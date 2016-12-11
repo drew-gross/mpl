@@ -1,6 +1,6 @@
 {
   "name": "mpl",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A compiler for a Mutable Programming Langauge",
   "main": "index.js",
   "scripts": {
