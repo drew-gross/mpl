@@ -1,0 +1,12 @@
+{
+  "name": "mpl",
+  "version": "1.0.0",
+  "description": "A compiler for a Mutable Programming Langauge",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "Drew Gross",
+  "license": "MIT"
+}
