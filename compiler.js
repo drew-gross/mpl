@@ -1,32 +1,41 @@
-module.exports = {
-    parse: contents => ({
-        statements: contents.split('\n').filter(line => line.length > 0),
-    }),
+const toC = tokens => {
+    return `int main(int arg, char **argv) { return ${tokens[tokens.length - 1].value}; }`;
+};
 
-    lex: input => {
-        let tokens = [];
-        while (input.length > 0) {
-            let match;
-            if (match = input.match(/^(\d+)\s*/)) {
-                input = input.slice(match[0].length);
-                tokens.push({ type: 'number', value: parseInt(match[1]) });
-            } else {
-                tokens.push({ type: 'invalid', value: null });
-                return tokens;
-            }
+const toJS = tokens => {
+    return `process.exit(${tokens[tokens.length - 1].value});`;
+};
+
+const lex = input => {
+    let tokens = [];
+    while (input.length > 0) {
+        let match;
+        if (match = input.match(/^(\d+)\s*/)) {
+            input = input.slice(match[0].length);
+            tokens.push({ type: 'number', value: parseInt(match[1]) });
+        } else {
+            tokens.push({ type: 'invalid', value: null });
+            return tokens;
         }
-        return tokens;
-    },
+    }
+    return tokens;
+};
 
-    evaluate: ({ statements }) => {
-        return parseInt(statements[statements.length - 1], 10);
-    },
+const parse = contents => ({
+    statements: contents.split('\n').filter(line => line.length > 0),
+});
 
-    toC: ({ statements }) => {
-        return `int main(int arg, char **argv) { return ${parseInt(statements[statements.length - 1], 10)}; }`;
-    },
+const compile = ({ source, target }) => {
+    tokens = lex(source);
+    if (target == 'js') {
+        return toJS(tokens);
+    } else if (target == 'c') {
+        return toC(tokens);
+    }
+};
 
-    toJS: ({ statements }) => {
-        return `process.exit(${parseInt(statements[statements.length - 1], 10)});`;
-    },
+module.exports = {
+    parse: parse,
+    lex: lex,
+    compile: compile,
 }
