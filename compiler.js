@@ -10,4 +10,8 @@ module.exports = {
     toC: ({ statements }) => {
         return `int main(int arg, char **argv) { return ${parseInt(statements[statements.length - 1], 10)}; }`;
     },
+
+    toJS: ({ statements }) => {
+        return `process.exit(${parseInt(statements[statements.length - 1], 10)});`;
+    },
 }

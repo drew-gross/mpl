@@ -1,6 +1,6 @@
 import test from 'ava';
 
-import { parse, evaluate, toC } from './compiler';
+import { parse, evaluate, toC, toJS } from './compiler';
 
 import tmp from 'tmp-promise';
 import fs from 'fs-extra';
@@ -28,10 +28,19 @@ test('compile and run c', async t => {
     const cFile = await tmp.file({ postfix: '.c'});
     const exeFile = await tmp.file();
     await fs.writeFile(cFile.fd, toC(parse('7')));
-    let contents = await fs.readFile(cFile.fd);
     await exec(`clang ${cFile.path} -o ${exeFile.path}`);
     try {
         await exec(exeFile.path);
+    } catch (e) {
+        t.deepEqual(e.code, 7);
+    }
+});
+
+test('compile and run js', async t => {
+    const jsFile = await tmp.file({ postfix: '.js'});
+    await fs.writeFile(jsFile.fd, toJS(parse('7')));
+    try {
+        await exec(`node ${jsFile.path}`);
     } catch (e) {
         t.deepEqual(e.code, 7);
     }
