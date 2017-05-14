@@ -1,6 +1,12 @@
 import test from 'ava';
 
-import { parse, evaluate, toC, toJS } from './compiler';
+import {
+    parse,
+    evaluate,
+    toC,
+    toJS,
+    lex,
+} from './compiler';
 
 import tmp from 'tmp-promise';
 import fs from 'fs-extra';
@@ -44,4 +50,17 @@ test('compile and run js', async t => {
     } catch (e) {
         t.deepEqual(e.code, 7);
     }
+});
+
+test('lexer', t => {
+    t.deepEqual(lex('123'), [
+        { type: 'number', value: 123 },
+    ]);
+    t.deepEqual(lex('123 456'), [
+        { type: 'number', value: 123 },
+        { type: 'number', value: 456 },
+    ]);
+    t.deepEqual(lex('a'), [
+        { type: 'invalid', value: null },
+    ]);
 });
