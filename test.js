@@ -10,17 +10,16 @@ import tmp from 'tmp-promise';
 import fs from 'fs-extra';
 import { exec } from 'child-process-promise';
 
-test('parse empty file', t => {
-    t.deepEqual(parse(''), {
-        statements: [],
-    });
+test('parse no tokens', t => {
+    t.deepEqual(parse([]), null);
 });
 
-test('parse single number', t => {
-    t.deepEqual(parse('7'), {
-        statements: [
-            '7',
-        ],
+test('ast for single number', t => {
+    t.deepEqual(parse(lex('7')), {
+        type: 'number',
+        children: [
+            { type: 'number', value: 7 },
+        ]
     });
 });
 

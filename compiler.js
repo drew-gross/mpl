@@ -1,9 +1,17 @@
-const toC = tokens => {
-    return `int main(int arg, char **argv) { return ${tokens[tokens.length - 1].value}; }`;
+const toC = ast => {
+    if (ast.type == 'number') {
+        return `int main(int argc, char **argv) { return ${ast.children[0].value}; }`;
+    } else if (ast.type == 'sum') {
+        return `int main(int argv, char **argv) { return ${ast.children[0].value} + ${ast.children[1].value}; }`;
+    }
 };
 
-const toJS = tokens => {
-    return `process.exit(${tokens[tokens.length - 1].value});`;
+const toJS = ast => {
+    if (ast.type == 'number') {
+        return `process.exit(${ast.children[0].value});`;
+    } else if (ast.type == 'sum') {
+        return `process.exit(${ast.children[0].value} + ${ast.children[1].value});`;
+    }
 };
 
 const lex = input => {
@@ -13,6 +21,9 @@ const lex = input => {
         if (match = input.match(/^(\d+)\s*/)) {
             input = input.slice(match[0].length);
             tokens.push({ type: 'number', value: parseInt(match[1]) });
+        } else if (match = input.match(/^(\+)\s*/)) {
+            input = input.slice(match[0].length);
+            tokens.push({ type: 'add', value: null });
         } else {
             tokens.push({ type: 'invalid', value: null });
             return tokens;
@@ -21,16 +32,41 @@ const lex = input => {
     return tokens;
 };
 
-const parse = contents => ({
-    statements: contents.split('\n').filter(line => line.length > 0),
-});
+// Grammar:
+// PROGRAM = NUMBER | SUM
+// SUM = NUMBER + NUMBER
+// NUMBER = \d+
+
+const parseSum = tokens => {
+    if (tokens.length == 3 && tokens[0].type == 'number' && tokens[1].type == 'add' && tokens[2].type == 'number') {
+        return {
+            type: 'sum',
+            children: [
+                { type: 'number', children: [tokens[0]] },
+                { type: 'number', children: [tokens[2]] },
+            ],
+        };
+    }
+    return null;
+};
+
+const parse = tokens => {
+    let parseResult;
+    if (parseResult = parseSum(tokens)) {
+        return parseResult;
+    } else if (tokens.length == 1 && tokens[0].type == 'number') {
+        return { type: 'number', children: [tokens[0]] };
+    }
+    return null;
+};
 
 const compile = ({ source, target }) => {
-    tokens = lex(source);
+    let tokens = lex(source);
+    ast = parse(tokens);
     if (target == 'js') {
-        return toJS(tokens);
+        return toJS(ast);
     } else if (target == 'c') {
-        return toC(tokens);
+        return toC(ast);
     }
 };
 
