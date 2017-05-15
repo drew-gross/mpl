@@ -2,7 +2,9 @@ const toC = ast => {
     if (ast.type == 'number') {
         return `int main(int argc, char **argv) { return ${ast.children[0].value}; }`;
     } else if (ast.type == 'sum') {
-        return `int main(int argv, char **argv) { return ${ast.children[0].value} + ${ast.children[1].value}; }`;
+        const lhs = ast.children[0].children[0].value;
+        const rhs = ast.children[1].children[0].value;
+        return `int main(int argc, char **argv) { return ${lhs} + ${rhs}; }`;
     }
 };
 
@@ -10,7 +12,9 @@ const toJS = ast => {
     if (ast.type == 'number') {
         return `process.exit(${ast.children[0].value});`;
     } else if (ast.type == 'sum') {
-        return `process.exit(${ast.children[0].value} + ${ast.children[1].value});`;
+        const lhs = ast.children[0].children[0].value;
+        const rhs = ast.children[1].children[0].value;
+        return `process.exit(${lhs} + ${rhs});`;
     }
 };
 

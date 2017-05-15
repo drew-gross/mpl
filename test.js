@@ -23,33 +23,35 @@ test('ast for single number', t => {
     });
 });
 
-test('compile and run c', async t => {
-    const cFile = await tmp.file({ postfix: '.c'});
-    const exeFile = await tmp.file();
-    await fs.writeFile(cFile.fd, compile({
-        source: '7',
-        target: 'c',
-    }));
-    await exec(`clang ${cFile.path} -o ${exeFile.path}`);
+const execAndGetExitCode = async command => {
     try {
-        await exec(exeFile.path);
+        await exec(command);
     } catch (e) {
-        t.deepEqual(e.code, 7);
+        return e.code;
     }
-});
+    return 0;
+};
 
-test('compile and run js', async t => {
-    const jsFile = await tmp.file({ postfix: '.js'});
-    await fs.writeFile(jsFile.fd, compile({
-        source: '7',
-        target: 'js',
-    }));
-    try {
-        await exec(`node ${jsFile.path}`);
-    } catch (e) {
-        t.deepEqual(e.code, 7);
-    }
-});
+const testProgram = (source, expectedExitCode) => {
+    test('runs in c', async t => {
+        const cFile = await tmp.file({ postfix: '.c'});
+        const exeFile = await tmp.file();
+        await fs.writeFile(cFile.fd, compile({ source, target: 'c' }));
+        await exec(`clang ${cFile.path} -o ${exeFile.path}`);
+        const exitCode = await execAndGetExitCode(exeFile.path);
+        t.deepEqual(exitCode, expectedExitCode);
+    });
+
+    test('runs in js', async t => {
+        const jsFile = await tmp.file({ postfix: '.js' });
+        await fs.writeFile(jsFile.fd, compile({ source, target: 'js' }));
+        const exitCode = await execAndGetExitCode(`node ${jsFile.path}`);
+        t.deepEqual(exitCode, expectedExitCode);
+    });
+}
+
+testProgram('7', 7);
+testProgram('2 + 2', 4);
 
 test('lexer', t => {
     t.deepEqual(lex('123'), [
