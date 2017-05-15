@@ -20,48 +20,167 @@ const toJS = ast => {
 
 const lex = input => {
     let tokens = [];
+
+    const tokenSpecs = [{
+        token: '\\d+',
+        type: 'number',
+        action: parseInt,
+    }, {
+        token: '\\+',
+        type: 'sum',
+    }, {
+        token: '\\*',
+        type: 'product',
+    }, {
+        token: '\\(',
+        type: 'leftBracket',
+    }, {
+        token: '\\)',
+        type: 'rightBracket',
+    }, {
+        token: '.*',
+        type: 'invalid',
+        action: x => x,
+    }];
+
     while (input.length > 0) {
-        let match;
-        if (match = input.match(/^(\d+)\s*/)) {
+        for (const tokenSpec of tokenSpecs) {
+            const match = input.match(RegExp(`^(${tokenSpec.token})\\s*`));
+            if (!match) continue;
             input = input.slice(match[0].length);
-            tokens.push({ type: 'number', value: parseInt(match[1]) });
-        } else if (match = input.match(/^(\+)\s*/)) {
-            input = input.slice(match[0].length);
-            tokens.push({ type: 'add', value: null });
-        } else {
-            tokens.push({ type: 'invalid', value: null });
-            return tokens;
+            const action = tokenSpec.action || (() => null);
+            tokens.push({ type: tokenSpec.type, value: action(match[1])});
+            break;
         }
     }
     return tokens;
 };
 
 // Grammar:
-// PROGRAM = NUMBER | SUM
-// SUM = NUMBER + NUMBER
-// NUMBER = \d+
+// PROGRAM -> PRODUCT
+// PRODUCT -> int * PRODUCT | int | ( PRODUCT )
 
-const parseSum = tokens => {
-    if (tokens.length == 3 && tokens[0].type == 'number' && tokens[1].type == 'add' && tokens[2].type == 'number') {
+const parseTerminal = (terminal, tokens, index) => {
+    if (tokens[index].type == terminal) {
         return {
-            type: 'sum',
-            children: [
-                { type: 'number', children: [tokens[0]] },
-                { type: 'number', children: [tokens[2]] },
-            ],
+            success: true,
+            newIndex: index + 1,
+            children: tokens[index],
+            type: terminal,
         };
     }
-    return null;
-};
+
+    return { success: false };
+}
+const parseProduct1 = (tokens, index) => {
+    if (tokens.length - index < 3) {
+        return { success: false };
+    }
+    const intResult = parseTerminal('number', tokens, index);
+    if (!intResult.success) {
+        return { success: false };
+    }
+
+    const timesResult = parseTerminal('product', tokens, index + 1);
+    if (!timesResult.success) {
+        return { success: false };
+    }
+
+    const productResult = parseProduct(tokens, index + 2);
+    if (!productResult.success) {
+        return { success: false };
+    }
+
+    return {
+        success: true,
+        newIndex: index + 3,
+        children: [intResult.children, timesResult.children, productResult.children] ,
+        type: 'product',
+    };
+}
+
+const parseProduct2 = (tokens, index) => {
+    const intResult = parseTerminal('number', tokens, index);
+    if (!intResult.success) {
+        return { success: false };
+    }
+
+    return {
+        success: true,
+        newIndex: intResult.newIndex,
+        children: [intResult.children],
+        type: 'product',
+    };
+}
+
+
+const parseProduct3 = (tokens, index) => {
+    const lbResult = parseTerminal('leftBracket', tokens, index);
+    if (!lbResult.success) {
+        return { success: false };
+    }
+
+    const productResult = parseProduct(tokens, lbResult.newIndex);
+    if (!productResult.success) {
+        return { success: false };
+    }
+
+    const rbResult = parseTerminal('rightBracket', tokens, productResult.newIndex);
+    if (!rbResult.success) {
+        return { success: false };
+    }
+
+    return {
+        success: true,
+        newIndex: rbResult.newIndex,
+        children: [lbResult.children, productResult.children, rbResult.children],
+        type: 'product',
+    };
+}
+
+const parseProduct = (tokens, index) => {
+    const p1Result = parseProduct1(tokens, index);
+    if (p1Result.success) {
+        return p1Result;
+    }
+
+    const p2Result = parseProduct2(tokens, index);
+    if (p2Result.success) {
+        return p2Result;
+    }
+
+    const p3Result = parseProduct3(tokens, index);
+    if (p3Result.success) {
+        return p3Result;
+    }
+
+    return { success: false };
+}
+
+const parseProgram = (tokens, index) => {
+    const productResult = parseProduct(tokens, index);
+    if (!productResult.success) {
+        return { success: false };
+    }
+    return {
+        success: true,
+        newIndex: productResult.newIndex,
+        children: [productResult],
+        type: 'program',
+    };
+}
+
+const flattenAst = ast => {
+    if (ast.children) {
+        return { type: ast.type, children: ast.children.map(flattenAst) };
+    } else {
+        return ast;
+    }
+}
 
 const parse = tokens => {
-    let parseResult;
-    if (parseResult = parseSum(tokens)) {
-        return parseResult;
-    } else if (tokens.length == 1 && tokens[0].type == 'number') {
-        return { type: 'number', children: [tokens[0]] };
-    }
-    return null;
+    const resultTree = parseProgram(tokens, 0)
+    return flattenAst(resultTree);
 };
 
 const compile = ({ source, target }) => {
