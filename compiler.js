@@ -1,3 +1,5 @@
+const { alternative, sequence, terminal } = require('./parser-combinator.js');
+
 const toC = ast => {
     if (ast.type == 'number') {
         return `int main(int argc, char **argv) { return ${ast.children[0].value}; }`;
@@ -60,28 +62,16 @@ const lex = input => {
 // PROGRAM -> PRODUCT
 // PRODUCT -> int * PRODUCT | int | ( PRODUCT )
 
-const parseTerminal = (terminal, tokens, index) => {
-    if (tokens[index].type == terminal) {
-        return {
-            success: true,
-            newIndex: index + 1,
-            children: tokens[index],
-            type: terminal,
-        };
-    }
-
-    return { success: false };
-}
 const parseProduct1 = (tokens, index) => {
     if (tokens.length - index < 3) {
         return { success: false };
     }
-    const intResult = parseTerminal('number', tokens, index);
+    const intResult = terminal('number')(tokens, index);
     if (!intResult.success) {
         return { success: false };
     }
 
-    const timesResult = parseTerminal('product', tokens, index + 1);
+    const timesResult = terminal('product')(tokens, index + 1);
     if (!timesResult.success) {
         return { success: false };
     }
@@ -100,7 +90,7 @@ const parseProduct1 = (tokens, index) => {
 }
 
 const parseProduct2 = (tokens, index) => {
-    const intResult = parseTerminal('number', tokens, index);
+    const intResult = terminal('number')(tokens, index);
     if (!intResult.success) {
         return { success: false };
     }
@@ -113,49 +103,13 @@ const parseProduct2 = (tokens, index) => {
     };
 }
 
+const parseProduct3 = sequence([
+    terminal('leftBracket'),
+    (t, i) => parseProduct(t, i),
+    terminal('rightBracket'),
+]);
 
-const parseProduct3 = (tokens, index) => {
-    const lbResult = parseTerminal('leftBracket', tokens, index);
-    if (!lbResult.success) {
-        return { success: false };
-    }
-
-    const productResult = parseProduct(tokens, lbResult.newIndex);
-    if (!productResult.success) {
-        return { success: false };
-    }
-
-    const rbResult = parseTerminal('rightBracket', tokens, productResult.newIndex);
-    if (!rbResult.success) {
-        return { success: false };
-    }
-
-    return {
-        success: true,
-        newIndex: rbResult.newIndex,
-        children: [lbResult.children, productResult.children, rbResult.children],
-        type: 'product',
-    };
-}
-
-const parseProduct = (tokens, index) => {
-    const p1Result = parseProduct1(tokens, index);
-    if (p1Result.success) {
-        return p1Result;
-    }
-
-    const p2Result = parseProduct2(tokens, index);
-    if (p2Result.success) {
-        return p2Result;
-    }
-
-    const p3Result = parseProduct3(tokens, index);
-    if (p3Result.success) {
-        return p3Result;
-    }
-
-    return { success: false };
-}
+const parseProduct = alternative([parseProduct1, parseProduct2, parseProduct3]);
 
 const parseProgram = (tokens, index) => {
     const productResult = parseProduct(tokens, index);
@@ -193,8 +147,4 @@ const compile = ({ source, target }) => {
     }
 };
 
-module.exports = {
-    parse: parse,
-    lex: lex,
-    compile: compile,
-}
+module.exports = { parse, lex, compile };

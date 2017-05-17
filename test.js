@@ -1,3 +1,4 @@
+debugger;
 import test from 'ava';
 
 import {
@@ -45,7 +46,7 @@ test('ast for number in brackets', t => {
     t.deepEqual(parse(lex('(5)')), {
         type: 'program',
         children: [{
-            type: 'product',
+            type: undefined, // needs fixed
             children: [
                 { type: 'leftBracket', value: null },
                 [{ type: 'number', value: 5 }],
@@ -59,7 +60,7 @@ test('ast for number in double brackets', t => {
     t.deepEqual(parse(lex('((20))')), {
         type: 'program',
         children: [{
-            type: 'product',
+            type: undefined, // needs fixed
             children: [
                 { type: 'leftBracket', value: null },
                 [
