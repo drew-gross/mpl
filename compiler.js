@@ -1,24 +1,50 @@
 const { alternative, sequence, terminal } = require('./parser-combinator.js');
 
+const astToStackOperationsC = ast => {
+    switch (ast.type) {
+        case 'program': return ast.children.map(astToStackOperationsC);
+        case 'number': return `stack[stackSize] = ${ast.value}; stackSize += 1;`;
+    };
+};
+
 const toC = ast => {
-    console.log(ast);
-    if (ast.type == 'number') {
-        return `int main(int argc, char **argv) { return ${ast.children[0].value}; }`;
-    } else if (ast.type == 'sum') {
-        const lhs = ast.children[0].children[0].value;
-        const rhs = ast.children[1].children[0].value;
-        return `int main(int argc, char **argv) { return ${lhs} + ${rhs}; }`;
+    let stackOperations = astToStackOperationsC(ast);
+
+    return `
+#include <stdio.h>
+
+int main(int argc, char **argv) {
+    char stack[255];
+    char stackSize = 0;
+    ${stackOperations.join('\n')}
+    if (stackSize == 1) {
+        return stack[0];
+    } else {
+        printf("Error: stack did not end with size 1");
+        return -1;
+    }
+}
+`;
+};
+
+const astToStackOperationsJS = ast => {
+    switch (ast.type) {
+        case 'program': return ast.children.map(astToStackOperationsJS);
+        case 'number': return `stack.push(${ast.value});`;
     }
 };
 
 const toJS = ast => {
-    if (ast.type == 'number') {
-        return `process.exit(${ast.children[0].value});`;
-    } else if (ast.type == 'sum') {
-        const lhs = ast.children[0].children[0].value;
-        const rhs = ast.children[1].children[0].value;
-        return `process.exit(${lhs} + ${rhs});`;
-    }
+    let stackOperations = astToStackOperationsJS(ast);
+
+    return `
+let stack = [];
+${stackOperations.join('\n')}
+if (stack.length !== 1) {
+    process.exit(-1);
+}
+process.exit(stack[0]);
+`;
 };
 
 const lex = input => {

@@ -11,9 +11,6 @@ const alternative = parsers => (tokens, index) => {
 const sequence = (type, parsers) => (tokens, index) => {
     const results = []
     for (const parser of parsers) {
-        if (index >= tokens.length) {
-            return { success: false };
-        }
         const result = parser(tokens, index);
         if (!result.success) {
             return { success: false };
@@ -30,6 +27,9 @@ const sequence = (type, parsers) => (tokens, index) => {
 }
 
 const terminal = terminal => (tokens, index) => {
+    if (index >= tokens.length) {
+        return { success: false };
+    }
     if (tokens[index].type == terminal) {
         return {
             success: true,

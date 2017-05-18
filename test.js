@@ -135,21 +135,31 @@ const testProgram = (source, expectedExitCode) => {
     test(`${source} runs in c`, async t => {
         const cFile = await tmp.file({ postfix: '.c'});
         const exeFile = await tmp.file();
-        await fs.writeFile(cFile.fd, compile({ source, target: 'c' }));
-        await exec(`clang ${cFile.path} -o ${exeFile.path}`);
+        const cSource = compile({ source, target: 'c' });
+        await fs.writeFile(cFile.fd, cSource);
+        try {
+            await exec(`clang ${cFile.path} -o ${exeFile.path}`);
+        } catch (e) {
+            t.fail(`Failed to compile generated C code: ${cSource}`);
+        }
         const exitCode = await execAndGetExitCode(exeFile.path);
         t.deepEqual(exitCode, expectedExitCode);
     });
 
     test(`${source} runs in js`, async t => {
         const jsFile = await tmp.file({ postfix: '.js' });
-        await fs.writeFile(jsFile.fd, compile({ source, target: 'js' }));
+        const jsSource = compile({ source, target: 'js' });
+        await fs.writeFile(jsFile.fd, jsSource);
         const exitCode = await execAndGetExitCode(`node ${jsFile.path}`);
-        t.deepEqual(exitCode, expectedExitCode);
+        if (exitCode !== expectedExitCode) {
+            t.fail(`JS returned ${exitCode} when it shold have returned ${expectedExitCode}: ${jsSource}`);
+        } else {
+            t.pass();
+        }
     });
 };
-/*
-testProgram('7', 7);
+
+testProgram('7', 7);/*
 testProgram('2 * 2', 4);
 testProgram('(3)', 4);
 */
