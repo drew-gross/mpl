@@ -1,13 +1,8 @@
-const alternative = (type, parsers) => (tokens, index) => {
+const alternative = parsers => (tokens, index) => {
     for (const parser of parsers) {
         const result = parser(tokens, index);
         if (result.success) {
-            return {
-                success: true,
-                newIndex: result.newIndex,
-                type: type,
-                children: [result],
-            };
+            return result;
         }
     }
     return { success: false };

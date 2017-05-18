@@ -64,19 +64,19 @@ const lex = input => {
 // EXPRESSION -> PRODUCT | ( EXPRESSION ) | int
 // PRODUCT -> int * EXPRESSION | ( EXPRESSION * EXPRESSION )
 
-const parseProduct1 = sequence('product', [
+const parseProduct1 = sequence('product1', [
     terminal('number'),
     terminal('product'),
     (t, i) => parseExpression(t, i),
 ]);
-const parseProduct2 = sequence('product', [
+const parseProduct2 = sequence('product2', [
     terminal('leftBracket'),
     (t, i) => parseExpression(t, i),
     terminal('product'),
     (t, i) => parseExpression(t, i),
     terminal('rightBracket'),
 ]);
-const parseProduct = alternative('product', [parseProduct1, parseProduct2]);
+const parseProduct = alternative([parseProduct1, parseProduct2]);
 
 const parseExpression1 = parseProduct;
 const parseExpression2 = sequence('expression', [
@@ -86,7 +86,7 @@ const parseExpression2 = sequence('expression', [
 ]);
 const parseExpression3 = terminal('number');
 
-const parseExpression = alternative('expression', [parseExpression1, parseExpression2, parseExpression3]);
+const parseExpression = alternative([parseExpression1, parseExpression2, parseExpression3]);
 
 const parseProgram = (tokens, index) => {
     const productResult = parseExpression(tokens, index);

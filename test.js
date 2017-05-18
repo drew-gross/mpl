@@ -32,11 +32,8 @@ test('ast for single number', t => {
     t.deepEqual(parse(lex('7')), {
         type: 'program',
         children: [{
-            type: 'expression',
-            children: [{
-                type: 'number',
-                value: 7,
-            }]
+            type: 'number',
+            value: 7,
         }]
     });
 });
@@ -47,18 +44,15 @@ test('ast for number in brackets', t => {
         children: [{
             type: 'expression',
             children: [{
-                type: 'expression',
-                children: [{
-                    type: 'leftBracket',
-                    value: null
-                }, {
-                    type: 'expression',
-                    children: [{ type: 'number', value: 5 }],
-                }, {
-                    type: 'rightBracket',
-                    value: null,
-                }]
-            }],
+                type: 'leftBracket',
+                value: null
+            }, {
+                type: 'number',
+                value: 5
+            }, {
+                type: 'rightBracket',
+                value: null,
+            }]
         }]
     });
 });
@@ -69,33 +63,24 @@ test('ast for number in double brackets', t => {
         children: [{
             type: 'expression',
             children: [{
+                type: 'leftBracket',
+                value: null
+            }, {
                 type: 'expression',
                 children: [{
                     type: 'leftBracket',
                     value: null
                 }, {
-                    type: 'expression',
-                    children: [{
-                        type: 'expression',
-                        children: [{
-                            type: 'leftBracket',
-                            value: null
-                        }, {
-                            type: 'expression',
-                            children: [{
-                                type: 'number',
-                                value: 20,
-                            }],
-                        }, {
-                            type: 'rightBracket',
-                            value: null,
-                        }],
-                    }],
+                    type: 'number',
+                    value: 20,
                 }, {
                     type: 'rightBracket',
                     value: null,
-                }]
-            }],
+                }],
+            }, {
+                type: 'rightBracket',
+                value: null,
+            }]
         }],
     });
 });
@@ -104,51 +89,33 @@ test('ast for double product', t => {
     t.deepEqual(parse(lex('3 * (4 * 5)')), {
         "type": "program",
         "children": [{
-            "type": "expression",
+            "type": "product1",
             "children": [{
+                "type": "number",
+                "value": 3
+            }, {
                 "type": "product",
+                "value": null
+            }, {
+                "type": "expression",
                 "children": [{
-                    "type": "product",
+                    "type": "leftBracket",
+                    "value": null
+                }, {
+                    "type": "product1",
                     "children": [{
                         "type": "number",
-                        "value": 3
+                        "value": 4
                     }, {
                         "type": "product",
                         "value": null
                     }, {
-                        "type": "expression",
-                        "children": [{
-                            "type": "expression",
-                            "children": [{
-                                "type": "leftBracket",
-                                "value": null
-                            }, {
-                                "type": "expression",
-                                "children": [{
-                                    "type": "product",
-                                    "children": [{
-                                        "type": "product",
-                                        "children": [{
-                                            "type": "number",
-                                            "value": 4
-                                        }, {
-                                            "type": "product",
-                                            "value": null
-                                        }, {
-                                            "type": "expression",
-                                            "children": [{
-                                                "type": "number",
-                                                "value": 5
-                                            }]
-                                        }]
-                                    }]
-                                }]
-                            }, {
-                                "type": "rightBracket",
-                                "value": null
-                            }]
-                        }]
+                        "type": "number",
+                        "value": 5
                     }]
+                }, {
+                    "type": "rightBracket",
+                    "value": null
                 }]
             }]
         }]
