@@ -1,6 +1,7 @@
 const { alternative, sequence, terminal } = require('./parser-combinator.js');
 
 const toC = ast => {
+    console.log(ast);
     if (ast.type == 'number') {
         return `int main(int argc, char **argv) { return ${ast.children[0].value}; }`;
     } else if (ast.type == 'sum') {
@@ -59,60 +60,36 @@ const lex = input => {
 };
 
 // Grammar:
-// PROGRAM -> PRODUCT
-// PRODUCT -> int * PRODUCT | int | ( PRODUCT )
+// PROGRAM -> EXPRESSION
+// EXPRESSION -> PRODUCT | ( EXPRESSION ) | int
+// PRODUCT -> int * EXPRESSION | ( EXPRESSION * EXPRESSION )
 
-const parseProduct1 = (tokens, index) => {
-    if (tokens.length - index < 3) {
-        return { success: false };
-    }
-    const intResult = terminal('number')(tokens, index);
-    if (!intResult.success) {
-        return { success: false };
-    }
-
-    const timesResult = terminal('product')(tokens, index + 1);
-    if (!timesResult.success) {
-        return { success: false };
-    }
-
-    const productResult = parseProduct(tokens, index + 2);
-    if (!productResult.success) {
-        return { success: false };
-    }
-
-    return {
-        success: true,
-        newIndex: index + 3,
-        children: [intResult.children, timesResult.children, productResult.children] ,
-        type: 'product',
-    };
-}
-
-const parseProduct2 = (tokens, index) => {
-    const intResult = terminal('number')(tokens, index);
-    if (!intResult.success) {
-        return { success: false };
-    }
-
-    return {
-        success: true,
-        newIndex: intResult.newIndex,
-        children: [intResult.children],
-        type: 'product',
-    };
-}
-
-const parseProduct3 = sequence([
+const parseProduct1 = sequence('product', [
+    terminal('number'),
+    terminal('product'),
+    (t, i) => parseExpression(t, i),
+]);
+const parseProduct2 = sequence('product', [
     terminal('leftBracket'),
-    (t, i) => parseProduct(t, i),
+    (t, i) => parseExpression(t, i),
+    terminal('product'),
+    (t, i) => parseExpression(t, i),
     terminal('rightBracket'),
 ]);
+const parseProduct = alternative('product', [parseProduct1, parseProduct2]);
 
-const parseProduct = alternative([parseProduct1, parseProduct2, parseProduct3]);
+const parseExpression1 = parseProduct;
+const parseExpression2 = sequence('expression', [
+    terminal('leftBracket'),
+    (t, i) => parseExpression(t, i),
+    terminal('rightBracket'),
+]);
+const parseExpression3 = terminal('number');
+
+const parseExpression = alternative('expression', [parseExpression1, parseExpression2, parseExpression3]);
 
 const parseProgram = (tokens, index) => {
-    const productResult = parseProduct(tokens, index);
+    const productResult = parseExpression(tokens, index);
     if (!productResult.success) {
         return { success: false };
     }
@@ -128,13 +105,17 @@ const flattenAst = ast => {
     if (ast.children) {
         return { type: ast.type, children: ast.children.map(flattenAst) };
     } else {
-        return ast;
+        return {
+            type: ast.type,
+            value: ast.value,
+        };
     }
 }
 
 const parse = tokens => {
     const resultTree = parseProgram(tokens, 0)
-    return flattenAst(resultTree);
+    const flattenedTree = flattenAst(resultTree);
+    return flattenedTree;
 };
 
 const compile = ({ source, target }) => {

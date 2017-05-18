@@ -6,7 +6,7 @@
   "scripts": {
     "test": "ava",
     "test-watch": "ava --watch --no-color",
-    "test-debug": "inspect --debug-exceptions node_modules/ava/profile.js test.js"
+    "test-debug": "inspect node_modules/ava/profile.js test.js"
   },
   "author": "Drew Gross",
   "dependencies": {
