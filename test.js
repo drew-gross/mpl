@@ -159,7 +159,7 @@ const testProgram = (source, expectedExitCode) => {
     });
 };
 
-testProgram('7', 7);/*
+//testProgram('7', 7);
 testProgram('2 * 2', 4);
-testProgram('(3)', 4);
-*/
+//testProgram('(3)', 4);
+

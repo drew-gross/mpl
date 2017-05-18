@@ -2,8 +2,17 @@ const { alternative, sequence, terminal } = require('./parser-combinator.js');
 
 const astToStackOperationsC = ast => {
     switch (ast.type) {
-        case 'program': return ast.children.map(astToStackOperationsC);
-        case 'number': return `stack[stackSize] = ${ast.value}; stackSize += 1;`;
+        case 'program': return ast.children.map(astToStackOperationsC).reduce((a, b) => a.concat(b));
+        case 'number': return [`stack[stackSize] = ${ast.value}; stackSize++;`];
+        case 'product1': return [
+            ...astToStackOperationsC(ast.children[0]),
+            ...astToStackOperationsC(ast.children[2]),
+            `{
+                char tmp1 = stack[stackSize - 1]; stackSize--;
+                char tmp2 = stack[stackSize - 1]; stackSize--;
+                stack[stackSize] = tmp1 + tmp2; stackSize++;
+            }`
+        ]
     };
 };
 
@@ -29,14 +38,19 @@ int main(int argc, char **argv) {
 
 const astToStackOperationsJS = ast => {
     switch (ast.type) {
-        case 'program': return ast.children.map(astToStackOperationsJS);
-        case 'number': return `stack.push(${ast.value});`;
+        case 'program': return ast.children.map(astToStackOperationsJS).reduce((a, b) => a.concat(b));
+        case 'number': return [`stack.push(${ast.value});`];
+        case 'product1': return [
+            ...astToStackOperationsJS(ast.children[0]),
+            ...astToStackOperationsJS(ast.children[2]),
+            `{ let tmp1 = stack.pop(); let tmp2 = stack.pop(); stack.push(tmp1 * tmp2); }`,
+        ];
     }
 };
 
 const toJS = ast => {
     let stackOperations = astToStackOperationsJS(ast);
-
+    debugger;
     return `
 let stack = [];
 ${stackOperations.join('\n')}
