@@ -26,12 +26,25 @@ test('lexer', t => {
         { type: 'number', value: 1 },
         { type: 'rightBracket', value: null },
     ]);
+    t.deepEqual(lex('return 100'), [
+        { type: 'return', value: null },
+        { type: 'number', value: 100 },
+    ]);
+});
+
+test('lex with initial whitespace', t => {
+    t.deepEqual(lex(' 123'), [
+        { type: 'number', value: 123 },
+    ]);
 });
 
 test('ast for single number', t => {
-    t.deepEqual(parse(lex('7')), {
+    t.deepEqual(parse(lex('return 7')), {
         type: 'program',
         children: [{
+            type: 'return',
+            value: null,
+        }, {
             type: 'number',
             value: 7,
         }]
@@ -39,10 +52,13 @@ test('ast for single number', t => {
 });
 
 test('ast for number in brackets', t => {
-    t.deepEqual(parse(lex('(5)')), {
+    t.deepEqual(parse(lex(' return (5)')), {
         type: 'program',
         children: [{
-            type: 'expression',
+            type: 'return',
+            value: null,
+        }, {
+            type: 'bracketedExpression',
             children: [{
                 type: 'leftBracket',
                 value: null
@@ -58,15 +74,18 @@ test('ast for number in brackets', t => {
 });
 
 test('ast for number in double brackets', t => {
-    t.deepEqual(parse(lex('((20))')), {
+    t.deepEqual(parse(lex('return ((20))')), {
         type: 'program',
         children: [{
-            type: 'expression',
+            type: 'return',
+            value: null,
+        }, {
+            type: 'bracketedExpression',
             children: [{
                 type: 'leftBracket',
                 value: null
             }, {
-                type: 'expression',
+                type: 'bracketedExpression',
                 children: [{
                     type: 'leftBracket',
                     value: null
@@ -86,36 +105,39 @@ test('ast for number in double brackets', t => {
 });
 
 test('ast for double product', t => {
-    t.deepEqual(parse(lex('3 * (4 * 5)')), {
-        "type": "program",
-        "children": [{
-            "type": "product1",
-            "children": [{
-                "type": "number",
-                "value": 3
+    t.deepEqual(parse(lex('return 3 * (4 * 5)')), {
+        type: 'program',
+        children: [{
+            type: 'return',
+            value: null,
+        }, {
+            type: 'product1',
+            children: [{
+                type: 'number',
+                value: 3
             }, {
-                "type": "product",
-                "value": null
+                type: 'product',
+                value: null
             }, {
-                "type": "expression",
-                "children": [{
-                    "type": "leftBracket",
-                    "value": null
+                type: 'bracketedExpression',
+                children: [{
+                    type: 'leftBracket',
+                    value: null
                 }, {
-                    "type": "product1",
-                    "children": [{
-                        "type": "number",
-                        "value": 4
+                    type: 'product1',
+                    children: [{
+                        type: 'number',
+                        value: 4
                     }, {
-                        "type": "product",
-                        "value": null
+                        type: 'product',
+                        value: null
                     }, {
-                        "type": "number",
-                        "value": 5
+                        type: 'number',
+                        value: 5
                     }]
                 }, {
-                    "type": "rightBracket",
-                    "value": null
+                    type: 'rightBracket',
+                    value: null
                 }]
             }]
         }]
@@ -159,7 +181,7 @@ const testProgram = (source, expectedExitCode) => {
     });
 };
 
-//testProgram('7', 7);
-testProgram('2 * 2', 4);
-//testProgram('(3)', 4);
+testProgram('return 7', 7);
+testProgram('return 2 * 2', 4);
+//testProgram('return (3)', 4);
 
