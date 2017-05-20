@@ -19,8 +19,8 @@ test('lexer', t => {
         { type: 'number', value: 123 },
         { type: 'number', value: 456 },
     ]);
-    t.deepEqual(lex('a'), [
-        { type: 'invalid', value: 'a' },
+    t.deepEqual(lex('&&&&&'), [
+        { type: 'invalid', value: '&&&&&' },
     ]);
     t.deepEqual(lex('(1)'), [
         { type: 'leftBracket', value: null },
@@ -41,7 +41,7 @@ test('lex with initial whitespace', t => {
 
 test('ast for single number', t => {
     t.deepEqual(parse(lex('return 7')), {
-        type: 'program',
+        type: 'returnStatement',
         children: [{
             type: 'return',
             value: null,
@@ -54,7 +54,7 @@ test('ast for single number', t => {
 
 test('ast for number in brackets', t => {
     t.deepEqual(parse(lex(' return (5)')), {
-        type: 'program',
+        type: 'returnStatement',
         children: [{
             type: 'return',
             value: null,
@@ -76,7 +76,7 @@ test('ast for number in brackets', t => {
 
 test('ast for number in double brackets', t => {
     t.deepEqual(parse(lex('return ((20))')), {
-        type: 'program',
+        type: 'returnStatement',
         children: [{
             type: 'return',
             value: null,
@@ -107,7 +107,7 @@ test('ast for number in double brackets', t => {
 
 test('ast for double product', t => {
     t.deepEqual(parse(lex('return 3 * (4 * 5)')), {
-        type: 'program',
+        type: 'returnStatement',
         children: [{
             type: 'return',
             value: null,
@@ -142,6 +142,43 @@ test('ast for double product', t => {
                 }]
             }]
         }]
+    });
+});
+
+test('ast for assignment then return', t => {
+    t.deepEqual(parse(lex('myVar = 3 * 3 return 9')), {
+        type: 'statement',
+        children: [{
+            type: 'statement',
+            children: [{
+                type: 'identifier',
+                value: 'myVar',
+            }, {
+                type: 'assignment',
+                value: null,
+            }, {
+                type: 'product1',
+                children: [{
+                    type: 'number',
+                    value: 3,
+                }, {
+                    type: 'product',
+                    value: null,
+                }, {
+                    type: 'number',
+                    value: 3,
+                }],
+            }],
+        }, {
+            type: 'returnStatement',
+            children: [{
+                type: 'return',
+                value: null,
+            }, {
+                type: 'number',
+                value: 9,
+            }],
+        }],
     });
 });
 
@@ -184,7 +221,7 @@ const testProgram = (source, expectedExitCode) => {
 
 test('lowering of bracketedExpressions', t => {
     t.deepEqual(lowerBracketedExpressions(parse(lex('return (8 * ((7)))'))), {
-        type: 'program',
+        type: 'returnStatement',
         children: [{
             type: 'return',
             value: null,

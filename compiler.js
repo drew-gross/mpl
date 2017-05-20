@@ -2,7 +2,7 @@ const { alternative, sequence, terminal } = require('./parser-combinator.js');
 
 const astToC = ast => {
     switch (ast.type) {
-        case 'program': return [...astToC(ast.children[1]), `return stack[0];`];
+        case 'returnStatement': return [...astToC(ast.children[1]), `return stack[0];`];
         case 'number': return [`stack[stackSize] = ${ast.value}; stackSize++;`];
         case 'product1': return [
             ...astToC(ast.children[0]),
@@ -13,7 +13,7 @@ const astToC = ast => {
                 stack[stackSize] = tmp1 + tmp2; stackSize++;
             }`
         ];
-        case 'expression':
+        default:
             debugger;
             return;
     };
@@ -35,13 +35,16 @@ int main(int argc, char **argv) {
 
 const astToJS = ast => {
     switch (ast.type) {
-        case 'program': return [...astToJS(ast.children[1]), `process.exit(stack[0]);`];
+        case 'returnStatement': return [...astToJS(ast.children[1]), `process.exit(stack[0]);`];
         case 'number': return [`stack.push(${ast.value});`];
         case 'product1': return [
             ...astToJS(ast.children[0]),
             ...astToJS(ast.children[2]),
             `{ let tmp1 = stack.pop(); let tmp2 = stack.pop(); stack.push(tmp1 * tmp2); }`,
         ];
+        default:
+            debugger;
+            return;
     }
 };
 
@@ -58,6 +61,13 @@ const lex = input => {
     const tokenSpecs = [{
         token: 'return',
         type: 'return',
+    }, {
+        token: '[a-zA-Z]\\w*',
+        type: 'identifier',
+        action: x => x,
+    }, {
+        token: '=',
+        type: 'assignment',
     }, {
         token: '\\d+',
         type: 'number',
@@ -99,7 +109,8 @@ const lex = input => {
 };
 
 // Grammar:
-// PROGRAM -> return EXPRESSION
+// PROGRAM -> STATEMENT PROGRAM | return EXPRESSION
+// STATEMENT -> identifier = EXPRESSION
 // EXPRESSION -> PRODUCT | ( EXPRESSION ) | int
 // PRODUCT -> int * EXPRESSION | ( EXPRESSION * EXPRESSION )
 
@@ -127,9 +138,15 @@ const parseExpression3 = terminal('number');
 
 const parseExpression = alternative([parseExpression1, parseExpression2, parseExpression3]);
 
-const parseProgram = sequence('program', [
-    terminal('return'),
-    parseExpression
+const parseStatement = sequence('statement', [
+    terminal('identifier'),
+    terminal('assignment'),
+    parseExpression,
+]);
+
+const parseProgram = alternative([
+    sequence('statement', [parseStatement, (t, i) => parseProgram(t, i)]),
+    sequence('returnStatement', [terminal('return'), parseExpression]),
 ]);
 
 const flattenAst = ast => {
@@ -144,9 +161,10 @@ const flattenAst = ast => {
 }
 
 const parse = tokens => {
+    debugger;
     const resultTree = parseProgram(tokens, 0)
     if (resultTree.success === false) {
-        return {};
+        return { error: 'Unable to parse' };
     }
     const flattenedTree = flattenAst(resultTree);
     return flattenedTree;
