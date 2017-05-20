@@ -152,9 +152,23 @@ const parse = tokens => {
     return flattenedTree;
 };
 
+const lowerBracketedExpressions = ast => {
+    if (ast.type === 'bracketedExpression') {
+        return lowerBracketedExpressions(ast.children[1]);
+    } else if ('children' in ast) {
+        return {
+            type: ast.type,
+            children: ast.children.map(lowerBracketedExpressions),
+        };
+    } else {
+        return ast;
+    }
+};
+
 const compile = ({ source, target }) => {
     let tokens = lex(source);
     ast = parse(tokens);
+    ast = lowerBracketedExpressions(ast);
     if (target == 'js') {
         return toJS(ast);
     } else if (target == 'c') {
@@ -162,4 +176,4 @@ const compile = ({ source, target }) => {
     }
 };
 
-module.exports = { parse, lex, compile };
+module.exports = { parse, lex, compile, lowerBracketedExpressions };

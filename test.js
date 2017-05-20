@@ -4,6 +4,7 @@ import {
     parse,
     compile,
     lex,
+    lowerBracketedExpressions,
 } from './compiler';
 
 import tmp from 'tmp-promise';
@@ -181,7 +182,28 @@ const testProgram = (source, expectedExitCode) => {
     });
 };
 
+test('lowering of bracketedExpressions', t => {
+    t.deepEqual(lowerBracketedExpressions(parse(lex('return (8 * ((7)))'))), {
+        type: 'program',
+        children: [{
+            type: 'return',
+            value: null,
+        }, {
+            type: 'product1',
+            children: [{
+                type: 'number',
+                value: 8
+            }, {
+                type: 'product',
+                value: null,
+            }, {
+                type: 'number',
+                value: 7,
+            }],
+        }],
+    });
+});
+
 testProgram('return 7', 7);
 testProgram('return 2 * 2', 4);
-//testProgram('return (3)', 4);
-
+testProgram('return (3)', 3);
