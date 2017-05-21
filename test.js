@@ -191,32 +191,30 @@ const execAndGetExitCode = async command => {
     return 0;
 };
 
-const testProgram = (source, expectedExitCode) => {
-    test(`${source} runs in c`, async t => {
-        const cFile = await tmp.file({ postfix: '.c'});
-        const exeFile = await tmp.file();
-        const cSource = compile({ source, target: 'c' });
-        await fs.writeFile(cFile.fd, cSource);
-        try {
-            await exec(`clang ${cFile.path} -o ${exeFile.path}`);
-        } catch (e) {
-            t.fail(`Failed to compile generated C code: ${cSource}`);
-        }
-        const exitCode = await execAndGetExitCode(exeFile.path);
-        t.deepEqual(exitCode, expectedExitCode);
-    });
+const compileAndRunMacro = async (t, source, expectedExitCode) => {
+    // C backend works fine
+    const cFile = await tmp.file({ postfix: '.c'});
+    const exeFile = await tmp.file();
+    const cSource = compile({ source, target: 'c' });
+    await fs.writeFile(cFile.fd, cSource);
+    try {
+        await exec(`clang ${cFile.path} -o ${exeFile.path}`);
+    } catch (e) {
+        t.fail(`Failed to compile generated C code: ${cSource}`);
+    }
+    const cExitCode = await execAndGetExitCode(exeFile.path);
+    t.deepEqual(cExitCode, expectedExitCode);
 
-    test(`${source} runs in js`, async t => {
-        const jsFile = await tmp.file({ postfix: '.js' });
-        const jsSource = compile({ source, target: 'js' });
-        await fs.writeFile(jsFile.fd, jsSource);
-        const exitCode = await execAndGetExitCode(`node ${jsFile.path}`);
-        if (exitCode !== expectedExitCode) {
-            t.fail(`JS returned ${exitCode} when it shold have returned ${expectedExitCode}: ${jsSource}`);
-        } else {
-            t.pass();
-        }
-    });
+    // JS backend works fine
+    const jsFile = await tmp.file({ postfix: '.js' });
+    const jsSource = compile({ source, target: 'js' });
+    await fs.writeFile(jsFile.fd, jsSource);
+    const jsExitCode = await execAndGetExitCode(`node ${jsFile.path}`);
+    if (jsExitCode !== expectedExitCode) {
+        t.fail(`JS returned ${jsExitCode} when it shold have returned ${expectedExitCode}: ${jsSource}`);
+    } else {
+        t.pass();
+    }
 };
 
 test('lowering of bracketedExpressions', t => {
@@ -241,6 +239,7 @@ test('lowering of bracketedExpressions', t => {
     });
 });
 
-testProgram('return 7', 7);
-testProgram('return 2 * 2', 4);
-testProgram('return (3)', 3);
+test('return 7', compileAndRunMacro, 'return 7', 7);
+test('return 2 * 2', compileAndRunMacro, 'return 2 * 2', 4);
+test('return (3)', compileAndRunMacro, 'return (3)', 3);
+//test('myVar = 3 * 3 return 9', compileAndRunMacro, 'myVar = 3 * 3 return 9', 9);
