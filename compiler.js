@@ -1,8 +1,13 @@
 const { alternative, sequence, terminal } = require('./parser-combinator.js');
 
+const flatten = array => array.reduce((a, b) => a.concat(b), []);
+
 const astToC = ast => {
     switch (ast.type) {
-        case 'returnStatement': return [...astToC(ast.children[1]), `return stack[0];`];
+        case 'returnStatement': return [
+            ...astToC(ast.children[1]),
+            `return stack[0];`
+        ];
         case 'number': return [`stack[stackSize] = ${ast.value}; stackSize++;`];
         case 'product1': return [
             ...astToC(ast.children[0]),
@@ -13,6 +18,10 @@ const astToC = ast => {
                 stack[stackSize] = tmp1 + tmp2; stackSize++;
             }`
         ];
+        case 'statement': return flatten(ast.children.map(astToC));
+        case 'assignment': return [
+            ...astToC(ast.children[2]),
+            `{ unsigned char ${ast.children[0].value} = stack[stackSize - 1]; stackSize--; }`];
         default:
             debugger;
             return;
@@ -42,6 +51,11 @@ const astToJS = ast => {
             ...astToJS(ast.children[2]),
             `{ let tmp1 = stack.pop(); let tmp2 = stack.pop(); stack.push(tmp1 * tmp2); }`,
         ];
+        case 'statement': return flatten(ast.children.map(astToJS));
+        case 'assignment': return [
+            ...astToJS(ast.children[2]),
+            `{ let ${ast.children[0].value} = stack.pop(); }`,
+        ]
         default:
             debugger;
             return;
@@ -138,7 +152,7 @@ const parseExpression3 = terminal('number');
 
 const parseExpression = alternative([parseExpression1, parseExpression2, parseExpression3]);
 
-const parseStatement = sequence('statement', [
+const parseStatement = sequence('assignment', [
     terminal('identifier'),
     terminal('assignment'),
     parseExpression,
@@ -161,7 +175,6 @@ const flattenAst = ast => {
 }
 
 const parse = tokens => {
-    debugger;
     const resultTree = parseProgram(tokens, 0)
     if (resultTree.success === false) {
         return { error: 'Unable to parse' };
