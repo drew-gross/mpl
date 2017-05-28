@@ -193,7 +193,7 @@ const execAndGetExitCode = async command => {
 
 const compileAndRunMacro = async (t, source, expectedExitCode) => {
     // C backend
-    const cFile = await tmp.file({ postfix: '.c'});
+    const cFile = await tmp.file({ postfix: '.c' });
     const exeFile = await tmp.file();
     const cSource = compile({ source, target: 'c' });
     await fs.writeFile(cFile.fd, cSource);
@@ -211,10 +211,18 @@ const compileAndRunMacro = async (t, source, expectedExitCode) => {
     await fs.writeFile(jsFile.fd, jsSource);
     const jsExitCode = await execAndGetExitCode(`node ${jsFile.path}`);
     if (jsExitCode !== expectedExitCode) {
-        t.fail(`JS returned ${jsExitCode} when it shold have returned ${expectedExitCode}: ${jsSource}`);
-    } else {
-        t.pass();
+        t.fail(`JS returned ${jsExitCode} when it should have returned ${expectedExitCode}: ${jsSource}`);
     }
+    // Mips backend
+    const mipsFile = await tmp.file({ postfix: '.s' });
+    const mipsSource = compile({ source, target: 'mips' });
+    t.deepEqual(typeof mipsSource, 'string')
+    await fs.writeFile(mipsFile.fd, mipsSource);
+    const mipsExitCode = await execAndGetExitCode(`bash -c 'exit \`spim -file ${mipsFile.path} | tail -n 1\`'`);
+    if (mipsExitCode !== expectedExitCode) {
+        t.fail(`mips returned ${mipsExitCode} when it should have returned ${expectedExitCode}: ${mipsSource}`);
+    }
+    t.pass();
 };
 
 test('lowering of bracketedExpressions', t => {
@@ -239,7 +247,7 @@ test('lowering of bracketedExpressions', t => {
     });
 });
 
-test('return 7', compileAndRunMacro, 'return 7', 7);
+test.only('return 7', compileAndRunMacro, 'return 7', 7);
 test('return 2 * 2', compileAndRunMacro, 'return 2 * 2', 4);
 test('return (3)', compileAndRunMacro, 'return (3)', 3);
 test('myVar = 3 * 3 return 9', compileAndRunMacro, 'myVar = 3 * 3 return 9', 9);

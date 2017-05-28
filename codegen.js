@@ -68,4 +68,25 @@ ${JS.join('\n')}
 `;
 };
 
-module.exports = { toJS, toC };
+const astToMips = ast => {
+    switch (ast.type) {
+        case 'returnStatement': return [...astToMips(ast.children[1]), `
+li $v0, 1
+syscall
+li $v0, 10
+syscall
+`];
+        case 'number': return [`li $a0, ${ast.value}`];
+    }
+}
+
+const toMips = ast => {
+    let mips = astToMips(ast);
+    return `
+.text
+main:
+${mips.join('\n')}
+`;
+}
+
+module.exports = { toJS, toC, toMips };

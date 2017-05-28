@@ -1,5 +1,5 @@
 const { alternative, sequence, terminal } = require('./parser-combinator.js');
-const { toJS, toC } = require('./codegen.js');
+const { toJS, toC, toMips } = require('./codegen.js');
 
 const lex = input => {
 
@@ -135,6 +135,8 @@ const compile = ({ source, target }) => {
         return toJS(ast);
     } else if (target == 'c') {
         return toC(ast);
+    } else if (target == 'mips') {
+        return toMips(ast);
     }
 };
 
