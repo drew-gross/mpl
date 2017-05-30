@@ -1,13 +1,21 @@
+.data
+myvar: .word 3
 .text
- main:
+main:
 
- li $t1, 7
- sw $t1, ($sp)
- addiu $sp, $sp -4
+# print myvar
+la $t1, myvar
+lw $a0, ($t1)
+li $v0, 1
+syscall
+
+# set myvar to 5
+li $t2, 5
+sw $t2, ($t1)
+lw $a0, ($t1)
+
+syscall
 
 
- addiu $sp, $sp, 4
- li $v0, 1
- syscall
- li $v0, 10
- syscall
+li $v0, 10
+syscall
