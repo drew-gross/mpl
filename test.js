@@ -145,37 +145,6 @@ test('ast for product with brackets', t => {
     });
 });
 
-test('ast for triple product', t => {
-    t.deepEqual(parse(lex('return 5 * 3 * 4')), {
-        type: 'returnStatement',
-        children: [{
-            type: 'return',
-            value: null,
-        }, {
-            type: 'product1',
-            children: [{
-                type: 'product1',
-                children: [{
-                    type: 'number',
-                    value: 5,
-                }, {
-                    type: 'product',
-                    value: null,
-                }, {
-                    type: 'number',
-                    value: 3
-                }]
-            }, {
-                type: 'product',
-                value: null,
-            }, {
-                type: 'number',
-                value: 4,
-            }]
-        }],
-    });
-});
-
 test('ast for assignment then return', t => {
     t.deepEqual(parse(lex('myVar = 3 * 3 return 9')), {
         type: 'statement',
@@ -222,7 +191,16 @@ const execAndGetExitCode = async command => {
     return 0;
 };
 
-const compileAndRunMacro = async (t, source, expectedExitCode) => {
+const compileAndRunMacro = async (t, {
+    source,
+    expectedExitCode,
+    expetedAst,
+}) => {
+    // Check the AST if asked
+    if (expetedAst) {
+        t.deepEqual(parse(lex(source)), expetedAst);
+    }
+
     // C backend
     const cFile = await tmp.file({ postfix: '.c' });
     const exeFile = await tmp.file();
@@ -279,9 +257,52 @@ test('lowering of bracketedExpressions', t => {
     });
 });
 
-test('return 7', compileAndRunMacro, 'return 7', 7);
-test('return 2 * 2', compileAndRunMacro, 'return 2 * 2', 4);
-test('triple product', compileAndRunMacro, 'return 5 * 3 * 4', 60);
-test('brackets', compileAndRunMacro, 'return (3)', 3);
-//test('complicated product', compileAndRunMacro, 'return 2 * (3 * 4) * 3', 72);
+test('bare return', compileAndRunMacro, {
+    source: 'return 7',
+    expectedExitCode: 7,
+});
+test('single product', compileAndRunMacro, {
+    source: 'return 2 * 2',
+    expectedExitCode: 4,
+});
+test('double product', compileAndRunMacro, {
+    source: 'return 5 * 3 * 4',
+    expectedExitCode: 60,
+    expetedAst: {
+        type: 'returnStatement',
+        children: [{
+            type: 'return',
+            value: null,
+        }, {
+            type: 'product1',
+            children: [{
+                type: 'product1',
+                children: [{
+                    type: 'number',
+                    value: 5,
+                }, {
+                    type: 'product',
+                    value: null,
+                }, {
+                    type: 'number',
+                    value: 3
+                }]
+            }, {
+                type: 'product',
+                value: null,
+            }, {
+                type: 'number',
+                value: 4,
+            }]
+        }],
+    }
+});
+test('brackets', compileAndRunMacro, {
+    source: 'return (3)',
+    expectedExitCode: 3,
+});
+test.failing('double product with brackets', compileAndRunMacro, {
+    source: 'return 2 * (3 * 4) * 3',
+    expectedExitCode: 72,
+});
 //test('myVar = 3 * 3 return 9', compileAndRunMacro, 'myVar = 3 * 3 return 9', 9);
