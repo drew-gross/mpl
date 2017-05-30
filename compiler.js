@@ -163,6 +163,7 @@ const parse = tokens => {
     ast = flattenAst(ast);
     ast = repairAssociativity(ast);
     ast = lowerProduct2(ast);
+    ast = lowerBracketedExpressions(ast);
     return ast;
 };
 
@@ -205,8 +206,6 @@ const lowerProduct2 = ast => {
 const compile = ({ source, target }) => {
     let tokens = lex(source);
     ast = parse(tokens);
-    ast = repairAssociativity(ast);
-    ast = lowerBracketedExpressions(ast);
     if (target == 'js') {
         return toJS(ast);
     } else if (target == 'c') {

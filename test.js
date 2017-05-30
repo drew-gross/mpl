@@ -53,7 +53,7 @@ test('ast for single number', t => {
 });
 
 test('ast for number in brackets', t => {
-    t.deepEqual(parse(lex(' return (5)')), {
+    t.deepEqual(parse(lex(' return (5)')), lowerBracketedExpressions({
         type: 'returnStatement',
         children: [{
             type: 'return',
@@ -71,11 +71,11 @@ test('ast for number in brackets', t => {
                 value: null,
             }]
         }]
-    });
+    }));
 });
 
 test('ast for number in double brackets', t => {
-    t.deepEqual(parse(lex('return ((20))')), {
+    t.deepEqual(parse(lex('return ((20))')), lowerBracketedExpressions({
         type: 'returnStatement',
         children: [{
             type: 'return',
@@ -102,11 +102,11 @@ test('ast for number in double brackets', t => {
                 value: null,
             }]
         }],
-    });
+    }));
 });
 
 test('ast for product with brackets', t => {
-    t.deepEqual(parse(lex('return 3 * (4 * 5)')), {
+    t.deepEqual(parse(lex('return 3 * (4 * 5)')), lowerBracketedExpressions({
         type: 'returnStatement',
         children: [{
             type: 'return',
@@ -142,7 +142,7 @@ test('ast for product with brackets', t => {
                 }]
             }]
         }]
-    });
+    }));
 });
 
 test('ast for assignment then return', t => {
