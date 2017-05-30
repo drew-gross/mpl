@@ -145,7 +145,7 @@ test('ast for product with brackets', t => {
     });
 });
 
-/*test('ast for triple product', t => {
+test('ast for triple product', t => {
     t.deepEqual(parse(lex('return 5 * 3 * 4')), {
         type: 'returnStatement',
         children: [{
@@ -174,7 +174,7 @@ test('ast for product with brackets', t => {
             }]
         }],
     });
-});*/
+});
 
 test('ast for assignment then return', t => {
     t.deepEqual(parse(lex('myVar = 3 * 3 return 9')), {

@@ -96,7 +96,10 @@ const parseProgram = alternative([
 
 const flattenAst = ast => {
     if (ast.children) {
-        return { type: ast.type, children: ast.children.map(flattenAst) };
+        return {
+            type: ast.type,
+            children: ast.children.map(flattenAst),
+        };
     } else {
         return {
             type: ast.type,
@@ -105,13 +108,42 @@ const flattenAst = ast => {
     }
 }
 
+const repairAssociativity = ast => {
+    if (ast.type === 'product1' && ast.children[2].type === 'product1') {
+        return {
+            type: 'product1',
+            children: [{
+                type: 'product1',
+                children: [
+                    repairAssociativity(ast.children[0]),
+                    { type: 'product', value: null },
+                    repairAssociativity(ast.children[2].children[0]),
+                ],
+            }, {
+                type: 'product',
+                value: null,
+            },
+                repairAssociativity(ast.children[2].children[2]),
+            ],
+        };
+    } else if ('children' in ast) {
+        return {
+            type: ast.type,
+            children: ast.children.map(repairAssociativity),
+        }
+    } else {
+        return ast;
+    }
+}
+
 const parse = tokens => {
-    const resultTree = parseProgram(tokens, 0)
-    if (resultTree.success === false) {
+    let ast = parseProgram(tokens, 0)
+    if (ast.success === false) {
         return { error: 'Unable to parse' };
     }
-    const flattenedTree = flattenAst(resultTree);
-    return flattenedTree;
+    ast = flattenAst(ast);
+    ast = repairAssociativity(ast);
+    return ast;
 };
 
 const lowerBracketedExpressions = ast => {
@@ -130,6 +162,7 @@ const lowerBracketedExpressions = ast => {
 const compile = ({ source, target }) => {
     let tokens = lex(source);
     ast = parse(tokens);
+    ast = repairAssociativity(ast);
     ast = lowerBracketedExpressions(ast);
     if (target == 'js') {
         return toJS(ast);
