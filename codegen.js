@@ -13,7 +13,7 @@ const astToC = ast => {
             `{
                 char tmp1 = stack[stackSize - 1]; stackSize--;
                 char tmp2 = stack[stackSize - 1]; stackSize--;
-                stack[stackSize] = tmp1 + tmp2; stackSize++;
+                stack[stackSize] = tmp1 * tmp2; stackSize++;
             }`
         ];
         case 'statement': return flatten(ast.children.map(astToC));
@@ -71,12 +71,32 @@ ${JS.join('\n')}
 const astToMips = ast => {
     switch (ast.type) {
         case 'returnStatement': return [...astToMips(ast.children[1]), `
+addiu $sp, $sp, 4
+lw $a0, ($sp)
 li $v0, 1
 syscall
 li $v0, 10
 syscall
 `];
-        case 'number': return [`li $a0, ${ast.value}`];
+        case 'number': return [`
+li $t1, ${ast.value}
+sw $t1, ($sp)
+addiu $sp, $sp -4
+`];
+        case 'product1': return [
+            ...astToMips(ast.children[0]),
+            ...astToMips(ast.children[2]),
+            `
+addiu $sp, $sp, 4
+lw $t1, ($sp)
+addiu $sp, $sp, 4
+lw $t2, ($sp)
+mult $t1, $t2
+mflo $t1
+sw $t1, ($sp)
+addiu $sp, $sp -4
+`,
+        ];
     }
 }
 
