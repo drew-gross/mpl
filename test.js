@@ -281,7 +281,7 @@ test('lowering of bracketedExpressions', t => {
 
 test('return 7', compileAndRunMacro, 'return 7', 7);
 test('return 2 * 2', compileAndRunMacro, 'return 2 * 2', 4);
-//test('triple product', compileAndRunMacro, 'return 5 * 3 * 4', 60);
+test('triple product', compileAndRunMacro, 'return 5 * 3 * 4', 60);
 test('brackets', compileAndRunMacro, 'return (3)', 3);
 //test('complicated product', compileAndRunMacro, 'return 2 * (3 * 4) * 3', 72);
 //test('myVar = 3 * 3 return 9', compileAndRunMacro, 'myVar = 3 * 3 return 9', 9);
