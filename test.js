@@ -13,29 +13,29 @@ import { exec } from 'child-process-promise';
 
 test('lexer', t => {
     t.deepEqual(lex('123'), [
-        { type: 'number', value: 123 },
+        { type: 'number', value: 123, string: '123' },
     ]);
     t.deepEqual(lex('123 456'), [
-        { type: 'number', value: 123 },
-        { type: 'number', value: 456 },
+        { type: 'number', value: 123, string: '123' },
+        { type: 'number', value: 456, string: '456' },
     ]);
     t.deepEqual(lex('&&&&&'), [
-        { type: 'invalid', value: '&&&&&' },
+        { type: 'invalid', value: '&&&&&', string: '&&&&&' },
     ]);
     t.deepEqual(lex('(1)'), [
-        { type: 'leftBracket', value: null },
-        { type: 'number', value: 1 },
-        { type: 'rightBracket', value: null },
+        { type: 'leftBracket', value: null, string: '(' },
+        { type: 'number', value: 1, string: '1' },
+        { type: 'rightBracket', value: null, string: ')' },
     ]);
     t.deepEqual(lex('return 100'), [
-        { type: 'return', value: null },
-        { type: 'number', value: 100 },
+        { type: 'return', value: null, string: 'return' },
+        { type: 'number', value: 100, string: '100' },
     ]);
 });
 
 test('lex with initial whitespace', t => {
     t.deepEqual(lex(' 123'), [
-        { type: 'number', value: 123 },
+        { type: 'number', value: 123, string: '123' },
     ]);
 });
 
@@ -198,7 +198,7 @@ const compileAndRunMacro = async (t, {
 }) => {
     // Check the AST if asked
     if (expetedAst) {
-        t.deepEqual(parse(lex(source)), expetedAst);
+        t.deepEqual(lowerBracketedExpressions(parse(lex(source))), expetedAst);
     }
 
     // C backend
@@ -301,8 +301,60 @@ test('brackets', compileAndRunMacro, {
     source: 'return (3)',
     expectedExitCode: 3,
 });
+test('brackets product', compileAndRunMacro, {
+    source: 'return (3 * 4) * 5',
+    expectedExitCode: 60,
+    expetedAst: {
+        type: 'returnStatement',
+        children: [{
+            type: 'return',
+            value: null,
+        }, {
+            type: 'product1',
+            children: [{
+                type: 'product1',
+                children: [{
+                    type: 'number',
+                    value: 3,
+                }, {
+                    type: 'product',
+                    value: null,
+                }, {
+                    type: 'number',
+                    value: 4,
+                }],
+            }, {
+                type: 'product',
+                value: null,
+            }, {
+                type: 'number',
+                value: 5,
+            }],
+        }],
+    },
+});
 test.failing('double product with brackets', compileAndRunMacro, {
-    source: 'return 2 * (3 * 4) * 3',
+    source: 'return 2 * (3 * 4) * 5',
     expectedExitCode: 72,
+    expetedAst: {
+        type: 'returnStatement',
+        children: [{
+            type: 'return',
+            value: null,
+        }, {
+            type: 'product1',
+            children: [{
+                type: 'product1',
+                children: [{
+                }],
+            }, {
+                type: 'product',
+                value: null,
+            }, {
+                type: 'number',
+                value: 5
+            }],
+        }],
+    },
 });
 //test('myVar = 3 * 3 return 9', compileAndRunMacro, 'myVar = 3 * 3 return 9', 9);

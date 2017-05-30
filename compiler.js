@@ -1,38 +1,49 @@
 const { alternative, sequence, terminal } = require('./parser-combinator.js');
 const { toJS, toC, toMips } = require('./codegen.js');
 
+let tokensToString = tokens => tokens.map(token => token.string).join('');
+
 const lex = input => {
 
     const tokenSpecs = [{
         token: 'return',
         type: 'return',
+        toString: () => 'return',
     }, {
         token: '[a-zA-Z]\\w*',
         type: 'identifier',
         action: x => x,
+        toString: x => x,
     }, {
         token: '=',
         type: 'assignment',
+        toString: () => '=',
     }, {
         token: '\\d+',
         type: 'number',
         action: parseInt,
+        toString: x => x.toString(),
     }, {
         token: '\\+',
         type: 'sum',
+        toString: () => '+',
     }, {
         token: '\\*',
         type: 'product',
+        toString: () => '*',
     }, {
         token: '\\(',
         type: 'leftBracket',
+        toString: () => '(',
     }, {
         token: '\\)',
         type: 'rightBracket',
+        toString: () => ')',
     }, {
         token: '.*',
         type: 'invalid',
         action: x => x,
+        toString: x => x,
     }];
 
     // slurp initial whitespace
@@ -46,53 +57,59 @@ const lex = input => {
             if (!match) continue;
             input = input.slice(match[0].length);
             const action = tokenSpec.action || (() => null);
-            tokens.push({ type: tokenSpec.type, value: action(match[1])});
+            const value = action(match[1]);
+            tokens.push({
+                type: tokenSpec.type,
+                value,
+                string: tokenSpec.toString(value),
+            });
             break;
         }
     }
     return tokens;
 };
 
+let parseProgram = (t, i) => parseProgramI(t, i);
+let parseStatement = (t, i) => parseStatementI(t, i);
+let parseExpression = (t, i) => parseExpressionI(t, i);
+let parseProduct = (t, i) => parseProductI(t, i);
+
 // Grammar:
 // PROGRAM -> STATEMENT PROGRAM | return EXPRESSION
+const parseProgramI = alternative([
+    sequence('statement', [parseStatement, parseProgram]),
+    sequence('returnStatement', [terminal('return'), parseExpression]),
+]);
+
 // STATEMENT -> identifier = EXPRESSION
-// EXPRESSION -> PRODUCT | ( EXPRESSION ) | int
-// PRODUCT -> int * EXPRESSION | ( EXPRESSION * EXPRESSION )
-
-const parseProduct1 = sequence('product1', [
-    terminal('number'),
-    terminal('product'),
-    (t, i) => parseExpression(t, i),
-]);
-const parseProduct2 = sequence('product2', [
-    terminal('leftBracket'),
-    (t, i) => parseExpression(t, i),
-    terminal('product'),
-    (t, i) => parseExpression(t, i),
-    terminal('rightBracket'),
-]);
-const parseProduct = alternative([parseProduct1, parseProduct2]);
-
-const parseExpression1 = parseProduct;
-const parseExpression2 = sequence('bracketedExpression', [
-    terminal('leftBracket'),
-    (t, i) => parseExpression(t, i),
-    terminal('rightBracket'),
-]);
-const parseExpression3 = terminal('number');
-
-const parseExpression = alternative([parseExpression1, parseExpression2, parseExpression3]);
-
-const parseStatement = sequence('assignment', [
+const parseStatementI = sequence('assignment', [
     terminal('identifier'),
     terminal('assignment'),
     parseExpression,
 ]);
 
-const parseProgram = alternative([
-    sequence('statement', [parseStatement, (t, i) => parseProgram(t, i)]),
-    sequence('returnStatement', [terminal('return'), parseExpression]),
+// EXPRESSION -> PRODUCT | ( EXPRESSION ) | int
+const parseExpression2 = sequence('bracketedExpression', [
+    terminal('leftBracket'),
+    parseExpression,
+    terminal('rightBracket'),
 ]);
+const parseExpressionI = alternative([parseProduct, parseExpression2, terminal('number')]);
+
+// PRODUCT -> int * EXPRESSION | ( EXPRESSION ) * EXPRESSION
+const parseProduct1 = sequence('product1', [
+    terminal('number'),
+    terminal('product'),
+    parseExpression,
+]);
+const parseProduct2 = sequence('product2', [
+    terminal('leftBracket'),
+    parseExpression,
+    terminal('rightBracket'),
+    terminal('product'),
+    parseExpression,
+]);
+const parseProductI = alternative([parseProduct1, parseProduct2]);
 
 const flattenAst = ast => {
     if (ast.children) {
@@ -137,12 +154,15 @@ const repairAssociativity = ast => {
 }
 
 const parse = tokens => {
+    //debugger;
+    //console.log(tokensToString(tokens));
     let ast = parseProgram(tokens, 0)
     if (ast.success === false) {
         return { error: 'Unable to parse' };
     }
     ast = flattenAst(ast);
     ast = repairAssociativity(ast);
+    ast = lowerProduct2(ast);
     return ast;
 };
 
@@ -154,6 +174,29 @@ const lowerBracketedExpressions = ast => {
             type: ast.type,
             children: ast.children.map(lowerBracketedExpressions),
         };
+    } else {
+        return ast;
+    }
+};
+
+const lowerProduct2 = ast => {
+    if (ast.type === 'product2') {
+        return {
+            type: 'product1',
+            children: [
+                lowerProduct2(ast.children[1]),
+            {
+                type: 'product',
+                value: null,
+            },
+                lowerProduct2(ast.children[4])
+            ],
+        };
+    } else if ('children' in ast) {
+        return {
+            type: ast.type,
+            children: ast.children.map(lowerProduct2),
+        }
     } else {
         return ast;
     }
