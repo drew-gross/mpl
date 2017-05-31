@@ -153,18 +153,7 @@ const repairAssociativity = ast => {
         return ast;
     }
 }
-const lowerBracketedExpressions = ast => {
-    if (ast.type === 'bracketedExpression') {
-        return lowerBracketedExpressions(ast.children[1]);
-    } else if ('children' in ast) {
-        return {
-            type: ast.type,
-            children: ast.children.map(lowerBracketedExpressions),
-        };
-    } else {
-        return ast;
-    }
-};
+const lowerBracketedExpressions = ast => transformAst('bracketedExpression', node => node.children[1], ast);
 
 const lowerProduct2 = ast => {
     if (ast.type === 'product2') {
@@ -210,6 +199,8 @@ const parse = tokens => {
     ast = flattenAst(ast);
     ast = repairAssociativity(ast);
     ast = lowerProduct2(ast);
+
+    // Lower bracketed expressions to nothing
     ast = lowerBracketedExpressions(ast);
 
     // Lower product1 to product
