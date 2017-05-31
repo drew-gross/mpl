@@ -7,9 +7,9 @@ const astToC = ast => {
             `return stack[0];`
         ];
         case 'number': return [`stack[stackSize] = ${ast.value}; stackSize++;`];
-        case 'product1': return [
+        case 'product': return [
             ...astToC(ast.children[0]),
-            ...astToC(ast.children[2]),
+            ...astToC(ast.children[1]),
             `{
                 char tmp1 = stack[stackSize - 1]; stackSize--;
                 char tmp2 = stack[stackSize - 1]; stackSize--;
@@ -44,9 +44,9 @@ const astToJS = ast => {
     switch (ast.type) {
         case 'returnStatement': return [...astToJS(ast.children[1]), `process.exit(stack[0]);`];
         case 'number': return [`stack.push(${ast.value});`];
-        case 'product1': return [
+        case 'product': return [
             ...astToJS(ast.children[0]),
-            ...astToJS(ast.children[2]),
+            ...astToJS(ast.children[1]),
             `{ let tmp1 = stack.pop(); let tmp2 = stack.pop(); stack.push(tmp1 * tmp2); }`,
         ];
         case 'statement': return flatten(ast.children.map(astToJS));
@@ -83,9 +83,9 @@ li $t1, ${ast.value}
 sw $t1, ($sp)
 addiu $sp, $sp -4
 `];
-        case 'product1': return [
+        case 'product': return [
             ...astToMips(ast.children[0]),
-            ...astToMips(ast.children[2]),
+            ...astToMips(ast.children[1]),
             `
 addiu $sp, $sp, 4
 lw $t1, ($sp)

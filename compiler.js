@@ -76,19 +76,21 @@ let parseProduct = (t, i) => parseProductI(t, i);
 
 // Grammar:
 // PROGRAM -> STATEMENT PROGRAM | return EXPRESSION
+// STATEMENT -> identifier = EXPRESSION
+// EXPRESSION -> PRODUCT | ( EXPRESSION ) | int
+// PRODUCT -> int * EXPRESSION | ( EXPRESSION ) * EXPRESSION
+
 const parseProgramI = alternative([
     sequence('statement', [parseStatement, parseProgram]),
     sequence('returnStatement', [terminal('return'), parseExpression]),
 ]);
 
-// STATEMENT -> identifier = EXPRESSION
 const parseStatementI = sequence('assignment', [
     terminal('identifier'),
     terminal('assignment'),
     parseExpression,
 ]);
 
-// EXPRESSION -> PRODUCT | ( EXPRESSION ) | int
 const parseExpression2 = sequence('bracketedExpression', [
     terminal('leftBracket'),
     parseExpression,
@@ -96,7 +98,6 @@ const parseExpression2 = sequence('bracketedExpression', [
 ]);
 const parseExpressionI = alternative([parseProduct, parseExpression2, terminal('number')]);
 
-// PRODUCT -> int * EXPRESSION | ( EXPRESSION ) * EXPRESSION
 const parseProduct1 = sequence('product1', [
     terminal('number'),
     terminal('product'),
@@ -152,21 +153,6 @@ const repairAssociativity = ast => {
         return ast;
     }
 }
-
-const parse = tokens => {
-    //debugger;
-    //console.log(tokensToString(tokens));
-    let ast = parseProgram(tokens, 0)
-    if (ast.success === false) {
-        return { error: 'Unable to parse' };
-    }
-    ast = flattenAst(ast);
-    ast = repairAssociativity(ast);
-    ast = lowerProduct2(ast);
-    ast = lowerBracketedExpressions(ast);
-    return ast;
-};
-
 const lowerBracketedExpressions = ast => {
     if (ast.type === 'bracketedExpression') {
         return lowerBracketedExpressions(ast.children[1]);
@@ -202,6 +188,38 @@ const lowerProduct2 = ast => {
         return ast;
     }
 };
+
+const lowerProduct1 = ast => {
+    if (ast.type === 'product1') {
+        return {
+            type: 'product',
+            children: [lowerProduct1(ast.children[0]), lowerProduct1(ast.children[2])],
+        }
+    } else if ('children' in ast) {
+        return {
+            type: ast.type,
+            children: ast.children.map(lowerProduct1),
+        };
+    } else {
+        return ast;
+    }
+}
+
+const parse = tokens => {
+    //debugger;
+    //console.log(tokensToString(tokens));
+    let ast = parseProgram(tokens, 0)
+    if (ast.success === false) {
+        return { error: 'Unable to parse' };
+    }
+    ast = flattenAst(ast);
+    ast = repairAssociativity(ast);
+    ast = lowerProduct2(ast);
+    ast = lowerBracketedExpressions(ast);
+    ast = lowerProduct1(ast);
+    return ast;
+};
+
 
 const compile = ({ source, target }) => {
     let tokens = lex(source);

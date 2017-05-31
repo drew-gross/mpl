@@ -112,26 +112,20 @@ test('ast for product with brackets', t => {
             type: 'return',
             value: null,
         }, {
-            type: 'product1',
+            type: 'product',
             children: [{
                 type: 'number',
                 value: 3
-            }, {
-                type: 'product',
-                value: null
             }, {
                 type: 'bracketedExpression',
                 children: [{
                     type: 'leftBracket',
                     value: null
                 }, {
-                    type: 'product1',
+                    type: 'product',
                     children: [{
                         type: 'number',
                         value: 4
-                    }, {
-                        type: 'product',
-                        value: null
                     }, {
                         type: 'number',
                         value: 5
@@ -157,13 +151,10 @@ test('ast for assignment then return', t => {
                 type: 'assignment',
                 value: null,
             }, {
-                type: 'product1',
+                type: 'product',
                 children: [{
                     type: 'number',
                     value: 3,
-                }, {
-                    type: 'product',
-                    value: null,
                 }, {
                     type: 'number',
                     value: 3,
@@ -242,13 +233,10 @@ test('lowering of bracketedExpressions', t => {
             type: 'return',
             value: null,
         }, {
-            type: 'product1',
+            type: 'product',
             children: [{
                 type: 'number',
                 value: 8
-            }, {
-                type: 'product',
-                value: null,
             }, {
                 type: 'number',
                 value: 7,
@@ -274,22 +262,16 @@ test('double product', compileAndRunMacro, {
             type: 'return',
             value: null,
         }, {
-            type: 'product1',
+            type: 'product',
             children: [{
-                type: 'product1',
+                type: 'product',
                 children: [{
                     type: 'number',
                     value: 5,
                 }, {
-                    type: 'product',
-                    value: null,
-                }, {
                     type: 'number',
                     value: 3
                 }]
-            }, {
-                type: 'product',
-                value: null,
             }, {
                 type: 'number',
                 value: 4,
@@ -310,22 +292,16 @@ test('brackets product', compileAndRunMacro, {
             type: 'return',
             value: null,
         }, {
-            type: 'product1',
+            type: 'product',
             children: [{
-                type: 'product1',
+                type: 'product',
                 children: [{
                     type: 'number',
                     value: 3,
                 }, {
-                    type: 'product',
-                    value: null,
-                }, {
                     type: 'number',
                     value: 4,
                 }],
-            }, {
-                type: 'product',
-                value: null,
             }, {
                 type: 'number',
                 value: 5,
