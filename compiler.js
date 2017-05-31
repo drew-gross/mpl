@@ -205,9 +205,20 @@ const lowerProduct1 = ast => {
     }
 }
 
+const transformAst = (nodeType, f, ast) => {
+    if (ast.type === nodeType) {
+        return transformAst(nodeType, f, f(ast));
+    } else if ('children' in ast) {
+        return {
+            type: ast.type,
+            children: ast.children.map(child => transformAst(nodeType, f, child)),
+        };
+    } else {
+        return ast;
+    }
+}
+
 const parse = tokens => {
-    //debugger;
-    //console.log(tokensToString(tokens));
     let ast = parseProgram(tokens, 0)
     if (ast.success === false) {
         return { error: 'Unable to parse' };
@@ -217,6 +228,7 @@ const parse = tokens => {
     ast = lowerProduct2(ast);
     ast = lowerBracketedExpressions(ast);
     ast = lowerProduct1(ast);
+    ast = transformAst('product1', node => ({ type: 'product', children: [ast.children[0], ast.children[2]] }), ast);
     return ast;
 };
 

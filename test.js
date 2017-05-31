@@ -189,7 +189,7 @@ const compileAndRunMacro = async (t, {
 }) => {
     // Check the AST if asked
     if (expetedAst) {
-        t.deepEqual(lowerBracketedExpressions(parse(lex(source))), expetedAst);
+        t.deepEqual(parse(lex(source)), expetedAst);
     }
 
     // C backend
