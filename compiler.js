@@ -227,8 +227,7 @@ const parse = tokens => {
     ast = repairAssociativity(ast);
     ast = lowerProduct2(ast);
     ast = lowerBracketedExpressions(ast);
-    ast = lowerProduct1(ast);
-    ast = transformAst('product1', node => ({ type: 'product', children: [ast.children[0], ast.children[2]] }), ast);
+    ast = transformAst('product1', node => ({ type: 'product', children: [node.children[0], node.children[2]] }), ast);
     return ast;
 };
 
