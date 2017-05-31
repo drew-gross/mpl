@@ -155,29 +155,6 @@ const repairAssociativity = ast => {
 }
 const lowerBracketedExpressions = ast => transformAst('bracketedExpression', node => node.children[1], ast);
 
-const lowerProduct2 = ast => {
-    if (ast.type === 'product2') {
-        return {
-            type: 'product1',
-            children: [
-                lowerProduct2(ast.children[1]),
-            {
-                type: 'product',
-                value: null,
-            },
-                lowerProduct2(ast.children[4])
-            ],
-        };
-    } else if ('children' in ast) {
-        return {
-            type: ast.type,
-            children: ast.children.map(lowerProduct2),
-        }
-    } else {
-        return ast;
-    }
-};
-
 const transformAst = (nodeType, f, ast) => {
     if (ast.type === nodeType) {
         return transformAst(nodeType, f, f(ast));
@@ -197,8 +174,15 @@ const parse = tokens => {
         return { error: 'Unable to parse' };
     }
     ast = flattenAst(ast);
+
+    // repair associativity of product
     ast = repairAssociativity(ast);
-    ast = lowerProduct2(ast);
+
+    // Lower product 2 -> product 1
+    ast = transformAst('product2', node => ({
+        type: 'product1',
+        children: [node.children[1], { type: 'product', value: null }, node.children[4]],
+    }), ast);
 
     // Lower bracketed expressions to nothing
     ast = lowerBracketedExpressions(ast);
