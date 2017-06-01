@@ -1,21 +1,23 @@
 .data
 myvar: .word 3
 .text
+times_three:
+    li $a1, 3
+    mult $a0, $a1
+    mflo $a0
+    jr $ra
+
 main:
 
-# print myvar
-la $t1, myvar
-lw $a0, ($t1)
-li $v0, 1
-syscall
+    # print myvar
+    la $t1, myvar
+    lw $a0, ($t1)
+    li $v0, 1
+    syscall
 
-# set myvar to 5
-li $t2, 5
-sw $t2, ($t1)
-lw $a0, ($t1)
+    # multiply by three
+    jal times_three
+    syscall
 
-syscall
-
-
-li $v0, 10
-syscall
+    li $v0, 10
+    syscall
