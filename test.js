@@ -140,26 +140,32 @@ test('ast for product with brackets', t => {
 });
 
 test('ast for assignment then return', t => {
-    t.deepEqual(parse(lex('myVar = 3 * 3 return 9')), {
+    const expected = {
         type: 'statement',
         children: [{
             type: 'assignment',
             children: [{
                 type: 'identifier',
-                value: 'myVar',
+                value: 'constThree',
             }, {
                 type: 'assignment',
                 value: null,
             }, {
-                type: 'product',
+                type: 'function',
                 children: [{
-                    type: 'number',
-                    value: 3,
+                    type: 'identifier',
+                    value: 'a',
+                }, {
+                    type: 'fatArrow',
+                    value: null,
                 }, {
                     type: 'number',
                     value: 3,
                 }],
             }],
+        }, {
+            type: 'statementSeparator',
+            value: null,
         }, {
             type: 'returnStatement',
             children: [{
@@ -167,10 +173,15 @@ test('ast for assignment then return', t => {
                 value: null,
             }, {
                 type: 'number',
-                value: 9,
+                value: 10,
             }],
         }],
-    });
+    };
+    const astWithSemicolon = parse(lex('constThree = a => 3; return 10'));
+    const astWithNewline = parse(lex('constThree = a => 3\n return 10'));
+
+    t.deepEqual(astWithSemicolon, expected);
+    t.deepEqual(astWithNewline, expected);
 });
 
 const execAndGetExitCode = async command => {

@@ -15,6 +15,14 @@ const lex = input => {
         action: x => x,
         toString: x => x,
     }, {
+        token: ';|\\n',
+        type: 'statementSeparator',
+        toString: () => '\n',
+    }, {
+        token: '=>',
+        type: 'fatArrow',
+        toString: () => '=>',
+    }, {
         token: '=',
         type: 'assignment',
         toString: () => '=',
@@ -53,7 +61,7 @@ const lex = input => {
     let tokens = [];
     while (input.length > 0) {
         for (const tokenSpec of tokenSpecs) {
-            const match = input.match(RegExp(`^(${tokenSpec.token})\\s*`));
+            const match = input.match(RegExp(`^(${tokenSpec.token})[ \\t]*`));
             if (!match) continue;
             input = input.slice(match[0].length);
             const action = tokenSpec.action || (() => null);
@@ -69,26 +77,37 @@ const lex = input => {
     return tokens;
 };
 
-let parseProgram = (t, i) => parseProgramI(t, i);
-let parseStatement = (t, i) => parseStatementI(t, i);
-let parseExpression = (t, i) => parseExpressionI(t, i);
-let parseProduct = (t, i) => parseProductI(t, i);
+const parseProgram = (t, i) => parseProgramI(t, i);
+const parseStatement = (t, i) => parseStatementI(t, i);
+const parseFunction = (t, i) => parseFunctionI(t, i);
+const parseArgList = (t, i) => parseArgListI(t, i);
+const parseExpression = (t, i) => parseExpressionI(t, i);
+const parseProduct = (t, i) => parseProductI(t, i);
 
 // Grammar:
-// PROGRAM -> STATEMENT PROGRAM | return EXPRESSION
-// STATEMENT -> identifier = EXPRESSION
+// PROGRAM -> STATEMENT STATEMENT_SEPARATOR PROGRAM | return EXPRESSION
+// STATEMENT -> identifier = FUNCTION
+// FUNCTION -> ARG_LIST => EXPRESSION
+// ARG_LIST -> identifier, ARG_LIST | identifier
 // EXPRESSION -> PRODUCT | ( EXPRESSION ) | int
 // PRODUCT -> int * EXPRESSION | ( EXPRESSION ) * EXPRESSION
 
 const parseProgramI = alternative([
-    sequence('statement', [parseStatement, parseProgram]),
+    sequence('statement', [parseStatement, terminal('statementSeparator'), parseProgram]),
     sequence('returnStatement', [terminal('return'), parseExpression]),
 ]);
 
 const parseStatementI = sequence('assignment', [
     terminal('identifier'),
     terminal('assignment'),
-    parseExpression,
+    parseFunction,
+]);
+
+const parseFunctionI = sequence('function', [parseArgList, terminal('fatArrow'), parseExpression]);
+
+const parseArgListI = alternative([
+    sequence('argList', [terminal('identifier'), terminal('comma'), parseArgList]),
+    terminal('identifier'),
 ]);
 
 const parseExpression2 = sequence('bracketedExpression', [
