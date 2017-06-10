@@ -123,11 +123,14 @@ sw $t1, ($sp)
 addiu $sp, $sp -4
 `,
         ];
+        case 'statement': return flatten(ast.children.map(astToMips));
+        default:
+            debugger;
     }
 }
 
-const toMips = ast => {
-    let mips = astToMips(ast);
+const toMips = (functions, program) => {
+    let mips = astToMips(program);
     return `
 .text
 main:

@@ -224,7 +224,7 @@ const compileAndRunMacro = async (t, {
     if (jsExitCode !== expectedExitCode) {
         t.fail(`JS returned ${jsExitCode} when it should have returned ${expectedExitCode}: ${jsSource}`);
     }
-/*
+
     // Mips backend
     const mipsFile = await tmp.file({ postfix: '.s' });
     const mipsSource = compile({ source, target: 'mips' });
@@ -234,7 +234,7 @@ const compileAndRunMacro = async (t, {
     if (mipsExitCode !== expectedExitCode) {
         t.fail(`mips returned ${mipsExitCode} when it should have returned ${expectedExitCode}: ${mipsSource}`);
     }
-    t.pass();*/
+    t.pass();
 };
 
 test('lowering of bracketedExpressions', t => {
