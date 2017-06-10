@@ -1,6 +1,8 @@
 const { alternative, sequence, terminal } = require('./parser-combinator.js');
 const { toJS, toC, toMips } = require('./codegen.js');
 
+const flatten = array => array.reduce((a, b) => a.concat(b), []);
+
 let tokensToString = tokens => tokens.map(token => token.string).join('');
 
 const lex = input => {
@@ -187,6 +189,36 @@ const transformAst = (nodeType, f, ast) => {
     }
 }
 
+let functionId = 0;
+
+const extractFunctions = ast => {
+    const newFunctions = [];
+    const newAst = {};
+    if (ast.type === 'function') {
+        const functionName = `anonymous_${functionId}`;
+        functionId++;
+        newFunctions.push({
+            name: functionName,
+            argument: ast.children[0],
+            body: ast.children[2]
+        });
+        newAst.type = 'functionLiteral';
+        newAst.value = functionName;
+    } else if ('children' in ast) {
+        const otherFuntions = ast.children.map(extractFunctions);
+        newAst.type = ast.type;
+        newAst.children = [];
+        otherFuntions.forEach(({ functions, program }) => {
+            newFunctions.push(...functions);
+            newAst.children.push(program);
+        });
+    } else {
+        newAst.type = ast.type;
+        newAst.value = ast.value;
+    }
+    return { functions: newFunctions, program: newAst };
+};
+
 const parse = tokens => {
     let ast = parseProgram(tokens, 0)
     if (ast.success === false) {
@@ -208,19 +240,21 @@ const parse = tokens => {
 
     // Lower product1 to product
     ast = transformAst('product1', node => ({ type: 'product', children: [node.children[0], node.children[2]] }), ast);
+
     return ast;
 };
 
 
 const compile = ({ source, target }) => {
-    let tokens = lex(source);
-    ast = parse(tokens);
+    const tokens = lex(source);
+    const ast = parse(tokens);
+    const { functions, program } = extractFunctions(ast);
     if (target == 'js') {
-        return toJS(ast);
+        return toJS(functions, program);
     } else if (target == 'c') {
-        return toC(ast);
+        return toC(functions, program);
     } else if (target == 'mips') {
-        return toMips(ast);
+        return toMips(functions, program);
     }
 };
 
