@@ -1,8 +1,8 @@
 .data
 myvar: .word 3
 .text
-times_three:
-    li $a1, 3
+times_four:
+    li $a1, 4
     mult $a0, $a1
     mflo $a0
     jr $ra
@@ -16,7 +16,8 @@ main:
     syscall
 
     # multiply by three
-    jal times_three
+    la $t1, times_four
+    jal $t1
     syscall
 
     li $v0, 10
