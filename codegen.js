@@ -25,6 +25,7 @@ const astToC = ast => {
             `;`,
         ];
         case 'functionLiteral': return [`&${ast.value}`];
+        case 'callExpression': return [`(*${ast.children[0].value})(0)`]; // Args unused for now >.<
         default:
             debugger;
             return;
@@ -72,6 +73,7 @@ const astToJS = ast => {
             ';',
         ]
         case 'functionLiteral': return [ast.value];
+        case 'callExpression': return [`${ast.children[0].value}()`]; // No args for now >.<
         default:
             debugger;
             return;
@@ -106,8 +108,6 @@ syscall
 `];
         case 'number': return [`
 li $t1, ${ast.value}
-sw $t1, ($sp)
-addiu $sp, $sp -4
 `];
         case 'product': return [
             ...astToMips(ast.children[0]),
@@ -124,17 +124,34 @@ addiu $sp, $sp -4
 `,
         ];
         case 'statement': return flatten(ast.children.map(astToMips));
+        case 'callExpression': debugger; return [`
+# la $t1, $t1
+jal $t1
+`];
+        case 'assignment': return [
+`# $t1 = ${ast.children[0].value}
+la $t1, ${ast.children[2].value}
+`]
         default:
             debugger;
     }
 }
 
 const toMips = (functions, program) => {
-    let mips = astToMips(program);
+    let mipsFunctions = functions.map(({ name, argument, body }) => {
+        return `
+${name}:
+${astToMips(body)}
+move $v0, $t1
+jr $ra
+`;
+    });
+    let mipsProgram = astToMips(program);
     return `
 .text
+${mipsFunctions.join('\n')}
 main:
-${mips.join('\n')}
+${mipsProgram.join('\n')}
 `;
 }
 
