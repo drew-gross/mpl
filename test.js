@@ -198,9 +198,15 @@ const compileAndRunMacro = async (t, {
     expectedExitCode,
     expetedAst,
 }) => {
+    // Make sure it parses
+    const parseResult = parse(lex(source));
+    if (parseResult.error === 'Unable to parse') {
+        t.fail(`Unable to parse "${source}"`);
+    }
+
     // Check the AST if asked
     if (expetedAst) {
-        t.deepEqual(parse(lex(source)), expetedAst);
+        t.deepEqual(parseResult, expetedAst);
     }
 
     // C backend
@@ -260,10 +266,12 @@ test('bare return', compileAndRunMacro, {
     source: 'return 7',
     expectedExitCode: 7,
 });
+
 test('single product', compileAndRunMacro, {
     source: 'return 2 * 2',
     expectedExitCode: 4,
 });
+
 test('double product', compileAndRunMacro, {
     source: 'return 5 * 3 * 4',
     expectedExitCode: 60,
@@ -290,10 +298,12 @@ test('double product', compileAndRunMacro, {
         }],
     }
 });
+
 test('brackets', compileAndRunMacro, {
     source: 'return (3)',
     expectedExitCode: 3,
 });
+
 test('brackets product', compileAndRunMacro, {
     source: 'return (3 * 4) * 5',
     expectedExitCode: 60,
@@ -320,10 +330,17 @@ test('brackets product', compileAndRunMacro, {
         }],
     },
 });
-test.only('assign function and return', compileAndRunMacro, {
+
+test('assign function and return', compileAndRunMacro, {
     source: 'constThree = a => 3; return 10',
     expectedExitCode: 10,
 });
+
+test.only('assign function and call it', compileAndRunMacro, {
+    source: 'takeItToEleven = a => 11; return takeItToEleven(unused)',
+    expectedExitCode: 11
+});
+
 test.failing('double product with brackets', compileAndRunMacro, {
     source: 'return 2 * (3 * 4) * 5',
     expectedExitCode: 72,
@@ -348,4 +365,5 @@ test.failing('double product with brackets', compileAndRunMacro, {
         }],
     },
 });
+
 //test('myVar = 3 * 3 return 9', compileAndRunMacro, 'myVar = 3 * 3 return 9', 9);

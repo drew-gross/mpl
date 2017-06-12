@@ -5,6 +5,7 @@ const parseStatement = (t, i) => parseStatementI(t, i);
 const parseFunction = (t, i) => parseFunctionI(t, i);
 const parseArgList = (t, i) => parseArgListI(t, i);
 const parseExpression = (t, i) => parseExpressionI(t, i);
+const parseCallExpression = (t, i) => parseCallExpressionI(t, i);
 const parseProduct = (t, i) => parseProductI(t, i);
 
 // Grammar:
@@ -12,7 +13,8 @@ const parseProduct = (t, i) => parseProductI(t, i);
 // STATEMENT -> identifier = FUNCTION
 // FUNCTION -> ARG_LIST => EXPRESSION
 // ARG_LIST -> identifier, ARG_LIST | identifier
-// EXPRESSION -> PRODUCT | ( EXPRESSION ) | int
+// EXPRESSION -> PRODUCT | ( EXPRESSION ) | CALL_EXPRESSION | int
+// CALL_EXPRESSION -> identifier ( ARG_LIST )
 // PRODUCT -> int * EXPRESSION | ( EXPRESSION ) * EXPRESSION
 
 const parseProgramI = alternative([
@@ -38,7 +40,19 @@ const parseExpression2 = sequence('bracketedExpression', [
     parseExpression,
     terminal('rightBracket'),
 ]);
-const parseExpressionI = alternative([parseProduct, parseExpression2, terminal('number')]);
+const parseExpressionI = alternative([
+    parseProduct,
+    parseExpression2,
+    parseCallExpression,
+    terminal('number')
+]);
+
+const parseCallExpressionI = sequence('callExpression', [
+    terminal('identifier'),
+    terminal('leftBracket'),
+    parseArgList,
+    terminal('rightBracket'),
+]);
 
 const parseProduct1 = sequence('product1', [
     terminal('number'),

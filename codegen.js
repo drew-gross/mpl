@@ -99,8 +99,7 @@ ${JS.join('\n')}
 const astToMips = ast => {
     switch (ast.type) {
         case 'returnStatement': return [...astToMips(ast.children[1]), `
-addiu $sp, $sp, 4
-lw $a0, ($sp)
+move $a0, $v0
 li $v0, 1
 syscall
 li $v0, 10
