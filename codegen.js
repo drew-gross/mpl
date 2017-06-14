@@ -58,8 +58,8 @@ const astToJS = ast => {
         case 'number': return [ast.value.toString()];
         case 'product': return [
             ...astToJS(ast.children[0]),
+            '*',
             ...astToJS(ast.children[1]),
-            `{ let tmp1 = stack.pop(); let tmp2 = stack.pop(); stack.push(tmp1 * tmp2); }`,
         ];
         case 'statement': return flatten(ast.children.map(astToJS));
         case 'statementSeparator': return [];
