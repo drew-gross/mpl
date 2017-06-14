@@ -10,12 +10,8 @@ const astToC = ast => {
         case 'number': return [ast.value.toString()];
         case 'product': return [
             ...astToC(ast.children[0]),
+            '*',
             ...astToC(ast.children[1]),
-            `{
-                char tmp1 = stack[stackSize - 1]; stackSize--;
-                char tmp2 = stack[stackSize - 1]; stackSize--;
-                stack[stackSize] = tmp1 * tmp2; stackSize++;
-            }`
         ];
         case 'statement': return flatten(ast.children.map(astToC));
         case 'statementSeparator': return [];
