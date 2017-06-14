@@ -15,7 +15,7 @@ const parseProduct = (t, i) => parseProductI(t, i);
 // ARG_LIST -> identifier, ARG_LIST | identifier
 // EXPRESSION -> PRODUCT | ( EXPRESSION ) | CALL_EXPRESSION | int
 // CALL_EXPRESSION -> identifier ( ARG_LIST )
-// PRODUCT -> int * EXPRESSION | ( EXPRESSION ) * EXPRESSION
+// PRODUCT -> int * EXPRESSION | ( EXPRESSION ) * EXPRESSION | CALL_EXPRESSION * EXPRESSION
 
 const parseProgramI = alternative([
     sequence('statement', [parseStatement, terminal('statementSeparator'), parseProgram]),
@@ -66,6 +66,11 @@ const parseProduct2 = sequence('product2', [
     terminal('product'),
     parseExpression,
 ]);
-const parseProductI = alternative([parseProduct1, parseProduct2]);
+const parseProduct3 = sequence('product3', [
+    parseCallExpression,
+    terminal('product'),
+    parseExpression,
+]);
+const parseProductI = alternative([parseProduct1, parseProduct2, parseProduct3]);
 
 module.exports = parseProgram;

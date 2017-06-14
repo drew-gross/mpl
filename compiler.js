@@ -167,6 +167,7 @@ const extractFunctions = ast => {
 
 const parse = tokens => {
     let ast = parseProgram(tokens, 0)
+    debugger;
     if (ast.success === false) {
         return { error: 'Unable to parse' };
     }
@@ -174,6 +175,9 @@ const parse = tokens => {
 
     // repair associativity of product
     ast = repairAssociativity(ast);
+
+    // Lower product 3 -> product 1
+    ast = transformAst('product3', node => ({ type: 'product1', children: node.children }), ast);
 
     // Lower product 2 -> product 1
     ast = transformAst('product2', node => ({

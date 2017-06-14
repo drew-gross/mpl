@@ -204,6 +204,11 @@ const compileAndRunMacro = async (t, {
         t.fail(`Unable to parse "${source}"`);
     }
 
+    const logAst = false;
+    if (logAst) {
+        console.log(JSON.stringify(parseResult, 0, 2));
+    }
+
     // Check the AST if asked
     if (expetedAst) {
         t.deepEqual(parseResult, expetedAst);
@@ -220,7 +225,9 @@ const compileAndRunMacro = async (t, {
         t.fail(`Failed to compile generated C code: ${cSource}. Errors: ${e.stderr}`);
     }
     const cExitCode = await execAndGetExitCode(exeFile.path);
-    t.deepEqual(cExitCode, expectedExitCode);
+    if (cExitCode !== expectedExitCode) {
+        t.fail(`C returned ${cExitCode} when it should have returned ${expectedExitCode}: ${cSource}`);
+    }
 
     // JS backend
     const jsFile = await tmp.file({ postfix: '.js' });
@@ -336,10 +343,19 @@ test('assign function and return', compileAndRunMacro, {
     expectedExitCode: 10,
 });
 
-test.only('assign function and call it', compileAndRunMacro, {
+test('assign function and call it', compileAndRunMacro, {
     source: 'takeItToEleven = a => 11; return takeItToEleven(unused)',
     expectedExitCode: 11
 });
+
+test.only('multiple variables called', compileAndRunMacro, {
+    source: `
+const11 = a => 11
+const12 = a => 12
+return const11(unused) * const12(unused)`,
+    expectedExitCode: 132,
+});
+
 
 test.failing('double product with brackets', compileAndRunMacro, {
     source: 'return 2 * (3 * 4) * 5',
