@@ -354,7 +354,7 @@ test('assign function and return', compileAndRunMacro, {
     expectedExitCode: 10,
 });
 
-test.only('assign function and call it', compileAndRunMacro, {
+test('assign function and call it', compileAndRunMacro, {
     source: 'takeItToEleven = a => 11; return takeItToEleven(unused)',
     expectedExitCode: 11
 });
