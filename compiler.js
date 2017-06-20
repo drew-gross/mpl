@@ -148,7 +148,16 @@ const statementTreeToStatementList = functionAst => {
         result.statements.push(currentStatement.children[0]);
         currentStatement = currentStatement.children[2];
     }
-    result.statements.push(currentStatement);
+    // Final statement of function. If it is a bare expression and is the only statement,
+    // allow it instead of a return statement.
+    if (result.statements.length === 0 && currentStatement.type === 'number') {
+        result.statements.push({
+            type: 'returnStatement',
+            children: [{ type: 'return', value: null }, currentStatement],
+        });
+    } else {
+        result.statements.push(currentStatement);
+    }
     return result;
 }
 
@@ -223,16 +232,16 @@ const parse = tokens => {
 const compile = ({ source, target }) => {
     const tokens = lex(source);
     const ast = parse(tokens);
-    let { functions, program } = extractFunctions(ast);
-    functions = functions.map(statementTreeToStatementList);
-    program = statementTreeToStatementList({ body: program });
-    const variables = flatten(program.statements.map(extractVariables));
+    const { functions, program } = extractFunctions(ast);
+    const functionsWithStatementList = functions.map(statementTreeToStatementList);
+    const programWithStatementList = statementTreeToStatementList({ body: program });
+    const variables = flatten(programWithStatementList.statements.map(extractVariables));
     if (target == 'js') {
-        return toJS(functions, variables, program);
+        return toJS(functionsWithStatementList, variables, programWithStatementList);
     } else if (target == 'c') {
-        return toC(functions, variables, program);
+        return toC(functionsWithStatementList, variables, programWithStatementList);
     } else if (target == 'mips') {
-        return toMips(functions, variables, program);
+        return toMips(functionsWithStatementList, variables, programWithStatementList);
     }
 };
 

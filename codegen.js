@@ -2,7 +2,7 @@ const flatten = array => array.reduce((a, b) => a.concat(b), []);
 
 const astToC = ast => {
     switch (ast.type) {
-        case 'returnStatement': return [
+        case 'returnStatement': debugger;return [
             `return`,
             ...astToC(ast.children[1]),
             ';',
@@ -33,7 +33,7 @@ const toC = (functions, variables, program) => {
         const body = statements[0]; // TOOD: support multiple statements in a function body
         return `
 unsigned char ${name}(unsigned char ${argument.value}) {
-    return ${astToC(body)};
+    ${astToC(body).join(' ')}
 }`
     });
     let C = flatten(program.statements.map(astToC));
@@ -82,7 +82,7 @@ const toJS = (functions, variables, program) => {
     let JSfunctions = functions.map(({ name, argument, statements }) => {
         return `
 ${name} = ${argument.value} => {
-    return ${astToJS(statements[0])};
+    return ${astToJS(statements[0]).join(' ')};
 };`
     });
 
@@ -98,21 +98,22 @@ const astToMips = (ast, registerAssignment) => {
     if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': {
-            const cleanupAndExit =
-`# print "return value" and exit
-li $v0, 1
-syscall
-li $v0, 10
-syscall`;
             let putRetvalIntoA0 = '';
-            if (ast.children[1].type = 'number') {
-                putRetvalIntoA0 = `li $a0, ${ast.children[1].value}`;
+            if (ast.children[1].type === 'number') {
+                putRetvalIntoA0 =
+`# load constant into return register
+li $a0, ${ast.children[1].value}`;
+            } else if (ast.children[1].type === 'callExpression') {
+                debugger;
+                putRetvalIntoA0 =
+`# call function, return val already in $a0
+${astToMips(ast.children[1], registerAssignment)}`
             } else {
                 debugger;
                 // with temporaries:
                 // astToMips(ast.children[1], registerAssignment),
             }
-            return [putRetvalIntoA0, cleanupAndExit];
+            return [putRetvalIntoA0];
         }
         case 'number': return [`
 li $t1, ${ast.value}
@@ -128,8 +129,7 @@ lw $t2, ($sp)
 mult $t1, $t2
 mflo $t1
 sw $t1, ($sp)
-addiu $sp, $sp -4
-`,
+addiu $sp, $sp -4`,
         ];
         case 'statement': return flatten(ast.children.map(child => astToMips(child, registerAssignment)));
         case 'callExpression': {
@@ -142,7 +142,6 @@ jal $${register}
 `];
         }
         case 'assignment': {
-            debugger;
             const name = ast.children[0].value;
             const value = ast.children[2].value;
             const register = registerAssignment[name];
@@ -169,11 +168,11 @@ const assignMipsRegisters = variables => {
 const toMips = (functions, variables, program) => {
     let registerAssignment = assignMipsRegisters(variables);
     let mipsFunctions = functions.map(({ name, argument, statements }) => {
+        debugger;
         let mipsCode = flatten(statements.map(statement => astToMips(statement, {})));
         return `
 ${name}:
 ${mipsCode}
-move $v0, $t1
 jr $ra
 `;
     });
@@ -184,7 +183,11 @@ jr $ra
 ${mipsFunctions.join('\n')}
 main:
 ${mipsProgram.join('\n')}
-`;
+# print "exit code" and exit
+li $v0, 1
+syscall
+li $v0, 10
+syscall`;
 }
 
 module.exports = { toJS, toC, toMips };
