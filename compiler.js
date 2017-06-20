@@ -258,7 +258,7 @@ const compile = ({ source, target }) => {
 
     // Modifications here :(
     functionsWithStatementList.forEach((item, index) => {
-        item.temporaryCount = functionTemporaryCounts(index);
+        item.temporaryCount = functionTemporaryCounts[index];
     });
     programWithStatementList.temporaryCount = programTemporaryCount
 
