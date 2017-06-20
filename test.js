@@ -359,6 +359,7 @@ test('assign function and call it', compileAndRunMacro, {
     expectedExitCode: 11
 });
 
+// Needs temporaries
 test.failing('multiple variables called', compileAndRunMacro, {
     source: `
 const11 = a => 11
@@ -368,6 +369,7 @@ return const11(unused) * const12(unused)`,
 });
 
 
+// Needs temporaries
 test.failing('double product with brackets', compileAndRunMacro, {
     source: 'return 2 * (3 * 4) * 5',
     expectedExitCode: 72,
