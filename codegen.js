@@ -37,7 +37,6 @@ unsigned char ${name}(unsigned char ${argument.value}) {
 }`
     });
     let C = flatten(program.statements.map(astToC));
-    debugger;
 
     return `
 #include <stdio.h>
@@ -51,6 +50,7 @@ int main(int argc, char **argv) {
 };
 
 const astToJS = ast => {
+    if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': return [
             `process.exit(`,
@@ -79,14 +79,14 @@ const astToJS = ast => {
 };
 
 const toJS = (functions, variables, program) => {
-    let JSfunctions = functions.map(({ name, argument, body }) => {
+    let JSfunctions = functions.map(({ name, argument, statements }) => {
         return `
 ${name} = ${argument.value} => {
-    return ${astToJS(body)};
+    return ${astToJS(statements[0])};
 };`
     });
 
-    let JS = astToJS(program);
+    let JS = flatten(program.statements.map(astToJS));
     return `
 ${JSfunctions.join('\n')}
 

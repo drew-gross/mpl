@@ -138,7 +138,6 @@ const transformAst = (nodeType, f, ast) => {
 let functionId = 0;
 
 const statementTreeToStatementList = functionAst => {
-    debugger;
     const result = {
         name: functionAst.name,
         argument: functionAst.argument,
