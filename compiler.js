@@ -228,14 +228,40 @@ const parse = tokens => {
     return ast;
 };
 
+const countTemporariesInExpression = ast => {
+    if ('value' in ast) {
+        return 0;
+    }
+    switch (ast.type) {
+        case 'returnStatement': return countTemporariesInExpression(ast.children[1]);
+        case 'product': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
+        default: debugger;
+    }
+}
+
+const countTemporariesInFunction = ({ statements }) => {
+    return Math.max(...statements.map(countTemporariesInExpression));
+}
 
 const compile = ({ source, target }) => {
     const tokens = lex(source);
     const ast = parse(tokens);
     const { functions, program } = extractFunctions(ast);
+
     const functionsWithStatementList = functions.map(statementTreeToStatementList);
     const programWithStatementList = statementTreeToStatementList({ body: program });
+
+    const functionTemporaryCounts = functionsWithStatementList.map(countTemporariesInFunction);
+    const programTemporaryCount = countTemporariesInFunction(programWithStatementList);
+
     const variables = flatten(programWithStatementList.statements.map(extractVariables));
+
+    // Modifications here :(
+    functionsWithStatementList.forEach((item, index) => {
+        item.temporaryCount = functionTemporaryCounts(index);
+    });
+    programWithStatementList.temporaryCount = programTemporaryCount
+
     if (target == 'js') {
         return toJS(functionsWithStatementList, variables, programWithStatementList);
     } else if (target == 'c') {

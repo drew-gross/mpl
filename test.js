@@ -282,7 +282,7 @@ test('bare return', compileAndRunMacro, {
 
 
 // Needs temporaries
-test('single product', compileAndRunMacro, {
+test.only('single product', compileAndRunMacro, {
     source: 'return 2 * 2',
     expectedExitCode: 4,
 });

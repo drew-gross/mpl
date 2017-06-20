@@ -94,7 +94,9 @@ ${JS.join('\n')}
 `;
 };
 
-const astToMips = (ast, registerAssignment) => {
+const nextTemporary = currentTemporary => currentTemporary + 1; // Don't use more temporaries than there are registers! :p
+
+const astToMips = (ast, registerAssignment, currentTemporary) => {
     if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': {
@@ -106,20 +108,31 @@ li $a0, ${ast.children[1].value}`;
             } else if (ast.children[1].type === 'callExpression') {
                 putRetvalIntoA0 =
 `# call function, return val already in $a0
-${astToMips(ast.children[1], registerAssignment)}`
+${astToMips(ast.children[1], registerAssignment, currentTemporary)}`
+            } else if (ast.children[1].type === 'product') {
+                const leftSideTemporary = currentTemporary;
+                const rightSideTemporary = nextTemporary(currentTemporary);
+                putRetvalIntoA0 =
+`# Evaluate product
+# Store left side in it's temporary ($t${leftSideTemporary})
+${astToMips(ast.children[1].children[0], registerAssignment, leftSideTemporary).join('\n')}
+# Store right side in it's temporary ($t${rightSideTemporary})
+${astToMips(ast.children[1].children[1], registerAssignment, nextTemporary(currentTemporary)).join('\n')}
+# Multiply and store result in output ($a0)
+mult $t${leftSideTemporary}, $t${rightSideTemporary}
+mflo $a0`
+
             } else {
                 debugger;
-                // with temporaries:
-                // astToMips(ast.children[1], registerAssignment),
             }
             return [putRetvalIntoA0];
         }
         case 'number': return [`
-li $t1, ${ast.value}
+li $t${currentTemporary}, ${ast.value}
 `];
         case 'product': return [
-            ...astToMips(ast.children[0], registerAssignment),
-            ...astToMips(ast.children[1], registerAssignment),
+            ...astToMips(ast.children[0], registerAssignment, currentTemporary),
+            ...astToMips(ast.children[1], registerAssignment, currentTemporary),
             `
 addiu $sp, $sp, 4
 lw $t1, ($sp)
@@ -130,7 +143,7 @@ mflo $t1
 sw $t1, ($sp)
 addiu $sp, $sp -4`,
         ];
-        case 'statement': return flatten(ast.children.map(child => astToMips(child, registerAssignment)));
+        case 'statement': return flatten(ast.children.map(child => astToMips(child, registerAssignment, currentTemporary)));
         case 'callExpression': {
             const name = ast.children[0].value;
             const register = registerAssignment[name];
@@ -166,14 +179,14 @@ const assignMipsRegisters = variables => {
 const toMips = (functions, variables, program) => {
     let registerAssignment = assignMipsRegisters(variables);
     let mipsFunctions = functions.map(({ name, argument, statements }) => {
-        let mipsCode = flatten(statements.map(statement => astToMips(statement, {})));
+        let mipsCode = flatten(statements.map(statement => astToMips(statement, {}, 0)));
         return `
 ${name}:
 ${mipsCode}
 jr $ra
 `;
     });
-    let mipsProgram = flatten(program.statements.map(statement => astToMips(statement, registerAssignment)));
+    let mipsProgram = flatten(program.statements.map(statement => astToMips(statement, registerAssignment, 0)));
     return `
 .text
 ${mipsFunctions.join('\n')}
