@@ -243,7 +243,6 @@ const compileAndRunMacro = async (t, {
     const mipsFile = await tmp.file({ postfix: '.s' });
     const mipsSource = compile({ source, target: 'mips' });
 
-    debugger;
     if (printIntermediate.includes('mips')) {
         console.log(mipsSource);
     }
@@ -283,7 +282,7 @@ test('bare return', compileAndRunMacro, {
 
 
 // Needs temporaries
-test.failing('single product', compileAndRunMacro, {
+test('single product', compileAndRunMacro, {
     source: 'return 2 * 2',
     expectedExitCode: 4,
 });

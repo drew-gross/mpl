@@ -2,7 +2,7 @@ const flatten = array => array.reduce((a, b) => a.concat(b), []);
 
 const astToC = ast => {
     switch (ast.type) {
-        case 'returnStatement': debugger;return [
+        case 'returnStatement': return [
             `return`,
             ...astToC(ast.children[1]),
             ';',
@@ -104,7 +104,6 @@ const astToMips = (ast, registerAssignment) => {
 `# load constant into return register
 li $a0, ${ast.children[1].value}`;
             } else if (ast.children[1].type === 'callExpression') {
-                debugger;
                 putRetvalIntoA0 =
 `# call function, return val already in $a0
 ${astToMips(ast.children[1], registerAssignment)}`
@@ -135,7 +134,6 @@ addiu $sp, $sp -4`,
         case 'callExpression': {
             const name = ast.children[0].value;
             const register = registerAssignment[name];
-            debugger;
             return [
 `# call ${name} ($${register})
 jal $${register}
@@ -168,7 +166,6 @@ const assignMipsRegisters = variables => {
 const toMips = (functions, variables, program) => {
     let registerAssignment = assignMipsRegisters(variables);
     let mipsFunctions = functions.map(({ name, argument, statements }) => {
-        debugger;
         let mipsCode = flatten(statements.map(statement => astToMips(statement, {})));
         return `
 ${name}:
@@ -177,7 +174,6 @@ jr $ra
 `;
     });
     let mipsProgram = flatten(program.statements.map(statement => astToMips(statement, registerAssignment)));
-    debugger;
     return `
 .text
 ${mipsFunctions.join('\n')}

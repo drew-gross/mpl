@@ -15,6 +15,7 @@
     "tmp-promise": "1.0.3"
   },
   "devDependencies": {
+    "ava": "0.19.1",
     "inspect-process": "0.4.2"
   }
 }
