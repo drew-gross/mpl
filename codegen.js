@@ -29,13 +29,15 @@ const astToC = ast => {
 };
 
 const toC = (functions, variables, program) => {
-    let Cfunctions = functions.map(({ name, argument, body }) => {
+    let Cfunctions = functions.map(({ name, argument, statements }) => {
+        const body = statements[0]; // TOOD: support multiple statements in a function body
         return `
 unsigned char ${name}(unsigned char ${argument.value}) {
     return ${astToC(body)};
 }`
     });
-    let C = astToC(program);
+    let C = flatten(program.statements.map(astToC));
+    debugger;
 
     return `
 #include <stdio.h>

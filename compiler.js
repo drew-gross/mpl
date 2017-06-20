@@ -137,6 +137,22 @@ const transformAst = (nodeType, f, ast) => {
 
 let functionId = 0;
 
+const statementTreeToStatementList = functionAst => {
+    debugger;
+    const result = {
+        name: functionAst.name,
+        argument: functionAst.argument,
+        statements: [],
+    };
+    let currentStatement = functionAst.body;
+    while (currentStatement.type === 'statement') {
+        result.statements.push(currentStatement.children[0]);
+        currentStatement = currentStatement.children[2];
+    }
+    result.statements.push(currentStatement);
+    return result;
+}
+
 const extractFunctions = ast => {
     const newFunctions = [];
     const newAst = {};
@@ -151,10 +167,10 @@ const extractFunctions = ast => {
         newAst.type = 'functionLiteral';
         newAst.value = functionName;
     } else if ('children' in ast) {
-        const otherFuntions = ast.children.map(extractFunctions);
+        const otherFunctions = ast.children.map(extractFunctions);
         newAst.type = ast.type;
         newAst.children = [];
-        otherFuntions.forEach(({ functions, program }) => {
+        otherFunctions.forEach(({ functions, program }) => {
             newFunctions.push(...functions);
             newAst.children.push(program);
         });
@@ -208,7 +224,9 @@ const parse = tokens => {
 const compile = ({ source, target }) => {
     const tokens = lex(source);
     const ast = parse(tokens);
-    const { functions, program } = extractFunctions(ast);
+    let { functions, program } = extractFunctions(ast);
+    functions = functions.map(statementTreeToStatementList);
+    program = statementTreeToStatementList({ body: program });
     const variables = extractVariables(program);
     if (target == 'js') {
         return toJS(functions, variables, program);
