@@ -97,13 +97,23 @@ ${JS.join('\n')}
 const astToMips = (ast, registerAssignment) => {
     if (!ast) debugger;
     switch (ast.type) {
-        case 'returnStatement': return [...astToMips(ast.children[1], registerAssignment), `
-move $a0, $v0
+        case 'returnStatement': {
+            const cleanupAndExit =
+`# print "return value" and exit
 li $v0, 1
 syscall
 li $v0, 10
-syscall
-`];
+syscall`;
+            let putRetvalIntoA0 = '';
+            if (ast.children[1].type = 'number') {
+                putRetvalIntoA0 = `li $a0, ${ast.children[1].value}`;
+            } else {
+                debugger;
+                // with temporaries:
+                // astToMips(ast.children[1], registerAssignment),
+            }
+            return [putRetvalIntoA0, cleanupAndExit];
+        }
         case 'number': return [`
 li $t1, ${ast.value}
 `];
@@ -132,6 +142,7 @@ jal $${register}
 `];
         }
         case 'assignment': {
+            debugger;
             const name = ast.children[0].value;
             const value = ast.children[2].value;
             const register = registerAssignment[name];
@@ -158,7 +169,7 @@ const assignMipsRegisters = variables => {
 const toMips = (functions, variables, program) => {
     let registerAssignment = assignMipsRegisters(variables);
     let mipsFunctions = functions.map(({ name, argument, statements }) => {
-        let mipsCode = flatten(statements.map(statement => astToMips(statements, {})));
+        let mipsCode = flatten(statements.map(statement => astToMips(statement, {})));
         return `
 ${name}:
 ${mipsCode}
@@ -166,7 +177,8 @@ move $v0, $t1
 jr $ra
 `;
     });
-    let mipsProgram = flatten(program.statements.map(statement => astToMips(program, registerAssignment)));
+    let mipsProgram = flatten(program.statements.map(statement => astToMips(statement, registerAssignment)));
+    debugger;
     return `
 .text
 ${mipsFunctions.join('\n')}

@@ -226,7 +226,7 @@ const compile = ({ source, target }) => {
     let { functions, program } = extractFunctions(ast);
     functions = functions.map(statementTreeToStatementList);
     program = statementTreeToStatementList({ body: program });
-    const variables = extractVariables(program);
+    const variables = flatten(program.statements.map(extractVariables));
     if (target == 'js') {
         return toJS(functions, variables, program);
     } else if (target == 'c') {
