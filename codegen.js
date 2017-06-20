@@ -28,7 +28,7 @@ const astToC = ast => {
     };
 };
 
-const toC = (functions, program) => {
+const toC = (functions, variables, program) => {
     let Cfunctions = functions.map(({ name, argument, body }) => {
         return `
 unsigned char ${name}(unsigned char ${argument.value}) {
@@ -76,7 +76,7 @@ const astToJS = ast => {
     }
 };
 
-const toJS = (functions, program) => {
+const toJS = (functions, variables, program) => {
     let JSfunctions = functions.map(({ name, argument, body }) => {
         return `
 ${name} = ${argument.value} => {
@@ -92,9 +92,9 @@ ${JS.join('\n')}
 `;
 };
 
-const astToMips = ast => {
+const astToMips = (ast, registerAssignment) => {
     switch (ast.type) {
-        case 'returnStatement': return [...astToMips(ast.children[1]), `
+        case 'returnStatement': return [...astToMips(ast.children[1], registerAssignment), `
 move $a0, $v0
 li $v0, 1
 syscall
@@ -105,8 +105,8 @@ syscall
 li $t1, ${ast.value}
 `];
         case 'product': return [
-            ...astToMips(ast.children[0]),
-            ...astToMips(ast.children[1]),
+            ...astToMips(ast.children[0], registerAssignment),
+            ...astToMips(ast.children[1], registerAssignment),
             `
 addiu $sp, $sp, 4
 lw $t1, ($sp)
@@ -118,30 +118,51 @@ sw $t1, ($sp)
 addiu $sp, $sp -4
 `,
         ];
-        case 'statement': return flatten(ast.children.map(astToMips));
-        case 'callExpression': debugger; return [`
-# la $t1, $t1
-jal $t1
+        case 'statement': return flatten(ast.children.map(child => astToMips(child, registerAssignment)));
+        case 'callExpression': {
+            const name = ast.children[0].value;
+            const register = registerAssignment[name];
+            debugger;
+            return [
+`# call ${name} ($${register})
+jal $${register}
 `];
-        case 'assignment': return [
-`# $t1 = ${ast.children[0].value}
-la $t1, ${ast.children[2].value}
+        }
+        case 'assignment': {
+            const name = ast.children[0].value;
+            const value = ast.children[2].value;
+            const register = registerAssignment[name];
+            return [
+`# ${name} ($${register}) = ${value}
+la $${register}, ${value}
 `]
+        }
         default:
             debugger;
     }
 }
 
-const toMips = (functions, program) => {
+const assignMipsRegisters = variables => {
+    let currentRegister = 0;
+    let result = {};
+    variables.forEach(variable => {
+        result[variable] = `t${currentRegister}`;
+        currentRegister = currentRegister + 1;
+    });
+    return result;
+};
+
+const toMips = (functions, variables, program) => {
+    let registerAssignment = assignMipsRegisters(variables);
     let mipsFunctions = functions.map(({ name, argument, body }) => {
         return `
 ${name}:
-${astToMips(body)}
+${astToMips(body, {})}
 move $v0, $t1
 jr $ra
 `;
     });
-    let mipsProgram = astToMips(program);
+    let mipsProgram = astToMips(program, registerAssignment);
     return `
 .text
 ${mipsFunctions.join('\n')}

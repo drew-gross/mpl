@@ -165,9 +165,19 @@ const extractFunctions = ast => {
     return { functions: newFunctions, program: newAst };
 };
 
+const extractVariables = ast => {
+    if (ast.type === 'assignment') {
+        return [ast.children[0].value];
+    } else if ('children' in ast) {
+        return flatten(ast.children.map(extractVariables));
+    } else {
+        return [];
+    }
+};
+
 const parse = tokens => {
     let ast = parseProgram(tokens, 0)
-    debugger;
+
     if (ast.success === false) {
         return { error: 'Unable to parse' };
     }
@@ -199,12 +209,13 @@ const compile = ({ source, target }) => {
     const tokens = lex(source);
     const ast = parse(tokens);
     const { functions, program } = extractFunctions(ast);
+    const variables = extractVariables(program);
     if (target == 'js') {
-        return toJS(functions, program);
+        return toJS(functions, variables, program);
     } else if (target == 'c') {
-        return toC(functions, program);
+        return toC(functions, variables, program);
     } else if (target == 'mips') {
-        return toMips(functions, program);
+        return toMips(functions, variables, program);
     }
 };
 

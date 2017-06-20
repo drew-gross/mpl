@@ -348,7 +348,7 @@ test('assign function and call it', compileAndRunMacro, {
     expectedExitCode: 11
 });
 
-test.only('multiple variables called', compileAndRunMacro, {
+test('multiple variables called', compileAndRunMacro, {
     source: `
 const11 = a => 11
 const12 = a => 12
