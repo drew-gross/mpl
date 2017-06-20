@@ -95,6 +95,7 @@ ${JS.join('\n')}
 };
 
 const astToMips = (ast, registerAssignment) => {
+    if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': return [...astToMips(ast.children[1], registerAssignment), `
 move $a0, $v0
@@ -156,15 +157,16 @@ const assignMipsRegisters = variables => {
 
 const toMips = (functions, variables, program) => {
     let registerAssignment = assignMipsRegisters(variables);
-    let mipsFunctions = functions.map(({ name, argument, body }) => {
+    let mipsFunctions = functions.map(({ name, argument, statements }) => {
+        let mipsCode = flatten(statements.map(statement => astToMips(statements, {})));
         return `
 ${name}:
-${astToMips(body, {})}
+${mipsCode}
 move $v0, $t1
 jr $ra
 `;
     });
-    let mipsProgram = astToMips(program, registerAssignment);
+    let mipsProgram = flatten(program.statements.map(statement => astToMips(program, registerAssignment)));
     return `
 .text
 ${mipsFunctions.join('\n')}
