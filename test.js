@@ -281,14 +281,12 @@ test('bare return', compileAndRunMacro, {
 });
 
 
-// Needs temporaries
 test('single product', compileAndRunMacro, {
     source: 'return 2 * 2',
     expectedExitCode: 4,
 });
 
-// Needs temporaries
-test.failing('double product', compileAndRunMacro, {
+test('double product', compileAndRunMacro, {
     source: 'return 5 * 3 * 4',
     expectedExitCode: 60,
     expetedAst: {
@@ -320,8 +318,7 @@ test('brackets', compileAndRunMacro, {
     expectedExitCode: 3,
 });
 
-// Needs temporaries
-test.failing('brackets product', compileAndRunMacro, {
+test('brackets product', compileAndRunMacro, {
     source: 'return (3 * 4) * 5',
     expectedExitCode: 60,
     expetedAst: {
@@ -394,4 +391,5 @@ test.failing('double product with brackets', compileAndRunMacro, {
     },
 });
 
-//test('myVar = 3 * 3 return 9', compileAndRunMacro, 'myVar = 3 * 3 return 9', 9);
+// Needs types
+test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, 'myVar = 3 * 3 return 9', 9);
