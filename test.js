@@ -219,6 +219,11 @@ const compileAndRunMacro = async (t, {
     const cFile = await tmp.file({ postfix: '.c' });
     const exeFile = await tmp.file();
     const cSource = compile({ source, target: 'c' });
+
+    if (printIntermediate.includes('c')) {
+        console.log(cSource);
+    }
+
     await fs.writeFile(cFile.fd, cSource);
     try {
         await exec(`clang ${cFile.path} -o ${exeFile.path}`);
