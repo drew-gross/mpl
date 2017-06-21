@@ -54,23 +54,35 @@ const astToJS = ({ ast, registerAssignment, destination, currentTemporary }) => 
     if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': return [
-            `process.exit(`,
-            ...astToJS({ ast: ast.children[1] }),
-            `);`,
+            `${destination} = `,
+            ...astToJS({
+                ast: ast.children[1],
+                destination,
+            }),
         ];
         case 'number': return [ast.value.toString()];
         case 'product': return [
-            ...astToJS({ ast: ast.children[0] }),
+            ...astToJS({
+                ast: ast.children[0],
+                destination,
+            }),
             '*',
-            ...astToJS({ ast: ast.children[1] }),
+            ...astToJS({
+                ast: ast.children[1],
+                destination
+            }),
         ];
         case 'statement': return flatten(ast.children.map(child => astToJS({
             ast: child,
+            destination,
         })));
         case 'statementSeparator': return [];
         case 'assignment': return [
             `const ${ast.children[0].value} = `,
-            ...astToJS({ ast: ast.children[2] }),
+            ...astToJS({
+                ast: ast.children[2],
+                destination
+            }),
             ';',
         ]
         case 'functionLiteral': return [ast.value];
@@ -85,16 +97,20 @@ const toJS = (functions, variables, program) => {
     let JSfunctions = functions.map(({ name, argument, statements }) => {
         return `
 ${name} = ${argument.value} => {
-    return ${astToJS({ ast: statements[0] }).join(' ')};
+    ${astToJS({ ast: statements[0], destination: 'retVal' }).join(' ')}
+    return retVal;
 };`
     });
 
-    let JS = flatten(program.statements.map(child => astToJS({ ast: child })));
+    let JS = flatten(program.statements.map(child => astToJS({
+        ast: child,
+        destination: 'exitCode',
+    })));
     return `
 ${JSfunctions.join('\n')}
 
 ${JS.join('\n')}
-`;
+process.exit(exitCode);`;
 };
 
 const nextTemporary = currentTemporary => currentTemporary + 1; // Don't use more temporaries than there are registers! :p
@@ -104,18 +120,21 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
     switch (ast.type) {
         case 'returnStatement': {
             if (ast.children[1].type === 'number') {
-                return `# load constant into return register
-li $a0, ${ast.children[1].value}\n`;
+                return [
+`# load constant into return register
+li $a0, ${ast.children[1].value}`
+];
             } else if (ast.children[1].type === 'callExpression') {
                 const callInstructions = astToMips({
                     ast: ast.children[1],
                     registerAssignment,
-                    destination: 'unused',
+                    destination,
                     currentTemporary,
                 });
                 return [
-`# call function, return val already in $a0
-${callInstructions.join('\n')}\n`]
+                    `# call function, return val already in $a0`,
+                    ...callInstructions,
+                ];
             } else if (ast.children[1].type === 'product') {
                 return astToMips({
                     ast:ast.children[1],
@@ -130,8 +149,8 @@ ${callInstructions.join('\n')}\n`]
         }
         case 'number': return [`li ${destination}, ${ast.value}\n`];
         case 'product': {
-            const leftSideDestination = destination;
-            const rightSideDestination = `$t${currentTemporary}`;
+            const leftSideDestination = `$t${currentTemporary}`;
+            const rightSideDestination = destination;
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
             const storeLeftInstructions = astToMips({
@@ -147,15 +166,15 @@ ${callInstructions.join('\n')}\n`]
                 currentTemporary: subExpressionTemporary
             });
             return [
-            `# Store left side in destination (${leftSideDestination})\n`,
-            ...storeLeftInstructions,
-            `# Store right side in temporary (${rightSideDestination})\n`,
-            ...storeRightInstructions,
-`# Evaluate product
-mult ${leftSideDestination}, ${rightSideDestination}
-# Move result to final destination (assume no overflow)
-mflo ${destination}\n`,
-        ];
+                `# Store left side in temporary (${leftSideDestination})\n`,
+                ...storeLeftInstructions,
+                `# Store right side in destination (${rightSideDestination})\n`,
+                ...storeRightInstructions,
+                `# Evaluate product`,
+                `mult ${leftSideDestination}, ${rightSideDestination}`,
+                `# Move result to final destination (assume no overflow)`,
+                `mflo ${destination}`,
+            ];
         }
         case 'statement': return flatten(ast.children.map(child => astToMips({
             ast: child,
@@ -167,9 +186,11 @@ mflo ${destination}\n`,
             const name = ast.children[0].value;
             const register = registerAssignment[name];
             return [
-`# call ${name} ($${register})
-jal $${register}
-`];
+                `# call ${name} ($${register})`,
+                `jal $${register}`,
+                `# move result from $a0 into destination`,
+                `move ${destination}, $a0`
+            ];
         }
         case 'assignment': {
             const name = ast.children[0].value;
