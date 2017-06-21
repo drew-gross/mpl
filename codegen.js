@@ -1,23 +1,24 @@
 const flatten = array => array.reduce((a, b) => a.concat(b), []);
 
-const astToC = ast => {
+const astToC = ({ ast, registerAssignment, destination, currentTemporary }) => {
+    if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': return [
             `return`,
-            ...astToC(ast.children[1]),
+            ...astToC({ ast: ast.children[1] }),
             ';',
         ];
         case 'number': return [ast.value.toString()];
         case 'product': return [
-            ...astToC(ast.children[0]),
+            ...astToC({ ast: ast.children[0] }),
             '*',
-            ...astToC(ast.children[1]),
+            ...astToC({ ast: ast.children[1] }),
         ];
-        case 'statement': return flatten(ast.children.map(astToC));
+        case 'statement': return flatten(ast.children.map(child => astToC({ ast: child })));
         case 'statementSeparator': return [];
         case 'assignment': return [
             `unsigned char (*${ast.children[0].value})(unsigned char) = `,
-            ...astToC(ast.children[2]),
+            ...astToC({ ast: ast.children[2] }),
             `;`,
         ];
         case 'functionLiteral': return [`&${ast.value}`];
@@ -33,10 +34,10 @@ const toC = (functions, variables, program) => {
         const body = statements[0]; // TOOD: support multiple statements in a function body
         return `
 unsigned char ${name}(unsigned char ${argument.value}) {
-    ${astToC(body).join(' ')}
+    ${astToC({ ast: body }).join(' ')}
 }`
     });
-    let C = flatten(program.statements.map(astToC));
+    let C = flatten(program.statements.map(child => astToC({ ast: child })));
 
     return `
 #include <stdio.h>
@@ -49,25 +50,27 @@ int main(int argc, char **argv) {
 `;
 };
 
-const astToJS = ast => {
+const astToJS = ({ ast, registerAssignment, destination, currentTemporary }) => {
     if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': return [
             `process.exit(`,
-            ...astToJS(ast.children[1]),
+            ...astToJS({ ast: ast.children[1] }),
             `);`,
         ];
         case 'number': return [ast.value.toString()];
         case 'product': return [
-            ...astToJS(ast.children[0]),
+            ...astToJS({ ast: ast.children[0] }),
             '*',
-            ...astToJS(ast.children[1]),
+            ...astToJS({ ast: ast.children[1] }),
         ];
-        case 'statement': return flatten(ast.children.map(astToJS));
+        case 'statement': return flatten(ast.children.map(child => astToJS({
+            ast: child,
+        })));
         case 'statementSeparator': return [];
         case 'assignment': return [
             `const ${ast.children[0].value} = `,
-            ...astToJS(ast.children[2]),
+            ...astToJS({ ast: ast.children[2] }),
             ';',
         ]
         case 'functionLiteral': return [ast.value];
@@ -82,11 +85,11 @@ const toJS = (functions, variables, program) => {
     let JSfunctions = functions.map(({ name, argument, statements }) => {
         return `
 ${name} = ${argument.value} => {
-    return ${astToJS(statements[0]).join(' ')};
+    return ${astToJS({ ast: statements[0] }).join(' ')};
 };`
     });
 
-    let JS = flatten(program.statements.map(astToJS));
+    let JS = flatten(program.statements.map(child => astToJS({ ast: child })));
     return `
 ${JSfunctions.join('\n')}
 
