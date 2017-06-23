@@ -408,8 +408,9 @@ test('id function', compileAndRunMacro, {
     expectedExitCode: 5,
 });
 
-// Needs types
+/* Needs types
 test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, {
     source: 'myVar = 3 * 3 return 9',
     expectedExitCode: 9,
 });
+*/

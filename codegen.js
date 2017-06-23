@@ -127,40 +127,15 @@ const nextTemporary = currentTemporary => currentTemporary + 1; // Don't use mor
 const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) => {
     if (!ast) debugger;
     switch (ast.type) {
-        case 'returnStatement': {
-            if (ast.children[1].type === 'number') {
-                return [
-                    `# load constant into return register
-                    li $a0, ${ast.children[1].value}`
-                ];
-            } else if (ast.children[1].type === 'callExpression') {
-                const callInstructions = astToMips({
-                    ast: ast.children[1],
-                    registerAssignment,
-                    destination,
-                    currentTemporary,
-                });
-                return [
-                    `# call function, return val already in $a0`,
-                    ...callInstructions,
-                ];
-            } else if (ast.children[1].type === 'product') {
-                return astToMips({
-                    ast: ast.children[1],
-                    registerAssignment,
-                    destination: '$a0',
-                    currentTemporary
-                });
-            } else if (ast.children[1].type === 'identifier') {
-                const identifierRegister = registerAssignment[ast.children[1].value];
-                return [
-                    `# Move from identifier (${identifierRegister}) into destination (${destination})`,
-                    `move ${destination}, ${identifierRegister}`,
-                ];
-            }
-            debugger;
-            break;
-        }
+        case 'returnStatement': return [
+            `# evaluate expression of return statement, put in $a0`,
+            ...astToMips({
+                ast: ast.children[1],
+                registerAssignment,
+                destination: '$a0',
+                currentTemporary,
+            }),
+        ];
         case 'number': return [`li ${destination}, ${ast.value}\n`];
         case 'product': {
             const leftSideDestination = `$t${currentTemporary}`;
@@ -221,6 +196,14 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
                 `# ${name} ($${register}) = ${value}
                 la $${register}, ${value}
             `]
+        }
+        case 'identifier': {
+            const identifierName = ast.value;
+            const identifierRegister = registerAssignment[identifierName];
+            return [
+                `# Move from ${identifierName} (${identifierRegister}) into destination (${destination})`,
+                `move ${destination}, ${identifierRegister}`,
+            ];
         }
         default:
             debugger;
