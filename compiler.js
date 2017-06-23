@@ -57,6 +57,7 @@ const lex = input => {
     }];
 
     // slurp initial whitespace
+    if (!input) debugger;
     input = input.trim();
 
     // consume input reading tokens
@@ -150,7 +151,7 @@ const statementTreeToStatementList = functionAst => {
     }
     // Final statement of function. If it is a bare expression and is the only statement,
     // allow it instead of a return statement.
-    if (result.statements.length === 0 && currentStatement.type === 'number') {
+    if (result.statements.length === 0 && ['number', 'identifier'].includes(currentStatement.type)) {
         result.statements.push({
             type: 'returnStatement',
             children: [{ type: 'return', value: null }, currentStatement],
@@ -235,6 +236,8 @@ const countTemporariesInExpression = ast => {
     switch (ast.type) {
         case 'returnStatement': return countTemporariesInExpression(ast.children[1]);
         case 'product': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
+        case 'assignment': return 0;
+        case 'callExpression': return 0;
         default: debugger;
     }
 }

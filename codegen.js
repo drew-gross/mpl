@@ -22,7 +22,12 @@ const astToC = ({ ast, registerAssignment, destination, currentTemporary }) => {
             `;`,
         ];
         case 'functionLiteral': return [`&${ast.value}`];
-        case 'callExpression': return [`(*${ast.children[0].value})(0)`]; // Args unused for now >.<
+        case 'callExpression': return [
+            `(*${ast.children[0].value})(`,
+            ...astToC({ ast: ast.children[2] }),
+            `)`,
+        ];
+        case 'identifier': return [ast.value];
         default:
             debugger;
             return;
@@ -86,7 +91,11 @@ const astToJS = ({ ast, registerAssignment, destination, currentTemporary }) => 
             ';',
         ]
         case 'functionLiteral': return [ast.value];
-        case 'callExpression': return [`${ast.children[0].value}()`]; // No args for now >.<
+        case 'callExpression': return [
+            `${ast.children[0].value}(`,
+            ...astToJS({ ast: ast.children[2] }),
+            `)`];
+        case 'identifier': return [ast.value];
         default:
             debugger;
             return;
@@ -137,15 +146,20 @@ li $a0, ${ast.children[1].value}`
                 ];
             } else if (ast.children[1].type === 'product') {
                 return astToMips({
-                    ast:ast.children[1],
+                    ast: ast.children[1],
                     registerAssignment,
                     destination: '$a0',
                     currentTemporary
                 });
-            } else {
-                debugger;
+            } else if (ast.children[1].type === 'identifier') {
+                const identifierRegister = registerAssignment[ast.children[1].value];
+                return [
+                    `# Move from identifier (${identifierRegister}) into destination (${destination})`,
+                    `move ${destination}, ${identifierRegister}`,
+                ];
             }
-            return [putRetvalIntoA0];
+            debugger;
+            break;
         }
         case 'number': return [`li ${destination}, ${ast.value}\n`];
         case 'product': {
@@ -186,6 +200,13 @@ li $a0, ${ast.children[1].value}`
             const name = ast.children[0].value;
             const register = registerAssignment[name];
             return [
+                `# Put argument in $s0`,
+                ...astToMips({
+                    ast: ast.children[2],
+                    registerAssignment,
+                    destination: '$s0',
+                    currentTemporary,
+                }),
                 `# call ${name} ($${register})`,
                 `jal $${register}`,
                 `# move result from $a0 into destination`,
@@ -219,15 +240,20 @@ const assignMipsRegisters = variables => {
 const toMips = (functions, variables, program) => {
     let registerAssignment = assignMipsRegisters(variables);
     let mipsFunctions = functions.map(({ name, argument, statements }) => {
-        let mipsCode = flatten(statements.map(statement => astToMips({
-            ast: statement,
-            registerAssignment: {},
-            destination: '$a0',
-            currentTemporary: 0
-        })));
+        let mipsCode = flatten(statements.map(statement => {
+            const registerAssignment = {
+                [argument.value]: '$s0',
+            };
+            return astToMips({
+                ast: statement,
+                registerAssignment,
+                destination: '$a0',
+                currentTemporary: 1
+            });
+        }));
         return `
 ${name}:
-${mipsCode}
+${mipsCode.join('\n')}
 jr $ra
 `;
     });

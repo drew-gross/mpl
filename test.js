@@ -356,7 +356,7 @@ test('assign function and return', compileAndRunMacro, {
 });
 
 test('assign function and call it', compileAndRunMacro, {
-    source: 'takeItToEleven = a => 11; return takeItToEleven(unused)',
+    source: 'takeItToEleven = a => 11; return takeItToEleven(0)',
     expectedExitCode: 11
 });
 
@@ -364,7 +364,7 @@ test('multiple variables called', compileAndRunMacro, {
     source: `
 const11 = a => 11
 const12 = a => 12
-return const11(unused) * const12(unused)`,
+return const11(1) * const12(2)`,
     expectedExitCode: 132,
 });
 
@@ -403,5 +403,13 @@ test('double product with brackets', compileAndRunMacro, {
     },
 });
 
+test('id function', compileAndRunMacro, {
+    source: 'id = a => a; return id(5)',
+    expectedExitCode: 5,
+});
+
 // Needs types
-test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, 'myVar = 3 * 3 return 9', 9);
+test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, {
+    source: 'myVar = 3 * 3 return 9',
+    expectedExitCode: 9,
+});
