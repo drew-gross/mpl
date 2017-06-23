@@ -196,7 +196,7 @@ const execAndGetExitCode = async command => {
 const compileAndRunMacro = async (t, {
     source,
     expectedExitCode,
-    expetedAst,
+    expectedAst,
     printIntermediate = [],
 }) => {
     // Make sure it parses
@@ -211,8 +211,8 @@ const compileAndRunMacro = async (t, {
     }
 
     // Check the AST if asked
-    if (expetedAst) {
-        t.deepEqual(parseResult, expetedAst);
+    if (expectedAst) {
+        t.deepEqual(parseResult, expectedAst);
     }
 
     // C backend
@@ -294,7 +294,7 @@ test('single product', compileAndRunMacro, {
 test('double product', compileAndRunMacro, {
     source: 'return 5 * 3 * 4',
     expectedExitCode: 60,
-    expetedAst: {
+    expectedAst: {
         type: 'returnStatement',
         children: [{
             type: 'return',
@@ -326,7 +326,7 @@ test('brackets', compileAndRunMacro, {
 test('brackets product', compileAndRunMacro, {
     source: 'return (3 * 4) * 5',
     expectedExitCode: 60,
-    expetedAst: {
+    expectedAst: {
         type: 'returnStatement',
         children: [{
             type: 'return',
@@ -370,26 +370,34 @@ return const11(unused) * const12(unused)`,
 
 
 // Needs temporaries
-test.failing('double product with brackets', compileAndRunMacro, {
+test('double product with brackets', compileAndRunMacro, {
     source: 'return 2 * (3 * 4) * 5',
-    expectedExitCode: 72,
-    expetedAst: {
+    expectedExitCode: 120,
+    expectedAst: {
         type: 'returnStatement',
         children: [{
             type: 'return',
             value: null,
         }, {
-            type: 'product1',
+            type: 'product',
             children: [{
-                type: 'product1',
-                children: [{
-                }],
+                type: 'number',
+                value: 2,
             }, {
                 type: 'product',
-                value: null,
-            }, {
-                type: 'number',
-                value: 5
+                children: [{
+                    type: 'product',
+                    children: [{
+                        type: 'number',
+                        value: 3,
+                    }, {
+                        type: 'number',
+                        value: 4,
+                    }]
+                }, {
+                    type: 'number',
+                    value: 5
+                }],
             }],
         }],
     },
