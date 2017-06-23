@@ -130,9 +130,9 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
         case 'returnStatement': {
             if (ast.children[1].type === 'number') {
                 return [
-`# load constant into return register
-li $a0, ${ast.children[1].value}`
-];
+                    `# load constant into return register
+                    li $a0, ${ast.children[1].value}`
+                ];
             } else if (ast.children[1].type === 'callExpression') {
                 const callInstructions = astToMips({
                     ast: ast.children[1],
@@ -218,9 +218,9 @@ li $a0, ${ast.children[1].value}`
             const value = ast.children[2].value;
             const register = registerAssignment[name];
             return [
-`# ${name} ($${register}) = ${value}
-la $${register}, ${value}
-`]
+                `# ${name} ($${register}) = ${value}
+                la $${register}, ${value}
+            `]
         }
         default:
             debugger;
