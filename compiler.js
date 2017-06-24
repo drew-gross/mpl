@@ -42,6 +42,10 @@ const lex = input => {
         type: 'product',
         toString: () => '*',
     }, {
+        token: '\\-',
+        type: 'subtraction',
+        toString: () => '-',
+    }, {
         token: '\\(',
         type: 'leftBracket',
         toString: () => '(',

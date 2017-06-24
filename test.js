@@ -407,9 +407,14 @@ test('id function', compileAndRunMacro, {
     expectedExitCode: 5,
 });
 
-test.only('double function', compileAndRunMacro, {
+test('double function', compileAndRunMacro, {
     source: 'doubleIt = a => 2 * a; return doubleIt(100)',
     expectedExitCode: 200,
+});
+
+test.only('subtraction', compileAndRunMacro, {
+    source: 'return 7 - 5',
+    expectedExitCode: 2,
 });
 
 /* Needs types

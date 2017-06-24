@@ -7,6 +7,7 @@ const parseArgList = (t, i) => parseArgListI(t, i);
 const parseExpression = (t, i) => parseExpressionI(t, i);
 const parseCallExpression = (t, i) => parseCallExpressionI(t, i);
 const parseProduct = (t, i) => parseProductI(t, i);
+const parseSubtraction = (t, i) => parseSubtractionI(t, i);
 
 // Grammar:
 // PROGRAM -> STATEMENT STATEMENT_SEPARATOR PROGRAM | return EXPRESSION
@@ -16,6 +17,7 @@ const parseProduct = (t, i) => parseProductI(t, i);
 // EXPRESSION -> PRODUCT | ( EXPRESSION ) | CALL_EXPRESSION | int | identifier;
 // CALL_EXPRESSION -> identifier ( ARG_LIST )
 // PRODUCT -> int * EXPRESSION | ( EXPRESSION ) * EXPRESSION | CALL_EXPRESSION * EXPRESSION
+// SUB_EXPRESSION -> int - SUB_EXPRESSION | ( EXPRESSION ) - SUB_EXPRESSION | CALL_EXPRESSION - SUB_EXPRESSION
 
 const parseProgramI = alternative([
     sequence('statement', [parseStatement, terminal('statementSeparator'), parseProgram]),
@@ -73,5 +75,26 @@ const parseProduct3 = sequence('product3', [
     parseExpression,
 ]);
 const parseProductI = alternative([parseProduct1, parseProduct2, parseProduct3]);
+
+const parseSubtraction1 = sequence('subtraction1', [
+    terminal('number'),
+    terminal('subtraction'),
+    parseSubtraction,
+]);
+
+const parseSubtraction2 = sequence('subtraction2', [
+    terminal('leftBracket'),
+    parseExpression,
+    terminal('rightBracket'),
+    terminal('subtraction'),
+    parseSubtraction,
+]);
+const parseSubtraction3 = sequence('subtraction3', [
+    parseCallExpression,
+    terminal('subtraction'),
+    parseSubtraction,
+]);
+
+const parseSubtractionI = alternative([parseSubtraction1, parseSubtraction2, parseSubtraction3]);
 
 module.exports = parseProgram;
