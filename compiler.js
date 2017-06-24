@@ -151,7 +151,7 @@ const statementTreeToStatementList = functionAst => {
     }
     // Final statement of function. If it is a bare expression and is the only statement,
     // allow it instead of a return statement.
-    if (result.statements.length === 0 && ['number', 'identifier'].includes(currentStatement.type)) {
+    if (result.statements.length === 0) {
         result.statements.push({
             type: 'returnStatement',
             children: [{ type: 'return', value: null }, currentStatement],

@@ -197,7 +197,7 @@ const compileAndRunMacro = async (t, {
     source,
     expectedExitCode,
     expectedAst,
-    printIntermediate = [],
+    printSubsteps = [],
 }) => {
     // Make sure it parses
     const parseResult = parse(lex(source));
@@ -205,8 +205,7 @@ const compileAndRunMacro = async (t, {
         t.fail(`Unable to parse "${source}"`);
     }
 
-    const logAst = false;
-    if (logAst) {
+    if (printSubsteps.includes('ast')) {
         console.log(JSON.stringify(parseResult, 0, 2));
     }
 
@@ -220,7 +219,7 @@ const compileAndRunMacro = async (t, {
     const exeFile = await tmp.file();
     const cSource = compile({ source, target: 'c' });
 
-    if (printIntermediate.includes('c')) {
+    if (printSubsteps.includes('c')) {
         console.log(cSource);
     }
 
@@ -248,7 +247,7 @@ const compileAndRunMacro = async (t, {
     const mipsFile = await tmp.file({ postfix: '.s' });
     const mipsSource = compile({ source, target: 'mips' });
 
-    if (printIntermediate.includes('mips')) {
+    if (printSubsteps.includes('mips')) {
         console.log(mipsSource);
     }
 
@@ -406,6 +405,11 @@ test('double product with brackets', compileAndRunMacro, {
 test('id function', compileAndRunMacro, {
     source: 'id = a => a; return id(5)',
     expectedExitCode: 5,
+});
+
+test.only('double function', compileAndRunMacro, {
+    source: 'doubleIt = a => 2 * a; return doubleIt(100)',
+    expectedExitCode: 200,
 });
 
 /* Needs types
