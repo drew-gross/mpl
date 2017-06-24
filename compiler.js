@@ -150,8 +150,8 @@ const statementTreeToStatementList = functionAst => {
         currentStatement = currentStatement.children[2];
     }
     // Final statement of function. If it is a bare expression and is the only statement,
-    // allow it instead of a return statement.
-    if (result.statements.length === 0) {
+    // and is not a returns statement, turn it into a return statement.
+    if (result.statements.length === 0 && currentStatement.type !== 'returnStatement') {
         result.statements.push({
             type: 'returnStatement',
             children: [{ type: 'return', value: null }, currentStatement],
