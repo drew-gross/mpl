@@ -14,6 +14,11 @@ const astToC = ({ ast, registerAssignment, destination, currentTemporary }) => {
             '*',
             ...astToC({ ast: ast.children[1] }),
         ];
+        case 'subtraction': return [
+            ...astToC({ ast: ast.children[0] }),
+            '-',
+            ...astToC({ ast: ast.children[1] }),
+        ];
         case 'statement': return flatten(ast.children.map(child => astToC({ ast: child })));
         case 'statementSeparator': return [];
         case 'assignment': return [
@@ -36,7 +41,7 @@ const astToC = ({ ast, registerAssignment, destination, currentTemporary }) => {
 
 const toC = (functions, variables, program) => {
     let Cfunctions = functions.map(({ name, argument, statements }) => {
-        const body = statements[0]; // TOOD: support multiple statements in a function body
+        const body = statements[0]; // TODO: support multiple statements in a function body
         return `
 unsigned char ${name}(unsigned char ${argument.value}) {
     ${astToC({ ast: body }).join(' ')}
@@ -72,6 +77,17 @@ const astToJS = ({ ast, registerAssignment, destination, currentTemporary }) => 
                 destination,
             }),
             '*',
+            ...astToJS({
+                ast: ast.children[1],
+                destination
+            }),
+        ];
+        case 'subtraction': return [
+            ...astToJS({
+                ast: ast.children[0],
+                destination,
+            }),
+            '-',
             ...astToJS({
                 ast: ast.children[1],
                 destination
@@ -163,6 +179,32 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
                 `mult ${leftSideDestination}, ${rightSideDestination}`,
                 `# Move result to final destination (assume no overflow)`,
                 `mflo ${destination}`,
+            ];
+        }
+        case 'subtraction': {
+            const leftSideDestination = `$t${currentTemporary}`;
+            const rightSideDestination = destination;
+            const subExpressionTemporary = nextTemporary(currentTemporary);
+
+            const storeLeftInstructions = astToMips({
+                ast: ast.children[0],
+                registerAssignment,
+                destination: leftSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+            const storeRightInstructions = astToMips({
+                ast: ast.children[1],
+                registerAssignment,
+                destination: rightSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+            return [
+                `# Store left side in temporary (${leftSideDestination})\n`,
+                ...storeLeftInstructions,
+                `# Store right side in destination (${rightSideDestination})\n`,
+                ...storeRightInstructions,
+                `# Evaluate subtraction`,
+                `sub ${destination}, ${leftSideDestination}, ${rightSideDestination}`,
             ];
         }
         case 'statement': return flatten(ast.children.map(child => astToMips({

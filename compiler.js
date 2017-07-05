@@ -98,28 +98,28 @@ const flattenAst = ast => {
     }
 }
 
-const repairAssociativity = ast => {
-    if (ast.type === 'product1' && ast.children[2].type === 'product1') {
+const repairAssociativity = (nodeTypeToRepair, ast) => {
+    if (ast.type === nodeTypeToRepair && ast.children[2].type === nodeTypeToRepair) {
         return {
-            type: 'product1',
+            type: nodeTypeToRepair,
             children: [{
-                type: 'product1',
+                type: nodeTypeToRepair,
                 children: [
-                    repairAssociativity(ast.children[0]),
+                    repairAssociativity(nodeTypeToRepair, ast.children[0]),
                     { type: 'product', value: null },
-                    repairAssociativity(ast.children[2].children[0]),
+                    repairAssociativity(nodeTypeToRepair, ast.children[2].children[0]),
                 ],
             }, {
                 type: 'product',
                 value: null,
             },
-                repairAssociativity(ast.children[2].children[2]),
+                repairAssociativity(nodeTypeToRepair, ast.children[2].children[2]),
             ],
         };
     } else if ('children' in ast) {
         return {
             type: ast.type,
-            children: ast.children.map(repairAssociativity),
+            children: ast.children.map(child => repairAssociativity(nodeTypeToRepair, child)),
         }
     } else {
         return ast;
@@ -212,23 +212,31 @@ const parse = tokens => {
     }
     ast = flattenAst(ast);
 
-    // repair associativity of product
-    ast = repairAssociativity(ast);
+    // repair associativity of product1
+    ast = repairAssociativity('product1', ast);
 
-    // Lower product 3 -> product 1
+    // repair associativity of subtraction1
+    ast = repairAssociativity('subtraction1', ast);
+
+    // Product 3 -> product 1
     ast = transformAst('product3', node => ({ type: 'product1', children: node.children }), ast);
 
-    // Lower product 2 -> product 1
+    // Product 2 -> product 1
     ast = transformAst('product2', node => ({
         type: 'product1',
         children: [node.children[1], { type: 'product', value: null }, node.children[4]],
     }), ast);
 
-    // Lower bracketed expressions to nothing
+    //
+
+    // Bracketed expressions -> nothing
     ast = lowerBracketedExpressions(ast);
 
-    // Lower product1 to product
+    // Product 1 -> product
     ast = transformAst('product1', node => ({ type: 'product', children: [node.children[0], node.children[2]] }), ast);
+
+    // Subtraction 1 -> subtraction
+    ast = transformAst('subtraction1', node => ({ type: 'subtraction', children: [node.children[0], node.children[2]] }), ast);
 
     return ast;
 };
@@ -240,6 +248,7 @@ const countTemporariesInExpression = ast => {
     switch (ast.type) {
         case 'returnStatement': return countTemporariesInExpression(ast.children[1]);
         case 'product': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
+        case 'subtraction': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
         case 'assignment': return 0;
         case 'callExpression': return 0;
         default: debugger;
