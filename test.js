@@ -412,7 +412,7 @@ test('double function', compileAndRunMacro, {
     expectedExitCode: 200,
 });
 
-test.only('subtraction', compileAndRunMacro, {
+test('subtraction', compileAndRunMacro, {
     source: 'return 7 - 5',
     expectedExitCode: 2,
 });
