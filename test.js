@@ -417,6 +417,11 @@ test('subtraction', compileAndRunMacro, {
     expectedExitCode: 2,
 });
 
+test.failing('order of operations', compileAndRunMacro, {
+    source: 'return 2 * 5 - 1',
+    expectedExitCode: 9,
+});
+
 /* Needs types
 test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, {
     source: 'myVar = 3 * 3 return 9',
