@@ -17,7 +17,7 @@ const parseSubtraction = (t, i) => parseSubtractionI(t, i);
 // EXPRESSION -> SUBTRACTION | CALL_EXPRESSION | int | identifier;
 // CALL_EXPRESSION -> identifier ( ARG_LIST )
 // SUBTRACTION -> PRODUCT - EXPRESSION | PRODUCT
-// PRODUCT -> int * PRODUCT | int | ( EXPRESSION )
+// PRODUCT -> int * PRODUCT | int | CALL_EXPRESSION * PRODUCT | CALL_EXPRESSION | ( EXPRESSION )
 
 const parseProgramI = alternative([
     sequence('statement', [parseStatement, terminal('statementSeparator'), parseProgram]),
@@ -57,8 +57,10 @@ const parseSubtractionI = alternative([
 ]);
 
 const parseProductI = alternative([
-    sequence('product3', [terminal('number'), terminal('product'), parseProduct]),
+    sequence('product1', [terminal('number'), terminal('product'), parseProduct]),
     terminal('number'),
+    sequence('product1', [parseCallExpression, terminal('product'), parseProduct]),
+    parseCallExpression,
     sequence('product2', [terminal('leftBracket'), parseExpression, terminal('rightBracket')]),
 ]);
 

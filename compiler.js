@@ -99,21 +99,19 @@ const flattenAst = ast => {
 }
 
 const repairAssociativity = (nodeTypeToRepair, ast) => {
-    if (ast.type === nodeTypeToRepair && ast.children[2].type === nodeTypeToRepair) {
+    debugger;
+    if (ast.type === nodeTypeToRepair && ast.children[1].type === nodeTypeToRepair) {
         return {
             type: nodeTypeToRepair,
-            children: [{
-                type: nodeTypeToRepair,
-                children: [
-                    repairAssociativity(nodeTypeToRepair, ast.children[0]),
-                    { type: 'product', value: null },
-                    repairAssociativity(nodeTypeToRepair, ast.children[2].children[0]),
-                ],
-            }, {
-                type: 'product',
-                value: null,
-            },
-                repairAssociativity(nodeTypeToRepair, ast.children[2].children[2]),
+            children: [
+                {
+                    type: nodeTypeToRepair,
+                    children: [
+                        repairAssociativity(nodeTypeToRepair, ast.children[0]),
+                        repairAssociativity(nodeTypeToRepair, ast.children[1].children[0]),
+                    ],
+                },
+                repairAssociativity(nodeTypeToRepair, ast.children[1].children[1]),
             ],
         };
     } else if ('children' in ast) {
@@ -212,9 +210,6 @@ const parse = tokens => {
     }
     ast = flattenAst(ast);
 
-    // repair associativity of product1
-    ast = repairAssociativity('product1', ast);
-
     // repair associativity of subtraction1
     ast = repairAssociativity('subtraction1', ast);
 
@@ -227,13 +222,14 @@ const parse = tokens => {
         children: [node.children[1], { type: 'product', value: null }, node.children[4]],
     }), ast);
 
-    //
-
     // Bracketed expressions -> nothing
     ast = lowerBracketedExpressions(ast);
 
     // Product 1 -> product
     ast = transformAst('product1', node => ({ type: 'product', children: [node.children[0], node.children[2]] }), ast);
+
+    // repair associativity of product
+    ast = repairAssociativity('product', ast);
 
     // Subtraction 1 -> subtraction
     ast = transformAst('subtraction1', node => ({ type: 'subtraction', children: [node.children[0], node.children[2]] }), ast);

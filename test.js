@@ -290,7 +290,7 @@ test('single product', compileAndRunMacro, {
     expectedExitCode: 4,
 });
 
-test('double product', compileAndRunMacro, {
+test.only('double product', compileAndRunMacro, {
     source: 'return 5 * 3 * 4',
     expectedExitCode: 60,
     expectedAst: {
@@ -365,6 +365,7 @@ const11 = a => 11
 const12 = a => 12
 return const11(1) * const12(2)`,
     expectedExitCode: 132,
+    printSubsteps: ['ast'],
 });
 
 
@@ -417,10 +418,9 @@ test('subtraction', compileAndRunMacro, {
     expectedExitCode: 2,
 });
 
-test.only('order of operations', compileAndRunMacro, {
+test('order of operations', compileAndRunMacro, {
     source: 'return 2 * 5 - 1',
     expectedExitCode: 9,
-    printSubsteps: ['ast'],
 });
 
 /* Needs types
