@@ -417,9 +417,10 @@ test('subtraction', compileAndRunMacro, {
     expectedExitCode: 2,
 });
 
-test.failing('order of operations', compileAndRunMacro, {
+test.only('order of operations', compileAndRunMacro, {
     source: 'return 2 * 5 - 1',
     expectedExitCode: 9,
+    printSubsteps: ['ast'],
 });
 
 /* Needs types

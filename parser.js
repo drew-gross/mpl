@@ -14,10 +14,10 @@ const parseSubtraction = (t, i) => parseSubtractionI(t, i);
 // STATEMENT -> identifier = FUNCTION
 // FUNCTION -> ARG_LIST => EXPRESSION
 // ARG_LIST -> EXPRESSION , ARG_LIST | EXPRESSION
-// EXPRESSION -> PRODUCT | SUBTRACTION | ( EXPRESSION ) | CALL_EXPRESSION | int | identifier;
+// EXPRESSION -> SUBTRACTION | CALL_EXPRESSION | int | identifier;
 // CALL_EXPRESSION -> identifier ( ARG_LIST )
-// PRODUCT -> int * EXPRESSION | ( EXPRESSION ) * EXPRESSION | CALL_EXPRESSION * EXPRESSION
-// SUBTRACTION -> int - EXPRESSION | ( EXPRESSION ) - SUBTRACTION | CALL_EXPRESSION - SUBTRACTION
+// SUBTRACTION -> PRODUCT - EXPRESSION | PRODUCT
+// PRODUCT -> int * EXPRESSION | int | ( EXPRESSION )
 
 const parseProgramI = alternative([
     sequence('statement', [parseStatement, terminal('statementSeparator'), parseProgram]),
@@ -37,15 +37,8 @@ const parseArgListI = alternative([
     parseExpression,
 ]);
 
-const parseExpression2 = sequence('bracketedExpression', [
-    terminal('leftBracket'),
-    parseExpression,
-    terminal('rightBracket'),
-]);
 const parseExpressionI = alternative([
-    parseProduct,
     parseSubtraction,
-    parseExpression2,
     parseCallExpression,
     terminal('number'),
     terminal('identifier'),
@@ -58,44 +51,16 @@ const parseCallExpressionI = sequence('callExpression', [
     terminal('rightBracket'),
 ]);
 
-const parseProduct1 = sequence('product1', [
+const parseSubtractionI = alternative([
+    sequence('subtraction3', [parseProduct, terminal('subtraction'), parseExpression]),
+    parseProduct,
+]);
+
+const parseProductI = alternative([
+    sequence('product3', [terminal('number'), terminal('product'), parseExpression]),
     terminal('number'),
-    terminal('product'),
-    parseExpression,
-]);
-const parseProduct2 = sequence('product2', [
-    terminal('leftBracket'),
-    parseExpression,
-    terminal('rightBracket'),
-    terminal('product'),
-    parseExpression,
-]);
-const parseProduct3 = sequence('product3', [
-    parseCallExpression,
-    terminal('product'),
-    parseExpression,
-]);
-const parseProductI = alternative([parseProduct1, parseProduct2, parseProduct3]);
-
-const parseSubtraction1 = sequence('subtraction1', [
-    terminal('number'),
-    terminal('subtraction'),
-    parseExpression,
+    sequence('product2', [terminal('leftBracket'), parseExpression, terminal('rightBracket')]),
 ]);
 
-const parseSubtraction2 = sequence('subtraction2', [
-    terminal('leftBracket'),
-    parseExpression,
-    terminal('rightBracket'),
-    terminal('subtraction'),
-    parseSubtraction,
-]);
-const parseSubtraction3 = sequence('subtraction3', [
-    parseCallExpression,
-    terminal('subtraction'),
-    parseSubtraction,
-]);
-
-const parseSubtractionI = alternative([parseSubtraction1, parseSubtraction2, parseSubtraction3]);
 
 module.exports = parseProgram;
