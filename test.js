@@ -290,7 +290,7 @@ test('single product', compileAndRunMacro, {
     expectedExitCode: 4,
 });
 
-test.only('double product', compileAndRunMacro, {
+test('double product', compileAndRunMacro, {
     source: 'return 5 * 3 * 4',
     expectedExitCode: 60,
     expectedAst: {
@@ -408,7 +408,7 @@ test('id function', compileAndRunMacro, {
     expectedExitCode: 5,
 });
 
-test('double function', compileAndRunMacro, {
+test.only('double function', compileAndRunMacro, {
     source: 'doubleIt = a => 2 * a; return doubleIt(100)',
     expectedExitCode: 200,
 });

@@ -99,7 +99,6 @@ const flattenAst = ast => {
 }
 
 const repairAssociativity = (nodeTypeToRepair, ast) => {
-    debugger;
     if (ast.type === nodeTypeToRepair && ast.children[1].type === nodeTypeToRepair) {
         return {
             type: nodeTypeToRepair,
