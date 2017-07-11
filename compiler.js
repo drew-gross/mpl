@@ -215,7 +215,6 @@ const parse = tokens => {
     // Product 3 -> product 1
     ast = transformAst('product3', node => ({ type: 'product1', children: node.children }), ast);
 
-
     // Product 2 -> product 1
     ast = transformAst('product2', node => {
         return {
