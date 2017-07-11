@@ -52,60 +52,33 @@ test('ast for single number', t => {
 });
 
 test('ast for number in brackets', t => {
-    t.deepEqual(parse(lex(' return (5)')), lowerBracketedExpressions({
+    t.deepEqual(parse(lex(' return (5)')), ({
         type: 'returnStatement',
         children: [{
             type: 'return',
             value: null,
         }, {
-            type: 'bracketedExpression',
-            children: [{
-                type: 'leftBracket',
-                value: null
-            }, {
-                type: 'number',
-                value: 5
-            }, {
-                type: 'rightBracket',
-                value: null,
-            }]
+            type: 'number',
+            value: 5
         }]
     }));
 });
 
 test('ast for number in double brackets', t => {
-    t.deepEqual(parse(lex('return ((20))')), lowerBracketedExpressions({
+    t.deepEqual(parse(lex('return ((20))')), ({
         type: 'returnStatement',
         children: [{
             type: 'return',
             value: null,
         }, {
-            type: 'bracketedExpression',
-            children: [{
-                type: 'leftBracket',
-                value: null
-            }, {
-                type: 'bracketedExpression',
-                children: [{
-                    type: 'leftBracket',
-                    value: null
-                }, {
-                    type: 'number',
-                    value: 20,
-                }, {
-                    type: 'rightBracket',
-                    value: null,
-                }],
-            }, {
-                type: 'rightBracket',
-                value: null,
-            }]
+            type: 'number',
+            value: 20,
         }],
     }));
 });
 
 test('ast for product with brackets', t => {
-    t.deepEqual(parse(lex('return 3 * (4 * 5)')), lowerBracketedExpressions({
+    t.deepEqual(parse(lex('return 3 * (4 * 5)')), ({
         type: 'returnStatement',
         children: [{
             type: 'return',
@@ -116,22 +89,13 @@ test('ast for product with brackets', t => {
                 type: 'number',
                 value: 3
             }, {
-                type: 'bracketedExpression',
+                type: 'product',
                 children: [{
-                    type: 'leftBracket',
-                    value: null
+                    type: 'number',
+                    value: 4
                 }, {
-                    type: 'product',
-                    children: [{
-                        type: 'number',
-                        value: 4
-                    }, {
-                        type: 'number',
-                        value: 5
-                    }]
-                }, {
-                    type: 'rightBracket',
-                    value: null
+                    type: 'number',
+                    value: 5
                 }]
             }]
         }]
@@ -260,7 +224,7 @@ const compileAndRunMacro = async (t, {
 };
 
 test('lowering of bracketedExpressions', t => {
-    t.deepEqual(lowerBracketedExpressions(parse(lex('return (8 * ((7)))'))), {
+    t.deepEqual((parse(lex('return (8 * ((7)))'))), {
         type: 'returnStatement',
         children: [{
             type: 'return',
@@ -366,7 +330,7 @@ return const11(1) * const12(2)`,
     expectedExitCode: 132,
 });
 
-test.only('double product with brackets', compileAndRunMacro, {
+test('double product with brackets', compileAndRunMacro, {
     source: 'return 2 * (3 * 4) * 5',
     expectedExitCode: 120,
     expectedAst: {
