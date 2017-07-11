@@ -6,10 +6,9 @@ const parseFunction = (t, i) => parseFunctionI(t, i);
 const parseArgList = (t, i) => parseArgListI(t, i);
 const parseParamList = (t, i) => parseParamListI(t, i);
 const parseExpression = (t, i) => parseExpressionI(t, i);
-const parseCallExpression = (t, i) => parseCallExpressionI(t, i);
 const parseSubtraction = (t, i) => parseSubtractionI(t, i);
 const parseProduct = (t, i) => parseProductI(t, i);
-const parseLiteral = (t, i) => parseLiteralI(t, i);
+const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
 
 // Grammar:
 // PROGRAM -> STATEMENT STATEMENT_SEPARATOR PROGRAM | return EXPRESSION
@@ -17,11 +16,10 @@ const parseLiteral = (t, i) => parseLiteralI(t, i);
 // FUNCTION -> ARG_LIST => EXPRESSION
 // ARG_LIST -> identifier , ARG_LIST | identifier
 // PARAM_LIST -> EXPRESSION , PARAM_LIST | EXPRESSION
-// EXPRESSION -> CALL_EXPRESSION | SUBTRACTION | int | identifier;
-// CALL_EXPRESSION -> identifier ( ARG_LIST )
+// EXPRESSION -> SUBTRACTION;
 // SUBTRACTION -> PRODUCT - EXPRESSION | PRODUCT
-// PRODUCT -> LITERAL * PRODUCT | LITERAL | CALL_EXPRESSION * PRODUCT | CALL_EXPRESSION | ( EXPRESSION )
-// LITERAL -> int | identifier
+// PRODUCT -> SIMPLE_EXPRESSION * PRODUCT | SIMPLE_EXPRESSION | ( EXPRESSION )
+// SIMPLE_EXPRESSION -> identifier ( ARG_LIST ) | int | identifier
 
 const parseProgramI = alternative([
     sequence('statement', [parseStatement, terminal('statementSeparator'), parseProgram]),
@@ -47,17 +45,7 @@ const parseParamListI = alternative([
 ]);
 
 const parseExpressionI = alternative([
-    parseCallExpression,
     parseSubtraction,
-    terminal('number'),
-    terminal('identifier'),
-]);
-
-const parseCallExpressionI = sequence('callExpression', [
-    terminal('identifier'),
-    terminal('leftBracket'),
-    parseParamList,
-    terminal('rightBracket'),
 ]);
 
 const parseSubtractionI = alternative([
@@ -66,13 +54,19 @@ const parseSubtractionI = alternative([
 ]);
 
 const parseProductI = alternative([
-    sequence('product1', [parseLiteral, terminal('product'), parseProduct]),
-    parseLiteral,
-    sequence('product1', [parseCallExpression, terminal('product'), parseProduct]),
-    parseCallExpression,
+    sequence('product1', [parseSimpleExpression, terminal('product'), parseProduct]),
+    parseSimpleExpression,
     sequence('product2', [terminal('leftBracket'), parseExpression, terminal('rightBracket')]),
 ]);
 
-const parseLiteralI = alternative([terminal('number'), terminal('identifier')]);
+const parseSimpleExpressionI = alternative([
+    sequence('callExpression', [
+        terminal('identifier'),
+        terminal('leftBracket'),
+        parseParamList,
+        terminal('rightBracket'),
+    ]),
+    terminal('number'), terminal('identifier')
+]);
 
 module.exports = parseProgram;

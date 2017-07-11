@@ -359,13 +359,12 @@ test('assign function and call it', compileAndRunMacro, {
     expectedExitCode: 11
 });
 
-test('multiple variables called', compileAndRunMacro, {
+test.only('multiple variables called', compileAndRunMacro, {
     source: `
 const11 = a => 11
 const12 = a => 12
 return const11(1) * const12(2)`,
     expectedExitCode: 132,
-    printSubsteps: ['ast'],
 });
 
 
@@ -408,7 +407,7 @@ test('id function', compileAndRunMacro, {
     expectedExitCode: 5,
 });
 
-test.only('double function', compileAndRunMacro, {
+test('double function', compileAndRunMacro, {
     source: 'doubleIt = a => 2 * a; return doubleIt(100)',
     expectedExitCode: 200,
 });
