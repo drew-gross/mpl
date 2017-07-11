@@ -122,9 +122,9 @@ const repairAssociativity = (nodeTypeToRepair, ast) => {
         return ast;
     }
 }
-const lowerBracketedExpressions = ast => transformAst('bracketedExpression', node => node.children[1], ast);
 
 const transformAst = (nodeType, f, ast) => {
+    if (!ast) debugger;
     if (ast.type === nodeType) {
         return transformAst(nodeType, f, f(ast));
     } else if ('children' in ast) {
@@ -215,14 +215,15 @@ const parse = tokens => {
     // Product 3 -> product 1
     ast = transformAst('product3', node => ({ type: 'product1', children: node.children }), ast);
 
-    // Product 2 -> product 1
-    ast = transformAst('product2', node => ({
-        type: 'product1',
-        children: [node.children[1], { type: 'product', value: null }, node.children[4]],
-    }), ast);
 
-    // Bracketed expressions -> nothing
-    ast = lowerBracketedExpressions(ast);
+    // Product 2 -> product 1
+    ast = transformAst('product2', node => {
+        return {
+            type: 'product1',
+            children: [node.children[1], { type: 'product', value: null }, node.children[4]],
+        };
+    }, ast);
+
 
     // Product 1 -> product
     ast = transformAst('product1', node => ({ type: 'product', children: [node.children[0], node.children[2]] }), ast);
@@ -232,6 +233,9 @@ const parse = tokens => {
 
     // Subtraction 1 -> subtraction
     ast = transformAst('subtraction1', node => ({ type: 'subtraction', children: [node.children[0], node.children[2]] }), ast);
+
+    // Bracketed expressions -> nothing
+    ast = transformAst('bracketedExpression', node => node.children[1], ast);
 
     return ast;
 };
@@ -282,4 +286,4 @@ const compile = ({ source, target }) => {
     }
 };
 
-module.exports = { parse, lex, compile, lowerBracketedExpressions };
+module.exports = { parse, lex, compile };

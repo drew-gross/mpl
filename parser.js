@@ -18,8 +18,8 @@ const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
 // PARAM_LIST -> EXPRESSION , PARAM_LIST | EXPRESSION
 // EXPRESSION -> SUBTRACTION;
 // SUBTRACTION -> PRODUCT - EXPRESSION | PRODUCT
-// PRODUCT -> SIMPLE_EXPRESSION * PRODUCT | SIMPLE_EXPRESSION | ( EXPRESSION )
-// SIMPLE_EXPRESSION -> identifier ( ARG_LIST ) | int | identifier
+// PRODUCT -> SIMPLE_EXPRESSION * PRODUCT | SIMPLE_EXPRESSION
+// SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( ARG_LIST ) | int | identifier
 
 const parseProgramI = alternative([
     sequence('statement', [parseStatement, terminal('statementSeparator'), parseProgram]),
@@ -56,10 +56,10 @@ const parseSubtractionI = alternative([
 const parseProductI = alternative([
     sequence('product1', [parseSimpleExpression, terminal('product'), parseProduct]),
     parseSimpleExpression,
-    sequence('product2', [terminal('leftBracket'), parseExpression, terminal('rightBracket')]),
 ]);
 
 const parseSimpleExpressionI = alternative([
+    sequence('bracketedExpression', [terminal('leftBracket'), parseExpression, terminal('rightBracket')]),
     sequence('callExpression', [
         terminal('identifier'),
         terminal('leftBracket'),

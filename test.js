@@ -4,7 +4,6 @@ import {
     parse,
     compile,
     lex,
-    lowerBracketedExpressions,
 } from './compiler';
 
 import tmp from 'tmp-promise';
@@ -359,7 +358,7 @@ test('assign function and call it', compileAndRunMacro, {
     expectedExitCode: 11
 });
 
-test.only('multiple variables called', compileAndRunMacro, {
+test('multiple variables called', compileAndRunMacro, {
     source: `
 const11 = a => 11
 const12 = a => 12
@@ -367,9 +366,7 @@ return const11(1) * const12(2)`,
     expectedExitCode: 132,
 });
 
-
-// Needs temporaries
-test('double product with brackets', compileAndRunMacro, {
+test.only('double product with brackets', compileAndRunMacro, {
     source: 'return 2 * (3 * 4) * 5',
     expectedExitCode: 120,
     expectedAst: {
@@ -380,11 +377,11 @@ test('double product with brackets', compileAndRunMacro, {
         }, {
             type: 'product',
             children: [{
-                type: 'number',
-                value: 2,
-            }, {
                 type: 'product',
                 children: [{
+                    type: 'number',
+                    value: 2
+                }, {
                     type: 'product',
                     children: [{
                         type: 'number',
@@ -393,10 +390,10 @@ test('double product with brackets', compileAndRunMacro, {
                         type: 'number',
                         value: 4,
                     }]
-                }, {
-                    type: 'number',
-                    value: 5
                 }],
+            }, {
+                type: 'number',
+                value: 5,
             }],
         }],
     },
