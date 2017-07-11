@@ -383,6 +383,11 @@ test('order of operations', compileAndRunMacro, {
     expectedExitCode: 9,
 });
 
+test('associativity of subtraction', compileAndRunMacro, {
+    source: 'return 5 - 2 - 1',
+    expectedExitCode: 2,
+});
+
 /* Needs types
 test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, {
     source: 'myVar = 3 * 3 return 9',

@@ -234,7 +234,11 @@ const parse = tokens => {
     // Subtraction 1 -> subtraction
     ast = transformAst('subtraction1', node => ({ type: 'subtraction', children: [node.children[0], node.children[2]] }), ast);
 
-    // Bracketed expressions -> nothing
+    // repair associativity of subtraction
+    ast = repairAssociativity('subtraction', ast);
+
+    // Bracketed expressions -> nothing. Must happen after associativity repair or we will break
+    // associativity of brackets.
     ast = transformAst('bracketedExpression', node => node.children[1], ast);
 
     return ast;
