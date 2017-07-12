@@ -9,6 +9,7 @@ const parseExpression = (t, i) => parseExpressionI(t, i);
 const parseTernary = (t, i) => parseTernaryI(t, i);
 const parseSubtraction = (t, i) => parseSubtractionI(t, i);
 const parseProduct = (t, i) => parseProductI(t, i);
+const parseEquality = (t, i) => parseEqualityI(t, i);
 const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
 
 // Grammar:
@@ -20,7 +21,8 @@ const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
 // EXPRESSION -> TERNARY | SUBTRACTION;
 // TERNARY -> SUBTRACTION ? SUBTRACTION : SUBTRACTION;
 // SUBTRACTION -> PRODUCT - EXPRESSION | PRODUCT
-// PRODUCT -> SIMPLE_EXPRESSION * PRODUCT | SIMPLE_EXPRESSION
+// PRODUCT -> EQUALITY * PRODUCT | EQUALITY
+// EQUALITY -> SIMPLE_EXPRESSION == EQUALITY | SIMPLE_EXPRESSION
 // SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( ARG_LIST ) | int | identifier
 
 const parseProgramI = alternative([
@@ -65,7 +67,12 @@ const parseSubtractionI = alternative([
 ]);
 
 const parseProductI = alternative([
-    sequence('product1', [parseSimpleExpression, terminal('product'), parseProduct]),
+    sequence('product1', [parseEquality, terminal('product'), parseProduct]),
+    parseEquality,
+]);
+
+const parseEqualityI = alternative([
+    sequence('equality', [parseSimpleExpression, terminal('equality'), parseEquality]),
     parseSimpleExpression,
 ]);
 

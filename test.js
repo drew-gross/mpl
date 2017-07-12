@@ -423,6 +423,20 @@ return ternary(1) - ternary(0)`,
     expectedExitCode: 6,
 });
 
+test('equality comparison true', compileAndRunMacro, {
+    source: `
+isFive = five => five == 5 ? 2 : 7
+return isFive(5)`,
+    expectedExitCode: 2,
+});
+
+test('equality comparison false', compileAndRunMacro, {
+    source: `
+isFive = notFive => notFive == 5 ? 2 : 7
+return isFive(11)`,
+    expectedExitCode: 7,
+});
+
 /* Needs types
 test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, {
     source: 'myVar = 3 * 3 return 9',

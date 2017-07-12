@@ -40,6 +40,11 @@ const astToC = ({ ast, registerAssignment, destination, currentTemporary }) => {
             ':',
             ...astToC({ ast: ast.children[4] }),
         ];
+        case 'equality': return [
+            ...astToC({ ast: ast.children[0] }),
+            '==',
+            ...astToC({ ast: ast.children[2] }),
+        ];
         default:
             debugger;
             return;
@@ -125,6 +130,11 @@ const astToJS = ({ ast, registerAssignment, destination, currentTemporary }) => 
             ...astToJS({ ast: ast.children[2] }),
             ':',
             ...astToJS({ ast: ast.children[4] }),
+        ];
+        case 'equality': return [
+            ...astToJS({ ast: ast.children[0] }),
+            '==',
+            ...astToJS({ ast: ast.children[2] }),
         ];
         default:
             debugger;
@@ -299,6 +309,46 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
                 }),
                 `# End of ternary label`,
                 `L${endOfTernaryLabel}:`,
+            ];
+        }
+        case 'equality': {
+            const leftSideDestination = `$t${currentTemporary}`;
+            const rightSideDestination = destination;
+            const subExpressionTemporary = nextTemporary(currentTemporary);
+
+            const storeLeftInstructions = astToMips({
+                ast: ast.children[0],
+                registerAssignment,
+                destination: leftSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+
+            const storeRightInstructions = astToMips({
+                ast: ast.children[2],
+                registerAssignment,
+                destination: rightSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+
+            const equalLabel = labelId;
+            labelId++;
+            const endOfConditionLabel = labelId;
+            labelId++;
+
+            return [
+                `# Store left side in temporary`,
+                ...storeLeftInstructions,
+                `# Store right side in temporary`,
+                ...storeRightInstructions,
+                `# Goto set 1 if equal`,
+                `beq ${leftSideDestination}, ${rightSideDestination}, L${equalLabel}`,
+                `# Not equal, set 0`,
+                `li ${destination}, 0`,
+                `# And goto exit`,
+                `b L${endOfConditionLabel}`,
+                `L${equalLabel}:`,
+                `li ${destination}, 1`,
+                `L${endOfConditionLabel}:`,
             ];
         }
         default:

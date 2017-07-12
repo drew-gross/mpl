@@ -25,6 +25,10 @@ const lex = input => {
         type: 'fatArrow',
         toString: () => '=>',
     }, {
+        token: '==',
+        type: 'equality',
+        toString: () => '==',
+    }, {
         token: '=',
         type: 'assignment',
         toString: () => '=',
@@ -210,6 +214,7 @@ const extractVariables = ast => {
 };
 
 const parse = tokens => {
+    //debugger; tokensToString;
     let ast = parseProgram(tokens, 0)
 
     if (ast.success === false) {
