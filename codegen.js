@@ -251,9 +251,9 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
             const value = ast.children[2].value;
             const register = registerAssignment[name];
             return [
-                `# ${name} ($${register}) = ${value}
-                la $${register}, ${value}
-            `]
+                `# ${name} ($${register}) = ${value}`,
+                `la $${register}, ${value}`,
+            ];
         }
         case 'identifier': {
             const identifierName = ast.value;
@@ -308,39 +308,48 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
 
 const assignMipsRegisters = variables => {
     let currentRegister = 0;
-    let result = {};
+    let registerAssignment = {};
     variables.forEach(variable => {
-        result[variable] = `t${currentRegister}`;
+        registerAssignment[variable] = `t${currentRegister}`;
         currentRegister = currentRegister + 1;
     });
-    return result;
+    return {
+        registerAssignment,
+        firstTemporary: currentRegister,
+    };
 };
 
-const toMips = (functions, variables, program) => {
-    let registerAssignment = assignMipsRegisters(variables);
-    let mipsFunctions = functions.map(({ name, argument, statements }) => {
-        let mipsCode = flatten(statements.map(statement => {
-            const registerAssignment = {
-                [argument.value]: '$s0',
-            };
-            return astToMips({
-                ast: statement,
-                registerAssignment,
-                destination: '$a0',
-                currentTemporary: 1
-            });
-        }));
-        return `
+const constructMipsFunction = ({ name, argument, statements }) => {
+    let mipsCode = flatten(statements.map(statement => {
+        const registerAssignment = {
+            [argument.value]: '$s0',
+        };
+        return astToMips({
+            ast: statement,
+            registerAssignment,
+            destination: '$a0',
+            currentTemporary: 1
+        });
+    }));
+    return `
 ${name}:
 ${mipsCode.join('\n')}
 jr $ra
 `;
-    });
+}
+
+const toMips = (functions, variables, program) => {
+    let mipsFunctions = functions.map(constructMipsFunction);
+
+    const {
+        registerAssignment,
+        firstTemporary,
+    } = assignMipsRegisters(variables);
     let mipsProgram = flatten(program.statements.map(statement => astToMips({
         ast: statement,
         registerAssignment,
         destination: '$a0',
-        currentTemporary: 0
+        currentTemporary: firstTemporary
     })));
     return `
 .text

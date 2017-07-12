@@ -409,6 +409,20 @@ test('ternary false', compileAndRunMacro, {
     expectedExitCode: 6,
 });
 
+test('ternary in function true', compileAndRunMacro, {
+    source: `
+ternary = a => a ? 9 : 5
+return ternary(0)`,
+    expectedExitCode: 5,
+});
+
+test.only('ternary in function then subtract', compileAndRunMacro, {
+    source: `
+ternary = a => a ? 9 : 3
+return ternary(1) - ternary(0)`,
+    expectedExitCode: 6,
+});
+
 /* Needs types
 test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, {
     source: 'myVar = 3 * 3 return 9',
