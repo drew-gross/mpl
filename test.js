@@ -163,7 +163,18 @@ const compileAndRunMacro = async (t, {
     printSubsteps = [],
 }) => {
     // Make sure it parses
-    const parseResult = parse(lex(source));
+    const lexResult = lex(source);
+    lexResult.forEach(({ string, type }) => {
+        if (type === 'invalid') {
+            t.fail(`Unable to lex. Invalid token: ${string}`);
+        }
+    });
+
+    if (printSubsteps.includes('tokens')) {
+        console.log(JSON.stringify(lexResult, 0, 2));
+    }
+
+    const parseResult = parse(lexResult);
     if (parseResult.error === 'Unable to parse') {
         t.fail(`Unable to parse "${source}"`);
     }
@@ -386,6 +397,16 @@ test('order of operations', compileAndRunMacro, {
 test('associativity of subtraction', compileAndRunMacro, {
     source: 'return 5 - 2 - 1',
     expectedExitCode: 2,
+});
+
+test('ternary true', compileAndRunMacro, {
+    source: 'return 1 ? 5 : 6',
+    expectedExitCode: 5,
+});
+
+test('ternary false', compileAndRunMacro, {
+    source: 'return 0 ? 5 : 6',
+    expectedExitCode: 6,
 });
 
 /* Needs types

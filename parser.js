@@ -6,6 +6,7 @@ const parseFunction = (t, i) => parseFunctionI(t, i);
 const parseArgList = (t, i) => parseArgListI(t, i);
 const parseParamList = (t, i) => parseParamListI(t, i);
 const parseExpression = (t, i) => parseExpressionI(t, i);
+const parseTernary = (t, i) => parseTernaryI(t, i);
 const parseSubtraction = (t, i) => parseSubtractionI(t, i);
 const parseProduct = (t, i) => parseProductI(t, i);
 const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
@@ -16,7 +17,8 @@ const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
 // FUNCTION -> ARG_LIST => EXPRESSION
 // ARG_LIST -> identifier , ARG_LIST | identifier
 // PARAM_LIST -> EXPRESSION , PARAM_LIST | EXPRESSION
-// EXPRESSION -> SUBTRACTION;
+// EXPRESSION -> TERNARY | SUBTRACTION;
+// TERNARY -> SUBTRACTION ? SUBTRACTION : SUBTRACTION;
 // SUBTRACTION -> PRODUCT - EXPRESSION | PRODUCT
 // PRODUCT -> SIMPLE_EXPRESSION * PRODUCT | SIMPLE_EXPRESSION
 // SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( ARG_LIST ) | int | identifier
@@ -45,6 +47,15 @@ const parseParamListI = alternative([
 ]);
 
 const parseExpressionI = alternative([
+    parseTernary,
+    parseSubtraction,
+]);
+
+const parseTernaryI = sequence('ternary', [
+    parseSubtraction,
+    terminal('ternaryOperator'),
+    parseSubtraction,
+    terminal('ternarySeparator'),
     parseSubtraction,
 ]);
 

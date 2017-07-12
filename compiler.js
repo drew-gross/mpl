@@ -54,6 +54,14 @@ const lex = input => {
         type: 'rightBracket',
         toString: () => ')',
     }, {
+        token: '\\:',
+        type: 'ternarySeparator',
+        toString: () => ':',
+    }, {
+        token: '\\?',
+        type: 'ternaryOperator',
+        toString: () => '?',
+    }, {
         token: '.*',
         type: 'invalid',
         action: x => x,
@@ -253,6 +261,7 @@ const countTemporariesInExpression = ast => {
         case 'subtraction': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
         case 'assignment': return 0;
         case 'callExpression': return 0;
+        case 'ternary': return 1;
         default: debugger;
     }
 }

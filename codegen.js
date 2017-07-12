@@ -33,6 +33,13 @@ const astToC = ({ ast, registerAssignment, destination, currentTemporary }) => {
             `)`,
         ];
         case 'identifier': return [ast.value];
+        case 'ternary': return [
+            ...astToC({ ast: ast.children[0] }),
+            '?',
+            ...astToC({ ast: ast.children[2] }),
+            ':',
+            ...astToC({ ast: ast.children[4] }),
+        ];
         default:
             debugger;
             return;
@@ -112,6 +119,13 @@ const astToJS = ({ ast, registerAssignment, destination, currentTemporary }) => 
             ...astToJS({ ast: ast.children[2] }),
             `)`];
         case 'identifier': return [ast.value];
+        case 'ternary': return [
+            ...astToJS({ ast: ast.children[0] }),
+            '?',
+            ...astToJS({ ast: ast.children[2] }),
+            ':',
+            ...astToJS({ ast: ast.children[4] }),
+        ];
         default:
             debugger;
             return;
@@ -139,6 +153,8 @@ process.exit(exitCode);`;
 };
 
 const nextTemporary = currentTemporary => currentTemporary + 1; // Don't use more temporaries than there are registers! :p
+
+let labelId = 0;
 
 const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) => {
     if (!ast) debugger;
@@ -245,6 +261,44 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
             return [
                 `# Move from ${identifierName} (${identifierRegister}) into destination (${destination})`,
                 `move ${destination}, ${identifierRegister}`,
+            ];
+        }
+        case 'ternary': {
+            const booleanTemporary = `$t${currentTemporary}`;
+            const subExpressionTemporary = nextTemporary(currentTemporary);
+            const falseBranchLabel = labelId;
+            labelId++;
+            const endOfTernaryLabel = labelId;
+            labelId++;
+            return [
+                `# Compute boolean and store in temporary`,
+                ...astToMips({
+                    ast: ast.children[0],
+                    registerAssignment,
+                    destination: booleanTemporary,
+                    currentTemporary: subExpressionTemporary,
+                }),
+                `# Go to false branch if zero`,
+                `beq ${booleanTemporary}, $0, L${falseBranchLabel}`,
+                `# Execute true branch`,
+                ...astToMips({
+                    ast: ast.children[2],
+                    registerAssignment,
+                    destination,
+                    currentTemporary: subExpressionTemporary,
+                }),
+                `# Jump to end of ternary`,
+                `b L${endOfTernaryLabel}`,
+                `L${falseBranchLabel}:`,
+                `# Execute false branch`,
+                ...astToMips({
+                    ast: ast.children[4],
+                    registerAssignment,
+                    destination,
+                    currentTemporary: subExpressionTemporary,
+                }),
+                `# End of ternary label`,
+                `L${endOfTernaryLabel}:`,
             ];
         }
         default:
