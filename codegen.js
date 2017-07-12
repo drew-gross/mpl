@@ -319,8 +319,18 @@ const assignMipsRegisters = variables => {
     };
 };
 
-const constructMipsFunction = ({ name, argument, statements }) => {
-    let mipsCode = flatten(statements.map(statement => {
+const constructMipsFunction = ({ name, argument, statements, temporaryCount }) => {
+    const saveTemporariesCode = [];
+    const restoreTemporariesCode = [];
+    while (temporaryCount >= 0) {
+        saveTemporariesCode.push(`sw $t${temporaryCount}, ($sp)`);
+        saveTemporariesCode.push(`addiu $sp, $sp, -4`);
+        restoreTemporariesCode.push(`lw $t${temporaryCount}, ($sp)`);
+        restoreTemporariesCode.push(`addiu $sp, $sp, 4`);
+        temporaryCount--;
+    }
+
+    const mipsCode = flatten(statements.map(statement => {
         const registerAssignment = {
             [argument.value]: '$s0',
         };
@@ -331,11 +341,13 @@ const constructMipsFunction = ({ name, argument, statements }) => {
             currentTemporary: 1
         });
     }));
-    return `
-${name}:
-${mipsCode.join('\n')}
-jr $ra
-`;
+    return [
+        `${name}:`,
+        ...saveTemporariesCode,
+        `${mipsCode.join('\n')}`,
+        ...restoreTemporariesCode.reverse(),
+        `jr $ra`,
+    ].join('\n');
 }
 
 const toMips = (functions, variables, program) => {
