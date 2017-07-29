@@ -227,7 +227,18 @@ const compileAndRunMacro = async (t, {
 
     t.deepEqual(typeof mipsSource, 'string')
     await fs.writeFile(mipsFile.fd, mipsSource);
-    const mipsExitCode = await execAndGetExitCode(`bash -c 'exit \`spim -file ${mipsFile.path} | tail -n 1\`'`);
+
+    try {
+        const result = await exec(`spim -file ${mipsFile.path}`);
+        if (result.stderr !== '') {
+            t.fail(`Spim error. Mips text: ${mipsSource}\n error text: ${result.stderr}`);
+        }
+        debugger;
+    } catch (e) {
+        t.fail('Exception');
+    }
+
+    const mipsExitCode = await execAndGetExitCode(`bash -c `);
     if (mipsExitCode !== expectedExitCode) {
         t.fail(`mips returned ${mipsExitCode} when it should have returned ${expectedExitCode}: ${mipsSource}`);
     }
@@ -435,6 +446,13 @@ test('equality comparison false', compileAndRunMacro, {
 isFive = notFive => notFive == 5 ? 2 : 7
 return isFive(11)`,
     expectedExitCode: 7,
+});
+
+test.only('factorial', compileAndRunMacro, {
+    source: `
+factorial = x => x == 1 ? 1 : x * factorial(x - 1)
+return factorial(5)`,
+    expectedExitCode: 120,
 });
 
 /* Needs types

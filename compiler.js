@@ -292,14 +292,18 @@ const compile = ({ source, target }) => {
     functionsWithStatementList.forEach((item, index) => {
         item.temporaryCount = functionTemporaryCounts[index];
     });
-    programWithStatementList.temporaryCount = programTemporaryCount
+    programWithStatementList.temporaryCount = programTemporaryCount;
+
+    globalDeclarations = programWithStatementList.statements
+        .filter(s => s.type === 'assignment')
+        .map(s => s.children[0].value);
 
     if (target == 'js') {
-        return toJS(functionsWithStatementList, variables, programWithStatementList);
+        return toJS(functionsWithStatementList, variables, programWithStatementList, globalDeclarations);
     } else if (target == 'c') {
-        return toC(functionsWithStatementList, variables, programWithStatementList);
+        return toC(functionsWithStatementList, variables, programWithStatementList, globalDeclarations);
     } else if (target == 'mips') {
-        return toMips(functionsWithStatementList, variables, programWithStatementList);
+        return toMips(functionsWithStatementList, variables, programWithStatementList, globalDeclarations);
     }
 };
 

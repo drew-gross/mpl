@@ -1,49 +1,60 @@
 const flatten = array => array.reduce((a, b) => a.concat(b), []);
 
-const astToC = ({ ast, registerAssignment, destination, currentTemporary }) => {
+const astToC = ({ ast, registerAssignment, globalDeclarations }) => {
     if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': return [
             `return`,
-            ...astToC({ ast: ast.children[1] }),
+            ...astToC({ ast: ast.children[1], globalDeclarations }),
             ';',
         ];
         case 'number': return [ast.value.toString()];
         case 'product': return [
-            ...astToC({ ast: ast.children[0] }),
+            ...astToC({ ast: ast.children[0], globalDeclarations }),
             '*',
-            ...astToC({ ast: ast.children[1] }),
+            ...astToC({ ast: ast.children[1], globalDeclarations }),
         ];
         case 'subtraction': return [
-            ...astToC({ ast: ast.children[0] }),
+            ...astToC({ ast: ast.children[0], globalDeclarations }),
             '-',
-            ...astToC({ ast: ast.children[1] }),
+            ...astToC({ ast: ast.children[1], globalDeclarations }),
         ];
-        case 'statement': return flatten(ast.children.map(child => astToC({ ast: child })));
+        case 'statement': return flatten(ast.children.map(child => astToC({ ast: child, globalDeclarations })));
         case 'statementSeparator': return [];
-        case 'assignment': return [
-            `unsigned char (*${ast.children[0].value})(unsigned char) = `,
-            ...astToC({ ast: ast.children[2] }),
-            `;`,
-        ];
+        case 'assignment': {
+            const lhs = ast.children[0].value
+            const rhs = astToC({ ast: ast.children[2], globalDeclarations });
+            if (globalDeclarations.includes(lhs)) {
+                return [
+                    `${lhs} = `,
+                    ...rhs,
+                    `;`,
+                ];
+            }
+            return [
+                `unsigned char (*${lhs})(unsigned char) = `,
+                ...rhs,
+                `;`,
+            ];
+        }
         case 'functionLiteral': return [`&${ast.value}`];
         case 'callExpression': return [
             `(*${ast.children[0].value})(`,
-            ...astToC({ ast: ast.children[2] }),
+            ...astToC({ ast: ast.children[2], globalDeclarations }),
             `)`,
         ];
         case 'identifier': return [ast.value];
         case 'ternary': return [
-            ...astToC({ ast: ast.children[0] }),
+            ...astToC({ ast: ast.children[0], globalDeclarations }),
             '?',
-            ...astToC({ ast: ast.children[2] }),
+            ...astToC({ ast: ast.children[2], globalDeclarations }),
             ':',
-            ...astToC({ ast: ast.children[4] }),
+            ...astToC({ ast: ast.children[4], globalDeclarations }),
         ];
         case 'equality': return [
-            ...astToC({ ast: ast.children[0] }),
+            ...astToC({ ast: ast.children[0], globalDeclarations }),
             '==',
-            ...astToC({ ast: ast.children[2] }),
+            ...astToC({ ast: ast.children[2], globalDeclarations }),
         ];
         default:
             debugger;
@@ -51,18 +62,21 @@ const astToC = ({ ast, registerAssignment, destination, currentTemporary }) => {
     };
 };
 
-const toC = (functions, variables, program) => {
-    let Cfunctions = functions.map(({ name, argument, statements }) => {
+const toC = (functions, variables, program, globalDeclarations) => {
+    let Cfunctions = functions.map(({ name, argument, statements, scopeChain }) => {
         const body = statements[0]; // TODO: support multiple statements in a function body
         return `
 unsigned char ${name}(unsigned char ${argument.value}) {
     ${astToC({ ast: body }).join(' ')}
 }`
     });
-    let C = flatten(program.statements.map(child => astToC({ ast: child })));
+    let C = flatten(program.statements.map(child => astToC({ ast: child, globalDeclarations })));
+    let Cdeclarations = globalDeclarations.map(name => `unsigned char (*${name})(unsigned char);`);
 
     return `
 #include <stdio.h>
+
+${Cdeclarations.join('\n')}
 
 ${Cfunctions.join('\n')}
 
@@ -166,7 +180,7 @@ const nextTemporary = currentTemporary => currentTemporary + 1; // Don't use mor
 
 let labelId = 0;
 
-const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) => {
+const astToMips = ({ ast, registerAssignment, destination, currentTemporary, globalDeclarations }) => {
     if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': return [
@@ -176,6 +190,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
                 registerAssignment,
                 destination: '$a0',
                 currentTemporary,
+                globalDeclarations,
             }),
         ];
         case 'number': return [`li ${destination}, ${ast.value}\n`];
@@ -188,13 +203,15 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
                 ast: ast.children[0],
                 registerAssignment,
                 destination: leftSideDestination,
-                currentTemporary: subExpressionTemporary
+                currentTemporary: subExpressionTemporary,
+                globalDeclarations,
             });
             const storeRightInstructions = astToMips({
                 ast: ast.children[1],
                 registerAssignment,
                 destination: rightSideDestination,
-                currentTemporary: subExpressionTemporary
+                currentTemporary: subExpressionTemporary,
+                globalDeclarations,
             });
             return [
                 `# Store left side in temporary (${leftSideDestination})\n`,
@@ -217,12 +234,14 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
                 registerAssignment,
                 destination: leftSideDestination,
                 currentTemporary: subExpressionTemporary,
+                globalDeclarations,
             });
             const storeRightInstructions = astToMips({
                 ast: ast.children[1],
                 registerAssignment,
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
+                globalDeclarations,
             });
             return [
                 `# Store left side in temporary (${leftSideDestination})\n`,
@@ -237,11 +256,16 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
             ast: child,
             registerAssignment,
             destination: '(TODO: READ FROM REGISTER ASSIGNMENT)',
-            currentTemporary
+            currentTemporary,
+            globalDeclarations,
         })));
         case 'callExpression': {
             const name = ast.children[0].value;
-            const register = registerAssignment[name];
+
+            const callInstruction = globalDeclarations.includes(name)
+                ? `jal ${name}`
+                : `jal $${registerAssignment[name]}`;
+
             return [
                 `# Put argument in $s0`,
                 ...astToMips({
@@ -249,9 +273,10 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
                     registerAssignment,
                     destination: '$s0',
                     currentTemporary,
+                    globalDeclarations,
                 }),
-                `# call ${name} ($${register})`,
-                `jal $${register}`,
+                `# call ${name}`,
+                callInstruction,
                 `# move result from $a0 into destination`,
                 `move ${destination}, $a0`
             ];
@@ -260,10 +285,17 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
             const name = ast.children[0].value;
             const value = ast.children[2].value;
             const register = registerAssignment[name];
-            return [
-                `# ${name} ($${register}) = ${value}`,
-                `la $${register}, ${value}`,
-            ];
+            if (globalDeclarations.includes(name)) {
+                return [
+                    `# .${name} = ${value}`,
+                    `sw .${name}, ${value}`,
+                ];
+            } else {
+                return [
+                    `# ${name} ($${register}) = ${value}`,
+                    `la $${register}, ${value}`,
+                ];
+            }
         }
         case 'identifier': {
             const identifierName = ast.value;
@@ -287,6 +319,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
                     registerAssignment,
                     destination: booleanTemporary,
                     currentTemporary: subExpressionTemporary,
+                    globalDeclarations,
                 }),
                 `# Go to false branch if zero`,
                 `beq ${booleanTemporary}, $0, L${falseBranchLabel}`,
@@ -296,6 +329,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
                     registerAssignment,
                     destination,
                     currentTemporary: subExpressionTemporary,
+                    globalDeclarations,
                 }),
                 `# Jump to end of ternary`,
                 `b L${endOfTernaryLabel}`,
@@ -306,6 +340,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
                     registerAssignment,
                     destination,
                     currentTemporary: subExpressionTemporary,
+                    globalDeclarations,
                 }),
                 `# End of ternary label`,
                 `L${endOfTernaryLabel}:`,
@@ -321,6 +356,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
                 registerAssignment,
                 destination: leftSideDestination,
                 currentTemporary: subExpressionTemporary,
+                globalDeclarations,
             });
 
             const storeRightInstructions = astToMips({
@@ -328,6 +364,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary }) =
                 registerAssignment,
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
+                globalDeclarations,
             });
 
             const equalLabel = labelId;
@@ -369,7 +406,7 @@ const assignMipsRegisters = variables => {
     };
 };
 
-const constructMipsFunction = ({ name, argument, statements, temporaryCount }) => {
+const constructMipsFunction = ({ name, argument, statements, temporaryCount }, globalDeclarations) => {
     const saveTemporariesCode = [];
     const restoreTemporariesCode = [];
     while (temporaryCount >= 0) {
@@ -388,7 +425,8 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }) =
             ast: statement,
             registerAssignment,
             destination: '$a0',
-            currentTemporary: 1
+            currentTemporary: 1,
+            globalDeclarations,
         });
     }));
     return [
@@ -400,8 +438,8 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }) =
     ].join('\n');
 }
 
-const toMips = (functions, variables, program) => {
-    let mipsFunctions = functions.map(constructMipsFunction);
+const toMips = (functions, variables, program, globalDeclarations) => {
+    let mipsFunctions = functions.map(f => constructMipsFunction(f,  globalDeclarations));
 
     const {
         registerAssignment,
@@ -411,9 +449,13 @@ const toMips = (functions, variables, program) => {
         ast: statement,
         registerAssignment,
         destination: '$a0',
-        currentTemporary: firstTemporary
+        currentTemporary: firstTemporary,
+        globalDeclarations
     })));
+
     return `
+.data
+${globalDeclarations.map(name => `${name}: .word 0`).join('\n')}
 .text
 ${mipsFunctions.join('\n')}
 main:
