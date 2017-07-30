@@ -159,6 +159,7 @@ const execAndGetExitCode = async command => {
 const compileAndRunMacro = async (t, {
     source,
     expectedExitCode,
+    expectedTypeErrors,
     expectedAst,
     printSubsteps = [],
 }) => {
@@ -191,7 +192,16 @@ const compileAndRunMacro = async (t, {
     // C backend
     const cFile = await tmp.file({ postfix: '.c' });
     const exeFile = await tmp.file();
-    const cSource = compile({ source, target: 'c' });
+    const result = compile({ source, target: 'c' });;
+    const cSource = result.code;
+
+    if (expectedTypeErrors) {
+        t.deepEqual(expectedTypeErrors, result.typeErrors);
+        return;
+    } else if (result.typeErrors.length > 0) {
+        t.fail(`Found type errors when none expected: ${result.typeErrors.join(', ')}`);
+        return;
+    }
 
     if (printSubsteps.includes('c')) {
         console.log(cSource);
@@ -210,7 +220,7 @@ const compileAndRunMacro = async (t, {
 
     // JS backend
     const jsFile = await tmp.file({ postfix: '.js' });
-    const jsSource = compile({ source, target: 'js' });
+    const jsSource = compile({ source, target: 'js' }).code;
     await fs.writeFile(jsFile.fd, jsSource);
     const jsExitCode = await execAndGetExitCode(`node ${jsFile.path}`);
     if (jsExitCode !== expectedExitCode) {
@@ -219,7 +229,7 @@ const compileAndRunMacro = async (t, {
 
     // Mips backend
     const mipsFile = await tmp.file({ postfix: '.s' });
-    const mipsSource = compile({ source, target: 'mips' });
+    const mipsSource = compile({ source, target: 'mips' }).code;
 
     if (printSubsteps.includes('mips')) {
         console.log(mipsSource);
@@ -411,23 +421,25 @@ test('associativity of subtraction', compileAndRunMacro, {
 });
 
 test('ternary true', compileAndRunMacro, {
-    source: 'return 1 ? 5 : 6',
+    source: 'return 1 == 1 ? 5 : 6',
     expectedExitCode: 5,
 });
 
 test('ternary false', compileAndRunMacro, {
-    source: 'return 0 ? 5 : 6',
+    source: 'return 0 == 1 ? 5 : 6',
     expectedExitCode: 6,
 });
 
-test('ternary in function true', compileAndRunMacro, {
+// Needs arg types
+test.failing('ternary in function true', compileAndRunMacro, {
     source: `
 ternary = a => a ? 9 : 5
 return ternary(0)`,
     expectedExitCode: 5,
 });
 
-test('ternary in function then subtract', compileAndRunMacro, {
+// Needs arg types
+test.failing('ternary in function then subtract', compileAndRunMacro, {
     source: `
 ternary = a => a ? 9 : 3
 return ternary(1) - ternary(0)`,
@@ -453,6 +465,11 @@ test('factorial', compileAndRunMacro, {
 factorial = x => x == 1 ? 1 : x * factorial(x - 1)
 return factorial(5)`,
     expectedExitCode: 120,
+});
+
+test('return bool fail', compileAndRunMacro, {
+    source: 'return 1 == 2',
+    expectedTypeErrors: ['You tried to return a Boolean'],
 });
 
 /* Needs types

@@ -283,6 +283,109 @@ const countTemporariesInFunction = ({ statements }) => {
     return Math.max(...statements.map(countTemporariesInExpression));
 }
 
+const typeOfExpression = ({ type, children, value }, knownIdentifiers) => {
+    switch (type) {
+        case 'number': return { type: 'Integer', errors: [] };
+        case 'subtraction':
+        case 'product': {
+            const leftType = typeOfExpression(children[0], knownIdentifiers);
+            const rightType = typeOfExpression(children[1], knownIdentifiers);
+            if (leftType.errors.length > 0 || rightType.errors.length > 0) {
+                return { type: '', errors: leftType.errors.concat(rightType.errors) };
+            }
+            if (leftType.type !== 'Integer') {
+                return { type: '', errors: [`Left hand side of ${type} was not integer`] };
+            }
+            if (rightType.type !== 'Integer') {
+                return { type: '', errors: [`Right hand side of ${type} was not integer`] };
+            }
+            return { type: 'Integer', errors: [] };
+        }
+        case 'equality': {
+            const leftType = typeOfExpression(children[0], knownIdentifiers);
+            const rightType = typeOfExpression(children[2], knownIdentifiers);
+            if (leftType.errors.length > 0 || rightType.errors.length > 0) {
+                return { type: '', errors: leftType.errors.concat(rightType.errors) };
+            }
+            if (leftType.type !== 'Integer') {
+                return { type: '', errors: [`Equality comparisons of Integers only. You tried to compare a ${leftType.type}.`] };
+            }
+            if (rightType.type !== 'Integer') {
+                return { type: '', errors: [`Equality comparisons of Integers only. You tried to compare a ${rightType.type}.`] };
+            }
+            return { type: 'Boolean', errors: [] };
+        }
+        case 'functionLiteral': return { type: 'Function', errors: [] };
+        case 'callExpression': return { type: 'Integer', errors: [] };
+        case 'identifier': {
+            if (value in knownIdentifiers) {
+                return { type: knownIdentifiers[value], errors: [] };
+            } else {
+                return { type: '', errors: [`Identifier ${value} has unknown type.`] };
+            }
+        }
+        case 'ternary': {
+            const conditionType = typeOfExpression(children[0], knownIdentifiers);
+            const trueBranchType = typeOfExpression(children[2], knownIdentifiers);
+            const falseBranchType = typeOfExpression(children[4], knownIdentifiers);
+            if (conditionType.errors.length > 0 || trueBranchType.errors.length > 0 || falseBranchType.errors.length > 0) {
+                return { type: '', errors: conditionType.errors.concat(trueBranchType.errors).concat(falseBranchType.errors) };
+            }
+            if (conditionType.type !== 'Boolean') {
+                return { type: '', errors: [`You tried to use a ${conditionType.type} as the condition in a ternary. Boolean is required`] };
+            }
+            if (trueBranchType.type !== falseBranchType.type) {
+                return { type: '', errors: [`Type mismatch in branches of ternary. True branch had ${trueBranchType.type}, false branch had ${falseBranchType.type}.`] };
+            }
+            return { type: trueBranchType.type, errors: [] };
+        };
+        default: debugger; return { type: '', errors: [`Unknown type ${type}`] };
+    }
+};
+
+const typeCheckStatement = ({ type, children }, knownIdentifiers) => {
+    switch (type) {
+        case 'returnStatement': {
+            const result = typeOfExpression(children[1], knownIdentifiers);
+            if (result.errors.length > 0) {
+                return { errors: result.errors, newIdentifiers: {} };
+            }
+            if (result.type !== 'Integer') {
+                return { errors: [`You tried to return a ${result.type}`], newIdentifiers: {} };
+            }
+            return { errors: [], newIdentifiers: {} };
+        }
+        case 'assignment': {
+            const leftType = { type: 'Function', errors: [] }; // TODO: make variables that can hold things other than functions
+            const rightType = typeOfExpression(children[2], knownIdentifiers);
+            if (rightType.errors.length > 0) {
+                return rightType;
+            }
+            if (rightType.type !== leftType.type) {
+                return { type: '', errors: [`Attempted to assign a ${rightType.type} to a ${leftType.type}`] };
+            }
+            return { errors: [], newIdentifiers: { [children[0].value]: leftType.type } };
+        }
+        default: debugger; return ['Unknown type'];
+    };
+};
+
+const typeCheckProgram = ({ statements, argument }) => {
+    knownIdentifiers = {};
+
+    if (argument) {
+        knownIdentifiers[argument.value] = 'Integer';
+    }
+
+    allErrors = [];
+    statements.forEach(s => {
+        const { errors, newIdentifiers } = typeCheckStatement(s, knownIdentifiers);
+        allErrors.push(...errors);
+        knownIdentifiers = Object.assign(knownIdentifiers, newIdentifiers);
+    });
+    return allErrors;
+};
+
 const compile = ({ source, target }) => {
     const tokens = lex(source);
     const ast = parse(tokens);
@@ -291,10 +394,22 @@ const compile = ({ source, target }) => {
     const functionsWithStatementList = functions.map(statementTreeToStatementList);
     const programWithStatementList = statementTreeToStatementList({ body: program });
 
+    let typeErrors = functionsWithStatementList.map(typeCheckProgram);
+    typeErrors.push(typeCheckProgram(programWithStatementList));
+
+    typeErrors = flatten(typeErrors);
+    if (typeErrors.length > 0) {
+        return {
+            typeErrors,
+            code: '',
+        };
+    }
+
     const functionTemporaryCounts = functionsWithStatementList.map(countTemporariesInFunction);
     const programTemporaryCount = countTemporariesInFunction(programWithStatementList);
 
     const variables = flatten(programWithStatementList.statements.map(extractVariables));
+
 
     // Modifications here :(
     functionsWithStatementList.forEach((item, index) => {
@@ -307,11 +422,20 @@ const compile = ({ source, target }) => {
         .map(s => s.children[0].value);
 
     if (target == 'js') {
-        return toJS(functionsWithStatementList, variables, programWithStatementList, globalDeclarations);
+        return {
+            typeErrors: [],
+            code: toJS(functionsWithStatementList, variables, programWithStatementList, globalDeclarations),
+        };
     } else if (target == 'c') {
-        return toC(functionsWithStatementList, variables, programWithStatementList, globalDeclarations);
+        return {
+            typeErrors: [],
+            code: toC(functionsWithStatementList, variables, programWithStatementList, globalDeclarations),
+        };
     } else if (target == 'mips') {
-        return toMips(functionsWithStatementList, variables, programWithStatementList, globalDeclarations);
+        return {
+            typeErrors: [],
+            code: toMips(functionsWithStatementList, variables, programWithStatementList, globalDeclarations),
+        };
     }
 };
 
