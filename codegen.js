@@ -410,9 +410,17 @@ const assignMipsRegisters = variables => {
 };
 
 const constructMipsFunction = ({ name, argument, statements, temporaryCount }, globalDeclarations) => {
-    const saveTemporariesCode = [];
-    const restoreTemporariesCode = [];
-    while (temporaryCount >= 0) {
+    const saveTemporariesCode = [
+        // Always store return address
+        `sw $ra, ($sp)`,
+        `addiu $sp, $sp, -4`,
+    ];
+    const restoreTemporariesCode = [
+        // Always restore return address
+        `lw $ra, ($sp)`,
+        `addiu $sp, $sp, 4`,
+    ];
+    while (temporaryCount > 0) {
         saveTemporariesCode.push(`sw $t${temporaryCount}, ($sp)`);
         saveTemporariesCode.push(`addiu $sp, $sp, -4`);
         restoreTemporariesCode.push(`lw $t${temporaryCount}, ($sp)`);

@@ -239,7 +239,7 @@ const compileAndRunMacro = async (t, {
             t.fail(`mips returned ${mipsExitCode} when it should have returned ${expectedExitCode}: ${mipsSource}`);
         }
     } catch (e) {
-        t.fail(`Exception: ${e.message}`);
+        t.fail(`Exception: ${e.message}\nmips source: ${mipsSource}`);
     }
 
     t.pass();
@@ -420,7 +420,7 @@ test('ternary false', compileAndRunMacro, {
     expectedExitCode: 6,
 });
 
-test.only('ternary in function true', compileAndRunMacro, {
+test('ternary in function true', compileAndRunMacro, {
     source: `
 ternary = a => a ? 9 : 5
 return ternary(0)`,

@@ -264,9 +264,17 @@ const countTemporariesInExpression = ast => {
         case 'returnStatement': return countTemporariesInExpression(ast.children[1]);
         case 'product': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
         case 'subtraction': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
-        case 'assignment': return 0;
-        case 'callExpression': return 0;
-        case 'ternary': return 1;
+        case 'assignment': return 1;
+        case 'callExpression': return 1;
+        case 'ternary': return 2 + Math.max(
+            countTemporariesInExpression(ast.children[0]),
+            countTemporariesInExpression(ast.children[2]),
+            countTemporariesInExpression(ast.children[4])
+        );
+        case 'equality': return 1 + Math.max(
+            countTemporariesInExpression(ast.children[0]),
+            countTemporariesInExpression(ast.children[2])
+        );
         default: debugger;
     }
 }
