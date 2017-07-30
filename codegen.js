@@ -282,18 +282,20 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             ];
         }
         case 'assignment': {
-            const name = ast.children[0].value;
-            const value = ast.children[2].value;
-            const register = registerAssignment[name];
-            if (globalDeclarations.includes(name)) {
+            const lhs = ast.children[0].value;
+            const rhs = ast.children[2].value;
+            if (globalDeclarations.includes(lhs)) {
                 return [
-                    `# .${name} = ${value}`,
-                    `sw .${name}, ${value}`,
+                    `# Load function ptr (${rhs} into current temporary ($${currentTemporary})`,
+                    `la $t${currentTemporary}, ${rhs}`,
+                    `# store from temporary into global`,
+                    `sw $t${currentTemporary}, ${lhs}`,
                 ];
             } else {
+                const register = registerAssignment[lhs];
                 return [
-                    `# ${name} ($${register}) = ${value}`,
-                    `la $${register}, ${value}`,
+                    `# ${lhs} ($${register}) = ${rhs}`,
+                    `la $${register}, ${rhs}`,
                 ];
             }
         }

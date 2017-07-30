@@ -233,15 +233,15 @@ const compileAndRunMacro = async (t, {
         if (result.stderr !== '') {
             t.fail(`Spim error. Mips text: ${mipsSource}\n error text: ${result.stderr}`);
         }
-        debugger;
+        const lines = result.stdout.split('\n');
+        const mipsExitCode = parseInt(lines[lines.length - 1]);
+        if (mipsExitCode !== expectedExitCode) {
+            t.fail(`mips returned ${mipsExitCode} when it should have returned ${expectedExitCode}: ${mipsSource}`);
+        }
     } catch (e) {
         t.fail('Exception');
     }
 
-    const mipsExitCode = await execAndGetExitCode(`bash -c `);
-    if (mipsExitCode !== expectedExitCode) {
-        t.fail(`mips returned ${mipsExitCode} when it should have returned ${expectedExitCode}: ${mipsSource}`);
-    }
     t.pass();
 };
 
@@ -334,7 +334,7 @@ test('brackets product', compileAndRunMacro, {
     },
 });
 
-test('assign function and return', compileAndRunMacro, {
+test.only('assign function and return', compileAndRunMacro, {
     source: 'constThree = a => 3; return 10',
     expectedExitCode: 10,
 });
@@ -448,7 +448,7 @@ return isFive(11)`,
     expectedExitCode: 7,
 });
 
-test.only('factorial', compileAndRunMacro, {
+test('factorial', compileAndRunMacro, {
     source: `
 factorial = x => x == 1 ? 1 : x * factorial(x - 1)
 return factorial(5)`,
