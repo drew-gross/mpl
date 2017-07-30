@@ -262,9 +262,10 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
         case 'callExpression': {
             const name = ast.children[0].value;
 
-            const callInstruction = globalDeclarations.includes(name)
-                ? `jal ${name}`
-                : `jal $${registerAssignment[name]}`;
+
+            const callInstructions = globalDeclarations.includes(name)
+                ? [`lw $t${currentTemporary}, ${name}`, `jal $t${currentTemporary}`]
+                : [`jal $${registerAssignment[name]}`];
 
             return [
                 `# Put argument in $s0`,
@@ -272,11 +273,11 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                     ast: ast.children[2],
                     registerAssignment,
                     destination: '$s0',
-                    currentTemporary,
+                    currentTemporary: nextTemporary(currentTemporary),
                     globalDeclarations,
                 }),
                 `# call ${name}`,
-                callInstruction,
+                ...callInstructions,
                 `# move result from $a0 into destination`,
                 `move ${destination}, $a0`
             ];

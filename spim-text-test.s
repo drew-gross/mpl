@@ -1,34 +1,48 @@
 .data
-myglobal: .word 0
-myfuncptr: .word 0
+ternary: .word 0
 .text
-printmyglobal:
-lw $a0, myglobal
+anonymous_2:
+sw $t1, ($sp)
+addiu $sp, $sp, -4
+sw $t0, ($sp)
+addiu $sp, $sp, -4
+# evaluate expression of return statement, put in $a0
+# Compute boolean and store in temporary
+# Move from a ($s0) into destination ($t1)
+move $t1, $s0
+# Go to false branch if zero
+beq $t1, $0, L0
+# Execute true branch
+li $a0, 9
+
+# Jump to end of ternary
+b L1
+L0:
+# Execute false branch
+li $a0, 5
+
+# End of ternary label
+L1:
+addiu $sp, $sp, 4
+lw $t0, ($sp)
+addiu $sp, $sp, 4
+lw $t1, ($sp)
+jr $ra
+main:
+# Load function ptr (anonymous_2 into current temporary ($1)
+la $t1, anonymous_2
+# store from temporary into global
+sw $t1, ternary
+# evaluate expression of return statement, put in $a0
+# Put argument in $s0
+li $s0, 0
+
+# call ternary
+jal ternary
+# move result from $a0 into destination
+move $a0, $a0
+# print "exit code" and exit
 li $v0, 1
 syscall
-jr $ra
-
-main:
-li $a0, 5
-sw $a0, myglobal
-
-jal printmyglobal
-
-li $a0, 6
-sw $a0, myglobal
-jal printmyglobal
-
-la $a2, printmyglobal
-jal $a2
-
-sw $a2 myfuncptr
-lw $a3 myfuncptr
-
-jal $a3
-
-li $a0, 7
-sw $a0, myglobal
-jal $a3
-
 li $v0, 10
 syscall
