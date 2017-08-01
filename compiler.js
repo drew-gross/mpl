@@ -218,7 +218,10 @@ const parse = tokens => {
     let ast = parseProgram(tokens, 0)
 
     if (ast.success === false) {
-        return { error: 'Unable to parse' };
+        return {
+            ast: {},
+            parseErrors: ['Unable to parse'],
+        };
     }
     ast = flattenAst(ast);
 
@@ -253,7 +256,10 @@ const parse = tokens => {
     // associativity of brackets.
     ast = transformAst('bracketedExpression', node => node.children[1], ast);
 
-    return ast;
+    return {
+        ast,
+        parseErrors: [],
+    };
 };
 
 const countTemporariesInExpression = ast => {
@@ -388,7 +394,15 @@ const typeCheckProgram = ({ statements, argument }) => {
 
 const compile = ({ source, target }) => {
     const tokens = lex(source);
-    const ast = parse(tokens);
+    const { ast, parseErrors } = parse(tokens);
+
+    if (parseErrors.length > 0) {
+        return {
+            code: '',
+            parseErrors,
+        };
+    }
+
     const { functions, program } = extractFunctions(ast);
 
     const functionsWithStatementList = functions.map(statementTreeToStatementList);
@@ -401,6 +415,7 @@ const compile = ({ source, target }) => {
     if (typeErrors.length > 0) {
         return {
             typeErrors,
+            parseErrors: [],
             code: '',
         };
     }
@@ -424,16 +439,19 @@ const compile = ({ source, target }) => {
     if (target == 'js') {
         return {
             typeErrors: [],
+            parseErrors: [],
             code: toJS(functionsWithStatementList, variables, programWithStatementList, globalDeclarations),
         };
     } else if (target == 'c') {
         return {
             typeErrors: [],
+            parseErrors: [],
             code: toC(functionsWithStatementList, variables, programWithStatementList, globalDeclarations),
         };
     } else if (target == 'mips') {
         return {
             typeErrors: [],
+            parseErrors: [],
             code: toMips(functionsWithStatementList, variables, programWithStatementList, globalDeclarations),
         };
     }

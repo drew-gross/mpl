@@ -40,105 +40,120 @@ test('lex with initial whitespace', t => {
 
 test('ast for single number', t => {
     t.deepEqual(parse(lex('return 7')), {
-        type: 'returnStatement',
-        children: [{
-            type: 'return',
-            value: null,
-        }, {
-            type: 'number',
-            value: 7,
-        }]
-    });
-});
-
-test('ast for number in brackets', t => {
-    t.deepEqual(parse(lex(' return (5)')), ({
-        type: 'returnStatement',
-        children: [{
-            type: 'return',
-            value: null,
-        }, {
-            type: 'number',
-            value: 5
-        }]
-    }));
-});
-
-test('ast for number in double brackets', t => {
-    t.deepEqual(parse(lex('return ((20))')), ({
-        type: 'returnStatement',
-        children: [{
-            type: 'return',
-            value: null,
-        }, {
-            type: 'number',
-            value: 20,
-        }],
-    }));
-});
-
-test('ast for product with brackets', t => {
-    t.deepEqual(parse(lex('return 3 * (4 * 5)')), ({
-        type: 'returnStatement',
-        children: [{
-            type: 'return',
-            value: null,
-        }, {
-            type: 'product',
-            children: [{
-                type: 'number',
-                value: 3
-            }, {
-                type: 'product',
-                children: [{
-                    type: 'number',
-                    value: 4
-                }, {
-                    type: 'number',
-                    value: 5
-                }]
-            }]
-        }]
-    }));
-});
-
-test('ast for assignment then return', t => {
-    const expected = {
-        type: 'statement',
-        children: [{
-            type: 'assignment',
-            children: [{
-                type: 'identifier',
-                value: 'constThree',
-            }, {
-                type: 'assignment',
-                value: null,
-            }, {
-                type: 'function',
-                children: [{
-                    type: 'identifier',
-                    value: 'a',
-                }, {
-                    type: 'fatArrow',
-                    value: null,
-                }, {
-                    type: 'number',
-                    value: 3,
-                }],
-            }],
-        }, {
-            type: 'statementSeparator',
-            value: null,
-        }, {
+        parseErrors: [],
+        ast: {
             type: 'returnStatement',
             children: [{
                 type: 'return',
                 value: null,
             }, {
                 type: 'number',
-                value: 10,
+                value: 7,
+            }]
+        },
+    });
+});
+
+test('ast for number in brackets', t => {
+    t.deepEqual(parse(lex(' return (5)')), ({
+        parseErrors: [],
+        ast: {
+            type: 'returnStatement',
+            children: [{
+                type: 'return',
+                value: null,
+            }, {
+                type: 'number',
+                value: 5
+            }]
+        },
+    }));
+});
+
+test('ast for number in double brackets', t => {
+    t.deepEqual(parse(lex('return ((20))')), ({
+        parseErrors: [],
+        ast: {
+            type: 'returnStatement',
+            children: [{
+                type: 'return',
+                value: null,
+            }, {
+                type: 'number',
+                value: 20,
             }],
-        }],
+        },
+    }));
+});
+
+test('ast for product with brackets', t => {
+    t.deepEqual(parse(lex('return 3 * (4 * 5)')), ({
+        parseErrors: [],
+        ast: {
+            type: 'returnStatement',
+            children: [{
+                type: 'return',
+                value: null,
+            }, {
+                type: 'product',
+                children: [{
+                    type: 'number',
+                    value: 3
+                }, {
+                    type: 'product',
+                    children: [{
+                        type: 'number',
+                        value: 4
+                    }, {
+                        type: 'number',
+                        value: 5
+                    }]
+                }]
+            }]
+        },
+    }));
+});
+
+test('ast for assignment then return', t => {
+    const expected = {
+        parseErrors: [],
+        ast: {
+            type: 'statement',
+            children: [{
+                type: 'assignment',
+                children: [{
+                    type: 'identifier',
+                    value: 'constThree',
+                }, {
+                    type: 'assignment',
+                    value: null,
+                }, {
+                    type: 'function',
+                    children: [{
+                        type: 'identifier',
+                        value: 'a',
+                    }, {
+                        type: 'fatArrow',
+                        value: null,
+                    }, {
+                        type: 'number',
+                        value: 3,
+                    }],
+                }],
+            }, {
+                type: 'statementSeparator',
+                value: null,
+            }, {
+                type: 'returnStatement',
+                children: [{
+                    type: 'return',
+                    value: null,
+                }, {
+                    type: 'number',
+                    value: 10,
+                }],
+            }],
+        },
     };
     const astWithSemicolon = parse(lex('constThree = a => 3; return 10'));
     const astWithNewline = parse(lex('constThree = a => 3\n return 10'));
@@ -160,6 +175,7 @@ const compileAndRunMacro = async (t, {
     source,
     expectedExitCode,
     expectedTypeErrors,
+    expectedParseErrors,
     expectedAst,
     printSubsteps = [],
 }) => {
@@ -176,10 +192,6 @@ const compileAndRunMacro = async (t, {
     }
 
     const parseResult = parse(lexResult);
-    if (parseResult.error === 'Unable to parse') {
-        t.fail(`Unable to parse "${source}"`);
-    }
-
     if (printSubsteps.includes('ast')) {
         console.log(JSON.stringify(parseResult, 0, 2));
     }
@@ -194,6 +206,14 @@ const compileAndRunMacro = async (t, {
     const exeFile = await tmp.file();
     const result = compile({ source, target: 'c' });;
     const cSource = result.code;
+
+    if (expectedParseErrors) {
+        t.deepEqual(expectedParseErrors, result.parseErrors);
+        return;
+    } else if (result.parseErrors.length > 0) {
+        t.fail(`Found parse errors when none expected: ${result.parseErrors.join(', ')}`);
+        return;
+    }
 
     if (expectedTypeErrors) {
         t.deepEqual(expectedTypeErrors, result.typeErrors);
@@ -257,20 +277,23 @@ const compileAndRunMacro = async (t, {
 
 test('lowering of bracketedExpressions', t => {
     t.deepEqual((parse(lex('return (8 * ((7)))'))), {
-        type: 'returnStatement',
-        children: [{
-            type: 'return',
-            value: null,
-        }, {
-            type: 'product',
+        parseErrors: [],
+        ast: {
+            type: 'returnStatement',
             children: [{
-                type: 'number',
-                value: 8
+                type: 'return',
+                value: null,
             }, {
-                type: 'number',
-                value: 7,
+                type: 'product',
+                children: [{
+                    type: 'number',
+                    value: 8
+                }, {
+                    type: 'number',
+                    value: 7,
+                }],
             }],
-        }],
+        },
     });
 });
 
@@ -289,27 +312,30 @@ test('double product', compileAndRunMacro, {
     source: 'return 5 * 3 * 4',
     expectedExitCode: 60,
     expectedAst: {
-        type: 'returnStatement',
-        children: [{
-            type: 'return',
-            value: null,
-        }, {
-            type: 'product',
+        parseErrors: [],
+        ast: {
+            type: 'returnStatement',
             children: [{
+                type: 'return',
+                value: null,
+            }, {
                 type: 'product',
                 children: [{
-                    type: 'number',
-                    value: 5,
+                    type: 'product',
+                    children: [{
+                        type: 'number',
+                        value: 5,
+                    }, {
+                        type: 'number',
+                        value: 3
+                    }]
                 }, {
                     type: 'number',
-                    value: 3
+                    value: 4,
                 }]
-            }, {
-                type: 'number',
-                value: 4,
-            }]
-        }],
-    }
+            }],
+        },
+    },
 });
 
 test('brackets', compileAndRunMacro, {
@@ -321,26 +347,29 @@ test('brackets product', compileAndRunMacro, {
     source: 'return (3 * 4) * 5',
     expectedExitCode: 60,
     expectedAst: {
-        type: 'returnStatement',
-        children: [{
-            type: 'return',
-            value: null,
-        }, {
-            type: 'product',
+        parseErrors: [],
+        ast: {
+            type: 'returnStatement',
             children: [{
+                type: 'return',
+                value: null,
+            }, {
                 type: 'product',
                 children: [{
-                    type: 'number',
-                    value: 3,
+                    type: 'product',
+                    children: [{
+                        type: 'number',
+                        value: 3,
+                    }, {
+                        type: 'number',
+                        value: 4,
+                    }],
                 }, {
                     type: 'number',
-                    value: 4,
+                    value: 5,
                 }],
-            }, {
-                type: 'number',
-                value: 5,
             }],
-        }],
+        },
     },
 });
 
@@ -366,32 +395,35 @@ test('double product with brackets', compileAndRunMacro, {
     source: 'return 2 * (3 * 4) * 5',
     expectedExitCode: 120,
     expectedAst: {
-        type: 'returnStatement',
-        children: [{
-            type: 'return',
-            value: null,
-        }, {
-            type: 'product',
+        parseErrors: [],
+        ast: {
+            type: 'returnStatement',
             children: [{
+                type: 'return',
+                value: null,
+            }, {
                 type: 'product',
                 children: [{
-                    type: 'number',
-                    value: 2
-                }, {
                     type: 'product',
                     children: [{
                         type: 'number',
-                        value: 3,
+                        value: 2
                     }, {
-                        type: 'number',
-                        value: 4,
-                    }]
+                        type: 'product',
+                        children: [{
+                            type: 'number',
+                            value: 3,
+                        }, {
+                            type: 'number',
+                            value: 4,
+                        }]
+                    }],
+                }, {
+                    type: 'number',
+                    value: 5,
                 }],
-            }, {
-                type: 'number',
-                value: 5,
             }],
-        }],
+        },
     },
 });
 
@@ -428,6 +460,12 @@ test('ternary true', compileAndRunMacro, {
 test('ternary false', compileAndRunMacro, {
     source: 'return 0 == 1 ? 5 : 6',
     expectedExitCode: 6,
+});
+
+test('parse error', compileAndRunMacro, {
+    source: '=>',
+    expectedParseErrors: ['Unable to parse'],
+
 });
 
 // Needs arg types
