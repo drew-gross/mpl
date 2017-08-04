@@ -4,6 +4,7 @@ const parseProgram = (t, i) => parseProgramI(t, i);
 const parseStatement = (t, i) => parseStatementI(t, i);
 const parseFunction = (t, i) => parseFunctionI(t, i);
 const parseArgList = (t, i) => parseArgListI(t, i);
+const parseArg = (t, i) => parseArgI(t, i);
 const parseParamList = (t, i) => parseParamListI(t, i);
 const parseExpression = (t, i) => parseExpressionI(t, i);
 const parseTernary = (t, i) => parseTernaryI(t, i);
@@ -16,7 +17,8 @@ const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
 // PROGRAM -> STATEMENT STATEMENT_SEPARATOR PROGRAM | return EXPRESSION
 // STATEMENT -> identifier = FUNCTION
 // FUNCTION -> ARG_LIST => EXPRESSION
-// ARG_LIST -> identifier , ARG_LIST | identifier
+// ARG_LIST -> ARG , ARG_LIST | ARG
+// ARG -> identifier : type
 // PARAM_LIST -> EXPRESSION , PARAM_LIST | EXPRESSION
 // EXPRESSION -> TERNARY | SUBTRACTION;
 // TERNARY -> SUBTRACTION ? SUBTRACTION : SUBTRACTION;
@@ -39,9 +41,11 @@ const parseStatementI = sequence('assignment', [
 const parseFunctionI = sequence('function', [parseArgList, terminal('fatArrow'), parseExpression]);
 
 const parseArgListI = alternative([
-    sequence('argList', [terminal('identifier'), terminal('comma'), parseArgList]),
-    terminal('identifier'),
+    sequence('argList', [parseArg, terminal('comma'), parseArgList]),
+    parseArg,
 ]);
+
+const parseArgI = sequence('arg', [terminal('identifier'), terminal('colon'), terminal('type')]);
 
 const parseParamListI = alternative([
     sequence('paramList', [parseExpression, terminal('comma'), parseParamList]),
@@ -57,7 +61,7 @@ const parseTernaryI = sequence('ternary', [
     parseSubtraction,
     terminal('ternaryOperator'),
     parseSubtraction,
-    terminal('ternarySeparator'),
+    terminal('colon'),
     parseSubtraction,
 ]);
 

@@ -379,7 +379,7 @@ test('assign function and return', compileAndRunMacro, {
 });
 
 test('assign function and call it', compileAndRunMacro, {
-    source: 'takeItToEleven = a => 11; return takeItToEleven(0)',
+    source: 'takeItToEleven = a: Integer => 11; return takeItToEleven(0)',
     expectedExitCode: 11
 });
 
@@ -428,7 +428,7 @@ test('double product with brackets', compileAndRunMacro, {
 });
 
 test('id function', compileAndRunMacro, {
-    source: 'id = a => a; return id(5)',
+    source: 'id = a: Integer => a; return id(5)',
     expectedExitCode: 5,
 });
 
@@ -498,9 +498,9 @@ return isFive(11)`,
     expectedExitCode: 7,
 });
 
-test('factorial', compileAndRunMacro, {
+test.only('factorial', compileAndRunMacro, {
     source: `
-factorial = x => x == 1 ? 1 : x * factorial(x - 1)
+factorial = x: Integer => x == 1 ? 1 : x * factorial(x - 1)
 return factorial(5)`,
     expectedExitCode: 120,
 });

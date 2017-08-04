@@ -12,8 +12,13 @@ const lex = input => {
         type: 'return',
         toString: () => 'return',
     }, {
-        token: '[a-zA-Z]\\w*',
+        token: '[a-z]\\w*',
         type: 'identifier',
+        action: x => x,
+        toString: x => x,
+    }, {
+        token: 'Integer|Boolean|Function',
+        type: 'type',
         action: x => x,
         toString: x => x,
     }, {
@@ -59,7 +64,7 @@ const lex = input => {
         toString: () => ')',
     }, {
         token: '\\:',
-        type: 'ternarySeparator',
+        type: 'colon',
         toString: () => ':',
     }, {
         token: '\\?',
@@ -380,7 +385,7 @@ const typeCheckProgram = ({ statements, argument }) => {
     knownIdentifiers = {};
 
     if (argument) {
-        knownIdentifiers[argument.value] = 'Integer';
+        knownIdentifiers[argument.children[0].value] = 'Integer';
     }
 
     allErrors = [];

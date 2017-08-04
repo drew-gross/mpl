@@ -66,7 +66,7 @@ const toC = (functions, variables, program, globalDeclarations) => {
     let Cfunctions = functions.map(({ name, argument, statements, scopeChain }) => {
         const body = statements[0]; // TODO: support multiple statements in a function body
         return `
-unsigned char ${name}(unsigned char ${argument.value}) {
+unsigned char ${name}(unsigned char ${argument.children[0].value}) {
     ${astToC({ ast: body }).join(' ')}
 }`
     });
@@ -159,7 +159,7 @@ const astToJS = ({ ast, registerAssignment, destination, currentTemporary }) => 
 const toJS = (functions, variables, program) => {
     let JSfunctions = functions.map(({ name, argument, statements }) => {
         return `
-${name} = ${argument.value} => {
+${name} = ${argument.children[0].value} => {
     ${astToJS({ ast: statements[0], destination: 'retVal' }).join(' ')}
     return retVal;
 };`
@@ -430,7 +430,7 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
 
     const mipsCode = flatten(statements.map(statement => {
         const registerAssignment = {
-            [argument.value]: '$s0',
+            [argument.children[0].value]: '$s0',
         };
         return astToMips({
             ast: statement,
