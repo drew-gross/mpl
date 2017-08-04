@@ -12,6 +12,11 @@ const lex = input => {
         type: 'return',
         toString: () => 'return',
     }, {
+        token: 'true|false',
+        type: 'booleanLiteral',
+        action: x => x.trim(),
+        toString: x => x,
+    }, {
         token: '[a-z]\\w*',
         type: 'identifier',
         action: x => x,
@@ -350,6 +355,7 @@ const typeOfExpression = ({ type, children, value }, knownIdentifiers) => {
             }
             return { type: trueBranchType.type, errors: [] };
         };
+        case 'booleanLiteral': return { type: 'Boolean', errors: [] };
         default: debugger; return { type: '', errors: [`Unknown type ${type}`] };
     }
 };

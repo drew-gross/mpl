@@ -56,6 +56,7 @@ const astToC = ({ ast, registerAssignment, globalDeclarations }) => {
             '==',
             ...astToC({ ast: ast.children[2], globalDeclarations }),
         ];
+        case 'booleanLiteral': return [ast.value == 'true' ? '1' : '0'];
         default:
             debugger;
             return;
@@ -150,6 +151,7 @@ const astToJS = ({ ast, registerAssignment, destination, currentTemporary }) => 
             '==',
             ...astToJS({ ast: ast.children[2] }),
         ];
+        case 'booleanLiteral': return [ast.value];
         default:
             debugger;
             return;
@@ -194,6 +196,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             }),
         ];
         case 'number': return [`li ${destination}, ${ast.value}\n`];
+        case 'booleanLiteral': return [`li ${destination}, ${ast.value == 'true' ? '1' : '0'}\n`];
         case 'product': {
             const leftSideDestination = `$t${currentTemporary}`;
             const rightSideDestination = destination;

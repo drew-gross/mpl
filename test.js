@@ -477,7 +477,6 @@ test('parse error', compileAndRunMacro, {
 
 });
 
-// Needs arg types
 test('ternary in function true', compileAndRunMacro, {
     source: `
 ternary = a: Boolean => a ? 9 : 5
@@ -485,7 +484,6 @@ return ternary(0)`,
     expectedExitCode: 5,
 });
 
-// Needs arg types
 test('ternary in function then subtract', compileAndRunMacro, {
     source: `
 ternary = a:Boolean => a ? 9 : 3
@@ -519,9 +517,17 @@ test('return bool fail', compileAndRunMacro, {
     expectedTypeErrors: ['You tried to return a Boolean'],
 });
 
-/* Needs types
+test('boolean literals', compileAndRunMacro, {
+    source: `return false ? 1 : 2`,
+    expectedExitCode: 2,
+});
+
+test('boolean literals', compileAndRunMacro, {
+    source: `return true ? 1 : 2`,
+    expectedExitCode: 1,
+});
+
 test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, {
     source: 'myVar = 3 * 3 return 9',
     expectedExitCode: 9,
 });
-*/
