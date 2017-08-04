@@ -130,8 +130,17 @@ test('ast for assignment then return', t => {
                 }, {
                     type: 'function',
                     children: [{
-                        type: 'identifier',
-                        value: 'a',
+                        type: 'arg',
+                        children: [{
+                            type: 'identifier',
+                            value: 'a'
+                        }, {
+                            type: 'colon',
+                            value: null,
+                        }, {
+                            type: 'type',
+                            value: 'Integer',
+                        }],
                     }, {
                         type: 'fatArrow',
                         value: null,
@@ -155,8 +164,8 @@ test('ast for assignment then return', t => {
             }],
         },
     };
-    const astWithSemicolon = parse(lex('constThree = a => 3; return 10'));
-    const astWithNewline = parse(lex('constThree = a => 3\n return 10'));
+    const astWithSemicolon = parse(lex('constThree = a: Integer => 3; return 10'));
+    const astWithNewline = parse(lex('constThree = a: Integer => 3\n return 10'));
 
     t.deepEqual(astWithSemicolon, expected);
     t.deepEqual(astWithNewline, expected);
@@ -374,7 +383,7 @@ test('brackets product', compileAndRunMacro, {
 });
 
 test('assign function and return', compileAndRunMacro, {
-    source: 'constThree = a => 3; return 10',
+    source: 'constThree = a: Integer => 3; return 10',
     expectedExitCode: 10,
 });
 
@@ -385,8 +394,8 @@ test('assign function and call it', compileAndRunMacro, {
 
 test('multiple variables called', compileAndRunMacro, {
     source: `
-const11 = a => 11
-const12 = a => 12
+const11 = a: Integer => 11
+const12 = a: Integer => 12
 return const11(1) * const12(2)`,
     expectedExitCode: 132,
 });
@@ -433,7 +442,7 @@ test('id function', compileAndRunMacro, {
 });
 
 test('double function', compileAndRunMacro, {
-    source: 'doubleIt = a => 2 * a; return doubleIt(100)',
+    source: 'doubleIt = a: Integer => 2 * a; return doubleIt(100)',
     expectedExitCode: 200,
 });
 
@@ -469,36 +478,36 @@ test('parse error', compileAndRunMacro, {
 });
 
 // Needs arg types
-test.failing('ternary in function true', compileAndRunMacro, {
+test('ternary in function true', compileAndRunMacro, {
     source: `
-ternary = a => a ? 9 : 5
+ternary = a: Boolean => a ? 9 : 5
 return ternary(0)`,
     expectedExitCode: 5,
 });
 
 // Needs arg types
-test.failing('ternary in function then subtract', compileAndRunMacro, {
+test('ternary in function then subtract', compileAndRunMacro, {
     source: `
-ternary = a => a ? 9 : 3
+ternary = a:Boolean => a ? 9 : 3
 return ternary(1) - ternary(0)`,
     expectedExitCode: 6,
 });
 
 test('equality comparison true', compileAndRunMacro, {
     source: `
-isFive = five => five == 5 ? 2 : 7
+isFive = five: Integer => five == 5 ? 2 : 7
 return isFive(5)`,
     expectedExitCode: 2,
 });
 
 test('equality comparison false', compileAndRunMacro, {
     source: `
-isFive = notFive => notFive == 5 ? 2 : 7
+isFive = notFive: Integer => notFive == 5 ? 2 : 7
 return isFive(11)`,
     expectedExitCode: 7,
 });
 
-test.only('factorial', compileAndRunMacro, {
+test('factorial', compileAndRunMacro, {
     source: `
 factorial = x: Integer => x == 1 ? 1 : x * factorial(x - 1)
 return factorial(5)`,

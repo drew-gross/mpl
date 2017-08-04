@@ -385,7 +385,7 @@ const typeCheckProgram = ({ statements, argument }) => {
     knownIdentifiers = {};
 
     if (argument) {
-        knownIdentifiers[argument.children[0].value] = 'Integer';
+        knownIdentifiers[argument.children[0].value] = argument.children[2].value;
     }
 
     allErrors = [];
