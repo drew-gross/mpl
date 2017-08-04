@@ -474,20 +474,19 @@ test('ternary false', compileAndRunMacro, {
 test('parse error', compileAndRunMacro, {
     source: '=>',
     expectedParseErrors: ['Unable to parse'],
-
 });
 
-test('ternary in function true', compileAndRunMacro, {
+test('ternary in function false', compileAndRunMacro, {
     source: `
 ternary = a: Boolean => a ? 9 : 5
-return ternary(0)`,
+return ternary(false)`,
     expectedExitCode: 5,
 });
 
 test('ternary in function then subtract', compileAndRunMacro, {
     source: `
 ternary = a:Boolean => a ? 9 : 3
-return ternary(1) - ternary(0)`,
+return ternary(true) - ternary(false)`,
     expectedExitCode: 6,
 });
 
