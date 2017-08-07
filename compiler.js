@@ -224,7 +224,6 @@ const extractVariables = ast => {
 };
 
 const parse = tokens => {
-    //debugger; tokensToString;
     let ast = parseProgram(tokens, 0)
 
     if (ast.success === false) {
@@ -333,7 +332,6 @@ const typeOfExpression = (foo, knownIdentifiers) => {
                 return { type: {}, errors: leftType.errors.concat(rightType.errors) };
             }
             if (!typesAreEqual(leftType.type, { name: 'Integer' })) {
-                debugger;
                 return { type: {}, errors: [`Equality comparisons of Integers only. You tried to compare a ${leftType.type} (lhs)`] };
             }
             if (!typesAreEqual(rightType.type, { name: 'Integer' })) {
@@ -351,7 +349,7 @@ const typeOfExpression = (foo, knownIdentifiers) => {
             }
             const functionName = children[0].value;
             const functionType = knownIdentifiers[functionName];
-            if (!typesAreEqual(argType.type, functionType.type.arg.type)) {
+            if (!typesAreEqual(argType.type, functionType.arg.type)) {
                 return { type: {}, errors: [`You passed a ${argType.type.name} as an argument to ${functionName}. It expects a ${functionType.name}`] };
             }
             return { type: { name: 'Integer' }, errors: [] };
@@ -396,16 +394,12 @@ const typeCheckStatement = ({ type, children }, knownIdentifiers) => {
             return { errors: [], newIdentifiers: {} };
         }
         case 'assignment': {
-            debugger;
-            const leftType = { type: { name: 'Function', arg: { type: { name: 'Integer' } } }, errors: [] }; // TODO: make variables that can hold things other than functions
             const rightType = typeOfExpression(children[2], knownIdentifiers);
             if (rightType.errors.length > 0) {
                 return { errors: rightType.errors, newIdentifiers: {} };
             }
-            if (!typesAreEqual(rightType.type, leftType.type)) {
-                return { errors: [`Attempted to assign a ${rightType.type.name} to a ${leftType.type.name}`], newIdentifiers: {} };
-            }
-            return { errors: [], newIdentifiers: { [children[0].value]: leftType } };
+            // Left type is inferred as right type
+            return { errors: [], newIdentifiers: { [children[0].value]: rightType } };
         }
         default: debugger; return ['Unknown type'];
     };
@@ -422,7 +416,9 @@ const typeCheckProgram = ({ statements, argument }, previouslyKnownIdentifiers) 
     statements.forEach(s => {
         if (allErrors.length == 0) {
             const { errors, newIdentifiers } = typeCheckStatement(s, knownIdentifiers);
-            knownIdentifiers = Object.assign(knownIdentifiers, newIdentifiers);
+            for (identifier in newIdentifiers) {
+                knownIdentifiers[identifier] = newIdentifiers[identifier].type;
+            }
             allErrors.push(...errors);
         }
     });
@@ -434,7 +430,6 @@ const getFunctionTypeMap = functions => {
     functions.forEach(({ name, argument }) => {
         result[name] = { name: 'Function', arg: { type: { name: argument.children[2].value } } };
     });
-    debugger;
     return result;
 };
 

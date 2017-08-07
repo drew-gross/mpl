@@ -483,7 +483,7 @@ return ternary(false)`,
     expectedExitCode: 5,
 });
 
-test('ternary in function then subtract', compileAndRunMacro, {
+test.only('ternary in function then subtract', compileAndRunMacro, {
     source: `
 ternary = a:Boolean => a ? 9 : 3
 return ternary(true) - ternary(false)`,
@@ -497,7 +497,7 @@ return isFive(5)`,
     expectedExitCode: 2,
 });
 
-test.only('equality comparison false', compileAndRunMacro, {
+test('equality comparison false', compileAndRunMacro, {
     source: `
 isFive = notFive: Integer => notFive == 5 ? 2 : 7
 return isFive(11)`,
