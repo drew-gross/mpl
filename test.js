@@ -497,7 +497,7 @@ return isFive(5)`,
     expectedExitCode: 2,
 });
 
-test('equality comparison false', compileAndRunMacro, {
+test.only('equality comparison false', compileAndRunMacro, {
     source: `
 isFive = notFive: Integer => notFive == 5 ? 2 : 7
 return isFive(11)`,
@@ -516,16 +516,25 @@ test('return bool fail', compileAndRunMacro, {
     expectedTypeErrors: ['You tried to return a Boolean'],
 });
 
-test('boolean literals', compileAndRunMacro, {
+test('boolean literal false', compileAndRunMacro, {
     source: `return false ? 1 : 2`,
     expectedExitCode: 2,
 });
 
-test('boolean literals', compileAndRunMacro, {
+test('boolean literal true', compileAndRunMacro, {
     source: `return true ? 1 : 2`,
     expectedExitCode: 1,
 });
 
+// Needs richer types for functions
+test.failing('wrong type for arg', compileAndRunMacro, {
+    source: `
+boolFunc = a: Boolean => 1
+return boolFunc(7)`,
+    expectedTypeErrors: ['blah'],
+});
+
+// Needs types for locals
 test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, {
     source: 'myVar = 3 * 3 return 9',
     expectedExitCode: 9,
