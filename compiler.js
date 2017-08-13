@@ -422,7 +422,7 @@ const typeCheckProgram = ({ statements, argument }, previouslyKnownIdentifiers) 
             allErrors.push(...errors);
         }
     });
-    return allErrors;
+    return { typeErrors: allErrors, identifiers: knownIdentifiers };
 };
 
 const getFunctionTypeMap = functions => {
@@ -451,8 +451,9 @@ const compile = ({ source, target }) => {
     const functionsWithStatementList = functions.map(statementTreeToStatementList);
     const programWithStatementList = statementTreeToStatementList({ body: program });
 
-    let typeErrors = functionsWithStatementList.map(f => typeCheckProgram(f, functionIdentifierTypes));
-    typeErrors.push(typeCheckProgram(programWithStatementList, functionIdentifierTypes));
+    const programTypeCheck = typeCheckProgram(programWithStatementList, functionIdentifierTypes);
+    let typeErrors = functionsWithStatementList.map(f => typeCheckProgram(f, Object.assign({}, functionIdentifierTypes, programTypeCheck.identifiers)).typeErrors);
+    typeErrors.push(programTypeCheck.typeErrors);
 
     typeErrors = flatten(typeErrors);
     if (typeErrors.length > 0) {
