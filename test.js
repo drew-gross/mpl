@@ -527,11 +527,11 @@ test('boolean literal true', compileAndRunMacro, {
 });
 
 // Needs richer types for functions
-test.failing('wrong type for arg', compileAndRunMacro, {
+test('wrong type for arg', compileAndRunMacro, {
     source: `
 boolFunc = a: Boolean => 1
 return boolFunc(7)`,
-    expectedTypeErrors: ['blah'],
+    expectedTypeErrors: ['You passed a Integer as an argument to boolFunc. It expects a Boolean'],
 });
 
 // Needs types for locals

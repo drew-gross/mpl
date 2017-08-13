@@ -350,7 +350,7 @@ const typeOfExpression = (foo, knownIdentifiers) => {
             const functionName = children[0].value;
             const functionType = knownIdentifiers[functionName];
             if (!typesAreEqual(argType.type, functionType.arg.type)) {
-                return { type: {}, errors: [`You passed a ${argType.type.name} as an argument to ${functionName}. It expects a ${functionType.name}`] };
+                return { type: {}, errors: [`You passed a ${argType.type.name} as an argument to ${functionName}. It expects a ${functionType.arg.type.name}`] };
             }
             return { type: { name: 'Integer' }, errors: [] };
         }
