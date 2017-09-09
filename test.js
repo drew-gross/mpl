@@ -526,7 +526,6 @@ test('boolean literal true', compileAndRunMacro, {
     expectedExitCode: 1,
 });
 
-// Needs richer types for functions
 test('wrong type for arg', compileAndRunMacro, {
     source: `
 boolFunc = a: Boolean => 1
