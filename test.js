@@ -516,7 +516,7 @@ test('return bool fail', compileAndRunMacro, {
     expectedTypeErrors: ['You tried to return a Boolean'],
 });
 
-test('boolean literal false', compileAndRunMacro, {
+test.only('boolean literal false', compileAndRunMacro, {
     source: `return false ? 1 : 2`,
     expectedExitCode: 2,
 });
@@ -540,7 +540,7 @@ test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, {
 });
 
 // Needs spill to ram
-test.failing('many temporaries, spill to ram', compileAndRunMacro, {
+test('many temporaries, spill to ram', compileAndRunMacro, {
     source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
     expectedExitCode: 1,
 });

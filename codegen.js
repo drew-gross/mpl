@@ -178,6 +178,13 @@ ${JS.join('\n')}
 process.exit(exitCode);`;
 };
 
+const storeLiteralMipsInstruction = ({type, destination}, value) => {
+    switch (type) {
+        case 'register': return `li ${destination}, ${value}`;
+        default: debugger; return '';
+    }
+}
+
 const nextTemporary = currentTemporary => currentTemporary + 1; // Don't use more temporaries than there are registers! :p
 
 let labelId = 0;
@@ -190,12 +197,15 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             ...astToMips({
                 ast: ast.children[1],
                 registerAssignment,
-                destination: '$a0',
+                destination: {
+                    type: 'register',
+                    destination: '$a0',
+                },
                 currentTemporary,
                 globalDeclarations,
             }),
         ];
-        case 'number': return [`li ${destination}, ${ast.value}\n`];
+        case 'number': return [storeLiteralMipsInstruction(destination, ast.value)];
         case 'booleanLiteral': return [`li ${destination}, ${ast.value == 'true' ? '1' : '0'}\n`];
         case 'product': {
             const leftSideDestination = `$t${currentTemporary}`;
@@ -386,7 +396,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 `# Goto set 1 if equal`,
                 `beq ${leftSideDestination}, ${rightSideDestination}, L${equalLabel}`,
                 `# Not equal, set 0`,
-                `li ${destination}, 0`,
+                storeLiteralMipsInstruction(destination, '0'),
                 `# And goto exit`,
                 `b L${endOfConditionLabel}`,
                 `L${equalLabel}:`,
@@ -462,7 +472,10 @@ const toMips = (functions, variables, program, globalDeclarations) => {
     let mipsProgram = flatten(program.statements.map(statement => astToMips({
         ast: statement,
         registerAssignment,
-        destination: '$a0',
+        destination: {
+            type: 'register',
+            destination: '$a0',
+        },
         currentTemporary: firstTemporary,
         globalDeclarations
     })));
