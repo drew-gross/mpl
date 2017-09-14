@@ -178,9 +178,16 @@ ${JS.join('\n')}
 process.exit(exitCode);`;
 };
 
-const storeLiteralMipsInstruction = ({type, destination}, value) => {
+const storeLiteralMips = ({type, destination}, value) => {
     switch (type) {
         case 'register': return `li ${destination}, ${value}`;
+        default: debugger; return '';
+    }
+}
+
+const subtractMips = ({ type, destination }, left, right) => {
+    switch (type) {
+        case 'register': return `sub ${destination}, ${left.destination}, ${right.destination}`;
         default: debugger; return '';
     }
 }
@@ -205,7 +212,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 globalDeclarations,
             }),
         ];
-        case 'number': return [storeLiteralMipsInstruction(destination, ast.value)];
+        case 'number': return [storeLiteralMips(destination, ast.value)];
         case 'booleanLiteral': return [`li ${destination}, ${ast.value == 'true' ? '1' : '0'}\n`];
         case 'product': {
             const leftSideDestination = `$t${currentTemporary}`;
@@ -227,9 +234,9 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 globalDeclarations,
             });
             return [
-                `# Store left side in temporary (${leftSideDestination})\n`,
+                `# Store left side in temporary (${leftSideDestination.destination})\n`,
                 ...storeLeftInstructions,
-                `# Store right side in destination (${rightSideDestination})\n`,
+                `# Store right side in destination (${rightSideDestination.destination})\n`,
                 ...storeRightInstructions,
                 `# Evaluate product`,
                 `mult ${leftSideDestination}, ${rightSideDestination}`,
@@ -238,7 +245,10 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             ];
         }
         case 'subtraction': {
-            const leftSideDestination = `$t${currentTemporary}`;
+            const leftSideDestination = {
+                type: 'register',
+                destination: `$t${currentTemporary}`,
+            };
             const rightSideDestination = destination;
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
@@ -257,12 +267,12 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 globalDeclarations,
             });
             return [
-                `# Store left side in temporary (${leftSideDestination})\n`,
+                `# Store left side in temporary (${leftSideDestination.destination})`,
                 ...storeLeftInstructions,
-                `# Store right side in destination (${rightSideDestination})\n`,
+                `# Store right side in destination (${rightSideDestination.destination})`,
                 ...storeRightInstructions,
                 `# Evaluate subtraction`,
-                `sub ${destination}, ${leftSideDestination}, ${rightSideDestination}`,
+                subtractMips(destination, leftSideDestination, rightSideDestination),
             ];
         }
         case 'statement': return flatten(ast.children.map(child => astToMips({
@@ -396,7 +406,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 `# Goto set 1 if equal`,
                 `beq ${leftSideDestination}, ${rightSideDestination}, L${equalLabel}`,
                 `# Not equal, set 0`,
-                storeLiteralMipsInstruction(destination, '0'),
+                storeLiteralMips(destination, '0'),
                 `# And goto exit`,
                 `b L${endOfConditionLabel}`,
                 `L${equalLabel}:`,

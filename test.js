@@ -456,7 +456,7 @@ test('order of operations', compileAndRunMacro, {
     expectedExitCode: 9,
 });
 
-test('associativity of subtraction', compileAndRunMacro, {
+test.only('associativity of subtraction', compileAndRunMacro, {
     source: 'return 5 - 2 - 1',
     expectedExitCode: 2,
 });
@@ -516,7 +516,7 @@ test('return bool fail', compileAndRunMacro, {
     expectedTypeErrors: ['You tried to return a Boolean'],
 });
 
-test.only('boolean literal false', compileAndRunMacro, {
+test('boolean literal false', compileAndRunMacro, {
     source: `return false ? 1 : 2`,
     expectedExitCode: 2,
 });
