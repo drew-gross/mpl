@@ -538,3 +538,9 @@ test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, {
     source: 'myVar = 3 * 3 return 9',
     expectedExitCode: 9,
 });
+
+// Needs spill to ram
+test.failing('many temporaries, spill to ram', compileAndRunMacro, {
+    source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
+    expectedExitCode: 1,
+});
