@@ -192,6 +192,27 @@ const subtractMips = ({ type, destination }, left, right) => {
     }
 }
 
+const moveMips = ({ type, destination }, source) => {
+    switch (type) {
+        case 'register': return `move ${destination}, ${source}`;
+        default: debugger; return '';
+    }
+}
+
+const multiplyMips = ({ type, destination }, left, right) => {
+    switch (type) {
+        case 'register': return `mult ${left.destination}, ${right.destination}
+# Move result to final destination (assume no overflow)
+mflo ${destination}`;
+        default: debugger; return '';
+    }
+}
+
+const mipsBranchIfEqual = (left, right, label) => {
+    if (left.type !== 'register' || right.type !== 'register') debugger;
+    return `beq ${left.destination}, ${right.destination}, ${label}`
+}
+
 const nextTemporary = currentTemporary => currentTemporary + 1; // Don't use more temporaries than there are registers! :p
 
 let labelId = 0;
@@ -215,7 +236,10 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
         case 'number': return [storeLiteralMips(destination, ast.value)];
         case 'booleanLiteral': return [`li ${destination}, ${ast.value == 'true' ? '1' : '0'}\n`];
         case 'product': {
-            const leftSideDestination = `$t${currentTemporary}`;
+            const leftSideDestination = {
+                type: 'register',
+                destination: `$t${currentTemporary}`,
+            };
             const rightSideDestination = destination;
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
@@ -239,9 +263,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 `# Store right side in destination (${rightSideDestination.destination})\n`,
                 ...storeRightInstructions,
                 `# Evaluate product`,
-                `mult ${leftSideDestination}, ${rightSideDestination}`,
-                `# Move result to final destination (assume no overflow)`,
-                `mflo ${destination}`,
+                multiplyMips(destination, leftSideDestination, rightSideDestination),
             ];
         }
         case 'subtraction': {
@@ -284,8 +306,6 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
         })));
         case 'callExpression': {
             const name = ast.children[0].value;
-
-
             const callInstructions = globalDeclarations.includes(name)
                 ? [`lw $t${currentTemporary}, ${name}`, `jal $t${currentTemporary}`]
                 : [`jal $${registerAssignment[name]}`];
@@ -295,14 +315,14 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 ...astToMips({
                     ast: ast.children[2],
                     registerAssignment,
-                    destination: '$s0',
+                    destination: { type: 'register', destination: '$s0' },
                     currentTemporary: nextTemporary(currentTemporary),
                     globalDeclarations,
                 }),
                 `# call ${name}`,
                 ...callInstructions,
                 `# move result from $a0 into destination`,
-                `move ${destination}, $a0`
+                moveMips(destination, '$a0'),
             ];
         }
         case 'assignment': {
@@ -328,11 +348,14 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             const identifierRegister = registerAssignment[identifierName];
             return [
                 `# Move from ${identifierName} (${identifierRegister}) into destination (${destination})`,
-                `move ${destination}, ${identifierRegister}`,
+                moveMips(destination, identifierRegister),
             ];
         }
         case 'ternary': {
-            const booleanTemporary = `$t${currentTemporary}`;
+            const booleanTemporary = {
+                type: 'register',
+                destination: `$t${currentTemporary}`,
+            };
             const subExpressionTemporary = nextTemporary(currentTemporary);
             const falseBranchLabel = labelId;
             labelId++;
@@ -348,7 +371,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                     globalDeclarations,
                 }),
                 `# Go to false branch if zero`,
-                `beq ${booleanTemporary}, $0, L${falseBranchLabel}`,
+                mipsBranchIfEqual(booleanTemporary, { type: 'register', destination: '$0' }, `L${falseBranchLabel}`),
                 `# Execute true branch`,
                 ...astToMips({
                     ast: ast.children[2],
@@ -373,7 +396,10 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             ];
         }
         case 'equality': {
-            const leftSideDestination = `$t${currentTemporary}`;
+            const leftSideDestination = {
+                type: 'register',
+                destination: `$t${currentTemporary}`
+            };
             const rightSideDestination = destination;
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
@@ -404,13 +430,13 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 `# Store right side in temporary`,
                 ...storeRightInstructions,
                 `# Goto set 1 if equal`,
-                `beq ${leftSideDestination}, ${rightSideDestination}, L${equalLabel}`,
+                mipsBranchIfEqual(leftSideDestination, rightSideDestination, `L${equalLabel}`),
                 `# Not equal, set 0`,
                 storeLiteralMips(destination, '0'),
                 `# And goto exit`,
                 `b L${endOfConditionLabel}`,
                 `L${equalLabel}:`,
-                `li ${destination}, 1`,
+                storeLiteralMips(destination, '1'),
                 `L${endOfConditionLabel}:`,
             ];
         }

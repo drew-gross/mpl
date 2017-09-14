@@ -456,7 +456,7 @@ test('order of operations', compileAndRunMacro, {
     expectedExitCode: 9,
 });
 
-test.only('associativity of subtraction', compileAndRunMacro, {
+test('associativity of subtraction', compileAndRunMacro, {
     source: 'return 5 - 2 - 1',
     expectedExitCode: 2,
 });
@@ -504,7 +504,7 @@ return isFive(11)`,
     expectedExitCode: 7,
 });
 
-test('factorial', compileAndRunMacro, {
+test.only('factorial', compileAndRunMacro, {
     source: `
 factorial = x: Integer => x == 1 ? 1 : x * factorial(x - 1)
 return factorial(5)`,
