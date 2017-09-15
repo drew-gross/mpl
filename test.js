@@ -504,7 +504,7 @@ return isFive(11)`,
     expectedExitCode: 7,
 });
 
-test.only('factorial', compileAndRunMacro, {
+test('factorial', compileAndRunMacro, {
     source: `
 factorial = x: Integer => x == 1 ? 1 : x * factorial(x - 1)
 return factorial(5)`,
@@ -540,7 +540,7 @@ test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, {
 });
 
 // Needs spill to ram
-test('many temporaries, spill to ram', compileAndRunMacro, {
+test.failing('many temporaries, spill to ram', compileAndRunMacro, {
     source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
     expectedExitCode: 1,
 });

@@ -234,7 +234,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             }),
         ];
         case 'number': return [storeLiteralMips(destination, ast.value)];
-        case 'booleanLiteral': return [`li ${destination}, ${ast.value == 'true' ? '1' : '0'}\n`];
+        case 'booleanLiteral': return [storeLiteralMips(destination, ast.value == 'true' ? '1' : '0')];
         case 'product': {
             const leftSideDestination = {
                 type: 'register',
