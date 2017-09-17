@@ -1,8 +1,15 @@
 const flatten = require('../util/list/flatten.js');
 
-const storeLiteralMips = ({type, destination}, value) => {
+// 's' registers are used for the, starting as 0. Spill recovery shall start at the last (7)
+
+const storeLiteralMips = ({ type, destination, spOffset }, value) => {
+    if (type == undefined) debugger;
     switch (type) {
-        case 'register': return `li ${destination}, ${value}`;
+        case 'register': return `li $t${destination}, ${value}`;
+        case 'memory': return [
+            `li $s7, ${value}`,
+            `sw $s7, -${spOffset}($sp)`
+        ].join('\n');
         default: debugger; return '';
     }
 }
@@ -21,13 +28,34 @@ const moveMips = ({ type, destination }, source) => {
     }
 }
 
-const multiplyMips = ({ type, destination }, left, right) => {
-    switch (type) {
-        case 'register': return `mult ${left.destination}, ${right.destination}
-# Move result to final destination (assume no overflow)
-mflo ${destination}`;
-        default: debugger; return '';
+const multiplyMips = (destination, left, right) => {
+    let leftRegister = `$t${left.destination}`;
+    let loadSpilled = []
+    let restoreSpilled = [];
+    if (left.type == 'memory') {
+        leftRegister = '$s1';
+        loadSpilled.push(`lw $s1, -${left.spOffset}($sp)`);
     }
+
+    let rightRegister = `$t${right.destination}`;
+    if (right.type == 'memory') {
+        rightRegister = '$s2';
+        loadSpilled.push(`lw $s2, -${right.spOffset}($sp)`);
+    }
+
+    let destinationRegister = `$t${destination.destination}`;
+    if (destination.type == 'memory') {
+        destinationRegister = '$s3';
+        restoreSpilled.push(`sw $s3, -${destination.spOffset}($sp)`);
+    }
+
+    return [
+        ...loadSpilled,
+        `mult ${leftRegister}, ${rightRegister}`,
+        `# Move result to final destination (assume no overflow)`,
+        `mflo ${destinationRegister}`,
+        ...restoreSpilled,
+    ].join('\n');
 }
 
 const mipsBranchIfEqual = (left, right, label) => {
@@ -35,7 +63,29 @@ const mipsBranchIfEqual = (left, right, label) => {
     return `beq ${left.destination}, ${right.destination}, ${label}`
 }
 
-const nextTemporary = currentTemporary => currentTemporary + 1; // Don't use more temporaries than there are registers! :p
+const nextTemporary = ({ type, destination, spOffset }) => {
+    if (type == 'register') {
+        if (destination == 9) {
+            // Now need to spill
+            return {
+                type: 'memory',
+                spOffset: 0,
+            };
+        } else {
+            return {
+                type: 'register',
+                destination: destination + 1,
+            };
+        }
+    } else if (type == 'memory') {
+        return {
+            type: 'memory',
+            spOffset: spOffset + 4,
+        }
+    } else {
+        debugger;
+    }
+};
 
 let labelId = 0;
 
@@ -49,7 +99,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 registerAssignment,
                 destination: {
                     type: 'register',
-                    destination: '$a0',
+                    destination: 0,
                 },
                 currentTemporary,
                 globalDeclarations,
@@ -58,10 +108,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
         case 'number': return [storeLiteralMips(destination, ast.value)];
         case 'booleanLiteral': return [storeLiteralMips(destination, ast.value == 'true' ? '1' : '0')];
         case 'product': {
-            const leftSideDestination = {
-                type: 'register',
-                destination: `$t${currentTemporary}`,
-            };
+            const leftSideDestination = currentTemporary;
             const rightSideDestination = destination;
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
@@ -89,10 +136,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             ];
         }
         case 'subtraction': {
-            const leftSideDestination = {
-                type: 'register',
-                destination: `$t${currentTemporary}`,
-            };
+            const leftSideDestination = currentTemporary;
             const rightSideDestination = destination;
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
@@ -276,7 +320,10 @@ const assignMipsRegisters = variables => {
     });
     return {
         registerAssignment,
-        firstTemporary: currentRegister,
+        firstTemporary: { // TODO: This assumes we never need to spill locals
+            type: 'register',
+            destination: currentRegister
+        },
     };
 };
 
@@ -322,7 +369,6 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
 
 module.exports = (functions, variables, program, globalDeclarations) => {
     let mipsFunctions = functions.map(f => constructMipsFunction(f,  globalDeclarations));
-
     const {
         registerAssignment,
         firstTemporary,
@@ -335,8 +381,13 @@ module.exports = (functions, variables, program, globalDeclarations) => {
             destination: '$a0',
         },
         currentTemporary: firstTemporary,
-        globalDeclarations
+        globalDeclarations,
     })));
+
+    // Create space for spilled tempraries
+    const numSpilledTemporaries = program.temporaryCount - 10
+    const makeSpillSpaceCode = ``;
+    const removeSpillSpaceCode = ``;
 
     return `
 .data
@@ -344,7 +395,11 @@ ${globalDeclarations.map(name => `${name}: .word 0`).join('\n')}
 .text
 ${mipsFunctions.join('\n')}
 main:
+# Make spill space for main program
+addiu $sp, $sp, -${numSpilledTemporaries * 4}
 ${mipsProgram.join('\n')}
+# Clean spill space for main program
+addiu $sp, $sp, ${numSpilledTemporaries * 4}
 # print "exit code" and exit
 li $v0, 1
 syscall
