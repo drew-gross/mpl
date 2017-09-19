@@ -5,7 +5,7 @@ const flatten = require('../util/list/flatten.js');
 const storeLiteralMips = ({ type, destination, spOffset }, value) => {
     if (type == undefined) debugger;
     switch (type) {
-        case 'register': return `li $t${destination}, ${value}`;
+        case 'register': return `li ${destination}, ${value}`;
         case 'memory': return [
             `li $s7, ${value}`,
             `sw $s7, -${spOffset}($sp)`
@@ -29,7 +29,7 @@ const moveMips = ({ type, destination }, source) => {
 }
 
 const multiplyMips = (destination, left, right) => {
-    let leftRegister = `$t${left.destination}`;
+    let leftRegister = left.destination;
     let loadSpilled = []
     let restoreSpilled = [];
     if (left.type == 'memory') {
@@ -37,17 +37,18 @@ const multiplyMips = (destination, left, right) => {
         loadSpilled.push(`lw $s1, -${left.spOffset}($sp)`);
     }
 
-    let rightRegister = `$t${right.destination}`;
+    let rightRegister = right.destination;
     if (right.type == 'memory') {
         rightRegister = '$s2';
         loadSpilled.push(`lw $s2, -${right.spOffset}($sp)`);
     }
 
-    let destinationRegister = `$t${destination.destination}`;
+    let destinationRegister = destination.destination;
     if (destination.type == 'memory') {
         destinationRegister = '$s3';
         restoreSpilled.push(`sw $s3, -${destination.spOffset}($sp)`);
     }
+    if (leftRegister == '$tNaN') debugger;
 
     return [
         ...loadSpilled,
@@ -65,7 +66,7 @@ const mipsBranchIfEqual = (left, right, label) => {
 
 const nextTemporary = ({ type, destination, spOffset }) => {
     if (type == 'register') {
-        if (destination == 9) {
+        if (destination == '$t9') {
             // Now need to spill
             return {
                 type: 'memory',
@@ -74,7 +75,7 @@ const nextTemporary = ({ type, destination, spOffset }) => {
         } else {
             return {
                 type: 'register',
-                destination: destination + 1,
+                destination: `$t${parseInt(destination[destination.length - 1]) + 1}`,
             };
         }
     } else if (type == 'memory') {
@@ -99,7 +100,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 registerAssignment,
                 destination: {
                     type: 'register',
-                    destination: 0,
+                    destination: '$a0',
                 },
                 currentTemporary,
                 globalDeclarations,
@@ -127,9 +128,9 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 globalDeclarations,
             });
             return [
-                `# Store left side in temporary (${leftSideDestination.destination})\n`,
+                `# Store left side in temporary (${leftSideDestination.destination})`,
                 ...storeLeftInstructions,
-                `# Store right side in destination (${rightSideDestination.destination})\n`,
+                `# Store right side in destination (${rightSideDestination.destination})`,
                 ...storeRightInstructions,
                 `# Evaluate product`,
                 multiplyMips(destination, leftSideDestination, rightSideDestination),
@@ -196,10 +197,11 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             const rhs = ast.children[2].value;
             if (globalDeclarations.includes(lhs)) {
                 return [
-                    `# Load function ptr (${rhs} into current temporary ($${currentTemporary})`,
-                    `la $t${currentTemporary}, ${rhs}`,
+                    // TODO: Make assignment better
+                    `# Load function ptr (${rhs} into s7 (s7 used to not overlap with arg)`,
+                    `la $s7, ${rhs}`,
                     `# store from temporary into global`,
-                    `sw $t${currentTemporary}, ${lhs}`,
+                    `sw $s7, ${lhs}`,
                 ];
             } else {
                 const register = registerAssignment[lhs];
@@ -218,10 +220,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             ];
         }
         case 'ternary': {
-            const booleanTemporary = {
-                type: 'register',
-                destination: `$t${currentTemporary}`,
-            };
+            const booleanTemporary = currentTemporary;
             const subExpressionTemporary = nextTemporary(currentTemporary);
             const falseBranchLabel = labelId;
             labelId++;
@@ -262,10 +261,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             ];
         }
         case 'equality': {
-            const leftSideDestination = {
-                type: 'register',
-                destination: `$t${currentTemporary}`
-            };
+            const leftSideDestination = currentTemporary;
             const rightSideDestination = destination;
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
@@ -322,7 +318,7 @@ const assignMipsRegisters = variables => {
         registerAssignment,
         firstTemporary: { // TODO: This assumes we never need to spill locals
             type: 'register',
-            destination: currentRegister
+            destination: `$t${currentRegister}`,
         },
     };
 };
@@ -354,7 +350,10 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
             ast: statement,
             registerAssignment,
             destination: '$a0',
-            currentTemporary: 1,
+            currentTemporary: {
+                type: 'register',
+                destination: '$t1',
+            },
             globalDeclarations,
         });
     }));
