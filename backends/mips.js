@@ -174,7 +174,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
         case 'callExpression': {
             const name = ast.children[0].value;
             const callInstructions = globalDeclarations.includes(name)
-                ? [`lw $t${currentTemporary}, ${name}`, `jal $t${currentTemporary}`]
+                ? [`jal ${name}`]
                 : [`jal $${registerAssignment[name]}`];
 
             return [
@@ -215,7 +215,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             const identifierName = ast.value;
             const identifierRegister = registerAssignment[identifierName];
             return [
-                `# Move from ${identifierName} (${identifierRegister}) into destination (${destination})`,
+                `# Move from ${identifierName} (${identifierRegister}) into destination (${destination.destination || destination.spOffset})`,
                 moveMips(destination, identifierRegister),
             ];
         }
