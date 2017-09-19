@@ -386,8 +386,14 @@ module.exports = (functions, variables, program, globalDeclarations) => {
 
     // Create space for spilled tempraries
     const numSpilledTemporaries = program.temporaryCount - 10
-    const makeSpillSpaceCode = ``;
-    const removeSpillSpaceCode = ``;
+    const makeSpillSpaceCode = numSpilledTemporaries > 0 ? [
+        `# Make spill space for main program`,
+        `addiu $sp, $sp, -${numSpilledTemporaries * 4}`,
+    ] : [];
+    const removeSpillSpaceCode = numSpilledTemporaries > 0 ? [
+        `# Clean spill space for main program`,
+        `addiu $sp, $sp, ${numSpilledTemporaries * 4}`,
+    ] : [];
 
     return `
 .data
@@ -395,11 +401,9 @@ ${globalDeclarations.map(name => `${name}: .word 0`).join('\n')}
 .text
 ${mipsFunctions.join('\n')}
 main:
-# Make spill space for main program
-addiu $sp, $sp, -${numSpilledTemporaries * 4}
+${makeSpillSpaceCode.join('\n')}
 ${mipsProgram.join('\n')}
-# Clean spill space for main program
-addiu $sp, $sp, ${numSpilledTemporaries * 4}
+${removeSpillSpaceCode.join('\n')}
 # print "exit code" and exit
 li $v0, 1
 syscall

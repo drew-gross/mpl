@@ -540,7 +540,7 @@ test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, {
 });
 
 // Needs spill to ram
-test.only('many temporaries, spill to ram', compileAndRunMacro, {
+test('many temporaries, spill to ram', compileAndRunMacro, {
     source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
     expectedExitCode: 1,
 });
