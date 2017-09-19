@@ -172,9 +172,10 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             globalDeclarations,
         })));
         case 'callExpression': {
+            if (currentTemporary.type !== 'register') debugger; // TODO: Figure out how to guarantee this doesn't happen
             const name = ast.children[0].value;
             const callInstructions = globalDeclarations.includes(name)
-                ? [`jal ${name}`]
+                ? [`lw ${currentTemporary.destination}, ${name}`, `jal ${currentTemporary.destination}`]
                 : [`jal $${registerAssignment[name]}`];
 
             return [

@@ -483,7 +483,7 @@ return ternary(false)`,
     expectedExitCode: 5,
 });
 
-test.only('ternary in function then subtract', compileAndRunMacro, {
+test('ternary in function then subtract', compileAndRunMacro, {
     source: `
 ternaryFunc = a:Boolean => a ? 9 : 3
 return ternaryFunc(true) - ternaryFunc(false)`,
