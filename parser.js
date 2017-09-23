@@ -20,12 +20,12 @@ const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
 // ARG_LIST -> ARG , ARG_LIST | ARG
 // ARG -> identifier : type
 // PARAM_LIST -> EXPRESSION , PARAM_LIST | EXPRESSION
-// EXPRESSION -> TERNARY | SUBTRACTION;
+// EXPRESSION -> TERNARY | SUBTRACTION | SIMPLE_EXPRESSION;
 // TERNARY -> SUBTRACTION ? SUBTRACTION : SUBTRACTION;
 // SUBTRACTION -> PRODUCT - EXPRESSION | PRODUCT
 // PRODUCT -> EQUALITY * PRODUCT | EQUALITY
 // EQUALITY -> SIMPLE_EXPRESSION == EQUALITY | SIMPLE_EXPRESSION
-// SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( ARG_LIST ) | int | boolean | identifier | FUNCTION
+// SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( ARG_LIST ) | int | boolean | FUNCTION | identifier
 
 const parseProgramI = alternative([
     sequence('statement', [parseStatement, terminal('statementSeparator'), parseProgram]),
@@ -64,6 +64,7 @@ const parseParamListI = alternative([
 const parseExpressionI = alternative([
     parseTernary,
     parseSubtraction,
+    parseSimpleExpression,
 ]);
 
 const parseTernaryI = sequence('ternary', [
@@ -99,8 +100,8 @@ const parseSimpleExpressionI = alternative([
     ]),
     terminal('number'),
     terminal('booleanLiteral'),
-    terminal('identifier'),
     parseFunction,
+    terminal('identifier'),
 ]);
 
 module.exports = parseProgram;

@@ -114,7 +114,7 @@ test('ast for product with brackets', t => {
     }));
 });
 
-test('ast for assignment then return', t => {
+test.only('ast for assignment then return', t => {
     const expected = {
         parseErrors: [],
         ast: {
@@ -545,7 +545,7 @@ test.failing('assign function to typed var', compileAndRunMacro, {
 });
 
 // Needs types for locals
-test.only('return local integer', compileAndRunMacro, {
+test('return local integer', compileAndRunMacro, {
     source: 'myVar: Integer = 3 * 3; return myVar',
     expectedExitCode: 9,
 });
