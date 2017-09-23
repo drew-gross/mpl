@@ -114,7 +114,7 @@ const extractFunctions = ast => {
 };
 
 const extractVariables = ast => {
-    if (ast.type === 'assignment') {
+    if (ast.type === 'assignment' || ast.type === 'typedAssignment') {
         return [ast.children[0].value];
     } else if ('children' in ast) {
         return flatten(ast.children.map(extractVariables));
@@ -179,6 +179,7 @@ const countTemporariesInExpression = ast => {
         case 'returnStatement': return countTemporariesInExpression(ast.children[1]);
         case 'product': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
         case 'subtraction': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
+        case 'typedAssignment': return 1;
         case 'assignment': return 1;
         case 'callExpression': return 1;
         case 'ternary': return 2 + Math.max(
@@ -300,6 +301,19 @@ const typeCheckStatement = ({ type, children }, knownIdentifiers) => {
             }
             // Left type is inferred as right type
             return { errors: [], newIdentifiers: { [children[0].value]: rightType } };
+        }
+        case 'typedAssignment': {
+            // Check that type of var being assigned to matches type being assigned
+            const varName = children[0].value;
+            const rightType = typeOfExpression(children[4], knownIdentifiers);
+            const leftType = { name: children[2].value };
+            if (rightType.errors.length > 0) {
+                return { errors: rightType.errors, newIdentifiers: {} };
+            }
+            if (!typesAreEqual(rightType.type, leftType)) {
+                return { errors: [`You tried to assign a ${rightType.type.name} to "${varName}", which has type ${leftType.name}`], newIdentifiers: {} };
+            }
+            return { errors: [], newIdentifiers: { [varName]: { type: leftType } } };
         }
         default: debugger; return ['Unknown type'];
     };

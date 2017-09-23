@@ -15,7 +15,7 @@ const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
 
 // Grammar:
 // PROGRAM -> STATEMENT STATEMENT_SEPARATOR PROGRAM | return EXPRESSION
-// STATEMENT -> identifier = FUNCTION
+// STATEMENT -> identifier : type = EXPRESSION | identifier = EXPRESSION
 // FUNCTION -> ARG_LIST => EXPRESSION
 // ARG_LIST -> ARG , ARG_LIST | ARG
 // ARG -> identifier : type
@@ -25,17 +25,26 @@ const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
 // SUBTRACTION -> PRODUCT - EXPRESSION | PRODUCT
 // PRODUCT -> EQUALITY * PRODUCT | EQUALITY
 // EQUALITY -> SIMPLE_EXPRESSION == EQUALITY | SIMPLE_EXPRESSION
-// SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( ARG_LIST ) | int | boolean | identifier
+// SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( ARG_LIST ) | int | boolean | identifier | FUNCTION
 
 const parseProgramI = alternative([
     sequence('statement', [parseStatement, terminal('statementSeparator'), parseProgram]),
     sequence('returnStatement', [terminal('return'), parseExpression]),
 ]);
 
-const parseStatementI = sequence('assignment', [
-    terminal('identifier'),
-    terminal('assignment'),
-    parseFunction,
+const parseStatementI = alternative([
+    sequence('typedAssignment', [
+        terminal('identifier'),
+        terminal('colon'),
+        terminal('type'),
+        terminal('assignment'),
+        parseExpression,
+    ]),
+    sequence('assignment', [
+        terminal('identifier'),
+        terminal('assignment'),
+        parseExpression,
+    ]),
 ]);
 
 const parseFunctionI = sequence('function', [parseArgList, terminal('fatArrow'), parseExpression]);
@@ -88,7 +97,10 @@ const parseSimpleExpressionI = alternative([
         parseParamList,
         terminal('rightBracket'),
     ]),
-    terminal('number'), terminal('booleanLiteral'), terminal('identifier')
+    terminal('number'),
+    terminal('booleanLiteral'),
+    terminal('identifier'),
+    parseFunction,
 ]);
 
 module.exports = parseProgram;

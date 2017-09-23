@@ -1,7 +1,15 @@
 const flatten = require('./util/list/flatten.js');
 const toMips = require('./backends/mips.js');
 
-const astToC = ({ ast, registerAssignment, globalDeclarations }) => {
+const mplTypeToCDeclaration = (type, identifier) => {
+    switch (type) {
+        case 'Function': return `unsigned char (*${identifier})(unsigned char)`
+        case 'Integer': return `uint8_t ${identifier}`;
+        default: debugger;
+    }
+};
+
+const astToC = ({ ast, globalDeclarations }) => {
     if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': return [
@@ -22,21 +30,23 @@ const astToC = ({ ast, registerAssignment, globalDeclarations }) => {
         ];
         case 'statement': return flatten(ast.children.map(child => astToC({ ast: child, globalDeclarations })));
         case 'statementSeparator': return [];
+        case 'typedAssignment': {
+            const lhs = ast.children[0].value;
+            const rhs = astToC({ ast: ast.children[4], globalDeclarations });
+            if (globalDeclarations.includes(lhs)) {
+                return [`${lhs} = `, ...rhs, `;`];
+            }
+            const lhsType = ast.children[2].value; // TODO: Not really type, just string :(
+            return [`${mplTypeToCDeclaration(lhsType, lhs)} = `, ...rhs, ';'];
+        }
         case 'assignment': {
             const lhs = ast.children[0].value
             const rhs = astToC({ ast: ast.children[2], globalDeclarations });
             if (globalDeclarations.includes(lhs)) {
-                return [
-                    `${lhs} = `,
-                    ...rhs,
-                    `;`,
-                ];
+                return [`${lhs} = `, ...rhs, `;`];
             }
-            return [
-                `unsigned char (*${lhs})(unsigned char) = `,
-                ...rhs,
-                `;`,
-            ];
+
+            return [`${mplTypeToCDeclaration('Function', lhs)} = `, ...rhs, `;`];
         }
         case 'functionLiteral': return [`&${ast.value}`];
         case 'callExpression': return [
@@ -77,6 +87,7 @@ unsigned char ${name}(unsigned char ${argument.children[0].value}) {
 
     return `
 #include <stdio.h>
+#include <stdint.h>
 
 ${Cdeclarations.join('\n')}
 
@@ -88,7 +99,7 @@ int main(int argc, char **argv) {
 `;
 };
 
-const astToJS = ({ ast, registerAssignment, destination, currentTemporary }) => {
+const astToJS = ({ ast, destination }) => {
     if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': return [
@@ -126,6 +137,14 @@ const astToJS = ({ ast, registerAssignment, destination, currentTemporary }) => 
             destination,
         })));
         case 'statementSeparator': return [];
+        case 'typedAssignment': return [
+            `const ${ast.children[0].value} = `,
+            ...astToJS({
+                ast: ast.children[4],
+                destination,
+            }),
+            ';',
+        ];
         case 'assignment': return [
             `const ${ast.children[0].value} = `,
             ...astToJS({
@@ -133,7 +152,7 @@ const astToJS = ({ ast, registerAssignment, destination, currentTemporary }) => 
                 destination
             }),
             ';',
-        ]
+        ];
         case 'functionLiteral': return [ast.value];
         case 'callExpression': return [
             `${ast.children[0].value}(`,

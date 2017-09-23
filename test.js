@@ -533,9 +533,20 @@ return boolFunc(7)`,
     expectedTypeErrors: ['You passed a Integer as an argument to boolFunc. It expects a Boolean'],
 });
 
+test('assign wrong type', compileAndRunMacro, {
+    source: 'myInt: Integer = false; return myInt;',
+    expectedTypeErrors: ['You tried to assign a Boolean to "myInt", which has type Integer'],
+});
+
+// Needs function types with args in syntax
+test.failing('assign function to typed var', compileAndRunMacro, {
+    source: 'myFunc: Function = a: Integer => a; return a(37);',
+    expectedExitCode: 37,
+});
+
 // Needs types for locals
-test.failing('myVar = 3 * 3 return 9', compileAndRunMacro, {
-    source: 'myVar = 3 * 3 return 9',
+test.only('return local integer', compileAndRunMacro, {
+    source: 'myVar: Integer = 3 * 3; return myVar',
     expectedExitCode: 9,
 });
 

@@ -1,6 +1,6 @@
 const flatten = require('../util/list/flatten.js');
 
-// 's' registers are used for the, starting as 0. Spill recovery shall start at the last (7)
+// 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 
 const storeLiteralMips = ({ type, destination, spOffset }, value) => {
     if (type == undefined) debugger;
@@ -128,9 +128,9 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 globalDeclarations,
             });
             return [
-                `# Store left side in temporary (${leftSideDestination.destination})`,
+                `# Store left side of product in temporary (${leftSideDestination.destination})`,
                 ...storeLeftInstructions,
-                `# Store right side in destination (${rightSideDestination.destination})`,
+                `# Store right side of product in destination (${rightSideDestination.destination})`,
                 ...storeRightInstructions,
                 `# Evaluate product`,
                 multiplyMips(destination, leftSideDestination, rightSideDestination),
@@ -193,6 +193,27 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 moveMips(destination, '$a0'),
             ];
         }
+        case 'typedAssignment': {
+            const lhs = ast.children[0].value;
+            debugger;
+            if (globalDeclarations.includes(lhs)) {
+                debugger; //TODO: assign to globals
+            } else if (lhs in registerAssignment) {
+                return [
+                    `# Run rhs of assignment and store to ${lhs} (${registerAssignment[lhs]})`,
+                    ...astToMips({
+                        ast: ast.children[4],
+                        registerAssignment,
+                        // TODO: Allow spilling of variables
+                        destination: { type: 'register', destination: `$${registerAssignment[lhs]}` },
+                        currentTemporary,
+                        globalDeclarations,
+                    }),
+                ];
+            } else {
+                debugger;
+            }
+        }
         case 'assignment': {
             const lhs = ast.children[0].value;
             const rhs = ast.children[2].value;
@@ -216,8 +237,8 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             const identifierName = ast.value;
             const identifierRegister = registerAssignment[identifierName];
             return [
-                `# Move from ${identifierName} (${identifierRegister}) into destination (${destination.destination || destination.spOffset})`,
-                moveMips(destination, identifierRegister),
+                `# Move from ${identifierName} ($${identifierRegister}) into destination (${destination.destination || destination.spOffset})`,
+                moveMips(destination, `$${identifierRegister}`),
             ];
         }
         case 'ternary': {
@@ -288,9 +309,9 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             labelId++;
 
             return [
-                `# Store left side in temporary`,
+                `# Store left side of equality in temporary`,
                 ...storeLeftInstructions,
-                `# Store right side in temporary`,
+                `# Store right side of equality in temporary`,
                 ...storeRightInstructions,
                 `# Goto set 1 if equal`,
                 mipsBranchIfEqual(leftSideDestination, rightSideDestination, `L${equalLabel}`),
