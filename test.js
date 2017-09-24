@@ -114,7 +114,7 @@ test('ast for product with brackets', t => {
     }));
 });
 
-test.only('ast for assignment then return', t => {
+test('ast for assignment then return', t => {
     const expected = {
         parseErrors: [],
         ast: {
@@ -504,7 +504,7 @@ return isFive(11)`,
     expectedExitCode: 7,
 });
 
-test('factorial', compileAndRunMacro, {
+test.only('factorial', compileAndRunMacro, {
     source: `
 factorial = x: Integer => x == 1 ? 1 : x * factorial(x - 1)
 return factorial(5)`,

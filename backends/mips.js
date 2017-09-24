@@ -176,7 +176,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             const name = ast.children[0].value;
             const callInstructions = globalDeclarations.includes(name)
                 ? [`lw ${currentTemporary.destination}, ${name}`, `jal ${currentTemporary.destination}`]
-                : [`jal $${registerAssignment[name]}`];
+                : [`jal ${registerAssignment[name].destination}`];
 
             return [
                 `# Put argument in $s0`,
@@ -200,12 +200,15 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 debugger; //TODO: assign to globals
             } else if (lhs in registerAssignment) {
                 return [
-                    `# Run rhs of assignment and store to ${lhs} (${registerAssignment[lhs]})`,
+                    `# Run rhs of assignment and store to ${lhs} (${registerAssignment[lhs].destination})`,
                     ...astToMips({
                         ast: ast.children[4],
                         registerAssignment,
                         // TODO: Allow spilling of variables
-                        destination: { type: 'register', destination: `$${registerAssignment[lhs]}` },
+                        destination: {
+                            type: 'register',
+                            destination: `${registerAssignment[lhs].destination}`,
+                        },
                         currentTemporary,
                         globalDeclarations,
                     }),
@@ -226,19 +229,19 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                     `sw $s7, ${lhs}`,
                 ];
             } else {
-                const register = registerAssignment[lhs];
+                const register = registerAssignment[lhs].destination;
                 return [
-                    `# ${lhs} ($${register}) = ${rhs}`,
-                    `la $${register}, ${rhs}`,
+                    `# ${lhs} (${register}) = ${rhs}`,
+                    `la ${register}, ${rhs}`,
                 ];
             }
         }
         case 'identifier': {
             const identifierName = ast.value;
-            const identifierRegister = registerAssignment[identifierName];
+            const identifierRegister = registerAssignment[identifierName].destination;
             return [
-                `# Move from ${identifierName} ($${identifierRegister}) into destination (${destination.destination || destination.spOffset})`,
-                moveMips(destination, `$${identifierRegister}`),
+                `# Move from ${identifierName} (${identifierRegister}) into destination (${destination.destination || destination.spOffset})`,
+                moveMips(destination, identifierRegister),
             ];
         }
         case 'ternary': {
@@ -330,15 +333,19 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
 }
 
 const assignMipsRegisters = variables => {
+    // TODO: allow spilling of variables
     let currentRegister = 0;
     let registerAssignment = {};
     variables.forEach(variable => {
-        registerAssignment[variable] = `t${currentRegister}`;
+        registerAssignment[variable] = {
+            type: 'register',
+            destination: `$t${currentRegister}`,
+        };
         currentRegister = currentRegister + 1;
     });
     return {
         registerAssignment,
-        firstTemporary: { // TODO: This assumes we never need to spill locals
+        firstTemporary: {
             type: 'register',
             destination: `$t${currentRegister}`,
         },
@@ -366,7 +373,10 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
 
     const mipsCode = flatten(statements.map(statement => {
         const registerAssignment = {
-            [argument.children[0].value]: '$s0',
+            [argument.children[0].value]: {
+                type: 'register',
+                destination: '$s0',
+            },
         };
         return astToMips({
             ast: statement,
