@@ -544,13 +544,11 @@ test.failing('assign function to typed var', compileAndRunMacro, {
     expectedExitCode: 37,
 });
 
-// Needs types for locals
 test('return local integer', compileAndRunMacro, {
     source: 'myVar: Integer = 3 * 3; return myVar',
     expectedExitCode: 9,
 });
 
-// Needs spill to ram
 test('many temporaries, spill to ram', compileAndRunMacro, {
     source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
     expectedExitCode: 1,
