@@ -504,7 +504,7 @@ return isFive(11)`,
     expectedExitCode: 7,
 });
 
-test.only('factorial', compileAndRunMacro, {
+test('factorial', compileAndRunMacro, {
     source: `
 factorial = x: Integer => x == 1 ? 1 : x * factorial(x - 1)
 return factorial(5)`,
