@@ -16,7 +16,7 @@ const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
 // Grammar:
 // PROGRAM -> STATEMENT STATEMENT_SEPARATOR PROGRAM | return EXPRESSION
 // STATEMENT -> identifier : type = EXPRESSION | identifier = EXPRESSION
-// FUNCTION -> ARG_LIST => EXPRESSION
+// FUNCTION -> ARG_LIST => EXPRESSION | ARG_LIST => { PROGRAM }
 // ARG_LIST -> ARG , ARG_LIST | ARG
 // ARG -> identifier : type
 // PARAM_LIST -> EXPRESSION , PARAM_LIST | EXPRESSION
@@ -47,7 +47,20 @@ const parseStatementI = alternative([
     ]),
 ]);
 
-const parseFunctionI = sequence('function', [parseArgList, terminal('fatArrow'), parseExpression]);
+const parseFunctionI = alternative([
+    sequence('function', [
+        parseArgList,
+        terminal('fatArrow'),
+        parseExpression,
+    ]),
+    sequence('functionWithBlock', [
+        parseArgList,
+        terminal('fatArrow'),
+        terminal('leftCurlyBrace'),
+        parseProgram,
+        terminal('rightCurlyBrace'),
+    ]),
+]);
 
 const parseArgListI = alternative([
     sequence('argList', [parseArg, terminal('comma'), parseArgList]),

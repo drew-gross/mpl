@@ -98,6 +98,16 @@ const extractFunctions = ast => {
         });
         newAst.type = 'functionLiteral';
         newAst.value = functionName;
+    } else if (ast.type === 'functionWithBlock') {
+        const functionName = `anonymous_${functionId}`;
+        functionId++;
+        newFunctions.push({
+            name: functionName,
+            argument: ast.children[0],
+            body: ast.children[3],
+        });
+        newAst.type = 'functionLiteral',
+        newAst.value = functionName;
     } else if ('children' in ast) {
         const otherFunctions = ast.children.map(extractFunctions);
         newAst.type = ast.type;

@@ -31,8 +31,10 @@ const astToC = ({ ast, globalDeclarations }) => {
         case 'statement': return flatten(ast.children.map(child => astToC({ ast: child, globalDeclarations })));
         case 'statementSeparator': return [];
         case 'typedAssignment': {
+            debugger;
             const lhs = ast.children[0].value;
             const rhs = astToC({ ast: ast.children[4], globalDeclarations });
+            if (!globalDeclarations) debugger;
             if (globalDeclarations.includes(lhs)) {
                 return [`${lhs} = `, ...rhs, `;`];
             }
@@ -42,6 +44,7 @@ const astToC = ({ ast, globalDeclarations }) => {
         case 'assignment': {
             const lhs = ast.children[0].value
             const rhs = astToC({ ast: ast.children[2], globalDeclarations });
+            if (!globalDeclarations) debugger;
             if (globalDeclarations.includes(lhs)) {
                 return [`${lhs} = `, ...rhs, `;`];
             }
@@ -76,10 +79,13 @@ const astToC = ({ ast, globalDeclarations }) => {
 
 const toC = (functions, variables, program, globalDeclarations) => {
     let Cfunctions = functions.map(({ name, argument, statements, scopeChain }) => {
-        const body = statements[0]; // TODO: support multiple statements in a function body
+        const body = statements[0]; // TODO: support multiple statements in a function body. Lets handle this in compiler, not codegen.
         return `
 unsigned char ${name}(unsigned char ${argument.children[0].value}) {
-    ${astToC({ ast: body }).join(' ')}
+    ${astToC({
+        ast: body,
+        globalDeclarations,
+    }).join(' ')}
 }`
     });
     let C = flatten(program.statements.map(child => astToC({ ast: child, globalDeclarations })));

@@ -238,7 +238,7 @@ const compileAndRunMacro = async (t, {
 
     await fs.writeFile(cFile.fd, cSource);
     try {
-        await exec(`clang ${cFile.path} -o ${exeFile.path}`);
+        await exec(`clang -Wall -Werror ${cFile.path} -o ${exeFile.path}`);
     } catch (e) {
         t.fail(`Failed to compile generated C code: ${cSource}. Errors: ${e.stderr}`);
     }
@@ -552,4 +552,23 @@ test('return local integer', compileAndRunMacro, {
 test('many temporaries, spill to ram', compileAndRunMacro, {
     source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
     expectedExitCode: 1,
+});
+
+test.only('multi statement function with locals', compileAndRunMacro, {
+    source: `
+quadrupleWithLocal = a: Integer => { b: Integer = 2 * a; return 2 * b }
+return quadrupleWithLocal(5);`,
+    expectedExitCode: 20,
+});
+
+// TODO: rethink statment separators
+test.failing('multi statement function on multiple lines with', compileAndRunMacro, {
+    source: `
+quadrupleWithLocal = a: Integer => {
+    b: Integer = 2 * a
+    return 2 * b
+}
+
+return quadrupleWithLocal(5);`,
+    expectedExitCode: 20,
 });

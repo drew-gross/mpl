@@ -60,6 +60,14 @@ module.exports = input => {
         type: 'rightBracket',
         toString: () => ')',
     }, {
+        token: '{',
+        type: 'leftCurlyBrace',
+        toString: () => '{',
+    }, {
+        token: '}',
+        type: 'rightCurlyBrace',
+        toString: () => '}',
+    }, {
         token: '\\:',
         type: 'colon',
         toString: () => ':',
