@@ -554,11 +554,18 @@ test('many temporaries, spill to ram', compileAndRunMacro, {
     expectedExitCode: 1,
 });
 
-test.only('multi statement function with locals', compileAndRunMacro, {
+test('multi statement function with locals', compileAndRunMacro, {
     source: `
 quadrupleWithLocal = a: Integer => { b: Integer = 2 * a; return 2 * b }
 return quadrupleWithLocal(5);`,
     expectedExitCode: 20,
+});
+
+test('mutil statement function with type error', compileAndRunMacro, {
+    source: `
+boolTimesInt = a: Integer => { b: Boolean = false; return a * b }
+return boolTimesInt(1);`,
+    expectedTypeErrors: ['Right hand side of product was not integer'],
 });
 
 // TODO: rethink statment separators

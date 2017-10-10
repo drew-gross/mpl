@@ -1,8 +1,8 @@
+const flatten = require('./util/list/flatten.js');
 const lex = require('./lex.js');
 const parseProgram = require('./parser.js')
 const { toJS, toC, toMips } = require('./codegen.js');
 
-const flatten = array => array.reduce((a, b) => a.concat(b), []);
 
 let tokensToString = tokens => tokens.map(token => token.string).join('');
 

@@ -195,7 +195,6 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
         }
         case 'typedAssignment': {
             const lhs = ast.children[0].value;
-            debugger;
             if (globalDeclarations.includes(lhs)) {
                 debugger; //TODO: assign to globals
             } else if (lhs in registerAssignment) {
@@ -363,7 +362,10 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
         `lw $ra, ($sp)`,
         `addiu $sp, $sp, 4`,
     ];
-    while (temporaryCount > 0) {
+
+    const localsCount = statements.length - 1; // Statments are either assign or return right now
+
+    while (temporaryCount + localsCount > 0) {
         saveTemporariesCode.push(`sw $t${temporaryCount}, ($sp)`);
         saveTemporariesCode.push(`addiu $sp, $sp, -4`);
         restoreTemporariesCode.push(`lw $t${temporaryCount}, ($sp)`);
@@ -371,21 +373,31 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
         temporaryCount--;
     }
 
+    const registerAssignment = {
+        [argument.children[0].value]: {
+            type: 'register',
+            destination: '$s0',
+        },
+    };
+
+    currentTemporary = {
+        type: 'register',
+        destination: '$t1',
+    };
+
+    statements.forEach(statement => {
+        if (statement.type === 'typedAssignment') {
+            registerAssignment[statement.children[0].value] = currentTemporary;
+            currentTemporary = nextTemporary(currentTemporary);
+        }
+    });
+
     const mipsCode = flatten(statements.map(statement => {
-        const registerAssignment = {
-            [argument.children[0].value]: {
-                type: 'register',
-                destination: '$s0',
-            },
-        };
         return astToMips({
             ast: statement,
             registerAssignment,
             destination: '$a0',
-            currentTemporary: {
-                type: 'register',
-                destination: '$t1',
-            },
+            currentTemporary,
             globalDeclarations,
         });
     }));
