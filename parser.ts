@@ -1,4 +1,4 @@
-const { alternative, sequence, terminal } = require('./parser-combinator.js');
+import { alternative, sequence, terminal } from './parser-combinator.js';
 
 const parseProgram = (t, i) => parseProgramI(t, i);
 const parseStatement = (t, i) => parseStatementI(t, i);

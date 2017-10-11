@@ -1,5 +1,12 @@
+type TokenSpec = {
+    token: string,
+    type: string,
+    action?: (x: string) => any,
+    toString: (x: any) => string,
+};
+
 export default input => {
-    const tokenSpecs = [{
+    const tokenSpecs: TokenSpec[] = [{
         token: 'return',
         type: 'return',
         toString: () => 'return',
@@ -21,19 +28,19 @@ export default input => {
     }, {
         token: ';|\\n',
         type: 'statementSeparator',
-        toString: () => '\n',
+        toString: _ => '\n',
     }, {
         token: '=>',
         type: 'fatArrow',
-        toString: () => '=>',
+        toString: _ => '=>',
     }, {
         token: '==',
         type: 'equality',
-        toString: () => '==',
+        toString: _ => '==',
     }, {
         token: '=',
         type: 'assignment',
-        toString: () => '=',
+        toString: _ => '=',
     }, {
         token: '\\d+',
         type: 'number',
@@ -42,39 +49,39 @@ export default input => {
     }, {
         token: '\\+',
         type: 'sum',
-        toString: () => '+',
+        toString: _ => '+',
     }, {
         token: '\\*',
         type: 'product',
-        toString: () => '*',
+        toString: _ => '*',
     }, {
         token: '\\-',
         type: 'subtraction',
-        toString: () => '-',
+        toString: _ => '-',
     }, {
         token: '\\(',
         type: 'leftBracket',
-        toString: () => '(',
+        toString: _ => '(',
     }, {
         token: '\\)',
         type: 'rightBracket',
-        toString: () => ')',
+        toString: _ => ')',
     }, {
         token: '{',
         type: 'leftCurlyBrace',
-        toString: () => '{',
+        toString: _ => '{',
     }, {
         token: '}',
         type: 'rightCurlyBrace',
-        toString: () => '}',
+        toString: _ => '}',
     }, {
         token: '\\:',
         type: 'colon',
-        toString: () => ':',
+        toString: _ => ':',
     }, {
         token: '\\?',
         type: 'ternaryOperator',
-        toString: () => '?',
+        toString: _ => '?',
     }, {
         token: '.*',
         type: 'invalid',

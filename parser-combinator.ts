@@ -42,4 +42,4 @@ const terminal = terminal => (tokens, index) => {
     return { success: false };
 }
 
-module.exports = { alternative, sequence, terminal };
+export { alternative, sequence, terminal };
