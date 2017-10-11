@@ -2,11 +2,16 @@
   "name": "mpl",
   "version": "0.0.1",
   "description": "A compiler for a Mutable Programming Langauge",
-  "main": "index.js",
+  "main": "built/index.js",
+  "ava": {
+    "files": [
+      "built/test.js"
+    ]
+  },
   "scripts": {
-    "test": "ava",
-    "test-watch": "ava --watch --no-color",
-    "test-debug": "inspect --debug-exception node_modules/ava/profile.js test.js"
+    "test": "tsc && ava",
+    "test-watch": "parallelshell \"ava --watch --no-color\" \"tsc --watch\"",
+    "test-debug": "inspect --debug-exception node_modules/ava/profile.js built/test.js"
   },
   "author": "Drew Gross",
   "dependencies": {
@@ -16,6 +21,8 @@
   },
   "devDependencies": {
     "ava": "0.19.1",
-    "inspect-process": "0.4.2"
+    "inspect-process": "0.4.2",
+    "parallelshell": "3.0.1",
+    "typescript": "2.5.3"
   }
 }
