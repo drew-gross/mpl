@@ -1,7 +1,7 @@
-const flatten = require('./util/list/flatten.js');
+import flatten from './util/list/flatten.js';
 const lex = require('./lex.js');
 const parseProgram = require('./parser.js')
-const { toJS, toC, toMips } = require('./codegen.js');
+import { toJS, toC, toMips } from './codegen.js';
 
 
 let tokensToString = tokens => tokens.map(token => token.string).join('');
@@ -336,11 +336,11 @@ const typeCheckProgram = ({ statements, argument }, previouslyKnownIdentifiers) 
         knownIdentifiers[argument.children[0].value] = { name: argument.children[2].value };
     }
 
-    allErrors = [];
+    const allErrors = [];
     statements.forEach(s => {
         if (allErrors.length == 0) {
             const { errors, newIdentifiers } = typeCheckStatement(s, knownIdentifiers);
-            for (identifier in newIdentifiers) {
+            for (const identifier in newIdentifiers) {
                 knownIdentifiers[identifier] = newIdentifiers[identifier].type;
             }
             allErrors.push(...errors);
@@ -400,7 +400,7 @@ const compile = ({ source, target }) => {
     });
     programWithStatementList.temporaryCount = programTemporaryCount;
 
-    globalDeclarations = programWithStatementList.statements
+    const globalDeclarations = programWithStatementList.statements
         .filter(s => s.type === 'assignment')
         .map(s => s.children[0].value);
 

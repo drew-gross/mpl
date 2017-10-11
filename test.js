@@ -6,8 +6,8 @@ import {
     lex,
 } from './compiler';
 
-import tmp from 'tmp-promise';
-import fs from 'fs-extra';
+import { file as tmpFile} from 'tmp-promise';
+import { writeFile } from 'fs-extra';
 import { exec } from 'child-process-promise';
 
 test('lexer', t => {
@@ -211,8 +211,8 @@ const compileAndRunMacro = async (t, {
     }
 
     // C backend
-    const cFile = await tmp.file({ postfix: '.c' });
-    const exeFile = await tmp.file();
+    const cFile = await tmpFile({ postfix: '.c' });
+    const exeFile = await tmpFile();
     const result = compile({ source, target: 'c' });;
     const cSource = result.code;
 
@@ -236,7 +236,7 @@ const compileAndRunMacro = async (t, {
         console.log(cSource);
     }
 
-    await fs.writeFile(cFile.fd, cSource);
+    await writeFile(cFile.fd, cSource);
     try {
         await exec(`clang -Wall -Werror ${cFile.path} -o ${exeFile.path}`);
     } catch (e) {
@@ -248,16 +248,16 @@ const compileAndRunMacro = async (t, {
     }
 
     // JS backend
-    const jsFile = await tmp.file({ postfix: '.js' });
+    const jsFile = await tmpFile({ postfix: '.js' });
     const jsSource = compile({ source, target: 'js' }).code;
-    await fs.writeFile(jsFile.fd, jsSource);
+    await writeFile(jsFile.fd, jsSource);
     const jsExitCode = await execAndGetExitCode(`node ${jsFile.path}`);
     if (jsExitCode !== expectedExitCode) {
         t.fail(`JS returned ${jsExitCode} when it should have returned ${expectedExitCode}: ${jsSource}`);
     }
 
     // Mips backend
-    const mipsFile = await tmp.file({ postfix: '.s' });
+    const mipsFile = await tmpFile({ postfix: '.s' });
     const mipsSource = compile({ source, target: 'mips' }).code;
 
     if (printSubsteps.includes('mips')) {
@@ -265,7 +265,7 @@ const compileAndRunMacro = async (t, {
     }
 
     t.deepEqual(typeof mipsSource, 'string')
-    await fs.writeFile(mipsFile.fd, mipsSource);
+    await writeFile(mipsFile.fd, mipsSource);
 
     try {
         const result = await exec(`spim -file ${mipsFile.path}`);

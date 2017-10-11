@@ -1,4 +1,4 @@
-const flatten = require('../util/list/flatten.js');
+import flatten from '../util/list/flatten.js';
 
 const astToJS = ({ ast, destination, exitInsteadOfReturn }) => {
     if (!ast) debugger;

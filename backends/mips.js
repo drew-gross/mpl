@@ -1,4 +1,4 @@
-const flatten = require('../util/list/flatten.js');
+import flatten from '../util/list/flatten.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 
@@ -380,7 +380,7 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
         },
     };
 
-    currentTemporary = {
+    let currentTemporary = {
         type: 'register',
         destination: '$t1',
     };

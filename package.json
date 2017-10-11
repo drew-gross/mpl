@@ -9,8 +9,9 @@
     ]
   },
   "scripts": {
-    "test": "tsc && ava",
-    "test-watch": "parallelshell \"ava --watch --no-color\" \"tsc --watch\"",
+    "test": "rimraf built && tsc && ava",
+    "test-watch": "tsc --watch & ava --watch --no-color",
+    "tsc-watch": "tsc --watch",
     "test-debug": "inspect --debug-exception node_modules/ava/profile.js built/test.js"
   },
   "author": "Drew Gross",
@@ -23,6 +24,7 @@
     "ava": "0.19.1",
     "inspect-process": "0.4.2",
     "parallelshell": "3.0.1",
+    "rimraf": "2.6.2",
     "typescript": "2.5.3"
   }
 }

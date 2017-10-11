@@ -1,4 +1,4 @@
-const flatten = require('../util/list/flatten.js');
+import flatten from '../util/list/flatten.js';
 
 const mplTypeToCDeclaration = (type, identifier) => {
     switch (type) {
@@ -77,7 +77,7 @@ const astToC = ({ ast, globalDeclarations }) => {
     };
 };
 
-module.exports = (functions, variables, program, globalDeclarations) => {
+export default (functions, variables, program, globalDeclarations) => {
     let Cfunctions = functions.map(({ name, argument, statements, scopeChain }) => {
         const prefix = `unsigned char ${name}(unsigned char ${argument.children[0].value}) {`;
         const suffix = `}`;
