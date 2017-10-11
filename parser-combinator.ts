@@ -1,3 +1,23 @@
+type AstLeaf = {
+    success?: true,
+    newIndex?: number,
+    type: string,
+    value: any,
+};
+
+type AstInteriorNode = {
+    success?: true,
+    newIndex?: number,
+    type: string,
+    children: any[],
+};
+
+type AstNode = AstInteriorNode | AstLeaf;
+
+type ParseResult = {
+    success: false,
+} | AstNode;
+
 const alternative = parsers => (tokens, index) => {
     for (const parser of parsers) {
         const result = parser(tokens, index);
@@ -42,4 +62,12 @@ const terminal = terminal => (tokens, index) => {
     return { success: false };
 }
 
-export { alternative, sequence, terminal };
+export {
+    alternative,
+    sequence,
+    terminal,
+    ParseResult,
+    AstNode,
+    AstLeaf,
+    AstInteriorNode,
+};

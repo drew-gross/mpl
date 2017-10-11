@@ -1,4 +1,4 @@
-import { alternative, sequence, terminal } from './parser-combinator.js';
+import { alternative, sequence, terminal, ParseResult } from './parser-combinator.js';
 
 const parseProgram = (t, i) => parseProgramI(t, i);
 const parseStatement = (t, i) => parseStatementI(t, i);

@@ -1,21 +1,22 @@
 import flatten from './util/list/flatten.js';
 import lex from './lex.js';
 import parseProgram from './parser.js'
+import { ParseResult, AstNode, AstInteriorNode, AstLeaf } from './parser-combinator.js';
 import { toJS, toC, toMips } from './codegen.js';
 
 
 let tokensToString = tokens => tokens.map(token => token.string).join('');
 
-const flattenAst = ast => {
-    if (ast.children) {
+const flattenAst = (ast: AstNode): any => {
+    if ((ast as AstInteriorNode).children) {
         return {
             type: ast.type,
-            children: ast.children.map(flattenAst),
+            children: (ast as AstInteriorNode).children.map(flattenAst),
         };
     } else {
         return {
             type: ast.type,
-            value: ast.value,
+            value: (ast as AstLeaf).value,
         };
     }
 }
@@ -133,16 +134,16 @@ const extractVariables = ast => {
     }
 };
 
-const parse = tokens => {
-    let ast = parseProgram(tokens, 0)
+const parse = (tokens: any[]): { ast?: any, parseErrors: string[] } => {
+    const parseResult: ParseResult = parseProgram(tokens, 0)
 
-    if (ast.success === false) {
+    if (parseResult.success === false) {
         return {
             ast: {},
             parseErrors: ['Unable to parse'],
         };
     }
-    ast = flattenAst(ast);
+    let ast = flattenAst(parseResult);
 
     // repair associativity of subtraction1
     ast = repairAssociativity('subtraction1', ast);
