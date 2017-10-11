@@ -1,5 +1,5 @@
 import flatten from './util/list/flatten.js';
-import lex from './lex.js';
+import { lex } from './lex.js';
 import parseProgram from './parser.js'
 import { ParseResult, AstNode, AstInteriorNode, AstLeaf } from './parser-combinator.js';
 import { toJS, toC, toMips } from './codegen.js';
@@ -138,9 +138,10 @@ const parse = (tokens: any[]): { ast?: any, parseErrors: string[] } => {
     const parseResult: ParseResult = parseProgram(tokens, 0)
 
     if (parseResult.success === false) {
+        const errorMessage = `Expected ${parseResult.error.expected.join(' or ')}, found ${parseResult.error.found}`;
         return {
             ast: {},
-            parseErrors: ['Unable to parse'],
+            parseErrors: [errorMessage],
         };
     }
     let ast = flattenAst(parseResult);

@@ -1,1 +1,1 @@
-export default array => array.reduce((a, b) => a.concat(b), []);
+export default <T>(array: T[][]): T[] => array.reduce((a: T[], b: T[]) => a.concat(b), []);

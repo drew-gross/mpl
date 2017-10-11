@@ -474,7 +474,7 @@ test('ternary false', compileAndRunMacro, {
 
 test('parse error', compileAndRunMacro, {
     source: '=>',
-    expectedParseErrors: ['Unable to parse'],
+    expectedParseErrors: ['Expected identifier or return, found fatArrow'],
 });
 
 test('ternary in function false', compileAndRunMacro, {
@@ -570,7 +570,7 @@ return boolTimesInt(1);`,
 });
 
 // TODO: rethink statment separators
-test.failing('multi statement function on multiple lines with', compileAndRunMacro, {
+test.failing('multi statement function on multiple lines', compileAndRunMacro, {
     source: `
 quadrupleWithLocal = a: Integer => {
     b: Integer = 2 * a

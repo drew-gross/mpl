@@ -5,7 +5,13 @@ type TokenSpec = {
     toString: (x: any) => string,
 };
 
-export default input => {
+type Token = {
+    type: string,
+    string: string,
+    value?: any,
+};
+
+const lex = (input: string): Token[] => {
     const tokenSpecs: TokenSpec[] = [{
         token: 'return',
         type: 'return',
@@ -94,7 +100,7 @@ export default input => {
     input = input.trim();
 
     // consume input reading tokens
-    let tokens = [];
+    let tokens: Token[] = [];
     while (input.length > 0) {
         for (const tokenSpec of tokenSpecs) {
             const match = input.match(RegExp(`^(${tokenSpec.token})[ \\t]*`));
@@ -112,3 +118,5 @@ export default input => {
     }
     return tokens;
 };
+
+export { lex, Token };
