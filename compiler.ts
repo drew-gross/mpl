@@ -357,6 +357,12 @@ const getFunctionTypeMap = functions => {
     return result;
 };
 
+type CompilationResult = {
+    typeErrors?: string[],
+    parseErrors?: string[],
+    code?: string,
+};
+
 const compile = ({ source, target }) => {
     const tokens = lex(source);
     const { ast, parseErrors } = parse(tokens);
@@ -425,4 +431,4 @@ const compile = ({ source, target }) => {
     }
 };
 
-export { parse, lex, compile };
+export { parse, lex, compile, CompilationResult };

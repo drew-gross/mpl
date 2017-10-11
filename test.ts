@@ -4,6 +4,7 @@ import {
     parse,
     compile,
     lex,
+    CompilationResult,
 } from './compiler';
 
 import { file as tmpFile} from 'tmp-promise';
@@ -197,12 +198,12 @@ const compileAndRunMacro = async (t, {
     });
 
     if (printSubsteps.includes('tokens')) {
-        console.log(JSON.stringify(lexResult, 0, 2));
+        console.log(JSON.stringify(lexResult, null, 2));
     }
 
     const parseResult = parse(lexResult);
     if (printSubsteps.includes('ast')) {
-        console.log(JSON.stringify(parseResult, 0, 2));
+        console.log(JSON.stringify(parseResult, null, 2));
     }
 
     // Check the AST if asked
@@ -213,7 +214,7 @@ const compileAndRunMacro = async (t, {
     // C backend
     const cFile = await tmpFile({ postfix: '.c' });
     const exeFile = await tmpFile();
-    const result = compile({ source, target: 'c' });;
+    const result: CompilationResult = compile({ source, target: 'c' });;
     const cSource = result.code;
 
     if (expectedParseErrors) {
