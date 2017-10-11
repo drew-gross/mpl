@@ -1,20 +1,20 @@
 import flatten from '../util/list/flatten.js';
 
-const astToJS = ({ ast, destination, exitInsteadOfReturn }) => {
+const astToJS = ({ ast, exitInsteadOfReturn }) => {
     if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': {
             if (exitInsteadOfReturn) {
                 return [`process.exit(${astToJS({
                     ast: ast.children[1],
-                    destination,
+                    exitInsteadOfReturn,
                 }).join(' ')})`];
             } else {
                 return [
                     `return `,
                     ...astToJS({
                         ast: ast.children[1],
-                        destination,
+                        exitInsteadOfReturn,
                     }),
                 ];
             }
@@ -23,35 +23,35 @@ const astToJS = ({ ast, destination, exitInsteadOfReturn }) => {
         case 'product': return [
             ...astToJS({
                 ast: ast.children[0],
-                destination,
+                exitInsteadOfReturn,
             }),
             '*',
             ...astToJS({
                 ast: ast.children[1],
-                destination
+                exitInsteadOfReturn
             }),
         ];
         case 'subtraction': return [
             ...astToJS({
                 ast: ast.children[0],
-                destination,
+                exitInsteadOfReturn,
             }),
             '-',
             ...astToJS({
                 ast: ast.children[1],
-                destination
+                exitInsteadOfReturn
             }),
         ];
         case 'statement': return flatten(ast.children.map(child => astToJS({
             ast: child,
-            destination,
+            exitInsteadOfReturn,
         })));
         case 'statementSeparator': return [];
         case 'typedAssignment': return [
             `const ${ast.children[0].value} = `,
             ...astToJS({
                 ast: ast.children[4],
-                destination,
+                exitInsteadOfReturn,
             }),
             ';',
         ];
@@ -59,27 +59,45 @@ const astToJS = ({ ast, destination, exitInsteadOfReturn }) => {
             `const ${ast.children[0].value} = `,
             ...astToJS({
                 ast: ast.children[2],
-                destination
+                exitInsteadOfReturn
             }),
             ';',
         ];
         case 'functionLiteral': return [ast.value];
         case 'callExpression': return [
             `${ast.children[0].value}(`,
-            ...astToJS({ ast: ast.children[2] }),
+            ...astToJS({
+                ast: ast.children[2],
+                exitInsteadOfReturn,
+            }),
             `)`];
         case 'identifier': return [ast.value];
         case 'ternary': return [
-            ...astToJS({ ast: ast.children[0] }),
+            ...astToJS({
+                ast: ast.children[0],
+                exitInsteadOfReturn,
+            }),
             '?',
-            ...astToJS({ ast: ast.children[2] }),
+            ...astToJS({
+                ast: ast.children[2],
+                exitInsteadOfReturn,
+            }),
             ':',
-            ...astToJS({ ast: ast.children[4] }),
+            ...astToJS({
+                ast: ast.children[4],
+                exitInsteadOfReturn,
+            }),
         ];
         case 'equality': return [
-            ...astToJS({ ast: ast.children[0] }),
+            ...astToJS({
+                ast: ast.children[0],
+                exitInsteadOfReturn,
+            }),
             '==',
-            ...astToJS({ ast: ast.children[2] }),
+            ...astToJS({
+                ast: ast.children[2],
+                exitInsteadOfReturn,
+            }),
         ];
         case 'booleanLiteral': return [ast.value];
         default:
@@ -88,7 +106,7 @@ const astToJS = ({ ast, destination, exitInsteadOfReturn }) => {
     }
 };
 
-module.exports = (functions, variables, program, globalDeclarations) => {
+export default (functions, variables, program, globalDeclarations) => {
     let JSfunctions = functions.map(({ name, argument, statements }) => {
         const prefix = `${name} = ${argument.children[0].value} => {`;
         const suffix = `}`;
@@ -96,7 +114,6 @@ module.exports = (functions, variables, program, globalDeclarations) => {
         const body = statements.map(statement => {
             return astToJS({
                 ast: statement,
-                globalDeclarations,
                 exitInsteadOfReturn: false,
             }).join(' ');
         });

@@ -1,5 +1,5 @@
-const toMips = require('./backends/mips.js');
-const toJS = require('./backends/js.js');
+import toMips from './backends/mips.js';
+import toJS from './backends/js.js';
 import toC from './backends/c.js';
 
 export { toJS };

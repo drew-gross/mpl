@@ -64,9 +64,11 @@ const mipsBranchIfEqual = (left, right, label) => {
     return `beq ${left.destination}, ${right.destination}, ${label}`
 }
 
-const nextTemporary = ({ type, destination, spOffset }) => {
-    if (type == 'register') {
-        if (destination == '$t9') {
+type StorageSpec = { type: 'register', destination: string } | { type: 'memory', spOffset: number };
+
+const nextTemporary = (storage: StorageSpec): StorageSpec => {
+    if (storage.type == 'register') {
+        if (storage.destination == '$t9') {
             // Now need to spill
             return {
                 type: 'memory',
@@ -75,13 +77,13 @@ const nextTemporary = ({ type, destination, spOffset }) => {
         } else {
             return {
                 type: 'register',
-                destination: `$t${parseInt(destination[destination.length - 1]) + 1}`,
+                destination: `$t${parseInt(storage.destination[storage.destination.length - 1]) + 1}`,
             };
         }
-    } else if (type == 'memory') {
+    } else if (storage.type == 'memory') {
         return {
             type: 'memory',
-            spOffset: spOffset + 4,
+            spOffset: storage.spOffset + 4,
         }
     } else {
         debugger;
@@ -373,14 +375,14 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
         temporaryCount--;
     }
 
-    const registerAssignment = {
+    const registerAssignment: any = {
         [argument.children[0].value]: {
             type: 'register',
             destination: '$s0',
         },
     };
 
-    let currentTemporary = {
+    let currentTemporary: StorageSpec = {
         type: 'register',
         destination: '$t1',
     };
@@ -410,7 +412,7 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
     ].join('\n');
 }
 
-module.exports = (functions, variables, program, globalDeclarations) => {
+export default (functions, variables, program, globalDeclarations) => {
     let mipsFunctions = functions.map(f => constructMipsFunction(f,  globalDeclarations));
     const {
         registerAssignment,
