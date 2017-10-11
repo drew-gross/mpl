@@ -117,4 +117,4 @@ const parseSimpleExpressionI = alternative([
     terminal('identifier'),
 ]);
 
-module.exports = parseProgram;
+export default parseProgram;

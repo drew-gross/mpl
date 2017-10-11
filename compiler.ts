@@ -1,6 +1,6 @@
 import flatten from './util/list/flatten.js';
-const lex = require('./lex.js');
-const parseProgram = require('./parser.js')
+import lex from './lex.js';
+import parseProgram from './parser.js'
 import { toJS, toC, toMips } from './codegen.js';
 
 
@@ -87,7 +87,7 @@ const statementTreeToStatementList = functionAst => {
 
 const extractFunctions = ast => {
     const newFunctions = [];
-    const newAst = {};
+    const newAst: any = {};
     if (ast.type === 'function') {
         const functionName = `anonymous_${functionId}`;
         functionId++;
@@ -292,7 +292,7 @@ const typeOfExpression = (foo, knownIdentifiers) => {
     }
 };
 
-const typeCheckStatement = ({ type, children }, knownIdentifiers) => {
+const typeCheckStatement = ({ type, children }, knownIdentifiers): { errors: string[], newIdentifiers: any } => {
     switch (type) {
         case 'returnStatement': {
             const result = typeOfExpression(children[1], knownIdentifiers);
@@ -325,7 +325,7 @@ const typeCheckStatement = ({ type, children }, knownIdentifiers) => {
             }
             return { errors: [], newIdentifiers: { [varName]: { type: leftType } } };
         }
-        default: debugger; return ['Unknown type'];
+        default: debugger; return { errors: ['Unknown type'], newIdentifiers: {} };
     };
 };
 
@@ -372,8 +372,8 @@ const compile = ({ source, target }) => {
 
     const functionIdentifierTypes = getFunctionTypeMap(functions);
 
-    const functionsWithStatementList = functions.map(statementTreeToStatementList);
-    const programWithStatementList = statementTreeToStatementList({ body: program });
+    const functionsWithStatementList: any = functions.map(statementTreeToStatementList);
+    const programWithStatementList: any = statementTreeToStatementList({ body: program });
 
     const programTypeCheck = typeCheckProgram(programWithStatementList, functionIdentifierTypes);
     let typeErrors = functionsWithStatementList.map(f => typeCheckProgram(f, Object.assign({}, functionIdentifierTypes, programTypeCheck.identifiers)).typeErrors);
@@ -425,4 +425,4 @@ const compile = ({ source, target }) => {
     }
 };
 
-module.exports = { parse, lex, compile };
+export { parse, lex, compile };

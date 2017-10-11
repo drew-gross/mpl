@@ -1,4 +1,4 @@
-module.exports = input => {
+export default input => {
     const tokenSpecs = [{
         token: 'return',
         type: 'return',
