@@ -31,6 +31,10 @@ test('lexer', t => {
         { type: 'return', value: null, string: 'return' },
         { type: 'number', value: 100, string: '100' },
     ]);
+    t.deepEqual(lex('return "test string"'), [
+        { type: 'return', value: null, string: 'return' },
+        { type: 'stringLiteral', value: 'test string', string: 'test string' },
+    ]);
 });
 
 test('lex with initial whitespace', t => {

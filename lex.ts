@@ -13,6 +13,15 @@ type Token = {
 
 const lex = (input: string): Token[] => {
     const tokenSpecs: TokenSpec[] = [{
+        token: '"[^"]*"',
+        type: 'stringLiteral',
+        action: x => {
+            const trimmed = x.trim();
+            const quotesRemoved = trimmed.substring(1, trimmed.length - 1);
+            return quotesRemoved;
+        },
+        toString: x => x,
+    }, {
         token: 'return',
         type: 'return',
         toString: () => 'return',
