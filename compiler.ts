@@ -1,4 +1,5 @@
 import flatten from './util/list/flatten.js';
+import unique from './util/list/unique.js';
 import { lex } from './lex.js';
 import parseProgram from './parser.js'
 import { ParseResult, AstNode, AstInteriorNode, AstLeaf } from './parser-combinator.js';
@@ -63,7 +64,6 @@ const transformAst = (nodeType, f, ast) => {
     }
 }
 
-let functionId = 0;
 
 const statementTreeToStatementList = functionAst => {
     const result = {
@@ -89,6 +89,7 @@ const statementTreeToStatementList = functionAst => {
     return result;
 }
 
+let functionId = 0;
 const extractFunctions = ast => {
     const newFunctions: any = [];
     const newAst: any = {};
@@ -125,6 +126,16 @@ const extractFunctions = ast => {
         newAst.value = ast.value;
     }
     return { functions: newFunctions, program: newAst };
+};
+
+const extractStringLiterals = (ast): string[] => {
+    let newLiterals = [];
+    if (ast.type === 'stringLiteral') {
+        newLiterals.push(ast.value as never);
+    } else if ('children' in ast) {
+        newLiterals = newLiterals.concat(ast.children.map(extractStringLiterals));
+    }
+    return unique(flatten(newLiterals));
 };
 
 const extractVariables = ast => {
@@ -222,8 +233,7 @@ const typesAreEqual = (a, b) => {
     return true;
 }
 
-const typeOfExpression = (foo, knownIdentifiers): { type: Type, errors: string[] } => {
-    const { type, children, value } = foo;
+const typeOfExpression = ({ type, children, value }, knownIdentifiers): { type: Type, errors: string[] } => {
     switch (type) {
         case 'number': return { type: { name: 'Integer' }, errors: [] };
         case 'subtraction':
@@ -264,6 +274,9 @@ const typeOfExpression = (foo, knownIdentifiers): { type: Type, errors: string[]
                 return argType;
             }
             const functionName = children[0].value;
+            if (!(functionName in knownIdentifiers)) {
+                return { type: {} as any, errors: [`Unknown identifier: ${functionName}`] };
+            }
             const functionType = knownIdentifiers[functionName];
             if (!typesAreEqual(argType.type, functionType.arg.type)) {
                 return { type: {} as any, errors: [`You passed a ${argType.type.name} as an argument to ${functionName}. It expects a ${functionType.arg.type.name}`] };
@@ -369,6 +382,13 @@ type CompilationResult = {
     code?: string,
 };
 
+const builtinIdentifiers = { // TODO: Require these to be imported
+    length: {
+        type: 'Function',
+        arg: { type: { name: 'String' } },
+    }
+};
+
 const compile = ({ source, target }): any => {
     const tokens = lex(source);
     const { ast, parseErrors } = parse(tokens);
@@ -381,14 +401,23 @@ const compile = ({ source, target }): any => {
     }
 
     const { functions, program } = extractFunctions(ast);
+    const stringLiterals = extractStringLiterals(ast);
+    console.log(stringLiterals);
 
     const functionIdentifierTypes = getFunctionTypeMap(functions);
 
     const functionsWithStatementList: any = functions.map(statementTreeToStatementList);
     const programWithStatementList: any = statementTreeToStatementList({ body: program });
 
-    const programTypeCheck = typeCheckProgram(programWithStatementList, functionIdentifierTypes);
-    let typeErrors = functionsWithStatementList.map(f => typeCheckProgram(f, Object.assign({}, functionIdentifierTypes, programTypeCheck.identifiers)).typeErrors);
+    const programTypeCheck = typeCheckProgram(programWithStatementList, {
+        ...builtinIdentifiers,
+        ...functionIdentifierTypes,
+    });
+    let typeErrors = functionsWithStatementList.map(f => typeCheckProgram(f, {
+        ...builtinIdentifiers,
+        ...functionIdentifierTypes,
+        ...programTypeCheck.identifiers
+    }).typeErrors);
     typeErrors.push(programTypeCheck.typeErrors);
 
     typeErrors = flatten(typeErrors);
@@ -432,7 +461,13 @@ const compile = ({ source, target }): any => {
         return {
             typeErrors: [],
             parseErrors: [],
-            code: toMips(functionsWithStatementList, variables, programWithStatementList, globalDeclarations),
+            code: toMips(
+                functionsWithStatementList,
+                variables,
+                programWithStatementList,
+                globalDeclarations,
+                stringLiterals
+            ),
         };
     }
 };

@@ -1,6 +1,7 @@
 import { Token, TokenType } from './lex.js';
 import unique from './util/list/unique.js';
 import flatten from './util/list/flatten.js';
+import assertNever from './util/assertNever.js';
 
 type AstNodeType =
     'return' |
@@ -50,10 +51,6 @@ type ParseResult = {
     success: false,
     error: ParseError,
 } | AstNode;
-
-function assertNever(x: never): never {
-    throw new Error(`Unexpected object: ${x}`);
-}
 
 const tokenTypeToAstNodeType = (token: TokenType): AstNodeType | undefined => {
     switch (token) {

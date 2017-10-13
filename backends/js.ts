@@ -100,6 +100,7 @@ const astToJS = ({ ast, exitInsteadOfReturn }) => {
             }),
         ];
         case 'booleanLiteral': return [ast.value];
+        case 'stringLiteral': return [`"${ast.value}"`];
         default:
             debugger;
             return;
@@ -130,6 +131,7 @@ export default (functions, variables, program, globalDeclarations) => {
         exitInsteadOfReturn: true,
     })));
     return `
+const length = str => str.length;
 ${JSfunctions.join('\n')}
 ${JS.join('\n')}`;
 };

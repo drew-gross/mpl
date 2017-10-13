@@ -93,7 +93,14 @@ const nextTemporary = (storage: StorageSpec): StorageSpec => {
 
 let labelId = 0;
 
-const astToMips = ({ ast, registerAssignment, destination, currentTemporary, globalDeclarations }) => {
+const astToMips = ({
+    ast,
+    registerAssignment,
+    destination,
+    currentTemporary,
+    globalDeclarations,
+    stringLiterals,
+}) => {
     if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': return [
@@ -107,6 +114,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 },
                 currentTemporary,
                 globalDeclarations,
+                stringLiterals,
             }),
         ];
         case 'number': return [storeLiteralMips(destination, ast.value)];
@@ -122,6 +130,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 destination: leftSideDestination,
                 currentTemporary: subExpressionTemporary,
                 globalDeclarations,
+                stringLiterals,
             });
             const storeRightInstructions = astToMips({
                 ast: ast.children[1],
@@ -129,6 +138,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
                 globalDeclarations,
+                stringLiterals,
             });
             return [
                 `# Store left side of product in temporary (${leftSideDestination.destination})`,
@@ -150,6 +160,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 destination: leftSideDestination,
                 currentTemporary: subExpressionTemporary,
                 globalDeclarations,
+                stringLiterals,
             });
             const storeRightInstructions = astToMips({
                 ast: ast.children[1],
@@ -157,6 +168,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
                 globalDeclarations,
+                stringLiterals,
             });
             return [
                 `# Store left side in temporary (${leftSideDestination.destination})`,
@@ -173,6 +185,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
             destination: '(TODO: READ FROM REGISTER ASSIGNMENT)',
             currentTemporary,
             globalDeclarations,
+            stringLiterals,
         })));
         case 'callExpression': {
             if (currentTemporary.type !== 'register') debugger; // TODO: Figure out how to guarantee this doesn't happen
@@ -189,6 +202,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                     destination: { type: 'register', destination: '$s0' },
                     currentTemporary: nextTemporary(currentTemporary),
                     globalDeclarations,
+                    stringLiterals,
                 }),
                 `# call ${name}`,
                 ...callInstructions,
@@ -213,6 +227,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                         },
                         currentTemporary,
                         globalDeclarations,
+                        stringLiterals,
                     }),
                 ];
             } else {
@@ -261,6 +276,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                     destination: booleanTemporary,
                     currentTemporary: subExpressionTemporary,
                     globalDeclarations,
+                    stringLiterals,
                 }),
                 `# Go to false branch if zero`,
                 mipsBranchIfEqual(booleanTemporary, { type: 'register', destination: '$0' }, `L${falseBranchLabel}`),
@@ -271,6 +287,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                     destination,
                     currentTemporary: subExpressionTemporary,
                     globalDeclarations,
+                    stringLiterals,
                 }),
                 `# Jump to end of ternary`,
                 `b L${endOfTernaryLabel}`,
@@ -282,6 +299,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                     destination,
                     currentTemporary: subExpressionTemporary,
                     globalDeclarations,
+                    stringLiterals,
                 }),
                 `# End of ternary label`,
                 `L${endOfTernaryLabel}:`,
@@ -298,6 +316,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 destination: leftSideDestination,
                 currentTemporary: subExpressionTemporary,
                 globalDeclarations,
+                stringLiterals,
             });
 
             const storeRightInstructions = astToMips({
@@ -306,6 +325,7 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
                 globalDeclarations,
+                stringLiterals,
             });
 
             const equalLabel = labelId;
@@ -328,6 +348,9 @@ const astToMips = ({ ast, registerAssignment, destination, currentTemporary, glo
                 storeLiteralMips(destination, '1'),
                 `L${endOfConditionLabel}:`,
             ];
+        }
+        case 'stringLiteral': {
+            debugger;
         }
         default:
             debugger;
@@ -354,7 +377,7 @@ const assignMipsRegisters = variables => {
     };
 };
 
-const constructMipsFunction = ({ name, argument, statements, temporaryCount }, globalDeclarations) => {
+const constructMipsFunction = ({ name, argument, statements, temporaryCount }, globalDeclarations, stringLiterals) => {
     const saveTemporariesCode = [
         // Always store return address
         `sw $ra, ($sp)`,
@@ -402,6 +425,7 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
             destination: '$a0',
             currentTemporary,
             globalDeclarations,
+            stringLiterals,
         });
     }));
     return [
@@ -413,8 +437,8 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
     ].join('\n');
 }
 
-export default (functions, variables, program, globalDeclarations) => {
-    let mipsFunctions = functions.map(f => constructMipsFunction(f,  globalDeclarations));
+export default (functions, variables, program, globalDeclarations, stringLiterals) => {
+    let mipsFunctions = functions.map(f => constructMipsFunction(f,  globalDeclarations, stringLiterals));
     const {
         registerAssignment,
         firstTemporary,
@@ -428,6 +452,7 @@ export default (functions, variables, program, globalDeclarations) => {
         },
         currentTemporary: firstTemporary,
         globalDeclarations,
+        stringLiterals,
     })));
 
     // Create space for spilled tempraries
@@ -444,6 +469,7 @@ export default (functions, variables, program, globalDeclarations) => {
     return `
 .data
 ${globalDeclarations.map(name => `${name}: .word 0`).join('\n')}
+${stringLiterals.map(text => `${text}: .asciiz "${text}"`).join('\n')}
 .text
 ${mipsFunctions.join('\n')}
 main:

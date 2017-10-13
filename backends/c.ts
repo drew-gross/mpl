@@ -4,11 +4,12 @@ const mplTypeToCDeclaration = (type, identifier) => {
     switch (type) {
         case 'Function': return `unsigned char (*${identifier})(unsigned char)`
         case 'Integer': return `uint8_t ${identifier}`;
+        case 'String': return `char *${identifier}`;
         default: debugger;
     }
 };
 
-const astToC = ({ ast, globalDeclarations }) => {
+const astToC = ({ ast, globalDeclarations }): string[] => {
     if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': return [
@@ -71,9 +72,10 @@ const astToC = ({ ast, globalDeclarations }) => {
             ...astToC({ ast: ast.children[2], globalDeclarations }),
         ];
         case 'booleanLiteral': return [ast.value == 'true' ? '1' : '0'];
+        case 'stringLiteral': return [`"${ast.value}"`];
         default:
             debugger;
-            return;
+            throw 'debugger';
     };
 };
 
@@ -101,6 +103,15 @@ export default (functions, variables, program, globalDeclarations) => {
     return `
 #include <stdio.h>
 #include <stdint.h>
+
+int length(char *str) {
+    int len = 0;
+    while (*str != 0) {
+        len++;
+        str++;
+    }
+    return len;
+}
 
 ${Cdeclarations.join('\n')}
 
