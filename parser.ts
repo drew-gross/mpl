@@ -26,7 +26,7 @@ const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
 // SUBTRACTION -> PRODUCT - EXPRESSION | PRODUCT
 // PRODUCT -> EQUALITY * PRODUCT | EQUALITY
 // EQUALITY -> SIMPLE_EXPRESSION == EQUALITY | SIMPLE_EXPRESSION
-// SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( ARG_LIST ) | int | boolean | FUNCTION | identifier
+// SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( ARG_LIST ) | int | boolean | string | FUNCTION | identifier
 
 const parseProgramI = alternative([
     sequence('statement', [parseStatement, terminal('statementSeparator'), parseProgram]),
@@ -114,6 +114,7 @@ const parseSimpleExpressionI = alternative([
     ]),
     terminal('number'),
     terminal('booleanLiteral'),
+    terminal('stringLiteral'),
     parseFunction,
     terminal('identifier'),
 ]);

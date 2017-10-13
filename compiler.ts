@@ -4,6 +4,9 @@ import parseProgram from './parser.js'
 import { ParseResult, AstNode, AstInteriorNode, AstLeaf } from './parser-combinator.js';
 import { toJS, toC, toMips } from './codegen.js';
 
+type Type = {
+    name: 'String' | 'Integer' | 'Boolean' | 'Function'
+};
 
 let tokensToString = tokens => tokens.map(token => token.string).join('');
 
@@ -219,7 +222,7 @@ const typesAreEqual = (a, b) => {
     return true;
 }
 
-const typeOfExpression = (foo, knownIdentifiers) => {
+const typeOfExpression = (foo, knownIdentifiers): { type: Type, errors: string[] } => {
     const { type, children, value } = foo;
     switch (type) {
         case 'number': return { type: { name: 'Integer' }, errors: [] };
@@ -228,13 +231,13 @@ const typeOfExpression = (foo, knownIdentifiers) => {
             const leftType = typeOfExpression(children[0], knownIdentifiers);
             const rightType = typeOfExpression(children[1], knownIdentifiers);
             if (leftType.errors.length > 0 || rightType.errors.length > 0) {
-                return { type: {}, errors: leftType.errors.concat(rightType.errors) };
+                return { type: {} as any, errors: leftType.errors.concat(rightType.errors) };
             }
             if (!typesAreEqual(leftType.type, { name: 'Integer' })) {
-                return { type: {}, errors: [`Left hand side of ${type} was not integer`] };
+                return { type: {} as any, errors: [`Left hand side of ${type} was not integer`] };
             }
             if (!typesAreEqual(rightType.type, { name: 'Integer' })) {
-                return { type: {}, errors: [`Right hand side of ${type} was not integer`] };
+                return { type: {} as any, errors: [`Right hand side of ${type} was not integer`] };
             }
             return { type: { name: 'Integer' }, errors: [] };
         }
@@ -242,13 +245,13 @@ const typeOfExpression = (foo, knownIdentifiers) => {
             const leftType = typeOfExpression(children[0], knownIdentifiers);
             const rightType = typeOfExpression(children[2], knownIdentifiers);
             if (leftType.errors.length > 0 || rightType.errors.length > 0) {
-                return { type: {}, errors: leftType.errors.concat(rightType.errors) };
+                return { type: {} as any, errors: leftType.errors.concat(rightType.errors) };
             }
             if (!typesAreEqual(leftType.type, { name: 'Integer' })) {
-                return { type: {}, errors: [`Equality comparisons of Integers only. You tried to compare a ${leftType.type} (lhs)`] };
+                return { type: {} as any, errors: [`Equality comparisons of Integers only. You tried to compare a ${leftType.type} (lhs)`] };
             }
             if (!typesAreEqual(rightType.type, { name: 'Integer' })) {
-                return { type: {}, errors: [`Equality comparisons of Integers only. You tried to compare a ${rightType.type} (rhs)`] };
+                return { type: {} as any, errors: [`Equality comparisons of Integers only. You tried to compare a ${rightType.type} (rhs)`] };
             }
             return { type: { name: 'Boolean' }, errors: [] };
         }
@@ -263,7 +266,7 @@ const typeOfExpression = (foo, knownIdentifiers) => {
             const functionName = children[0].value;
             const functionType = knownIdentifiers[functionName];
             if (!typesAreEqual(argType.type, functionType.arg.type)) {
-                return { type: {}, errors: [`You passed a ${argType.type.name} as an argument to ${functionName}. It expects a ${functionType.arg.type.name}`] };
+                return { type: {} as any, errors: [`You passed a ${argType.type.name} as an argument to ${functionName}. It expects a ${functionType.arg.type.name}`] };
             }
             return { type: { name: 'Integer' }, errors: [] };
         }
@@ -271,7 +274,7 @@ const typeOfExpression = (foo, knownIdentifiers) => {
             if (value in knownIdentifiers) {
                 return { type: knownIdentifiers[value], errors: [] };
             } else {
-                return { type: {}, errors: [`Identifier ${value} has unknown type.`] };
+                return { type: {} as any, errors: [`Identifier ${value} has unknown type.`] };
             }
         }
         case 'ternary': {
@@ -279,18 +282,19 @@ const typeOfExpression = (foo, knownIdentifiers) => {
             const trueBranchType = typeOfExpression(children[2], knownIdentifiers);
             const falseBranchType = typeOfExpression(children[4], knownIdentifiers);
             if (conditionType.errors.length > 0 || trueBranchType.errors.length > 0 || falseBranchType.errors.length > 0) {
-                return { type: {}, errors: conditionType.errors.concat(trueBranchType.errors).concat(falseBranchType.errors) };
+                return { type: {} as any, errors: conditionType.errors.concat(trueBranchType.errors).concat(falseBranchType.errors) };
             }
             if (!typesAreEqual(conditionType.type, { name: 'Boolean' })) {
-                return { type: {}, errors: [`You tried to use a ${conditionType.type.name} as the condition in a ternary. Boolean is required`] };
+                return { type: {} as any, errors: [`You tried to use a ${conditionType.type.name} as the condition in a ternary. Boolean is required`] };
             }
             if (!typesAreEqual(trueBranchType.type, falseBranchType.type)) {
-                return { type: {}, errors: [`Type mismatch in branches of ternary. True branch had ${trueBranchType.type}, false branch had ${falseBranchType.type}.`] };
+                return { type: {} as any, errors: [`Type mismatch in branches of ternary. True branch had ${trueBranchType.type}, false branch had ${falseBranchType.type}.`] };
             }
             return { type: trueBranchType.type, errors: [] };
         };
         case 'booleanLiteral': return { type: { name: 'Boolean' }, errors: [] };
-        default: debugger; return { type: {}, errors: [`Unknown type ${type}`] };
+        case 'stringLiteral': return { type: { name: 'String' }, errors: [] };
+        default: debugger; return { type: {} as any, errors: [`Unknown type ${type}`] };
     }
 };
 
