@@ -1,12 +1,36 @@
+type TokenType =
+    'return' |
+    'booleanLiteral' |
+    'stringLiteral' |
+    'identifier' |
+    'type' |
+    'statementSeparator' |
+    'fatArrow' |
+    'equality' |
+    'assignment' |
+    'number' |
+    'sum' |
+    'product' |
+    'subtraction' |
+    'leftBracket' |
+    'rightBracket' |
+    'leftCurlyBrace' |
+    'rightCurlyBrace' |
+    'colon' |
+    'comma' |
+    'ternaryOperator' |
+    'endOfFile' |
+    'invalid' ;
+
 type TokenSpec = {
     token: string,
-    type: string,
+    type: TokenType,
     action?: (x: string) => any,
     toString: (x: any) => string,
 };
 
 type Token = {
-    type: string,
+    type: TokenType,
     string: string,
     value?: any,
 };
@@ -128,4 +152,4 @@ const lex = (input: string): Token[] => {
     return tokens;
 };
 
-export { lex, Token };
+export { lex, Token, TokenType };

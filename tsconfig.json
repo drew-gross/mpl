@@ -4,7 +4,8 @@
         "allowJs": true,
         "target": "ES2017",
         "module": "commonjs",
-        "noEmitOnError": true
+        "noEmitOnError": true,
+        "strictNullChecks": true
     },
     "include": [
         "./**/*"

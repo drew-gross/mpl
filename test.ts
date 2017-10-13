@@ -1,9 +1,10 @@
 import test from 'ava';
 
+import { lex, TokenType } from './lex.js';
+
 import {
     parse,
     compile,
-    lex,
     CompilationResult,
 } from './compiler';
 
@@ -201,12 +202,12 @@ const compileAndRunMacro = async (t, {
         }
     });
 
-    if (printSubsteps.includes('tokens')) {
+    if (printSubsteps.includes('tokens' as never)) {
         console.log(JSON.stringify(lexResult, null, 2));
     }
 
     const parseResult = parse(lexResult);
-    if (printSubsteps.includes('ast')) {
+    if (printSubsteps.includes('ast' as never)) {
         console.log(JSON.stringify(parseResult, null, 2));
     }
 
@@ -224,20 +225,20 @@ const compileAndRunMacro = async (t, {
     if (expectedParseErrors) {
         t.deepEqual(expectedParseErrors, result.parseErrors);
         return;
-    } else if (result.parseErrors.length > 0) {
-        t.fail(`Found parse errors when none expected: ${result.parseErrors.join(', ')}`);
+    } else if ((result.parseErrors as any).length > 0) {
+        t.fail(`Found parse errors when none expected: ${(result.parseErrors as any).join(', ')}`);
         return;
     }
 
     if (expectedTypeErrors) {
         t.deepEqual(expectedTypeErrors, result.typeErrors);
         return;
-    } else if (result.typeErrors.length > 0) {
-        t.fail(`Found type errors when none expected: ${result.typeErrors.join(', ')}`);
+    } else if ((result.typeErrors as any).length > 0) {
+        t.fail(`Found type errors when none expected: ${(result.typeErrors as any).join(', ')}`);
         return;
     }
 
-    if (printSubsteps.includes('c')) {
+    if (printSubsteps.includes('c' as never)) {
         console.log(cSource);
     }
 
@@ -265,7 +266,7 @@ const compileAndRunMacro = async (t, {
     const mipsFile = await tmpFile({ postfix: '.s' });
     const mipsSource = compile({ source, target: 'mips' }).code;
 
-    if (printSubsteps.includes('mips')) {
+    if (printSubsteps.includes('mips' as never)) {
         console.log(mipsSource);
     }
 
@@ -583,4 +584,9 @@ quadrupleWithLocal = a: Integer => {
 
 return quadrupleWithLocal(5);`,
     expectedExitCode: 20,
+});
+
+test.failing('string length', compileAndRunMacro, {
+    source: `myStr: String = "test"; return length(myStr);`,
+    expectedExitCode: 4,
 });

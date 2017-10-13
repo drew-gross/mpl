@@ -1,3 +1,4 @@
+import { TokenType } from './lex.js';
 import { alternative, sequence, terminal, ParseResult } from './parser-combinator.js';
 
 const parseProgram = (t, i) => parseProgramI(t, i);

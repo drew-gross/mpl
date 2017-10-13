@@ -30,8 +30,8 @@ const moveMips = ({ type, destination }, source) => {
 
 const multiplyMips = (destination, left, right) => {
     let leftRegister = left.destination;
-    let loadSpilled = []
-    let restoreSpilled = [];
+    let loadSpilled: any = []
+    let restoreSpilled: any = [];
     if (left.type == 'memory') {
         leftRegister = '$s1';
         loadSpilled.push(`lw $s1, -${left.spOffset}($sp)`);
@@ -87,6 +87,7 @@ const nextTemporary = (storage: StorageSpec): StorageSpec => {
         }
     } else {
         debugger;
+        throw 'debugger';
     }
 };
 

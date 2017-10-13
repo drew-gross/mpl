@@ -66,7 +66,7 @@ const statementTreeToStatementList = functionAst => {
     const result = {
         name: functionAst.name,
         argument: functionAst.argument,
-        statements: [],
+        statements: [] as any,
     };
     let currentStatement = functionAst.body;
     while (currentStatement.type === 'statement') {
@@ -87,7 +87,7 @@ const statementTreeToStatementList = functionAst => {
 }
 
 const extractFunctions = ast => {
-    const newFunctions = [];
+    const newFunctions: any = [];
     const newAst: any = {};
     if (ast.type === 'function') {
         const functionName = `anonymous_${functionId}`;
@@ -338,7 +338,7 @@ const typeCheckProgram = ({ statements, argument }, previouslyKnownIdentifiers) 
         knownIdentifiers[argument.children[0].value] = { name: argument.children[2].value };
     }
 
-    const allErrors = [];
+    const allErrors: any = [];
     statements.forEach(s => {
         if (allErrors.length == 0) {
             const { errors, newIdentifiers } = typeCheckStatement(s, knownIdentifiers);
@@ -365,7 +365,7 @@ type CompilationResult = {
     code?: string,
 };
 
-const compile = ({ source, target }) => {
+const compile = ({ source, target }): any => {
     const tokens = lex(source);
     const { ast, parseErrors } = parse(tokens);
 
