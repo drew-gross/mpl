@@ -586,7 +586,7 @@ return quadrupleWithLocal(5);`,
     expectedExitCode: 20,
 });
 
-test.only('string length', compileAndRunMacro, {
+test.failing('string length', compileAndRunMacro, {
     source: `myStr: String = "test"; return length(myStr);`,
     expectedExitCode: 4,
 });

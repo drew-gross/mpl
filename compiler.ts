@@ -402,7 +402,6 @@ const compile = ({ source, target }): any => {
 
     const { functions, program } = extractFunctions(ast);
     const stringLiterals = extractStringLiterals(ast);
-    console.log(stringLiterals);
 
     const functionIdentifierTypes = getFunctionTypeMap(functions);
 
