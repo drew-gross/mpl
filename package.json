@@ -17,13 +17,13 @@
   "author": "Drew Gross",
   "dependencies": {
     "child-process-promise": "2.2.1",
-    "fs-extra": "3.0.1",
+    "fs-extra": "4.0.2",
     "tmp-promise": "1.0.3"
   },
   "devDependencies": {
-    "ava": "0.19.1",
-    "inspect-process": "0.4.2",
-    "parallelshell": "3.0.1",
+    "ava": "0.22.0",
+    "inspect-process": "0.5.0",
+    "parallelshell": "3.0.2",
     "rimraf": "2.6.2",
     "typescript": "2.5.3"
   }
