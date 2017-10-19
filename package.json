@@ -12,7 +12,7 @@
     "test": "rimraf built && tsc && ava",
     "test-watch": "ava --watch --no-color",
     "tsc-watch": "tsc --watch",
-    "test-debug": "inspect --debug-exception node_modules/ava/profile.js built/test.js"
+    "test-debug": "tsc && inspect --debug-exception node_modules/ava/profile.js built/test.js"
   },
   "author": "Drew Gross",
   "dependencies": {

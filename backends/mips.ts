@@ -28,6 +28,13 @@ const moveMips = ({ type, destination }, source) => {
     }
 }
 
+const loadGlobalMips = ({ type, destination, spOffset }, value) => {
+    switch (type) {
+        case 'register': return `la ${destination}, ${value}`;
+        default: debugger; return '';
+    }
+}
+
 const multiplyMips = (destination, left, right) => {
     let leftRegister = left.destination;
     let loadSpilled: any = []
@@ -90,6 +97,8 @@ const nextTemporary = (storage: StorageSpec): StorageSpec => {
         throw 'debugger';
     }
 };
+
+const runtimeFunctions = ['length'];
 
 let labelId = 0;
 
@@ -190,9 +199,27 @@ const astToMips = ({
         case 'callExpression': {
             if (currentTemporary.type !== 'register') debugger; // TODO: Figure out how to guarantee this doesn't happen
             const name = ast.children[0].value;
-            const callInstructions = globalDeclarations.includes(name)
-                ? [`lw ${currentTemporary.destination}, ${name}`, `jal ${currentTemporary.destination}`]
-                : [`jal ${registerAssignment[name].destination}`];
+            let callInstructions: string[] = []
+            if (runtimeFunctions.includes(name)) {
+                callInstructions = [
+                    `# Call runtime function`,
+                    `la ${currentTemporary.destination}, ${name}`,
+                    `jal ${currentTemporary.destination}`,
+                ];
+            } else if (globalDeclarations.includes(name)) {
+                callInstructions = [
+                    `# Call global function`,
+                    `lw ${currentTemporary.destination}, ${name}`,
+                    `jal ${currentTemporary.destination}`,
+                ];
+            } else if (name in registerAssignment) {
+                callInstructions = [
+                    `# Call register function`,
+                    `jal ${registerAssignment[name].destination}`,
+                ];
+            } else {
+                debugger;
+            }
 
             return [
                 `# Put argument in $s0`,
@@ -351,6 +378,10 @@ const astToMips = ({
         }
         case 'stringLiteral': {
             debugger;
+            return [
+                `# Load string literal address into register`,
+                loadGlobalMips(destination, ast.value),
+            ];
         }
         default:
             debugger;
@@ -379,12 +410,12 @@ const assignMipsRegisters = variables => {
 
 const constructMipsFunction = ({ name, argument, statements, temporaryCount }, globalDeclarations, stringLiterals) => {
     const saveTemporariesCode = [
-        // Always store return address
+        `# Always store return address`,
         `sw $ra, ($sp)`,
         `addiu $sp, $sp, -4`,
     ];
     const restoreTemporariesCode = [
-        // Always restore return address
+        `# Always restore return address`,
         `lw $ra, ($sp)`,
         `addiu $sp, $sp, 4`,
     ];
@@ -470,7 +501,44 @@ export default (functions, variables, program, globalDeclarations, stringLiteral
 .data
 ${globalDeclarations.map(name => `${name}: .word 0`).join('\n')}
 ${stringLiterals.map(text => `${text}: .asciiz "${text}"`).join('\n')}
+
 .text
+length:
+# Always store return address
+sw $ra, ($sp)
+addiu $sp, $sp, -4
+# Store two temporaries
+sw $t1, ($sp)
+addiu $sp, $sp, -4
+sw $t2, ($sp)
+addiu $sp, $sp, -4
+
+# Set length count to 0
+li $t1, 0
+length_loop:
+# Load char into temporary
+lb $t2, ($s0)
+# If char is null, end of string. Return count.
+beq $t2, 0, length_return
+# Else bump pointer count and and return to start of loop
+addiu $t1, $t1, 1
+addiu $s0, $s0, 1
+b length_loop
+
+length_return:
+# Put length in return register
+move $a0, $t1
+
+# Restore two temporaries
+addiu $sp, $sp, 4
+lw $t2, ($sp)
+addiu $sp, $sp, 4
+lw $t1, ($sp)
+# Always restore return address
+addiu $sp, $sp, 4
+lw $ra, ($sp)
+jr $ra
+
 ${mipsFunctions.join('\n')}
 main:
 ${makeSpillSpaceCode.join('\n')}
