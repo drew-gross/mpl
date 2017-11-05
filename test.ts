@@ -632,3 +632,8 @@ return str1 == str2 ? 1 : 2
 `,
     expectedExitCode: 2
 });
+
+test.failing('wrong type global', compileAndRun, {
+    source: `str: String = 5; return length(str)`,
+    expectedTypeErrors: ['Blah'],
+});

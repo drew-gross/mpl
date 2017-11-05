@@ -5,8 +5,13 @@ import parseProgram from './parser.js'
 import { ParseResult, AstNode, AstInteriorNode, AstLeaf } from './parser-combinator.js';
 import { toJS, toC, toMips } from './codegen.js';
 
-type Type = {
+export type Type = {
     name: 'String' | 'Integer' | 'Boolean' | 'Function'
+};
+
+export type VariableDeclaration = {
+    name: string,
+    type: Type,
 };
 
 let tokensToString = tokens => tokens.map(token => token.string).join('');
@@ -391,6 +396,17 @@ const builtinIdentifiers = { // TODO: Require these to be imported
     }
 };
 
+const assigneentToDeclaration = (ast): VariableDeclaration => {
+    const result = typeOfExpression(ast.children[2], {});
+    if (result.errors.length > 0) {
+        debugger;
+    }
+    return {
+        name: ast.children[0].value,
+        type: result.type,
+    };
+};
+
 const compile = ({ source, target }): any => {
     const tokens = lex(source);
     const { ast, parseErrors } = parse(tokens);
@@ -435,16 +451,17 @@ const compile = ({ source, target }): any => {
 
     const variables = flatten(programWithStatementList.statements.map(extractVariables));
 
-
     // Modifications here :(
     functionsWithStatementList.forEach((item, index) => {
         item.temporaryCount = functionTemporaryCounts[index];
     });
     programWithStatementList.temporaryCount = programTemporaryCount;
 
-    const globalDeclarations = programWithStatementList.statements
+    debugger;
+
+    const globalDeclarations: Array<VariableDeclaration> = programWithStatementList.statements
         .filter(s => s.type === 'assignment')
-        .map(s => s.children[0].value);
+        .map(assigneentToDeclaration);
 
     if (target == 'js') {
         return {
@@ -452,17 +469,11 @@ const compile = ({ source, target }): any => {
             parseErrors: [],
             code: toJS(functionsWithStatementList, variables, programWithStatementList, globalDeclarations),
         };
-    } else if (target == 'c') {
+    } else {
         return {
             typeErrors: [],
             parseErrors: [],
-            code: toC(functionsWithStatementList, variables, programWithStatementList, globalDeclarations),
-        };
-    } else if (target == 'mips') {
-        return {
-            typeErrors: [],
-            parseErrors: [],
-            code: toMips(
+            code: toC(
                 functionsWithStatementList,
                 variables,
                 programWithStatementList,
