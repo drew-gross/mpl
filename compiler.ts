@@ -407,7 +407,7 @@ const assigneentToDeclaration = (ast): VariableDeclaration => {
     };
 };
 
-const compile = ({ source, target }): any => {
+const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mips' }): any => {
     const tokens = lex(source);
     const { ast, parseErrors } = parse(tokens);
 
@@ -457,31 +457,24 @@ const compile = ({ source, target }): any => {
     });
     programWithStatementList.temporaryCount = programTemporaryCount;
 
-    debugger;
-
     const globalDeclarations: Array<VariableDeclaration> = programWithStatementList.statements
         .filter(s => s.type === 'assignment')
         .map(assigneentToDeclaration);
 
+    let f: any = null;
+
     if (target == 'js') {
-        return {
-            typeErrors: [],
-            parseErrors: [],
-            code: toJS(functionsWithStatementList, variables, programWithStatementList, globalDeclarations),
-        };
-    } else {
-        return {
-            typeErrors: [],
-            parseErrors: [],
-            code: toC(
-                functionsWithStatementList,
-                variables,
-                programWithStatementList,
-                globalDeclarations,
-                stringLiterals
-            ),
-        };
+        f = toJS;
+    } else if (target == 'c') {
+        f = toC;
+    } else if (target == 'mips') {
+        f = toMips;
     }
+    return {
+        typeErrors: [],
+        parseErrors: [],
+        code: f(functionsWithStatementList, variables, programWithStatementList, globalDeclarations, stringLiterals),
+    };
 };
 
 export { parse, lex, compile, CompilationResult };

@@ -107,7 +107,7 @@ const astToJS = ({ ast, exitInsteadOfReturn }) => {
     }
 };
 
-export default (functions, variables, program, globalDeclarations) => {
+export default (functions, variables, program, globalDeclarations, stringLiterals) => {
     let JSfunctions = functions.map(({ name, argument, statements }) => {
         const prefix = `${name} = ${argument.children[0].value} => {`;
         const suffix = `}`;
