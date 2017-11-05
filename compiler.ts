@@ -257,11 +257,13 @@ const typeOfExpression = ({ type, children, value }, knownIdentifiers): { type: 
             if (leftType.errors.length > 0 || rightType.errors.length > 0) {
                 return { type: {} as any, errors: leftType.errors.concat(rightType.errors) };
             }
-            if (!typesAreEqual(leftType.type, { name: 'Integer' })) {
-                return { type: {} as any, errors: [`Equality comparisons of Integers only. You tried to compare a ${leftType.type} (lhs)`] };
-            }
-            if (!typesAreEqual(rightType.type, { name: 'Integer' })) {
-                return { type: {} as any, errors: [`Equality comparisons of Integers only. You tried to compare a ${rightType.type} (rhs)`] };
+            if (!typesAreEqual(leftType.type, rightType.type)) {
+                return { type: {} as any, errors: [
+                    `Equality comparisons must compare values of the same type.. You tried to compare a ${
+                        leftType.type.name
+                    } (lhs) with a ${
+                        rightType.type.name
+                    } (rhs)`] };
             }
             return { type: { name: 'Boolean' }, errors: [] };
         }

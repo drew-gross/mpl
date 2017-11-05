@@ -186,14 +186,23 @@ const execAndGetExitCode = async command => {
     return 0;
 };
 
-const compileAndRunMacro = async (t, {
+type CompileAndRunOptions = {
+    source: string,
+    expectedExitCode: number,
+    expectedTypeErrors: [any],
+    expectedParseErrors: [any],
+    expectedAst: [any],
+    printSubsteps?: ('js' | 'tokens' | 'ast' | 'c' | 'mips')[],
+}
+
+const compileAndRun = async (t, {
     source,
     expectedExitCode,
     expectedTypeErrors,
     expectedParseErrors,
     expectedAst,
     printSubsteps = [],
-}) => {
+} : CompileAndRunOptions) => {
     // Make sure it parses
     const lexResult = lex(source);
     lexResult.forEach(({ string, type }) => {
@@ -202,12 +211,12 @@ const compileAndRunMacro = async (t, {
         }
     });
 
-    if (printSubsteps.includes('tokens' as never)) {
+    if (printSubsteps.includes('tokens')) {
         console.log(JSON.stringify(lexResult, null, 2));
     }
 
     const parseResult = parse(lexResult);
-    if (printSubsteps.includes('ast' as never)) {
+    if (printSubsteps.includes('ast')) {
         console.log(JSON.stringify(parseResult, null, 2));
     }
 
@@ -238,7 +247,7 @@ const compileAndRunMacro = async (t, {
         return;
     }
 
-    if (printSubsteps.includes('c' as never)) {
+    if (printSubsteps.includes('c')) {
         console.log(cSource);
     }
 
@@ -256,6 +265,11 @@ const compileAndRunMacro = async (t, {
     // JS backend
     const jsFile = await tmpFile({ postfix: '.js' });
     const jsSource = compile({ source, target: 'js' }).code;
+
+    if (printSubsteps.includes('js')) {
+        console.log(jsSource);
+    }
+
     await writeFile(jsFile.fd, jsSource);
     const jsExitCode = await execAndGetExitCode(`node ${jsFile.path}`);
     if (jsExitCode !== expectedExitCode) {
@@ -266,7 +280,7 @@ const compileAndRunMacro = async (t, {
     const mipsFile = await tmpFile({ postfix: '.s' });
     const mipsSource = compile({ source, target: 'mips' }).code;
 
-    if (printSubsteps.includes('mips' as never)) {
+    if (printSubsteps.includes('mips')) {
         console.log(mipsSource);
     }
 
@@ -312,18 +326,18 @@ test('lowering of bracketedExpressions', t => {
     });
 });
 
-test('bare return', compileAndRunMacro, {
+test('bare return', compileAndRun, {
     source: 'return 7',
     expectedExitCode: 7,
 });
 
 
-test('single product', compileAndRunMacro, {
+test('single product', compileAndRun, {
     source: 'return 2 * 2',
     expectedExitCode: 4,
 });
 
-test('double product', compileAndRunMacro, {
+test('double product', compileAndRun, {
     source: 'return 5 * 3 * 4',
     expectedExitCode: 60,
     expectedAst: {
@@ -353,12 +367,12 @@ test('double product', compileAndRunMacro, {
     },
 });
 
-test('brackets', compileAndRunMacro, {
+test('brackets', compileAndRun, {
     source: 'return (3)',
     expectedExitCode: 3,
 });
 
-test('brackets product', compileAndRunMacro, {
+test('brackets product', compileAndRun, {
     source: 'return (3 * 4) * 5',
     expectedExitCode: 60,
     expectedAst: {
@@ -388,17 +402,17 @@ test('brackets product', compileAndRunMacro, {
     },
 });
 
-test('assign function and return', compileAndRunMacro, {
+test('assign function and return', compileAndRun, {
     source: 'constThree = a: Integer => 3; return 10',
     expectedExitCode: 10,
 });
 
-test('assign function and call it', compileAndRunMacro, {
+test('assign function and call it', compileAndRun, {
     source: 'takeItToEleven = a: Integer => 11; return takeItToEleven(0)',
     expectedExitCode: 11
 });
 
-test('multiple variables called', compileAndRunMacro, {
+test('multiple variables called', compileAndRun, {
     source: `
 const11 = a: Integer => 11
 const12 = a: Integer => 12
@@ -406,7 +420,7 @@ return const11(1) * const12(2)`,
     expectedExitCode: 132,
 });
 
-test('double product with brackets', compileAndRunMacro, {
+test('double product with brackets', compileAndRun, {
     source: 'return 2 * (3 * 4) * 5',
     expectedExitCode: 120,
     expectedAst: {
@@ -442,132 +456,132 @@ test('double product with brackets', compileAndRunMacro, {
     },
 });
 
-test('id function', compileAndRunMacro, {
+test('id function', compileAndRun, {
     source: 'id = a: Integer => a; return id(5)',
     expectedExitCode: 5,
 });
 
-test('double function', compileAndRunMacro, {
+test('double function', compileAndRun, {
     source: 'doubleIt = a: Integer => 2 * a; return doubleIt(100)',
     expectedExitCode: 200,
 });
 
-test('subtraction', compileAndRunMacro, {
+test('subtraction', compileAndRun, {
     source: 'return 7 - 5',
     expectedExitCode: 2,
 });
 
-test('order of operations', compileAndRunMacro, {
+test('order of operations', compileAndRun, {
     source: 'return 2 * 5 - 1',
     expectedExitCode: 9,
 });
 
-test('associativity of subtraction', compileAndRunMacro, {
+test('associativity of subtraction', compileAndRun, {
     source: 'return 5 - 2 - 1',
     expectedExitCode: 2,
 });
 
-test('ternary true', compileAndRunMacro, {
+test('ternary true', compileAndRun, {
     source: 'return 1 == 1 ? 5 : 6',
     expectedExitCode: 5,
 });
 
-test('ternary false', compileAndRunMacro, {
+test('ternary false', compileAndRun, {
     source: 'return 0 == 1 ? 5 : 6',
     expectedExitCode: 6,
 });
 
-test('parse error', compileAndRunMacro, {
+test('parse error', compileAndRun, {
     source: '=>',
     expectedParseErrors: ['Expected identifier or return, found fatArrow'],
 });
 
-test('ternary in function false', compileAndRunMacro, {
+test('ternary in function false', compileAndRun, {
     source: `
 ternary = a: Boolean => a ? 9 : 5
 return ternary(false)`,
     expectedExitCode: 5,
 });
 
-test('ternary in function then subtract', compileAndRunMacro, {
+test('ternary in function then subtract', compileAndRun, {
     source: `
 ternaryFunc = a:Boolean => a ? 9 : 3
 return ternaryFunc(true) - ternaryFunc(false)`,
     expectedExitCode: 6,
 });
 
-test('equality comparison true', compileAndRunMacro, {
+test('equality comparison true', compileAndRun, {
     source: `
 isFive = five: Integer => five == 5 ? 2 : 7
 return isFive(5)`,
     expectedExitCode: 2,
 });
 
-test('equality comparison false', compileAndRunMacro, {
+test('equality comparison false', compileAndRun, {
     source: `
 isFive = notFive: Integer => notFive == 5 ? 2 : 7
 return isFive(11)`,
     expectedExitCode: 7,
 });
 
-test('factorial', compileAndRunMacro, {
+test('factorial', compileAndRun, {
     source: `
 factorial = x: Integer => x == 1 ? 1 : x * factorial(x - 1)
 return factorial(5)`,
     expectedExitCode: 120,
 });
 
-test('return bool fail', compileAndRunMacro, {
+test('return bool fail', compileAndRun, {
     source: 'return 1 == 2',
     expectedTypeErrors: ['You tried to return a Boolean'],
 });
 
-test('boolean literal false', compileAndRunMacro, {
+test('boolean literal false', compileAndRun, {
     source: `return false ? 1 : 2`,
     expectedExitCode: 2,
 });
 
-test('boolean literal true', compileAndRunMacro, {
+test('boolean literal true', compileAndRun, {
     source: `return true ? 1 : 2`,
     expectedExitCode: 1,
 });
 
-test('wrong type for arg', compileAndRunMacro, {
+test('wrong type for arg', compileAndRun, {
     source: `
 boolFunc = a: Boolean => 1
 return boolFunc(7)`,
     expectedTypeErrors: ['You passed a Integer as an argument to boolFunc. It expects a Boolean'],
 });
 
-test('assign wrong type', compileAndRunMacro, {
+test('assign wrong type', compileAndRun, {
     source: 'myInt: Integer = false; return myInt;',
     expectedTypeErrors: ['You tried to assign a Boolean to "myInt", which has type Integer'],
 });
 
 // Needs function types with args in syntax
-test.failing('assign function to typed var', compileAndRunMacro, {
+test.failing('assign function to typed var', compileAndRun, {
     source: 'myFunc: Function = a: Integer => a; return a(37);',
     expectedExitCode: 37,
 });
 
-test('return local integer', compileAndRunMacro, {
+test('return local integer', compileAndRun, {
     source: 'myVar: Integer = 3 * 3; return myVar',
     expectedExitCode: 9,
 });
 
-test('many temporaries, spill to ram', compileAndRunMacro, {
+test('many temporaries, spill to ram', compileAndRun, {
     source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
     expectedExitCode: 1,
 });
 
-test('multi statement function with locals', compileAndRunMacro, {
+test('multi statement function with locals', compileAndRun, {
     source: `
 quadrupleWithLocal = a: Integer => { b: Integer = 2 * a; return 2 * b }
 return quadrupleWithLocal(5);`,
     expectedExitCode: 20,
 });
 
-test('mutil statement function with type error', compileAndRunMacro, {
+test('mutil statement function with type error', compileAndRun, {
     source: `
 boolTimesInt = a: Integer => { b: Boolean = false; return a * b }
 return boolTimesInt(1);`,
@@ -575,7 +589,7 @@ return boolTimesInt(1);`,
 });
 
 // TODO: rethink statment separators
-test.failing('multi statement function on multiple lines', compileAndRunMacro, {
+test.failing('multi statement function on multiple lines', compileAndRun, {
     source: `
 quadrupleWithLocal = a: Integer => {
     b: Integer = 2 * a
@@ -586,7 +600,35 @@ return quadrupleWithLocal(5);`,
     expectedExitCode: 20,
 });
 
-test('string length', compileAndRunMacro, {
+test('string length', compileAndRun, {
     source: `myStr: String = "test"; return length(myStr);`,
     expectedExitCode: 4,
+});
+
+// TODO: fix this
+test.failing('string type inferred', compileAndRun, {
+    source: `myStr = "test2"; return length(myStr);`,
+    expectedExitCode: 5,
+});
+
+// TODO: memory management. Also exit code.
+test.failing('string copy', compileAndRun, {
+    source: `myStr1: String = "test"; myStr2: String = myStr1; return length(myStr2);`,
+    expectedExitCode: 5,
+});
+
+test.only('string equality: equal', compileAndRun, {
+    source: `str1 = "a"
+str2 = "a"
+return str1 == str2 ? 1 : 2
+`,
+    expectedExitCode: 1
+});
+
+test('string equality: inequal', compileAndRun, {
+    source: `str1 = "a"
+str2 = "b"
+return str1 == str2 ? 1 : 2
+`,
+    expectedExitCode: 2
 });
