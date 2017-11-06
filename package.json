@@ -13,7 +13,8 @@
     "test-watch": "ava --watch --no-color",
     "tsc-watch": "tsc --watch",
     "test-debug": "tsc && inspect --debug-exception node_modules/ava/profile.js built/test.js",
-    "mips-debug": "./QtSpim.app/Contents/MacOS/QtSpim mips-test.s"
+    "mips-debug": "./QtSpim.app/Contents/MacOS/QtSpim mips-test.s",
+    "cloc": "cloc --exclude-dir=node_modules,built ."
   },
   "author": "Drew Gross",
   "dependencies": {

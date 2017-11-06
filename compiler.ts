@@ -76,7 +76,6 @@ const transformAst = (nodeType, f, ast) => {
     }
 }
 
-
 const statementTreeToStatementList = functionAst => {
     const result = {
         name: functionAst.name,
