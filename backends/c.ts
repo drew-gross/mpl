@@ -78,6 +78,12 @@ const astToC = ({ ast, globalDeclarations, stringLiterals }: BackendInput): stri
             '==',
             ...astToC({ ast: ast.children[2], globalDeclarations, stringLiterals }),
         ];
+        case 'stringEquality': return [
+            // TODO: Just compares pointers right now. Fix that.
+            ...astToC({ ast: ast.children[0], globalDeclarations, stringLiterals }),
+            '==',
+            ...astToC({ ast: ast.children[2], globalDeclarations, stringLiterals }),
+        ];
         case 'booleanLiteral': return [ast.value == 'true' ? '1' : '0'];
         case 'stringLiteral': return [ast.value];
         default:

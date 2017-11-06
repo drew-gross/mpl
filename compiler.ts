@@ -62,14 +62,27 @@ const repairAssociativity = (nodeTypeToRepair, ast) => {
     }
 }
 
-const transformAst = (nodeType, f, ast) => {
+const transformAst = (nodeType, f, ast: AstNode, recurseOnNew: boolean) => {
     if (!ast) debugger;
     if (ast.type === nodeType) {
-        return transformAst(nodeType, f, f(ast));
+        const newNode = f(ast);
+        if ('children' in newNode) {
+            // If we aren't supposed to recurse, don't re-tranform the node we just made
+            if (recurseOnNew) {
+                return transformAst(nodeType, f, newNode, recurseOnNew);
+            } else {
+                return {
+                    type: newNode.type,
+                    children: newNode.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
+                }
+            }
+        } else {
+            return newNode;
+        }
     } else if ('children' in ast) {
         return {
             type: ast.type,
-            children: ast.children.map(child => transformAst(nodeType, f, child)),
+            children: (ast as AstInteriorNode).children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
         };
     } else {
         return ast;
@@ -175,7 +188,7 @@ const parse = (tokens: any[]): { ast?: any, parseErrors: string[] } => {
     ast = repairAssociativity('subtraction1', ast);
 
     // Product 3 -> product 1
-    ast = transformAst('product3', node => ({ type: 'product1', children: node.children }), ast);
+    ast = transformAst('product3', node => ({ type: 'product1', children: node.children }), ast, true);
 
     // Product 2 -> product 1
     ast = transformAst('product2', node => {
@@ -183,24 +196,29 @@ const parse = (tokens: any[]): { ast?: any, parseErrors: string[] } => {
             type: 'product1',
             children: [node.children[1], { type: 'product', value: null }, node.children[4]],
         };
-    }, ast);
+    }, ast, true);
 
 
     // Product 1 -> product
-    ast = transformAst('product1', node => ({ type: 'product', children: [node.children[0], node.children[2]] }), ast);
+    ast = transformAst('product1', node => ({ type: 'product', children: [node.children[0], node.children[2]] }), ast, true);
 
     // repair associativity of product
     ast = repairAssociativity('product', ast);
 
     // Subtraction 1 -> subtraction
-    ast = transformAst('subtraction1', node => ({ type: 'subtraction', children: [node.children[0], node.children[2]] }), ast);
+    ast = transformAst(
+        'subtraction1',
+        node => ({ type: 'subtraction', children: [node.children[0], node.children[2]] }),
+        ast,
+        true,
+    );
 
     // repair associativity of subtraction
     ast = repairAssociativity('subtraction', ast);
 
     // Bracketed expressions -> nothing. Must happen after associativity repair or we will break
     // associativity of brackets.
-    ast = transformAst('bracketedExpression', node => node.children[1], ast);
+    ast = transformAst('bracketedExpression', node => node.children[1], ast, true);
 
     return {
         ast,
@@ -224,6 +242,7 @@ const countTemporariesInExpression = ast => {
             countTemporariesInExpression(ast.children[2]),
             countTemporariesInExpression(ast.children[4])
         );
+        case 'stringEquality':
         case 'equality': return 1 + Math.max(
             countTemporariesInExpression(ast.children[0]),
             countTemporariesInExpression(ast.children[2])
@@ -421,6 +440,12 @@ const assignmentToDeclaration = (ast, knownIdentifiers): VariableDeclaration => 
     };
 };
 
+type Function = {
+    name: string | undefined,
+    argument: any | undefined,
+    statements: AstNode[],
+}
+
 const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mips' }): any => {
     const tokens = lex(source);
     const { ast, parseErrors } = parse(tokens);
@@ -437,18 +462,21 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
 
     const functionIdentifierTypes = getFunctionTypeMap(functions);
 
-    const functionsWithStatementList = functions.map(statementTreeToStatementList);
-    const programWithStatementList = statementTreeToStatementList({ body: program });
+    const functionsWithStatementList: Function[] = functions.map(statementTreeToStatementList);
+    const programWithStatementList: Function = statementTreeToStatementList({ body: program });
 
-    const programTypeCheck = typeCheckProgram(programWithStatementList, {
+    let knownIdentifiers = {
         ...builtinIdentifiers,
         ...functionIdentifierTypes,
-    });
-    let typeErrors = functionsWithStatementList.map(f => typeCheckProgram(f, {
-        ...builtinIdentifiers,
-        ...functionIdentifierTypes,
-        ...programTypeCheck.identifiers
-    }).typeErrors);
+    };
+
+    const programTypeCheck = typeCheckProgram(programWithStatementList, knownIdentifiers);
+
+    knownIdentifiers = {
+        ...knownIdentifiers,
+        ...programTypeCheck.identifiers,
+    };
+    let typeErrors = functionsWithStatementList.map(f => typeCheckProgram(f, knownIdentifiers).typeErrors);
     typeErrors.push(programTypeCheck.typeErrors);
 
     typeErrors = flatten(typeErrors);
@@ -459,6 +487,32 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
             code: '',
         };
     }
+
+    // Now that we have type information, go through and insert typed
+    // versions of operators
+
+    programWithStatementList.statements = programWithStatementList.statements.map(statement => transformAst(
+        'equality',
+        node => {
+            if ('children' in node) {
+                let leftType = typeOfExpression(node.children[0], knownIdentifiers);
+                let rightType = typeOfExpression(node.children[0], knownIdentifiers);
+                // Typecheck already passed, so assume no errorsnn
+                if (leftType.type.name === 'String' && rightType.type.name === 'String') {
+                    return {
+                        ...node,
+                        type: 'stringEquality',
+                    }
+                } else {
+                    return node;
+                }
+            } else {
+                return node;
+            }
+        },
+        statement,
+        false,
+    ));
 
     const functionTemporaryCounts = functionsWithStatementList.map(countTemporariesInFunction);
     const programTemporaryCount = countTemporariesInFunction(programWithStatementList);

@@ -305,7 +305,7 @@ const compileAndRun = async (t, {
 };
 
 test('lowering of bracketedExpressions', t => {
-    t.deepEqual((parse(lex('return (8 * ((7)))'))), {
+    t.deepEqual(parse(lex('return (8 * ((7)))')), {
         parseErrors: [],
         ast: {
             type: 'returnStatement',
@@ -617,8 +617,7 @@ test.failing('string copy', compileAndRun, {
     expectedExitCode: 5,
 });
 
-// TODO: Restructure things so that backend knows to use string equality
-// when comparing strings
+// TODO: real string equality
 test.failing('string equality: equal', compileAndRun, {
     source: `str1 = "a"
 str2 = "a"
@@ -627,7 +626,8 @@ return str1 == str2 ? 1 : 2
     expectedExitCode: 1
 });
 
-test('string equality: inequal', compileAndRun, {
+// TODO: real string equality
+test.failing('string equality: inequal', compileAndRun, {
     source: `str1 = "a"
 str2 = "b"
 return str1 == str2 ? 1 : 2

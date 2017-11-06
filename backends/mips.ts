@@ -422,6 +422,10 @@ const astToMips = ({
                 `L${endOfConditionLabel}:`,
             ];
         }
+        case 'stringEquality': {
+            debugger;
+            throw "debugger";
+        }
         case 'stringLiteral': {
             return [
                 `# Load string literal address into register`,
@@ -430,6 +434,8 @@ const astToMips = ({
         }
         default:
             debugger;
+            throw "debugger";
+
     }
 }
 

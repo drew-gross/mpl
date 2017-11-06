@@ -99,11 +99,22 @@ const astToJS = ({ ast, exitInsteadOfReturn }) => {
                 exitInsteadOfReturn,
             }),
         ];
+        case 'stringEquality':  return [
+            ...astToJS({
+                ast: ast.children[0],
+                exitInsteadOfReturn,
+            }),
+            '==',
+            ...astToJS({
+                ast: ast.children[2],
+                exitInsteadOfReturn,
+            }),
+        ];
         case 'booleanLiteral': return [ast.value];
         case 'stringLiteral': return [`"${ast.value}"`];
         default:
             debugger;
-            return;
+            throw "debugger";
     }
 };
 
