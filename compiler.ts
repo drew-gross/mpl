@@ -438,8 +438,8 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
 
     const functionIdentifierTypes = getFunctionTypeMap(functions);
 
-    const functionsWithStatementList: any = functions.map(statementTreeToStatementList);
-    const programWithStatementList: any = statementTreeToStatementList({ body: program });
+    const functionsWithStatementList = functions.map(statementTreeToStatementList);
+    const programWithStatementList = statementTreeToStatementList({ body: program });
 
     const programTypeCheck = typeCheckProgram(programWithStatementList, {
         ...builtinIdentifiers,
@@ -470,9 +470,12 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
         ...item,
         temporaryCount: functionTemporaryCounts[index],
     }));
-    programWithStatementList.temporaryCount = programTemporaryCount;
+    const programWithStatementListAndTemporaryCount = {
+        ...programWithStatementList,
+        temporaryCount: programTemporaryCount,
+    };
 
-    const globalDeclarations: VariableDeclaration[] = programWithStatementList.statements
+    const globalDeclarations: VariableDeclaration[] = programWithStatementListAndTemporaryCount.statements
         .filter(s => s.type === 'assignment')
         .map(assignment => {
             const result = assignmentToDeclaration(assignment, {
@@ -505,7 +508,7 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
         code: backend(
             functionsWithStatementListAndTemporaryCount,
             variables,
-            programWithStatementList,
+            programWithStatementListAndTemporaryCount,
             globalDeclarations,
             stringLiterals,
         ),
