@@ -524,7 +524,7 @@ return isFive(11)`,
     expectedExitCode: 7,
 });
 
-test('factorial', compileAndRun, {
+test.only('factorial', compileAndRun, {
     source: `
 factorial = x: Integer => x == 1 ? 1 : x * factorial(x - 1)
 return factorial(5)`,
@@ -606,7 +606,7 @@ test('string length', compileAndRun, {
 });
 
 // TODO: fix this
-test.failing('string type inferred', compileAndRun, {
+test('string type inferred', compileAndRun, {
     source: `myStr = "test2"; return length(myStr);`,
     expectedExitCode: 5,
 });
@@ -617,7 +617,7 @@ test.failing('string copy', compileAndRun, {
     expectedExitCode: 5,
 });
 
-test.only('string equality: equal', compileAndRun, {
+test('string equality: equal', compileAndRun, {
     source: `str1 = "a"
 str2 = "a"
 return str1 == str2 ? 1 : 2

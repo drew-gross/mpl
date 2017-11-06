@@ -57,8 +57,7 @@ const astToC = ({ ast, globalDeclarations, stringLiterals }: BackendInput): stri
             if (globalDeclarations.map(({ name }: { name: string }) => name).includes(lhs)) {
                 return [`${lhs} = `, ...rhs, `;`];
             }
-
-            return [`${mplTypeToCDeclaration({ name: 'Function' }, lhs)} = `, ...rhs, `;`];
+            return [`${mplTypeToCDeclaration({ name: 'Function' } as any, lhs)} = `, ...rhs, `;`];
         }
         case 'functionLiteral': return [`&${ast.value}`];
         case 'callExpression': return [
@@ -89,7 +88,7 @@ const astToC = ({ ast, globalDeclarations, stringLiterals }: BackendInput): stri
 
 const stringLiteralDeclaration = stringLiteral => `char *${stringLiteral} = "${stringLiteral}";`;
 
-export default (functions, variables, program, globalDeclarations: Array<VariableDeclaration>, stringLiterals) => {
+export default (functions, variables, program, globalDeclarations: VariableDeclaration[], stringLiterals) => {
     let Cfunctions = functions.map(({ name, argument, statements, scopeChain }) => {
         const prefix = `unsigned char ${name}(unsigned char ${argument.children[0].value}) {`;
         const suffix = `}`;

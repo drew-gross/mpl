@@ -1,4 +1,5 @@
 import flatten from '../util/list/flatten.js';
+import { VariableDeclaration } from '../compiler.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 
@@ -102,6 +103,15 @@ const runtimeFunctions = ['length'];
 
 let labelId = 0;
 
+type AstToMipsOptions = {
+    ast: any,
+    registerAssignment: any,
+    destination: any,
+    currentTemporary: any,
+    globalDeclarations: VariableDeclaration[],
+    stringLiterals: any,
+};
+
 const astToMips = ({
     ast,
     registerAssignment,
@@ -109,7 +119,7 @@ const astToMips = ({
     currentTemporary,
     globalDeclarations,
     stringLiterals,
-}) => {
+}: AstToMipsOptions) => {
     if (!ast) debugger;
     switch (ast.type) {
         case 'returnStatement': return [
@@ -206,7 +216,7 @@ const astToMips = ({
                     `la ${currentTemporary.destination}, ${name}`,
                     `jal ${currentTemporary.destination}`,
                 ];
-            } else if (globalDeclarations.includes(name)) {
+            } else if (globalDeclarations.some(declaration => declaration.name === name)) {
                 callInstructions = [
                     `# Call global function`,
                     `lw ${currentTemporary.destination}, ${name}`,
@@ -219,6 +229,7 @@ const astToMips = ({
                 ];
             } else {
                 debugger;
+                throw "fail";
             }
 
             return [
@@ -271,6 +282,12 @@ const astToMips = ({
                     `la $s7, ${rhs}`,
                     `# store from temporary into global`,
                     `sw $s7, ${lhs}`,
+                ];
+            } else if (stringLiterals.includes(rhs)) { // TODO: Pretty sure this is wrong
+                const register = registerAssignment[lhs].destination;
+                return [
+                    `# Load string literal`,
+                    `la ${register}, string_constant_${rhs}`,
                 ];
             } else {
                 const register = registerAssignment[lhs].destination;
@@ -380,7 +397,7 @@ const astToMips = ({
             debugger;
             return [
                 `# Load string literal address into register`,
-                loadGlobalMips(destination, ast.value),
+                loadGlobalMips(destination, `string_constant_${ast.value}`),
             ];
         }
         default:
@@ -468,7 +485,7 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
     ].join('\n');
 }
 
-export default (functions, variables, program, globalDeclarations, stringLiterals) => {
+export default (functions, variables, program, globalDeclarations: VariableDeclaration[], stringLiterals) => {
     let mipsFunctions = functions.map(f => constructMipsFunction(f,  globalDeclarations, stringLiterals));
     const {
         registerAssignment,
@@ -499,8 +516,8 @@ export default (functions, variables, program, globalDeclarations, stringLiteral
 
     return `
 .data
-${globalDeclarations.map(name => `${name}: .word 0`).join('\n')}
-${stringLiterals.map(text => `${text}: .asciiz "${text}"`).join('\n')}
+${globalDeclarations.map(name => `${name.name}: .word 0`).join('\n')}
+${stringLiterals.map(text => `string_constant_${text}: .asciiz "${text}"`).join('\n')}
 
 .text
 length:

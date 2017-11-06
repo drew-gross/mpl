@@ -12,7 +12,8 @@
     "test": "rimraf built && tsc && ava",
     "test-watch": "ava --watch --no-color",
     "tsc-watch": "tsc --watch",
-    "test-debug": "tsc && inspect --debug-exception node_modules/ava/profile.js built/test.js"
+    "test-debug": "tsc && inspect --debug-exception node_modules/ava/profile.js built/test.js",
+    "mips-debug": "./QtSpim.app/Contents/MacOS/QtSpim mips-test.s"
   },
   "author": "Drew Gross",
   "dependencies": {

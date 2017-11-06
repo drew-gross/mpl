@@ -6,13 +6,20 @@ import { ParseResult, AstNode, AstInteriorNode, AstLeaf } from './parser-combina
 import { toJS, toC, toMips } from './codegen.js';
 
 export type Type = {
-    name: 'String' | 'Integer' | 'Boolean' | 'Function'
+    name: 'String' | 'Integer' | 'Boolean'
+} | {
+    name: 'Function',
+    arg: { type: Type },
 };
 
 export type VariableDeclaration = {
     name: string,
     type: Type,
 };
+
+type Backend = (functions, variables, program, globalDeclarations: VariableDeclaration[], stringLiterals) => string;
+
+type IdentifierDict = { [name: string]: Type };
 
 let tokensToString = tokens => tokens.map(token => token.string).join('');
 
@@ -238,7 +245,7 @@ const typesAreEqual = (a, b) => {
     return true;
 }
 
-const typeOfExpression = ({ type, children, value }, knownIdentifiers): { type: Type, errors: string[] } => {
+const typeOfExpression = ({ type, children, value }, knownIdentifiers: IdentifierDict): { type: Type, errors: string[] } => {
     switch (type) {
         case 'number': return { type: { name: 'Integer' }, errors: [] };
         case 'subtraction':
@@ -268,12 +275,15 @@ const typeOfExpression = ({ type, children, value }, knownIdentifiers): { type: 
                         leftType.type.name
                     } (lhs) with a ${
                         rightType.type.name
-                    } (rhs)`] };
+                    } (rhs)`]
+                };
             }
             return { type: { name: 'Boolean' }, errors: [] };
         }
         case 'functionLiteral': {
-            return { type: knownIdentifiers[value], errors: [] };
+            const functionType = knownIdentifiers[value];
+            if (!functionType) debugger;
+            return { type: functionType, errors: [] };
         }
         case 'callExpression': {
             const argType = typeOfExpression(children[2], knownIdentifiers);
@@ -285,6 +295,11 @@ const typeOfExpression = ({ type, children, value }, knownIdentifiers): { type: 
                 return { type: {} as any, errors: [`Unknown identifier: ${functionName}`] };
             }
             const functionType = knownIdentifiers[functionName];
+            if (functionType.name !== 'Function') {
+                debugger;
+                return { type: {} as any, errors: [`You tried to call ${functionName}, but it's not a function (it's a ${functionName.type})`] };
+            }
+            if (!argType || !functionType.arg) debugger;
             if (!typesAreEqual(argType.type, functionType.arg.type)) {
                 return { type: {} as any, errors: [`You passed a ${argType.type.name} as an argument to ${functionName}. It expects a ${functionType.arg.type.name}`] };
             }
@@ -355,8 +370,15 @@ const typeCheckStatement = ({ type, children }, knownIdentifiers): { errors: str
     };
 };
 
-const typeCheckProgram = ({ statements, argument }, previouslyKnownIdentifiers) => {
-    let knownIdentifiers = Object.assign({}, previouslyKnownIdentifiers);
+const builtinIdentifiers: IdentifierDict = { // TODO: Require these to be imported
+    length: {
+        name: 'Function',
+        arg: { type: { name: 'String' } },
+    }
+};
+
+const typeCheckProgram = ({ statements, argument }, previouslyKnownIdentifiers: IdentifierDict) => {
+    let knownIdentifiers = Object.assign(builtinIdentifiers, previouslyKnownIdentifiers);
 
     if (argument) {
         knownIdentifiers[argument.children[0].value] = { name: argument.children[2].value };
@@ -389,15 +411,8 @@ type CompilationResult = {
     code?: string,
 };
 
-const builtinIdentifiers = { // TODO: Require these to be imported
-    length: {
-        type: 'Function',
-        arg: { type: { name: 'String' } },
-    }
-};
-
-const assigneentToDeclaration = (ast): VariableDeclaration => {
-    const result = typeOfExpression(ast.children[2], {});
+const assignmentToDeclaration = (ast, knownIdentifiers): VariableDeclaration => {
+    const result = typeOfExpression(ast.children[2], knownIdentifiers);
     if (result.errors.length > 0) {
         debugger;
     }
@@ -457,23 +472,37 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
     });
     programWithStatementList.temporaryCount = programTemporaryCount;
 
-    const globalDeclarations: Array<VariableDeclaration> = programWithStatementList.statements
+    const globalDeclarations: VariableDeclaration[] = programWithStatementList.statements
         .filter(s => s.type === 'assignment')
-        .map(assigneentToDeclaration);
+        .map(assignment => {
+            const result = assignmentToDeclaration(assignment, {
+                ...builtinIdentifiers,
+                ...functionIdentifierTypes,
+                ...programTypeCheck.identifiers,
+            });
+            if (!result.type) debugger;
+            return result;
+        });
 
-    let f: any = null;
+    let backend: Backend | null = null;
 
     if (target == 'js') {
-        f = toJS;
+        backend = toJS;
     } else if (target == 'c') {
-        f = toC;
+        backend = toC;
     } else if (target == 'mips') {
-        f = toMips;
+        backend = toMips;
+    } else {
+        return {
+            typeErrors: [],
+            parseErrors: ['Invalid target'],
+            code: '',
+        }
     }
     return {
         typeErrors: [],
         parseErrors: [],
-        code: f(functionsWithStatementList, variables, programWithStatementList, globalDeclarations, stringLiterals),
+        code: backend(functionsWithStatementList, variables, programWithStatementList, globalDeclarations, stringLiterals),
     };
 };
 
