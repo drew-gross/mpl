@@ -466,10 +466,10 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
 
     const variables = flatten(programWithStatementList.statements.map(extractVariables));
 
-    // Modifications here :(
-    functionsWithStatementList.forEach((item, index) => {
-        item.temporaryCount = functionTemporaryCounts[index];
-    });
+    const functionsWithStatementListAndTemporaryCount = functionsWithStatementList.map((item, index) => ({
+        ...item,
+        temporaryCount: functionTemporaryCounts[index],
+    }));
     programWithStatementList.temporaryCount = programTemporaryCount;
 
     const globalDeclarations: VariableDeclaration[] = programWithStatementList.statements
@@ -502,7 +502,13 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
     return {
         typeErrors: [],
         parseErrors: [],
-        code: backend(functionsWithStatementList, variables, programWithStatementList, globalDeclarations, stringLiterals),
+        code: backend(
+            functionsWithStatementListAndTemporaryCount,
+            variables,
+            programWithStatementList,
+            globalDeclarations,
+            stringLiterals,
+        ),
     };
 };
 
