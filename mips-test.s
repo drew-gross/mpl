@@ -1,6 +1,6 @@
 .data
-factorial: .word 0
-
+myStr: .word 0
+string_constant_test2: .asciiz "test2"
 
 .text
 length:
@@ -39,88 +39,20 @@ addiu $sp, $sp, 4
 lw $ra, ($sp)
 jr $ra
 
-anonymous_2:
-# Always store return address
-sw $ra, ($sp)
-addiu $sp, $sp, -4
-sw $t4, ($sp)
-addiu $sp, $sp, -4
-sw $t3, ($sp)
-addiu $sp, $sp, -4
-sw $t2, ($sp)
-addiu $sp, $sp, -4
-sw $t1, ($sp)
-addiu $sp, $sp, -4
-# evaluate expression of return statement, put in $a0
-# Compute boolean and store in temporary
-# Store left side of equality in temporary
-# Move from x ($s0) into destination ($t2)
-move $t2, $s0
-# Store right side of equality in temporary
-li $t1, 1
-# Goto set 1 if equal
-beq $t2, $t1, L2
-# Not equal, set 0
-li $t1, 0
-# And goto exit
-b L3
-L2:
-li $t1, 1
-L3:
-# Go to false branch if zero
-beq $t1, $0, L0
-# Execute true branch
-li $a0, 1
-# Jump to end of ternary
-b L1
-L0:
-# Execute false branch
-# Store left side of product in temporary ($t2)
-# Move from x ($s0) into destination ($t2)
-move $t2, $s0
-# Store right side of product in destination ($a0)
-# Put argument in $s0
-# Store left side in temporary ($t4)
-# Move from x ($s0) into destination ($t4)
-move $t4, $s0
-# Store right side in destination ($s0)
-li $s0, 1
-# Evaluate subtraction
-sub $s0, $t4, $s0
-# call factorial
-# Call global function
-lw $t3, factorial
-jal $t3
-# move result from $a0 into destination
-move $a0, $a0
-# Evaluate product
-mult $t2, $a0
-# Move result to final destination (assume no overflow)
-mflo $a0
-# End of ternary label
-L1:
-addiu $sp, $sp, 4
-lw $t1, ($sp)
-addiu $sp, $sp, 4
-lw $t2, ($sp)
-addiu $sp, $sp, 4
-lw $t3, ($sp)
-addiu $sp, $sp, 4
-lw $t4, ($sp)
-addiu $sp, $sp, 4
-lw $ra, ($sp)
-# Always restore return address
-jr $ra
+
 main:
 
-# factorial ($t0) = anonymous_2
-la $t0, anonymous_2
+# Load string ptr (test2 into s7 (s7 used to not overlap with arg)
+la $s7, string_constant_test2
+# store from temporary into global string
+sw $s7, myStr
 # evaluate expression of return statement, put in $a0
 # Put argument in $s0
-li $s0, 5
-# call factorial
-# Call global function
-lw $t1, factorial
+# Move from global myStr into destination ($s0)
+la $s0, myStr
+# call length
+# Call runtime function
+la $t1, length
 jal $t1
 # move result from $a0 into destination
 move $a0, $a0

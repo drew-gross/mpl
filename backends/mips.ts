@@ -250,7 +250,7 @@ const astToMips = ({
         }
         case 'typedAssignment': {
             const lhs = ast.children[0].value;
-            if (globalDeclarations.includes(lhs)) {
+            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 debugger; //TODO: assign to globals
             } else if (lhs in registerAssignment) {
                 return [
@@ -275,14 +275,29 @@ const astToMips = ({
         case 'assignment': {
             const lhs = ast.children[0].value;
             const rhs = ast.children[2].value;
-            if (globalDeclarations.includes(lhs)) {
-                return [
-                    // TODO: Make assignment better
-                    `# Load function ptr (${rhs} into s7 (s7 used to not overlap with arg)`,
-                    `la $s7, ${rhs}`,
-                    `# store from temporary into global`,
-                    `sw $s7, ${lhs}`,
-                ];
+            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
+                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
+                if (!declaration) {
+                    debugger;
+                    throw "fail";
+                }
+                switch (declaration.type.name) {
+                    case 'Function': return [
+                        `# Load function ptr (${rhs} into s7 (s7 used to not overlap with arg)`,
+                        `la $s7, ${rhs}`,
+                        `# store from temporary into global`,
+                        `sw $s7, ${lhs}`,
+                    ];
+                    case 'String': return [
+                        `# Load string ptr (${rhs} into s7 (s7 used to not overlap with arg)`,
+                        `la $s7, string_constant_${rhs}`,
+                        `# store from temporary into global string`,
+                        `sw $s7, ${lhs}`,
+                    ];
+                    default:
+                        debugger;
+                        throw "fail";
+                };
             } else if (stringLiterals.includes(rhs)) { // TODO: Pretty sure this is wrong
                 const register = registerAssignment[lhs].destination;
                 return [
@@ -298,7 +313,19 @@ const astToMips = ({
             }
         }
         case 'identifier': {
+            // TODO: Better handle identifiers here. Also just better storage/scope chains?
             const identifierName = ast.value;
+            if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
+                const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
+                if (!declaration) {
+                    debugger;
+                    throw "fail";
+                }
+                return [
+                    `# Move from global ${identifierName} into destination (${destination.destination || destination.spOffset})`,
+                    loadGlobalMips(destination, identifierName),
+                ];
+            }
             const identifierRegister = registerAssignment[identifierName].destination;
             return [
                 `# Move from ${identifierName} (${identifierRegister}) into destination (${destination.destination || destination.spOffset})`,
@@ -353,7 +380,6 @@ const astToMips = ({
             const leftSideDestination = currentTemporary;
             const rightSideDestination = destination;
             const subExpressionTemporary = nextTemporary(currentTemporary);
-
             const storeLeftInstructions = astToMips({
                 ast: ast.children[0],
                 registerAssignment,
@@ -377,6 +403,9 @@ const astToMips = ({
             const endOfConditionLabel = labelId;
             labelId++;
 
+            let jumpIfEqualInstructions = [];
+            debugger;
+
             return [
                 `# Store left side of equality in temporary`,
                 ...storeLeftInstructions,
@@ -394,7 +423,6 @@ const astToMips = ({
             ];
         }
         case 'stringLiteral': {
-            debugger;
             return [
                 `# Load string literal address into register`,
                 loadGlobalMips(destination, `string_constant_${ast.value}`),
