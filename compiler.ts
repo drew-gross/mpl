@@ -20,13 +20,13 @@ export type VariableDeclaration = {
 export type Function = {
     name: string;
     statements: any;
+    variables: VariableWithMemoryCategory[],
     argument: any;
     temporaryCount: number;
 };
 
 export type BackendInputs = {
     functions: Function[],
-    variables: VariableWithMemoryCategory[],
     program: Function,
     globalDeclarations: VariableDeclaration[],
     stringLiterals,
@@ -127,6 +127,7 @@ const statementTreeToFunction = (functionAst): Function => {
     }
     return {
         ...result,
+        variables: flatten(result.statements.map(extractVariables)),
         temporaryCount: countTemporariesInFunction(result),
     };
 }
@@ -197,20 +198,20 @@ const getMemoryCategory = (ast): MemoryCategory => {
         throw 'debugger';
     }
 
-    if (rhsType === 'stringLiteral') {
-        return 'GlobalStatic';
-    } else if (rhsType === 'identifier') {
-        // TODO: Add a 'Stack' type for things like ints
-        // that fit on the stack
-        return 'Dynamic';
-    } else if (rhsType === 'functionLiteral') {
-        return 'GlobalStatic';
-    } else if (rhsType === 'product') {
-        return 'Stack';
+    switch (rhsType) {
+        case 'stringLiteral':
+        case 'functionLiteral':
+        case 'booleanLiteral':
+            return 'GlobalStatic';
+        case 'identifier':
+            return 'Dynamic' // TODO: Should sometimes be stack based on type
+        case 'product':
+            return 'Stack';
+        default:
+            debugger;
+            throw 'debugger';
     }
 
-    debugger;
-    throw 'debugger';
 };
 
 const extractVariables = (ast): VariableWithMemoryCategory[] => {
@@ -566,8 +567,6 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
         false,
     ));
 
-    const variables: VariableWithMemoryCategory[] = flatten(programWithStatementList.statements.map(extractVariables));
-
     const globalDeclarations: VariableDeclaration[] = programWithStatementList.statements
         .filter(s => s.type === 'assignment')
         .map(assignment => {
@@ -600,7 +599,6 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
         parseErrors: [],
         code: backend({
             functions: functionsWithStatementList,
-            variables,
             program: programWithStatementList,
             globalDeclarations,
             stringLiterals,

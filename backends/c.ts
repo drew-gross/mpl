@@ -96,7 +96,6 @@ const stringLiteralDeclaration = stringLiteral => `char *${stringLiteral} = "${s
 
 export default ({
     functions,
-    variables,
     program,
     globalDeclarations,
     stringLiterals,

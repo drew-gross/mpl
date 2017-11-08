@@ -630,7 +630,6 @@ jr $ra`;
 
 export default ({
     functions,
-    variables,
     program,
     globalDeclarations,
     stringLiterals,
@@ -639,7 +638,7 @@ export default ({
     const {
         registerAssignment,
         firstTemporary,
-    } = assignMipsRegisters(variables);
+    } = assignMipsRegisters(program.variables);
     let mipsProgram = flatten(program.statements.map(statement => astToMips({
         ast: statement,
         registerAssignment,
