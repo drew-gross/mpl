@@ -1,5 +1,5 @@
 import flatten from '../util/list/flatten.js';
-import { VariableDeclaration, VariableWithMemoryCategory } from '../compiler.js';
+import { VariableDeclaration, VariableWithMemoryCategory, BackendInputs } from '../compiler.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 
@@ -628,7 +628,13 @@ addiu $sp, $sp, 4
 lw $ra, ($sp)
 jr $ra`;
 
-export default (functions, variables: VariableWithMemoryCategory[], program, globalDeclarations: VariableDeclaration[], stringLiterals) => {
+export default ({
+    functions,
+    variables,
+    program,
+    globalDeclarations,
+    stringLiterals,
+}: BackendInputs) => {
     let mipsFunctions = functions.map(f => constructMipsFunction(f,  globalDeclarations, stringLiterals));
     const {
         registerAssignment,

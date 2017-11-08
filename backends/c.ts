@@ -1,5 +1,5 @@
 import flatten from '../util/list/flatten.js';
-import { VariableDeclaration, Type } from '../compiler.js';
+import { VariableDeclaration, Type, BackendInputs } from '../compiler.js';
 
 const mplTypeToCDeclaration = (type: Type, name: string) => {
     if (!type) debugger;
@@ -94,8 +94,14 @@ const astToC = ({ ast, globalDeclarations, stringLiterals }: BackendInput): stri
 
 const stringLiteralDeclaration = stringLiteral => `char *${stringLiteral} = "${stringLiteral}";`;
 
-export default (functions, variables, program, globalDeclarations: VariableDeclaration[], stringLiterals) => {
-    let Cfunctions = functions.map(({ name, argument, statements, scopeChain }) => {
+export default ({
+    functions,
+    variables,
+    program,
+    globalDeclarations,
+    stringLiterals,
+}: BackendInputs) => {
+    let Cfunctions = functions.map(({ name, argument, statements }) => {
         const prefix = `unsigned char ${name}(unsigned char ${argument.children[0].value}) {`;
         const suffix = `}`;
 

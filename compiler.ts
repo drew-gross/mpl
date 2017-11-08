@@ -17,13 +17,22 @@ export type VariableDeclaration = {
     type: Type,
 };
 
-type Backend = (
-    functions,
+export type Function = {
+    name: string;
+    statements: any;
+    argument: any;
+    temporaryCount: number;
+};
+
+export type BackendInputs = {
+    functions: Function[],
     variables: VariableWithMemoryCategory[],
-    program,
+    program: Function,
     globalDeclarations: VariableDeclaration[],
-    stringLiterals
-) => string;
+    stringLiterals,
+};
+
+type Backend = (BackendInputs) => string;
 
 type IdentifierDict = { [name: string]: Type };
 
@@ -95,7 +104,7 @@ const transformAst = (nodeType, f, ast: AstNode, recurseOnNew: boolean) => {
     }
 }
 
-const statementTreeToStatementList = functionAst => {
+const statementTreeToFunction = (functionAst): Function => {
     const result = {
         name: functionAst.name,
         argument: functionAst.argument,
@@ -116,7 +125,10 @@ const statementTreeToStatementList = functionAst => {
     } else {
         result.statements.push(currentStatement);
     }
-    return result;
+    return {
+        ...result,
+        temporaryCount: countTemporariesInFunction(result),
+    };
 }
 
 let functionId = 0;
@@ -503,8 +515,8 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
 
     const functionIdentifierTypes = getFunctionTypeMap(functions);
 
-    const functionsWithStatementList: Function[] = functions.map(statementTreeToStatementList);
-    const programWithStatementList: Function = statementTreeToStatementList({ body: program });
+    const functionsWithStatementList: Function[] = functions.map(statementTreeToFunction);
+    const programWithStatementList: Function = statementTreeToFunction({ body: program });
 
     let knownIdentifiers = {
         ...builtinIdentifiers,
@@ -554,21 +566,9 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
         false,
     ));
 
-    const functionTemporaryCounts = functionsWithStatementList.map(countTemporariesInFunction);
-    const programTemporaryCount = countTemporariesInFunction(programWithStatementList);
-
     const variables: VariableWithMemoryCategory[] = flatten(programWithStatementList.statements.map(extractVariables));
 
-    const functionsWithStatementListAndTemporaryCount = functionsWithStatementList.map((item, index) => ({
-        ...item,
-        temporaryCount: functionTemporaryCounts[index],
-    }));
-    const programWithStatementListAndTemporaryCount = {
-        ...programWithStatementList,
-        temporaryCount: programTemporaryCount,
-    };
-
-    const globalDeclarations: VariableDeclaration[] = programWithStatementListAndTemporaryCount.statements
+    const globalDeclarations: VariableDeclaration[] = programWithStatementList.statements
         .filter(s => s.type === 'assignment')
         .map(assignment => {
             const result = assignmentToDeclaration(assignment, {
@@ -598,13 +598,13 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
     return {
         typeErrors: [],
         parseErrors: [],
-        code: backend(
-            functionsWithStatementListAndTemporaryCount,
+        code: backend({
+            functions: functionsWithStatementList,
             variables,
-            programWithStatementListAndTemporaryCount,
+            program: programWithStatementList,
             globalDeclarations,
             stringLiterals,
-        ),
+        }),
     };
 };
 
