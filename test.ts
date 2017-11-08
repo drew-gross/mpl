@@ -611,14 +611,12 @@ test.failing('string type inferred', compileAndRun, {
     expectedExitCode: 5,
 });
 
-// TODO: memory management. Also exit code.
 test.failing('string copy', compileAndRun, {
     source: `myStr1: String = "test"; myStr2: String = myStr1; return length(myStr2);`,
     expectedExitCode: 5,
 });
 
-// TODO: real string equality
-test.failing('string equality: equal', compileAndRun, {
+test('string equality: equal', compileAndRun, {
     source: `str1 = "a"
 str2 = "a"
 return str1 == str2 ? 1 : 2
@@ -626,13 +624,20 @@ return str1 == str2 ? 1 : 2
     expectedExitCode: 1
 });
 
-// TODO: real string equality
-test.failing('string equality: inequal', compileAndRun, {
+test('string equality: inequal same length', compileAndRun, {
     source: `str1 = "a"
 str2 = "b"
 return str1 == str2 ? 1 : 2
 `,
     expectedExitCode: 2
+});
+
+test('string equality: inequal different length', compileAndRun, {
+    source: `str1 = "aa"
+str2 = "a"
+return str1 == str2 ? 1 : 2
+`,
+    expectedExitCode: 2,
 });
 
 test.failing('wrong type global', compileAndRun, {

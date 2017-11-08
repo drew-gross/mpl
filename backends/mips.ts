@@ -1,5 +1,5 @@
 import flatten from '../util/list/flatten.js';
-import { VariableDeclaration } from '../compiler.js';
+import { VariableDeclaration, VariableWithMemoryCategory } from '../compiler.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 
@@ -404,7 +404,6 @@ const astToMips = ({
             labelId++;
 
             let jumpIfEqualInstructions = [];
-            debugger;
 
             return [
                 `# Store left side of equality in temporary`,
@@ -423,8 +422,39 @@ const astToMips = ({
             ];
         }
         case 'stringEquality': {
-            debugger;
-            throw "debugger";
+            // Put left in s0 and right in s1 for passing to string equality function
+            const storeLeftInstructions = astToMips({
+                ast: ast.children[0],
+                registerAssignment,
+                destination: {
+                    type: 'register',
+                    destination: '$s0',
+                },
+                currentTemporary,
+                globalDeclarations,
+                stringLiterals,
+            });
+            const storeRightInstructions = astToMips({
+                ast: ast.children[2],
+                registerAssignment,
+                destination: {
+                    type: 'register',
+                    destination: '$s1',
+                },
+                currentTemporary,
+                globalDeclarations,
+                stringLiterals,
+            });
+            return [
+                `# Store left side in s0`,
+                ...storeLeftInstructions,
+                `# Store right side in s1`,
+                ...storeRightInstructions,
+                `# Call stringEquality`,
+                `jal stringEquality`,
+                `# Return value in $a0. Move to destination`,
+                moveMips(destination, '$a0'),
+            ];
         }
         case 'stringLiteral': {
             return [
@@ -439,12 +469,12 @@ const astToMips = ({
     }
 }
 
-const assignMipsRegisters = variables => {
+const assignMipsRegisters = (variables: VariableWithMemoryCategory[]) => {
     // TODO: allow spilling of variables
     let currentRegister = 0;
     let registerAssignment = {};
     variables.forEach(variable => {
-        registerAssignment[variable] = {
+        registerAssignment[variable.name] = {
             type: 'register',
             destination: `$t${currentRegister}`,
         };
@@ -519,7 +549,86 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
     ].join('\n');
 }
 
-export default (functions, variables, program, globalDeclarations: VariableDeclaration[], stringLiterals) => {
+const lengthRuntimeFunction =
+`length:
+# Always store return address
+sw $ra, ($sp)
+addiu $sp, $sp, -4
+# Store two temporaries
+sw $t1, ($sp)
+addiu $sp, $sp, -4
+sw $t2, ($sp)
+addiu $sp, $sp, -4
+
+# Set length count to 0
+li $t1, 0
+length_loop:
+# Load char into temporary
+lb $t2, ($s0)
+# If char is null, end of string. Return count.
+beq $t2, 0, length_return
+# Else bump pointer count and and return to start of loop
+addiu $t1, $t1, 1
+addiu $s0, $s0, 1
+b length_loop
+
+length_return:
+# Put length in return register
+move $a0, $t1
+
+# Restore two temporaries
+addiu $sp, $sp, 4
+lw $t2, ($sp)
+addiu $sp, $sp, 4
+lw $t1, ($sp)
+# Always restore return address
+addiu $sp, $sp, 4
+lw $ra, ($sp)
+jr $ra`;
+
+const stringEqualityRuntimeFunction =
+`stringEquality:
+# Always store return address
+sw $ra, ($sp)
+addiu $sp, $sp, -4
+# Store two temporaries
+sw $t1, ($sp)
+addiu $sp, $sp, -4
+sw $t2, ($sp)
+addiu $sp, $sp, -4
+
+# Assume equal. Write 1 to $a0. Overwrite if difference found.
+li $a0, 1
+
+# Accepts pointers to strings in $s0 and $s1.
+stringEquality_loop:
+# load current chars into temporaries
+lb $t1, ($s0)
+lb $t2, ($s1)
+# Inequal: return false
+bne $t1, $t2, stringEquality_return_false
+# Now we know both sides are equal. If they equal null, string is over.
+# Return true. We already set $a0 to 1, so just goto end.
+beq $t1, 0, stringEquality_return
+# Otherwise, bump pointers and check next char
+addiu $s0, 1
+addiu $s1, 1
+b stringEquality_loop
+
+stringEquality_return_false:
+li $a0, 0
+stringEquality_return:
+# Restore two temporaries
+addiu $sp, $sp, 4
+lw $t2, ($sp)
+addiu $sp, $sp, 4
+lw $t1, ($sp)
+# Always restore return address
+addiu $sp, $sp, 4
+lw $ra, ($sp)
+jr $ra`;
+
+export default (functions, variables: VariableWithMemoryCategory[], program, globalDeclarations: VariableDeclaration[], stringLiterals) => {
     let mipsFunctions = functions.map(f => constructMipsFunction(f,  globalDeclarations, stringLiterals));
     const {
         registerAssignment,
@@ -554,41 +663,8 @@ ${globalDeclarations.map(name => `${name.name}: .word 0`).join('\n')}
 ${stringLiterals.map(text => `string_constant_${text}: .asciiz "${text}"`).join('\n')}
 
 .text
-length:
-# Always store return address
-sw $ra, ($sp)
-addiu $sp, $sp, -4
-# Store two temporaries
-sw $t1, ($sp)
-addiu $sp, $sp, -4
-sw $t2, ($sp)
-addiu $sp, $sp, -4
-
-# Set length count to 0
-li $t1, 0
-length_loop:
-# Load char into temporary
-lb $t2, ($s0)
-# If char is null, end of string. Return count.
-beq $t2, 0, length_return
-# Else bump pointer count and and return to start of loop
-addiu $t1, $t1, 1
-addiu $s0, $s0, 1
-b length_loop
-
-length_return:
-# Put length in return register
-move $a0, $t1
-
-# Restore two temporaries
-addiu $sp, $sp, 4
-lw $t2, ($sp)
-addiu $sp, $sp, 4
-lw $t1, ($sp)
-# Always restore return address
-addiu $sp, $sp, 4
-lw $ra, ($sp)
-jr $ra
+${lengthRuntimeFunction}
+${stringEqualityRuntimeFunction}
 
 ${mipsFunctions.join('\n')}
 main:

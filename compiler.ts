@@ -17,7 +17,13 @@ export type VariableDeclaration = {
     type: Type,
 };
 
-type Backend = (functions, variables, program, globalDeclarations: VariableDeclaration[], stringLiterals) => string;
+type Backend = (
+    functions,
+    variables: VariableWithMemoryCategory[],
+    program,
+    globalDeclarations: VariableDeclaration[],
+    stringLiterals
+) => string;
 
 type IdentifierDict = { [name: string]: Type };
 
@@ -162,9 +168,45 @@ const extractStringLiterals = (ast): string[] => {
     return unique(flatten(newLiterals));
 };
 
-const extractVariables = ast => {
+type MemoryCategory = 'GlobalStatic' | 'Dynamic' | 'Stack';
+export type VariableWithMemoryCategory = {
+    name: string,
+    memoryCategory: MemoryCategory,
+};
+
+const getMemoryCategory = (ast): MemoryCategory => {
+    let rhsType;
+    if (ast.type === 'typedAssignment') {
+        rhsType = ast.children[4].type;
+    } else if (ast.type === 'assignment') {
+        rhsType = ast.children[2].type;
+    } else {
+        debugger;
+        throw 'debugger';
+    }
+
+    if (rhsType === 'stringLiteral') {
+        return 'GlobalStatic';
+    } else if (rhsType === 'identifier') {
+        // TODO: Add a 'Stack' type for things like ints
+        // that fit on the stack
+        return 'Dynamic';
+    } else if (rhsType === 'functionLiteral') {
+        return 'GlobalStatic';
+    } else if (rhsType === 'product') {
+        return 'Stack';
+    }
+
+    debugger;
+    throw 'debugger';
+};
+
+const extractVariables = (ast): VariableWithMemoryCategory[] => {
     if (ast.type === 'assignment' || ast.type === 'typedAssignment') {
-        return [ast.children[0].value];
+        return [{
+            name: ast.children[0].value,
+            memoryCategory: getMemoryCategory(ast),
+        }];
     } else if ('children' in ast) {
         return flatten(ast.children.map(extractVariables));
     } else {
@@ -314,7 +356,6 @@ const typeOfExpression = ({ type, children, value }, knownIdentifiers: Identifie
             }
             const functionType = knownIdentifiers[functionName];
             if (functionType.name !== 'Function') {
-                debugger;
                 return { type: {} as any, errors: [`You tried to call ${functionName}, but it's not a function (it's a ${functionName.type})`] };
             }
             if (!argType || !functionType.arg) debugger;
@@ -490,7 +531,6 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
 
     // Now that we have type information, go through and insert typed
     // versions of operators
-
     programWithStatementList.statements = programWithStatementList.statements.map(statement => transformAst(
         'equality',
         node => {
@@ -517,7 +557,7 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
     const functionTemporaryCounts = functionsWithStatementList.map(countTemporariesInFunction);
     const programTemporaryCount = countTemporariesInFunction(programWithStatementList);
 
-    const variables = flatten(programWithStatementList.statements.map(extractVariables));
+    const variables: VariableWithMemoryCategory[] = flatten(programWithStatementList.statements.map(extractVariables));
 
     const functionsWithStatementListAndTemporaryCount = functionsWithStatementList.map((item, index) => ({
         ...item,
