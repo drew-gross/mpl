@@ -225,30 +225,34 @@ const compileAndRun = async (t, {
         t.deepEqual(parseResult, expectedAst);
     }
 
-    if (expectedTypeErrors) {
-        t.deepEqual(expectedTypeErrors, result.typeErrors);
-        return;
-    } else if ((result.typeErrors as any).length > 0) {
-        t.fail(`Found type errors when none expected: ${(result.typeErrors as any).join(', ')}`);
-        return;
-    }
-
-    if (printSubsteps.includes('c')) {
-        console.log(cSource);
-    }
-
     // JS backend
     const jsFile = await tmpFile({ postfix: '.js' });
-    const jsSource = compile({ source, target: 'js' }).code;
+    const jsResult = compile({ source, target: 'js' });
 
     if (printSubsteps.includes('js')) {
-        console.log(jsSource);
+        console.log(jsResult.code);
     }
 
-    await writeFile(jsFile.fd, jsSource);
+    if (expectedParseErrors) {
+        t.deepEqual(expectedParseErrors, jsResult.parseErrors);
+        return;
+    } else if ((jsResult.parseErrors as any).length > 0) {
+        t.fail(`Found parse errors when none expected: ${(jsResult.parseErrors as any).join(', ')}`);
+        return;
+    }
+
+    if (expectedTypeErrors) {
+        t.deepEqual(expectedTypeErrors, jsResult.typeErrors);
+        return;
+    } else if ((jsResult.typeErrors as any).length > 0) {
+        t.fail(`Found type errors when none expected: ${(jsResult.typeErrors as any).join(', ')}`);
+        return;
+    }
+
+    await writeFile(jsFile.fd, jsResult.code);
     const jsExitCode = await execAndGetExitCode(`node ${jsFile.path}`);
     if (jsExitCode !== expectedExitCode) {
-        t.fail(`JS returned ${jsExitCode} when it should have returned ${expectedExitCode}: ${jsSource}`);
+        t.fail(`JS returned ${jsExitCode} when it should have returned ${expectedExitCode}: ${jsResult.code}`);
     }
 
     // C backend
@@ -257,12 +261,8 @@ const compileAndRun = async (t, {
     const result: CompilationResult = compile({ source, target: 'c' });;
     const cSource = result.code;
 
-    if (expectedParseErrors) {
-        t.deepEqual(expectedParseErrors, result.parseErrors);
-        return;
-    } else if ((result.parseErrors as any).length > 0) {
-        t.fail(`Found parse errors when none expected: ${(result.parseErrors as any).join(', ')}`);
-        return;
+    if (printSubsteps.includes('c')) {
+        console.log(cSource);
     }
 
     await writeFile(cFile.fd, cSource);
