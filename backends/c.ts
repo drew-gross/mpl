@@ -85,7 +85,8 @@ const astToC = ({
                     case 'String':
                         switch (declaration.memoryCategory) {
                             case 'Dynamic': return [
-                                `${mplTypeToCDeclaration(declaration.type, lhs)} = malloc(length(${rhs}));`,
+                                `// Alloate space for string, including null terminator`,
+                                `${mplTypeToCDeclaration(declaration.type, lhs)} = malloc(length(${rhs}) + 1);`,
                                 `string_copy(${rhs}, ${lhs});`,
                             ];
                             case 'GlobalStatic': return [

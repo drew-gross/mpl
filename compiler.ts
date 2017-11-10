@@ -158,7 +158,8 @@ const statementTreeToFunction = (functionAst, knownIdentifiers): Function => {
     });
 
     variables.forEach((variable: VariableDeclaration, index) => {
-        variablesAsIdentifiers[variable.name] = typeOfExpression(result.statements[index].children[4], {
+        const rhsIndex = result.statements[index].type === 'assignment' ? 2 : 4;
+        variablesAsIdentifiers[variable.name] = typeOfExpression(result.statements[index].children[rhsIndex], {
             ...knownIdentifiers,
             ...variablesAsIdentifiers,
         }).type;

@@ -181,7 +181,11 @@ const execAndGetExitCode = async command => {
     try {
         await exec(command);
     } catch (e) {
-        return e.code;
+        if (typeof e.code === 'number') {
+            return e.code;
+        } else {
+            throw `Couldn't get exit code: ${e}`;
+        }
     }
     return 0;
 };
@@ -250,10 +254,14 @@ const compileAndRun = async (t, {
     }
 
     await writeFile(jsFile.fd, jsResult.code);
-    const jsExitCode = await execAndGetExitCode(`node ${jsFile.path}`);
-    if (jsExitCode !== expectedExitCode) {
-        t.fail(`JS returned ${jsExitCode} when it should have returned ${expectedExitCode}: ${jsResult.code}`);
-    }
+    try {
+        const jsExitCode = await execAndGetExitCode(`node ${jsFile.path}`);
+        if (jsExitCode !== expectedExitCode) {
+            t.fail(`JS returned ${jsExitCode} when it should have returned ${expectedExitCode}: ${jsResult.code}`);
+        }
+   } catch (e) {
+       t.fail(`JS failed completely with "${e.msg}: ${jsResult.code}`);
+   }
 
     // C backend
     const cFile = await tmpFile({ postfix: '.c' });
@@ -271,9 +279,13 @@ const compileAndRun = async (t, {
     } catch (e) {
         t.fail(`Failed to compile generated C code: ${cSource}. Errors: ${e.stderr}`);
     }
-    const cExitCode = await execAndGetExitCode(exeFile.path);
-    if (cExitCode !== expectedExitCode) {
-        t.fail(`C returned ${cExitCode} when it should have returned ${expectedExitCode}: ${cSource}`);
+    try {
+        const cExitCode = await execAndGetExitCode(exeFile.path);
+        if (cExitCode !== expectedExitCode) {
+            t.fail(`C returned ${cExitCode} when it should have returned ${expectedExitCode}: ${cSource}`);
+        }
+    } catch (e) {
+       t.fail(`C failed completely with "${e}: ${cSource}`);
     }
 
     // Mips backend
@@ -564,7 +576,7 @@ test.failing('assign function to typed var', compileAndRun, {
     expectedExitCode: 37,
 });
 
-test.only('return local integer', compileAndRun, {
+test('return local integer', compileAndRun, {
     source: 'myVar: Integer = 3 * 3; return myVar',
     expectedExitCode: 9,
 });
@@ -625,7 +637,7 @@ return str1 == str2 ? 1 : 2
     expectedExitCode: 1
 });
 
-test('string equality: inequal same length', compileAndRun, {
+test.only('string equality: inequal same length', compileAndRun, {
     source: `str1 = "a"
 str2 = "b"
 return str1 == str2 ? 1 : 2
