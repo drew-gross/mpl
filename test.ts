@@ -611,9 +611,10 @@ test.failing('string type inferred', compileAndRun, {
     expectedExitCode: 5,
 });
 
-test.failing('string copy', compileAndRun, {
-    source: `myStr1: String = "test"; myStr2: String = myStr1; return length(myStr2);`,
-    expectedExitCode: 5,
+// TODO: Mips doesn't actually malloc, it aliases. Fix that.
+test.only('string copy', compileAndRun, {
+    source: `myStr1: String = "testing"; myStr2: String = myStr1; return length(myStr2);`,
+    expectedExitCode: 7,
 });
 
 test('string equality: equal', compileAndRun, {

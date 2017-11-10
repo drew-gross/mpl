@@ -12,17 +12,25 @@ export type Type = {
     arg: { type: Type },
 };
 
+type VariableDeclarationWithNoMemory = {
+    name: string,
+    type: Type,
+}
+
+type MemoryCategory = 'GlobalStatic' | 'Dynamic' | 'Stack';
 export type VariableDeclaration = {
     name: string,
     type: Type,
+    memoryCategory: MemoryCategory,
 };
 
 export type Function = {
-    name: string;
-    statements: any;
-    variables: VariableWithMemoryCategory[],
-    argument: any;
-    temporaryCount: number;
+    name: string,
+    statements: any,
+    variables: VariableDeclaration[],
+    argument: any,
+    temporaryCount: number,
+    knownIdentifiers: IdentifierDict,
 };
 
 export type BackendInputs = {
@@ -104,7 +112,22 @@ const transformAst = (nodeType, f, ast: AstNode, recurseOnNew: boolean) => {
     }
 }
 
-const statementTreeToFunction = (functionAst): Function => {
+const extractVariables = (ast, knownIdentifiers): VariableDeclaration[] => {
+    if (ast.type === 'assignment' || ast.type === 'typedAssignment') {
+        const rhsIndex = ast.type === 'assignment' ? 2 : 4;
+        return [{
+            name: ast.children[0].value,
+            memoryCategory: getMemoryCategory(ast),
+            type: typeOfExpression(ast.children[rhsIndex], knownIdentifiers).type,
+        }];
+    } else if ('children' in ast) {
+        return flatten(ast.children.map(extractVariables));
+    } else {
+        return [];
+    }
+};
+
+const statementTreeToFunction = (functionAst, knownIdentifiers): Function => {
     const result = {
         name: functionAst.name,
         argument: functionAst.argument,
@@ -125,10 +148,27 @@ const statementTreeToFunction = (functionAst): Function => {
     } else {
         result.statements.push(currentStatement);
     }
+    const variablesAsIdentifiers: IdentifierDict = {};
+    const variables: VariableDeclaration[] = [];
+    result.statements.forEach(statement => {
+        extractVariables(statement, {...knownIdentifiers, ...variablesAsIdentifiers}).forEach(variable => {
+            variablesAsIdentifiers[variable.name] = variable.type;
+            variables.push(variable);
+        });
+    });
+
+    variables.forEach((variable: VariableDeclaration, index) => {
+        variablesAsIdentifiers[variable.name] = typeOfExpression(result.statements[index].children[4], {
+            ...knownIdentifiers,
+            ...variablesAsIdentifiers,
+        }).type;
+    });
+
     return {
         ...result,
-        variables: flatten(result.statements.map(extractVariables)),
+        variables,
         temporaryCount: countTemporariesInFunction(result),
+        knownIdentifiers: { ...knownIdentifiers, ...variablesAsIdentifiers },
     };
 }
 
@@ -181,12 +221,6 @@ const extractStringLiterals = (ast): string[] => {
     return unique(flatten(newLiterals));
 };
 
-type MemoryCategory = 'GlobalStatic' | 'Dynamic' | 'Stack';
-export type VariableWithMemoryCategory = {
-    name: string,
-    memoryCategory: MemoryCategory,
-};
-
 const getMemoryCategory = (ast): MemoryCategory => {
     let rhsType;
     if (ast.type === 'typedAssignment') {
@@ -206,25 +240,13 @@ const getMemoryCategory = (ast): MemoryCategory => {
         case 'identifier':
             return 'Dynamic' // TODO: Should sometimes be stack based on type
         case 'product':
+        case 'number':
             return 'Stack';
         default:
             debugger;
             throw 'debugger';
     }
 
-};
-
-const extractVariables = (ast): VariableWithMemoryCategory[] => {
-    if (ast.type === 'assignment' || ast.type === 'typedAssignment') {
-        return [{
-            name: ast.children[0].value,
-            memoryCategory: getMemoryCategory(ast),
-        }];
-    } else if ('children' in ast) {
-        return flatten(ast.children.map(extractVariables));
-    } else {
-        return [];
-    }
 };
 
 const parse = (tokens: any[]): { ast?: any, parseErrors: string[] } => {
@@ -318,7 +340,7 @@ const typesAreEqual = (a, b) => {
     return true;
 }
 
-const typeOfExpression = ({ type, children, value }, knownIdentifiers: IdentifierDict): { type: Type, errors: string[] } => {
+export const typeOfExpression = ({ type, children, value }, knownIdentifiers: IdentifierDict): { type: Type, errors: string[] } => {
     switch (type) {
         case 'number': return { type: { name: 'Integer' }, errors: [] };
         case 'subtraction':
@@ -483,7 +505,7 @@ type CompilationResult = {
     code?: string,
 };
 
-const assignmentToDeclaration = (ast, knownIdentifiers): VariableDeclaration => {
+const assignmentToDeclaration = (ast, knownIdentifiers): VariableDeclarationWithNoMemory => {
     const result = typeOfExpression(ast.children[2], knownIdentifiers);
     if (result.errors.length > 0) {
         debugger;
@@ -515,14 +537,13 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
     const stringLiterals = extractStringLiterals(ast);
 
     const functionIdentifierTypes = getFunctionTypeMap(functions);
-
-    const functionsWithStatementList: Function[] = functions.map(statementTreeToFunction);
-    const programWithStatementList: Function = statementTreeToFunction({ body: program });
-
     let knownIdentifiers = {
         ...builtinIdentifiers,
         ...functionIdentifierTypes,
     };
+
+    const functionsWithStatementList: Function[] = functions.map(statementTreeToFunction, knownIdentifiers);
+    const programWithStatementList: Function = statementTreeToFunction({ body: program }, knownIdentifiers);
 
     const programTypeCheck = typeCheckProgram(programWithStatementList, knownIdentifiers);
 
@@ -550,7 +571,7 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
             if ('children' in node) {
                 let leftType = typeOfExpression(node.children[0], knownIdentifiers);
                 let rightType = typeOfExpression(node.children[0], knownIdentifiers);
-                // Typecheck already passed, so assume no errorsnn
+                // Typecheck already passed, so assume no errors
                 if (leftType.type.name === 'String' && rightType.type.name === 'String') {
                     return {
                         ...node,

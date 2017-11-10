@@ -1,5 +1,5 @@
 import flatten from '../util/list/flatten.js';
-import { VariableDeclaration, VariableWithMemoryCategory, BackendInputs } from '../compiler.js';
+import { VariableDeclaration, BackendInputs } from '../compiler.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 
@@ -469,7 +469,7 @@ const astToMips = ({
     }
 }
 
-const assignMipsRegisters = (variables: VariableWithMemoryCategory[]) => {
+const assignMipsRegisters = (variables: VariableDeclaration[]) => {
     // TODO: allow spilling of variables
     let currentRegister = 0;
     let registerAssignment = {};
