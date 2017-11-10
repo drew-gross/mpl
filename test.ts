@@ -564,7 +564,7 @@ test.failing('assign function to typed var', compileAndRun, {
     expectedExitCode: 37,
 });
 
-test('return local integer', compileAndRun, {
+test.only('return local integer', compileAndRun, {
     source: 'myVar: Integer = 3 * 3; return myVar',
     expectedExitCode: 9,
 });
@@ -612,7 +612,7 @@ test.failing('string type inferred', compileAndRun, {
 });
 
 // TODO: Mips doesn't actually malloc, it aliases. Fix that.
-test.only('string copy', compileAndRun, {
+test('string copy', compileAndRun, {
     source: `myStr1: String = "testing"; myStr2: String = myStr1; return length(myStr2);`,
     expectedExitCode: 7,
 });

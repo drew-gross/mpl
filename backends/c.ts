@@ -80,6 +80,7 @@ const astToC = ({
                 }
                 switch (declaration.type.name) {
                     case 'Function':
+                    case 'Integer':
                         return [`${mplTypeToCDeclaration(declaration.type, lhs)} = `, ...rhs, `;`];
                     case 'String':
                         switch (declaration.memoryCategory) {
