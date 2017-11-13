@@ -586,7 +586,7 @@ test('many temporaries, spill to ram', compileAndRun, {
     expectedExitCode: 1,
 });
 
-test.only('multi statement function with locals', compileAndRun, {
+test('multi statement function with locals', compileAndRun, {
     source: `
 quadrupleWithLocal = a: Integer => { b: Integer = 2 * a; return 2 * b }
 return quadrupleWithLocal(5);`,
@@ -654,7 +654,7 @@ return str1 == str2 ? 1 : 2
     expectedExitCode: 2,
 });
 
-test.failing('wrong type global', compileAndRun, {
+test('wrong type global', compileAndRun, {
     source: `str: String = 5; return length(str)`,
-    expectedTypeErrors: ['Blah'],
+    expectedTypeErrors: ['You tried to assign a Integer to "str", which has type String'],
 });
