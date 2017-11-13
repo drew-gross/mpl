@@ -543,7 +543,7 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
         ...functionIdentifierTypes,
     };
 
-    const functionsWithStatementList: Function[] = functions.map(statementTreeToFunction, knownIdentifiers);
+    const functionsWithStatementList: Function[] = functions.map(statement => statementTreeToFunction(statement, knownIdentifiers));
     const programWithStatementList: Function = statementTreeToFunction({ body: program }, knownIdentifiers);
 
     const programTypeCheck = typeCheckProgram(programWithStatementList, knownIdentifiers);

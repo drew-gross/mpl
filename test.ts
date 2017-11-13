@@ -586,7 +586,7 @@ test('many temporaries, spill to ram', compileAndRun, {
     expectedExitCode: 1,
 });
 
-test('multi statement function with locals', compileAndRun, {
+test.only('multi statement function with locals', compileAndRun, {
     source: `
 quadrupleWithLocal = a: Integer => { b: Integer = 2 * a; return 2 * b }
 return quadrupleWithLocal(5);`,
@@ -629,7 +629,7 @@ test('string copy', compileAndRun, {
     expectedExitCode: 7,
 });
 
-test.only('string equality: equal', compileAndRun, {
+test('string equality: equal', compileAndRun, {
     source: `str1 = "a"
 str2 = "a"
 return str1 == str2 ? 1 : 2
