@@ -6,7 +6,7 @@ import {
     parse,
     compile,
     CompilationResult,
-} from './compiler';
+} from './frontend.js';
 
 import { file as tmpFile} from 'tmp-promise';
 import { writeFile } from 'fs-extra';
@@ -618,7 +618,7 @@ test('string length', compileAndRun, {
 });
 
 // TODO: Fix this. No idea why this fails when non-inferred length works.
-test.failing('string type inferred', compileAndRun, {
+test.only('string type inferred', compileAndRun, {
     source: `myStr = "test2"; return length(myStr);`,
     expectedExitCode: 5,
 });

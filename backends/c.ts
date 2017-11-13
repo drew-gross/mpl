@@ -1,5 +1,5 @@
 import flatten from '../util/list/flatten.js';
-import { typeOfExpression, VariableDeclaration, Type, BackendInputs, Function } from '../compiler.js';
+import { typeOfExpression, VariableDeclaration, Type, BackendInputs, Function } from '../frontend.js';
 
 const mplTypeToCDeclaration = (type: Type, name: string) => {
     if (!type) debugger;
