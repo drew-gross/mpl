@@ -65,7 +65,7 @@ const astToC = ({
                     case 'String': {
                         return [
                             `${lhs} = malloc(length(${rhs}));`,
-                            `string_copy(${lhs}, ${rhs});`,
+                            `string_copy(${rhs}, ${lhs});`,
                         ];
                     }
                     default:
@@ -121,12 +121,11 @@ const astToC = ({
             '==',
             ...astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations }),
         ];
-        case 'stringEquality': return [
-            // TODO: Just compares pointers right now. Fix that.
-            ...astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations }),
-            '==',
-            ...astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations }),
-        ];
+        case 'stringEquality': {
+            const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations }).join('');
+            const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations }).join('');
+            return [`string_compare(${lhs}, ${rhs})`];
+        }
         case 'booleanLiteral': return [ast.value == 'true' ? '1' : '0'];
         case 'stringLiteral': return [ast.value];
         default:
@@ -191,6 +190,7 @@ export default ({
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 int length(char *str) {
     int len = 0;
@@ -200,6 +200,17 @@ int length(char *str) {
 
 void string_copy(char *in, char *out) {
     while ((*out++ = *in++)) {}
+}
+
+bool string_compare(char *in, char *out) {
+    while (*in == *out) {
+        if (*in == 0) {
+            return true;
+        }
+        in++;
+        out++;
+    }
+    return false;
 }
 
 ${Cdeclarations.join('\n')}

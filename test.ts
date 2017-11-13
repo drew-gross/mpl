@@ -629,7 +629,7 @@ test('string copy', compileAndRun, {
     expectedExitCode: 7,
 });
 
-test('string equality: equal', compileAndRun, {
+test.only('string equality: equal', compileAndRun, {
     source: `str1 = "a"
 str2 = "a"
 return str1 == str2 ? 1 : 2
@@ -637,7 +637,8 @@ return str1 == str2 ? 1 : 2
     expectedExitCode: 1
 });
 
-test.only('string equality: inequal same length', compileAndRun, {
+// TODO: Fix allocations
+test('string equality: inequal same length', compileAndRun, {
     source: `str1 = "a"
 str2 = "b"
 return str1 == str2 ? 1 : 2
