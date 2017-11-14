@@ -1,4 +1,5 @@
 import flatten from '../util/list/flatten.js';
+import execAndGetExitCode from '../util/execAndGetExitCode.js';
 
 const astToJS = ({ ast, exitInsteadOfReturn }) => {
     if (!ast) debugger;
@@ -118,7 +119,7 @@ const astToJS = ({ ast, exitInsteadOfReturn }) => {
     }
 };
 
-export default ({functions, variables, program, globalDeclarations, stringLiterals}) => {
+const toExectuable = ({functions, variables, program, globalDeclarations, stringLiterals}) => {
     let JSfunctions = functions.map(({ name, argument, statements }) => {
         const prefix = `${name} = ${argument.children[0].value} => {`;
         const suffix = `}`;
@@ -145,4 +146,19 @@ export default ({functions, variables, program, globalDeclarations, stringLitera
 const length = str => str.length;
 ${JSfunctions.join('\n')}
 ${JS.join('\n')}`;
+};
+
+const execute = async path => {
+    try {
+        const exitCode = await execAndGetExitCode(`node ${path}`);
+        return exitCode;
+    } catch (e) {
+        return e.msg;
+    }
+};
+
+export default {
+    toExectuable,
+    execute,
+    name: 'js',
 };

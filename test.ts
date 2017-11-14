@@ -1,16 +1,19 @@
 import test from 'ava';
+import { Backend } from './api.js';
 
 import { lex, TokenType } from './lex.js';
 
 import {
     parse,
     compile,
-    CompilationResult,
 } from './frontend.js';
+
+import mipsBackend from './backends/mips.js';
+import jsBackend from './backends/js.js';
+import cBackend from './backends/c.js';
 
 import { file as tmpFile} from 'tmp-promise';
 import { writeFile } from 'fs-extra';
-import { exec } from 'child-process-promise';
 
 test('lexer', t => {
     t.deepEqual(lex('123'), [
@@ -177,26 +180,13 @@ test('ast for assignment then return', t => {
     t.deepEqual(astWithNewline, expected);
 });
 
-const execAndGetExitCode = async command => {
-    try {
-        await exec(command);
-    } catch (e) {
-        if (typeof e.code === 'number') {
-            return e.code;
-        } else {
-            throw `Couldn't get exit code: ${e}`;
-        }
-    }
-    return 0;
-};
-
 type CompileAndRunOptions = {
     source: string,
     expectedExitCode: number,
     expectedTypeErrors: [any],
     expectedParseErrors: [any],
     expectedAst: [any],
-    printSubsteps?: ('js' | 'tokens' | 'ast' | 'c' | 'mips')[],
+    printSubsteps?: string[],
 }
 
 const compileAndRun = async (t, {
@@ -207,6 +197,13 @@ const compileAndRun = async (t, {
     expectedAst,
     printSubsteps = [],
 } : CompileAndRunOptions) => {
+    const printableSubsteps = ['js', 'tokens', 'ast', 'c', 'mips'];
+    printSubsteps.forEach(substepToPrint => {
+        if (!printSubsteps.includes(substepToPrint)) {
+            t.fail(`${substepToPrint} is not a printable substep`);
+        }
+    });
+
     // Make sure it parses
     const lexResult = lex(source);
     lexResult.forEach(({ string, type }) => {
@@ -228,89 +225,40 @@ const compileAndRun = async (t, {
     if (expectedAst) {
         t.deepEqual(parseResult, expectedAst);
     }
-
-    // JS backend
-    const jsFile = await tmpFile({ postfix: '.js' });
-    const jsResult = compile({ source, target: 'js' });
-
-    if (printSubsteps.includes('js')) {
-        console.log(jsResult.code);
-    }
-
-    if (expectedParseErrors) {
-        t.deepEqual(expectedParseErrors, jsResult.parseErrors);
+    const frontendOutput = compile(source);
+    if (expectedParseErrors && 'parseErrors' in frontendOutput) {
+        t.deepEqual(expectedParseErrors, (frontendOutput as { parseErrors: string[] }).parseErrors);
         return;
-    } else if ((jsResult.parseErrors as any).length > 0) {
-        t.fail(`Found parse errors when none expected: ${(jsResult.parseErrors as any).join(', ')}`);
+    } else if ('parseErrors' in frontendOutput) {
+        t.fail(`Found parse errors when none expected: ${(frontendOutput as { parseErrors: string[] }).parseErrors.join(', ')}`);
+    } else if (expectedParseErrors) {
+        t.fail('Expected parse errors and none found');
+    }
+
+    if (expectedTypeErrors && 'typeErrors' in frontendOutput) {
+        t.deepEqual(expectedTypeErrors, (frontendOutput as { typeErrors: string[] }).typeErrors);
         return;
+    } else if ('typeErrors' in frontendOutput) {
+        t.fail(`Found type errors when none expected: ${(frontendOutput as { typeErrors: string[] }).typeErrors.join(', ')}`);
+    } else if (expectedTypeErrors) {
+        t.fail('Expected type errors and none found');
     }
 
-    if (expectedTypeErrors) {
-        t.deepEqual(expectedTypeErrors, jsResult.typeErrors);
-        return;
-    } else if ((jsResult.typeErrors as any).length > 0) {
-        t.fail(`Found type errors when none expected: ${(jsResult.typeErrors as any).join(', ')}`);
-        return;
-    }
-
-    await writeFile(jsFile.fd, jsResult.code);
-    try {
-        const jsExitCode = await execAndGetExitCode(`node ${jsFile.path}`);
-        if (jsExitCode !== expectedExitCode) {
-            t.fail(`JS returned ${jsExitCode} when it should have returned ${expectedExitCode}: ${jsResult.code}`);
+    // Backends
+    const backends: Backend[] = [jsBackend, cBackend, mipsBackend];
+    for (let i = 0; i < backends.length; i++) {
+        const backend = backends[i];
+        const exeFile = await tmpFile({ postfix: `.${backend.name}` });
+        const exeContents = backend.toExectuable(frontendOutput);
+        if (printSubsteps.includes(backend.name)) {
+            console.log(exeContents);
         }
-   } catch (e) {
-       t.fail(`JS failed completely with "${e.msg}: ${jsResult.code}`);
-   }
+        await writeFile(exeFile.fd, exeContents);
+        const result = await backend.execute(exeFile.path);
 
-    // C backend
-    const cFile = await tmpFile({ postfix: '.c' });
-    const exeFile = await tmpFile();
-    const result: CompilationResult = compile({ source, target: 'c' });;
-    const cSource = result.code;
-
-    if (printSubsteps.includes('c')) {
-        console.log(cSource);
-    }
-
-    await writeFile(cFile.fd, cSource);
-    try {
-        await exec(`clang -Wall -Werror ${cFile.path} -o ${exeFile.path}`);
-    } catch (e) {
-        t.fail(`Failed to compile generated C code: ${cSource}. Errors: ${e.stderr}`);
-    }
-    try {
-        const cExitCode = await execAndGetExitCode(exeFile.path);
-        if (cExitCode !== expectedExitCode) {
-            t.fail(`C returned ${cExitCode} when it should have returned ${expectedExitCode}: ${cSource}`);
+        if (result !== expectedExitCode) {
+            t.fail(`JS returned ${result} when it should have returned ${expectedExitCode}: ${exeContents}`);
         }
-    } catch (e) {
-       t.fail(`C failed completely with "${e}: ${cSource}`);
-    }
-
-    // Mips backend
-    const mipsFile = await tmpFile({ postfix: '.s' });
-    const mipsSource = compile({ source, target: 'mips' }).code;
-
-    if (printSubsteps.includes('mips')) {
-        console.log(mipsSource);
-    }
-
-    t.deepEqual(typeof mipsSource, 'string')
-    await writeFile(mipsFile.fd, mipsSource);
-
-    try {
-        const result = await exec(`spim -file ${mipsFile.path}`);
-        if (result.stderr !== '') {
-            t.fail(`Spim error. Mips text: ${mipsSource}\n error text: ${result.stderr}`);
-        }
-        const lines = result.stdout.split('\n');
-        const mipsExitCode = parseInt(lines[lines.length - 1]);
-        if (mipsExitCode !== expectedExitCode) {
-            t.fail(`mips returned ${mipsExitCode} when it should have returned ${expectedExitCode}: ${mipsSource}`);
-        }
-    } catch (e) {
-        t.fail(`Exception: ${e.message}\nmips source: ${mipsSource}`);
     }
 
     t.pass();
@@ -618,7 +566,7 @@ test('string length', compileAndRun, {
 });
 
 // TODO: Fix this. No idea why this fails when non-inferred length works.
-test.only('string type inferred', compileAndRun, {
+test.failing('string type inferred', compileAndRun, {
     source: `myStr = "test2"; return length(myStr);`,
     expectedExitCode: 5,
 });

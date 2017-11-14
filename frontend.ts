@@ -3,46 +3,12 @@ import unique from './util/list/unique.js';
 import { lex } from './lex.js';
 import parseProgram from './parser.js'
 import { ParseResult, AstNode, AstInteriorNode, AstLeaf } from './parser-combinator.js';
-import { toJS, toC, toMips } from './codegen.js';
-
-export type Type = {
-    name: 'String' | 'Integer' | 'Boolean'
-} | {
-    name: 'Function',
-    arg: { type: Type },
-};
+import { Type, VariableDeclaration, IdentifierDict, Function, MemoryCategory, BackendInputs } from './api.js';
 
 type VariableDeclarationWithNoMemory = {
     name: string,
     type: Type,
 }
-
-type MemoryCategory = 'GlobalStatic' | 'Dynamic' | 'Stack';
-export type VariableDeclaration = {
-    name: string,
-    type: Type,
-    memoryCategory: MemoryCategory,
-};
-
-export type Function = {
-    name: string,
-    statements: any,
-    variables: VariableDeclaration[],
-    argument: any,
-    temporaryCount: number,
-    knownIdentifiers: IdentifierDict,
-};
-
-export type BackendInputs = {
-    functions: Function[],
-    program: Function,
-    globalDeclarations: VariableDeclaration[],
-    stringLiterals,
-};
-
-type Backend = (BackendInputs) => string;
-
-type IdentifierDict = { [name: string]: Type };
 
 let tokensToString = tokens => tokens.map(token => token.string).join('');
 
@@ -500,12 +466,6 @@ const getFunctionTypeMap = functions => {
     return result;
 };
 
-type CompilationResult = {
-    typeErrors?: string[],
-    parseErrors?: string[],
-    code?: string,
-};
-
 const assignmentToDeclaration = (ast, knownIdentifiers): VariableDeclarationWithNoMemory => {
     const result = typeOfExpression(ast.children[2], knownIdentifiers);
     if (result.errors.length > 0) {
@@ -517,21 +477,17 @@ const assignmentToDeclaration = (ast, knownIdentifiers): VariableDeclarationWith
     };
 };
 
-type Function = {
-    name: string | undefined,
-    argument: any | undefined,
-    statements: AstNode[],
-}
+type FrontendOutput =
+    BackendInputs |
+    { parseErrors: string[] } |
+    { typeErrors: string[] };
 
-const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mips' }): any => {
+const compile = (source: string): FrontendOutput => {
     const tokens = lex(source);
     const { ast, parseErrors } = parse(tokens);
 
     if (parseErrors.length > 0) {
-        return {
-            code: '',
-            parseErrors,
-        };
+        return { parseErrors };
     }
 
     const { functions, program } = extractFunctions(ast);
@@ -557,11 +513,7 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
 
     typeErrors = flatten(typeErrors);
     if (typeErrors.length > 0) {
-        return {
-            typeErrors,
-            parseErrors: [],
-            code: '',
-        };
+        return { typeErrors };
     }
 
     // Now that we have type information, go through and insert typed
@@ -599,33 +551,14 @@ const compile = ({ source, target }: { source: string, target: 'js' | 'c' | 'mip
             });
             if (!result.type) debugger;
             return result;
-        });
+        }) as any;
 
-    let backend: Backend | null = null;
-
-    if (target == 'js') {
-        backend = toJS;
-    } else if (target == 'c') {
-        backend = toC;
-    } else if (target == 'mips') {
-        backend = toMips;
-    } else {
-        return {
-            typeErrors: [],
-            parseErrors: ['Invalid target'],
-            code: '',
-        }
-    }
     return {
-        typeErrors: [],
-        parseErrors: [],
-        code: backend({
-            functions: functionsWithStatementList,
-            program: programWithStatementList,
-            globalDeclarations,
-            stringLiterals,
-        }),
+        functions: functionsWithStatementList,
+        program: programWithStatementList,
+        globalDeclarations,
+        stringLiterals,
     };
 };
 
-export { parse, lex, compile, CompilationResult };
+export { parse, lex, compile };

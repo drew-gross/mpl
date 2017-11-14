@@ -1,5 +1,9 @@
+import { file as tmpFile} from 'tmp-promise';
+import { VariableDeclaration, Type, BackendInputs, Function } from '../api.js';
 import flatten from '../util/list/flatten.js';
-import { typeOfExpression, VariableDeclaration, Type, BackendInputs, Function } from '../frontend.js';
+import { typeOfExpression } from '../frontend.js';
+import { exec } from 'child-process-promise';
+import execAndGetExitCode from '../util/execAndGetExitCode.js';
 
 const mplTypeToCDeclaration = (type: Type, name: string) => {
     if (!type) debugger;
@@ -136,7 +140,7 @@ const astToC = ({
 
 const stringLiteralDeclaration = stringLiteral => `char *${stringLiteral} = "${stringLiteral}";`;
 
-export default ({
+const toExectuable = ({
     functions,
     program,
     globalDeclarations,
@@ -173,7 +177,7 @@ export default ({
         .filter(s => s.memoryCategory === 'Dynamic')
         .map(s => `free(${s.name});`);
     let CcreateResult = astToC({
-        ast: returnStatement.children[1],
+        ast: (returnStatement as any).children[1],
         globalDeclarations,
         stringLiterals,
         localDeclarations: program.variables,
@@ -224,4 +228,25 @@ int main(int argc, char **argv) {
     ${CreturnResult}
 }
 `;
+};
+
+const execute = async path => {
+    const exeFile = await tmpFile();
+    try {
+        await exec(`clang -Wall -Werror ${path} -o ${exeFile.path}`);
+    } catch (e) {
+        return 'Failed to compile generated C code';
+    }
+    try {
+        const exitCode = await execAndGetExitCode(exeFile.path);
+        return exitCode;
+    } catch (e) {
+        return e.msg;
+    }
+};
+
+export default {
+    toExectuable,
+    execute,
+    name: 'c',
 };

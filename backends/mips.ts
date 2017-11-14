@@ -1,5 +1,6 @@
+import { exec } from 'child-process-promise';
 import flatten from '../util/list/flatten.js';
-import { VariableDeclaration, BackendInputs } from '../frontend.js';
+import { VariableDeclaration, BackendInputs } from '../api.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 
@@ -628,7 +629,7 @@ addiu $sp, $sp, 4
 lw $ra, ($sp)
 jr $ra`;
 
-export default ({
+const toExectuable = ({
     functions,
     program,
     globalDeclarations,
@@ -681,4 +682,24 @@ li $v0, 1
 syscall
 li $v0, 10
 syscall`;
+}
+
+const execute = async path => {
+    try {
+        const result = await exec(`spim -file ${path}`);
+        if (result.stderr !== '') {
+            return `Spim error: ${result.stderr}`;
+        }
+        const lines = result.stdout.split('\n');
+        const mipsExitCode = parseInt(lines[lines.length - 1]);
+        return mipsExitCode;
+    } catch (e) {
+        return `Exception: ${e.message}`;
+    }
+};
+
+export default {
+    toExectuable,
+    execute,
+    name: 'mips',
 }
