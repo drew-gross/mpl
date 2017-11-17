@@ -1,5 +1,5 @@
 import test from 'ava';
-import { Backend } from './api.js';
+import { Backend, BackendInputs } from './api.js';
 
 import { lex, TokenType } from './lex.js';
 
@@ -197,7 +197,7 @@ const compileAndRun = async (t, {
     expectedAst,
     printSubsteps = [],
 } : CompileAndRunOptions) => {
-    const printableSubsteps = ['js', 'tokens', 'ast', 'c', 'mips'];
+    const printableSubsteps = ['js', 'tokens', 'ast', 'c', 'mips', 'structure'];
     printSubsteps.forEach(substepToPrint => {
         if (!printSubsteps.includes(substepToPrint)) {
             t.fail(`${substepToPrint} is not a printable substep`);
@@ -244,6 +244,17 @@ const compileAndRun = async (t, {
         t.fail('Expected type errors and none found');
     }
 
+    if (printSubsteps.includes('structure')) {
+        const structure = frontendOutput as BackendInputs;
+        console.log(structure);
+        console.log('Functions: Not supported');
+        console.log('Program:');
+        console.log('-> Globals:');
+        structure.globalDeclarations.forEach(declaration => {
+            console.log(`---> ${declaration.type.name} ${declaration.name}`);
+        });
+    }
+
     // Backends
     const backends: Backend[] = [jsBackend, cBackend, mipsBackend];
     for (let i = 0; i < backends.length; i++) {
@@ -257,7 +268,7 @@ const compileAndRun = async (t, {
         const result = await backend.execute(exeFile.path);
 
         if (result !== expectedExitCode) {
-            t.fail(`JS returned ${result} when it should have returned ${expectedExitCode}: ${exeContents}`);
+            t.fail(`${backend.name} returned ${result} when it should have returned ${expectedExitCode}: ${/*exeContents*/''}`);
         }
     }
 
@@ -566,9 +577,15 @@ test('string length', compileAndRun, {
 });
 
 // TODO: Fix this. No idea why this fails when non-inferred length works.
-test.failing('string type inferred', compileAndRun, {
+test.only('string length with type inferred', compileAndRun, {
     source: `myStr = "test2"; return length(myStr);`,
     expectedExitCode: 5,
+});
+
+test('struture is equal for inferred string type', t => {
+    const inferredStructure = compile('myStr = "test"; return length(myStr);');
+    const suppliedStructure = compile('myStr: String = "test"; return length(myStr);');
+    t.deepEqual(inferredStructure, suppliedStructure);
 });
 
 // TODO: Mips doesn't actually malloc, it aliases. Fix that.
