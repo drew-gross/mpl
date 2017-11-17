@@ -187,6 +187,7 @@ type CompileAndRunOptions = {
     expectedParseErrors: [any],
     expectedAst: [any],
     printSubsteps?: string[],
+    failing?: string[],
 }
 
 const compileAndRun = async (t, {
@@ -196,6 +197,7 @@ const compileAndRun = async (t, {
     expectedParseErrors,
     expectedAst,
     printSubsteps = [],
+    failing = [],
 } : CompileAndRunOptions) => {
     const printableSubsteps = ['js', 'tokens', 'ast', 'c', 'mips', 'structure'];
     printSubsteps.forEach(substepToPrint => {
@@ -269,7 +271,7 @@ const compileAndRun = async (t, {
         await writeFile(exeFile.fd, exeContents);
         const result = await backend.execute(exeFile.path);
 
-        if (result !== expectedExitCode) {
+        if (result !== expectedExitCode && !failing.includes(backend.name)) {
             t.fail(`${backend.name} returned ${result} when it should have returned ${expectedExitCode}: ${/*exeContents*/''}`);
         }
     }
@@ -580,7 +582,7 @@ test('string length', compileAndRun, {
 });
 
 // TODO: Fix this. No idea why this fails when non-inferred length works.
-test.only('string length with type inferred', compileAndRun, {
+test('string length with type inferred', compileAndRun, {
     source: `myStr = "test2"; return length(myStr);`,
     expectedExitCode: 5,
 });
