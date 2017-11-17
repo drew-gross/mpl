@@ -518,9 +518,8 @@ const compile = (source: string): FrontendOutput => {
 
     // Now that we have type information, go through and insert typed
     // versions of operators
-    programWithStatementList.statements = programWithStatementList.statements.map(statement => transformAst(
-        'equality',
-        node => {
+    programWithStatementList.statements = programWithStatementList.statements.map(statement => {
+        const typedEquality = transformAst('equality', node => {
             if ('children' in node) {
                 let leftType = typeOfExpression(node.children[0], knownIdentifiers);
                 let rightType = typeOfExpression(node.children[0], knownIdentifiers);
@@ -536,10 +535,25 @@ const compile = (source: string): FrontendOutput => {
             } else {
                 return node;
             }
-        },
-        statement,
-        false,
-    ));
+        }, statement, false);
+        const typedAssignment = transformAst('assignment', node => {
+            if ('children' in node) {
+                return {
+                    children: [
+                        node.children[0],
+                        { type: 'colon', value: null },
+                        { type: 'type', value: typeOfExpression(node.children[2], knownIdentifiers).type.name },
+                        { type: 'assignment', value: null },
+                        node.children[2],
+                    ],
+                    type: 'typedAssignment',
+                };
+            } else {
+                return node;
+            };
+        }, typedEquality, false);
+        return typedAssignment;
+    });
 
     const globalDeclarations: VariableDeclaration[] = programWithStatementList.statements
         .filter(s => s.type === 'assignment')
