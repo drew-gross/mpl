@@ -204,6 +204,8 @@ const astToString = ast => {
             return ast.value.toString();
         case 'typedAssignment':
             return `${astToString(ast.children[0])}: ${astToString(ast.children[2])} = ${astToString(ast.children[4])}`;
+        case 'assignment':
+            return `${astToString(ast.children[0])} = ${astToString(ast.children[2])}`;
         case 'callExpression':
             return `${astToString(ast.children[0])}(${astToString(ast.children[2])})`;
         case 'functionLiteral':

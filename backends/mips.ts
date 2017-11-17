@@ -1,39 +1,40 @@
 import { exec } from 'child-process-promise';
 import flatten from '../util/list/flatten.js';
 import { VariableDeclaration, BackendInputs } from '../api.js';
+import debug from '../util/debug.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 
 const storeLiteralMips = ({ type, destination, spOffset }, value) => {
-    if (type == undefined) debugger;
+    if (type == undefined) debug();
     switch (type) {
         case 'register': return `li ${destination}, ${value}`;
         case 'memory': return [
             `li $s7, ${value}`,
             `sw $s7, -${spOffset}($sp)`
         ].join('\n');
-        default: debugger; return '';
+        default: debug(); return '';
     }
 }
 
 const subtractMips = ({ type, destination }, left, right) => {
     switch (type) {
         case 'register': return `sub ${destination}, ${left.destination}, ${right.destination}`;
-        default: debugger; return '';
+        default: debug(); return '';
     }
 }
 
 const moveMips = ({ type, destination }, source) => {
     switch (type) {
         case 'register': return `move ${destination}, ${source}`;
-        default: debugger; return '';
+        default: debug(); return '';
     }
 }
 
 const loadGlobalMips = ({ type, destination, spOffset }, value) => {
     switch (type) {
         case 'register': return `la ${destination}, ${value}`;
-        default: debugger; return '';
+        default: debug(); return '';
     }
 }
 
@@ -57,7 +58,7 @@ const multiplyMips = (destination, left, right) => {
         destinationRegister = '$s3';
         restoreSpilled.push(`sw $s3, -${destination.spOffset}($sp)`);
     }
-    if (leftRegister == '$tNaN') debugger;
+    if (leftRegister == '$tNaN') debug();
 
     return [
         ...loadSpilled,
@@ -69,7 +70,7 @@ const multiplyMips = (destination, left, right) => {
 }
 
 const mipsBranchIfEqual = (left, right, label) => {
-    if (left.type !== 'register' || right.type !== 'register') debugger;
+    if (left.type !== 'register' || right.type !== 'register') debug();
     return `beq ${left.destination}, ${right.destination}, ${label}`
 }
 
@@ -95,8 +96,7 @@ const nextTemporary = (storage: StorageSpec): StorageSpec => {
             spOffset: storage.spOffset + 4,
         }
     } else {
-        debugger;
-        throw 'debugger';
+        return debug();
     }
 };
 
@@ -121,7 +121,7 @@ const astToMips = ({
     globalDeclarations,
     stringLiterals,
 }: AstToMipsOptions) => {
-    if (!ast) debugger;
+    if (!ast) debug();
     switch (ast.type) {
         case 'returnStatement': return [
             `# evaluate expression of return statement, put in $a0`,
@@ -208,17 +208,15 @@ const astToMips = ({
             stringLiterals,
         })));
         case 'functionLiteral': {
-            debugger;
-            throw 'debugger';
-            /*
-            if (currentTemporary.type !== 'register') debugger; // TODO: Figure out how to guarantee this doesn't happen
+            debug();
+            if (currentTemporary.type !== 'register') debug(); // TODO: Figure out how to guarantee this doesn't happen
             return [
                 `# Loading function into register`,
                 `la ${currentTemporary.destination}, ${ast.value}`
-            ];*/
+            ];
         }
         case 'callExpression': {
-            if (currentTemporary.type !== 'register') debugger; // TODO: Figure out how to guarantee this doesn't happen
+            if (currentTemporary.type !== 'register') debug(); // TODO: Figure out how to guarantee this doesn't happen
             const name = ast.children[0].value;
             let callInstructions: string[] = []
             if (runtimeFunctions.includes(name)) {
@@ -239,8 +237,7 @@ const astToMips = ({
                     `jal ${registerAssignment[name].destination}`,
                 ];
             } else {
-                debugger;
-                throw "fail";
+                debug();
             }
 
             return [
@@ -262,7 +259,7 @@ const astToMips = ({
         case 'typedAssignment': {
             const lhs = ast.children[0].value;
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
-                debugger; //TODO: assign to globals
+                debug(); //TODO: assign to globals
             } else if (lhs in registerAssignment) {
                 return [
                     `# Run rhs of assignment and store to ${lhs} (${registerAssignment[lhs].destination})`,
@@ -280,7 +277,7 @@ const astToMips = ({
                     }),
                 ];
             } else {
-                debugger;
+                debug();
             }
         }
         case 'assignment': {
@@ -289,10 +286,9 @@ const astToMips = ({
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) {
-                    debugger;
-                    throw "fail";
+                    debug();
                 }
-                switch (declaration.type.name) {
+                switch ((declaration as any).type.name) {
                     case 'Function': return [
                         `# Load function ptr (${rhs} into s7 (s7 used to not overlap with arg)`,
                         `la $s7, ${rhs}`,
@@ -306,8 +302,7 @@ const astToMips = ({
                         `sw $s7, ${lhs}`,
                     ];
                     default:
-                        debugger;
-                        throw "fail";
+                        debug();
                 };
             } else if (stringLiterals.includes(rhs)) { // TODO: Pretty sure this is wrong
                 const register = registerAssignment[lhs].destination;
@@ -329,8 +324,7 @@ const astToMips = ({
             if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
                 if (!declaration) {
-                    debugger;
-                    throw "fail";
+                    debug();
                 }
                 return [
                     `# Move from global ${identifierName} into destination (${destination.destination || destination.spOffset})`,
@@ -474,8 +468,7 @@ const astToMips = ({
             ];
         }
         default:
-            debugger;
-            throw "debugger";
+            debug();
 
     }
 }
