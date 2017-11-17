@@ -246,8 +246,10 @@ const compileAndRun = async (t, {
 
     if (printSubsteps.includes('structure')) {
         const structure = frontendOutput as BackendInputs;
-        console.log(structure);
-        console.log('Functions: Not supported');
+        console.log('Functions:');
+        structure.functions.forEach(f => {
+            console.log(`-> ${f.name}`);
+        });
         console.log('Program:');
         console.log('-> Globals:');
         structure.globalDeclarations.forEach(declaration => {
@@ -380,7 +382,8 @@ test('assign function and return', compileAndRun, {
 
 test('assign function and call it', compileAndRun, {
     source: 'takeItToEleven = a: Integer => 11; return takeItToEleven(0)',
-    expectedExitCode: 11
+    expectedExitCode: 11,
+    printSubsteps: ['structure'],
 });
 
 test('multiple variables called', compileAndRun, {
