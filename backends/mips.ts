@@ -208,11 +208,10 @@ const astToMips = ({
             stringLiterals,
         })));
         case 'functionLiteral': {
-            debug();
-            if (currentTemporary.type !== 'register') debug(); // TODO: Figure out how to guarantee this doesn't happen
+            if (destination.type !== 'register') debug(); // TODO: Figure out how to guarantee this doesn't happen
             return [
                 `# Loading function into register`,
-                `la ${currentTemporary.destination}, ${ast.value}`
+                `la ${destination.destination}, ${ast.value}`
             ];
         }
         case 'callExpression': {

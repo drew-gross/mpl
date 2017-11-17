@@ -521,12 +521,11 @@ return ternaryFunc(true) - ternaryFunc(false)`,
     expectedExitCode: 6,
 });
 
-test.only('equality comparison true', compileAndRun, {
+test('equality comparison true', compileAndRun, {
     source: `
 isFive = five: Integer => five == 5 ? 2 : 7
 return isFive(5)`,
     expectedExitCode: 2,
-    printSubsteps: ['structure'],
 });
 
 test('equality comparison false', compileAndRun, {
