@@ -15,6 +15,8 @@ import cBackend from './backends/c.js';
 import { file as tmpFile} from 'tmp-promise';
 import { writeFile } from 'fs-extra';
 
+import debug from './util/debug.js';
+
 test('lexer', t => {
     t.deepEqual(lex('123'), [
         { type: 'number', value: 123, string: '123' },
@@ -191,6 +193,7 @@ type CompileAndRunOptions = {
 }
 
 const astToString = ast => {
+    if (!ast) debug();
     switch (ast.type) {
         case 'returnStatement':
             return `return ${astToString(ast.children[1])}`;
@@ -212,6 +215,10 @@ const astToString = ast => {
             return ast.value;
         case 'type':
             return ast.value;
+        case 'product':
+            return `${astToString(ast.children[0])} * ${astToString(ast.children[1])}`;
+        case 'subtraction':
+            return `${astToString(ast.children[0])} - ${astToString(ast.children[1])}`;
         default:
             debugger
             throw 'debugger';
@@ -420,7 +427,6 @@ test('assign function and return', compileAndRun, {
 test('assign function and call it', compileAndRun, {
     source: 'takeItToEleven = a: Integer => 11; return takeItToEleven(0)',
     expectedExitCode: 11,
-    printSubsteps: ['structure'],
 });
 
 test('multiple variables called', compileAndRun, {

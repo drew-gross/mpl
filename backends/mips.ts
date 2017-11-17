@@ -74,6 +74,7 @@ const mipsBranchIfEqual = (left, right, label) => {
     return `beq ${left.destination}, ${right.destination}, ${label}`
 }
 
+// TODO: global
 type StorageSpec = { type: 'register', destination: string } | { type: 'memory', spOffset: number };
 
 const nextTemporary = (storage: StorageSpec): StorageSpec => {
@@ -258,7 +259,19 @@ const astToMips = ({
         case 'typedAssignment': {
             const lhs = ast.children[0].value;
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
-                debug(); //TODO: assign to globals
+                return [
+                    `# Put function pointer into temporary`,
+                    ...astToMips({
+                        ast: ast.children[4],
+                        registerAssignment,
+                        destination: currentTemporary,
+                        currentTemporary,
+                        globalDeclarations,
+                        stringLiterals,
+                    }),
+                    `# Put function pointer into global`,
+                    `sw ${currentTemporary.destination}, ${lhs}`,
+                ];
             } else if (lhs in registerAssignment) {
                 return [
                     `# Run rhs of assignment and store to ${lhs} (${registerAssignment[lhs].destination})`,
