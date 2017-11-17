@@ -190,6 +190,32 @@ type CompileAndRunOptions = {
     failing?: string[],
 }
 
+const astToString = ast => {
+    switch (ast.type) {
+        case 'returnStatement':
+            return `return ${astToString(ast.children[1])}`;
+        case 'ternary':
+            return `${astToString(ast.children[0])} ? ${astToString(ast.children[2])} : ${astToString(ast.children[4])}`;
+        case 'equality':
+            return `${astToString(ast.children[0])} == ${astToString(ast.children[2])}`;
+        case 'identifier':
+            return ast.value;
+        case 'number':
+            return ast.value.toString();
+        case 'typedAssignment':
+            return `${astToString(ast.children[0])}: ${astToString(ast.children[2])} = ${astToString(ast.children[4])}`;
+        case 'callExpression':
+            return `${astToString(ast.children[0])}(${astToString(ast.children[2])})`;
+        case 'functionLiteral':
+            return ast.value;
+        case 'type':
+            return ast.value;
+        default:
+            debugger
+            throw 'debugger';
+    }
+};
+
 const compileAndRun = async (t, {
     source,
     expectedExitCode,
@@ -250,12 +276,19 @@ const compileAndRun = async (t, {
         const structure = frontendOutput as BackendInputs;
         console.log('Functions:');
         structure.functions.forEach(f => {
-            console.log(`-> ${f.name}`);
+            console.log(`-> ${f.name}(${f.argument.children[0].value})`);
+            f.statements.forEach(statement => {
+                console.log(`---> `, astToString(statement));
+            });
         });
         console.log('Program:');
         console.log('-> Globals:');
         structure.globalDeclarations.forEach(declaration => {
             console.log(`---> ${declaration.type.name} ${declaration.name}`);
+        });
+        console.log('-> Statements:');
+        structure.program.statements.forEach(statement => {
+            console.log(`---> `, astToString(statement));
         });
     }
 
@@ -486,11 +519,12 @@ return ternaryFunc(true) - ternaryFunc(false)`,
     expectedExitCode: 6,
 });
 
-test('equality comparison true', compileAndRun, {
+test.only('equality comparison true', compileAndRun, {
     source: `
 isFive = five: Integer => five == 5 ? 2 : 7
 return isFive(5)`,
     expectedExitCode: 2,
+    printSubsteps: ['structure'],
 });
 
 test('equality comparison false', compileAndRun, {

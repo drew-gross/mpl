@@ -207,6 +207,16 @@ const astToMips = ({
             globalDeclarations,
             stringLiterals,
         })));
+        case 'functionLiteral': {
+            debugger;
+            throw 'debugger';
+            /*
+            if (currentTemporary.type !== 'register') debugger; // TODO: Figure out how to guarantee this doesn't happen
+            return [
+                `# Loading function into register`,
+                `la ${currentTemporary.destination}, ${ast.value}`
+            ];*/
+        }
         case 'callExpression': {
             if (currentTemporary.type !== 'register') debugger; // TODO: Figure out how to guarantee this doesn't happen
             const name = ast.children[0].value;
