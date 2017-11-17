@@ -28,7 +28,7 @@ export type BackendInputs = {
     stringLiterals,
 };
 export type Backend = {
-    toExectuable: (BackendInputs) => string,
     name: string,
+    toExectuable: (BackendInputs) => string,
     execute: (string) => Promise<number | string>, // Exit code or error
 }
