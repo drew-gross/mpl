@@ -583,7 +583,7 @@ length_loop:
 lb $t2, ($s0)
 # If char is null, end of string. Return count.
 beq $t2, 0, length_return
-# Else bump pointer count and and return to start of loop
+# Else bump pointer and count and return to start of loop
 addiu $t1, $t1, 1
 addiu $s0, $s0, 1
 b length_loop
