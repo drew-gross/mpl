@@ -630,7 +630,11 @@ return quadrupleWithLocal(5);`,
 test.only('string length', compileAndRun, {
     source: `myStr: String = "test"; return length(myStr);`,
     expectedExitCode: 4,
-    debugSubsteps: ['mips'],
+});
+
+test.failing('empty string length', compileAndRun, {
+   source: `myStr: String = ""; return length(myStr);`,
+   expectedExitCode: 0,
 });
 
 // TODO: Fix this. No idea why this fails when non-inferred length works.
