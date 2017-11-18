@@ -2,6 +2,8 @@
   "name": "mpl",
   "version": "0.0.1",
   "description": "A compiler for a Mutable Programming Langauge",
+  "repository": "https://github.com/drew-gross/mpl",
+  "license": "Undecided",
   "main": "built/index.js",
   "ava": {
     "files": [
@@ -23,6 +25,7 @@
     "tmp-promise": "1.0.3"
   },
   "devDependencies": {
+    "@types/node": "8.0.53",
     "ava": "0.22.0",
     "inspect-process": "0.5.0",
     "parallelshell": "3.0.2",

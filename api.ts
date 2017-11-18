@@ -31,4 +31,5 @@ export type Backend = {
     name: string,
     toExectuable: (BackendInputs) => string,
     execute: (string) => Promise<number | string>, // Exit code or error
+    debug?: (string) => Promise<void>,
 }

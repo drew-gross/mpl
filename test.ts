@@ -189,6 +189,7 @@ type CompileAndRunOptions = {
     expectedParseErrors: [any],
     expectedAst: [any],
     printSubsteps?: string[],
+    debugSubsteps?: string[],
     failing?: string[],
 }
 
@@ -232,6 +233,7 @@ const compileAndRun = async (t, {
     expectedParseErrors,
     expectedAst,
     printSubsteps = [],
+    debugSubsteps = [],
     failing = [],
 } : CompileAndRunOptions) => {
     const printableSubsteps = ['js', 'tokens', 'ast', 'c', 'mips', 'structure'];
@@ -311,6 +313,14 @@ const compileAndRun = async (t, {
             console.log(exeContents);
         }
         await writeFile(exeFile.fd, exeContents);
+
+        if (debugSubsteps.includes(backend.name)) {
+            if (backend.debug) {
+                await backend.debug(exeFile.path);
+            } else {
+                t.fail(`${backend.name} doesn't define a debugger`);
+            }
+        }
         const result = await backend.execute(exeFile.path);
 
         if (result !== expectedExitCode && !failing.includes(backend.name)) {
@@ -617,9 +627,10 @@ return quadrupleWithLocal(5);`,
     expectedExitCode: 20,
 });
 
-test('string length', compileAndRun, {
+test.only('string length', compileAndRun, {
     source: `myStr: String = "test"; return length(myStr);`,
     expectedExitCode: 4,
+    debugSubsteps: ['mips'],
 });
 
 // TODO: Fix this. No idea why this fails when non-inferred length works.

@@ -713,8 +713,13 @@ const execute = async path => {
     }
 };
 
+const debugWithQtSpim = async path => {
+    await exec(`${__dirname}/../../QtSpim.app/Contents/MacOS/QtSpim ${path}`);
+};
+
 export default {
+    name: 'mips',
     toExectuable,
     execute,
-    name: 'mips',
+    debug: debugWithQtSpim,
 }
