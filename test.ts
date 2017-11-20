@@ -430,7 +430,6 @@ test('assign function and return', compileAndRun, {
 test('assign function and call it', compileAndRun, {
     source: 'takeItToEleven = a: Integer => 11; return takeItToEleven(0)',
     expectedExitCode: 11,
-    printSubsteps: ['structure'],
 });
 
 test('multiple variables called', compileAndRun, {
