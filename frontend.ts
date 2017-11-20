@@ -467,7 +467,7 @@ const getFunctionTypeMap = functions => {
 };
 
 const assignmentToDeclaration = (ast, knownIdentifiers): VariableDeclarationWithNoMemory => {
-    const result = typeOfExpression(ast.children[4], knownIdentifiers);
+    const result = typeOfExpression(ast.children[2], knownIdentifiers);
     if (result.errors.length > 0) {
         debugger;
     }
@@ -555,9 +555,8 @@ const compile = (source: string): FrontendOutput => {
         return typedAssignment;
     });
 
-    debugger;
     const globalDeclarations: VariableDeclaration[] = programWithStatementList.statements
-        .filter(s => s.type === 'typedAssignment')
+        .filter(s => s.type === 'assignment')
         .map(assignment => {
             const result = assignmentToDeclaration(assignment, {
                 ...builtinIdentifiers,

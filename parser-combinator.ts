@@ -9,7 +9,6 @@ type AstNodeType =
     'number' |
     'product' |
     'assignment' |
-    'typedAssignment' |
     'subtraction' |
     'identifier' |
     'equality' |
