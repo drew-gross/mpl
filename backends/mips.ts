@@ -74,6 +74,7 @@ const mipsBranchIfEqual = (left, right, label) => {
     return `beq ${left.destination}, ${right.destination}, ${label}`
 }
 
+// TODO: global storage
 type StorageSpec = { type: 'register', destination: string } | { type: 'memory', spOffset: number };
 
 const nextTemporary = (storage: StorageSpec): StorageSpec => {

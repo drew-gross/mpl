@@ -1,5 +1,6 @@
 import flatten from './util/list/flatten.js';
 import unique from './util/list/unique.js';
+import debug from './util/debug.js';
 import { lex } from './lex.js';
 import parseProgram from './parser.js'
 import { ParseResult, AstNode, AstInteriorNode, AstLeaf } from './parser-combinator.js';
@@ -553,6 +554,10 @@ const compile = (source: string): FrontendOutput => {
             };
         }, typedEquality, false);
         return typedAssignment;
+    });
+
+    programWithStatementList.statements.forEach(statement => {
+        if (statement.type === 'assignment') debug();
     });
 
     const globalDeclarations: VariableDeclaration[] = programWithStatementList.statements
