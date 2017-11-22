@@ -30,6 +30,6 @@
     "inspect-process": "0.5.0",
     "parallelshell": "3.0.2",
     "rimraf": "2.6.2",
-    "typescript": "2.5.3"
+    "typescript": "2.6.1"
   }
 }
