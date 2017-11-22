@@ -72,6 +72,8 @@ const astToC = ({
                             `string_copy(${rhs}, ${lhs});`,
                         ];
                     }
+                    case 'Integer':
+                        return [`${lhs} = `, ...rhs, `;`];
                     default:
                         debugger;
                         throw 'debugger';

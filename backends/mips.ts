@@ -33,7 +33,7 @@ const moveMips = ({ type, destination }, source) => {
 
 const loadGlobalMips = ({ type, destination, spOffset }, value) => {
     switch (type) {
-        case 'register': return `la ${destination}, ${value}`;
+        case 'register': return `lw ${destination}, ${value}`;
         default: debug(); return '';
     }
 }
