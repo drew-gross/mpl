@@ -631,7 +631,7 @@ test('string length', compileAndRun, {
     expectedExitCode: 4,
 });
 
-test.failing('empty string length', compileAndRun, {
+test('empty string length', compileAndRun, {
    source: `myStr: String = ""; return length(myStr);`,
    expectedExitCode: 0,
 });

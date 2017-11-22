@@ -56,6 +56,7 @@ const astToC = ({
         case 'assignment': {
             const rhsIndex = ast.type === 'assignment' ? 2 : 4;
             const lhs = ast.children[0].value;
+            debugger;
             const rhs = astToC({ ast: ast.children[rhsIndex], globalDeclarations, stringLiterals, localDeclarations });
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
@@ -133,14 +134,14 @@ const astToC = ({
             return [`string_compare(${lhs}, ${rhs})`];
         }
         case 'booleanLiteral': return [ast.value == 'true' ? '1' : '0'];
-        case 'stringLiteral': return [ast.value];
+        case 'stringLiteral': return [`string_literal_${ast.value}`];
         default:
             debugger;
             throw 'debugger';
     };
 };
 
-const stringLiteralDeclaration = stringLiteral => `char *${stringLiteral} = "${stringLiteral}";`;
+const stringLiteralDeclaration = stringLiteral => `char *string_literal_${stringLiteral} = "${stringLiteral}";`;
 
 const toExectuable = ({
     functions,
