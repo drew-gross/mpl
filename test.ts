@@ -636,7 +636,6 @@ test.failing('empty string length', compileAndRun, {
    expectedExitCode: 0,
 });
 
-// TODO: Fix this. No idea why this fails when non-inferred length works.
 test('string length with type inferred', compileAndRun, {
     source: `myStr = "test2"; return length(myStr);`,
     expectedExitCode: 5,
