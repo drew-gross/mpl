@@ -31,6 +31,13 @@ const moveMips = ({ type, destination }, source) => {
     }
 }
 
+const loadAddressOfGlobal = ({ type, destination, spOffset }, value) => {
+    switch (type) {
+        case 'register': return `la ${destination}, ${value}`;
+        default: debug(); return '';
+    }
+}
+
 const loadGlobalMips = ({ type, destination, spOffset }, value) => {
     switch (type) {
         case 'register': return `lw ${destination}, ${value}`;
@@ -259,7 +266,56 @@ const astToMips = ({
         case 'typedAssignment': {
             const lhs = ast.children[0].value;
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
-                debug(); //TODO: assign to globals
+                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
+                if (!declaration) debug();
+                switch ((declaration as any).type.name) {
+                    case 'Function':
+                        return [
+                            `# Put function pointer into temporary`,
+                            ...astToMips({
+                                ast: ast.children[4],
+                                registerAssignment,
+                                destination: currentTemporary,
+                                currentTemporary,
+                                globalDeclarations,
+                                stringLiterals,
+                            }),
+                            `# Put function pointer into global`,
+                            `sw ${currentTemporary.destination}, ${lhs}`,
+                        ];
+                    case 'Integer':
+                        return [
+                            `# Put integer pointer into temporary`,
+                            ...astToMips({
+                                ast: ast.children[4],
+                                registerAssignment,
+                                destination: currentTemporary,
+                                currentTemporary,
+                                globalDeclarations,
+                                stringLiterals,
+                            }),
+                            `# Store into global`,
+                            `sw ${currentTemporary.destination}, ${lhs}`,
+                        ];
+                    case 'String':
+                        return [
+                            `# Put string pointer into temporary`,
+                            ...astToMips({
+                                ast: ast.children[4],
+                                registerAssignment,
+                                destination: currentTemporary,
+                                currentTemporary,
+                                globalDeclarations,
+                                stringLiterals,
+                            }),
+                            `# Store into global`,
+                            `sw ${currentTemporary.destination}, ${lhs}`,
+                        ];
+                    default:
+                        console.log(declaration);
+                        debug();
+                        break;
+                }
             } else if (lhs in registerAssignment) {
                 return [
                     `# Run rhs of assignment and store to ${lhs} (${registerAssignment[lhs].destination})`,
@@ -464,7 +520,7 @@ const astToMips = ({
         case 'stringLiteral': {
             return [
                 `# Load string literal address into register`,
-                loadGlobalMips(destination, `string_constant_${ast.value}`),
+                loadAddressOfGlobal(destination, `string_constant_${ast.value}`),
             ];
         }
         default:
