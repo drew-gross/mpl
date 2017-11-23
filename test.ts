@@ -649,10 +649,9 @@ test('struture is equal for inferred string type', t => {
 });
 
 // TODO: Mips doesn't actually malloc, it aliases. Fix that.
-test.only('string copy', compileAndRun, {
+test('string copy', compileAndRun, {
     source: `myStr1: String = "testing"; myStr2: String = myStr1; return length(myStr2);`,
     expectedExitCode: 7,
-    printSubsteps: ['c'],
 });
 
 test('string equality: equal', compileAndRun, {

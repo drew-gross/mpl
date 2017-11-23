@@ -179,7 +179,7 @@ const toExectuable = ({
     })));
     let CprogramFrees = program.variables
         .filter(s => s.memoryCategory === 'Dynamic')
-        .map(s => `free(${s.name});`);
+        .map(s => `my_free(${s.name});`);
     let CcreateResult = astToC({
         ast: (returnStatement as any).children[1],
         globalDeclarations,
@@ -213,6 +213,10 @@ void *my_malloc(size_t size) {
         exit(-1);
     }
     return newlyAllocated;
+}
+
+void my_free(void *pointer) {
+    // TODO: implement free
 }
 
 int length(char *str) {
@@ -260,7 +264,7 @@ const execute = async path => {
         const exitCode = await execAndGetExitCode(exeFile.path);
         return exitCode;
     } catch (e) {
-        return e.msg;
+        return e;
     }
 };
 
