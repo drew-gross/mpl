@@ -641,7 +641,6 @@ test('string length', compileAndRun, {
 test('empty string length', compileAndRun, {
    source: `myStr: String = ""; return length(myStr);`,
    expectedExitCode: 0,
-   printSubsteps: ['c'],
 });
 
 test('string length with type inferred', compileAndRun, {

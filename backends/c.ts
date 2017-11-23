@@ -4,6 +4,7 @@ import flatten from '../util/list/flatten.js';
 import { typeOfExpression } from '../frontend.js';
 import { exec } from 'child-process-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
+import debug from '../util/debug.js';
 
 const mplTypeToCDeclaration = (type: Type, name: string) => {
     if (!type) debugger;
@@ -11,9 +12,7 @@ const mplTypeToCDeclaration = (type: Type, name: string) => {
         case 'Function': return `unsigned char (*${name})(unsigned char)`
         case 'Integer': return `uint8_t ${name}`;
         case 'String': return `char *${name}`;
-        default:
-            debugger;
-            throw 'debugger';
+        default: debug();
     }
 };
 
@@ -56,14 +55,10 @@ const astToC = ({
         case 'assignment': {
             const rhsIndex = ast.type === 'assignment' ? 2 : 4;
             const lhs = ast.children[0].value;
-            debugger;
             const rhs = astToC({ ast: ast.children[rhsIndex], globalDeclarations, stringLiterals, localDeclarations });
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
-                if (!declaration) {
-                    debugger;
-                    throw "fail";
-                }
+                if (!declaration) throw debug();
                 switch (declaration.type.name) {
                     case 'Function':
                         return [`${lhs} = `, ...rhs, `;`];
@@ -76,16 +71,11 @@ const astToC = ({
                     }
                     case 'Integer':
                         return [`${lhs} = `, ...rhs, `;`];
-                    default:
-                        debugger;
-                        throw 'debugger';
+                    default: debug();
                 }
             } else {
                 const declaration = localDeclarations.find(declaration => declaration.name === lhs);
-                if (!declaration) {
-                    debugger;
-                    throw "fail";
-                }
+                if (!declaration) throw debug();
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
@@ -100,13 +90,9 @@ const astToC = ({
                             case 'GlobalStatic': return [
                                 `${mplTypeToCDeclaration(declaration.type, lhs)} = `, ...rhs, `;`,
                             ]
-                            default:
-                                debugger;
-                                throw 'debugger';
+                            default: debug();
                         }
-                    default:
-                        debugger;
-                        throw 'debugger';
+                    default: debug();
                 }
             }
         }
@@ -136,10 +122,9 @@ const astToC = ({
         }
         case 'booleanLiteral': return [ast.value == 'true' ? '1' : '0'];
         case 'stringLiteral': return [`string_literal_${ast.value}`];
-        default:
-            debugger;
-            throw 'debugger';
+        default: debug();
     };
+    return debug();
 };
 
 const stringLiteralDeclaration = stringLiteral => `char *string_literal_${stringLiteral} = "${stringLiteral}";`;
@@ -178,7 +163,9 @@ const toExectuable = ({
         localDeclarations: program.variables,
     })));
     let CprogramFrees = program.variables
-        .filter(s => s.memoryCategory === 'Dynamic')
+        // TODO: Make a better memory model for dynamic/global frees.
+        // .filter(s => s.memoryCategory === 'Dynamic')
+        .filter(s => s.type.name == 'String')
         .map(s => `my_free(${s.name});`);
     let CcreateResult = astToC({
         ast: (returnStatement as any).children[1],
@@ -261,7 +248,19 @@ void my_free(void *pointer) {
     // TODO: Merge blocks
     // Get a pointer to the space after the block info (-1 actually subtracts sizeof(struct block_info))
     struct block_info *block_to_free = ((struct block_info *)pointer) - 1;
-    block_to_free->free = false;
+    block_to_free->free = true;
+}
+
+// Run through blocks and make sure they are free. For debugging.
+void verify_no_leaks() {
+    struct block_info *current_block = first_block;
+    while (current_block != NULL) {
+        if (!current_block->free) {
+            printf("Unfreed memory detected! Exiting.");
+            exit(-1);
+        }
+        current_block = current_block->next_block;
+    }
 }
 
 int length(char *str) {
@@ -293,6 +292,7 @@ int main(int argc, char **argv) {
     ${Cprogram.join('\n')}
     ${CassignResult}
     ${CprogramFrees.join('\n')}
+    verify_no_leaks();
     ${CreturnResult}
 }
 `;
