@@ -1,6 +1,6 @@
 import { exec } from 'child-process-promise';
 import flatten from '../util/list/flatten.js';
-import { VariableDeclaration, BackendInputs } from '../api.js';
+import { VariableDeclaration, BackendInputs, ExecutionResult } from '../api.js';
 import debug from '../util/debug.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
@@ -743,17 +743,22 @@ li $v0, 10
 syscall`;
 }
 
-const execute = async path => {
+const execute = async (path: string): Promise<ExecutionResult> => {
     try {
         const result = await exec(`spim -file ${path}`);
         if (result.stderr !== '') {
-            return `Spim error: ${result.stderr}`;
+            return { error: `Spim error: ${result.stderr}` };
         }
         const lines = result.stdout.split('\n');
         const mipsExitCode = parseInt(lines[lines.length - 1]);
-        return mipsExitCode;
+        return {
+            exitCode: mipsExitCode,
+            stdout: result.stdout,
+        };
     } catch (e) {
-        return `Exception: ${e.message}`;
+        return {
+            error: `Exception: ${e.message}`
+        };
     }
 };
 

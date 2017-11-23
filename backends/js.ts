@@ -1,5 +1,6 @@
 import flatten from '../util/list/flatten.js';
-import execAndGetExitCode from '../util/execAndGetExitCode.js';
+import execAndGetResult from '../util/execAndGetResult.js';
+import { ExecutionResult } from '../api.js';
 
 const astToJS = ({ ast, exitInsteadOfReturn }) => {
     if (!ast) debugger;
@@ -148,12 +149,11 @@ ${JSfunctions.join('\n')}
 ${JS.join('\n')}`;
 };
 
-const execute = async path => {
+const execute = async (path: string): Promise<ExecutionResult> => {
     try {
-        const exitCode = await execAndGetExitCode(`node ${path}`);
-        return exitCode;
+        return execAndGetResult(`node ${path}`);
     } catch (e) {
-        return e.msg;
+        return { error: e.msg };
     }
 };
 

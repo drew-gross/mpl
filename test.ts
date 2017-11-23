@@ -321,9 +321,16 @@ const compileAndRun = async (t, {
             }
         }
         const result = await backend.execute(exeFile.path);
+        if ('error' in result) {
+            t.fail(`${backend.name} execution failed: ${(result as any).error}`);
+        }
+        const result2 = result as any;
 
-        if (result !== expectedExitCode && !failing.includes(backend.name)) {
-            t.fail(`${backend.name} returned ${result} when it should have returned ${expectedExitCode}: ${/*exeContents*/''}`);
+        if (result2.exitCode !== expectedExitCode && !failing.includes(backend.name)) {
+            const errorMessage = `${backend.name} had unexpected output.
+Exit code: ${result2.exitCode}. Expected: ${expectedExitCode}.
+Stdout: "${result2.stdout}".`
+            t.fail(errorMessage);
         }
     }
 

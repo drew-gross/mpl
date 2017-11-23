@@ -27,9 +27,15 @@ export type BackendInputs = {
     globalDeclarations: VariableDeclaration[],
     stringLiterals,
 };
+export type ExecutionResult = {
+    exitCode: number;
+    stdout: string;
+} | {
+    error: string;
+};
 export type Backend = {
     name: string,
     toExectuable: (BackendInputs) => string,
-    execute: (string) => Promise<number | string>, // Exit code or error
+    execute: (string) => Promise<ExecutionResult>, // Exit code or error
     debug?: (string) => Promise<void>,
-}
+};

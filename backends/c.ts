@@ -1,9 +1,9 @@
 import { file as tmpFile} from 'tmp-promise';
-import { VariableDeclaration, Type, BackendInputs, Function } from '../api.js';
+import { VariableDeclaration, Type, BackendInputs, Function, ExecutionResult } from '../api.js';
 import flatten from '../util/list/flatten.js';
 import { typeOfExpression } from '../frontend.js';
 import { exec } from 'child-process-promise';
-import execAndGetExitCode from '../util/execAndGetExitCode.js';
+import execAndGetResult from '../util/execAndGetResult.js';
 
 const mplTypeToCDeclaration = (type: Type, name: string) => {
     if (!type) debugger;
@@ -298,18 +298,19 @@ int main(int argc, char **argv) {
 `;
 };
 
-const execute = async path => {
+const execute = async (path: string): Promise<ExecutionResult> => {
     const exeFile = await tmpFile();
     try {
         await exec(`clang -Wall -Werror ${path} -o ${exeFile.path}`);
     } catch (e) {
-        return `Failed to compile generated C code:\n${e.stderr}`;
+        return { error: `Failed to compile generated C code:\n${e.stderr}` };
     }
     try {
-        const exitCode = await execAndGetExitCode(exeFile.path);
-        return exitCode;
+        return execAndGetResult(exeFile.path);
     } catch (e) {
-        return e;
+        return {
+            error: e,
+        };
     }
 };
 
