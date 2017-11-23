@@ -690,3 +690,23 @@ test('wrong type global', compileAndRun, {
     source: `str: String = 5; return length(str)`,
     expectedTypeErrors: ['You tried to assign a Integer to "str", which has type String'],
 });
+
+test.only('string concatenation', compileAndRun, {
+    source: `str1: String = "a"
+str2: String = "b"
+return str1 ++ str2 == "ab" ? 5 : 10`,
+    expectedExitCode: 5,
+});
+
+test('complex string concatenation', compileAndRun, {
+    source: `lenFunc = dummy => {
+        str1 = "abc"
+        str2 = "def"
+        str3 = "abc"
+        concat1 = str1 ++ str2 ++ str3
+        concat2 = str3 ++ str2 ++ str3
+        return concat1 == concat2 ? (length(str1 + str2)) : 99
+}
+return lenFunc(5)`,
+    expectedExitCode: 6,
+});
