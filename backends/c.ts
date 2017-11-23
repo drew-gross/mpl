@@ -69,7 +69,8 @@ const astToC = ({
                         return [`${lhs} = `, ...rhs, `;`];
                     case 'String': {
                         return [
-                            `${lhs} = malloc(length(${rhs}));`,
+                            `// Alloate space for string, including null terminator`,
+                            `${lhs} = my_malloc(length(${rhs}) + 1);`,
                             `string_copy(${rhs}, ${lhs});`,
                         ];
                     }
@@ -93,7 +94,7 @@ const astToC = ({
                         switch (declaration.memoryCategory) {
                             case 'Dynamic': return [
                                 `// Alloate space for string, including null terminator`,
-                                `${mplTypeToCDeclaration(declaration.type, lhs)} = malloc(length(${rhs}) + 1);`,
+                                `${mplTypeToCDeclaration(declaration.type, lhs)} = my_malloc(length(${rhs}) + 1);`,
                                 `string_copy(${rhs}, ${lhs});`,
                             ];
                             case 'GlobalStatic': return [
@@ -198,6 +199,21 @@ const toExectuable = ({
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <unistd.h>
+
+void *my_malloc(size_t size) {
+    if (size == 0) {
+        printf("Zero memory requested! Exiting.");
+        exit(-1);
+    }
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    void *newlyAllocated = sbrk(size); // TODO: Switch to mmap on mac, sbrk is deprecated
+    if (newlyAllocated == (void*)-1) {
+        printf("Memory allocation failed! Exiting.");
+        exit(-1);
+    }
+    return newlyAllocated;
+}
 
 int length(char *str) {
     int len = 0;
@@ -238,7 +254,7 @@ const execute = async path => {
     try {
         await exec(`clang -Wall -Werror ${path} -o ${exeFile.path}`);
     } catch (e) {
-        return 'Failed to compile generated C code';
+        return `Failed to compile generated C code:\n${e.stderr}`;
     }
     try {
         const exitCode = await execAndGetExitCode(exeFile.path);
