@@ -677,6 +677,7 @@ str2 = "a"
 return str1 == str2 ? 1 : 2
 `,
     expectedExitCode: 2,
+    printSubsteps: ['c'],
 });
 
 test('wrong type global', compileAndRun, {

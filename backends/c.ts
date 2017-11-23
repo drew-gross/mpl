@@ -201,22 +201,67 @@ const toExectuable = ({
 #include <stdbool.h>
 #include <unistd.h>
 
-void *my_malloc(size_t size) {
-    if (size == 0) {
+struct block_info {
+    size_t size;
+    struct block_info *next_block; // NULL means no next block.
+    bool free;
+};
+
+struct block_info *first_block = NULL; // Set to null because in the beginning, there are no blocks
+
+void *my_malloc(size_t requested_size) {
+    // Error out if we request zero bytes, that should never happen
+    if (requested_size == 0) {
         printf("Zero memory requested! Exiting.");
         exit(-1);
     }
-    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    void *newlyAllocated = sbrk(size); // TODO: Switch to mmap on mac, sbrk is deprecated
-    if (newlyAllocated == (void*)-1) {
-        printf("Memory allocation failed! Exiting.");
-        exit(-1);
+
+    struct block_info *current_block = first_block;
+    struct block_info *previous_block = NULL;
+
+    // Find the first free block that is large enough
+    while (current_block != NULL && current_block->free == false && current_block->size >= requested_size) {
+        previous_block = current_block;
+        current_block = current_block->next_block;
     }
-    return newlyAllocated;
+
+    if (current_block == NULL) {
+        // No large enough blocks. Use sbrk to create a new one TODO: Switch to mmap on mac, sbrk is deprecated
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        struct block_info *newly_allocated = (struct block_info*)sbrk(requested_size + sizeof(struct block_info));
+        if (newly_allocated == (void*)-1) {
+            printf("Memory allocation failed! Exiting.");
+            exit(-1); // TODO: Come up with an alloc failure strategy
+        }
+
+        if (first_block == NULL) {
+            // First alloc!
+            first_block = newly_allocated;
+        } else if (previous_block != NULL) {
+            previous_block->next_block = newly_allocated;
+        }
+        newly_allocated->size = requested_size;
+        newly_allocated->next_block = NULL;
+        newly_allocated->free = false;
+        // Return pointer to the space after the block info (+1 actually adds sizeof(struct block_info))
+        return newly_allocated + 1;
+    } else {
+        // Found an existing block, mark it as not free (TODO: Split it)
+        current_block->free = false;
+        // Return pointer to the space after the block info (+1 actually adds sizeof(struct block_info))
+        return current_block + 1;
+    }
 }
 
 void my_free(void *pointer) {
-    // TODO: implement free
+    if (pointer == NULL) {
+        printf("Tried to free null pointer! Exiting.");
+        exit(-1);
+    }
+    // TODO: Merge blocks
+    // Get a pointer to the space after the block info (-1 actually subtracts sizeof(struct block_info))
+    struct block_info *block_to_free = ((struct block_info *)pointer) - 1;
+    block_to_free->free = false;
 }
 
 int length(char *str) {
