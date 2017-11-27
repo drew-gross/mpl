@@ -25,6 +25,7 @@ type AstNodeType =
     'rightCurlyBrace' |
     'endOfFile' |
     'colon' |
+    'concatenation' |
     'comma';
 
 type AstLeaf = {
@@ -77,6 +78,7 @@ const tokenTypeToAstNodeType = (token: TokenType): AstNodeType | undefined => {
         case 'colon': return 'colon';
         case 'comma': return 'comma';
         case 'invalid': return undefined;
+        case 'concatenation': return 'concatenation';
         default: return assertNever(token);
     }
 };

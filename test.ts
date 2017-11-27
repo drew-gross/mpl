@@ -249,9 +249,9 @@ const astToString = ast => {
             return `${astToString(ast.children[0])} * ${astToString(ast.children[1])}`;
         case 'subtraction':
             return `${astToString(ast.children[0])} - ${astToString(ast.children[1])}`;
-        default:
-            debugger
-            throw 'debugger';
+        case 'stringLiteral':
+            return `"${ast.value}"`;
+        default: throw debug();
     }
 };
 
@@ -347,31 +347,33 @@ const compileAndRun = async (t, {
     const backends: Backend[] = [jsBackend, cBackend, mipsBackend];
     for (let i = 0; i < backends.length; i++) {
         const backend = backends[i];
-        const exeFile = await tmpFile({ postfix: `.${backend.name}` });
-        const exeContents = backend.toExectuable(frontendOutput);
-        if (printSubsteps.includes(backend.name)) {
-            console.log(exeContents);
-        }
-        await writeFile(exeFile.fd, exeContents);
-
-        if (debugSubsteps.includes(backend.name)) {
-            if (backend.debug) {
-                await backend.debug(exeFile.path);
-            } else {
-                t.fail(`${backend.name} doesn't define a debugger`);
+        if (!failing.includes(backend.name)) {
+            const exeFile = await tmpFile({ postfix: `.${backend.name}` });
+            const exeContents = backend.toExectuable(frontendOutput);
+            if (printSubsteps.includes(backend.name)) {
+                console.log(exeContents);
             }
-        }
-        const result = await backend.execute(exeFile.path);
-        if ('error' in result) {
-            t.fail(`${backend.name} execution failed: ${(result as any).error}`);
-        }
-        const result2 = result as any;
+            await writeFile(exeFile.fd, exeContents);
 
-        if (result2.exitCode !== expectedExitCode && !failing.includes(backend.name)) {
-            const errorMessage = `${backend.name} had unexpected output.
+            if (debugSubsteps.includes(backend.name)) {
+                if (backend.debug) {
+                    await backend.debug(exeFile.path);
+                } else {
+                    t.fail(`${backend.name} doesn't define a debugger`);
+                }
+            }
+            const result = await backend.execute(exeFile.path);
+            if ('error' in result) {
+                t.fail(`${backend.name} execution failed: ${(result as any).error}`);
+            }
+            const result2 = result as any;
+
+            if (result2.exitCode !== expectedExitCode) {
+                const errorMessage = `${backend.name} had unexpected output.
 Exit code: ${result2.exitCode}. Expected: ${expectedExitCode}.
 Stdout: "${result2.stdout}".`
-            t.fail(errorMessage);
+                t.fail(errorMessage);
+            }
         }
     }
 
@@ -755,21 +757,38 @@ test('wrong type global', compileAndRun, {
     expectedTypeErrors: ['You tried to assign a Integer to "str", which has type String'],
 });
 
-test.only('string concatenation', compileAndRun, {
+test('string concatenation', compileAndRun, {
     source: `str1: String = "a"
 str2: String = "b"
 return str1 ++ str2 == "ab" ? 5 : 10`,
     expectedExitCode: 5,
+    failing: ['mips'],
 });
 
-test('complex string concatenation', compileAndRun, {
-    source: `lenFunc = dummy => {
-        str1 = "abc"
-        str2 = "def"
-        str3 = "abc"
-        concat1 = str1 ++ str2 ++ str3
-        concat2 = str3 ++ str2 ++ str3
-        return concat1 == concat2 ? (length(str1 + str2)) : 99
+test('concatenate and get length then add', compileAndRun, {
+    source: `return length("abc" ++ "defg") - 2;`,
+    expectedExitCode: 5,
+    failing: ['mips'],
+});
+
+// TODO: Problem extracting variables
+test.failing('semi-complex string concatenation', compileAndRun, {
+    source:
+`lenFunc = dummy: Integer => { str1 = "abc"; str2 = str1 ++ str1; return str2 == "abcabc" ? 40 : 50 }
+return lenFunc(5)`,
+    expectedExitCode: 40,
+});
+
+// TODO: causes bad behaviour in parser, takes forever
+test.failing('complex string concatenation', compileAndRun, {
+    source:
+`lenFunc = dummy: Integer => {
+    str1 = "abc"
+    str2 = "def"
+    str3 = "abc"
+    concat1 = str1 ++ str2 ++ str3
+    concat2 = str3 ++ str2 ++ str3
+    return concat1 == concat2 ? (length(str1 ++ str2)) : 99
 }
 return lenFunc(5)`,
     expectedExitCode: 6,
@@ -778,4 +797,9 @@ return lenFunc(5)`,
 test('parsing fails for extra invalid tokens', compileAndRun, {
     source: `return 5 (`,
     expectedParseErrors: ['Expected endOfFile, found leftBracket'],
+});
+
+test.failing('addition', compileAndRun, {
+    source: `return length("foo") + 5`,
+    expectedExitCode: 8,
 });

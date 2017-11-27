@@ -14,6 +14,7 @@ const parseSubtraction = (t, i) => parseSubtractionI(t, i);
 const parseProduct = (t, i) => parseProductI(t, i);
 const parseEquality = (t, i) => parseEqualityI(t, i);
 const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
+const parseConcatenation = (t, i) => parseConcatenationI(t, i);
 
 // Grammar:
 // PROGRAM -> FUNCTION_BODY end_of_input
@@ -27,8 +28,9 @@ const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
 // TERNARY -> SUBTRACTION ? SUBTRACTION : SUBTRACTION;
 // SUBTRACTION -> PRODUCT - EXPRESSION | PRODUCT
 // PRODUCT -> EQUALITY * PRODUCT | EQUALITY
-// EQUALITY -> SIMPLE_EXPRESSION == EQUALITY | SIMPLE_EXPRESSION
-// SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( ARG_LIST ) | int | boolean | string | FUNCTION | identifier
+// EQUALITY -> CONCATENATION == EQUALITY | CONCATENATION
+// CONCATENATION -> SIMPLE_EXPRESSION ++ CONCATENATION | SIMPLE_EXPRESSION
+// SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( PARAM_LIST ) | int | boolean | string | FUNCTION | identifier
 
 const parseProgramI = sequence('program', [parseFunctionBody, endOfInput]);
 
@@ -105,7 +107,12 @@ const parseProductI = alternative([
 ]);
 
 const parseEqualityI = alternative([
-    sequence('equality', [parseSimpleExpression, terminal('equality'), parseEquality]),
+    sequence('equality', [parseConcatenation, terminal('equality'), parseEquality]),
+    parseConcatenation,
+]);
+
+const parseConcatenationI = alternative([
+    sequence('concatenation', [parseSimpleExpression, terminal('concatenation'), parseConcatenation]),
     parseSimpleExpression,
 ]);
 

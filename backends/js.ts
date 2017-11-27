@@ -114,6 +114,19 @@ const astToJS = ({ ast, exitInsteadOfReturn }) => {
         ];
         case 'booleanLiteral': return [ast.value];
         case 'stringLiteral': return [`"${ast.value}"`];
+        case 'concatenation': return [
+            '(',
+            ...astToJS({
+                ast: ast.children[0],
+                exitInsteadOfReturn,
+            }),
+            ').concat(',
+            ...astToJS({
+                ast: ast.children[2],
+                exitInsteadOfReturn,
+            }),
+            ')',
+        ];
         default:
             debugger;
             throw "debugger";

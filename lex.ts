@@ -20,6 +20,7 @@ type TokenType =
     'comma' |
     'ternaryOperator' |
     'endOfFile' |
+    'concatenation' |
     'invalid' ;
 
 type TokenSpec = {
@@ -85,6 +86,10 @@ const lex = (input: string): Token[] => {
         type: 'number',
         action: parseInt,
         toString: x => x.toString(),
+    }, {
+        token: '\\+\\+',
+        type: 'concatenation',
+        toString: _ => '++',
     }, {
         token: '\\+',
         type: 'sum',

@@ -5,6 +5,7 @@ import { typeOfExpression } from '../frontend.js';
 import { exec } from 'child-process-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import debug from '../util/debug.js';
+import join from '../util/join.js';
 
 const mplTypeToCDeclaration = (type: Type, name: string) => {
     if (!type) debug();
@@ -23,34 +24,102 @@ type BackendInput = {
     stringLiterals: string[],
 };
 
+type AstToCResult = {
+    cPreExpression: string[],
+    cExpression: string[],
+    cPostExpression: string[],
+}
+
+/* TODO: make and use cConcat = (p1, expr => p2) => {
+    const newC = cb(p1.cExpr);
+    return {
+        cPre: p1.pre ++ newC.pre
+        cLogic: newC.logic,
+        cPost: newC.post ++ p1.post
+    }
+};*/
+
 const astToC = ({
     ast,
     globalDeclarations,
     stringLiterals,
     localDeclarations,
-}: BackendInput): string[] => {
+}: BackendInput): AstToCResult => {
     if (!ast) debug();
     switch (ast.type) {
-        case 'returnStatement': return [
-            `return`,
-            ...astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations }),
-            ';',
-        ];
-        case 'number': return [ast.value.toString()];
-        case 'product': {
-            return [
-                ...astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations }),
-                '*',
-                ...astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations }),
-            ];
+        case 'returnStatement': {
+            const subExpression = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
+            return {
+                cPreExpression: subExpression.cPreExpression,
+                cExpression: [
+                    'return',
+                    ...subExpression.cExpression,
+                    ';',
+                ],
+                cPostExpression: subExpression.cPostExpression,
+            };
         }
-        case 'subtraction': return [
-            ...astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations }),
-            '-',
-            ...astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations }),
-        ];
-        case 'statement': return flatten(ast.children.map(child => astToC({ ast: child, globalDeclarations, stringLiterals, localDeclarations })));
-        case 'statementSeparator': return [];
+        case 'number': return {
+            cPreExpression: [],
+            cExpression: [ast.value.toString()],
+            cPostExpression: [],
+        };
+        case 'product': {
+            const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
+            const rhs = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
+            return {
+                cPreExpression: [...lhs.cPreExpression, ...rhs.cPreExpression],
+                cExpression: [...lhs.cExpression, '*', ...rhs.cExpression],
+                cPostExpression: [...lhs.cPostExpression, ...rhs.cPostExpression],
+            };
+        }
+        case 'subtraction': {
+            const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
+            const rhs = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
+            return {
+                cPreExpression: [...lhs.cPreExpression, ...rhs.cPreExpression],
+                cExpression: [...lhs.cExpression, '-', ...rhs.cExpression],
+                cPostExpression: [...lhs.cPostExpression, ...rhs.cPostExpression],
+            };
+        }
+        case 'concatenation': {
+            const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
+            const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
+            return {
+                cPreExpression: [
+                    ...lhs.cPreExpression,
+                    ...rhs.cPreExpression,
+                    `char *temporary_string = my_malloc(length(${join(lhs.cExpression, ' ')}) + length(${join(rhs.cExpression, ' ')}) + 1);`
+                ],
+                cExpression: [
+                    'string_concatenate(',
+                    ...lhs.cExpression,
+                    ', ',
+                    ...rhs.cExpression,
+                    ', temporary_string)',
+                ],
+                cPostExpression: ['my_free(temporary_string);', ...rhs.cPostExpression, ...lhs.cPostExpression],
+            };
+        };
+        case 'statement': {
+            const childResults = ast.children.map(child => astToC({
+                ast: child,
+                globalDeclarations,
+                stringLiterals,
+                localDeclarations,
+            }));
+
+            return {
+                cPreExpression: flatten(childResults.map(r => r.cPreExpression)),
+                cExpression: flatten(childResults.map(r => r.cExpression)),
+                cPostExpression: flatten(childResults.map(r => r.cPostExpression)),
+            };
+        }
+        case 'statementSeparator': return {
+            cPreExpression: [],
+            cExpression: [],
+            cPostExpression: [],
+        };
         case 'typedAssignment':
         case 'assignment': {
             const rhsIndex = ast.type === 'assignment' ? 2 : 4;
@@ -61,16 +130,28 @@ const astToC = ({
                 if (!declaration) throw debug();
                 switch (declaration.type.name) {
                     case 'Function':
-                        return [`${lhs} = `, ...rhs, `;`];
+                        return {
+                            cPreExpression: rhs.cPreExpression,
+                            cExpression: [`${lhs} = `, ...rhs.cExpression, `;`],
+                            cPostExpression: rhs.cPostExpression,
+                        };
                     case 'String': {
-                        return [
-                            `// Alloate space for string, including null terminator`,
-                            `${lhs} = my_malloc(length(${rhs}) + 1);`,
-                            `string_copy(${rhs}, ${lhs});`,
-                        ];
+                        return {
+                            cPreExpression: rhs.cPreExpression,
+                            cExpression: [
+                                `${lhs} = my_malloc(length(${rhs.cExpression}) + 1);`,
+                                `string_copy(${rhs.cExpression}, ${lhs});`,
+                            ],
+                            cPostExpression: rhs.cPostExpression,
+                        };
                     }
-                    case 'Integer':
-                        return [`${lhs} = `, ...rhs, `;`];
+                    case 'Integer': {
+                        return {
+                            cPreExpression: rhs.cPreExpression,
+                            cExpression: [`${lhs} = `, ...rhs.cExpression, `;`],
+                            cPostExpression: rhs.cPostExpression,
+                        };
+                    }
                     default: debug();
                 }
             } else {
@@ -81,49 +162,122 @@ const astToC = ({
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
-                        return [`${mplTypeToCDeclaration(declaration.type, lhs)} = `, ...rhs, `;`];
+                        return {
+                            cPreExpression: rhs.cPreExpression,
+                            cExpression: [`${mplTypeToCDeclaration(declaration.type, lhs)} = `, ...rhs.cExpression, `;`],
+                            cPostExpression: rhs.cPostExpression,
+                        };
                     case 'String':
                         switch (declaration.memoryCategory) {
-                            case 'Dynamic': return [
-                                `// Alloate space for string, including null terminator`,
-                                `${mplTypeToCDeclaration(declaration.type, lhs)} = my_malloc(length(${rhs}) + 1);`,
-                                `string_copy(${rhs}, ${lhs});`,
-                            ];
-                            case 'GlobalStatic': return [
-                                `${mplTypeToCDeclaration(declaration.type, lhs)} = `, ...rhs, `;`,
-                            ]
+                            case 'Stack':
+                            case 'Dynamic': {
+                                return {
+                                    cPreExpression: rhs.cPreExpression,
+                                    cExpression: [
+                                        `// Alloate space for string, including null terminator`,
+                                        `${mplTypeToCDeclaration(declaration.type, lhs)} = my_malloc(length(${join(rhs.cExpression, ' ')}) + 1);`,
+                                        `string_copy(${rhs}, ${lhs});`,
+                                    ],
+                                    cPostExpression: rhs.cPostExpression,
+                                };
+                            };
+                            case 'GlobalStatic': {
+                                return {
+                                    cPreExpression: rhs.cPreExpression,
+                                    cExpression: [`${mplTypeToCDeclaration(declaration.type, lhs)} = `, ...rhs.cExpression, `;`],
+                                    cPostExpression: rhs.cPostExpression
+                                }
+                            };
                             default: debug();
                         }
                     default: debug();
                 }
             }
         }
-        case 'functionLiteral': return [`&${ast.value}`];
-        case 'callExpression': return [
-            `(*${ast.children[0].value})(`,
-            ...astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations }),
-            `)`,
-        ];
-        case 'identifier': return [ast.value];
-        case 'ternary': return [
-            ...astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations }),
-            '?',
-            ...astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations }),
-            ':',
-            ...astToC({ ast: ast.children[4], globalDeclarations, stringLiterals, localDeclarations }),
-        ];
-        case 'equality': return [
-            ...astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations }),
-            '==',
-            ...astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations }),
-        ];
-        case 'stringEquality': {
-            const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations }).join('');
-            const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations }).join('');
-            return [`string_compare(${lhs}, ${rhs})`];
+        case 'functionLiteral': return {
+            cPreExpression: [],
+            cExpression: [`&${ast.value}`],
+            cPostExpression: [],
         }
-        case 'booleanLiteral': return [ast.value == 'true' ? '1' : '0'];
-        case 'stringLiteral': return [`string_literal_${ast.value}`];
+        case 'callExpression': {
+            const argC = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
+            return {
+                cPreExpression: argC.cPreExpression,
+                cExpression: [
+                    `(*${ast.children[0].value})(`,
+                    ...argC.cExpression,
+                    `)`,
+                ],
+                cPostExpression: argC.cPostExpression,
+            };
+        };
+        case 'identifier': return {
+            cPreExpression: [],
+            cExpression: [ast.value],
+            cPostExpression: [],
+        };
+        case 'ternary': {
+            const comparatorC = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
+            const ifTrueC = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
+            const ifFalseC = astToC({ ast: ast.children[4], globalDeclarations, stringLiterals, localDeclarations });
+            return {
+                cPreExpression: [
+                    ...comparatorC.cPreExpression,
+                    ...ifTrueC.cPreExpression,
+                    ...ifFalseC.cPreExpression,
+                ],
+                cExpression: [
+                    ...comparatorC.cExpression,
+                    '?',
+                    ...ifTrueC.cExpression,
+                    ':',
+                    ...ifFalseC.cExpression,
+                ],
+                cPostExpression: [
+                    ...ifFalseC.cPostExpression,
+                    ...ifTrueC.cPostExpression,
+                    ...comparatorC.cPostExpression,
+                ],
+            };
+        };
+        case 'equality': {
+            const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
+            const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
+            return {
+                cPreExpression: [...lhs.cPreExpression, ...rhs.cPreExpression],
+                cExpression: [
+                    ...lhs.cExpression,
+                    '==',
+                    ...rhs.cExpression,
+                ],
+                cPostExpression: [...rhs.cPostExpression, ...lhs.cPostExpression],
+            };
+        };
+        case 'stringEquality': {
+            const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
+            const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
+            return {
+                cPreExpression: [...lhs.cPreExpression, ...rhs.cPreExpression],
+                cExpression: [
+                    'string_compare(',
+                    ...lhs.cExpression,
+                    ',',
+                    ...rhs.cExpression,
+                    ')',
+                ],
+                cPostExpression: [...rhs.cPreExpression, ...lhs.cPostExpression],
+            };
+        }
+        case 'booleanLiteral': return {
+            cPreExpression: [],
+            cExpression: [ast.value == 'true' ? '1' : '0'],
+            cPostExpression: [],
+        };
+        case 'stringLiteral': return {
+            cPreExpression: [],
+            cExpression: [`string_literal_${ast.value}`],
+            cPostExpression: [],
+        };
         default: debug();
     };
     return debug();
@@ -142,28 +296,40 @@ const toExectuable = ({
         const suffix = `}`;
 
         const body = statements.map(statement => {
-            return astToC({
+            const statementLogic = astToC({
                 ast: statement,
                 globalDeclarations,
                 stringLiterals,
                 localDeclarations: variables,
-            }).join(' ');
+            });
+            return join([
+                join(statementLogic.cPreExpression, '\n'),
+                join(statementLogic.cExpression, ' '),
+                join(statementLogic.cPostExpression, '\n'),
+            ], '\n');
         });
 
-        return [
+        return join([
             prefix,
             ...body,
             suffix,
-        ].join(' ');
+        ], ' ');
     });
     const nonReturnStatements = program.statements.slice(0, program.statements.length - 1);
     const returnStatement = program.statements[program.statements.length - 1];
-    let Cprogram = flatten(nonReturnStatements.map(child => astToC({
-        ast: child,
-        globalDeclarations,
-        stringLiterals,
-        localDeclarations: program.variables,
-    })));
+    let Cprogram = join(nonReturnStatements.map(child => {
+        const statementLogic = astToC({
+            ast: child,
+            globalDeclarations,
+            stringLiterals,
+            localDeclarations: program.variables,
+        });
+        return join([
+            join(statementLogic.cPreExpression, '\n'),
+            join(statementLogic.cExpression, ' '),
+            join(statementLogic.cPostExpression, '\n'),
+        ], '\n');
+    }), '\n');
     let CprogramFrees = program.variables
         // TODO: Make a better memory model for dynamic/global frees.
         // .filter(s => s.memoryCategory === 'Dynamic')
@@ -176,7 +342,10 @@ const toExectuable = ({
         localDeclarations: program.variables,
     });
     // Only Integers can be returned from main program
-    let CassignResult = `${mplTypeToCDeclaration({ name: 'Integer' }, 'result')} = ${CcreateResult.join('\n')};`;
+
+    let cPreAssign = join(CcreateResult.cPreExpression, '\n');
+    let CassignResult = `${mplTypeToCDeclaration({ name: 'Integer' }, 'result')} = ${join(CcreateResult.cExpression, ' ')};`;
+    let cPostAssign = join(CcreateResult.cPostExpression, '\n');
     let CreturnResult = `return result;`;
 
     let Cdeclarations = globalDeclarations
@@ -286,14 +455,33 @@ bool string_compare(char *in, char *out) {
     return false;
 }
 
-${Cdeclarations.join('\n')}
-${Cfunctions.join('\n')}
-${stringLiterals.map(stringLiteralDeclaration).join('\n')}
+char *string_concatenate(char *left, char *right, char *out) {
+    char *original_out = out;
+    char next;
+    while ((next = *left)) {
+        *out = next;
+        out++;
+        left++;
+    }
+    while ((next = *right)) {
+        *out = next;
+        out++;
+        right++;
+    }
+    *out = 0;
+    return original_out;
+}
+
+${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
+${join(Cdeclarations, '\n')}
+${join(Cfunctions, '\n')}
 
 int main(int argc, char **argv) {
-    ${Cprogram.join('\n')}
+    ${Cprogram}
+    ${cPreAssign}
     ${CassignResult}
-    ${CprogramFrees.join('\n')}
+    ${cPostAssign}
+    ${join(CprogramFrees, '\n')}
     verify_no_leaks();
     ${CreturnResult}
 }

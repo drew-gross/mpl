@@ -216,6 +216,7 @@ const getMemoryCategory = (ast): MemoryCategory => {
             return 'Dynamic' // TODO: Should sometimes be stack based on type
         case 'product':
         case 'number':
+        case 'concatenation':
             return 'Stack';
         default: throw debug();
     }
@@ -298,6 +299,10 @@ const countTemporariesInExpression = ast => {
             countTemporariesInExpression(ast.children[2])
         );
         case 'program': return countTemporariesInExpression(ast.children[0]);
+        case 'concatenation': return 1 + Math.max(
+            countTemporariesInExpression(ast.children[0]),
+            countTemporariesInExpression(ast.children[2]),
+        );
         default: debug();
     }
 }
@@ -349,6 +354,17 @@ export const typeOfExpression = ({ type, children, value }, knownIdentifiers: Id
                 };
             }
             return { type: { name: 'Boolean' }, errors: [] };
+        }
+        case 'concatenation': {
+            const leftType = typeOfExpression(children[0], knownIdentifiers);
+            const rightType = typeOfExpression(children[2], knownIdentifiers);
+            if (leftType.errors.length > 0 || rightType.errors.length > 0) {
+                return { type: {} as any, errors: leftType.errors.concat(rightType.errors) };
+            }
+            if (leftType.type.name !== 'String' || rightType.type.name !== 'String') {
+                return { type: {} as any, errors: ['Only strings can be concatenated right now'] };
+            }
+            return { type: { name: 'String' }, errors: [] };
         }
         case 'functionLiteral': {
             const functionType = knownIdentifiers[value];
