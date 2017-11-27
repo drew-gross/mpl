@@ -1,7 +1,8 @@
 import { TokenType } from './lex.js';
-import { alternative, sequence, terminal, ParseResult } from './parser-combinator.js';
+import { alternative, sequence, terminal, endOfInput, ParseResult } from './parser-combinator.js';
 
 const parseProgram = (t, i) => parseProgramI(t, i);
+const parseFunctionBody = (t, i) => parseFunctionBodyI(t, i);
 const parseStatement = (t, i) => parseStatementI(t, i);
 const parseFunction = (t, i) => parseFunctionI(t, i);
 const parseArgList = (t, i) => parseArgListI(t, i);
@@ -15,9 +16,10 @@ const parseEquality = (t, i) => parseEqualityI(t, i);
 const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
 
 // Grammar:
-// PROGRAM -> STATEMENT STATEMENT_SEPARATOR PROGRAM | return EXPRESSION
+// PROGRAM -> FUNCTION_BODY end_of_input
+// FUNCTION -> ARG_LIST => EXPRESSION | ARG_LIST => { FUNCTION_BODY }
+// FUNCTION_BODY -> STATEMENT STATEMENT_SEPARATOR FUNCTION_BODY | return EXPRESSION STATEMENT_SEPARATOR | return EXPRESSION
 // STATEMENT -> identifier : type = EXPRESSION | identifier = EXPRESSION
-// FUNCTION -> ARG_LIST => EXPRESSION | ARG_LIST => { PROGRAM }
 // ARG_LIST -> ARG , ARG_LIST | ARG
 // ARG -> identifier : type
 // PARAM_LIST -> EXPRESSION , PARAM_LIST | EXPRESSION
@@ -28,8 +30,11 @@ const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
 // EQUALITY -> SIMPLE_EXPRESSION == EQUALITY | SIMPLE_EXPRESSION
 // SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( ARG_LIST ) | int | boolean | string | FUNCTION | identifier
 
-const parseProgramI = alternative([
-    sequence('statement', [parseStatement, terminal('statementSeparator'), parseProgram]),
+const parseProgramI = sequence('program', [parseFunctionBody, endOfInput]);
+
+const parseFunctionBodyI = alternative([
+    sequence('statement', [parseStatement, terminal('statementSeparator'), parseFunctionBody]),
+    sequence('returnStatement', [terminal('return'), parseExpression, terminal('statementSeparator')]),
     sequence('returnStatement', [terminal('return'), parseExpression]),
 ]);
 
@@ -58,7 +63,7 @@ const parseFunctionI = alternative([
         parseArgList,
         terminal('fatArrow'),
         terminal('leftCurlyBrace'),
-        parseProgram,
+        parseFunctionBody,
         terminal('rightCurlyBrace'),
     ]),
 ]);

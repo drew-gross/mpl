@@ -161,10 +161,30 @@ const terminal = (terminal: TokenType) => (tokens: Token[], index): ParseResult 
     };
 }
 
+const endOfInput = (tokens: Token[], index: number): ParseResult => {
+    if (index == tokens.length) {
+        return {
+            success: true,
+            newIndex: index + 1,
+            value: 'endOfFile',
+            type: 'endOfFile',
+        }
+    } else {
+        return {
+            success: false,
+            error: {
+                expected: ['endOfFile'],
+                found: tokens[index].type,
+            }
+        }
+    }
+}
+
 export {
     alternative,
     sequence,
     terminal,
+    endOfInput,
     ParseResult,
     AstNode,
     AstLeaf,

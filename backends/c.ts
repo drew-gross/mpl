@@ -7,7 +7,7 @@ import execAndGetResult from '../util/execAndGetResult.js';
 import debug from '../util/debug.js';
 
 const mplTypeToCDeclaration = (type: Type, name: string) => {
-    if (!type) debugger;
+    if (!type) debug();
     switch (type.name) {
         case 'Function': return `unsigned char (*${name})(unsigned char)`
         case 'Integer': return `uint8_t ${name}`;
@@ -29,7 +29,7 @@ const astToC = ({
     stringLiterals,
     localDeclarations,
 }: BackendInput): string[] => {
-    if (!ast) debugger;
+    if (!ast) debug();
     switch (ast.type) {
         case 'returnStatement': return [
             `return`,
@@ -76,6 +76,8 @@ const astToC = ({
             } else {
                 const declaration = localDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug();
+                if (!declaration.type) throw debug();
+                if (!declaration.type.name) throw debug();
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':

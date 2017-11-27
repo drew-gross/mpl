@@ -52,14 +52,20 @@ test('ast for single number', t => {
     t.deepEqual(parse(lex('return 7')), {
         parseErrors: [],
         ast: {
-            type: 'returnStatement',
+            type: 'program',
             children: [{
-                type: 'return',
-                value: null,
+                type: 'returnStatement',
+                children: [{
+                    type: 'return',
+                    value: null,
+                }, {
+                    type: 'number',
+                    value: 7,
+                }],
             }, {
-                type: 'number',
-                value: 7,
-            }]
+                type: 'endOfFile',
+                value: 'endOfFile',
+            }],
         },
     });
 });
@@ -68,14 +74,20 @@ test('ast for number in brackets', t => {
     t.deepEqual(parse(lex(' return (5)')), ({
         parseErrors: [],
         ast: {
-            type: 'returnStatement',
+            type: 'program',
             children: [{
-                type: 'return',
-                value: null,
+                type: 'returnStatement',
+                children: [{
+                    type: 'return',
+                    value: null,
+                }, {
+                    type: 'number',
+                    value: 5
+                }],
             }, {
-                type: 'number',
-                value: 5
-            }]
+                type: 'endOfFile',
+                value: 'endOfFile',
+            }],
         },
     }));
 });
@@ -84,13 +96,19 @@ test('ast for number in double brackets', t => {
     t.deepEqual(parse(lex('return ((20))')), ({
         parseErrors: [],
         ast: {
-            type: 'returnStatement',
+            type: 'program',
             children: [{
-                type: 'return',
-                value: null,
+                type: 'returnStatement',
+                children: [{
+                    type: 'return',
+                    value: null,
+                }, {
+                    type: 'number',
+                    value: 20,
+                }],
             }, {
-                type: 'number',
-                value: 20,
+                type: 'endOfFile',
+                value: 'endOfFile',
             }],
         },
     }));
@@ -100,26 +118,32 @@ test('ast for product with brackets', t => {
     t.deepEqual(parse(lex('return 3 * (4 * 5)')), ({
         parseErrors: [],
         ast: {
-            type: 'returnStatement',
+            type: 'program',
             children: [{
-                type: 'return',
-                value: null,
-            }, {
-                type: 'product',
+                type: 'returnStatement',
                 children: [{
-                    type: 'number',
-                    value: 3
+                    type: 'return',
+                    value: null,
                 }, {
                     type: 'product',
                     children: [{
                         type: 'number',
-                        value: 4
+                        value: 3
                     }, {
-                        type: 'number',
-                        value: 5
+                        type: 'product',
+                        children: [{
+                            type: 'number',
+                            value: 4
+                        }, {
+                            type: 'number',
+                            value: 5
+                        }]
                     }]
                 }]
-            }]
+            }, {
+                type: 'endOfFile',
+                value: 'endOfFile',
+            }],
         },
     }));
 });
@@ -128,49 +152,55 @@ test('ast for assignment then return', t => {
     const expected = {
         parseErrors: [],
         ast: {
-            type: 'statement',
+            type: 'program',
             children: [{
-                type: 'assignment',
+                type: 'statement',
                 children: [{
-                    type: 'identifier',
-                    value: 'constThree',
-                }, {
                     type: 'assignment',
-                    value: null,
-                }, {
-                    type: 'function',
                     children: [{
-                        type: 'arg',
+                        type: 'identifier',
+                        value: 'constThree',
+                    }, {
+                        type: 'assignment',
+                        value: null,
+                    }, {
+                        type: 'function',
                         children: [{
-                            type: 'identifier',
-                            value: 'a'
+                            type: 'arg',
+                            children: [{
+                                type: 'identifier',
+                                value: 'a'
+                            }, {
+                                type: 'colon',
+                                value: null,
+                            }, {
+                                type: 'type',
+                                value: 'Integer',
+                            }],
                         }, {
-                            type: 'colon',
+                            type: 'fatArrow',
                             value: null,
                         }, {
-                            type: 'type',
-                            value: 'Integer',
+                            type: 'number',
+                            value: 3,
                         }],
-                    }, {
-                        type: 'fatArrow',
+                    }],
+                }, {
+                    type: 'statementSeparator',
+                    value: null,
+                }, {
+                    type: 'returnStatement',
+                    children: [{
+                        type: 'return',
                         value: null,
                     }, {
                         type: 'number',
-                        value: 3,
+                        value: 10,
                     }],
                 }],
             }, {
-                type: 'statementSeparator',
-                value: null,
-            }, {
-                type: 'returnStatement',
-                children: [{
-                    type: 'return',
-                    value: null,
-                }, {
-                    type: 'number',
-                    value: 10,
-                }],
+                type: 'endOfFile',
+                value: 'endOfFile',
             }],
         },
     };
@@ -282,6 +312,17 @@ const compileAndRun = async (t, {
         t.fail('Expected type errors and none found');
     }
 
+    const fo = frontendOutput as BackendInputs;
+
+    // Run valdations on frontend output (currently only detects values that don't match their type)
+    fo.functions.forEach(f => {
+        f.variables.forEach(v => {
+            if (!v.type.name) {
+                t.fail(`Invalid frontend output: ${v.name} (in ${f.name}) had a bad type!`);
+            }
+        });
+    });
+
     if (printSubsteps.includes('structure')) {
         const structure = frontendOutput as BackendInputs;
         console.log('Functions:');
@@ -341,19 +382,25 @@ test('lowering of bracketedExpressions', t => {
     t.deepEqual(parse(lex('return (8 * ((7)))')), {
         parseErrors: [],
         ast: {
-            type: 'returnStatement',
+            type: 'program',
             children: [{
-                type: 'return',
-                value: null,
-            }, {
-                type: 'product',
+                type: 'returnStatement',
                 children: [{
-                    type: 'number',
-                    value: 8
+                    type: 'return',
+                    value: null,
                 }, {
-                    type: 'number',
-                    value: 7,
+                    type: 'product',
+                    children: [{
+                        type: 'number',
+                        value: 8
+                    }, {
+                        type: 'number',
+                        value: 7,
+                    }],
                 }],
+            }, {
+                type: 'endOfFile',
+                value: 'endOfFile',
             }],
         },
     });
@@ -376,25 +423,31 @@ test('double product', compileAndRun, {
     expectedAst: {
         parseErrors: [],
         ast: {
-            type: 'returnStatement',
+            type: 'program',
             children: [{
-                type: 'return',
-                value: null,
-            }, {
-                type: 'product',
+                type: 'returnStatement',
                 children: [{
+                    type: 'return',
+                    value: null,
+                }, {
                     type: 'product',
                     children: [{
-                        type: 'number',
-                        value: 5,
+                        type: 'product',
+                        children: [{
+                            type: 'number',
+                            value: 5,
+                        }, {
+                            type: 'number',
+                            value: 3
+                        }]
                     }, {
                         type: 'number',
-                        value: 3
+                        value: 4,
                     }]
-                }, {
-                    type: 'number',
-                    value: 4,
-                }]
+                }],
+            }, {
+                type: 'endOfFile',
+                value: 'endOfFile',
             }],
         },
     },
@@ -411,25 +464,31 @@ test('brackets product', compileAndRun, {
     expectedAst: {
         parseErrors: [],
         ast: {
-            type: 'returnStatement',
+            type: 'program',
             children: [{
-                type: 'return',
-                value: null,
-            }, {
-                type: 'product',
+                type: 'returnStatement',
                 children: [{
+                    type: 'return',
+                    value: null,
+                }, {
                     type: 'product',
                     children: [{
-                        type: 'number',
-                        value: 3,
+                        type: 'product',
+                        children: [{
+                            type: 'number',
+                            value: 3,
+                        }, {
+                            type: 'number',
+                            value: 4,
+                        }],
                     }, {
                         type: 'number',
-                        value: 4,
+                        value: 5,
                     }],
-                }, {
-                    type: 'number',
-                    value: 5,
                 }],
+            }, {
+                type: 'endOfFile',
+                value: 'endOfFile',
             }],
         },
     },
@@ -459,31 +518,37 @@ test('double product with brackets', compileAndRun, {
     expectedAst: {
         parseErrors: [],
         ast: {
-            type: 'returnStatement',
+            type: 'program',
             children: [{
-                type: 'return',
-                value: null,
-            }, {
-                type: 'product',
+                type: 'returnStatement',
                 children: [{
+                    type: 'return',
+                    value: null,
+                }, {
                     type: 'product',
                     children: [{
-                        type: 'number',
-                        value: 2
-                    }, {
                         type: 'product',
                         children: [{
                             type: 'number',
-                            value: 3,
+                            value: 2
                         }, {
-                            type: 'number',
-                            value: 4,
-                        }]
+                            type: 'product',
+                            children: [{
+                                type: 'number',
+                                value: 3,
+                            }, {
+                                type: 'number',
+                                value: 4,
+                            }]
+                        }],
+                    }, {
+                        type: 'number',
+                        value: 5,
                     }],
-                }, {
-                    type: 'number',
-                    value: 5,
                 }],
+            }, {
+                type: 'endOfFile',
+                value: 'endOfFile',
             }],
         },
     },
@@ -683,10 +748,14 @@ str2 = "a"
 return str1 == str2 ? 1 : 2
 `,
     expectedExitCode: 2,
-    printSubsteps: ['c'],
 });
 
 test('wrong type global', compileAndRun, {
     source: `str: String = 5; return length(str)`,
     expectedTypeErrors: ['You tried to assign a Integer to "str", which has type String'],
+});
+
+test('parsing fails for extra invalid tokens', compileAndRun, {
+    source: `return 5 (`,
+    expectedParseErrors: ['Expected endOfFile, found leftBracket'],
 });
