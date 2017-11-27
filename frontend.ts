@@ -53,7 +53,7 @@ const repairAssociativity = (nodeTypeToRepair, ast) => {
 }
 
 const transformAst = (nodeType, f, ast: AstNode, recurseOnNew: boolean) => {
-    if (!ast) debugger;
+    if (!ast) debug();
     if (ast.type === nodeType) {
         const newNode = f(ast);
         if ('children' in newNode) {
@@ -79,7 +79,7 @@ const transformAst = (nodeType, f, ast: AstNode, recurseOnNew: boolean) => {
     }
 }
 
-const extractVariables = (ast, knownIdentifiers): VariableDeclaration[] => {
+const extractVariables = (ast, knownIdentifiers: IdentifierDict): VariableDeclaration[] => {
     if (ast.type === 'assignment' || ast.type === 'typedAssignment') {
         const rhsIndex = ast.type === 'assignment' ? 2 : 4;
         return [{
@@ -115,10 +115,18 @@ const statementTreeToFunction = (functionAst, knownIdentifiers): Function => {
     } else {
         result.statements.push(currentStatement);
     }
+    const argumentIdentifier: IdentifierDict = {};
+    if (functionAst.argument) {
+        argumentIdentifier[functionAst.argument.children[0].value] = { name: functionAst.argument.children[2].value };
+    }
     const variablesAsIdentifiers: IdentifierDict = {};
     const variables: VariableDeclaration[] = [];
     result.statements.forEach(statement => {
-        extractVariables(statement, {...knownIdentifiers, ...variablesAsIdentifiers}).forEach(variable => {
+        extractVariables(statement, {
+            ...knownIdentifiers,
+            ...variablesAsIdentifiers,
+            ...argumentIdentifier,
+        }).forEach(variable => {
             variablesAsIdentifiers[variable.name] = variable.type;
             variables.push(variable);
         });
@@ -196,8 +204,7 @@ const getMemoryCategory = (ast): MemoryCategory => {
     } else if (ast.type === 'assignment') {
         rhsType = ast.children[2].type;
     } else {
-        debugger;
-        throw 'debugger';
+        debug();
     }
 
     switch (rhsType) {
@@ -210,9 +217,7 @@ const getMemoryCategory = (ast): MemoryCategory => {
         case 'product':
         case 'number':
             return 'Stack';
-        default:
-            debugger;
-            throw 'debugger';
+        default: throw debug();
     }
 
 };
@@ -292,7 +297,8 @@ const countTemporariesInExpression = ast => {
             countTemporariesInExpression(ast.children[0]),
             countTemporariesInExpression(ast.children[2])
         );
-        default: debugger;
+        case 'program': return countTemporariesInExpression(ast.children[0]);
+        default: debug();
     }
 }
 
@@ -301,7 +307,7 @@ const countTemporariesInFunction = ({ statements }) => {
 }
 
 const typesAreEqual = (a, b) => {
-    if (!a || !b) debugger;
+    if (!a || !b) debug();
     if (a.name !== b.name) {
         return false;
     }
@@ -309,6 +315,7 @@ const typesAreEqual = (a, b) => {
 }
 
 export const typeOfExpression = ({ type, children, value }, knownIdentifiers: IdentifierDict): { type: Type, errors: string[] } => {
+    if (!type) debug();
     switch (type) {
         case 'number': return { type: { name: 'Integer' }, errors: [] };
         case 'subtraction':
@@ -345,7 +352,7 @@ export const typeOfExpression = ({ type, children, value }, knownIdentifiers: Id
         }
         case 'functionLiteral': {
             const functionType = knownIdentifiers[value];
-            if (!functionType) debugger;
+            if (!functionType) debug();
             return { type: functionType, errors: [] };
         }
         case 'callExpression': {
@@ -361,7 +368,7 @@ export const typeOfExpression = ({ type, children, value }, knownIdentifiers: Id
             if (functionType.name !== 'Function') {
                 return { type: {} as any, errors: [`You tried to call ${functionName}, but it's not a function (it's a ${functionName.type})`] };
             }
-            if (!argType || !functionType.arg) debugger;
+            if (!argType || !functionType.arg) debug();
             if (!typesAreEqual(argType.type, functionType.arg.type)) {
                 return { type: {} as any, errors: [`You passed a ${argType.type.name} as an argument to ${functionName}. It expects a ${functionType.arg.type.name}`] };
             }
@@ -391,7 +398,8 @@ export const typeOfExpression = ({ type, children, value }, knownIdentifiers: Id
         };
         case 'booleanLiteral': return { type: { name: 'Boolean' }, errors: [] };
         case 'stringLiteral': return { type: { name: 'String' }, errors: [] };
-        default: debugger; return { type: {} as any, errors: [`Unknown type ${type}`] };
+        case 'program': return typeOfExpression(children[0], knownIdentifiers);
+        default: throw debug();
     }
 };
 
@@ -501,7 +509,8 @@ const compile = (source: string): FrontendOutput => {
     };
 
     const functionsWithStatementList: Function[] = functions.map(statement => statementTreeToFunction(statement, knownIdentifiers));
-    const programWithStatementList: Function = statementTreeToFunction({ body: program }, knownIdentifiers);
+    // program has type "program", get it's first statement via children[0]
+    const programWithStatementList: Function = statementTreeToFunction({ body: program.children[0] }, knownIdentifiers);
 
     const programTypeCheck = typeCheckProgram(programWithStatementList, knownIdentifiers);
 
