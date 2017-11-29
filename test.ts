@@ -217,9 +217,9 @@ type CompileAndRunOptions = {
     expectedTypeErrors: [any],
     expectedParseErrors: [any],
     expectedAst: [any],
-    printSubsteps?: string[],
-    debugSubsteps?: string[],
-    failing?: string[],
+    printSubsteps?: string[] | string,
+    debugSubsteps?: string[] | string,
+    failing?: string[] | string,
 }
 
 const astToString = ast => {
@@ -265,6 +265,15 @@ const compileAndRun = async (t, {
     debugSubsteps = [],
     failing = [],
 } : CompileAndRunOptions) => {
+    if (typeof printSubsteps === 'string') {
+        printSubsteps = [printSubsteps];
+    }
+    if (typeof debugSubsteps === 'string') {
+        debugSubsteps = [debugSubsteps];
+    }
+    if (typeof failing === 'string') {
+        failing = [failing];
+    }
     const printableSubsteps = ['js', 'tokens', 'ast', 'c', 'mips', 'structure'];
     printSubsteps.forEach(substepToPrint => {
         if (!printSubsteps.includes(substepToPrint)) {
