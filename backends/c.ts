@@ -363,7 +363,7 @@ const toExectuable = ({
         variables,
         globalDeclarations,
         stringLiterals,
-        buildSignature: (name, argument) => `unsigned char ${name}(unsigned char ${argument.children[0].value})`,
+        buildSignature: (name, argument) => `unsigned char ${name}(unsigned char ${argument.name})`,
         returnType: { name: 'Integer' }, // Can currently only return integer
     }));
     const Cprogram = makeCfunctionBody({

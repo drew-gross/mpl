@@ -337,7 +337,7 @@ const compileAndRun = async (t, {
         const structure = frontendOutput as BackendInputs;
         console.log('Functions:');
         structure.functions.forEach(f => {
-            console.log(`-> ${f.name}(${f.argument.children[0].value})`);
+            console.log(`-> ${f.name}(${f.argument.type.name})`);
             f.statements.forEach(statement => {
                 console.log(`---> `, astToString(statement));
             });

@@ -1,6 +1,6 @@
 import flatten from '../util/list/flatten.js';
 import execAndGetResult from '../util/execAndGetResult.js';
-import { ExecutionResult } from '../api.js';
+import { BackendInputs, ExecutionResult } from '../api.js';
 
 const astToJS = ({ ast, exitInsteadOfReturn }) => {
     if (!ast) debugger;
@@ -133,9 +133,9 @@ const astToJS = ({ ast, exitInsteadOfReturn }) => {
     }
 };
 
-const toExectuable = ({functions, variables, program, globalDeclarations, stringLiterals}) => {
+const toExectuable = ({functions, program, globalDeclarations, stringLiterals}: BackendInputs) => {
     let JSfunctions = functions.map(({ name, argument, statements }) => {
-        const prefix = `${name} = ${argument.children[0].value} => {`;
+        const prefix = `${name} = ${argument.name} => {`;
         const suffix = `}`;
 
         const body = statements.map(statement => {

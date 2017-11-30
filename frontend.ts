@@ -94,34 +94,47 @@ const extractVariables = (ast, knownIdentifiers: IdentifierDict): VariableDeclar
     }
 };
 
-const statementTreeToFunction = (functionAst, knownIdentifiers): Function => {
-    const result = {
-        name: functionAst.name,
-        argument: functionAst.argument,
-        statements: [] as any,
-    };
-    let currentStatement = functionAst.body;
+type FunctionAst = {
+    name: string;
+    argument?: AstNode;
+    body: AstNode;
+}
+
+const statementTreeToFunction = (functionAst: FunctionAst, knownIdentifiers): Function => {
+    const functionName: string = functionAst.name;
+    let functionStatements: AstNode[] = [];
+    let currentStatement = functionAst.body as any;
+    let functionArgument;
     while (currentStatement.type === 'statement') {
-        result.statements.push(currentStatement.children[0]);
+        functionStatements.push(currentStatement.children[0]);
         currentStatement = currentStatement.children[2];
     }
     // Final statement of function. If it is a bare expression and is the only statement,
     // and is not a returns statement, turn it into a return statement.
-    if (result.statements.length === 0 && currentStatement.type !== 'returnStatement') {
-        result.statements.push({
+    if (functionStatements.length === 0 && currentStatement.type !== 'returnStatement') {
+        functionStatements.push({
             type: 'returnStatement',
             children: [{ type: 'return', value: null }, currentStatement],
-        });
+        } as any);
     } else {
-        result.statements.push(currentStatement);
+        functionStatements.push(currentStatement);
     }
     const argumentIdentifier: IdentifierDict = {};
     if (functionAst.argument) {
-        argumentIdentifier[functionAst.argument.children[0].value] = { name: functionAst.argument.children[2].value };
+        const argumentName = (functionAst.argument as AstInteriorNode).children[0].value;
+        const argumentTypeName = (functionAst.argument as AstInteriorNode).children[2].value;
+        argumentIdentifier[argumentName] = { name: argumentTypeName };
+        functionArgument = {
+            name: argumentName,
+            type: { name: argumentTypeName },
+            memoryCategory: 'Stack' as MemoryCategory,
+        };
+    } else {
+        functionArgument = undefined as any;
     }
     const variablesAsIdentifiers: IdentifierDict = {};
     const variables: VariableDeclaration[] = [];
-    result.statements.forEach(statement => {
+    functionStatements.forEach(statement => {
         extractVariables(statement, {
             ...knownIdentifiers,
             ...variablesAsIdentifiers,
@@ -133,17 +146,19 @@ const statementTreeToFunction = (functionAst, knownIdentifiers): Function => {
     });
 
     variables.forEach((variable: VariableDeclaration, index) => {
-        const rhsIndex = result.statements[index].type === 'assignment' ? 2 : 4;
-        variablesAsIdentifiers[variable.name] = typeOfExpression(result.statements[index].children[rhsIndex], {
+        const rhsIndex = functionStatements[index].type === 'assignment' ? 2 : 4;
+        variablesAsIdentifiers[variable.name] = typeOfExpression((functionStatements[index] as AstInteriorNode).children[rhsIndex], {
             ...knownIdentifiers,
             ...variablesAsIdentifiers,
         }).type;
     });
 
     return {
-        ...result,
+        name: functionName,
+        statements: functionStatements,
+        argument: functionArgument,
         variables,
-        temporaryCount: countTemporariesInFunction(result),
+        temporaryCount: countTemporariesInFunction({ statements: functionStatements }),
         knownIdentifiers: { ...knownIdentifiers, ...variablesAsIdentifiers },
     };
 }
@@ -463,17 +478,17 @@ const builtinIdentifiers: IdentifierDict = { // TODO: Require these to be import
     }
 };
 
-const typeCheckProgram = ({ statements, argument }, previouslyKnownIdentifiers: IdentifierDict) => {
+const typeCheckProgram = ({ statements, argument }: Function, previouslyKnownIdentifiers: IdentifierDict) => {
     let knownIdentifiers = Object.assign(builtinIdentifiers, previouslyKnownIdentifiers);
 
     if (argument) {
-        knownIdentifiers[argument.children[0].value] = { name: argument.children[2].value };
+        knownIdentifiers[argument.name] = argument.type;
     }
 
     const allErrors: any = [];
-    statements.forEach(s => {
+    statements.forEach(statement => {
         if (allErrors.length == 0) {
-            const { errors, newIdentifiers } = typeCheckStatement(s, knownIdentifiers);
+            const { errors, newIdentifiers } = typeCheckStatement(statement as any, knownIdentifiers);
             for (const identifier in newIdentifiers) {
                 knownIdentifiers[identifier] = newIdentifiers[identifier].type;
             }
@@ -563,7 +578,7 @@ const compile = (source: string): FrontendOutput => {
 
     const functionsWithStatementList: Function[] = functions.map(statement => statementTreeToFunction(statement, knownIdentifiers));
     // program has type "program", get it's first statement via children[0]
-    const programWithStatementList: Function = statementTreeToFunction({ body: program.children[0] }, knownIdentifiers);
+    const programWithStatementList: Function = statementTreeToFunction({ body: program.children[0], name: 'main' }, knownIdentifiers);
 
     const programTypeCheck = typeCheckProgram(programWithStatementList, knownIdentifiers);
 
@@ -584,7 +599,7 @@ const compile = (source: string): FrontendOutput => {
         f.statements = f.statements.map(s => fixOperators({
             ...knownIdentifiers,
             ...f.knownIdentifiers,
-            [f.argument.children[0].value]: { name: f.argument.children[2].value },
+            [f.argument.name]: f.argument.type,
         }, s));
     });
 

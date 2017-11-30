@@ -573,7 +573,7 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
     }
 
     const registerAssignment: any = {
-        [argument.children[0].value]: {
+        [argument.name]: {
             type: 'register',
             destination: '$s0',
         },

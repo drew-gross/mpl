@@ -17,7 +17,7 @@ export type Function = {
     name: string,
     statements: AstNode[],
     variables: VariableDeclaration[],
-    argument: any,
+    argument: VariableDeclaration,
     temporaryCount: number,
     knownIdentifiers: IdentifierDict,
 };
