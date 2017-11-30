@@ -502,6 +502,43 @@ const assignmentToDeclaration = (ast, knownIdentifiers): VariableDeclarationWith
     };
 };
 
+const fixOperators = (knownIdentifiers, statement) => {
+    const typedEquality = transformAst('equality', node => {
+        if ('children' in node) {
+            let leftType = typeOfExpression(node.children[0], knownIdentifiers);
+            let rightType = typeOfExpression(node.children[0], knownIdentifiers);
+            if (leftType.errors.length > 0 || rightType.errors.length > 0) debug();
+            if (leftType.type.name === 'String' && rightType.type.name === 'String') {
+                return {
+                    ...node,
+                    type: 'stringEquality',
+                }
+            } else {
+                return node;
+            }
+        } else {
+            return node;
+        }
+    }, statement, false);
+    const typedAssignment = transformAst('assignment', node => {
+        if ('children' in node) {
+            return {
+                children: [
+                    node.children[0],
+                    { type: 'colon', value: null },
+                    { type: 'type', value: typeOfExpression(node.children[2], knownIdentifiers).type.name },
+                    { type: 'assignment', value: null },
+                    node.children[2],
+                ],
+                type: 'typedAssignment',
+            };
+        } else {
+            return node;
+        };
+    }, typedEquality, false);
+    return typedAssignment;
+};
+
 type FrontendOutput =
     BackendInputs |
     { parseErrors: string[] } |
@@ -542,45 +579,18 @@ const compile = (source: string): FrontendOutput => {
         return { typeErrors };
     }
 
-    // Now that we have type information, go through and insert typed
-    // versions of operators
-    programWithStatementList.statements = programWithStatementList.statements.map(statement => {
-        const typedEquality = transformAst('equality', node => {
-            if ('children' in node) {
-                let leftType = typeOfExpression(node.children[0], knownIdentifiers);
-                let rightType = typeOfExpression(node.children[0], knownIdentifiers);
-                // Typecheck already passed, so assume no errors
-                if (leftType.type.name === 'String' && rightType.type.name === 'String') {
-                    return {
-                        ...node,
-                        type: 'stringEquality',
-                    }
-                } else {
-                    return node;
-                }
-            } else {
-                return node;
-            }
-        }, statement, false);
-        const typedAssignment = transformAst('assignment', node => {
-            if ('children' in node) {
-                return {
-                    children: [
-                        node.children[0],
-                        { type: 'colon', value: null },
-                        { type: 'type', value: typeOfExpression(node.children[2], knownIdentifiers).type.name },
-                        { type: 'assignment', value: null },
-                        node.children[2],
-                    ],
-                    type: 'typedAssignment',
-                };
-            } else {
-                return node;
-            };
-        }, typedEquality, false);
-        return typedAssignment;
+    // Modifications here :(
+    functionsWithStatementList.forEach(f => {
+        f.statements = f.statements.map(s => fixOperators({
+            ...knownIdentifiers,
+            ...f.knownIdentifiers,
+            [f.argument.children[0].value]: { name: f.argument.children[2].value },
+        }, s));
     });
 
+    // Now that we have type information, go through and insert typed
+    // versions of operators
+    programWithStatementList.statements = programWithStatementList.statements.map(s => fixOperators(knownIdentifiers, s));
     programWithStatementList.statements.forEach(statement => {
         if (statement.type === 'assignment') debug();
     });
@@ -593,7 +603,7 @@ const compile = (source: string): FrontendOutput => {
                 ...functionIdentifierTypes,
                 ...programTypeCheck.identifiers,
             });
-            if (!result.type) debugger;
+            if (!result.type) debug();
             return result;
         }) as any;
 

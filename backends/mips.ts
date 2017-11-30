@@ -523,6 +523,7 @@ const astToMips = ({
                 loadAddressOfGlobal(destination, `string_constant_${ast.value}`),
             ];
         }
+        case 'concatenation': debug();
         default:
             debug();
 

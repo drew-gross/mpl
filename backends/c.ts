@@ -174,9 +174,11 @@ const astToC = ({
                                 return {
                                     cPreExpression: rhs.cPreExpression,
                                     cExpression: [
-                                        `// Alloate space for string, including null terminator`,
+                                        `// Alloate space for string, including null terminator\n`,
                                         `${mplTypeToCDeclaration(declaration.type, lhs)} = my_malloc(length(${join(rhs.cExpression, ' ')}) + 1);`,
-                                        `string_copy(${rhs}, ${lhs});`,
+                                        `string_copy(`,
+                                         ...rhs.cExpression,
+                                         `, ${lhs});`,
                                     ],
                                     cPostExpression: rhs.cPostExpression,
                                 };
@@ -285,70 +287,102 @@ const astToC = ({
 
 const stringLiteralDeclaration = stringLiteral => `char *string_literal_${stringLiteral} = "${stringLiteral}";`;
 
-const toExectuable = ({
-    functions,
-    program,
+type MakeCFunctionBodyInputs = {
+    name: any,
+    argument: any,
+    statements: any,
+    variables: any,
+    globalDeclarations: any,
+    stringLiterals: any,
+    buildSignature: any,
+    returnType: any,
+    beforeExit?: string[],
+}
+
+const makeCfunctionBody = ({
+    name,
+    argument,
+    statements,
+    variables,
     globalDeclarations,
     stringLiterals,
-}: BackendInputs) => {
-    let Cfunctions = functions.map(({ name, argument, statements, variables }) => {
-        const prefix = `unsigned char ${name}(unsigned char ${argument.children[0].value}) {`;
-        const suffix = `}`;
-
-        const body = statements.map(statement => {
-            const statementLogic = astToC({
-                ast: statement,
-                globalDeclarations,
-                stringLiterals,
-                localDeclarations: variables,
-            });
-            return join([
-                join(statementLogic.cPreExpression, '\n'),
-                join(statementLogic.cExpression, ' '),
-                join(statementLogic.cPostExpression, '\n'),
-            ], '\n');
-        });
-
-        return join([
-            prefix,
-            ...body,
-            suffix,
-        ], ' ');
-    });
-    const nonReturnStatements = program.statements.slice(0, program.statements.length - 1);
-    const returnStatement = program.statements[program.statements.length - 1];
-    let Cprogram = join(nonReturnStatements.map(child => {
+    buildSignature,
+    returnType,
+    beforeExit = []
+}: MakeCFunctionBodyInputs) => {
+    const nonReturnStatements = statements.slice(0, statements.length - 1);
+    const returnStatement = statements[statements.length - 1];
+    const body = nonReturnStatements.map(statement => {
         const statementLogic = astToC({
-            ast: child,
+            ast: statement,
             globalDeclarations,
             stringLiterals,
-            localDeclarations: program.variables,
+            localDeclarations: variables,
         });
         return join([
             join(statementLogic.cPreExpression, '\n'),
             join(statementLogic.cExpression, ' '),
             join(statementLogic.cPostExpression, '\n'),
         ], '\n');
-    }), '\n');
-    let CprogramFrees = program.variables
+    });
+    const frees = variables
         // TODO: Make a better memory model for dynamic/global frees.
-        // .filter(s => s.memoryCategory === 'Dynamic')
+        .filter(s => s.memoryCategory !== 'GlobalStatic')
         .filter(s => s.type.name == 'String')
         .map(s => `my_free(${s.name});`);
-    let CcreateResult = astToC({
-        ast: (returnStatement as any).children[1],
+    const returnCode = astToC({
+        ast: returnStatement.children[1],
         globalDeclarations,
         stringLiterals,
-        localDeclarations: program.variables,
+        localDeclarations: variables,
     });
-    // Only Integers can be returned from main program
+    return join([
+        buildSignature(name, argument),
+        '{',
+        ...body,
+        ...returnCode.cPreExpression,
+        `${mplTypeToCDeclaration(returnType, 'result')} = ${join(returnCode.cExpression, ' ')};`,
+        ...returnCode.cPostExpression,
+        ...frees,
+        ...beforeExit,
+        `return result;`,
+        '}',
+    ], '\n');
+}
 
-    let cPreAssign = join(CcreateResult.cPreExpression, '\n');
-    let CassignResult = `${mplTypeToCDeclaration({ name: 'Integer' }, 'result')} = ${join(CcreateResult.cExpression, ' ')};`;
-    let cPostAssign = join(CcreateResult.cPostExpression, '\n');
-    let CreturnResult = `return result;`;
-
-    let Cdeclarations = globalDeclarations
+const toExectuable = ({
+    functions,
+    program,
+    globalDeclarations,
+    stringLiterals,
+}: BackendInputs) => {
+    const Cfunctions = functions.map(({ name, argument, statements, variables }) => makeCfunctionBody({
+        name,
+        argument,
+        statements,
+        variables,
+        globalDeclarations,
+        stringLiterals,
+        buildSignature: (name, argument) => `unsigned char ${name}(unsigned char ${argument.children[0].value})`,
+        returnType: { name: 'Integer' }, // Can currently only return integer
+    }));
+    const Cprogram = makeCfunctionBody({
+        name: 'main', // Unused for now
+        argument: {} as any, // Unused for now
+        statements: program.statements,
+        variables: program.variables,
+        globalDeclarations,
+        stringLiterals,
+        buildSignature: (_1, _2) => 'int main(int argc, char **argv)',
+        returnType: { name: 'Integer' }, // Main can only ever return integer
+        beforeExit: [
+            ...globalDeclarations
+                .filter(declaration => declaration.type.name === 'String')
+                .map(declaration => `my_free(${declaration.name});`),
+            'verify_no_leaks();',
+        ],
+    });
+    const Cdeclarations = globalDeclarations
         .map(declaration => mplTypeToCDeclaration(declaration.type, declaration.name))
         .map(cDeclaration => `${cDeclaration};`);
 
@@ -475,16 +509,7 @@ char *string_concatenate(char *left, char *right, char *out) {
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
 ${join(Cdeclarations, '\n')}
 ${join(Cfunctions, '\n')}
-
-int main(int argc, char **argv) {
-    ${Cprogram}
-    ${cPreAssign}
-    ${CassignResult}
-    ${cPostAssign}
-    ${join(CprogramFrees, '\n')}
-    verify_no_leaks();
-    ${CreturnResult}
-}
+${Cprogram}
 `;
 };
 

@@ -229,6 +229,7 @@ const astToString = ast => {
             return `return ${astToString(ast.children[1])}`;
         case 'ternary':
             return `${astToString(ast.children[0])} ? ${astToString(ast.children[2])} : ${astToString(ast.children[4])}`;
+        case 'stringEquality':
         case 'equality':
             return `${astToString(ast.children[0])} == ${astToString(ast.children[2])}`;
         case 'identifier':
@@ -323,7 +324,7 @@ const compileAndRun = async (t, {
 
     const fo = frontendOutput as BackendInputs;
 
-    // Run valdations on frontend output (currently only detects values that don't match their type)
+    // Run valdations on frontend output (currently just detects values that don't match their type)
     fo.functions.forEach(f => {
         f.variables.forEach(v => {
             if (!v.type.name) {
@@ -344,7 +345,7 @@ const compileAndRun = async (t, {
         console.log('Program:');
         console.log('-> Globals:');
         structure.globalDeclarations.forEach(declaration => {
-            console.log(`---> ${declaration.type.name} ${declaration.name}`);
+            console.log(`---> ${declaration.type.name} ${declaration.name} (${declaration.memoryCategory})`);
         });
         console.log('-> Statements:');
         structure.program.statements.forEach(statement => {
@@ -741,7 +742,7 @@ test('string equality: equal', compileAndRun, {
 str2 = "a"
 return str1 == str2 ? 1 : 2
 `,
-    expectedExitCode: 1
+    expectedExitCode: 1,
 });
 
 // TODO: Fix allocations
@@ -781,11 +782,12 @@ test('concatenate and get length then add', compileAndRun, {
 });
 
 // TODO: Problem extracting variables
-test.failing('semi-complex string concatenation', compileAndRun, {
+test('semi-complex string concatenation', compileAndRun, {
     source:
 `lenFunc = dummy: Integer => { str1 = "abc"; str2 = str1 ++ str1; return str2 == "abcabc" ? 40 : 50 }
 return lenFunc(5)`,
     expectedExitCode: 40,
+    failing: ['mips'],
 });
 
 // TODO: causes bad behaviour in parser, takes forever
