@@ -32,7 +32,7 @@ type AstToCResult = {
 
 type ExpressionBuilder = (e1: string[], e2: string[]) => string[];
 
-const concatenateExpression = (
+const buildExpression = (
     expression1: AstToCResult,
     expression2: AstToCResult,
     buildExpression: ExpressionBuilder
@@ -54,11 +54,7 @@ const astToC = ({
             const subExpression = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
             return {
                 cPreExpression: subExpression.cPreExpression,
-                cExpression: [
-                    'return',
-                    ...subExpression.cExpression,
-                    ';',
-                ],
+                cExpression: ['return', ...subExpression.cExpression, ';'],
                 cPostExpression: subExpression.cPostExpression,
             };
         }
@@ -70,16 +66,12 @@ const astToC = ({
         case 'product': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const rhs = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
-            return concatenateExpression(lhs, rhs, (e1, e2) => [...e1, '*', ...e2]);
+            return buildExpression(lhs, rhs, (e1, e2) => [...e1, '*', ...e2]);
         }
         case 'subtraction': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const rhs = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
-            return {
-                cPreExpression: [...lhs.cPreExpression, ...rhs.cPreExpression],
-                cExpression: [...lhs.cExpression, '-', ...rhs.cExpression],
-                cPostExpression: [...lhs.cPostExpression, ...rhs.cPostExpression],
-            };
+            return buildExpression(lhs, rhs, (e1, e2) => [...e1, '-', ...e2]);
         }
         case 'concatenation': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
