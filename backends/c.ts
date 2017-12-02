@@ -107,8 +107,7 @@ const astToC = ({
                         return {
                             prepare: rhs.prepare,
                             execute: [
-                                `${lhs} = my_malloc(length(${rhs.execute}) + 1);`,
-                                `string_copy(${rhs.execute}, ${lhs});`,
+                                `${lhs} = string_copy(${rhs.execute}, my_malloc(length(${rhs.execute}) + 1));`,
                             ],
                             cleanup: rhs.cleanup,
                         };
@@ -142,11 +141,9 @@ const astToC = ({
                                 return {
                                     prepare: rhs.prepare,
                                     execute: [
-                                        `// Alloate space for string, including null terminator\n`,
-                                        `${mplTypeToCDeclaration(declaration.type, lhs)} = my_malloc(length(${join(rhs.execute, ' ')}) + 1);`,
-                                        `string_copy(`,
+                                        `${mplTypeToCDeclaration(declaration.type, lhs)} = string_copy(`,
                                          ...rhs.execute,
-                                         `, ${lhs});`,
+                                         `, my_malloc(length(${join(rhs.execute, ' ')}) + 1));`,
                                     ],
                                     cleanup: rhs.cleanup,
                                 };
@@ -382,8 +379,10 @@ int length(char *str) {
     return len;
 }
 
-void string_copy(char *in, char *out) {
+char *string_copy(char *in, char *out) {
+    char *original_out = out;
     while ((*out++ = *in++)) {}
+    return original_out;
 }
 
 bool string_compare(char *in, char *out) {
