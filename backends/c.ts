@@ -51,11 +51,7 @@ const astToC = ({
     switch (ast.type) {
         case 'returnStatement': {
             const subExpression = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
-            return {
-                cPreExpression: subExpression.cPreExpression,
-                cExpression: ['return', ...subExpression.cExpression, ';'],
-                cPostExpression: subExpression.cPostExpression,
-            };
+            return buildExpression([subExpression], ([e1]) => ['return', ...e1, ';']);
         }
         case 'number': return {
             cPreExpression: [],
