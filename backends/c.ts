@@ -30,16 +30,15 @@ type AstToCResult = {
     cPostExpression: string[],
 }
 
-type ExpressionBuilder = (e1: string[], e2: string[]) => string[];
+type ExpressionBuilder = (expressions: string[][]) => string[];
 
 const buildExpression = (
-    expression1: AstToCResult,
-    expression2: AstToCResult,
+    inputs: AstToCResult[],
     buildExpression: ExpressionBuilder
 ): AstToCResult => ({
-    cPreExpression: [...expression1.cPreExpression, ...expression2.cPreExpression],
-    cExpression: buildExpression(expression1.cExpression, expression2.cExpression),
-    cPostExpression: [...expression2.cPostExpression, ...expression1.cPostExpression],
+    cPreExpression: flatten(inputs.map(input => input.cPreExpression)),
+    cExpression: buildExpression(inputs.map(input => input.cExpression)),
+    cPostExpression: flatten(inputs.map(input => input.cPostExpression)).reverse(),
 });
 
 const astToC = ({
@@ -66,12 +65,12 @@ const astToC = ({
         case 'product': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const rhs = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
-            return buildExpression(lhs, rhs, (e1, e2) => [...e1, '*', ...e2]);
+            return buildExpression([lhs, rhs], ([e1, e2]) => [...e1, '*', ...e2]);
         }
         case 'subtraction': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const rhs = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
-            return buildExpression(lhs, rhs, (e1, e2) => [...e1, '-', ...e2]);
+            return buildExpression([lhs, rhs], ([e1, e2]) => [...e1, '-', ...e2]);
         }
         case 'concatenation': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
