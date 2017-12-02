@@ -775,7 +775,7 @@ return str1 ++ str2 == "ab" ? 5 : 10`,
     failing: ['mips'],
 });
 
-test('concatenate and get length then add', compileAndRun, {
+test('concatenate and get length then subtract', compileAndRun, {
     source: `return length("abc" ++ "defg") - 2;`,
     expectedExitCode: 5,
     failing: ['mips'],
