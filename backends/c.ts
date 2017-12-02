@@ -24,17 +24,20 @@ type BackendInput = {
     stringLiterals: string[],
 };
 
-type AstToCResult = {
+type CompiledExpression = {
     prepare: string[],
     execute: string[],
     cleanup: string[],
 }
 
-type ExpressionBuilder = (expressions: string[][]) => string[];
+type ExpressionCompiler = (expressions: string[][]) => string[];
 
-const buildExpression = (subExpressions: AstToCResult[], buildExecutor: ExpressionBuilder): AstToCResult => ({
+const compileExpression = (
+    subExpressions: CompiledExpression[],
+    expressionCompiler: ExpressionCompiler
+): CompiledExpression => ({
     prepare: flatten(subExpressions.map(input => input.prepare)),
-    execute: buildExecutor(subExpressions.map(input => input.execute)),
+    execute: expressionCompiler(subExpressions.map(input => input.execute)),
     cleanup: flatten(subExpressions.map(input => input.cleanup)).reverse(),
 });
 
@@ -43,23 +46,23 @@ const astToC = ({
     globalDeclarations,
     stringLiterals,
     localDeclarations,
-}: BackendInput): AstToCResult => {
+}: BackendInput): CompiledExpression => {
     if (!ast) debug();
     switch (ast.type) {
         case 'returnStatement': {
             const subExpression = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
-            return buildExpression([subExpression], ([e1]) => ['return', ...e1, ';']);
+            return compileExpression([subExpression], ([e1]) => ['return', ...e1, ';']);
         }
-        case 'number': return buildExpression([], ([]) => [ast.value.toString()]);
+        case 'number': return compileExpression([], ([]) => [ast.value.toString()]);
         case 'product': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const rhs = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
-            return buildExpression([lhs, rhs], ([e1, e2]) => [...e1, '*', ...e2]);
+            return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '*', ...e2]);
         }
         case 'subtraction': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const rhs = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
-            return buildExpression([lhs, rhs], ([e1, e2]) => [...e1, '-', ...e2]);
+            return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '-', ...e2]);
         }
         case 'concatenation': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
@@ -69,7 +72,7 @@ const astToC = ({
                 execute: [],
                 cleanup: ['my_free(temporary_string);'],
             }
-            return buildExpression(
+            return compileExpression(
                 [lhs, rhs, prepAndCleanup],
                 ([e1, e2, _]) => ['string_concatenate(', ...e1, ', ', ...e2,', temporary_string)']
             );
@@ -82,9 +85,9 @@ const astToC = ({
                 localDeclarations,
             }));
 
-            return buildExpression(childResults, flatten);
+            return compileExpression(childResults, flatten);
         }
-        case 'statementSeparator': return buildExpression([], ([]) => []);
+        case 'statementSeparator': return compileExpression([], ([]) => []);
         case 'typedAssignment':
         case 'assignment': {
             const rhsIndex = ast.type === 'assignment' ? 2 : 4;
@@ -148,7 +151,7 @@ const astToC = ({
                                     cleanup: rhs.cleanup,
                                 };
                             };
-                            case 'GlobalStatic': return buildExpression(
+                            case 'GlobalStatic': return compileExpression(
                                 [rhs],
                                 ([e1]) => [`${mplTypeToCDeclaration(declaration.type, lhs)} = `, ...e1, `;`]
                             );
@@ -158,17 +161,17 @@ const astToC = ({
                 }
             }
         }
-        case 'functionLiteral': return buildExpression([], ([]) => [`&${ast.value}`]);
+        case 'functionLiteral': return compileExpression([], ([]) => [`&${ast.value}`]);
         case 'callExpression': {
             const argC = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
-            return buildExpression([argC], ([e1]) => [`(*${ast.children[0].value})(`, ...e1, ')']);
+            return compileExpression([argC], ([e1]) => [`(*${ast.children[0].value})(`, ...e1, ')']);
         };
-        case 'identifier': return buildExpression([], ([]) => [ast.value]);
+        case 'identifier': return compileExpression([], ([]) => [ast.value]);
         case 'ternary': {
             const comparatorC = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const ifTrueC = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
             const ifFalseC = astToC({ ast: ast.children[4], globalDeclarations, stringLiterals, localDeclarations });
-            return buildExpression(
+            return compileExpression(
                 [comparatorC, ifTrueC, ifFalseC],
                 ([compare, ifTrue, ifFalse]) => [...compare, '?', ...ifTrue, ':', ...ifFalse]
             );
@@ -176,15 +179,15 @@ const astToC = ({
         case 'equality': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
-            return buildExpression([lhs, rhs], ([e1, e2]) => [...e1, '==', ...e2]);
+            return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '==', ...e2]);
         };
         case 'stringEquality': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
-            return buildExpression([lhs, rhs], ([e1, e2]) => ['string_compare(', ...e1, ',', ...e2, ')']);
+            return compileExpression([lhs, rhs], ([e1, e2]) => ['string_compare(', ...e1, ',', ...e2, ')']);
         }
-        case 'booleanLiteral': return buildExpression([], ([]) => [ast.value == 'true' ? '1' : '0']);
-        case 'stringLiteral': return buildExpression([], ([]) => [`string_literal_${ast.value}`]);
+        case 'booleanLiteral': return compileExpression([], ([]) => [ast.value == 'true' ? '1' : '0']);
+        case 'stringLiteral': return compileExpression([], ([]) => [`string_literal_${ast.value}`]);
         default: debug();
     };
     return debug();
