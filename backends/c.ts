@@ -25,20 +25,17 @@ type BackendInput = {
 };
 
 type AstToCResult = {
-    cPreExpression: string[],
-    cExpression: string[],
-    cPostExpression: string[],
+    prepare: string[],
+    execute: string[],
+    cleanup: string[],
 }
 
 type ExpressionBuilder = (expressions: string[][]) => string[];
 
-const buildExpression = (
-    inputs: AstToCResult[],
-    buildExpression: ExpressionBuilder
-): AstToCResult => ({
-    cPreExpression: flatten(inputs.map(input => input.cPreExpression)),
-    cExpression: buildExpression(inputs.map(input => input.cExpression)),
-    cPostExpression: flatten(inputs.map(input => input.cPostExpression)).reverse(),
+const buildExpression = (subExpressions: AstToCResult[], buildExecutor: ExpressionBuilder): AstToCResult => ({
+    prepare: flatten(subExpressions.map(input => input.prepare)),
+    execute: buildExecutor(subExpressions.map(input => input.execute)),
+    cleanup: flatten(subExpressions.map(input => input.cleanup)).reverse(),
 });
 
 const astToC = ({
@@ -68,9 +65,9 @@ const astToC = ({
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
             const prepAndCleanup = {
-                cPreExpression: [`char *temporary_string = my_malloc(length(${join(lhs.cExpression, ' ')}) + length(${join(rhs.cExpression, ' ')}) + 1);`],
-                cExpression: [],
-                cPostExpression: ['my_free(temporary_string);'],
+                prepare: [`char *temporary_string = my_malloc(length(${join(lhs.execute, ' ')}) + length(${join(rhs.execute, ' ')}) + 1);`],
+                execute: [],
+                cleanup: ['my_free(temporary_string);'],
             }
             return buildExpression(
                 [lhs, rhs, prepAndCleanup],
@@ -99,25 +96,25 @@ const astToC = ({
                 switch (declaration.type.name) {
                     case 'Function':
                         return {
-                            cPreExpression: rhs.cPreExpression,
-                            cExpression: [`${lhs} = `, ...rhs.cExpression, `;`],
-                            cPostExpression: rhs.cPostExpression,
+                            prepare: rhs.prepare,
+                            execute: [`${lhs} = `, ...rhs.execute, `;`],
+                            cleanup: rhs.cleanup,
                         };
                     case 'String': {
                         return {
-                            cPreExpression: rhs.cPreExpression,
-                            cExpression: [
-                                `${lhs} = my_malloc(length(${rhs.cExpression}) + 1);`,
-                                `string_copy(${rhs.cExpression}, ${lhs});`,
+                            prepare: rhs.prepare,
+                            execute: [
+                                `${lhs} = my_malloc(length(${rhs.execute}) + 1);`,
+                                `string_copy(${rhs.execute}, ${lhs});`,
                             ],
-                            cPostExpression: rhs.cPostExpression,
+                            cleanup: rhs.cleanup,
                         };
                     }
                     case 'Integer': {
                         return {
-                            cPreExpression: rhs.cPreExpression,
-                            cExpression: [`${lhs} = `, ...rhs.cExpression, `;`],
-                            cPostExpression: rhs.cPostExpression,
+                            prepare: rhs.prepare,
+                            execute: [`${lhs} = `, ...rhs.execute, `;`],
+                            cleanup: rhs.cleanup,
                         };
                     }
                     default: debug();
@@ -131,24 +128,24 @@ const astToC = ({
                     case 'Function':
                     case 'Integer':
                         return {
-                            cPreExpression: rhs.cPreExpression,
-                            cExpression: [`${mplTypeToCDeclaration(declaration.type, lhs)} = `, ...rhs.cExpression, `;`],
-                            cPostExpression: rhs.cPostExpression,
+                            prepare: rhs.prepare,
+                            execute: [`${mplTypeToCDeclaration(declaration.type, lhs)} = `, ...rhs.execute, `;`],
+                            cleanup: rhs.cleanup,
                         };
                     case 'String':
                         switch (declaration.memoryCategory) {
                             case 'Stack':
                             case 'Dynamic': {
                                 return {
-                                    cPreExpression: rhs.cPreExpression,
-                                    cExpression: [
+                                    prepare: rhs.prepare,
+                                    execute: [
                                         `// Alloate space for string, including null terminator\n`,
-                                        `${mplTypeToCDeclaration(declaration.type, lhs)} = my_malloc(length(${join(rhs.cExpression, ' ')}) + 1);`,
+                                        `${mplTypeToCDeclaration(declaration.type, lhs)} = my_malloc(length(${join(rhs.execute, ' ')}) + 1);`,
                                         `string_copy(`,
-                                         ...rhs.cExpression,
+                                         ...rhs.execute,
                                          `, ${lhs});`,
                                     ],
-                                    cPostExpression: rhs.cPostExpression,
+                                    cleanup: rhs.cleanup,
                                 };
                             };
                             case 'GlobalStatic': return buildExpression(
@@ -228,9 +225,9 @@ const makeCfunctionBody = ({
             localDeclarations: variables,
         });
         return join([
-            join(statementLogic.cPreExpression, '\n'),
-            join(statementLogic.cExpression, ' '),
-            join(statementLogic.cPostExpression, '\n'),
+            join(statementLogic.prepare, '\n'),
+            join(statementLogic.execute, ' '),
+            join(statementLogic.cleanup, '\n'),
         ], '\n');
     });
     const frees = variables
@@ -248,9 +245,9 @@ const makeCfunctionBody = ({
         buildSignature(name, argument),
         '{',
         ...body,
-        ...returnCode.cPreExpression,
-        `${mplTypeToCDeclaration(returnType, 'result')} = ${join(returnCode.cExpression, ' ')};`,
-        ...returnCode.cPostExpression,
+        ...returnCode.prepare,
+        `${mplTypeToCDeclaration(returnType, 'result')} = ${join(returnCode.execute, ' ')};`,
+        ...returnCode.cleanup,
         ...frees,
         ...beforeExit,
         `return result;`,
