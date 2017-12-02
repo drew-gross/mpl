@@ -53,11 +53,7 @@ const astToC = ({
             const subExpression = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
             return buildExpression([subExpression], ([e1]) => ['return', ...e1, ';']);
         }
-        case 'number': return {
-            cPreExpression: [],
-            cExpression: [ast.value.toString()],
-            cPostExpression: [],
-        };
+        case 'number': return buildExpression([], ([]) => [ast.value.toString()]);
         case 'product': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const rhs = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
