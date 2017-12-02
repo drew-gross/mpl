@@ -67,22 +67,15 @@ const astToC = ({
         case 'concatenation': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
-
-            return {
-                cPreExpression: [
-                    ...lhs.cPreExpression,
-                    ...rhs.cPreExpression,
-                    `char *temporary_string = my_malloc(length(${join(lhs.cExpression, ' ')}) + length(${join(rhs.cExpression, ' ')}) + 1);`
-                ],
-                cExpression: [
-                    'string_concatenate(',
-                    ...lhs.cExpression,
-                    ', ',
-                    ...rhs.cExpression,
-                    ', temporary_string)',
-                ],
-                cPostExpression: ['my_free(temporary_string);', ...rhs.cPostExpression, ...lhs.cPostExpression],
-            };
+            const prepAndCleanup = {
+                cPreExpression: [`char *temporary_string = my_malloc(length(${join(lhs.cExpression, ' ')}) + length(${join(rhs.cExpression, ' ')}) + 1);`],
+                cExpression: [],
+                cPostExpression: ['my_free(temporary_string);'],
+            }
+            return buildExpression(
+                [lhs, rhs, prepAndCleanup],
+                ([e1, e2, _]) => ['string_concatenate(', ...e1, ', ', ...e2,', temporary_string)']
+            );
         };
         case 'statement': {
             const childResults = ast.children.map(child => astToC({
@@ -158,13 +151,10 @@ const astToC = ({
                                     cPostExpression: rhs.cPostExpression,
                                 };
                             };
-                            case 'GlobalStatic': {
-                                return {
-                                    cPreExpression: rhs.cPreExpression,
-                                    cExpression: [`${mplTypeToCDeclaration(declaration.type, lhs)} = `, ...rhs.cExpression, `;`],
-                                    cPostExpression: rhs.cPostExpression
-                                }
-                            };
+                            case 'GlobalStatic': return buildExpression(
+                                [rhs],
+                                ([e1]) => [`${mplTypeToCDeclaration(declaration.type, lhs)} = `, ...e1, `;`]
+                            );
                             default: debug();
                         }
                     default: debug();
