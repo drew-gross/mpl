@@ -67,6 +67,7 @@ const astToC = ({
         case 'concatenation': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
+
             return {
                 cPreExpression: [
                     ...lhs.cPreExpression,
@@ -91,17 +92,9 @@ const astToC = ({
                 localDeclarations,
             }));
 
-            return {
-                cPreExpression: flatten(childResults.map(r => r.cPreExpression)),
-                cExpression: flatten(childResults.map(r => r.cExpression)),
-                cPostExpression: flatten(childResults.map(r => r.cPostExpression)),
-            };
+            return buildExpression(childResults, flatten);
         }
-        case 'statementSeparator': return {
-            cPreExpression: [],
-            cExpression: [],
-            cPostExpression: [],
-        };
+        case 'statementSeparator': return buildExpression([], ([]) => []);
         case 'typedAssignment':
         case 'assignment': {
             const rhsIndex = ast.type === 'assignment' ? 2 : 4;
@@ -178,90 +171,33 @@ const astToC = ({
                 }
             }
         }
-        case 'functionLiteral': return {
-            cPreExpression: [],
-            cExpression: [`&${ast.value}`],
-            cPostExpression: [],
-        }
+        case 'functionLiteral': return buildExpression([], ([]) => [`&${ast.value}`]);
         case 'callExpression': {
             const argC = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
-            return {
-                cPreExpression: argC.cPreExpression,
-                cExpression: [
-                    `(*${ast.children[0].value})(`,
-                    ...argC.cExpression,
-                    `)`,
-                ],
-                cPostExpression: argC.cPostExpression,
-            };
+            return buildExpression([argC], ([e1]) => [`(*${ast.children[0].value})(`, ...e1, ')']);
         };
-        case 'identifier': return {
-            cPreExpression: [],
-            cExpression: [ast.value],
-            cPostExpression: [],
-        };
+        case 'identifier': return buildExpression([], ([]) => [ast.value]);
         case 'ternary': {
             const comparatorC = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const ifTrueC = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
             const ifFalseC = astToC({ ast: ast.children[4], globalDeclarations, stringLiterals, localDeclarations });
-            return {
-                cPreExpression: [
-                    ...comparatorC.cPreExpression,
-                    ...ifTrueC.cPreExpression,
-                    ...ifFalseC.cPreExpression,
-                ],
-                cExpression: [
-                    ...comparatorC.cExpression,
-                    '?',
-                    ...ifTrueC.cExpression,
-                    ':',
-                    ...ifFalseC.cExpression,
-                ],
-                cPostExpression: [
-                    ...ifFalseC.cPostExpression,
-                    ...ifTrueC.cPostExpression,
-                    ...comparatorC.cPostExpression,
-                ],
-            };
+            return buildExpression(
+                [comparatorC, ifTrueC, ifFalseC],
+                ([compare, ifTrue, ifFalse]) => [...compare, '?', ...ifTrue, ':', ...ifFalse]
+            );
         };
         case 'equality': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
-            return {
-                cPreExpression: [...lhs.cPreExpression, ...rhs.cPreExpression],
-                cExpression: [
-                    ...lhs.cExpression,
-                    '==',
-                    ...rhs.cExpression,
-                ],
-                cPostExpression: [...rhs.cPostExpression, ...lhs.cPostExpression],
-            };
+            return buildExpression([lhs, rhs], ([e1, e2]) => [...e1, '==', ...e2]);
         };
         case 'stringEquality': {
             const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
             const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
-            return {
-                cPreExpression: [...lhs.cPreExpression, ...rhs.cPreExpression],
-                cExpression: [
-                    'string_compare(',
-                    ...lhs.cExpression,
-                    ',',
-                    ...rhs.cExpression,
-                    ')',
-                ],
-                cPostExpression: [...rhs.cPreExpression, ...lhs.cPostExpression],
-            };
+            return buildExpression([lhs, rhs], ([e1, e2]) => ['string_compare(', ...e1, ',', ...e2, ')']);
         }
-        case 'booleanLiteral': return {
-            cPreExpression: [],
-            cExpression: [ast.value == 'true' ? '1' : '0'],
-            cPostExpression: [],
-        };
-        case 'stringLiteral': return {
-            cPreExpression: [],
-            cExpression: [`string_literal_${ast.value}`],
-            cPostExpression: [],
-        };
+        case 'booleanLiteral': return buildExpression([], ([]) => [ast.value == 'true' ? '1' : '0']);
+        case 'stringLiteral': return buildExpression([], ([]) => [`string_literal_${ast.value}`]);
         default: debug();
     };
     return debug();
