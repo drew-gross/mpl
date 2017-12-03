@@ -152,10 +152,7 @@ const astToC = ({
                                     cleanup: rhs.cleanup,
                                 };
                             };
-                            case 'GlobalStatic': return compileExpression(
-                                [rhs],
-                                ([e1]) => [`${mplTypeToCDeclaration(declaration.type, lhs)} = `, ...e1, `;`]
-                            );
+                            case 'GlobalStatic': return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
                             default: debug();
                         }
                     default: debug();
