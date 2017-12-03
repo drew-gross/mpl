@@ -13,7 +13,7 @@ const mplTypeToCDeclaration = (type: Type, name: string) => {
         case 'Function': return `unsigned char (*${name})(unsigned char)`
         case 'Integer': return `uint8_t ${name}`;
         case 'String': return `char *${name}`;
-        default: debug();
+        default: throw debug();
     }
 };
 
@@ -137,12 +137,7 @@ const astToC = ({
                 if (!declaration.type.name) throw debug();
                 switch (declaration.type.name) {
                     case 'Function':
-                    case 'Integer':
-                        return {
-                            prepare: rhs.prepare,
-                            execute: [`${mplTypeToCDeclaration(declaration.type, lhs)} = `, ...rhs.execute, `;`],
-                            cleanup: rhs.cleanup,
-                        };
+                    case 'Integer': return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
                     case 'String':
                         switch (declaration.memoryCategory) {
                             case 'Stack':
