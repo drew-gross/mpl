@@ -122,10 +122,10 @@ const astToC = ({
                 switch (declaration.type.name) {
                     case 'Function': return compileAssignment(lhs, rhs);
                     case 'String': {
-                        const copyExpression = compileExpression([rhs], ([e]) => [
+                        const rhsWillAlloc = compileExpression([rhs], ([e]) => [
                                 `string_copy(${e}, my_malloc(length(${e}) + 1));`,
                             ])
-                        return compileAssignment(lhs, copyExpression);
+                        return compileAssignment(lhs, rhsWillAlloc);
                     }
                     case 'Integer': return compileAssignment(lhs, rhs);
                     default: debug();
