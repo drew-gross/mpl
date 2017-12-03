@@ -142,15 +142,11 @@ const astToC = ({
                         switch (declaration.memoryCategory) {
                             case 'Stack':
                             case 'Dynamic': {
-                                return {
-                                    prepare: rhs.prepare,
-                                    execute: [
-                                        `${mplTypeToCDeclaration(declaration.type, lhs)} = string_copy(`,
-                                         ...rhs.execute,
-                                         `, my_malloc(length(${join(rhs.execute, ' ')}) + 1));`,
-                                    ],
-                                    cleanup: rhs.cleanup,
-                                };
+                                const rhsWillAlloc = compileExpression(
+                                    [rhs],
+                                    ([e1]) => ['string_copy(', ...e1, ', my_malloc(length(', ...e1, ') + 1))'],
+                                );
+                                return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhsWillAlloc);
                             };
                             case 'GlobalStatic': return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
                             default: debug();
