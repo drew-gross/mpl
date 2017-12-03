@@ -30,6 +30,18 @@ type CompiledExpression = {
     cleanup: string[],
 }
 
+type CompiledAssignment = {
+    prepare: string[],
+    execute: string[],
+    cleanup: string[],
+}
+
+type CompiledProgram = {
+    prepare: string[],
+    execute: string[],
+    cleanup: string[],
+}
+
 type ExpressionCompiler = (expressions: string[][]) => string[];
 
 const compileExpression = (
@@ -41,12 +53,23 @@ const compileExpression = (
     cleanup: flatten(subExpressions.map(input => input.cleanup)).reverse(),
 });
 
+const compileAssignment = (
+    destination: string,
+    rhs: CompiledExpression,
+): CompiledAssignment => {
+    return {
+        prepare: rhs.prepare,
+        execute: [`${destination} = `, ...rhs.execute, ';'],
+        cleanup: rhs.cleanup,
+    };
+}
+
 const astToC = ({
     ast,
     globalDeclarations,
     stringLiterals,
     localDeclarations,
-}: BackendInput): CompiledExpression => {
+}: BackendInput): CompiledProgram => {
     if (!ast) debug();
     switch (ast.type) {
         case 'returnStatement': {
@@ -97,28 +120,14 @@ const astToC = ({
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug();
                 switch (declaration.type.name) {
-                    case 'Function':
-                        return {
-                            prepare: rhs.prepare,
-                            execute: [`${lhs} = `, ...rhs.execute, `;`],
-                            cleanup: rhs.cleanup,
-                        };
+                    case 'Function': return compileAssignment(lhs, rhs);
                     case 'String': {
-                        return {
-                            prepare: rhs.prepare,
-                            execute: [
-                                `${lhs} = string_copy(${rhs.execute}, my_malloc(length(${rhs.execute}) + 1));`,
-                            ],
-                            cleanup: rhs.cleanup,
-                        };
+                        const copyExpression = compileExpression([rhs], ([e]) => [
+                                `string_copy(${e}, my_malloc(length(${e}) + 1));`,
+                            ])
+                        return compileAssignment(lhs, copyExpression);
                     }
-                    case 'Integer': {
-                        return {
-                            prepare: rhs.prepare,
-                            execute: [`${lhs} = `, ...rhs.execute, `;`],
-                            cleanup: rhs.cleanup,
-                        };
-                    }
+                    case 'Integer': return compileAssignment(lhs, rhs);
                     default: debug();
                 }
             } else {
