@@ -4,6 +4,8 @@ import { VariableDeclaration, BackendInputs, ExecutionResult } from '../api.js';
 import debug from '../util/debug.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
+const argument1Register = '$s0';
+const argument2Register = '$s1';
 
 const storeLiteralMips = ({ type, destination, spOffset }, value) => {
     if (type == undefined) debug();
@@ -248,11 +250,11 @@ const astToMips = ({
             }
 
             return [
-                `# Put argument in $s0`,
+                `# Put argument in argument1Register`,
                 ...astToMips({
                     ast: ast.children[2],
                     registerAssignment,
-                    destination: { type: 'register', destination: '$s0' },
+                    destination: { type: 'register', destination: argument1Register },
                     currentTemporary: nextTemporary(currentTemporary),
                     globalDeclarations,
                     stringLiterals,
@@ -489,7 +491,7 @@ const astToMips = ({
                 registerAssignment,
                 destination: {
                     type: 'register',
-                    destination: '$s0',
+                    destination: argument1Register,
                 },
                 currentTemporary,
                 globalDeclarations,
@@ -500,7 +502,7 @@ const astToMips = ({
                 registerAssignment,
                 destination: {
                     type: 'register',
-                    destination: '$s1',
+                    destination: argument2Register,
                 },
                 currentTemporary,
                 globalDeclarations,
@@ -625,12 +627,12 @@ addiu $sp, $sp, -4
 li $t1, 0
 length_loop:
 # Load char into temporary
-lb $t2, ($s0)
+lb $t2, (${argument1Register})
 # If char is null, end of string. Return count.
 beq $t2, 0, length_return
 # Else bump pointer and count and return to start of loop
 addiu $t1, $t1, 1
-addiu $s0, $s0, 1
+addiu ${argument1Register}, ${argument1Register}, 1
 b length_loop
 
 length_return:
@@ -661,19 +663,19 @@ addiu $sp, $sp, -4
 # Assume equal. Write 1 to $a0. Overwrite if difference found.
 li $a0, 1
 
-# Accepts pointers to strings in $s0 and $s1.
+# (string*, string*) -> bool
 stringEquality_loop:
 # load current chars into temporaries
-lb $t1, ($s0)
-lb $t2, ($s1)
+lb $t1, (${argument1Register})
+lb $t2, (${argument2Register})
 # Inequal: return false
 bne $t1, $t2, stringEquality_return_false
 # Now we know both sides are equal. If they equal null, string is over.
 # Return true. We already set $a0 to 1, so just goto end.
 beq $t1, 0, stringEquality_return
 # Otherwise, bump pointers and check next char
-addiu $s0, 1
-addiu $s1, 1
+addiu ${argument1Register}, 1
+addiu ${argument2Register}, 1
 b stringEquality_loop
 
 stringEquality_return_false:
@@ -727,6 +729,13 @@ const toExectuable = ({
 .data
 ${globalDeclarations.map(name => `${name.name}: .word 0`).join('\n')}
 ${stringLiterals.map(text => `string_constant_${text}: .asciiz "${text}"`).join('\n')}
+
+# For malloc
+first_block_size: .word 0
+first_block_next_block_ptr: .word 0
+first_block_free: .word 1
+
+my_malloc:
 
 .text
 ${lengthRuntimeFunction}
