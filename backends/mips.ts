@@ -6,6 +6,10 @@ import debug from '../util/debug.js';
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 const argument1 = '$s0';
 const argument2 = '$s1';
+const syscallArg1 = '$a0';
+const syscallArg2 = '$a1';
+const syscallResult = '$v0';
+const syscallSelect = '$v0';
 
 const storeLiteralMips = ({ type, destination, spOffset }, value) => {
     if (type == undefined) debug();
@@ -677,6 +681,91 @@ const stringEqualityRuntimeFunction = () => {
     jr $ra`;
 }
 
+const myMallocRuntimeFunction = () => {
+    const result = '$a0';
+    const currentBlockPointer = '$t1';
+    const previousBlockPointer = '$t2';
+    const scratch = '$t3';
+    return `my_malloc:
+    ${saveRegistersCode(3).join('\n')}
+    bne ${argument1}, 0, my_malloc_zero_size_check_passed
+    la $a0, zero_memory_malloc_error
+    li $v0, 4
+    syscall
+    li $v0, 10
+    syscall
+    my_malloc_zero_size_check_passed:
+
+    la ${currentBlockPointer}, first_block
+    la ${previousBlockPointer}, 0
+
+    find_large_enough_free_block_loop:
+    # no blocks left (will require sbrk)
+    beq ${currentBlockPointer}, 0, find_large_enough_free_block_loop_exit
+    # current block not free, try next
+    lw ${scratch}, 2(${currentBlockPointer})
+    beq ${scratch}, 0, advance_pointers
+    # current block not large enough, try next
+    lw ${scratch}, 0(${currentBlockPointer})
+    bgt ${scratch}, ${argument1}, advance_pointers
+    # We found a large enough block! Hooray!
+    b find_large_enough_free_block_loop_exit
+
+    advance_pointers:
+    move ${previousBlockPointer}, ${currentBlockPointer}
+    lw ${currentBlockPointer}, 1(${currentBlockPointer})
+    b find_large_enough_free_block_loop
+
+    find_large_enough_free_block_loop_exit:
+    beq ${currentBlockPointer}, 0, sbrk_more_space
+
+    # Found a reusable block, mark it as not free
+    sw $0, 2(${currentBlockPointer})
+    # add 3 to get actual space
+    move ${result}, ${currentBlockPointer}
+    addiu ${result}, 3
+    b my_malloc_return
+
+    sbrk_more_space:
+    move ${syscallArg1}, ${argument1}
+    # Include space for management block
+    addiu ${syscallArg1}, 3
+    li ${syscallSelect}, 9
+    syscall
+    # If sbrk failed, exit
+    bne ${syscallResult}, -1, sbrk_exit_check_passed
+    la $a0, sbrk_failed
+    li $v0, 4
+    syscall
+    li $v0, 10
+    syscall
+    sbrk_exit_check_passed:
+
+    # ${syscallResult} now contains pointer to block. Set up pointer to new block.
+    lw ${scratch}, first_block
+    bne ${scratch}, 0, assign_previous
+    sw ${syscallResult}, first_block
+    b set_up_new_space
+    assign_previous:
+    bne ${previousBlockPointer}, 0, set_up_new_space
+    sw ${syscallResult}, 1(${previousBlockPointer})
+
+    set_up_new_space:
+    # Save size to new block
+    sw ${argument1}, 0(${syscallResult})
+    # Save next pointer = nullptr
+    sw $0, 1(${syscallResult})
+    # Not free as we are about to use it
+    sw $0, 1(${syscallResult})
+    move ${result}, ${syscallResult}
+    # add 3 to get actual space
+    addiu ${result}, 3
+
+    my_malloc_return:
+    ${restoreRegistersCode(3).join('\n')}
+    `;
+}
+
 const toExectuable = ({
     functions,
     program,
@@ -716,29 +805,18 @@ const toExectuable = ({
 ${globalDeclarations.map(name => `${name.name}: .word 0`).join('\n')}
 ${stringLiterals.map(text => `string_constant_${text}: .asciiz "${text}"`).join('\n')}
 zero_memory_malloc_error: .asciiz "Zero memory requested! Exiting."
+sbrk_failed: .asciiz "Memory allocation failed! Exiting."
 
-# For malloc
-first_block_size: .word 0
-first_block_next_block_ptr: .word 0
-first_block_free: .word 1
-
-.text
-my_malloc:
-bne ${argument1Register}, 0, my_malloc_zero_size_check_passed
-la $a0, zero_memory_malloc_error
-li $v0, 4
-syscall
-li $v0, 10
-syscall
-my_malloc_zero_size_check_passed:
+# First block pointer. Block: size, next, free
+first_block: .word 0
 
 .text
 ${lengthRuntimeFunction()}
 ${stringEqualityRuntimeFunction()}
+${myMallocRuntimeFunction()}
 
 ${mipsFunctions.join('\n')}
 main:
-jal my_malloc
 ${makeSpillSpaceCode.join('\n')}
 ${mipsProgram.join('\n')}
 ${removeSpillSpaceCode.join('\n')}
