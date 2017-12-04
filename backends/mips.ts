@@ -654,14 +654,7 @@ const stringEqualityRuntimeFunction = () => {
     const leftByte = '$t1';
     const rightByte = '$t2';
     return `stringEquality:
-    # Always store return address
-    sw $ra, ($sp)
-    addiu $sp, $sp, -4
-    # Store two temporaries
-    sw ${leftByte}, ($sp)
-    addiu $sp, $sp, -4
-    sw ${rightByte}, ($sp)
-    addiu $sp, $sp, -4
+    ${saveRegistersCode(2).join('\n')}
 
     # Assume equal. Write 1 to $a0. Overwrite if difference found.
     li ${result}, 1
@@ -684,14 +677,7 @@ const stringEqualityRuntimeFunction = () => {
     stringEquality_return_false:
     li ${result}, 0
     stringEquality_return:
-    # Restore two temporaries
-    addiu $sp, $sp, 4
-    lw ${rightByte}, ($sp)
-    addiu $sp, $sp, 4
-    lw ${leftByte}, ($sp)
-    # Always restore return address
-    addiu $sp, $sp, 4
-    lw $ra, ($sp)
+    ${restoreRegistersCode(2).join('\n')}
     jr $ra`;
 }
 
