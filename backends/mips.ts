@@ -552,27 +552,37 @@ const assignMipsRegisters = (variables: VariableDeclaration[]) => {
     };
 };
 
-const constructMipsFunction = ({ name, argument, statements, temporaryCount }, globalDeclarations, stringLiterals) => {
-    const saveTemporariesCode = [
+const saveRegistersCode = (numRegisters: number): string[] => {
+    let result = [
         `# Always store return address`,
         `sw $ra, ($sp)`,
         `addiu $sp, $sp, -4`,
     ];
-    const restoreTemporariesCode = [
-        `# Always restore return address`,
+    while (numRegisters > 0) {
+        result.push(`sw $t${numRegisters}, ($sp)`);
+        result.push(`addiu $sp, $sp, -4`);
+        numRegisters--;
+    }
+    return result;
+};
+
+const restoreRegistersCode = (numRegisters: number): string[] => {
+    let result = [
         `lw $ra, ($sp)`,
         `addiu $sp, $sp, 4`,
+        `# Always restore return address`,
     ];
-
-    const localsCount = statements.length - 1; // Statments are either assign or return right now
-
-    while (temporaryCount + localsCount > 0) {
-        saveTemporariesCode.push(`sw $t${temporaryCount}, ($sp)`);
-        saveTemporariesCode.push(`addiu $sp, $sp, -4`);
-        restoreTemporariesCode.push(`lw $t${temporaryCount}, ($sp)`);
-        restoreTemporariesCode.push(`addiu $sp, $sp, 4`);
-        temporaryCount--;
+    while (numRegisters > 0) {
+        result.push(`lw $t${numRegisters}, ($sp)`);
+        result.push(`addiu $sp, $sp, 4`);
+        numRegisters--;
     }
+    return result.reverse();
+};
+
+const constructMipsFunction = ({ name, argument, statements, temporaryCount }, globalDeclarations, stringLiterals) => {
+    // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
+    const scratchRegisterCount = temporaryCount + statements.length - 1;
 
     const registerAssignment: any = {
         [argument.name]: {
@@ -605,9 +615,9 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
     }));
     return [
         `${name}:`,
-        ...saveTemporariesCode,
+        ...saveRegistersCode(scratchRegisterCount),
         `${mipsCode.join('\n')}`,
-        ...restoreTemporariesCode.reverse(),
+        ...restoreRegistersCode(scratchRegisterCount),
         `jr $ra`,
     ].join('\n');
 }
