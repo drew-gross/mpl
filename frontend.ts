@@ -5,6 +5,7 @@ import { lex } from './lex.js';
 import parseProgram from './parser.js'
 import { ParseResult, AstNode, AstInteriorNode, AstLeaf } from './parser-combinator.js';
 import { Type, VariableDeclaration, IdentifierDict, Function, MemoryCategory, BackendInputs } from './api.js';
+import * as Ast from './ast.js';
 
 type VariableDeclarationWithNoMemory = {
     name: string,
@@ -559,6 +560,78 @@ type FrontendOutput =
     { parseErrors: string[] } |
     { typeErrors: string[] };
 
+const lowerAst = (ast: any): Ast.LoweredAst => {
+    if (!ast) debug();
+    switch (ast.type) {
+        case 'returnStatement': return {
+            kind: 'returnStatement',
+            expression: lowerAst(ast.children[1]),
+        }
+        case 'number': return {
+            kind: 'number',
+            value: ast.value,
+        }
+        case 'identifier': return {
+            kind: 'identifier',
+            value: ast.value,
+        }
+        case 'product': return {
+            kind: 'product',
+            lhs: lowerAst(ast.children[0]),
+            rhs: lowerAst(ast.children[1]),
+        }
+        case 'ternary': return {
+            kind: 'ternary',
+            condition: lowerAst(ast.children[0]),
+            ifTrue: lowerAst(ast.children[2]),
+            ifFalse: lowerAst(ast.children[4]),
+        }
+        case 'equality': return {
+            kind: 'equality',
+            lhs: lowerAst(ast.children[0]),
+            rhs: lowerAst(ast.children[2]),
+        }
+        case 'callExpression': return {
+            kind: 'callExpression',
+            name: ast.children[0].value,
+            argument: lowerAst(ast.children[2]),
+        }
+        case 'subtraction': return {
+            kind: 'subtraction',
+            lhs: lowerAst(ast.children[0]),
+            rhs: lowerAst(ast.children[1]),
+        }
+        case 'typedAssignment': return {
+            kind: 'typedAssignment',
+            destination: ast.children[0].value,
+            expression: lowerAst(ast.children[4]),
+        }
+        case 'stringLiteral': return {
+            kind: 'stringLiteral',
+            value: ast.value,
+        }
+        case 'concatenation': return {
+            kind: 'concatenation',
+            lhs: lowerAst(ast.children[0]),
+            rhs: lowerAst(ast.children[2]),
+        }
+        case 'stringEquality': return {
+            kind: 'stringEquality',
+            lhs: lowerAst(ast.children[0]),
+            rhs: lowerAst(ast.children[2]),
+        }
+        case 'functionLiteral': return {
+            kind: 'functionLiteral',
+            deanonymizedName: ast.value,
+        }
+        case 'booleanLiteral': return {
+            kind: 'booleanLiteral',
+            value: ast.value == 'true',
+        }
+        default: throw debug();
+    }
+}
+
 const compile = (source: string): FrontendOutput => {
     const tokens = lex(source);
     const { ast, parseErrors } = parse(tokens);
@@ -610,6 +683,16 @@ const compile = (source: string): FrontendOutput => {
         if (statement.type === 'assignment') debug();
     });
 
+    const loweredFunctionsWithStatementList = functionsWithStatementList.map(f => ({
+        ...f,
+        statements: f.statements.map(lowerAst),
+    }));
+
+    const loweredProgramWithStatementList = {
+        ...programWithStatementList,
+        statements: programWithStatementList.statements.map(lowerAst),
+    };
+
     const globalDeclarations: VariableDeclaration[] = programWithStatementList.statements
         .filter(s => s.type === 'typedAssignment')
         .map(assignment => {
@@ -623,8 +706,8 @@ const compile = (source: string): FrontendOutput => {
         }) as any;
 
     return {
-        functions: functionsWithStatementList,
-        program: programWithStatementList,
+        functions: loweredFunctionsWithStatementList,
+        program: loweredProgramWithStatementList,
         globalDeclarations,
         stringLiterals,
     };

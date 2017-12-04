@@ -1,21 +1,23 @@
 import flatten from '../util/list/flatten.js';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { BackendInputs, ExecutionResult } from '../api.js';
+import * as Ast from '../ast.js';
+import debug from '../util/debug.js';
 
-const astToJS = ({ ast, exitInsteadOfReturn }) => {
+const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.LoweredAst, exitInsteadOfReturn: boolean }) => {
     if (!ast) debugger;
-    switch (ast.type) {
+    switch (ast.kind) {
         case 'returnStatement': {
             if (exitInsteadOfReturn) {
                 return [`process.exit(${astToJS({
-                    ast: ast.children[1],
+                    ast: ast.expression,
                     exitInsteadOfReturn,
                 }).join(' ')})`];
             } else {
                 return [
                     `return `,
                     ...astToJS({
-                        ast: ast.children[1],
+                        ast: ast.expression,
                         exitInsteadOfReturn,
                     }),
                 ];
@@ -24,23 +26,23 @@ const astToJS = ({ ast, exitInsteadOfReturn }) => {
         case 'number': return [ast.value.toString()];
         case 'product': return [
             ...astToJS({
-                ast: ast.children[0],
+                ast: ast.lhs,
                 exitInsteadOfReturn,
             }),
             '*',
             ...astToJS({
-                ast: ast.children[1],
+                ast: ast.rhs,
                 exitInsteadOfReturn
             }),
         ];
         case 'subtraction': return [
             ...astToJS({
-                ast: ast.children[0],
+                ast: ast.lhs,
                 exitInsteadOfReturn,
             }),
             '-',
             ...astToJS({
-                ast: ast.children[1],
+                ast: ast.rhs,
                 exitInsteadOfReturn
             }),
         ];
@@ -48,67 +50,58 @@ const astToJS = ({ ast, exitInsteadOfReturn }) => {
             ast: child,
             exitInsteadOfReturn,
         })));
-        case 'statementSeparator': return [];
         case 'typedAssignment': return [
-            `const ${ast.children[0].value} = `,
+            `const ${ast.destination} = `,
             ...astToJS({
-                ast: ast.children[4],
+                ast: ast.expression,
                 exitInsteadOfReturn,
             }),
             ';',
         ];
-        case 'assignment': return [
-            `const ${ast.children[0].value} = `,
-            ...astToJS({
-                ast: ast.children[2],
-                exitInsteadOfReturn
-            }),
-            ';',
-        ];
-        case 'functionLiteral': return [ast.value];
+        case 'functionLiteral': return [ast.deanonymizedName];
         case 'callExpression': return [
-            `${ast.children[0].value}(`,
+            `${ast.name}(`,
             ...astToJS({
-                ast: ast.children[2],
+                ast: ast.argument,
                 exitInsteadOfReturn,
             }),
             `)`];
         case 'identifier': return [ast.value];
         case 'ternary': return [
             ...astToJS({
-                ast: ast.children[0],
+                ast: ast.condition,
                 exitInsteadOfReturn,
             }),
             '?',
             ...astToJS({
-                ast: ast.children[2],
+                ast: ast.ifTrue,
                 exitInsteadOfReturn,
             }),
             ':',
             ...astToJS({
-                ast: ast.children[4],
+                ast: ast.ifFalse,
                 exitInsteadOfReturn,
             }),
         ];
         case 'equality': return [
             ...astToJS({
-                ast: ast.children[0],
+                ast: ast.lhs,
                 exitInsteadOfReturn,
             }),
             '==',
             ...astToJS({
-                ast: ast.children[2],
+                ast: ast.rhs,
                 exitInsteadOfReturn,
             }),
         ];
         case 'stringEquality':  return [
             ...astToJS({
-                ast: ast.children[0],
+                ast: ast.lhs,
                 exitInsteadOfReturn,
             }),
             '==',
             ...astToJS({
-                ast: ast.children[2],
+                ast: ast.rhs,
                 exitInsteadOfReturn,
             }),
         ];
@@ -117,12 +110,12 @@ const astToJS = ({ ast, exitInsteadOfReturn }) => {
         case 'concatenation': return [
             '(',
             ...astToJS({
-                ast: ast.children[0],
+                ast: ast.lhs,
                 exitInsteadOfReturn,
             }),
             ').concat(',
             ...astToJS({
-                ast: ast.children[2],
+                ast: ast.rhs,
                 exitInsteadOfReturn,
             }),
             ')',
