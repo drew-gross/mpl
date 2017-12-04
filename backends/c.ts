@@ -111,8 +111,7 @@ const astToC = ({
 
             return compileExpression(childResults, flatten);
         }
-        case 'typedAssignment':
-        case 'assignment': {
+        case 'typedAssignment': {
             const lhs = ast.destination;
             const rhs = astToC({ ast: ast.expression, globalDeclarations, stringLiterals, localDeclarations });
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {

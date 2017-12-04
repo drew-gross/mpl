@@ -33,13 +33,6 @@ export type StringEquality = {
     rhs: LoweredAst;
 };
 
-// TODO: merge assignment and typed assignment
-export type Assignment = {
-    kind: 'assignment';
-    destination: string;
-    expression: LoweredAst;
-};
-
 export type TypedAssignment = {
     kind: 'typedAssignment';
     destination: string;
@@ -96,7 +89,6 @@ export type LoweredAst =
     Ternary |
     Identifier |
     Equality |
-    Assignment |
     TypedAssignment |
     FunctionCall |
     FunctionLiteral |

@@ -58,14 +58,6 @@ const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.LoweredAst, exitInstea
             }),
             ';',
         ];
-        case 'assignment': return [
-            `const ${ast.destination} = `,
-            ...astToJS({
-                ast: ast.expression,
-                exitInsteadOfReturn
-            }),
-            ';',
-        ];
         case 'functionLiteral': return [ast.deanonymizedName];
         case 'callExpression': return [
             `${ast.name}(`,

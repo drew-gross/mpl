@@ -314,10 +314,7 @@ const astToMips = ({
                             `# Store into global`,
                             `sw ${currentTemporary.destination}, ${lhs}`,
                         ];
-                    default:
-                        console.log(declaration);
-                        debug();
-                        break;
+                    default: throw debug();
                 }
             } else if (lhs in registerAssignment) {
                 return [
@@ -336,48 +333,8 @@ const astToMips = ({
                     }),
                 ];
             } else {
-                debug();
+                throw debug();
             }
-        }
-        case 'assignment': {
-            const lhs = ast.destination;
-            const rhs = ast.expression;
-            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
-                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
-                if (!declaration) {
-                    debug();
-                }
-                switch ((declaration as any).type.name) {
-                    case 'Function': return [
-                        `# Load function ptr (${rhs} into s7 (s7 used to not overlap with arg)`,
-                        `la $s7, ${rhs}`,
-                        `# store from temporary into global`,
-                        `sw $s7, ${lhs}`,
-                    ];
-                    case 'String': return [
-                        `# Load string ptr (${rhs} into s7 (s7 used to not overlap with arg)`,
-                        `la $s7, string_constant_${rhs}`,
-                        `# store from temporary into global string`,
-                        `sw $s7, ${lhs}`,
-                    ];
-                    default:
-                        debug();
-                };
-            } else if (stringLiterals.includes(rhs)) { // TODO: Pretty sure this is wrong
-                const register = registerAssignment[lhs].destination;
-                return [
-                    `# Load string literal`,
-                    `la ${register}, string_constant_${rhs}`,
-                ];
-            } else {
-                const register = registerAssignment[lhs].destination;
-                return [
-                    `# ${lhs} (${register}) = ${rhs}`,
-                    `la ${register}, ${rhs}`,
-                ];
-            }
-            throw debug();
-
         }
         case 'identifier': {
             // TODO: Better handle identifiers here. Also just better storage/scope chains?
