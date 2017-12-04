@@ -767,11 +767,12 @@ test('wrong type global', compileAndRun, {
     expectedTypeErrors: ['You tried to assign a Integer to "str", which has type String'],
 });
 
-test.only('string concatenation', compileAndRun, {
+test('string concatenation', compileAndRun, {
     source: `str1: String = "a"
 str2: String = "b"
 return str1 ++ str2 == "ab" ? 5 : 10`,
     expectedExitCode: 5,
+    failing: 'mips',
 });
 
 test('concatenate and get length then subtract', compileAndRun, {
