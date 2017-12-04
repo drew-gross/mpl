@@ -754,7 +754,7 @@ return str1 == str2 ? 1 : 2
     expectedExitCode: 2
 });
 
-test('string equality: inequal different length', compileAndRun, {
+test.only('string equality: inequal different length', compileAndRun, {
     source: `str1 = "aa"
 str2 = "a"
 return str1 == str2 ? 1 : 2
@@ -767,7 +767,7 @@ test('wrong type global', compileAndRun, {
     expectedTypeErrors: ['You tried to assign a Integer to "str", which has type String'],
 });
 
-test.failing('string concatenation', compileAndRun, {
+test.only('string concatenation', compileAndRun, {
     source: `str1: String = "a"
 str2: String = "b"
 return str1 ++ str2 == "ab" ? 5 : 10`,

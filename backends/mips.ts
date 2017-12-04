@@ -729,20 +729,29 @@ const toExectuable = ({
 .data
 ${globalDeclarations.map(name => `${name.name}: .word 0`).join('\n')}
 ${stringLiterals.map(text => `string_constant_${text}: .asciiz "${text}"`).join('\n')}
+zero_memory_malloc_error: .asciiz "Zero memory requested! Exiting."
 
 # For malloc
 first_block_size: .word 0
 first_block_next_block_ptr: .word 0
 first_block_free: .word 1
 
-my_malloc:
-
 .text
+my_malloc:
+bne ${argument1Register}, 0, my_malloc_zero_size_check_passed
+la $a0, zero_memory_malloc_error
+li $v0, 4
+syscall
+li $v0, 10
+syscall
+my_malloc_zero_size_check_passed:
+
 ${lengthRuntimeFunction}
 ${stringEqualityRuntimeFunction}
 
 ${mipsFunctions.join('\n')}
 main:
+jal my_malloc
 ${makeSpillSpaceCode.join('\n')}
 ${mipsProgram.join('\n')}
 ${removeSpillSpaceCode.join('\n')}
