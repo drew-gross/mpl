@@ -612,42 +612,45 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
     ].join('\n');
 }
 
-const lengthRuntimeFunction =
-`length:
-# Always store return address
-sw $ra, ($sp)
-addiu $sp, $sp, -4
-# Store two temporaries
-sw $t1, ($sp)
-addiu $sp, $sp, -4
-sw $t2, ($sp)
-addiu $sp, $sp, -4
+const lengthRuntimeFunction = () => {
+    const result = '$a0';
+    const lengthSoFar = '$t1';
+    return `length:
+    # Always store return address
+    sw $ra, ($sp)
+    addiu $sp, $sp, -4
+    # Store two temporaries
+    sw ${lengthSoFar}, ($sp)
+    addiu $sp, $sp, -4
+    sw $t2, ($sp)
+    addiu $sp, $sp, -4
 
-# Set length count to 0
-li $t1, 0
-length_loop:
-# Load char into temporary
-lb $t2, (${argument1})
-# If char is null, end of string. Return count.
-beq $t2, 0, length_return
-# Else bump pointer and count and return to start of loop
-addiu $t1, $t1, 1
-addiu ${argument1}, ${argument1}, 1
-b length_loop
+    # Set length count to 0
+    li ${lengthSoFar}, 0
+    length_loop:
+    # Load char into temporary
+    lb $t2, (${argument1})
+    # If char is null, end of string. Return count.
+    beq $t2, 0, length_return
+    # Else bump pointer and count and return to start of loop
+    addiu ${lengthSoFar}, ${lengthSoFar}, 1
+    addiu ${argument1}, ${argument1}, 1
+    b length_loop
 
-length_return:
-# Put length in return register
-move $a0, $t1
+    length_return:
+    # Put length in return register
+    move ${result}, ${lengthSoFar}
 
-# Restore two temporaries
-addiu $sp, $sp, 4
-lw $t2, ($sp)
-addiu $sp, $sp, 4
-lw $t1, ($sp)
-# Always restore return address
-addiu $sp, $sp, 4
-lw $ra, ($sp)
-jr $ra`;
+    # Restore two temporaries
+    addiu $sp, $sp, 4
+    lw $t2, ($sp)
+    addiu $sp, $sp, 4
+    lw ${lengthSoFar}, ($sp)
+    # Always restore return address
+    addiu $sp, $sp, 4
+    lw $ra, ($sp)
+    jr $ra`;
+}
 
 const stringEqualityRuntimeFunction = () => {
     const result = '$a0';
@@ -742,7 +745,7 @@ first_block_free: .word 1
 my_malloc:
 
 .text
-${lengthRuntimeFunction}
+${lengthRuntimeFunction()}
 ${stringEqualityRuntimeFunction()}
 
 ${mipsFunctions.join('\n')}
