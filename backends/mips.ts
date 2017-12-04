@@ -624,28 +624,24 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
 
 const lengthRuntimeFunction = () => {
     const result = '$a0';
-    const lengthSoFar = '$t1';
-    const currentChar = '$t2';
+    const currentChar = '$t1';
     return `length:
-    ${saveRegistersCode(2).join('\n')}
+    ${saveRegistersCode(1).join('\n')}
 
     # Set length count to 0
-    li ${lengthSoFar}, 0
+    li ${result}, 0
     length_loop:
     # Load char into temporary
     lb ${currentChar}, (${argument1})
     # If char is null, end of string. Return count.
     beq ${currentChar}, 0, length_return
     # Else bump pointer and count and return to start of loop
-    addiu ${lengthSoFar}, ${lengthSoFar}, 1
+    addiu ${result}, ${result}, 1
     addiu ${argument1}, ${argument1}, 1
     b length_loop
 
     length_return:
-    # Put length in return register
-    move ${result}, ${lengthSoFar}
-
-    ${restoreRegistersCode(2).join('\n')}
+    ${restoreRegistersCode(1).join('\n')}
     jr $ra`;
 }
 
