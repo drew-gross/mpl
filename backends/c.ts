@@ -1,3 +1,4 @@
+import * as Ast from '../ast.js';
 import { file as tmpFile} from 'tmp-promise';
 import { VariableDeclaration, Type, BackendInputs, Function, ExecutionResult } from '../api.js';
 import flatten from '../util/list/flatten.js';
@@ -18,7 +19,7 @@ const mplTypeToCDeclaration = (type: Type, name: string) => {
 };
 
 type BackendInput = {
-    ast: any,
+    ast: Ast.LoweredAst,
     globalDeclarations: VariableDeclaration[],
     localDeclarations: VariableDeclaration[],
     stringLiterals: string[],
@@ -71,25 +72,25 @@ const astToC = ({
     localDeclarations,
 }: BackendInput): CompiledProgram => {
     if (!ast) debug();
-    switch (ast.type) {
+    switch (ast.kind) {
         case 'returnStatement': {
-            const subExpression = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
+            const subExpression = astToC({ ast: ast.expression, globalDeclarations, stringLiterals, localDeclarations });
             return compileExpression([subExpression], ([e1]) => ['return', ...e1, ';']);
         }
         case 'number': return compileExpression([], ([]) => [ast.value.toString()]);
         case 'product': {
-            const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
-            const rhs = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
+            const lhs = astToC({ ast: ast.lhs, globalDeclarations, stringLiterals, localDeclarations });
+            const rhs = astToC({ ast: ast.rhs, globalDeclarations, stringLiterals, localDeclarations });
             return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '*', ...e2]);
         }
         case 'subtraction': {
-            const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
-            const rhs = astToC({ ast: ast.children[1], globalDeclarations, stringLiterals, localDeclarations });
+            const lhs = astToC({ ast: ast.lhs, globalDeclarations, stringLiterals, localDeclarations });
+            const rhs = astToC({ ast: ast.rhs, globalDeclarations, stringLiterals, localDeclarations });
             return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '-', ...e2]);
         }
         case 'concatenation': {
-            const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
-            const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
+            const lhs = astToC({ ast: ast.lhs, globalDeclarations, stringLiterals, localDeclarations });
+            const rhs = astToC({ ast: ast.rhs, globalDeclarations, stringLiterals, localDeclarations });
             const prepAndCleanup = {
                 prepare: [`char *temporary_string = my_malloc(length(${join(lhs.execute, ' ')}) + length(${join(rhs.execute, ' ')}) + 1);`],
                 execute: [],
@@ -110,12 +111,10 @@ const astToC = ({
 
             return compileExpression(childResults, flatten);
         }
-        case 'statementSeparator': return compileExpression([], ([]) => []);
         case 'typedAssignment':
         case 'assignment': {
-            const rhsIndex = ast.type === 'assignment' ? 2 : 4;
-            const lhs = ast.children[0].value;
-            const rhs = astToC({ ast: ast.children[rhsIndex], globalDeclarations, stringLiterals, localDeclarations });
+            const lhs = ast.destination;
+            const rhs = astToC({ ast: ast.expression, globalDeclarations, stringLiterals, localDeclarations });
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug();
@@ -154,33 +153,35 @@ const astToC = ({
                     default: debug();
                 }
             }
+            throw debug();
+
         }
-        case 'functionLiteral': return compileExpression([], ([]) => [`&${ast.value}`]);
+        case 'functionLiteral': return compileExpression([], ([]) => [`&${ast.deanonymizedName}`]);
         case 'callExpression': {
-            const argC = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
-            return compileExpression([argC], ([e1]) => [`(*${ast.children[0].value})(`, ...e1, ')']);
+            const argC = astToC({ ast: ast.argument, globalDeclarations, stringLiterals, localDeclarations });
+            return compileExpression([argC], ([e1]) => [`(*${ast.name})(`, ...e1, ')']);
         };
         case 'identifier': return compileExpression([], ([]) => [ast.value]);
         case 'ternary': {
-            const comparatorC = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
-            const ifTrueC = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
-            const ifFalseC = astToC({ ast: ast.children[4], globalDeclarations, stringLiterals, localDeclarations });
+            const comparatorC = astToC({ ast: ast.condition, globalDeclarations, stringLiterals, localDeclarations });
+            const ifTrueC = astToC({ ast: ast.ifTrue, globalDeclarations, stringLiterals, localDeclarations });
+            const ifFalseC = astToC({ ast: ast.ifFalse, globalDeclarations, stringLiterals, localDeclarations });
             return compileExpression(
                 [comparatorC, ifTrueC, ifFalseC],
                 ([compare, ifTrue, ifFalse]) => [...compare, '?', ...ifTrue, ':', ...ifFalse]
             );
         };
         case 'equality': {
-            const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
-            const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
+            const lhs = astToC({ ast: ast.lhs, globalDeclarations, stringLiterals, localDeclarations });
+            const rhs = astToC({ ast: ast.rhs, globalDeclarations, stringLiterals, localDeclarations });
             return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '==', ...e2]);
         };
         case 'stringEquality': {
-            const lhs = astToC({ ast: ast.children[0], globalDeclarations, stringLiterals, localDeclarations });
-            const rhs = astToC({ ast: ast.children[2], globalDeclarations, stringLiterals, localDeclarations });
+            const lhs = astToC({ ast: ast.lhs, globalDeclarations, stringLiterals, localDeclarations });
+            const rhs = astToC({ ast: ast.rhs, globalDeclarations, stringLiterals, localDeclarations });
             return compileExpression([lhs, rhs], ([e1, e2]) => ['string_compare(', ...e1, ',', ...e2, ')']);
         }
-        case 'booleanLiteral': return compileExpression([], ([]) => [ast.value == 'true' ? '1' : '0']);
+        case 'booleanLiteral': return compileExpression([], ([]) => [ast.value ? '1' : '0']);
         case 'stringLiteral': return compileExpression([], ([]) => [`string_literal_${ast.value}`]);
         default: debug();
     };
@@ -192,7 +193,7 @@ const stringLiteralDeclaration = stringLiteral => `char *string_literal_${string
 type MakeCFunctionBodyInputs = {
     name: any,
     argument: any,
-    statements: any,
+    statements: Ast.LoweredAst[],
     variables: any,
     globalDeclarations: any,
     stringLiterals: any,
@@ -214,6 +215,7 @@ const makeCfunctionBody = ({
 }: MakeCFunctionBodyInputs) => {
     const nonReturnStatements = statements.slice(0, statements.length - 1);
     const returnStatement = statements[statements.length - 1];
+    if (returnStatement.kind !== 'returnStatement') throw debug();
     const body = nonReturnStatements.map(statement => {
         const statementLogic = astToC({
             ast: statement,
@@ -233,7 +235,7 @@ const makeCfunctionBody = ({
         .filter(s => s.type.name == 'String')
         .map(s => `my_free(${s.name});`);
     const returnCode = astToC({
-        ast: returnStatement.children[1],
+        ast: returnStatement.expression,
         globalDeclarations,
         stringLiterals,
         localDeclarations: variables,

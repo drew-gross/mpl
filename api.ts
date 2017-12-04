@@ -1,4 +1,5 @@
 import { AstNode } from './parser-combinator.js'; // TODO: This shouldn't be necessary
+import { LoweredAst } from './ast.js';
 
 export type Type = {
     name: 'String' | 'Integer' | 'Boolean'
@@ -21,9 +22,17 @@ export type Function = {
     temporaryCount: number,
     knownIdentifiers: IdentifierDict,
 };
+export type LoweredFunction = {
+    name: string,
+    statements: LoweredAst[],
+    variables: VariableDeclaration[],
+    argument: VariableDeclaration,
+    temporaryCount: number,
+    knownIdentifiers: IdentifierDict,
+};
 export type BackendInputs = {
-    functions: Function[],
-    program: Function,
+    functions: LoweredFunction[],
+    program: LoweredFunction,
     globalDeclarations: VariableDeclaration[],
     stringLiterals,
 };

@@ -1,6 +1,7 @@
 import { exec } from 'child-process-promise';
 import flatten from '../util/list/flatten.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult } from '../api.js';
+import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
@@ -115,7 +116,7 @@ const runtimeFunctions = ['length'];
 let labelId = 0;
 
 type AstToMipsOptions = {
-    ast: any,
+    ast: Ast.LoweredAst,
     registerAssignment: any,
     destination: any,
     currentTemporary: any,
@@ -132,11 +133,11 @@ const astToMips = ({
     stringLiterals,
 }: AstToMipsOptions) => {
     if (!ast) debug();
-    switch (ast.type) {
+    switch (ast.kind) {
         case 'returnStatement': return [
             `# evaluate expression of return statement, put in $a0`,
             ...astToMips({
-                ast: ast.children[1],
+                ast: ast.expression,
                 registerAssignment,
                 destination: {
                     type: 'register',
@@ -148,14 +149,14 @@ const astToMips = ({
             }),
         ];
         case 'number': return [storeLiteralMips(destination, ast.value)];
-        case 'booleanLiteral': return [storeLiteralMips(destination, ast.value == 'true' ? '1' : '0')];
+        case 'booleanLiteral': return [storeLiteralMips(destination, ast.value ? '1' : '0')];
         case 'product': {
             const leftSideDestination = currentTemporary;
             const rightSideDestination = destination;
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
             const storeLeftInstructions = astToMips({
-                ast: ast.children[0],
+                ast: ast.lhs,
                 registerAssignment,
                 destination: leftSideDestination,
                 currentTemporary: subExpressionTemporary,
@@ -163,7 +164,7 @@ const astToMips = ({
                 stringLiterals,
             });
             const storeRightInstructions = astToMips({
-                ast: ast.children[1],
+                ast: ast.rhs,
                 registerAssignment,
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
@@ -185,7 +186,7 @@ const astToMips = ({
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
             const storeLeftInstructions = astToMips({
-                ast: ast.children[0],
+                ast: ast.lhs,
                 registerAssignment,
                 destination: leftSideDestination,
                 currentTemporary: subExpressionTemporary,
@@ -193,7 +194,7 @@ const astToMips = ({
                 stringLiterals,
             });
             const storeRightInstructions = astToMips({
-                ast: ast.children[1],
+                ast: ast.rhs,
                 registerAssignment,
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
@@ -221,12 +222,12 @@ const astToMips = ({
             if (destination.type !== 'register') debug(); // TODO: Figure out how to guarantee this doesn't happen
             return [
                 `# Loading function into register`,
-                `la ${destination.destination}, ${ast.value}`
+                `la ${destination.destination}, ${ast.deanonymizedName}`
             ];
         }
         case 'callExpression': {
             if (currentTemporary.type !== 'register') debug(); // TODO: Figure out how to guarantee this doesn't happen
-            const name = ast.children[0].value;
+            const name = ast.name;
             let callInstructions: string[] = []
             if (runtimeFunctions.includes(name)) {
                 callInstructions = [
@@ -252,7 +253,7 @@ const astToMips = ({
             return [
                 `# Put argument in argument1`,
                 ...astToMips({
-                    ast: ast.children[2],
+                    ast: ast.argument,
                     registerAssignment,
                     destination: { type: 'register', destination: argument1 },
                     currentTemporary: nextTemporary(currentTemporary),
@@ -266,7 +267,7 @@ const astToMips = ({
             ];
         }
         case 'typedAssignment': {
-            const lhs = ast.children[0].value;
+            const lhs = ast.destination;
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) debug();
@@ -275,7 +276,7 @@ const astToMips = ({
                         return [
                             `# Put function pointer into temporary`,
                             ...astToMips({
-                                ast: ast.children[4],
+                                ast: ast.expression,
                                 registerAssignment,
                                 destination: currentTemporary,
                                 currentTemporary,
@@ -289,7 +290,7 @@ const astToMips = ({
                         return [
                             `# Put integer pointer into temporary`,
                             ...astToMips({
-                                ast: ast.children[4],
+                                ast: ast.expression,
                                 registerAssignment,
                                 destination: currentTemporary,
                                 currentTemporary,
@@ -303,7 +304,7 @@ const astToMips = ({
                         return [
                             `# Put string pointer into temporary`,
                             ...astToMips({
-                                ast: ast.children[4],
+                                ast: ast.expression,
                                 registerAssignment,
                                 destination: currentTemporary,
                                 currentTemporary,
@@ -322,7 +323,7 @@ const astToMips = ({
                 return [
                     `# Run rhs of assignment and store to ${lhs} (${registerAssignment[lhs].destination})`,
                     ...astToMips({
-                        ast: ast.children[4],
+                        ast: ast.expression,
                         registerAssignment,
                         // TODO: Allow spilling of variables
                         destination: {
@@ -339,8 +340,8 @@ const astToMips = ({
             }
         }
         case 'assignment': {
-            const lhs = ast.children[0].value;
-            const rhs = ast.children[2].value;
+            const lhs = ast.destination;
+            const rhs = ast.expression;
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) {
@@ -375,6 +376,8 @@ const astToMips = ({
                     `la ${register}, ${rhs}`,
                 ];
             }
+            throw debug();
+
         }
         case 'identifier': {
             // TODO: Better handle identifiers here. Also just better storage/scope chains?
@@ -405,7 +408,7 @@ const astToMips = ({
             return [
                 `# Compute boolean and store in temporary`,
                 ...astToMips({
-                    ast: ast.children[0],
+                    ast: ast.condition,
                     registerAssignment,
                     destination: booleanTemporary,
                     currentTemporary: subExpressionTemporary,
@@ -416,7 +419,7 @@ const astToMips = ({
                 mipsBranchIfEqual(booleanTemporary, { type: 'register', destination: '$0' }, `L${falseBranchLabel}`),
                 `# Execute true branch`,
                 ...astToMips({
-                    ast: ast.children[2],
+                    ast: ast.ifTrue,
                     registerAssignment,
                     destination,
                     currentTemporary: subExpressionTemporary,
@@ -428,7 +431,7 @@ const astToMips = ({
                 `L${falseBranchLabel}:`,
                 `# Execute false branch`,
                 ...astToMips({
-                    ast: ast.children[4],
+                    ast: ast.ifFalse,
                     registerAssignment,
                     destination,
                     currentTemporary: subExpressionTemporary,
@@ -444,7 +447,7 @@ const astToMips = ({
             const rightSideDestination = destination;
             const subExpressionTemporary = nextTemporary(currentTemporary);
             const storeLeftInstructions = astToMips({
-                ast: ast.children[0],
+                ast: ast.lhs,
                 registerAssignment,
                 destination: leftSideDestination,
                 currentTemporary: subExpressionTemporary,
@@ -453,7 +456,7 @@ const astToMips = ({
             });
 
             const storeRightInstructions = astToMips({
-                ast: ast.children[2],
+                ast: ast.rhs,
                 registerAssignment,
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
@@ -487,7 +490,7 @@ const astToMips = ({
         case 'stringEquality': {
             // Put left in s0 and right in s1 for passing to string equality function
             const storeLeftInstructions = astToMips({
-                ast: ast.children[0],
+                ast: ast.lhs,
                 registerAssignment,
                 destination: {
                     type: 'register',
@@ -498,7 +501,7 @@ const astToMips = ({
                 stringLiterals,
             });
             const storeRightInstructions = astToMips({
-                ast: ast.children[2],
+                ast: ast.rhs,
                 registerAssignment,
                 destination: {
                     type: 'register',
@@ -580,7 +583,14 @@ const restoreRegistersCode = (numRegisters: number): string[] => {
     return result.reverse();
 };
 
-const constructMipsFunction = ({ name, argument, statements, temporaryCount }, globalDeclarations, stringLiterals) => {
+type ConstructMipsFunctionFirstArg = {
+    name: any;
+    argument: any;
+    statements: Ast.LoweredAst[];
+    temporaryCount: any;
+}
+
+const constructMipsFunction = ({ name, argument, statements, temporaryCount }: ConstructMipsFunctionFirstArg, globalDeclarations, stringLiterals) => {
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
     const scratchRegisterCount = temporaryCount + statements.length - 1;
 
@@ -597,8 +607,8 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }, g
     };
 
     statements.forEach(statement => {
-        if (statement.type === 'typedAssignment') {
-            registerAssignment[statement.children[0].value] = currentTemporary;
+        if (statement.kind === 'typedAssignment') {
+            registerAssignment[statement.destination] = currentTemporary;
             currentTemporary = nextTemporary(currentTemporary);
         }
     });
