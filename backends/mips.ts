@@ -4,8 +4,8 @@ import { VariableDeclaration, BackendInputs, ExecutionResult } from '../api.js';
 import debug from '../util/debug.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
-const argument1Register = '$s0';
-const argument2Register = '$s1';
+const argument1 = '$s0';
+const argument2 = '$s1';
 
 const storeLiteralMips = ({ type, destination, spOffset }, value) => {
     if (type == undefined) debug();
@@ -250,11 +250,11 @@ const astToMips = ({
             }
 
             return [
-                `# Put argument in argument1Register`,
+                `# Put argument in argument1`,
                 ...astToMips({
                     ast: ast.children[2],
                     registerAssignment,
-                    destination: { type: 'register', destination: argument1Register },
+                    destination: { type: 'register', destination: argument1 },
                     currentTemporary: nextTemporary(currentTemporary),
                     globalDeclarations,
                     stringLiterals,
@@ -491,7 +491,7 @@ const astToMips = ({
                 registerAssignment,
                 destination: {
                     type: 'register',
-                    destination: argument1Register,
+                    destination: argument1,
                 },
                 currentTemporary,
                 globalDeclarations,
@@ -502,7 +502,7 @@ const astToMips = ({
                 registerAssignment,
                 destination: {
                     type: 'register',
-                    destination: argument2Register,
+                    destination: argument2,
                 },
                 currentTemporary,
                 globalDeclarations,
@@ -627,12 +627,12 @@ addiu $sp, $sp, -4
 li $t1, 0
 length_loop:
 # Load char into temporary
-lb $t2, (${argument1Register})
+lb $t2, (${argument1})
 # If char is null, end of string. Return count.
 beq $t2, 0, length_return
 # Else bump pointer and count and return to start of loop
 addiu $t1, $t1, 1
-addiu ${argument1Register}, ${argument1Register}, 1
+addiu ${argument1}, ${argument1}, 1
 b length_loop
 
 length_return:
@@ -649,47 +649,51 @@ addiu $sp, $sp, 4
 lw $ra, ($sp)
 jr $ra`;
 
-const stringEqualityRuntimeFunction =
-`stringEquality:
-# Always store return address
-sw $ra, ($sp)
-addiu $sp, $sp, -4
-# Store two temporaries
-sw $t1, ($sp)
-addiu $sp, $sp, -4
-sw $t2, ($sp)
-addiu $sp, $sp, -4
+const stringEqualityRuntimeFunction = () => {
+    const result = '$a0';
+    const leftByte = '$t1';
+    const rightByte = '$t2';
+    return `stringEquality:
+    # Always store return address
+    sw $ra, ($sp)
+    addiu $sp, $sp, -4
+    # Store two temporaries
+    sw ${leftByte}, ($sp)
+    addiu $sp, $sp, -4
+    sw ${rightByte}, ($sp)
+    addiu $sp, $sp, -4
 
-# Assume equal. Write 1 to $a0. Overwrite if difference found.
-li $a0, 1
+    # Assume equal. Write 1 to $a0. Overwrite if difference found.
+    li ${result}, 1
 
-# (string*, string*) -> bool
-stringEquality_loop:
-# load current chars into temporaries
-lb $t1, (${argument1Register})
-lb $t2, (${argument2Register})
-# Inequal: return false
-bne $t1, $t2, stringEquality_return_false
-# Now we know both sides are equal. If they equal null, string is over.
-# Return true. We already set $a0 to 1, so just goto end.
-beq $t1, 0, stringEquality_return
-# Otherwise, bump pointers and check next char
-addiu ${argument1Register}, 1
-addiu ${argument2Register}, 1
-b stringEquality_loop
+    # (string*, string*) -> bool
+    stringEquality_loop:
+    # load current chars into temporaries
+    lb ${leftByte}, (${argument1})
+    lb ${rightByte}, (${argument2})
+    # Inequal: return false
+    bne ${leftByte}, ${rightByte}, stringEquality_return_false
+    # Now we know both sides are equal. If they equal null, string is over.
+    # Return true. We already set ${result} to 1, so just goto end.
+    beq ${leftByte}, 0, stringEquality_return
+    # Otherwise, bump pointers and check next char
+    addiu ${argument1}, 1
+    addiu ${argument2}, 1
+    b stringEquality_loop
 
-stringEquality_return_false:
-li $a0, 0
-stringEquality_return:
-# Restore two temporaries
-addiu $sp, $sp, 4
-lw $t2, ($sp)
-addiu $sp, $sp, 4
-lw $t1, ($sp)
-# Always restore return address
-addiu $sp, $sp, 4
-lw $ra, ($sp)
-jr $ra`;
+    stringEquality_return_false:
+    li ${result}, 0
+    stringEquality_return:
+    # Restore two temporaries
+    addiu $sp, $sp, 4
+    lw ${rightByte}, ($sp)
+    addiu $sp, $sp, 4
+    lw ${leftByte}, ($sp)
+    # Always restore return address
+    addiu $sp, $sp, 4
+    lw $ra, ($sp)
+    jr $ra`;
+}
 
 const toExectuable = ({
     functions,
@@ -739,7 +743,7 @@ my_malloc:
 
 .text
 ${lengthRuntimeFunction}
-${stringEqualityRuntimeFunction}
+${stringEqualityRuntimeFunction()}
 
 ${mipsFunctions.join('\n')}
 main:
