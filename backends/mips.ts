@@ -274,8 +274,8 @@ const astToMips = ({
             const lhs = ast.destination;
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
-                if (!declaration) debug();
-                switch ((declaration as any).type.name) {
+                if (!declaration) throw debug();
+                switch (declaration.type.name) {
                     case 'Function':
                         return [
                             `# Put function pointer into temporary`,
