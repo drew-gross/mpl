@@ -273,48 +273,35 @@ const astToMips = ({
         case 'typedAssignment': {
             const lhs = ast.destination;
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
+                const rhs = astToMips({
+                    ast: ast.expression,
+                    registerAssignment,
+                    destination: currentTemporary,
+                    currentTemporary,
+                    globalDeclarations,
+                    stringLiterals,
+                });
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug();
                 switch (declaration.type.name) {
                     case 'Function':
                         return [
                             `# Put function pointer into temporary`,
-                            ...astToMips({
-                                ast: ast.expression,
-                                registerAssignment,
-                                destination: currentTemporary,
-                                currentTemporary,
-                                globalDeclarations,
-                                stringLiterals,
-                            }),
+                            ...rhs,
                             `# Put function pointer into global`,
                             `sw ${currentTemporary.destination}, ${lhs}`,
                         ];
                     case 'Integer':
                         return [
                             `# Put integer pointer into temporary`,
-                            ...astToMips({
-                                ast: ast.expression,
-                                registerAssignment,
-                                destination: currentTemporary,
-                                currentTemporary,
-                                globalDeclarations,
-                                stringLiterals,
-                            }),
+                            ...rhs,
                             `# Store into global`,
                             `sw ${currentTemporary.destination}, ${lhs}`,
                         ];
                     case 'String':
                         return [
                             `# Put string pointer into temporary`,
-                            ...astToMips({
-                                ast: ast.expression,
-                                registerAssignment,
-                                destination: currentTemporary,
-                                currentTemporary,
-                                globalDeclarations,
-                                stringLiterals,
-                            }),
+                            ...rhs,
                             `# Store into global`,
                             `sw ${currentTemporary.destination}, ${lhs}`,
                         ];
