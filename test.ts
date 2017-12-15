@@ -715,7 +715,7 @@ test('string length', compileAndRun, {
     expectedExitCode: 4,
 });
 
-test('empty string length', compileAndRun, {
+test('empty s tring length', compileAndRun, {
    source: `myStr: String = ""; return length(myStr);`,
    expectedExitCode: 0,
 });
@@ -745,7 +745,6 @@ return str1 == str2 ? 1 : 2
     expectedExitCode: 1,
 });
 
-// TODO: Fix allocations
 test('string equality: inequal same length', compileAndRun, {
     source: `str1 = "a"
 str2 = "b"

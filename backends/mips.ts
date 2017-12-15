@@ -11,6 +11,7 @@ const syscallArg1 = '$a0';
 const syscallArg2 = '$a1';
 const syscallResult = '$v0';
 const syscallSelect = '$v0';
+const functionResult = '$a0';
 
 const storeLiteralMips = ({ type, destination, spOffset }, value) => {
     if (type == undefined) debug();
@@ -139,13 +140,13 @@ const astToMips = ({
     if (!ast) debug();
     switch (ast.kind) {
         case 'returnStatement': return [
-            `# evaluate expression of return statement, put in $a0`,
+            `# evaluate expression of return statement, put in ${functionResult}`,
             ...astToMips({
                 ast: ast.expression,
                 registerAssignment,
                 destination: {
                     type: 'register',
-                    destination: '$a0',
+                    destination: functionResult,
                 },
                 currentTemporary,
                 globalDeclarations,
@@ -266,8 +267,8 @@ const astToMips = ({
                 }),
                 `# call ${name}`,
                 ...callInstructions,
-                `# move result from $a0 into destination`,
-                moveMips(destination, '$a0'),
+                `# move result from ${functionResult} into destination`,
+                moveMips(destination, functionResult),
             ];
         }
         case 'typedAssignment': {
@@ -302,8 +303,20 @@ const astToMips = ({
                         return [
                             `# Put string pointer into temporary`,
                             ...rhs,
+                            `# Get string length`,
+                            `move ${argument1}, ${currentTemporary.destination}`,
+                            `jal length`,
+                            `# add one for null terminator`,
+                            `addiu ${functionResult}, ${functionResult}, 1`,
+                            `# Allocate that much space`,
+                            `move ${argument1}, ${functionResult}`,
+                            `jal my_malloc`,
+                            `# copy string into allocated space`,
+                            `move ${argument1}, ${currentTemporary.destination}`,
+                            `move ${argument2}, ${functionResult}`,
+                            `jal string_copy`,
                             `# Store into global`,
-                            `sw ${currentTemporary.destination}, ${lhs}`,
+                            `sw ${functionResult}, ${lhs}`,
                         ];
                     default: throw debug();
                 }
@@ -466,8 +479,8 @@ const astToMips = ({
                 ...storeRightInstructions,
                 `# Call stringEquality`,
                 `jal stringEquality`,
-                `# Return value in $a0. Move to destination`,
-                moveMips(destination, '$a0'),
+                `# Return value in ${functionResult}. Move to destination`,
+                moveMips(destination, functionResult),
             ];
         }
         case 'stringLiteral': {
@@ -565,7 +578,7 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }: C
         return astToMips({
             ast: statement,
             registerAssignment,
-            destination: '$a0',
+            destination: functionResult,
             currentTemporary,
             globalDeclarations,
             stringLiterals,
@@ -581,20 +594,19 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }: C
 }
 
 const lengthRuntimeFunction = () => {
-    const result = '$a0';
     const currentChar = '$t1';
     return `length:
     ${saveRegistersCode(1).join('\n')}
 
     # Set length count to 0
-    li ${result}, 0
+    li ${functionResult}, 0
     length_loop:
     # Load char into temporary
     lb ${currentChar}, (${argument1})
     # If char is null, end of string. Return count.
     beq ${currentChar}, 0, length_return
     # Else bump pointer and count and return to start of loop
-    addiu ${result}, ${result}, 1
+    addiu ${functionResult}, ${functionResult}, 1
     addiu ${argument1}, ${argument1}, 1
     b length_loop
 
@@ -604,14 +616,13 @@ const lengthRuntimeFunction = () => {
 }
 
 const stringEqualityRuntimeFunction = () => {
-    const result = '$a0';
     const leftByte = '$t1';
     const rightByte = '$t2';
     return `stringEquality:
     ${saveRegistersCode(2).join('\n')}
 
     # Assume equal. Write 1 to $a0. Overwrite if difference found.
-    li ${result}, 1
+    li ${functionResult}, 1
 
     # (string*, string*) -> bool
     stringEquality_loop:
@@ -621,7 +632,7 @@ const stringEqualityRuntimeFunction = () => {
     # Inequal: return false
     bne ${leftByte}, ${rightByte}, stringEquality_return_false
     # Now we know both sides are equal. If they equal null, string is over.
-    # Return true. We already set ${result} to 1, so just goto end.
+    # Return true. We already set ${functionResult} to 1, so just goto end.
     beq ${leftByte}, 0, stringEquality_return
     # Otherwise, bump pointers and check next char
     addiu ${argument1}, 1
@@ -629,14 +640,35 @@ const stringEqualityRuntimeFunction = () => {
     b stringEquality_loop
 
     stringEquality_return_false:
-    li ${result}, 0
+    li ${functionResult}, 0
     stringEquality_return:
     ${restoreRegistersCode(2).join('\n')}
     jr $ra`;
 }
 
+const stringCopyRuntimeFunction = () => {
+    const currentChar = '$t1';
+    return `string_copy:
+    ${saveRegistersCode(1).join('\n')}
+    # load byte from input
+    string_copy_loop:
+    lb ${currentChar}, (${argument1})
+    # write it to argument 2
+    sb ${currentChar}, (${argument2})
+    # If it was the null terminator, exit
+    bne ${currentChar}, $0, string_copy_return
+    # Else, bump the pointers so we copy the next char, and copy copy the next char
+    addiu ${argument1}, ${argument1}, 1
+    addiu ${argument2}, ${argument2}, 1
+    b string_copy_loop
+    string_copy_return:
+    ${restoreRegistersCode(1).join('\n')}
+    jr $ra`;
+}
+
+const bytesInWord = 4;
+
 const myMallocRuntimeFunction = () => {
-    const result = '$a0';
     const currentBlockPointer = '$t1';
     const previousBlockPointer = '$t2';
     const scratch = '$t3';
@@ -657,7 +689,7 @@ const myMallocRuntimeFunction = () => {
     # no blocks left (will require sbrk)
     beq ${currentBlockPointer}, 0, find_large_enough_free_block_loop_exit
     # current block not free, try next
-    lw ${scratch}, 2(${currentBlockPointer})
+    lw ${scratch}, ${2 * bytesInWord}(${currentBlockPointer})
     beq ${scratch}, 0, advance_pointers
     # current block not large enough, try next
     lw ${scratch}, 0(${currentBlockPointer})
@@ -667,23 +699,23 @@ const myMallocRuntimeFunction = () => {
 
     advance_pointers:
     move ${previousBlockPointer}, ${currentBlockPointer}
-    lw ${currentBlockPointer}, 1(${currentBlockPointer})
+    lw ${currentBlockPointer}, ${1 * bytesInWord}(${currentBlockPointer})
     b find_large_enough_free_block_loop
 
     find_large_enough_free_block_loop_exit:
     beq ${currentBlockPointer}, 0, sbrk_more_space
 
     # Found a reusable block, mark it as not free
-    sw $0, 2(${currentBlockPointer})
-    # add 3 to get actual space
-    move ${result}, ${currentBlockPointer}
-    addiu ${result}, 3
+    sw $0, ${2 * bytesInWord}(${currentBlockPointer})
+    # add 3 words to get actual space
+    move ${functionResult}, ${currentBlockPointer}
+    addiu ${functionResult}, ${3 * bytesInWord}
     b my_malloc_return
 
     sbrk_more_space:
     move ${syscallArg1}, ${argument1}
     # Include space for management block
-    addiu ${syscallArg1}, 3
+    addiu ${syscallArg1}, ${3 * bytesInWord}
     li ${syscallSelect}, 9
     syscall
     # If sbrk failed, exit
@@ -702,21 +734,22 @@ const myMallocRuntimeFunction = () => {
     b set_up_new_space
     assign_previous:
     bne ${previousBlockPointer}, 0, set_up_new_space
-    sw ${syscallResult}, 1(${previousBlockPointer})
+    sw ${syscallResult}, ${1 * bytesInWord}(${previousBlockPointer})
 
     set_up_new_space:
     # Save size to new block
     sw ${argument1}, 0(${syscallResult})
     # Save next pointer = nullptr
-    sw $0, 1(${syscallResult})
+    sw $0, ${1 * bytesInWord}(${syscallResult})
     # Not free as we are about to use it
-    sw $0, 1(${syscallResult})
-    move ${result}, ${syscallResult}
-    # add 3 to get actual space
-    addiu ${result}, 3
+    sw $0, ${2 * bytesInWord}(${syscallResult})
+    move ${functionResult}, ${syscallResult}
+    # add 3 words to get actual space
+    addiu ${functionResult}, ${3 * bytesInWord}
 
     my_malloc_return:
     ${restoreRegistersCode(3).join('\n')}
+    jr $ra
     `;
 }
 
@@ -767,6 +800,7 @@ first_block: .word 0
 .text
 ${lengthRuntimeFunction()}
 ${stringEqualityRuntimeFunction()}
+${stringCopyRuntimeFunction()}
 ${myMallocRuntimeFunction()}
 
 ${mipsFunctions.join('\n')}
