@@ -756,7 +756,7 @@ return str1 == str2 ? 1 : 2
 test('string equality: inequal different length', compileAndRun, {
     source: `str1 = "aa"
 str2 = "a"
-return str1 == str2 ? 1 : 2
+return str1 == str2 ? 7 : 2
 `,
     expectedExitCode: 2,
 });

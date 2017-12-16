@@ -656,7 +656,7 @@ const stringCopyRuntimeFunction = () => {
     # write it to argument 2
     sb ${currentChar}, (${argument2})
     # If it was the null terminator, exit
-    bne ${currentChar}, $0, string_copy_return
+    beq ${currentChar}, $0, string_copy_return
     # Else, bump the pointers so we copy the next char, and copy copy the next char
     addiu ${argument1}, ${argument1}, 1
     addiu ${argument2}, ${argument2}, 1
