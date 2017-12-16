@@ -731,7 +731,6 @@ test('struture is equal for inferred string type', t => {
     t.deepEqual(inferredStructure, suppliedStructure);
 });
 
-// TODO: Mips doesn't actually malloc, it aliases. Fix that.
 test('string copy', compileAndRun, {
     source: `myStr1: String = "testing"; myStr2: String = myStr1; return length(myStr2);`,
     expectedExitCode: 7,
