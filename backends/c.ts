@@ -65,32 +65,34 @@ const compileAssignment = (
     };
 }
 
-const astToC = ({
-    ast,
-    globalDeclarations,
-    stringLiterals,
-    localDeclarations,
-}: BackendInput): CompiledProgram => {
+const astToC = (input: BackendInput): CompiledProgram => {
+    const {
+        ast,
+        globalDeclarations,
+        stringLiterals,
+        localDeclarations,
+    } = input;
+    const recurse = newInput => astToC({ ...input, ...newInput });
     if (!ast) debug();
     switch (ast.kind) {
         case 'returnStatement': {
-            const subExpression = astToC({ ast: ast.expression, globalDeclarations, stringLiterals, localDeclarations });
+            const subExpression = recurse({ ast: ast.expression });
             return compileExpression([subExpression], ([e1]) => ['return', ...e1, ';']);
         }
         case 'number': return compileExpression([], ([]) => [ast.value.toString()]);
         case 'product': {
-            const lhs = astToC({ ast: ast.lhs, globalDeclarations, stringLiterals, localDeclarations });
-            const rhs = astToC({ ast: ast.rhs, globalDeclarations, stringLiterals, localDeclarations });
+            const lhs = recurse({ ast: ast.lhs });
+            const rhs = recurse({ ast: ast.rhs });
             return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '*', ...e2]);
         }
         case 'subtraction': {
-            const lhs = astToC({ ast: ast.lhs, globalDeclarations, stringLiterals, localDeclarations });
-            const rhs = astToC({ ast: ast.rhs, globalDeclarations, stringLiterals, localDeclarations });
+            const lhs = recurse({ ast: ast.lhs });
+            const rhs = recurse({ ast: ast.rhs });
             return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '-', ...e2]);
         }
         case 'concatenation': {
-            const lhs = astToC({ ast: ast.lhs, globalDeclarations, stringLiterals, localDeclarations });
-            const rhs = astToC({ ast: ast.rhs, globalDeclarations, stringLiterals, localDeclarations });
+            const lhs = recurse({ ast: ast.lhs });
+            const rhs = recurse({ ast: ast.rhs });
             const prepAndCleanup = {
                 prepare: [`char *temporary_string = my_malloc(length(${join(lhs.execute, ' ')}) + length(${join(rhs.execute, ' ')}) + 1);`],
                 execute: [],
@@ -102,18 +104,12 @@ const astToC = ({
             );
         };
         case 'statement': {
-            const childResults = ast.children.map(child => astToC({
-                ast: child,
-                globalDeclarations,
-                stringLiterals,
-                localDeclarations,
-            }));
-
+            const childResults = ast.children.map(child => recurse({ ast: child }));
             return compileExpression(childResults, flatten);
         }
         case 'typedAssignment': {
             const lhs = ast.destination;
-            const rhs = astToC({ ast: ast.expression, globalDeclarations, stringLiterals, localDeclarations });
+            const rhs = recurse({ ast: ast.expression });
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug();
@@ -157,27 +153,27 @@ const astToC = ({
         }
         case 'functionLiteral': return compileExpression([], ([]) => [`&${ast.deanonymizedName}`]);
         case 'callExpression': {
-            const argC = astToC({ ast: ast.argument, globalDeclarations, stringLiterals, localDeclarations });
+            const argC = recurse({ ast: ast.argument });
             return compileExpression([argC], ([e1]) => [`(*${ast.name})(`, ...e1, ')']);
         };
         case 'identifier': return compileExpression([], ([]) => [ast.value]);
         case 'ternary': {
-            const comparatorC = astToC({ ast: ast.condition, globalDeclarations, stringLiterals, localDeclarations });
-            const ifTrueC = astToC({ ast: ast.ifTrue, globalDeclarations, stringLiterals, localDeclarations });
-            const ifFalseC = astToC({ ast: ast.ifFalse, globalDeclarations, stringLiterals, localDeclarations });
+            const comparatorC = recurse({ ast: ast.condition });
+            const ifTrueC = recurse({ ast: ast.ifTrue });
+            const ifFalseC = recurse({ ast: ast.ifFalse });
             return compileExpression(
                 [comparatorC, ifTrueC, ifFalseC],
                 ([compare, ifTrue, ifFalse]) => [...compare, '?', ...ifTrue, ':', ...ifFalse]
             );
         };
         case 'equality': {
-            const lhs = astToC({ ast: ast.lhs, globalDeclarations, stringLiterals, localDeclarations });
-            const rhs = astToC({ ast: ast.rhs, globalDeclarations, stringLiterals, localDeclarations });
+            const lhs = recurse({ ast: ast.lhs });
+            const rhs = recurse({ ast: ast.rhs });
             return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '==', ...e2]);
         };
         case 'stringEquality': {
-            const lhs = astToC({ ast: ast.lhs, globalDeclarations, stringLiterals, localDeclarations });
-            const rhs = astToC({ ast: ast.rhs, globalDeclarations, stringLiterals, localDeclarations });
+            const lhs = recurse({ ast: ast.lhs });
+            const rhs = recurse({ ast: ast.rhs });
             return compileExpression([lhs, rhs], ([e1, e2]) => ['string_compare(', ...e1, ',', ...e2, ')']);
         }
         case 'booleanLiteral': return compileExpression([], ([]) => [ast.value ? '1' : '0']);
