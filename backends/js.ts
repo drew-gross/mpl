@@ -6,123 +6,37 @@ import debug from '../util/debug.js';
 
 const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.LoweredAst, exitInsteadOfReturn: boolean }) => {
     if (!ast) debugger;
+    const recurse = newInput => ({ ast, exitInsteadOfReturn, ...newInput });
     switch (ast.kind) {
         case 'returnStatement': {
             if (exitInsteadOfReturn) {
-                return [`process.exit(${astToJS({
-                    ast: ast.expression,
-                    exitInsteadOfReturn,
-                }).join(' ')})`];
+                return [`process.exit(${recurse({ ast: ast.expression }).join(' ')})`];
             } else {
-                return [
-                    `return `,
-                    ...astToJS({
-                        ast: ast.expression,
-                        exitInsteadOfReturn,
-                    }),
-                ];
+                return [`return `, ...recurse({ ast: ast.expression })];
             }
         };
         case 'number': return [ast.value.toString()];
-        case 'product': return [
-            ...astToJS({
-                ast: ast.lhs,
-                exitInsteadOfReturn,
-            }),
-            '*',
-            ...astToJS({
-                ast: ast.rhs,
-                exitInsteadOfReturn
-            }),
-        ];
-        case 'subtraction': return [
-            ...astToJS({
-                ast: ast.lhs,
-                exitInsteadOfReturn,
-            }),
-            '-',
-            ...astToJS({
-                ast: ast.rhs,
-                exitInsteadOfReturn
-            }),
-        ];
-        case 'statement': return flatten(ast.children.map(child => astToJS({
-            ast: child,
-            exitInsteadOfReturn,
-        })));
-        case 'typedAssignment': return [
-            `const ${ast.destination} = `,
-            ...astToJS({
-                ast: ast.expression,
-                exitInsteadOfReturn,
-            }),
-            ';',
-        ];
+        case 'product': return [...recurse({ ast: ast.lhs }), '*', ...recurse({ ast: ast.rhs })];
+        case 'subtraction': return [...recurse({ ast: ast.lhs }), '-', ...recurse({ ast: ast.rhs })];
+        case 'statement': return flatten(ast.children.map(child => recurse({ ast: child })));
+        case 'typedAssignment': return [`const ${ast.destination} = `, ...recurse({ ast: ast.expression }), ';'];
         case 'functionLiteral': return [ast.deanonymizedName];
-        case 'callExpression': return [
-            `${ast.name}(`,
-            ...astToJS({
-                ast: ast.argument,
-                exitInsteadOfReturn,
-            }),
-            `)`];
+        case 'callExpression': return [`${ast.name}(`, ...recurse({ ast: ast.argument }), `)`];
         case 'identifier': return [ast.value];
         case 'ternary': return [
-            ...astToJS({
-                ast: ast.condition,
-                exitInsteadOfReturn,
-            }),
+            ...recurse({ ast: ast.condition }),
             '?',
-            ...astToJS({
-                ast: ast.ifTrue,
-                exitInsteadOfReturn,
-            }),
+            ...recurse({ ast: ast.ifTrue }),
             ':',
-            ...astToJS({
-                ast: ast.ifFalse,
-                exitInsteadOfReturn,
-            }),
+            ...recurse({ ast: ast.ifFalse }),
         ];
-        case 'equality': return [
-            ...astToJS({
-                ast: ast.lhs,
-                exitInsteadOfReturn,
-            }),
-            '==',
-            ...astToJS({
-                ast: ast.rhs,
-                exitInsteadOfReturn,
-            }),
-        ];
-        case 'stringEquality':  return [
-            ...astToJS({
-                ast: ast.lhs,
-                exitInsteadOfReturn,
-            }),
-            '==',
-            ...astToJS({
-                ast: ast.rhs,
-                exitInsteadOfReturn,
-            }),
-        ];
+        case 'equality': return [...recurse({ ast: ast.lhs }), '==', ...recurse({ ast: ast.rhs })];
+        case 'stringEquality':  return [...recurse({ ast: ast.lhs }), '==', ...recurse({ ast: ast.rhs })];
         case 'booleanLiteral': return [ast.value];
         case 'stringLiteral': return [`"${ast.value}"`];
-        case 'concatenation': return [
-            '(',
-            ...astToJS({
-                ast: ast.lhs,
-                exitInsteadOfReturn,
-            }),
-            ').concat(',
-            ...astToJS({
-                ast: ast.rhs,
-                exitInsteadOfReturn,
-            }),
-            ')',
-        ];
-        default:
-            debugger;
-            throw "debugger";
+        case 'concatenation': return ['(', ...recurse({ ast: ast.lhs }), ').concat(', ...recurse({ ast: ast.rhs }), ')'];
+        default: throw debug();
+
     }
 };
 
@@ -132,17 +46,10 @@ const toExectuable = ({functions, program, globalDeclarations, stringLiterals}: 
         const suffix = `}`;
 
         const body = statements.map(statement => {
-            return astToJS({
-                ast: statement,
-                exitInsteadOfReturn: false,
-            }).join(' ');
+            return astToJS({ ast: statement, exitInsteadOfReturn: false }).join(' ');
         });
 
-        return [
-            prefix,
-            ...body,
-            suffix,
-        ].join(' ');
+        return [prefix, ...body, suffix].join(' ');
     });
 
     let JS = flatten(program.statements.map(child => astToJS({
