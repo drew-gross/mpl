@@ -129,28 +129,26 @@ type AstToMipsOptions = {
     stringLiterals: any,
 };
 
-const astToMips = ({
-    ast,
-    registerAssignment,
-    destination,
-    currentTemporary,
-    globalDeclarations,
-    stringLiterals,
-}: AstToMipsOptions) => {
+const astToMips = (input: AstToMipsOptions) => {
+    const {
+        ast,
+        registerAssignment,
+        destination,
+        currentTemporary,
+        globalDeclarations,
+        stringLiterals,
+    } = input;
+    const recurse = newInput => astToMips({ ...input, ...newInput });
     if (!ast) debug();
     switch (ast.kind) {
         case 'returnStatement': return [
             `# evaluate expression of return statement, put in ${functionResult}`,
-            ...astToMips({
+            ...recurse({
                 ast: ast.expression,
-                registerAssignment,
                 destination: {
                     type: 'register',
                     destination: functionResult,
                 },
-                currentTemporary,
-                globalDeclarations,
-                stringLiterals,
             }),
         ];
         case 'number': return [storeLiteralMips(destination, ast.value)];
@@ -160,21 +158,15 @@ const astToMips = ({
             const rightSideDestination = destination;
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
-            const storeLeftInstructions = astToMips({
+            const storeLeftInstructions = recurse({
                 ast: ast.lhs,
-                registerAssignment,
                 destination: leftSideDestination,
                 currentTemporary: subExpressionTemporary,
-                globalDeclarations,
-                stringLiterals,
             });
-            const storeRightInstructions = astToMips({
+            const storeRightInstructions = recurse({
                 ast: ast.rhs,
-                registerAssignment,
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
-                globalDeclarations,
-                stringLiterals,
             });
             return [
                 `# Store left side of product in temporary (${leftSideDestination.destination})`,
@@ -190,21 +182,15 @@ const astToMips = ({
             const rightSideDestination = destination;
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
-            const storeLeftInstructions = astToMips({
+            const storeLeftInstructions = recurse({
                 ast: ast.lhs,
-                registerAssignment,
                 destination: leftSideDestination,
                 currentTemporary: subExpressionTemporary,
-                globalDeclarations,
-                stringLiterals,
             });
-            const storeRightInstructions = astToMips({
+            const storeRightInstructions = recurse({
                 ast: ast.rhs,
-                registerAssignment,
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
-                globalDeclarations,
-                stringLiterals,
             });
             return [
                 `# Store left side in temporary (${leftSideDestination.destination})`,
@@ -215,13 +201,9 @@ const astToMips = ({
                 subtractMips(destination, leftSideDestination, rightSideDestination),
             ];
         }
-        case 'statement': return flatten(ast.children.map(child => astToMips({
+        case 'statement': return flatten(ast.children.map(child => recurse({
             ast: child,
-            registerAssignment,
             destination: '(TODO: READ FROM REGISTER ASSIGNMENT)',
-            currentTemporary,
-            globalDeclarations,
-            stringLiterals,
         })));
         case 'functionLiteral': {
             if (destination.type !== 'register') debug(); // TODO: Figure out how to guarantee this doesn't happen
@@ -257,13 +239,10 @@ const astToMips = ({
 
             return [
                 `# Put argument in argument1`,
-                ...astToMips({
+                ...recurse({
                     ast: ast.argument,
-                    registerAssignment,
                     destination: { type: 'register', destination: argument1 },
                     currentTemporary: nextTemporary(currentTemporary),
-                    globalDeclarations,
-                    stringLiterals,
                 }),
                 `# call ${name}`,
                 ...callInstructions,
@@ -274,14 +253,7 @@ const astToMips = ({
         case 'typedAssignment': {
             const lhs = ast.destination;
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
-                const rhs = astToMips({
-                    ast: ast.expression,
-                    registerAssignment,
-                    destination: currentTemporary,
-                    currentTemporary,
-                    globalDeclarations,
-                    stringLiterals,
-                });
+                const rhs = recurse({ ast: ast.expression, destination: currentTemporary });
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug();
                 switch (declaration.type.name) {
@@ -323,17 +295,13 @@ const astToMips = ({
             } else if (lhs in registerAssignment) {
                 return [
                     `# Run rhs of assignment and store to ${lhs} (${registerAssignment[lhs].destination})`,
-                    ...astToMips({
+                    ...recurse({
                         ast: ast.expression,
-                        registerAssignment,
                         // TODO: Allow spilling of variables
                         destination: {
                             type: 'register',
                             destination: `${registerAssignment[lhs].destination}`,
                         },
-                        currentTemporary,
-                        globalDeclarations,
-                        stringLiterals,
                     }),
                 ];
             } else {
@@ -368,37 +336,20 @@ const astToMips = ({
             labelId++;
             return [
                 `# Compute boolean and store in temporary`,
-                ...astToMips({
+                ...recurse({
                     ast: ast.condition,
-                    registerAssignment,
                     destination: booleanTemporary,
                     currentTemporary: subExpressionTemporary,
-                    globalDeclarations,
-                    stringLiterals,
                 }),
                 `# Go to false branch if zero`,
                 mipsBranchIfEqual(booleanTemporary, { type: 'register', destination: '$0' }, `L${falseBranchLabel}`),
                 `# Execute true branch`,
-                ...astToMips({
-                    ast: ast.ifTrue,
-                    registerAssignment,
-                    destination,
-                    currentTemporary: subExpressionTemporary,
-                    globalDeclarations,
-                    stringLiterals,
-                }),
+                ...recurse({ ast: ast.ifTrue, currentTemporary: subExpressionTemporary }),
                 `# Jump to end of ternary`,
                 `b L${endOfTernaryLabel}`,
                 `L${falseBranchLabel}:`,
                 `# Execute false branch`,
-                ...astToMips({
-                    ast: ast.ifFalse,
-                    registerAssignment,
-                    destination,
-                    currentTemporary: subExpressionTemporary,
-                    globalDeclarations,
-                    stringLiterals,
-                }),
+                ...recurse({ ast: ast.ifFalse, currentTemporary: subExpressionTemporary }),
                 `# End of ternary label`,
                 `L${endOfTernaryLabel}:`,
             ];
@@ -407,22 +358,15 @@ const astToMips = ({
             const leftSideDestination = currentTemporary;
             const rightSideDestination = destination;
             const subExpressionTemporary = nextTemporary(currentTemporary);
-            const storeLeftInstructions = astToMips({
+            const storeLeftInstructions = recurse({
                 ast: ast.lhs,
-                registerAssignment,
                 destination: leftSideDestination,
                 currentTemporary: subExpressionTemporary,
-                globalDeclarations,
-                stringLiterals,
             });
-
-            const storeRightInstructions = astToMips({
+            const storeRightInstructions = recurse({
                 ast: ast.rhs,
-                registerAssignment,
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
-                globalDeclarations,
-                stringLiterals,
             });
 
             const equalLabel = labelId;
@@ -450,27 +394,19 @@ const astToMips = ({
         }
         case 'stringEquality': {
             // Put left in s0 and right in s1 for passing to string equality function
-            const storeLeftInstructions = astToMips({
+            const storeLeftInstructions = recurse({
                 ast: ast.lhs,
-                registerAssignment,
                 destination: {
                     type: 'register',
                     destination: argument1,
                 },
-                currentTemporary,
-                globalDeclarations,
-                stringLiterals,
             });
-            const storeRightInstructions = astToMips({
+            const storeRightInstructions = recurse({
                 ast: ast.rhs,
-                registerAssignment,
                 destination: {
                     type: 'register',
                     destination: argument2,
                 },
-                currentTemporary,
-                globalDeclarations,
-                stringLiterals,
             });
             return [
                 `# Store left side in s0`,
