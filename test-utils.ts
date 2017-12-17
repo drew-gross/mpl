@@ -1,9 +1,11 @@
 import { Backend, BackendInputs } from './api.js';
+import { LoweredAst } from './ast.js';
 import { lex } from './lex.js';
 import { parse, compile } from './frontend.js';
-import debug from './util/debug.js';
 import { file as tmpFile} from 'tmp-promise';
 import { writeFile } from 'fs-extra';
+import assertNever from './util/assertNever.js';
+import debug from './util/debug.js';
 
 import mipsBackend from './backends/mips.js';
 import jsBackend from './backends/js.js';
@@ -20,37 +22,25 @@ type CompileAndRunOptions = {
     failing?: string[] | string,
 }
 
-const astToString = ast => {
+const astToString = (ast: LoweredAst) => {
     if (!ast) debug();
-    switch (ast.type) {
-        case 'returnStatement':
-            return `return ${astToString(ast.children[1])}`;
-        case 'ternary':
-            return `${astToString(ast.children[0])} ? ${astToString(ast.children[2])} : ${astToString(ast.children[4])}`;
+    switch (ast.kind) {
+        case 'returnStatement': return `return ${astToString(ast.expression)}`;
+        case 'ternary': return `${astToString(ast.condition)} ? ${astToString(ast.ifTrue)} : ${astToString(ast.ifFalse)}`;
         case 'stringEquality':
-        case 'equality':
-            return `${astToString(ast.children[0])} == ${astToString(ast.children[2])}`;
-        case 'identifier':
-            return ast.value;
-        case 'number':
-            return ast.value.toString();
-        case 'typedAssignment':
-            return `${astToString(ast.children[0])}: ${astToString(ast.children[2])} = ${astToString(ast.children[4])}`;
-        case 'assignment':
-            return `${astToString(ast.children[0])} = ${astToString(ast.children[2])}`;
-        case 'callExpression':
-            return `${astToString(ast.children[0])}(${astToString(ast.children[2])})`;
-        case 'functionLiteral':
-            return ast.value;
-        case 'type':
-            return ast.value;
-        case 'product':
-            return `${astToString(ast.children[0])} * ${astToString(ast.children[1])}`;
-        case 'subtraction':
-            return `${astToString(ast.children[0])} - ${astToString(ast.children[1])}`;
-        case 'stringLiteral':
-            return `"${ast.value}"`;
-        default: throw debug();
+        case 'equality': return `${astToString(ast.lhs)} == ${astToString(ast.rhs)}`;
+        case 'identifier': return ast.value;
+        case 'number': return ast.value.toString();
+        case 'typedAssignment': return `${ast.destination}: (TODO: put type here) = ${astToString(ast.expression)}`;
+        case 'callExpression': return `${ast.name}(${astToString(ast.argument)})`;
+        case 'functionLiteral': return ast.deanonymizedName;
+        case 'product': return `${astToString(ast.lhs)} * ${astToString(ast.rhs)}`;
+        case 'subtraction': return `${astToString(ast.lhs)} - ${astToString(ast.rhs)}`;
+        case 'stringLiteral': return `"${ast.value}"`;
+        case 'statement': return ast.children.map(astToString);
+        case 'booleanLiteral': return ast.value ? 'True' : 'False';
+        case 'concatenation': return `${ast.lhs} ++ ${ast.rhs}`;
+        default: /* assertNever(ast.kind); */ throw debug();
     }
 };
 
@@ -132,25 +122,24 @@ export const compileAndRun = async (t, {
         });
     });
 
-    if (printSubsteps.includes('structure')) {
-        const structure = frontendOutput as BackendInputs;
-        console.log('Functions:');
-        structure.functions.forEach(f => {
-            console.log(`-> ${f.name}(${f.argument.type.name})`);
-            f.statements.forEach(statement => {
-                console.log(`---> `, astToString(statement));
-            });
+    const printStructure = printSubsteps.includes('structure') ? console.log.bind(console) : () => {};
+    const structure = frontendOutput as BackendInputs;
+    printStructure('Functions:');
+    structure.functions.forEach(f => {
+        printStructure(`-> ${f.name}(${f.argument.type.name})`);
+        f.statements.forEach(statement => {
+            printStructure(`---> `, astToString(statement));
         });
-        console.log('Program:');
-        console.log('-> Globals:');
-        structure.globalDeclarations.forEach(declaration => {
-            console.log(`---> ${declaration.type.name} ${declaration.name} (${declaration.memoryCategory})`);
-        });
-        console.log('-> Statements:');
-        structure.program.statements.forEach(statement => {
-            console.log(`---> `, astToString(statement));
-        });
-    }
+    });
+    printStructure('Program:');
+    printStructure('-> Globals:');
+    structure.globalDeclarations.forEach(declaration => {
+        printStructure(`---> ${declaration.type.name} ${declaration.name} (${declaration.memoryCategory})`);
+    });
+    printStructure('-> Statements:');
+    structure.program.statements.forEach(statement => {
+        printStructure(`---> `, astToString(statement));
+    });
 
     // Backends
     const backends: Backend[] = [jsBackend, cBackend, mipsBackend];
