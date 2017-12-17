@@ -53,6 +53,8 @@ const loadGlobalMips = ({ type, destination, spOffset }, value) => {
     }
 }
 
+const move = ({ from, to }: ({ from: string, to: string })) => `move ${to}, ${from}`;
+
 const multiplyMips = (destination, left, right) => {
     let leftRegister = left.destination;
     let loadSpilled: any = []
@@ -276,16 +278,16 @@ const astToMips = (input: AstToMipsOptions) => {
                             `# Put string pointer into temporary`,
                             ...rhs,
                             `# Get string length`,
-                            `move ${argument1}, ${currentTemporary.destination}`,
+                            move({ to: argument1, from: currentTemporary.destination }),
                             `jal length`,
                             `# add one for null terminator`,
                             `addiu ${functionResult}, ${functionResult}, 1`,
                             `# Allocate that much space`,
-                            `move ${argument1}, ${functionResult}`,
+                            move({ to: argument1, from: functionResult }),
                             `jal my_malloc`,
                             `# copy string into allocated space`,
-                            `move ${argument1}, ${currentTemporary.destination}`,
-                            `move ${argument2}, ${functionResult}`,
+                            move({ to: argument1, from: currentTemporary.destination }),
+                            move({ to: argument2, from: functionResult }),
                             `jal string_copy`,
                             `# Store into global`,
                             `sw ${functionResult}, ${lhs}`,
@@ -634,7 +636,7 @@ const myMallocRuntimeFunction = () => {
     b find_large_enough_free_block_loop_exit
 
     advance_pointers:
-    move ${previousBlockPointer}, ${currentBlockPointer}
+    ${move({ to: previousBlockPointer, from: currentBlockPointer })}
     lw ${currentBlockPointer}, ${1 * bytesInWord}(${currentBlockPointer})
     b find_large_enough_free_block_loop
 
@@ -644,12 +646,12 @@ const myMallocRuntimeFunction = () => {
     # Found a reusable block, mark it as not free
     sw $0, ${2 * bytesInWord}(${currentBlockPointer})
     # add 3 words to get actual space
-    move ${functionResult}, ${currentBlockPointer}
+    ${move({ to: functionResult, from: currentBlockPointer })}
     addiu ${functionResult}, ${3 * bytesInWord}
     b my_malloc_return
 
     sbrk_more_space:
-    move ${syscallArg1}, ${argument1}
+    ${move({ to: syscallArg1, from: argument1 })}
     # Include space for management block
     addiu ${syscallArg1}, ${3 * bytesInWord}
     li ${syscallSelect}, 9
@@ -679,7 +681,7 @@ const myMallocRuntimeFunction = () => {
     sw $0, ${1 * bytesInWord}(${syscallResult})
     # Not free as we are about to use it
     sw $0, ${2 * bytesInWord}(${syscallResult})
-    move ${functionResult}, ${syscallResult}
+    ${move({ to: functionResult, from: syscallResult })}
     # add 3 words to get actual space
     addiu ${functionResult}, ${3 * bytesInWord}
 
