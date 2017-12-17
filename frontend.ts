@@ -315,7 +315,7 @@ const countTemporariesInExpression = ast => {
             countTemporariesInExpression(ast.children[2])
         );
         case 'program': return countTemporariesInExpression(ast.children[0]);
-        case 'concatenation': return 1 + Math.max(
+        case 'concatenation': return 2 + Math.max(
             countTemporariesInExpression(ast.children[0]),
             countTemporariesInExpression(ast.children[2]),
         );
