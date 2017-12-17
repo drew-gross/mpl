@@ -7,6 +7,7 @@ import debug from '../util/debug.js';
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 const argument1 = '$s0';
 const argument2 = '$s1';
+const argument3 = '$s2';
 const syscallArg1 = '$a0';
 const syscallArg2 = '$a1';
 const syscallResult = '$v0';
@@ -21,39 +22,47 @@ const storeLiteralMips = ({ type, destination, spOffset }, value) => {
             `li $s7, ${value}`,
             `sw $s7, -${spOffset}($sp)`
         ].join('\n');
-        default: debug(); return '';
+        default: throw debug();
     }
 }
 
 const subtractMips = ({ type, destination }, left, right) => {
     switch (type) {
         case 'register': return `sub ${destination}, ${left.destination}, ${right.destination}`;
-        default: debug(); return '';
+        default: throw debug();
     }
 }
 
-const moveMips = ({ type, destination }, source) => {
+const moveMipsDeprecated = ({ type, destination }, source) => {
     switch (type) {
-        case 'register': return `move ${destination}, ${source}`;
-        default: debug(); return '';
+        case 'register': return move({ to: destination, from: source });
+        default: throw debug();
+    }
+}
+
+const moveMips = ({ to, from }: { to: StorageSpec, from: string }) => {
+    switch (to.type) {
+        case 'register': return move({ to: to.destination, from });
+        default: throw debug();
     }
 }
 
 const loadAddressOfGlobal = ({ type, destination, spOffset }, value) => {
     switch (type) {
         case 'register': return `la ${destination}, ${value}`;
-        default: debug(); return '';
+        default: throw debug();
     }
 }
 
 const loadGlobalMips = ({ type, destination, spOffset }, value) => {
     switch (type) {
         case 'register': return `lw ${destination}, ${value}`;
-        default: debug(); return '';
+        default: throw debug();
     }
 }
 
-const move = ({ from, to }: ({ from: string, to: string })) => `move ${to}, ${from}`;
+const move = ({ from, to }: { from: string, to: string }) => `move ${to}, ${from}`;
+const add = ({ l, r, to }: { l: string, r: string, to: string }) => `add ${to}, ${l}, ${r}`;
 
 const multiplyMips = (destination, left, right) => {
     let leftRegister = left.destination;
@@ -93,6 +102,12 @@ const mipsBranchIfEqual = (left, right, label) => {
 
 // TODO: global storage
 type StorageSpec = { type: 'register', destination: string } | { type: 'memory', spOffset: number };
+const storageSpecToString = (spec: StorageSpec): string => {
+    switch (spec.type) {
+        case 'register': return spec.destination;
+        case 'memory': return `$sp-${spec.spOffset}`;
+    }
+}
 
 const nextTemporary = (storage: StorageSpec): StorageSpec => {
     if (storage.type == 'register') {
@@ -125,8 +140,8 @@ let labelId = 0;
 type AstToMipsOptions = {
     ast: Ast.LoweredAst,
     registerAssignment: any,
-    destination: any,
-    currentTemporary: any,
+    destination: StorageSpec,
+    currentTemporary: StorageSpec,
     globalDeclarations: VariableDeclaration[],
     stringLiterals: any,
 };
@@ -153,8 +168,8 @@ const astToMips = (input: AstToMipsOptions) => {
                 },
             }),
         ];
-        case 'number': return [storeLiteralMips(destination, ast.value)];
-        case 'booleanLiteral': return [storeLiteralMips(destination, ast.value ? '1' : '0')];
+        case 'number': return [storeLiteralMips(destination as any, ast.value)];
+        case 'booleanLiteral': return [storeLiteralMips(destination as any, ast.value ? '1' : '0')];
         case 'product': {
             const leftSideDestination = currentTemporary;
             const rightSideDestination = destination;
@@ -171,9 +186,9 @@ const astToMips = (input: AstToMipsOptions) => {
                 currentTemporary: subExpressionTemporary,
             });
             return [
-                `# Store left side of product in temporary (${leftSideDestination.destination})`,
+                `# Store left side of product in temporary (${storageSpecToString(leftSideDestination)})`,
                 ...storeLeftInstructions,
-                `# Store right side of product in destination (${rightSideDestination.destination})`,
+                `# Store right side of product in destination (${storageSpecToString(rightSideDestination)})`,
                 ...storeRightInstructions,
                 `# Evaluate product`,
                 multiplyMips(destination, leftSideDestination, rightSideDestination),
@@ -181,7 +196,9 @@ const astToMips = (input: AstToMipsOptions) => {
         }
         case 'subtraction': {
             const leftSideDestination = currentTemporary;
+            if (leftSideDestination.type !== 'register') throw debug();
             const rightSideDestination = destination;
+            if (rightSideDestination.type !== 'register') throw debug();
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
             const storeLeftInstructions = recurse({
@@ -200,7 +217,7 @@ const astToMips = (input: AstToMipsOptions) => {
                 `# Store right side in destination (${rightSideDestination.destination})`,
                 ...storeRightInstructions,
                 `# Evaluate subtraction`,
-                subtractMips(destination, leftSideDestination, rightSideDestination),
+                subtractMips(destination as any, leftSideDestination, rightSideDestination),
             ];
         }
         case 'statement': return flatten(ast.children.map(child => recurse({
@@ -208,14 +225,15 @@ const astToMips = (input: AstToMipsOptions) => {
             destination: '(TODO: READ FROM REGISTER ASSIGNMENT)',
         })));
         case 'functionLiteral': {
-            if (destination.type !== 'register') debug(); // TODO: Figure out how to guarantee this doesn't happen
+            if (destination.type !== 'register') throw debug(); // TODO: Figure out how to guarantee this doesn't happen
             return [
                 `# Loading function into register`,
                 `la ${destination.destination}, ${ast.deanonymizedName}`
             ];
         }
         case 'callExpression': {
-            if (currentTemporary.type !== 'register') debug(); // TODO: Figure out how to guarantee this doesn't happen
+            if (currentTemporary.type !== 'register') throw debug(); // TODO: Figure out how to guarantee this doesn't happen
+            if (destination.type !== 'register') throw debug();
             const name = ast.name;
             let callInstructions: string[] = []
             if (runtimeFunctions.includes(name)) {
@@ -249,7 +267,7 @@ const astToMips = (input: AstToMipsOptions) => {
                 `# call ${name}`,
                 ...callInstructions,
                 `# move result from ${functionResult} into destination`,
-                moveMips(destination, functionResult),
+                moveMipsDeprecated(destination, functionResult),
             ];
         }
         case 'typedAssignment': {
@@ -258,6 +276,7 @@ const astToMips = (input: AstToMipsOptions) => {
                 const rhs = recurse({ ast: ast.expression, destination: currentTemporary });
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug();
+                if (currentTemporary.type !== 'register') throw debug();
                 switch (declaration.type.name) {
                     case 'Function':
                         return [
@@ -315,18 +334,16 @@ const astToMips = (input: AstToMipsOptions) => {
             const identifierName = ast.value;
             if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
-                if (!declaration) {
-                    debug();
-                }
+                if (!declaration) throw debug();
                 return [
-                    `# Move from global ${identifierName} into destination (${destination.destination || destination.spOffset})`,
-                    loadGlobalMips(destination, identifierName),
+                    `# Move from global ${identifierName} into destination (${(destination as any).destination || (destination as any).spOffset})`,
+                    loadGlobalMips(destination as any, identifierName),
                 ];
             }
             const identifierRegister = registerAssignment[identifierName].destination;
             return [
-                `# Move from ${identifierName} (${identifierRegister}) into destination (${destination.destination || destination.spOffset})`,
-                moveMips(destination, identifierRegister),
+                `# Move from ${identifierName} (${identifierRegister}) into destination (${(destination as any).destination || (destination as any).spOffset})`,
+                moveMipsDeprecated(destination as any, identifierRegister),
             ];
         }
         case 'ternary': {
@@ -386,11 +403,11 @@ const astToMips = (input: AstToMipsOptions) => {
                 `# Goto set 1 if equal`,
                 mipsBranchIfEqual(leftSideDestination, rightSideDestination, `L${equalLabel}`),
                 `# Not equal, set 0`,
-                storeLiteralMips(destination, '0'),
+                storeLiteralMips(destination as any, '0'),
                 `# And goto exit`,
                 `b L${endOfConditionLabel}`,
                 `L${equalLabel}:`,
-                storeLiteralMips(destination, '1'),
+                storeLiteralMips(destination as any, '1'),
                 `L${endOfConditionLabel}:`,
             ];
         }
@@ -418,23 +435,80 @@ const astToMips = (input: AstToMipsOptions) => {
                 `# Call stringEquality`,
                 `jal stringEquality`,
                 `# Return value in ${functionResult}. Move to destination`,
-                moveMips(destination, functionResult),
+                moveMipsDeprecated(destination as any, functionResult),
             ];
         }
         case 'stringLiteral': {
             return [
                 `# Load string literal address into register`,
-                loadAddressOfGlobal(destination, `string_constant_${ast.value}`),
+                loadAddressOfGlobal(destination as any, `string_constant_${ast.value}`),
             ];
         }
-        case 'concatenation': debug();
+        case 'concatenation': {
+            if (destination.type !== 'register') throw debug();
+            const leftSideDestination = currentTemporary;
+            if (leftSideDestination.type !== 'register') throw debug();
+            const rightSideDestination = nextTemporary(leftSideDestination);
+            if (rightSideDestination.type !== 'register') throw debug();
+            const subExpressionTemporary = nextTemporary(rightSideDestination);
+            const newStringLengthTemporary = nextTemporary(subExpressionTemporary);
+            if (newStringLengthTemporary.type !== 'register') throw debug();
+            const mallocResultTemporary = newStringLengthTemporary; // Don't need length after malloc is done
+
+            const storeLeftInstructions = recurse({
+                ast: ast.lhs,
+                destination: leftSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+            const storeRightInstructions = recurse({
+                ast: ast.rhs,
+                destination: rightSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+            return [
+                `# Create a temporary to store new string length. Start with 1 for null terminator.`,
+                `li ${newStringLengthTemporary.destination}, 5`,
+                `# Compute lhs`,
+                ...storeLeftInstructions,
+                `# Compute rhs`,
+                ...storeRightInstructions,
+                `# Compute the length of lhs and add it to length temporary`,
+                move({ from: leftSideDestination.destination, to: argument1 }),
+                `jal length`,
+                add({
+                    l: functionResult,
+                    r: newStringLengthTemporary.destination,
+                    to: newStringLengthTemporary.destination,
+                }),
+                `# Compute the length of rhs and add it to length temporary`,
+                move({ from: rightSideDestination.destination, to: argument1 }),
+                `jal length`,
+                add({
+                    l: functionResult,
+                    r: newStringLengthTemporary.destination,
+                    to: newStringLengthTemporary.destination,
+                 }),
+                `# Malloc that much space`,
+                move({ from: functionResult, to: argument1 }),
+                `jal my_malloc`,
+                `# Save result`,
+                move({ from: functionResult, to: mallocResultTemporary.destination }),
+                `# Concatenate the strings and write to malloced space`,
+                move({ from: leftSideDestination.destination, to: argument1 }),
+                move({ from: rightSideDestination.destination, to: argument2 }),
+                move({ from: mallocResultTemporary.destination, to: argument3 }),
+                `jal string_concatenate`,
+                `# Move malloced pointer to final destination`,
+                move({ from: mallocResultTemporary.destination, to: destination.destination }),
+            ]
+        }
         default:
             debug();
 
     }
 }
 
-const assignMipsRegisters = (variables: VariableDeclaration[]) => {
+const assignMipsRegisters = (variables: VariableDeclaration[]): { registerAssignment: any, firstTemporary: StorageSpec } => {
     // TODO: allow spilling of variables
     let currentRegister = 0;
     let registerAssignment = {};
@@ -516,7 +590,7 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }: C
         return astToMips({
             ast: statement,
             registerAssignment,
-            destination: functionResult,
+            destination: functionResult as any, // TODO: Not sure how this works. Maybe it doesn't.
             currentTemporary,
             globalDeclarations,
             stringLiterals,
@@ -600,6 +674,38 @@ const stringCopyRuntimeFunction = () => {
     addiu ${argument2}, ${argument2}, 1
     b string_copy_loop
     string_copy_return:
+    ${restoreRegistersCode(1).join('\n')}
+    jr $ra`;
+}
+
+const stringConcatenateRuntimeFunction = () => {
+    const left = argument1;
+    const right = argument2;
+    const out = argument3;
+    const currentChar = '$t1';
+    return `string_concatenate:
+    ${saveRegistersCode(1).join('\n')}
+    # Load byte from left
+    write_left_loop:
+    lb ${currentChar}, (${left}),
+    # If null, start copying from right
+    beq ${currentChar}, $0, copy_from_right
+    # Else, write to out, bump pointers, and loop
+    sb ${currentChar}, (${out})
+    addiu ${left}, ${left}, 1
+    addiu ${out}, ${out}, 1
+    b write_left_loop
+    copy_from_right:
+    lb ${currentChar}, (${right})
+    # always write (to get null terminator)
+    sb ${currentChar}, (${out})
+    # if we just wrote a null terminator, we are done
+    beq ${currentChar}, $0, concatenate_return
+    # Else bump pointers and loop
+    addiu ${right}, ${right}, 1
+    addiu ${out}, ${out}, 1,
+    b copy_from_right
+    concatenate_return:
     ${restoreRegistersCode(1).join('\n')}
     jr $ra`;
 }
@@ -740,6 +846,7 @@ ${lengthRuntimeFunction()}
 ${stringEqualityRuntimeFunction()}
 ${stringCopyRuntimeFunction()}
 ${myMallocRuntimeFunction()}
+${stringConcatenateRuntimeFunction()}
 
 ${mipsFunctions.join('\n')}
 main:
