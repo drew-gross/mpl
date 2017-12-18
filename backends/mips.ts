@@ -467,7 +467,7 @@ const astToMips = (input: AstToMipsOptions) => {
             });
             return [
                 `# Create a temporary to store new string length. Start with 1 for null terminator.`,
-                `li ${newStringLengthTemporary.destination}, 5`,
+                `li ${newStringLengthTemporary.destination}, 1`,
                 `# Compute lhs`,
                 ...storeLeftInstructions,
                 `# Compute rhs`,

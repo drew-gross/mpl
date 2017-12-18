@@ -584,7 +584,7 @@ return str1 ++ str2 == "ab" ? 5 : 10`,
 test('concatenate and get length then subtract', compileAndRun, {
     source: `return length("abc" ++ "defg") - 2;`,
     expectedExitCode: 5,
-    failing: ['mips'],
+    failing: 'mips'
 });
 
 // TODO: Problem extracting variables
