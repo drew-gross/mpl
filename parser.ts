@@ -1,20 +1,20 @@
 import { TokenType } from './lex.js';
 import { alternative, sequence, terminal, endOfInput, ParseResult } from './parser-combinator.js';
 
-const parseProgram = (t, i) => parseProgramI(t, i);
-const parseFunctionBody = (t, i) => parseFunctionBodyI(t, i);
-const parseStatement = (t, i) => parseStatementI(t, i);
-const parseFunction = (t, i) => parseFunctionI(t, i);
-const parseArgList = (t, i) => parseArgListI(t, i);
-const parseArg = (t, i) => parseArgI(t, i);
-const parseParamList = (t, i) => parseParamListI(t, i);
-const parseExpression = (t, i) => parseExpressionI(t, i);
-const parseTernary = (t, i) => parseTernaryI(t, i);
-const parseSubtraction = (t, i) => parseSubtractionI(t, i);
-const parseProduct = (t, i) => parseProductI(t, i);
-const parseEquality = (t, i) => parseEqualityI(t, i);
-const parseSimpleExpression = (t, i) => parseSimpleExpressionI(t, i);
-const parseConcatenation = (t, i) => parseConcatenationI(t, i);
+const program = (t, i) => programI(t, i);
+const functionBody = (t, i) => functionBodyI(t, i);
+const statement = (t, i) => statementI(t, i);
+const func = (t, i) => funcI(t, i);
+const argList = (t, i) => argListI(t, i);
+const arg = (t, i) => argI(t, i);
+const paramList = (t, i) => paramListI(t, i);
+const expression = (t, i) => expressionI(t, i);
+const ternary = (t, i) => ternaryI(t, i);
+const subtraction = (t, i) => subtractionI(t, i);
+const product = (t, i) => productI(t, i);
+const equality = (t, i) => equalityI(t, i);
+const simpleExpression = (t, i) => simpleExpressionI(t, i);
+const concatenation = (t, i) => concatenationI(t, i);
 
 // Grammar:
 // PROGRAM -> FUNCTION_BODY end_of_input
@@ -32,103 +32,90 @@ const parseConcatenation = (t, i) => parseConcatenationI(t, i);
 // CONCATENATION -> SIMPLE_EXPRESSION ++ CONCATENATION | SIMPLE_EXPRESSION
 // SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( PARAM_LIST ) | int | boolean | string | FUNCTION | identifier
 
-const parseProgramI = sequence('program', [parseFunctionBody, endOfInput]);
+const programI = sequence('program', [functionBody, endOfInput]);
 
-const parseFunctionBodyI = alternative([
-    sequence('statement', [parseStatement, terminal('statementSeparator'), parseFunctionBody]),
-    sequence('returnStatement', [terminal('return'), parseExpression, terminal('statementSeparator')]),
-    sequence('returnStatement', [terminal('return'), parseExpression]),
+const functionBodyI = alternative([
+    sequence('statement', [statement, terminal('statementSeparator'), functionBody]),
+    sequence('returnStatement', [terminal('return'), expression, terminal('statementSeparator')]),
+    sequence('returnStatement', [terminal('return'), expression]),
 ]);
 
-const parseStatementI = alternative([
+const statementI = alternative([
     sequence('typedAssignment', [
         terminal('identifier'),
         terminal('colon'),
         terminal('type'),
         terminal('assignment'),
-        parseExpression,
+        expression,
     ]),
     sequence('assignment', [
         terminal('identifier'),
         terminal('assignment'),
-        parseExpression,
+        expression,
     ]),
 ]);
 
-const parseFunctionI = alternative([
-    sequence('function', [
-        parseArgList,
-        terminal('fatArrow'),
-        parseExpression,
-    ]),
+const funcI = alternative([
+    sequence('function', [argList, terminal('fatArrow'), expression]),
     sequence('functionWithBlock', [
-        parseArgList,
+        argList,
         terminal('fatArrow'),
         terminal('leftCurlyBrace'),
-        parseFunctionBody,
+        functionBody,
         terminal('rightCurlyBrace'),
     ]),
 ]);
 
-const parseArgListI = alternative([
-    sequence('argList', [parseArg, terminal('comma'), parseArgList]),
-    parseArg,
+const argListI = alternative([
+    sequence('argList', [arg, terminal('comma'), argList]),
+    arg,
 ]);
 
-const parseArgI = sequence('arg', [terminal('identifier'), terminal('colon'), terminal('type')]);
+const argI = sequence('arg', [terminal('identifier'), terminal('colon'), terminal('type')]);
 
-const parseParamListI = alternative([
-    sequence('paramList', [parseExpression, terminal('comma'), parseParamList]),
-    parseExpression,
+const paramListI = alternative([
+    sequence('paramList', [expression, terminal('comma'), paramList]),
+    expression,
 ]);
 
-const parseExpressionI = alternative([
-    parseTernary,
-    parseSubtraction,
-    parseSimpleExpression,
-]);
+const expressionI = alternative([ternary, subtraction, simpleExpression]);
 
-const parseTernaryI = sequence('ternary', [
-    parseSubtraction,
+const ternaryI = sequence('ternary', [
+    subtraction,
     terminal('ternaryOperator'),
-    parseSubtraction,
+    subtraction,
     terminal('colon'),
-    parseSubtraction,
+    subtraction,
 ]);
 
-const parseSubtractionI = alternative([
-    sequence('subtraction1', [parseProduct, terminal('subtraction'), parseExpression]),
-    parseProduct,
+const subtractionI = alternative([
+    sequence('subtraction1', [product, terminal('subtraction'), expression]),
+    product,
 ]);
 
-const parseProductI = alternative([
-    sequence('product1', [parseEquality, terminal('product'), parseProduct]),
-    parseEquality,
+const productI = alternative([
+    sequence('product1', [equality, terminal('product'), product]),
+    equality,
 ]);
 
-const parseEqualityI = alternative([
-    sequence('equality', [parseConcatenation, terminal('equality'), parseEquality]),
-    parseConcatenation,
+const equalityI = alternative([
+    sequence('equality', [concatenation, terminal('equality'), equality]),
+    concatenation,
 ]);
 
-const parseConcatenationI = alternative([
-    sequence('concatenation', [parseSimpleExpression, terminal('concatenation'), parseConcatenation]),
-    parseSimpleExpression,
+const concatenationI = alternative([
+    sequence('concatenation', [simpleExpression, terminal('concatenation'), concatenation]),
+    simpleExpression,
 ]);
 
-const parseSimpleExpressionI = alternative([
-    sequence('bracketedExpression', [terminal('leftBracket'), parseExpression, terminal('rightBracket')]),
-    sequence('callExpression', [
-        terminal('identifier'),
-        terminal('leftBracket'),
-        parseParamList,
-        terminal('rightBracket'),
-    ]),
+const simpleExpressionI = alternative([
+    sequence('bracketedExpression', [terminal('leftBracket'), expression, terminal('rightBracket')]),
+    sequence('callExpression', [terminal('identifier'), terminal('leftBracket'), paramList, terminal('rightBracket')]),
     terminal('number'),
     terminal('booleanLiteral'),
     terminal('stringLiteral'),
-    parseFunction,
+    func,
     terminal('identifier'),
 ]);
 
-export default parseProgram;
+export default program;
