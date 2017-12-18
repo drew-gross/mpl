@@ -40,13 +40,6 @@ const moveMipsDeprecated = ({ type, destination }, source) => {
     }
 }
 
-const moveMips = ({ to, from }: { to: StorageSpec, from: string }) => {
-    switch (to.type) {
-        case 'register': return move({ to: to.destination, from });
-        default: throw debug();
-    }
-}
-
 const loadAddressOfGlobal = ({ type, destination, spOffset }, value) => {
     switch (type) {
         case 'register': return `la ${destination}, ${value}`;
