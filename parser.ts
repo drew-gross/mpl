@@ -24,7 +24,7 @@ const concatenation = (t, i) => concatenationI(t, i);
 // ARG_LIST -> ARG , ARG_LIST | ARG
 // ARG -> identifier : type
 // PARAM_LIST -> EXPRESSION , PARAM_LIST | EXPRESSION
-// EXPRESSION -> TERNARY | SUBTRACTION | SIMPLE_EXPRESSION;
+// EXPRESSION -> TERNARY | SUBTRACTION;
 // TERNARY -> SUBTRACTION ? SUBTRACTION : SUBTRACTION;
 // SUBTRACTION -> PRODUCT - EXPRESSION | PRODUCT
 // PRODUCT -> EQUALITY * PRODUCT | EQUALITY
@@ -78,7 +78,7 @@ const paramListI = alternative([
     expression,
 ]);
 
-const expressionI = alternative([ternary, subtraction, simpleExpression]);
+const expressionI = alternative([ternary, subtraction]);
 
 const ternaryI = sequence('ternary', [
     subtraction,
