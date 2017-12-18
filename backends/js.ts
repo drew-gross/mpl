@@ -6,7 +6,7 @@ import debug from '../util/debug.js';
 
 const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.LoweredAst, exitInsteadOfReturn: boolean }) => {
     if (!ast) debugger;
-    const recurse = newInput => ({ ast, exitInsteadOfReturn, ...newInput });
+    const recurse = newInput => astToJS({ ast, exitInsteadOfReturn, ...newInput });
     switch (ast.kind) {
         case 'returnStatement': {
             if (exitInsteadOfReturn) {
