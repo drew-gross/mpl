@@ -24,8 +24,8 @@ const concatenation = (t, i) => concatenationI(t, i);
 // ARG_LIST -> ARG , ARG_LIST | ARG
 // ARG -> identifier : type
 // PARAM_LIST -> EXPRESSION , PARAM_LIST | EXPRESSION
-// EXPRESSION -> TERNARY | SUBTRACTION;
-// TERNARY -> SUBTRACTION ? SUBTRACTION : SUBTRACTION;
+// EXPRESSION -> TERNARY
+// TERNARY -> SUBTRACTION ? SUBTRACTION : SUBTRACTION | SUBTRACTION
 // SUBTRACTION -> PRODUCT - EXPRESSION | PRODUCT
 // PRODUCT -> EQUALITY * PRODUCT | EQUALITY
 // EQUALITY -> CONCATENATION == EQUALITY | CONCATENATION
@@ -80,11 +80,14 @@ const paramListI = alternative([
 
 const expressionI = alternative([ternary, subtraction]);
 
-const ternaryI = sequence('ternary', [
-    subtraction,
-    terminal('ternaryOperator'),
-    subtraction,
-    terminal('colon'),
+const ternaryI = alternative([
+    sequence('ternary', [
+        subtraction,
+        terminal('ternaryOperator'),
+        subtraction,
+        terminal('colon'),
+        subtraction,
+    ]),
     subtraction,
 ]);
 
