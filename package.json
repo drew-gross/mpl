@@ -24,7 +24,7 @@
     "tmp-promise": "1.0.4"
   },
   "devDependencies": {
-    "@types/node": "8.0.53",
+    "@types/node": "8.5.1",
     "ava": "0.23.0",
     "inspect-process": "0.5.0",
     "parallelshell": "3.0.2",
