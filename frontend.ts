@@ -251,8 +251,9 @@ const parse = (tokens: any[]): { ast?: any, parseErrors: string[] } => {
     }
     let ast = flattenAst(parseResult);
 
-    // repair associativity of subtraction1
+    // repair associativity of addition and subtraction
     ast = repairAssociativity('subtraction1', ast);
+    ast = repairAssociativity('addition1', ast);
 
     // Product 3 -> product 1
     ast = transformAst('product3', node => ({ type: 'product1', children: node.children }), ast, true);
@@ -280,6 +281,14 @@ const parse = (tokens: any[]): { ast?: any, parseErrors: string[] } => {
         true,
     );
 
+    // Addtion 1 -> addition
+    ast = transformAst(
+        'addition1',
+        node => ({ type: 'addition', children: [node.children[0], node.children[2]] }),
+        ast,
+        true,
+    );
+
     // repair associativity of subtraction
     ast = repairAssociativity('subtraction', ast);
 
@@ -300,6 +309,7 @@ const countTemporariesInExpression = ast => {
     switch (ast.type) {
         case 'returnStatement': return countTemporariesInExpression(ast.children[1]);
         case 'product': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
+        case 'addition':
         case 'subtraction': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
         case 'typedAssignment': return 1;
         case 'assignment': return 1;
@@ -340,6 +350,7 @@ export const typeOfExpression = ({ type, children, value }, knownIdentifiers: Id
     switch (type) {
         case 'number': return { type: { name: 'Integer' }, errors: [] };
         case 'subtraction':
+        case 'addition':
         case 'product': {
             const leftType = typeOfExpression(children[0], knownIdentifiers);
             const rightType = typeOfExpression(children[1], knownIdentifiers);
@@ -598,6 +609,11 @@ const lowerAst = (ast: any): Ast.LoweredAst => {
         }
         case 'subtraction': return {
             kind: 'subtraction',
+            lhs: lowerAst(ast.children[0]),
+            rhs: lowerAst(ast.children[1]),
+        }
+        case 'addition': return {
+            kind: 'addition',
             lhs: lowerAst(ast.children[0]),
             rhs: lowerAst(ast.children[1]),
         }

@@ -85,6 +85,11 @@ const astToC = (input: BackendInput): CompiledProgram => {
             const rhs = recurse({ ast: ast.rhs });
             return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '*', ...e2]);
         }
+        case 'addition': {
+            const lhs = recurse({ ast: ast.lhs });
+            const rhs = recurse({ ast: ast.rhs });
+            return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '+', ...e2]);
+        }
         case 'subtraction': {
             const lhs = recurse({ ast: ast.lhs });
             const rhs = recurse({ ast: ast.rhs });

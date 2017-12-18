@@ -35,6 +35,7 @@ const astToString = (ast: LoweredAst) => {
         case 'callExpression': return `${ast.name}(${astToString(ast.argument)})`;
         case 'functionLiteral': return ast.deanonymizedName;
         case 'product': return `${astToString(ast.lhs)} * ${astToString(ast.rhs)}`;
+        case 'addition': return `${astToString(ast.lhs)} + ${astToString(ast.rhs)}`;
         case 'subtraction': return `${astToString(ast.lhs)} - ${astToString(ast.rhs)}`;
         case 'stringLiteral': return `"${ast.value}"`;
         case 'statement': return ast.children.map(astToString);

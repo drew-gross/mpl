@@ -614,7 +614,7 @@ test('parsing fails for extra invalid tokens', compileAndRun, {
     expectedParseErrors: ['Expected endOfFile, found leftBracket'],
 });
 
-test.failing('addition', compileAndRun, {
+test('addition', compileAndRun, {
     source: `return length("foo") + 5`,
     expectedExitCode: 8,
 });

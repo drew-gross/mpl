@@ -18,6 +18,7 @@ const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.LoweredAst, exitInstea
         case 'number': return [ast.value.toString()];
         case 'product': return [...recurse({ ast: ast.lhs }), '*', ...recurse({ ast: ast.rhs })];
         case 'subtraction': return [...recurse({ ast: ast.lhs }), '-', ...recurse({ ast: ast.rhs })];
+        case 'addition': return [...recurse({ ast: ast.lhs }), '+', ...recurse({ ast: ast.rhs })];
         case 'statement': return flatten(ast.children.map(child => recurse({ ast: child })));
         case 'typedAssignment': return [`const ${ast.destination} = `, ...recurse({ ast: ast.expression }), ';'];
         case 'functionLiteral': return [ast.deanonymizedName];
@@ -36,7 +37,6 @@ const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.LoweredAst, exitInstea
         case 'stringLiteral': return [`"${ast.value}"`];
         case 'concatenation': return ['(', ...recurse({ ast: ast.lhs }), ').concat(', ...recurse({ ast: ast.rhs }), ')'];
         default: throw debug();
-
     }
 };
 

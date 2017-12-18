@@ -55,6 +55,12 @@ export type Statement = {
     children: any;
 };
 
+export type Addition = {
+    kind: 'addition';
+    lhs: LoweredAst;
+    rhs: LoweredAst;
+};
+
 export type Subtraction = {
     kind: 'subtraction';
     lhs: LoweredAst;
@@ -94,6 +100,7 @@ export type LoweredAst =
     FunctionLiteral |
     Statement |
     Subtraction |
+    Addition |
     Product |
     BooleanLiteral |
     StringEquality |

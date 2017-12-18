@@ -11,6 +11,7 @@ const paramList = (t, i) => paramListI(t, i);
 const expression = (t, i) => expressionI(t, i);
 const ternary = (t, i) => ternaryI(t, i);
 const subtraction = (t, i) => subtractionI(t, i);
+const addition = (t, i) => additionI(t, i);
 const product = (t, i) => productI(t, i);
 const equality = (t, i) => equalityI(t, i);
 const simpleExpression = (t, i) => simpleExpressionI(t, i);
@@ -25,7 +26,8 @@ const concatenation = (t, i) => concatenationI(t, i);
 // ARG -> identifier : type
 // PARAM_LIST -> EXPRESSION , PARAM_LIST | EXPRESSION
 // EXPRESSION -> TERNARY
-// TERNARY -> SUBTRACTION ? SUBTRACTION : SUBTRACTION | SUBTRACTION
+// TERNARY -> ADDITION ? ADDITION : ADDITION | ADDITION
+// ADDITION -> SUBTRACTION + EXPRESSION | SUBTRACTION
 // SUBTRACTION -> PRODUCT - EXPRESSION | PRODUCT
 // PRODUCT -> EQUALITY * PRODUCT | EQUALITY
 // EQUALITY -> CONCATENATION == EQUALITY | CONCATENATION
@@ -82,12 +84,17 @@ const expressionI = alternative([ternary, subtraction]);
 
 const ternaryI = alternative([
     sequence('ternary', [
-        subtraction,
+        addition,
         terminal('ternaryOperator'),
-        subtraction,
+        addition,
         terminal('colon'),
-        subtraction,
+        addition,
     ]),
+    addition,
+]);
+
+const additionI = alternative([
+    sequence('addition1', [subtraction, terminal('sum'), expression]),
     subtraction,
 ]);
 

@@ -187,6 +187,37 @@ const astToMips = (input: AstToMipsOptions) => {
                 multiplyMips(destination, leftSideDestination, rightSideDestination),
             ];
         }
+        case 'addition': {
+            if (destination.type !== 'register') throw debug();
+            const leftSideDestination = currentTemporary;
+            if (leftSideDestination.type !== 'register') throw debug();
+            const rightSideDestination = destination;
+            if (rightSideDestination.type !== 'register') throw debug();
+            const subExpressionTemporary = nextTemporary(currentTemporary);
+
+            const storeLeftInstructions = recurse({
+                ast: ast.lhs,
+                destination: leftSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+            const storeRightInstructions = recurse({
+                ast: ast.rhs,
+                destination: rightSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+            return [
+                `# Store left side in temporary (${leftSideDestination.destination})`,
+                ...storeLeftInstructions,
+                `# Store right side in destination (${rightSideDestination.destination})`,
+                ...storeRightInstructions,
+                `# Evaluate subtraction`,
+                add({
+                    l: leftSideDestination.destination,
+                    r: rightSideDestination.destination,
+                    to: destination.destination,
+                }),
+            ];
+        }
         case 'subtraction': {
             const leftSideDestination = currentTemporary;
             if (leftSideDestination.type !== 'register') throw debug();
