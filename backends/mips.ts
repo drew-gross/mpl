@@ -489,7 +489,7 @@ const astToMips = (input: AstToMipsOptions) => {
                     to: newStringLengthTemporary.destination,
                  }),
                 `# Malloc that much space`,
-                move({ from: functionResult, to: argument1 }),
+                move({ from: newStringLengthTemporary.destination, to: argument1 }),
                 `jal my_malloc`,
                 `# Save result`,
                 move({ from: functionResult, to: mallocResultTemporary.destination }),

@@ -584,7 +584,6 @@ return str1 ++ str2 == "ab" ? 5 : 10`,
 test('concatenate and get length then subtract', compileAndRun, {
     source: `return length("abc" ++ "defg") - 2;`,
     expectedExitCode: 5,
-    failing: 'mips'
 });
 
 // TODO: Problem extracting variables
@@ -593,7 +592,6 @@ test('semi-complex string concatenation', compileAndRun, {
 `lenFunc = dummy: Integer => { str1 = "abc"; str2 = str1 ++ str1; return str2 == "abcabc" ? 40 : 50 }
 return lenFunc(5)`,
     expectedExitCode: 40,
-    failing: ['mips'],
 });
 
 // TODO: causes bad behaviour in parser, takes forever
