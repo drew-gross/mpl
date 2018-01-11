@@ -801,8 +801,8 @@ const myMallocRuntimeFunction = () => {
     sw ${syscallResult}, first_block
     b set_up_new_space
     assign_previous:
-    bne ${previousBlockPointer}, 0, set_up_new_space
-    sw ${syscallResult}, ${1 * bytesInWord}(${previousBlockPointer})
+    beq ${previousBlockPointer}, 0, set_up_new_space
+    sw ${syscallResult}, (${previousBlockPointer})
 
     set_up_new_space:
     # Save size to new block
@@ -820,6 +820,29 @@ const myMallocRuntimeFunction = () => {
     jr $ra
     `;
 }
+
+const verifyNoLeaks = () => {
+    const currentBlockPointer = '$t1';
+    const currentData = '$t2';
+    return `verify_no_leaks:
+    ${saveRegistersCode(2).join('\n')}
+    la ${currentBlockPointer}, first_block
+    verify_no_leaks_loop:
+    beq ${currentBlockPointer}, 0, verify_no_leaks_return
+    lw ${currentData}, ${2 * bytesInWord}(${currentBlockPointer})
+    bne ${currentData}, 0, veriify_no_leaks_advance_pointers
+    la $a0, leaks_found_error
+    li $v0, 4
+    syscall
+    li $v0, 10
+    syscall
+    veriify_no_leaks_advance_pointers:
+    lw ${currentBlockPointer}, ${1 * bytesInWord}(${currentBlockPointer})
+    b verify_no_leaks_loop
+    verify_no_leaks_return:
+    ${restoreRegistersCode(2).join('\n')}
+    jr $ra`;
+};
 
 const toExectuable = ({
     functions,
@@ -861,6 +884,7 @@ ${globalDeclarations.map(name => `${name.name}: .word 0`).join('\n')}
 ${stringLiterals.map(text => `string_constant_${text}: .asciiz "${text}"`).join('\n')}
 zero_memory_malloc_error: .asciiz "Zero memory requested! Exiting."
 sbrk_failed: .asciiz "Memory allocation failed! Exiting."
+leaks_found_error: .asciiz "Leaks detected! Exiting."
 
 # First block pointer. Block: size, next, free
 first_block: .word 0
@@ -871,12 +895,15 @@ ${stringEqualityRuntimeFunction()}
 ${stringCopyRuntimeFunction()}
 ${myMallocRuntimeFunction()}
 ${stringConcatenateRuntimeFunction()}
+${verifyNoLeaks()}
 
 ${mipsFunctions.join('\n')}
 main:
 ${makeSpillSpaceCode.join('\n')}
 ${mipsProgram.join('\n')}
 ${removeSpillSpaceCode.join('\n')}
+# Check for leaks
+# jal verify_no_leaks disabled for now -- there are leaks
 # print "exit code" and exit
 li $v0, 1
 syscall
