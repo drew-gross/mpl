@@ -139,7 +139,13 @@ type AstToMipsOptions = {
     stringLiterals: any,
 };
 
-const astToMips = (input: AstToMipsOptions) => {
+type CompiledProgram = {
+    prepare: string[],
+    execute: string[],
+    cleanup: string[],
+}
+
+const astToMips = (input: AstToMipsOptions): CompiledProgram => {
     const {
         ast,
         registerAssignment,
@@ -151,16 +157,20 @@ const astToMips = (input: AstToMipsOptions) => {
     const recurse = newInput => astToMips({ ...input, ...newInput });
     if (!ast) debug();
     switch (ast.kind) {
-        case 'returnStatement': return [
-            `# evaluate expression of return statement, put in ${functionResult}`,
-            ...recurse({
-                ast: ast.expression,
-                destination: {
-                    type: 'register',
-                    destination: functionResult,
-                },
-            }),
-        ];
+        case 'returnStatement': return {
+            prepare: [],
+            execute: [
+                `# evaluate expression of return statement, put in ${functionResult}`,
+                ...recurse({
+                    ast: ast.expression,
+                    destination: {
+                        type: 'register',
+                        destination: functionResult,
+                    },
+                }),
+            ],
+            cleanup: [],
+        };
         case 'number': return [storeLiteralMips(destination as any, ast.value)];
         case 'booleanLiteral': return [storeLiteralMips(destination as any, ast.value ? '1' : '0')];
         case 'product': {
@@ -527,7 +537,7 @@ const astToMips = (input: AstToMipsOptions) => {
             ]
         }
         default:
-            debug();
+            return debug();
 
     }
 }
@@ -827,16 +837,17 @@ const verifyNoLeaks = () => {
     return `verify_no_leaks:
     ${saveRegistersCode(2).join('\n')}
     la ${currentBlockPointer}, first_block
+    lw ${currentBlockPointer}, (${currentBlockPointer})
     verify_no_leaks_loop:
     beq ${currentBlockPointer}, 0, verify_no_leaks_return
     lw ${currentData}, ${2 * bytesInWord}(${currentBlockPointer})
-    bne ${currentData}, 0, veriify_no_leaks_advance_pointers
+    bne ${currentData}, 0, verify_no_leaks_advance_pointers
     la $a0, leaks_found_error
     li $v0, 4
     syscall
     li $v0, 10
     syscall
-    veriify_no_leaks_advance_pointers:
+    verify_no_leaks_advance_pointers:
     lw ${currentBlockPointer}, ${1 * bytesInWord}(${currentBlockPointer})
     b verify_no_leaks_loop
     verify_no_leaks_return:
@@ -903,7 +914,7 @@ ${makeSpillSpaceCode.join('\n')}
 ${mipsProgram.join('\n')}
 ${removeSpillSpaceCode.join('\n')}
 # Check for leaks
-# jal verify_no_leaks disabled for now -- there are leaks
+jal verify_no_leaks
 # print "exit code" and exit
 li $v0, 1
 syscall

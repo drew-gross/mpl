@@ -519,9 +519,11 @@ return quadrupleWithLocal(5);`,
     expectedExitCode: 20,
 });
 
-test('string length', compileAndRun, {
+test.only('string length', compileAndRun, {
     source: `myStr: String = "test"; return length(myStr);`,
     expectedExitCode: 4,
+    printSubsteps: 'mips',
+    //debugSubsteps: 'mips',
 });
 
 test('empty s tring length', compileAndRun, {
