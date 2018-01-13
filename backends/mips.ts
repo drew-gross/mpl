@@ -757,7 +757,7 @@ const myMallocRuntimeFunction = () => {
     return `my_malloc:
     ${saveRegistersCode(3).join('\n')}
     bne ${argument1}, 0, my_malloc_zero_size_check_passed
-    la $a0, ${errors.allocatedZero}
+    la $a0, ${errors.allocatedZero.name}
     li $v0, 4
     syscall
     li $v0, 10
@@ -802,7 +802,7 @@ const myMallocRuntimeFunction = () => {
     syscall
     # If sbrk failed, exit
     bne ${syscallResult}, -1, sbrk_exit_check_passed
-    la $a0, ${errors.allocationFailed}
+    la $a0, ${errors.allocationFailed.name}
     li $v0, 4
     syscall
     li $v0, 10
@@ -844,13 +844,13 @@ const verifyNoLeaks = () => {
     verify_no_leaks_loop:
     beq ${currentBlockPointer}, 0, verify_no_leaks_return
     lw ${currentData}, ${2 * bytesInWord}(${currentBlockPointer})
-    bne ${currentData}, 0, veriify_no_leaks_advance_pointers
-    la $a0, ${errors.leaksDetected}
+    bne ${currentData}, 0, verify_no_leaks_advance_pointers
+    la $a0, ${errors.leaksDetected.name}
     li $v0, 4
     syscall
     li $v0, 10
     syscall
-    veriify_no_leaks_advance_pointers:
+    verify_no_leaks_advance_pointers:
     lw ${currentBlockPointer}, ${1 * bytesInWord}(${currentBlockPointer})
     b verify_no_leaks_loop
     verify_no_leaks_return:
