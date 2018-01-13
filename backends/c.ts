@@ -7,6 +7,7 @@ import { exec } from 'child-process-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
+import { CompiledProgram, CompiledExpression, compileExpression } from '../backend-utils.js';
 
 const mplTypeToCDeclaration = (type: Type, name: string) => {
     if (!type) debug();
@@ -25,34 +26,11 @@ type BackendInput = {
     stringLiterals: string[],
 };
 
-type CompiledExpression = {
-    prepare: string[],
-    execute: string[],
-    cleanup: string[],
-}
-
 type CompiledAssignment = {
     prepare: string[],
     execute: string[],
     cleanup: string[],
 }
-
-type CompiledProgram = {
-    prepare: string[],
-    execute: string[],
-    cleanup: string[],
-}
-
-type ExpressionCompiler = (expressions: string[][]) => string[];
-
-const compileExpression = (
-    subExpressions: CompiledExpression[],
-    expressionCompiler: ExpressionCompiler
-): CompiledExpression => ({
-    prepare: flatten(subExpressions.map(input => input.prepare)),
-    execute: expressionCompiler(subExpressions.map(input => input.execute)),
-    cleanup: flatten(subExpressions.map(input => input.cleanup)).reverse(),
-});
 
 const compileAssignment = (
     destination: string,
