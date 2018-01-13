@@ -4,6 +4,7 @@ import { VariableDeclaration, BackendInputs, ExecutionResult } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import { CompiledProgram, compileExpression } from '../backend-utils.js';
+import { errors } from '../runtime-strings.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 const argument1 = '$s0';
@@ -898,9 +899,9 @@ const toExectuable = ({
 .data
 ${globalDeclarations.map(name => `${name.name}: .word 0`).join('\n')}
 ${stringLiterals.map(text => `string_constant_${text}: .asciiz "${text}"`).join('\n')}
-zero_memory_malloc_error: .asciiz "Zero memory requested! Exiting."
-sbrk_failed: .asciiz "Memory allocation failed! Exiting."
-leaks_found_error: .asciiz "Leaks detected! Exiting."
+zero_memory_malloc_error: .asciiz "${errors.allocatedZero}"
+sbrk_failed: .asciiz "${errors.allocationFailed}"
+leaks_found_error: .asciiz "${errors.leaksDetected}"
 
 # First block pointer. Block: size, next, free
 first_block: .word 0
