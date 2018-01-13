@@ -4,6 +4,7 @@ import { VariableDeclaration, BackendInputs, ExecutionResult, LoweredFunction } 
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import { CompiledProgram, compileExpression } from '../backend-utils.js';
+import { errors } from '../runtime-strings.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 const argument1 = '$s0';
@@ -760,7 +761,7 @@ const myMallocRuntimeFunction = () => {
     return `my_malloc:
     ${saveRegistersCode(3).join('\n')}
     bne ${argument1}, 0, my_malloc_zero_size_check_passed
-    la $a0, zero_memory_malloc_error
+    la $a0, ${errors.allocatedZero.name}
     li $v0, 4
     syscall
     li $v0, 10
@@ -805,7 +806,7 @@ const myMallocRuntimeFunction = () => {
     syscall
     # If sbrk failed, exit
     bne ${syscallResult}, -1, sbrk_exit_check_passed
-    la $a0, sbrk_failed
+    la $a0, ${errors.allocationFailed.name}
     li $v0, 4
     syscall
     li $v0, 10
@@ -844,7 +845,7 @@ const myFreeRuntimeFunction = () => {
     my_free:
     ${saveRegistersCode(1).join('\n')}
     bne ${argument1}, 0, free_null_check_passed
-    la $a0, tried_to_free_null
+    la $a0, ${errors.freeNull.name}
     li $v0, 4
     syscall
     li $v0, 10
@@ -868,7 +869,7 @@ const verifyNoLeaks = () => {
     beq ${currentBlockPointer}, 0, verify_no_leaks_return
     lw ${currentData}, ${2 * bytesInWord}(${currentBlockPointer})
     bne ${currentData}, 0, verify_no_leaks_advance_pointers
-    la $a0, leaks_found_error
+    la $a0, ${errors.leaksDetected.name}
     li $v0, 4
     syscall
     li $v0, 10
@@ -936,10 +937,7 @@ const toExectuable = ({
 .data
 ${globalDeclarations.map(name => `${name.name}: .word 0`).join('\n')}
 ${stringLiterals.map(text => `string_constant_${text}: .asciiz "${text}"`).join('\n')}
-zero_memory_malloc_error: .asciiz "Zero memory requested! Exiting."
-sbrk_failed: .asciiz "Memory allocation failed! Exiting."
-leaks_found_error: .asciiz "Leaks detected! Exiting."
-tried_to_free_null: .asciiz "Tried to free null pointer! Exiting."
+${Object.keys(errors).map(key => `${errors[key].name}: .asciiz "${errors[key].value}"`).join('\n')}
 
 # First block pointer. Block: size, next, free
 first_block: .word 0

@@ -8,6 +8,7 @@ import execAndGetResult from '../util/execAndGetResult.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
 import { CompiledProgram, CompiledExpression, compileExpression } from '../backend-utils.js';
+import { errors } from '../runtime-strings.js';
 
 const mplTypeToCDeclaration = (type: Type, name: string) => {
     if (!type) debug();
@@ -286,7 +287,7 @@ struct block_info *first_block = NULL; // Set to null because in the beginning, 
 void *my_malloc(size_t requested_size) {
     // Error out if we request zero bytes, that should never happen
     if (requested_size == 0) {
-        printf("Zero memory requested! Exiting.");
+        printf("${errors.allocatedZero}");
         exit(-1);
     }
 
@@ -304,7 +305,7 @@ void *my_malloc(size_t requested_size) {
         #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         struct block_info *newly_allocated = (struct block_info*)sbrk(requested_size + sizeof(struct block_info));
         if (newly_allocated == (void*)-1) {
-            printf("Memory allocation failed! Exiting.");
+            printf("${errors.allocationFailed}");
             exit(-1); // TODO: Come up with an alloc failure strategy
         }
 
@@ -329,7 +330,7 @@ void *my_malloc(size_t requested_size) {
 
 void my_free(void *pointer) {
     if (pointer == NULL) {
-        printf("Tried to free null pointer! Exiting.");
+        printf("${errors.freeNull}");
         exit(-1);
     }
     // TODO: Merge blocks
@@ -343,7 +344,7 @@ void verify_no_leaks() {
     struct block_info *current_block = first_block;
     while (current_block != NULL) {
         if (!current_block->free) {
-            printf("Unfreed memory detected! Exiting.");
+            printf("${errors.leaksDetected}");
             exit(-1);
         }
         current_block = current_block->next_block;
