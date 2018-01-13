@@ -1,6 +1,6 @@
 import { exec } from 'child-process-promise';
 import flatten from '../util/list/flatten.js';
-import { VariableDeclaration, BackendInputs, ExecutionResult } from '../api.js';
+import { VariableDeclaration, BackendInputs, ExecutionResult, LoweredFunction } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import { CompiledProgram, compileExpression } from '../backend-utils.js';
@@ -591,19 +591,12 @@ const restoreRegistersCode = (numRegisters: number): string[] => {
     return result.reverse();
 };
 
-type ConstructMipsFunctionFirstArg = {
-    name: any;
-    argument: any;
-    statements: Ast.LoweredAst[];
-    temporaryCount: any;
-}
-
-const constructMipsFunction = ({ name, argument, statements, temporaryCount }: ConstructMipsFunctionFirstArg, globalDeclarations, stringLiterals) => {
+const constructMipsFunction = (f: LoweredFunction, globalDeclarations, stringLiterals) => {
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
-    const scratchRegisterCount = temporaryCount + statements.length - 1;
+    const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
 
     const registerAssignment: any = {
-        [argument.name]: {
+        [f.argument.name]: {
             type: 'register',
             destination: '$s0',
         },
@@ -614,14 +607,14 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }: C
         destination: '$t1',
     };
 
-    statements.forEach(statement => {
+    f.statements.forEach(statement => {
         if (statement.kind === 'typedAssignment') {
             registerAssignment[statement.destination] = currentTemporary;
             currentTemporary = nextTemporary(currentTemporary);
         }
     });
 
-    const mipsCode = flatten(statements.map(statement => {
+    const mipsCode = flatten(f.statements.map(statement => {
         const compiledProgram = astToMips({
             ast: statement,
             registerAssignment,
@@ -630,10 +623,22 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }: C
             globalDeclarations,
             stringLiterals,
         });
-        return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
+        const freeLocals = f.variables
+            // TODO: Make a better memory model for dynamic/global frees.
+            .filter(s => s.memoryCategory !== 'GlobalStatic')
+            .filter(s => s.type.name == 'String')
+            .map(s => {
+                debugger;
+            });
+        debugger;
+        return [
+            ...compiledProgram.prepare,
+            ...compiledProgram.execute,
+            ...compiledProgram.cleanup,
+        ];
     }));
     return [
-        `${name}:`,
+        `${f.name}:`,
         ...saveRegistersCode(scratchRegisterCount),
         `${mipsCode.join('\n')}`,
         ...restoreRegistersCode(scratchRegisterCount),
@@ -833,6 +838,25 @@ const myMallocRuntimeFunction = () => {
     `;
 }
 
+const myFreeRuntimeFunction = () => {
+    const one = '$t1';
+    return `
+    my_free:
+    ${saveRegistersCode(1).join('\n')}
+    bne ${argument1}, 0, free_null_check_passed
+    la $a0, tried_to_free_null
+    li $v0, 4
+    syscall
+    li $v0, 10
+    syscall
+    free_null_check_passed:
+    # TODO: merge blocks
+    li ${one}, 1,
+    sw ${one}, ${-1 * bytesInWord}(${argument1}) # free = work before space
+    ${restoreRegistersCode(1).join('\n')}
+    jr $ra`;
+};
+
 const verifyNoLeaks = () => {
     const currentBlockPointer = '$t1';
     const currentData = '$t2';
@@ -880,7 +904,21 @@ const toExectuable = ({
             globalDeclarations,
             stringLiterals,
         });
-        return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
+
+        const freeGlobals = globalDeclarations
+            .filter(declaration => declaration.type.name === 'String')
+            .map(declaration => [
+                `lw ${argument1}, ${declaration.name}`,
+                `jal my_free`,
+            ]);
+        debugger;
+
+        return [
+            ...compiledProgram.prepare,
+            ...compiledProgram.execute,
+            ...compiledProgram.cleanup,
+            ...flatten(freeGlobals),
+        ];
     }));
 
     // Create space for spilled tempraries
@@ -901,6 +939,7 @@ ${stringLiterals.map(text => `string_constant_${text}: .asciiz "${text}"`).join(
 zero_memory_malloc_error: .asciiz "Zero memory requested! Exiting."
 sbrk_failed: .asciiz "Memory allocation failed! Exiting."
 leaks_found_error: .asciiz "Leaks detected! Exiting."
+tried_to_free_null: .asciiz "Tried to free null pointer! Exiting."
 
 # First block pointer. Block: size, next, free
 first_block: .word 0
@@ -910,6 +949,7 @@ ${lengthRuntimeFunction()}
 ${stringEqualityRuntimeFunction()}
 ${stringCopyRuntimeFunction()}
 ${myMallocRuntimeFunction()}
+${myFreeRuntimeFunction()}
 ${stringConcatenateRuntimeFunction()}
 ${verifyNoLeaks()}
 
