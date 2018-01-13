@@ -3,6 +3,7 @@ import flatten from '../util/list/flatten.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
+import { CompiledProgram, compileExpression } from '../backend-utils.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 const argument1 = '$s0';
@@ -139,12 +140,6 @@ type AstToMipsOptions = {
     stringLiterals: any,
 };
 
-type CompiledProgram = {
-    prepare: string[],
-    execute: string[],
-    cleanup: string[],
-}
-
 const astToMips = (input: AstToMipsOptions): CompiledProgram => {
     const {
         ast,
@@ -157,22 +152,20 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
     const recurse = newInput => astToMips({ ...input, ...newInput });
     if (!ast) debug();
     switch (ast.kind) {
-        case 'returnStatement': return {
-            prepare: [],
-            execute: [
+        case 'returnStatement':
+            const subExpression = recurse({
+                ast: ast.expression,
+                destination: {
+                    type: 'register',
+                    destination: functionResult,
+                },
+            });
+            return compileExpression([subExpression], ([e1]) => [
                 `# evaluate expression of return statement, put in ${functionResult}`,
-                ...recurse({
-                    ast: ast.expression,
-                    destination: {
-                        type: 'register',
-                        destination: functionResult,
-                    },
-                }),
-            ],
-            cleanup: [],
-        };
-        case 'number': return [storeLiteralMips(destination as any, ast.value)];
-        case 'booleanLiteral': return [storeLiteralMips(destination as any, ast.value ? '1' : '0')];
+                ...e1,
+            ]);
+        case 'number': return compileExpression([], ([]) => [storeLiteralMips(destination as any, ast.value)]);
+        case 'booleanLiteral': return compileExpression([], ([]) => [storeLiteralMips(destination as any, ast.value ? '1' : '0')]);
         case 'product': {
             const leftSideDestination = currentTemporary;
             const rightSideDestination = destination;
@@ -188,14 +181,14 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
             });
-            return [
+            return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
                 `# Store left side of product in temporary (${storageSpecToString(leftSideDestination)})`,
-                ...storeLeftInstructions,
+                ...storeLeft,
                 `# Store right side of product in destination (${storageSpecToString(rightSideDestination)})`,
-                ...storeRightInstructions,
+                ...storeRight,
                 `# Evaluate product`,
                 multiplyMips(destination, leftSideDestination, rightSideDestination),
-            ];
+            ]);
         }
         case 'addition': {
             if (destination.type !== 'register') throw debug();
@@ -215,18 +208,18 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
             });
-            return [
+            return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
                 `# Store left side in temporary (${leftSideDestination.destination})`,
-                ...storeLeftInstructions,
+                ...storeLeft,
                 `# Store right side in destination (${rightSideDestination.destination})`,
-                ...storeRightInstructions,
+                ...storeRight,
                 `# Evaluate subtraction`,
                 add({
                     l: leftSideDestination.destination,
                     r: rightSideDestination.destination,
                     to: destination.destination,
                 }),
-            ];
+            ]);
         }
         case 'subtraction': {
             const leftSideDestination = currentTemporary;
@@ -245,25 +238,28 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
             });
-            return [
+            return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
                 `# Store left side in temporary (${leftSideDestination.destination})`,
-                ...storeLeftInstructions,
+                ...storeLeft,
                 `# Store right side in destination (${rightSideDestination.destination})`,
-                ...storeRightInstructions,
+                ...storeRight,
                 `# Evaluate subtraction`,
                 subtractMips(destination as any, leftSideDestination, rightSideDestination),
-            ];
+            ]);
         }
-        case 'statement': return flatten(ast.children.map(child => recurse({
-            ast: child,
-            destination: '(TODO: READ FROM REGISTER ASSIGNMENT)',
-        })));
+        case 'statement': {
+            const childResults = ast.children.map(child => recurse({
+                ast: child,
+                destination: '(TODO: READ FROM REGISTER ASSIGNMENT)',
+            }))
+            return compileExpression(childResults, flatten);
+        }
         case 'functionLiteral': {
             if (destination.type !== 'register') throw debug(); // TODO: Figure out how to guarantee this doesn't happen
-            return [
+            return compileExpression([], ([]) => [
                 `# Loading function into register`,
                 `la ${destination.destination}, ${ast.deanonymizedName}`
-            ];
+            ]);
         }
         case 'callExpression': {
             if (currentTemporary.type !== 'register') throw debug(); // TODO: Figure out how to guarantee this doesn't happen
@@ -291,18 +287,20 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 debug();
             }
 
-            return [
+            const argC = recurse({
+                ast: ast.argument,
+                destination: { type: 'register', destination: argument1 },
+                currentTemporary: nextTemporary(currentTemporary),
+            });
+
+            return compileExpression([argC], ([arg]) => [
                 `# Put argument in argument1`,
-                ...recurse({
-                    ast: ast.argument,
-                    destination: { type: 'register', destination: argument1 },
-                    currentTemporary: nextTemporary(currentTemporary),
-                }),
+                ...arg,
                 `# call ${name}`,
                 ...callInstructions,
                 `# move result from ${functionResult} into destination`,
                 moveMipsDeprecated(destination, functionResult),
-            ];
+            ]);
         }
         case 'typedAssignment': {
             const lhs = ast.destination;
@@ -313,23 +311,23 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 if (currentTemporary.type !== 'register') throw debug();
                 switch (declaration.type.name) {
                     case 'Function':
-                        return [
+                        return compileExpression([rhs], ([e1]) => [
                             `# Put function pointer into temporary`,
-                            ...rhs,
+                            ...e1,
                             `# Put function pointer into global`,
                             `sw ${currentTemporary.destination}, ${lhs}`,
-                        ];
+                        ]);
                     case 'Integer':
-                        return [
+                        return compileExpression([rhs], ([e1]) => [
                             `# Put integer pointer into temporary`,
-                            ...rhs,
+                            ...e1,
                             `# Store into global`,
                             `sw ${currentTemporary.destination}, ${lhs}`,
-                        ];
+                        ]);
                     case 'String':
-                        return [
+                        return compileExpression([rhs], ([e1]) => [
                             `# Put string pointer into temporary`,
-                            ...rhs,
+                            ...e1,
                             `# Get string length`,
                             move({ to: argument1, from: currentTemporary.destination }),
                             `jal length`,
@@ -344,21 +342,22 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                             `jal string_copy`,
                             `# Store into global`,
                             `sw ${functionResult}, ${lhs}`,
-                        ];
+                        ]);
                     default: throw debug();
                 }
             } else if (lhs in registerAssignment) {
-                return [
+                const rhs = recurse({
+                    ast: ast.expression,
+                    // TODO: Allow spilling of variables
+                    destination: {
+                        type: 'register',
+                        destination: `${registerAssignment[lhs].destination}`,
+                    },
+                });
+                return compileExpression([rhs], ([e1]) => [
                     `# Run rhs of assignment and store to ${lhs} (${registerAssignment[lhs].destination})`,
-                    ...recurse({
-                        ast: ast.expression,
-                        // TODO: Allow spilling of variables
-                        destination: {
-                            type: 'register',
-                            destination: `${registerAssignment[lhs].destination}`,
-                        },
-                    }),
-                ];
+                    ...e1,
+                ]);
             } else {
                 throw debug();
             }
@@ -369,16 +368,16 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
             if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
                 if (!declaration) throw debug();
-                return [
+                return compileExpression([], ([]) => [
                     `# Move from global ${identifierName} into destination (${(destination as any).destination || (destination as any).spOffset})`,
                     loadGlobalMips(destination as any, identifierName),
-                ];
+                ]);
             }
             const identifierRegister = registerAssignment[identifierName].destination;
-            return [
+            return compileExpression([], ([]) => [
                 `# Move from ${identifierName} (${identifierRegister}) into destination (${(destination as any).destination || (destination as any).spOffset})`,
                 moveMipsDeprecated(destination as any, identifierRegister),
-            ];
+            ]);
         }
         case 'ternary': {
             const booleanTemporary = currentTemporary;
@@ -387,25 +386,28 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
             labelId++;
             const endOfTernaryLabel = labelId;
             labelId++;
-            return [
+            const boolExpression = recurse({
+                ast: ast.condition,
+                destination: booleanTemporary,
+                currentTemporary: subExpressionTemporary,
+            });
+            const ifTrueExpression = recurse({ ast: ast.ifTrue, currentTemporary: subExpressionTemporary });
+            const ifFalseExpression = recurse({ ast: ast.ifFalse, currentTemporary: subExpressionTemporary });
+            return compileExpression([boolExpression, ifTrueExpression, ifFalseExpression], ([e1, e2, e3]) => [
                 `# Compute boolean and store in temporary`,
-                ...recurse({
-                    ast: ast.condition,
-                    destination: booleanTemporary,
-                    currentTemporary: subExpressionTemporary,
-                }),
+                ...e1,
                 `# Go to false branch if zero`,
                 mipsBranchIfEqual(booleanTemporary, { type: 'register', destination: '$0' }, `L${falseBranchLabel}`),
                 `# Execute true branch`,
-                ...recurse({ ast: ast.ifTrue, currentTemporary: subExpressionTemporary }),
+                ...e2,
                 `# Jump to end of ternary`,
                 `b L${endOfTernaryLabel}`,
                 `L${falseBranchLabel}:`,
                 `# Execute false branch`,
-                ...recurse({ ast: ast.ifFalse, currentTemporary: subExpressionTemporary }),
+                ...e3,
                 `# End of ternary label`,
                 `L${endOfTernaryLabel}:`,
-            ];
+            ]);
         }
         case 'equality': {
             const leftSideDestination = currentTemporary;
@@ -429,11 +431,11 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
 
             let jumpIfEqualInstructions = [];
 
-            return [
+            return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
                 `# Store left side of equality in temporary`,
-                ...storeLeftInstructions,
+                ...storeLeft,
                 `# Store right side of equality in temporary`,
-                ...storeRightInstructions,
+                ...storeRight,
                 `# Goto set 1 if equal`,
                 mipsBranchIfEqual(leftSideDestination, rightSideDestination, `L${equalLabel}`),
                 `# Not equal, set 0`,
@@ -443,7 +445,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 `L${equalLabel}:`,
                 storeLiteralMips(destination as any, '1'),
                 `L${endOfConditionLabel}:`,
-            ];
+            ]);
         }
         case 'stringEquality': {
             // Put left in s0 and right in s1 for passing to string equality function
@@ -461,22 +463,22 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                     destination: argument2,
                 },
             });
-            return [
+            return compileExpression([storeLeftInstructions, storeRightInstructions], ([e1, e2]) => [
                 `# Store left side in s0`,
-                ...storeLeftInstructions,
+                ...e1,
                 `# Store right side in s1`,
-                ...storeRightInstructions,
+                ...e2,
                 `# Call stringEquality`,
                 `jal stringEquality`,
                 `# Return value in ${functionResult}. Move to destination`,
                 moveMipsDeprecated(destination as any, functionResult),
-            ];
+            ]);
         }
         case 'stringLiteral': {
-            return [
+            return compileExpression([], ([]) => [
                 `# Load string literal address into register`,
                 loadAddressOfGlobal(destination as any, `string_constant_${ast.value}`),
-            ];
+            ]);
         }
         case 'concatenation': {
             if (destination.type !== 'register') throw debug();
@@ -499,13 +501,13 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
             });
-            return [
+            return compileExpression([storeLeftInstructions, storeRightInstructions], ([e1, e2]) => [
                 `# Create a temporary to store new string length. Start with 1 for null terminator.`,
                 `li ${newStringLengthTemporary.destination}, 1`,
                 `# Compute lhs`,
-                ...storeLeftInstructions,
+                ...e1,
                 `# Compute rhs`,
-                ...storeRightInstructions,
+                ...e2,
                 `# Compute the length of lhs and add it to length temporary`,
                 move({ from: leftSideDestination.destination, to: argument1 }),
                 `jal length`,
@@ -534,11 +536,10 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 `jal string_concatenate`,
                 `# Move malloced pointer to final destination`,
                 move({ from: mallocResultTemporary.destination, to: destination.destination }),
-            ]
+            ]);
         }
         default:
-            return debug();
-
+            throw debug();
     }
 }
 
@@ -621,7 +622,7 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }: C
     });
 
     const mipsCode = flatten(statements.map(statement => {
-        return astToMips({
+        const compiledProgram = astToMips({
             ast: statement,
             registerAssignment,
             destination: functionResult as any, // TODO: Not sure how this works. Maybe it doesn't.
@@ -629,6 +630,7 @@ const constructMipsFunction = ({ name, argument, statements, temporaryCount }: C
             globalDeclarations,
             stringLiterals,
         });
+        return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
     }));
     return [
         `${name}:`,
@@ -866,17 +868,20 @@ const toExectuable = ({
         registerAssignment,
         firstTemporary,
     } = assignMipsRegisters(program.variables);
-    let mipsProgram = flatten(program.statements.map(statement => astToMips({
-        ast: statement,
-        registerAssignment,
-        destination: {
-            type: 'register',
-            destination: '$a0',
-        },
-        currentTemporary: firstTemporary,
-        globalDeclarations,
-        stringLiterals,
-    })));
+    let mipsProgram = flatten(program.statements.map(statement => {
+        const compiledProgram = astToMips({
+            ast: statement,
+            registerAssignment,
+            destination: {
+                type: 'register',
+                destination: '$a0',
+            },
+            currentTemporary: firstTemporary,
+            globalDeclarations,
+            stringLiterals,
+        });
+        return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
+    }));
 
     // Create space for spilled tempraries
     const numSpilledTemporaries = program.temporaryCount - 10
