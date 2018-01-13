@@ -519,14 +519,12 @@ return quadrupleWithLocal(5);`,
     expectedExitCode: 20,
 });
 
-test.only('string length', compileAndRun, {
+test('string length', compileAndRun, {
     source: `myStr: String = "test"; return length(myStr);`,
     expectedExitCode: 4,
-    printSubsteps: 'mips',
-    //debugSubsteps: 'mips',
 });
 
-test('empty s tring length', compileAndRun, {
+test('empty string length', compileAndRun, {
    source: `myStr: String = ""; return length(myStr);`,
    expectedExitCode: 0,
 });
@@ -547,7 +545,7 @@ test('string copy', compileAndRun, {
     expectedExitCode: 7,
 });
 
-test('string equality: equal', compileAndRun, {
+test.only('string equality: equal', compileAndRun, {
     source: `str1 = "a"
 str2 = "a"
 return str1 == str2 ? 1 : 2

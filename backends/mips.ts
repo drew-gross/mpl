@@ -906,21 +906,19 @@ const toExectuable = ({
             stringLiterals,
         });
 
-        const freeGlobals = globalDeclarations
-            .filter(declaration => declaration.type.name === 'String')
-            .map(declaration => [
-                `lw ${argument1}, ${declaration.name}`,
-                `jal my_free`,
-            ]);
-        debugger;
-
         return [
             ...compiledProgram.prepare,
             ...compiledProgram.execute,
             ...compiledProgram.cleanup,
-            ...flatten(freeGlobals),
         ];
     }));
+
+    const freeGlobals = globalDeclarations
+        .filter(declaration => declaration.type.name === 'String')
+        .map(declaration => [
+            `lw ${argument1}, ${declaration.name}`,
+            `jal my_free`,
+        ]);
 
     // Create space for spilled tempraries
     const numSpilledTemporaries = program.temporaryCount - 10
@@ -956,6 +954,7 @@ main:
 ${makeSpillSpaceCode.join('\n')}
 ${mipsProgram.join('\n')}
 ${removeSpillSpaceCode.join('\n')}
+${flatten(freeGlobals).join('\n')}
 # Check for leaks
 jal verify_no_leaks
 # print "exit code" and exit
