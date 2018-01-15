@@ -32,14 +32,14 @@ type AstLeaf = {
     success?: true,
     newIndex?: number,
     type: AstNodeType,
-    value: any,
+    value: string | number | null | undefined,
 };
 
 type AstInteriorNode = {
     success?: true,
     newIndex?: number,
     type: AstNodeType,
-    children: any[],
+    children: AstNode[],
 };
 
 type AstNode = AstInteriorNode | AstLeaf;
@@ -104,7 +104,7 @@ const alternative = parsers => (tokens: Token[], index): ParseResult => {
 }
 
 const sequence = (type, parsers) => (tokens: Token[], index): ParseResult => {
-    const results: any = []
+    const results: AstNode[] = []
     for (const parser of parsers) {
         const result = parser(tokens, index);
         if (!result.success) {
