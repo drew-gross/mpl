@@ -3,7 +3,7 @@ import unique from './util/list/unique.js';
 import flatten from './util/list/flatten.js';
 import assertNever from './util/assertNever.js';
 
-type AstNodeType =
+export type AstNodeType =
     'return' |
     'booleanLiteral' |
     'number' |
@@ -39,7 +39,7 @@ type AstInteriorNode = {
     success?: true,
     newIndex?: number,
     type: AstNodeType,
-    children: any[],
+    children: AstNode[],
 };
 
 type AstNode = AstInteriorNode | AstLeaf;
@@ -104,7 +104,7 @@ const alternative = parsers => (tokens: Token[], index): ParseResult => {
 }
 
 const sequence = (type, parsers) => (tokens: Token[], index): ParseResult => {
-    const results: any = []
+    const results: AstNode[] = []
     for (const parser of parsers) {
         const result = parser(tokens, index);
         if (!result.success) {

@@ -1,5 +1,6 @@
-import { TokenType } from './lex.js';
-import { alternative, sequence, terminal, endOfInput, ParseResult } from './parser-combinator.js';
+import { TokenType, Token } from './lex.js';
+import { alternative, sequence, terminal, endOfInput, ParseResult, AstNodeType } from './parser-combinator.js';
+import debug from './util/debug.js';
 
 const program = (t, i) => programI(t, i);
 const functionBody = (t, i) => functionBodyI(t, i);
@@ -34,8 +35,16 @@ const concatenation = (t, i) => concatenationI(t, i);
 // CONCATENATION -> SIMPLE_EXPRESSION ++ CONCATENATION | SIMPLE_EXPRESSION
 // SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( PARAM_LIST ) | int | boolean | string | FUNCTION | identifier
 
+type BaseParser = (tokens: Token[], index: number) => ParseResult;
+type SequenceParser = { n: string, p: (string | BaseParser)[] };
+type AlternativeParser = (SequenceParser | string | BaseParser)[];
+
 type Parser = {
-    [index: string]: string | BaseParser,
+    [index: string]: SequenceParser | AlternativeParser,
+}
+
+const isSequence = (val: SequenceParser | AlternativeParser): val is SequenceParser =>  {
+    return 'n' in val;
 }
 
 const plus = terminal('sum');
@@ -45,32 +54,50 @@ const rightBracket = terminal('rightBracket');
 const int = terminal('number');
 const _return = terminal('return');
 
-export const parse = (parser: Parser, start: string, tokens: any[]) => {
-    const childrenParser = parser[start];
-    const currentParse = {
-        type: start,
-        children: [],
-    };
+export const parse = (parser: Parser, currentParser: string, tokens: Token[]): ParseResult => {
+    const index = 0;
+    const childrenParser = parser[currentParser];
+    if (typeof childrenParser === 'string') {
+        // Base Parser
+        const children = parse(childrenParser, currentParser, tokens);
+    } else if (isSequence(childrenParser)) {
+        // Sequence Parser
+        for (const p of childrenParser.p) {
+            if (typeof p === 'function') {
+                const result: ParseResult = p(tokens, index);
+                if (result.success == false) {
+                    break;
+                }
+            } else {
+                debug();
+            }
+        }
+    } else {
+        debug();
+    }
+
     return {
-        ast: currentParse,
-        parseErrors: [],
+        type: currentParser as AstNodeType,
+        children: [],
+        success: true,
+        newIndex: 0,
     };
 };
 
 export const parser: Parser = {
-    program: [_return, 'expression', endOfInput],
-    expression: ['addition'],
+    program: { n: 'progam', p: [_return, 'expression', endOfInput] },
+    expression: { n: 'addition1', p: ['addition'] },
     addition: [
-        ['subtraction', plus, 'expression'],
-        ['subtraction'],
+        { n: 'subtraction1', p: ['subtraction', plus, 'expression'] },
+        'subtraction',
     ],
     subtraction: [
-        ['simpleExpression', minus, 'subtraction'],
-        ['simpleExpression'],
+        { n: 'subtraction1', p: ['simpleExpression', minus, 'subtraction'] },
+        'simpleExpression',
     ],
     simpleExpression: [
-        [leftBracket, 'expression', rightBracket],
-        [int],
+        { n: 'bracketedExpression', p: [leftBracket, 'expression', rightBracket] },
+        int,
     ],
 };
 
