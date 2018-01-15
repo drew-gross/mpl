@@ -287,7 +287,7 @@ struct block_info *first_block = NULL; // Set to null because in the beginning, 
 void *my_malloc(size_t requested_size) {
     // Error out if we request zero bytes, that should never happen
     if (requested_size == 0) {
-        printf("${errors.allocatedZero}");
+        printf("${errors.allocatedZero.value}");
         exit(-1);
     }
 
@@ -305,7 +305,7 @@ void *my_malloc(size_t requested_size) {
         #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         struct block_info *newly_allocated = (struct block_info*)sbrk(requested_size + sizeof(struct block_info));
         if (newly_allocated == (void*)-1) {
-            printf("${errors.allocationFailed}");
+            printf("${errors.allocationFailed.value}");
             exit(-1); // TODO: Come up with an alloc failure strategy
         }
 
@@ -330,7 +330,7 @@ void *my_malloc(size_t requested_size) {
 
 void my_free(void *pointer) {
     if (pointer == NULL) {
-        printf("${errors.freeNull}");
+        printf("${errors.freeNull.value}");
         exit(-1);
     }
     // TODO: Merge blocks
@@ -344,7 +344,7 @@ void verify_no_leaks() {
     struct block_info *current_block = first_block;
     while (current_block != NULL) {
         if (!current_block->free) {
-            printf("${errors.leaksDetected}");
+            printf("${errors.leaksDetected.value}");
             exit(-1);
         }
         current_block = current_block->next_block;
