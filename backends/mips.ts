@@ -502,7 +502,17 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
             });
-            return compileExpression([storeLeftInstructions, storeRightInstructions], ([e1, e2]) => [
+            const cleanup = {
+                prepare: [],
+                execute: [],
+                cleanup: [
+                    `# Freeing temporary from concat`,
+                    move({ from: mallocResultTemporary.destination, to: argument1 }),
+                    // TODO: maybe not valid? This destination may have been reused for something else by the time we get to cleanup
+                    `jal my_free`,
+                ],
+            }
+            return compileExpression([storeLeftInstructions, storeRightInstructions, cleanup], ([e1, e2, _]) => [
                 `# Create a temporary to store new string length. Start with 1 for null terminator.`,
                 `li ${newStringLengthTemporary.destination}, 1`,
                 `# Compute lhs`,
@@ -629,13 +639,19 @@ const constructMipsFunction = (f: LoweredFunction, globalDeclarations, stringLit
             .filter(s => s.memoryCategory !== 'GlobalStatic')
             .filter(s => s.type.name == 'String')
             .map(s => {
-                debugger;
+                const memoryForVariable: StorageSpec = registerAssignment[s.name];
+                if (memoryForVariable.type !== 'register') throw debug();
+                return [
+                    move({ from: memoryForVariable.destination, to: argument1 }),
+                    `jal my_free`,
+                ];
             });
-        debugger;
+
         return [
             ...compiledProgram.prepare,
             ...compiledProgram.execute,
             ...compiledProgram.cleanup,
+            // ...flatten(freeLocals), // TODO: Freeing locals should be necessary...
         ];
     }));
     return [
