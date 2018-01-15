@@ -26,14 +26,14 @@ type TokenType =
 type TokenSpec = {
     token: string,
     type: TokenType,
-    action?: (x: string) => any,
+    action?: (x: string) => string | number | null,
     toString: (x: any) => string,
 };
 
 type Token = {
     type: TokenType,
     string: string,
-    value?: any,
+    value?: string | number | null,
 };
 
 const lex = (input: string): Token[] => {

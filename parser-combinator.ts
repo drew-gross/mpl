@@ -32,7 +32,7 @@ type AstLeaf = {
     success?: true,
     newIndex?: number,
     type: AstNodeType,
-    value: any,
+    value: string | number | null | undefined,
 };
 
 type AstInteriorNode = {

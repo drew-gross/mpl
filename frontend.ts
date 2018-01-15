@@ -122,9 +122,9 @@ const statementTreeToFunction = (functionAst: FunctionAst, knownIdentifiers): Fu
     }
     const argumentIdentifier: IdentifierDict = {};
     if (functionAst.argument) {
-        const argumentName = (functionAst.argument as AstInteriorNode).children[0].value;
-        const argumentTypeName = (functionAst.argument as AstInteriorNode).children[2].value;
-        argumentIdentifier[argumentName] = { name: argumentTypeName };
+        const argumentName = ((functionAst.argument as AstInteriorNode).children[0] as AstLeaf).value as string;
+        const argumentTypeName = ((functionAst.argument as AstInteriorNode).children[2] as AstLeaf).value as string;
+        argumentIdentifier[argumentName] = { name: argumentTypeName } as any;
         functionArgument = {
             name: argumentName,
             type: { name: argumentTypeName },
@@ -148,7 +148,8 @@ const statementTreeToFunction = (functionAst: FunctionAst, knownIdentifiers): Fu
 
     variables.forEach((variable: VariableDeclaration, index) => {
         const rhsIndex = functionStatements[index].type === 'assignment' ? 2 : 4;
-        variablesAsIdentifiers[variable.name] = typeOfExpression((functionStatements[index] as AstInteriorNode).children[rhsIndex], {
+        const statement = functionStatements[index] as AstInteriorNode;
+        variablesAsIdentifiers[variable.name] = typeOfExpression(statement.children[rhsIndex] as any, {
             ...knownIdentifiers,
             ...variablesAsIdentifiers,
         }).type;
