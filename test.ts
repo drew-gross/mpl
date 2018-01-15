@@ -3,6 +3,7 @@ import test from 'ava';
 import { lex, TokenType } from './lex.js';
 import { parse, compile } from './frontend.js';
 import { compileAndRun } from './test-utils.js';
+import { parser, parse as newParser } from './parser.js';
 
 test('lexer', t => {
     t.deepEqual(lex('123'), [
@@ -225,6 +226,21 @@ test('lowering of bracketedExpressions', t => {
             }],
         },
     });
+});
+
+test.only('new parser', t => {
+    console.log('--- parser ---');
+    console.log(parser);
+    const input = lex('return 1 + ((2)) + (3 - 4)');
+    console.log('--- input ---');
+    console.log(input);
+    const newOutput = newParser(parser, 'program', input);
+    console.log('--- new output ---');
+    console.log(newOutput);
+    const oldOutput = parse(input);
+    console.log('--- old output ---');
+    console.log(oldOutput);
+    t.deepEqual(newOutput, oldOutput as any);
 });
 
 test('bare return', compileAndRun, {

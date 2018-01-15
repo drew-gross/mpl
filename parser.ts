@@ -34,6 +34,46 @@ const concatenation = (t, i) => concatenationI(t, i);
 // CONCATENATION -> SIMPLE_EXPRESSION ++ CONCATENATION | SIMPLE_EXPRESSION
 // SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( PARAM_LIST ) | int | boolean | string | FUNCTION | identifier
 
+type Parser = {
+    [index: string]: string | BaseParser,
+}
+
+const plus = terminal('sum');
+const minus = terminal('subtraction');
+const leftBracket = terminal('leftBracket');
+const rightBracket = terminal('rightBracket');
+const int = terminal('number');
+const _return = terminal('return');
+
+export const parse = (parser: Parser, start: string, tokens: any[]) => {
+    const childrenParser = parser[start];
+    const currentParse = {
+        type: start,
+        children: [],
+    };
+    return {
+        ast: currentParse,
+        parseErrors: [],
+    };
+};
+
+export const parser: Parser = {
+    program: [_return, 'expression', endOfInput],
+    expression: ['addition'],
+    addition: [
+        ['subtraction', plus, 'expression'],
+        ['subtraction'],
+    ],
+    subtraction: [
+        ['simpleExpression', minus, 'subtraction'],
+        ['simpleExpression'],
+    ],
+    simpleExpression: [
+        [leftBracket, 'expression', rightBracket],
+        [int],
+    ],
+};
+
 const programI = sequence('program', [functionBody, endOfInput]);
 
 const functionBodyI = alternative([
