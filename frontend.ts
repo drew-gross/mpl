@@ -1,7 +1,7 @@
 import flatten from './util/list/flatten.js';
 import unique from './util/list/unique.js';
 import debug from './util/debug.js';
-import { lex } from './lex.js';
+import { lex, Token } from './lex.js';
 import parseProgram from './parser.js'
 import { ParseResult, AstNode, AstInteriorNode, AstLeaf } from './parser-combinator.js';
 import { Type, VariableDeclaration, IdentifierDict, Function, MemoryCategory, BackendInputs } from './api.js';
@@ -239,7 +239,7 @@ const getMemoryCategory = (ast): MemoryCategory => {
 
 };
 
-const parse = (tokens: any[]): { ast?: any, parseErrors: string[] } => {
+const parse = (tokens: Token[]): { ast?: any, parseErrors: string[] } => {
     const parseResult: ParseResult = parseProgram(tokens, 0)
 
     if (parseResult.success === false) {
