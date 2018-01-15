@@ -1,6 +1,8 @@
 import { TokenType, Token } from './lex.js';
-import { alternative, sequence, terminal, endOfInput, ParseResult, AstNodeType } from './parser-combinator.js';
+import { alternative, sequence, terminal, endOfInput, ParseResult, ParseError, AstNodeType, AstNode } from './parser-combinator.js';
 import debug from './util/debug.js';
+import unique from './util/list/unique.js';
+import flatten from './util/list/flatten.js';
 
 const program = (t, i) => programI(t, i);
 const functionBody = (t, i) => functionBodyI(t, i);
@@ -39,7 +41,7 @@ type BaseParser = (tokens: Token[], index: number) => ParseResult;
 type SequenceParser = { n: string, p: (string | BaseParser)[] };
 type AlternativeParser = (SequenceParser | string | BaseParser)[];
 
-type Parser = {
+type Grammar = {
     [index: string]: SequenceParser | AlternativeParser,
 }
 
@@ -54,43 +56,81 @@ const rightBracket = terminal('rightBracket');
 const int = terminal('number');
 const _return = terminal('return');
 
-const parseSequence = (parser: SequenceParser, tokens: Token[], index: number): ParseResult => {
-    const results = [];
-};
-
-export const parse = (parser: Parser, currentParser: string, tokens: Token[]): ParseResult => {
-    const index = 0;
-    const childrenParser = parser[currentParser];
-    if (typeof childrenParser === 'string') {
-        // Base Parser
-        const children = parse(childrenParser, currentParser, tokens);
-    } else if (isSequence(childrenParser)) {
-        // Sequence Parser
-        for (const p of childrenParser.p) {
-            if (typeof p === 'function') {
-                const result: ParseResult = p(tokens, index);
-                if (result.success == false) {
-                    break;
-                } else {
-                }
-            } else {
-                debug();
-            }
+const parseSequence = (grammar: Grammar, parser: SequenceParser, tokens: Token[], index: number): ParseResult => {
+    const results: AstNode[] = [];
+    for (const p of parser.p) {
+        let result: ParseResult;
+        if (typeof p === 'function') {
+            result = p(tokens, index);
+        } else {
+            result = parse(grammar, p, tokens, index);
         }
-    } else {
-        debug();
+
+        if (!result.success) {
+            return result;
+        }
+
+        results.push(result);
+        index = result.newIndex as number;
     }
 
     return {
-        type: currentParser as AstNodeType,
-        children: [],
         success: true,
-        newIndex: 0,
+        newIndex: index,
+        type: parser.n as AstNodeType,
+        children: results,
     };
 };
 
-export const parser: Parser = {
-    program: { n: 'progam', p: [_return, 'expression', endOfInput] },
+const parseAlternative = (
+    grammar: Grammar,
+    alternatives: AlternativeParser,
+    tokens: Token[],
+    index: number
+): ParseResult => {
+    const errors: ParseError[] = [];
+    for (const parser of alternatives) {
+        let result;
+        if (typeof parser === 'string') {
+            result = parse(grammar, parser, tokens, index);
+        } else if (typeof parser === 'function') {
+            result = parser(tokens, index);
+        } else {
+            result = parseSequence(grammar, parser, tokens, index);
+        }
+        if (result.success) {
+            return result;
+        } else {
+            errors.push(result.error);
+        }
+    }
+    return {
+        success: false,
+        error: {
+            found: unique(errors.map(e => e.found)).join('/'),
+            expected: unique(flatten(errors.map(e => e.expected))),
+        }
+    };
+};
+
+export const parse = (grammar: Grammar, firstRule: string, tokens: Token[], index: number): ParseResult => {
+    const childrenParser = grammar[firstRule];
+    if (typeof childrenParser === 'string') {
+        // Base Parser
+        return parse(childrenParser, firstRule, tokens, index);
+    } else if (isSequence(childrenParser)) {
+        // Sequence Parser
+        return parseSequence(grammar, childrenParser, tokens, index);
+    } else if (Array.isArray(childrenParser)) {
+        // Alternative Parser
+        return parseAlternative(grammar, childrenParser, tokens, index);
+    } else {
+        throw debug();
+    }
+};
+
+export const parser: Grammar = {
+    program: { n: 'program', p: [_return, 'expression', endOfInput] },
     expression: { n: 'addition1', p: ['addition'] },
     addition: [
         { n: 'subtraction1', p: ['subtraction', plus, 'expression'] },

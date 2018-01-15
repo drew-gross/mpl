@@ -234,7 +234,7 @@ test.only('new parser', t => {
     const input = lex('return 1 + ((2)) + (3 - 4)');
     console.log('--- input ---');
     console.log(input);
-    const newOutput = newParser(parser, 'program', input);
+    const newOutput = newParser(parser, 'program', input, 0);
     console.log('--- new output ---');
     console.log(newOutput);
     const oldOutput = parseProgram(input, 0);

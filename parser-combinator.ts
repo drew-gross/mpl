@@ -188,6 +188,7 @@ export {
     terminal,
     endOfInput,
     ParseResult,
+    ParseError,
     AstNode,
     AstLeaf,
     AstInteriorNode,
