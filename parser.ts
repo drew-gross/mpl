@@ -54,6 +54,10 @@ const rightBracket = terminal('rightBracket');
 const int = terminal('number');
 const _return = terminal('return');
 
+const parseSequence = (parser: SequenceParser, tokens: Token[], index: number): ParseResult => {
+    const results = [];
+};
+
 export const parse = (parser: Parser, currentParser: string, tokens: Token[]): ParseResult => {
     const index = 0;
     const childrenParser = parser[currentParser];
@@ -67,6 +71,7 @@ export const parse = (parser: Parser, currentParser: string, tokens: Token[]): P
                 const result: ParseResult = p(tokens, index);
                 if (result.success == false) {
                     break;
+                } else {
                 }
             } else {
                 debug();
