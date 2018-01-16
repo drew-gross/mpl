@@ -4,7 +4,7 @@ import { lex, TokenType } from './lex.js';
 import { parse, compile } from './frontend.js';
 import { compileAndRun } from './test-utils.js';
 import { parser, parse as newParser, default as parseProgram } from './parser.js';
-import { stripResultIndexes } from './parser-combinator.js';
+import { stripResultIndexes, ParseResult, AstNode } from './parser-combinator.js';
 
 test('lexer', t => {
     t.deepEqual(lex('123'), [
@@ -39,25 +39,25 @@ test('lex with initial whitespace', t => {
 });
 
 test('ast for single number', t => {
-    t.deepEqual(parse(lex('return 7')), {
-        parseErrors: [],
-        ast: {
-            type: 'program',
+    const tokens = lex('return 7');
+    const parseResult: ParseResult = stripResultIndexes(newParser(parser, 'program', tokens, 0));
+    const expectedResult: AstNode = {
+        type: 'program' as any,
+        children: [{
+            type: 'returnStatement' as any,
             children: [{
-                type: 'returnStatement',
-                children: [{
-                    type: 'return',
-                    value: null,
-                }, {
-                    type: 'number',
-                    value: 7,
-                }],
+                type: 'return' as any,
+                value: null,
             }, {
-                type: 'endOfFile',
-                value: 'endOfFile',
+                type: 'number' as any,
+                value: 7,
             }],
-        },
-    });
+        }, {
+            type: 'endOfFile' as any,
+            value: 'endOfFile',
+        }],
+    };
+    t.deepEqual(parseResult, expectedResult);
 });
 
 test('ast for number in brackets', t => {
