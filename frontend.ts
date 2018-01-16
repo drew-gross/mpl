@@ -3,7 +3,7 @@ import unique from './util/list/unique.js';
 import debug from './util/debug.js';
 import { lex, Token } from './lex.js';
 import parseProgram from './parser.js'
-import { ParseResult, AstNode, AstInteriorNode, AstLeaf } from './parser-combinator.js';
+import { ParseResult, AstNode, AstInteriorNode, AstLeaf, parseResultIsError } from './parser-combinator.js';
 import { Type, VariableDeclaration, IdentifierDict, Function, MemoryCategory, BackendInputs } from './api.js';
 import * as Ast from './ast.js';
 
@@ -243,8 +243,8 @@ const getMemoryCategory = (ast): MemoryCategory => {
 const parse = (tokens: Token[]): { ast?: any, parseErrors: string[] } => {
     const parseResult: ParseResult = parseProgram(tokens, 0)
 
-    if (parseResult.success === false) {
-        const errorMessage = `Expected ${parseResult.error.expected.join(' or ')}, found ${parseResult.error.found}`;
+    if (parseResultIsError(parseResult)) {
+        const errorMessage = `Expected ${parseResult.expected.join(' or ')}, found ${parseResult.found}`;
         return {
             ast: {},
             parseErrors: [errorMessage],
