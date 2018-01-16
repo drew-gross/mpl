@@ -135,6 +135,7 @@ export const parse = (grammar: Grammar, firstRule: string, tokens: Token[], inde
 
 const plus = terminal('sum');
 const minus = terminal('subtraction');
+const times = terminal('product');
 const leftBracket = terminal('leftBracket');
 const rightBracket = terminal('rightBracket');
 const int = terminal('number');
@@ -151,7 +152,11 @@ export const parser: Grammar = {
         'subtraction',
     ],
     subtraction: [
-        { n: 'subtraction1', p: ['simpleExpression', minus, 'subtraction'] },
+        { n: 'subtraction1', p: ['product', minus, 'subtraction'] },
+        'product',
+    ],
+    product: [
+        { n: 'product', p: ['simpleExpression', times, 'product'] },
         'simpleExpression',
     ],
     simpleExpression: [

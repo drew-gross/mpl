@@ -100,36 +100,39 @@ test('ast for number in double brackets', t => {
 });
 
 test('ast for product with brackets', t => {
-    t.deepEqual(parse(lex('return 3 * (4 * 5)')), ({
-        parseErrors: [],
-        ast: {
-            type: 'program',
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(newParser(parser, 'program', lex('return 3 * (4 * 5)'), 0))), ({
+        type: 'program' as any,
+        children: [{
+            type: 'returnStatement' as any,
             children: [{
-                type: 'returnStatement',
+                type: 'return' as any,
+                value: null,
+            }, {
+                type: 'product' as any,
                 children: [{
-                    type: 'return',
-                    value: null,
+                    type: 'number' as any,
+                    value: 3
                 }, {
-                    type: 'product',
+                   type: 'product',
+                   value: null,
+                }, {
+                    type: 'product' as any,
                     children: [{
-                        type: 'number',
-                        value: 3
+                        type: 'number' as any,
+                        value: 4
                     }, {
-                        type: 'product',
-                        children: [{
-                            type: 'number',
-                            value: 4
-                        }, {
-                            type: 'number',
-                            value: 5
-                        }]
+                       type: 'product',
+                       value: null,
+                    }, {
+                        type: 'number' as any,
+                        value: 5
                     }]
                 }]
-            }, {
-                type: 'endOfFile',
-                value: 'endOfFile',
-            }],
-        },
+            }]
+        }, {
+            type: 'endOfFile' as any,
+            value: 'endOfFile',
+        }],
     }));
 });
 
