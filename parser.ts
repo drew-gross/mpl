@@ -141,7 +141,7 @@ const rightBracket = terminal('rightBracket');
 const int = terminal('number');
 const _return = terminal('return');
 
-export const parser: Grammar = {
+export const grammar: Grammar = {
     program: { n: 'program', p: ['functionBody', endOfInput] },
     functionBody: [
         { n: 'returnStatement', p: [_return, 'expression'] }

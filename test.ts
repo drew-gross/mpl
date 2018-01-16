@@ -3,7 +3,7 @@ import test from 'ava';
 import { lex, TokenType } from './lex.js';
 import { parse, compile } from './frontend.js';
 import { compileAndRun } from './test-utils.js';
-import { parser, parse as newParser, default as parseProgram } from './parser.js';
+import { grammar, parse as newParser, default as parseProgram } from './parser.js';
 import { stripResultIndexes, ParseResult, AstNode } from './parser-combinator.js';
 import { removeBracketsFromAst } from './frontend.js';
 
@@ -41,7 +41,7 @@ test('lex with initial whitespace', t => {
 
 test('ast for single number', t => {
     const tokens = lex('return 7');
-    const parseResult: ParseResult = stripResultIndexes(newParser(parser, 'program', tokens, 0));
+    const parseResult: ParseResult = stripResultIndexes(newParser(grammar, 'program', tokens, 0));
     const expectedResult: AstNode = {
         type: 'program' as any,
         children: [{
@@ -62,7 +62,7 @@ test('ast for single number', t => {
 });
 
 test('ast for number in brackets', t => {
-    t.deepEqual(removeBracketsFromAst(stripResultIndexes(newParser(parser, 'program', lex(' return (5)'), 0))), ({
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(newParser(grammar, 'program', lex(' return (5)'), 0))), ({
         type: 'program' as any,
         children: [{
             type: 'returnStatement' as any,
@@ -81,7 +81,7 @@ test('ast for number in brackets', t => {
 });
 
 test('ast for number in double brackets', t => {
-    t.deepEqual(removeBracketsFromAst(stripResultIndexes(newParser(parser, 'program', lex('return ((20))'), 0))), ({
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(newParser(grammar, 'program', lex('return ((20))'), 0))), ({
         type: 'program' as any,
         children: [{
             type: 'returnStatement' as any,
@@ -100,7 +100,7 @@ test('ast for number in double brackets', t => {
 });
 
 test('ast for product with brackets', t => {
-    t.deepEqual(removeBracketsFromAst(stripResultIndexes(newParser(parser, 'program', lex('return 3 * (4 * 5)'), 0))), ({
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(newParser(grammar, 'program', lex('return 3 * (4 * 5)'), 0))), ({
         type: 'program' as any,
         children: [{
             type: 'returnStatement' as any,
@@ -229,7 +229,7 @@ test('lowering of bracketedExpressions', t => {
 
 test('new parser', t => {
     const input = lex('return 1 + ((2)) + (3 - 4)');
-    const newOutput = stripResultIndexes(newParser(parser, 'program', input, 0));
+    const newOutput = stripResultIndexes(newParser(grammar, 'program', input, 0));
     const oldOutput = stripResultIndexes(parseProgram(input, 0));
     t.deepEqual(newOutput, oldOutput);
 });
