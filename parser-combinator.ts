@@ -28,31 +28,67 @@ export type AstNodeType =
     'concatenation' |
     'comma';
 
-type AstLeaf = {
-    success?: true,
-    newIndex?: number,
-    type: AstNodeType,
-    value: string | number | null | undefined,
+interface AstInteriorNode {
+    type: AstNodeType;
+    children: AstNode[];
 };
 
-type AstInteriorNode = {
-    success?: true,
-    newIndex?: number,
-    type: AstNodeType,
-    children: AstNode[],
+type AstLeaf = {
+    type: AstNodeType;
+    value: string | number | null | undefined;
 };
 
 type AstNode = AstInteriorNode | AstLeaf;
 
-type ParseError = {
+interface AstLeafWithIndex {
+    success: true,
+    newIndex: number,
+    type: AstNodeType,
+    value: string | number | null | undefined,
+};
+
+interface AstInteriorNodeWithIndex {
+    success: true,
+    newIndex: number,
+    type: AstNodeType,
+    children: AstNode[],
+};
+
+type AstNodeWithIndex = AstInteriorNodeWithIndex | AstLeafWithIndex;
+
+interface ParseError {
     found: string,
     expected: TokenType[],
 };
 
-type ParseResult = {
-    success: false,
-    error: ParseError,
-} | AstNode;
+type ParseResultWithIndex = ParseError | AstNodeWithIndex;
+type ParseResult = ParseError | AstNode;
+
+const parseResultIsError = (r: ParseResult): r is ParseError => {
+    return 'found' in r && 'expected' in r;
+};
+const parseResultWithIndexIsError = (r: ParseResultWithIndex): r is ParseError => {
+    return 'found' in r && 'expected' in r;
+};
+const parseResultWithIndexIsLeaf = (r: ParseResultWithIndex): r is AstLeafWithIndex => {
+    return 'value' in r;
+};
+
+const stripIndexes = (r: ParseResultWithIndex): ParseResult => {
+    if (parseResultWithIndexIsError(r)) {
+        return r;
+    }
+    if (parseResultWithIndexIsLeaf(r)) {
+        return {
+            value: r.value,
+            type: r.type,
+        };
+    }
+    return {
+        type: r.type,
+        children: r.children,
+    };
+};
 
 const tokenTypeToAstNodeType = (token: TokenType): AstNodeType | undefined => {
     switch (token) {
@@ -83,35 +119,29 @@ const tokenTypeToAstNodeType = (token: TokenType): AstNodeType | undefined => {
     }
 };
 
-const alternative = parsers => (tokens: Token[], index): ParseResult => {
+const alternative = parsers => (tokens: Token[], index): ParseResultWithIndex => {
     const errors: ParseError[] = [];
     for (const parser of parsers) {
         const result = parser(tokens, index);
-        if (result.success) {
-            return result;
+        if (parseResultWithIndexIsError(result)) {
+            errors.push(result);
         } else {
-            errors.push(result.error);
+            return result;
         }
     }
 
     return {
-        success: false,
-        error: {
-            found: unique(errors.map(e => e.found)).join('/'),
-            expected: unique(flatten(errors.map(e => e.expected))),
-        },
+        found: unique(errors.map(e => e.found)).join('/'),
+        expected: unique(flatten(errors.map(e => e.expected))),
     };
 }
 
-const sequence = (type, parsers) => (tokens: Token[], index): ParseResult => {
+const sequence = (type, parsers) => (tokens: Token[], index): ParseResultWithIndex => {
     const results: AstNode[] = []
     for (const parser of parsers) {
         const result = parser(tokens, index);
         if (!result.success) {
-            return {
-                success: false,
-                error: result.error,
-            };
+            return result;
         }
         results.push(result);
         index = result.newIndex;
@@ -124,14 +154,11 @@ const sequence = (type, parsers) => (tokens: Token[], index): ParseResult => {
     };
 }
 
-const terminal = (terminal: TokenType) => (tokens: Token[], index): ParseResult => {
+const terminal = (terminal: TokenType) => (tokens: Token[], index): ParseResultWithIndex => {
     if (index >= tokens.length) {
         return {
-            success: false,
-            error: {
-                found: 'endOfFile',
-                expected: [terminal],
-            },
+            found: 'endOfFile',
+            expected: [terminal],
         };
     }
     if (tokens[index].type == terminal) {
@@ -145,25 +172,19 @@ const terminal = (terminal: TokenType) => (tokens: Token[], index): ParseResult 
             }
         } else {
             return {
-                success: false,
-                error: {
-                    expected: [terminal],
-                    found: tokens[index].type,
-                }
+                expected: [terminal],
+                found: tokens[index].type,
             }
         }
     }
 
     return {
-        success: false,
-        error: {
-            expected: [terminal],
-            found: tokens[index].type,
-        },
+        expected: [terminal],
+        found: tokens[index].type,
     };
 }
 
-const endOfInput = (tokens: Token[], index: number): ParseResult => {
+const endOfInput = (tokens: Token[], index: number): ParseResultWithIndex => {
     if (index == tokens.length) {
         return {
             success: true,
@@ -173,11 +194,8 @@ const endOfInput = (tokens: Token[], index: number): ParseResult => {
         }
     } else {
         return {
-            success: false,
-            error: {
-                expected: ['endOfFile'],
-                found: tokens[index].type,
-            }
+            expected: ['endOfFile'],
+            found: tokens[index].type,
         }
     }
 }
@@ -187,9 +205,11 @@ export {
     sequence,
     terminal,
     endOfInput,
+    ParseResultWithIndex,
     ParseResult,
     ParseError,
     AstNode,
     AstLeaf,
     AstInteriorNode,
+    parseResultIsError,
 };
