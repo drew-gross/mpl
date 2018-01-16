@@ -5,6 +5,7 @@ import { parse, compile } from './frontend.js';
 import { compileAndRun } from './test-utils.js';
 import { parser, parse as newParser, default as parseProgram } from './parser.js';
 import { stripResultIndexes, ParseResult, AstNode } from './parser-combinator.js';
+import { removeBracketsFromAst } from './frontend.js';
 
 test('lexer', t => {
     t.deepEqual(lex('123'), [
@@ -61,24 +62,21 @@ test('ast for single number', t => {
 });
 
 test('ast for number in brackets', t => {
-    t.deepEqual(parse(lex(' return (5)')), ({
-        parseErrors: [],
-        ast: {
-            type: 'program',
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(newParser(parser, 'program', lex(' return (5)'), 0))), ({
+        type: 'program' as any,
+        children: [{
+            type: 'returnStatement' as any,
             children: [{
-                type: 'returnStatement',
-                children: [{
-                    type: 'return',
-                    value: null,
-                }, {
-                    type: 'number',
-                    value: 5
-                }],
+                type: 'return' as any,
+                value: null,
             }, {
-                type: 'endOfFile',
-                value: 'endOfFile',
+                type: 'number' as any,
+                value: 5
             }],
-        },
+        }, {
+            type: 'endOfFile' as any,
+            value: 'endOfFile',
+        }],
     }));
 });
 

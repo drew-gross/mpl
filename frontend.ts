@@ -240,6 +240,8 @@ const getMemoryCategory = (ast): MemoryCategory => {
 
 };
 
+const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[1], ast, true);
+
 const parse = (tokens: Token[]): { ast?: any, parseErrors: string[] } => {
     const parseResult: ParseResult = parseProgram(tokens, 0)
 
@@ -295,7 +297,7 @@ const parse = (tokens: Token[]): { ast?: any, parseErrors: string[] } => {
 
     // Bracketed expressions -> nothing. Must happen after associativity repair or we will break
     // associativity of brackets.
-    ast = transformAst('bracketedExpression', node => node.children[1], ast, true);
+    ast = removeBracketsFromAst(ast);
 
     return {
         ast,
@@ -730,4 +732,4 @@ const compile = (source: string): FrontendOutput => {
     };
 };
 
-export { parse, lex, compile };
+export { parse, lex, compile, removeBracketsFromAst };
