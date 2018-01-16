@@ -51,7 +51,7 @@ interface AstInteriorNodeWithIndex {
     success: true,
     newIndex: number,
     type: AstNodeType,
-    children: AstNode[],
+    children: AstNodeWithIndex[],
 };
 
 type AstNodeWithIndex = AstInteriorNodeWithIndex | AstLeafWithIndex;
@@ -74,10 +74,7 @@ const parseResultWithIndexIsLeaf = (r: ParseResultWithIndex): r is AstLeafWithIn
     return 'value' in r;
 };
 
-const stripIndexes = (r: ParseResultWithIndex): ParseResult => {
-    if (parseResultWithIndexIsError(r)) {
-        return r;
-    }
+const stripNodeIndexes = (r: AstNodeWithIndex): AstNode => {
     if (parseResultWithIndexIsLeaf(r)) {
         return {
             value: r.value,
@@ -86,8 +83,15 @@ const stripIndexes = (r: ParseResultWithIndex): ParseResult => {
     }
     return {
         type: r.type,
-        children: r.children,
+        children: r.children.map(stripNodeIndexes),
     };
+};
+
+const stripResultIndexes = (r: ParseResultWithIndex): ParseResult => {
+    if (parseResultWithIndexIsError(r)) {
+        return r;
+    }
+    return stripNodeIndexes(r);
 };
 
 const tokenTypeToAstNodeType = (token: TokenType): AstNodeType | undefined => {
@@ -137,7 +141,7 @@ const alternative = parsers => (tokens: Token[], index): ParseResultWithIndex =>
 }
 
 const sequence = (type, parsers) => (tokens: Token[], index): ParseResultWithIndex => {
-    const results: AstNode[] = []
+    const results: AstNodeWithIndex[] = []
     for (const parser of parsers) {
         const result = parser(tokens, index);
         if (!result.success) {
@@ -209,7 +213,9 @@ export {
     ParseResult,
     ParseError,
     AstNode,
+    AstNodeWithIndex,
     AstLeaf,
     AstInteriorNode,
     parseResultIsError,
+    stripResultIndexes,
 };

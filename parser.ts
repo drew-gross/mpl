@@ -1,5 +1,17 @@
 import { TokenType, Token } from './lex.js';
-import { alternative, sequence, terminal, endOfInput, ParseResult, ParseError, AstNodeType, AstNode } from './parser-combinator.js';
+import {
+    alternative,
+    sequence,
+    terminal,
+    endOfInput,
+    ParseResult,
+    ParseResultWithIndex,
+    ParseError,
+    AstNodeType,
+    AstNode,
+    AstNodeWithIndex,
+    parseResultIsError
+} from './parser-combinator.js';
 import debug from './util/debug.js';
 import unique from './util/list/unique.js';
 import flatten from './util/list/flatten.js';
@@ -37,7 +49,7 @@ const concatenation = (t, i) => concatenationI(t, i);
 // CONCATENATION -> SIMPLE_EXPRESSION ++ CONCATENATION | SIMPLE_EXPRESSION
 // SIMPLE_EXPRESSION -> ( EXPRESSION ) | identifier ( PARAM_LIST ) | int | boolean | string | FUNCTION | identifier
 
-type BaseParser = (tokens: Token[], index: number) => ParseResult;
+type BaseParser = (tokens: Token[], index: number) => ParseResultWithIndex;
 type SequenceParser = { n: string, p: (string | BaseParser)[] };
 type AlternativeParser = (SequenceParser | string | BaseParser)[];
 
@@ -49,24 +61,22 @@ const isSequence = (val: SequenceParser | AlternativeParser): val is SequencePar
     return 'n' in val;
 }
 
-const plus = terminal('sum');
-const minus = terminal('subtraction');
-const leftBracket = terminal('leftBracket');
-const rightBracket = terminal('rightBracket');
-const int = terminal('number');
-const _return = terminal('return');
-
-const parseSequence = (grammar: Grammar, parser: SequenceParser, tokens: Token[], index: number): ParseResult => {
-    const results: AstNode[] = [];
+const parseSequence = (
+    grammar: Grammar,
+    parser: SequenceParser,
+    tokens: Token[],
+    index: number
+): ParseResultWithIndex => {
+    const results: AstNodeWithIndex[] = [];
     for (const p of parser.p) {
-        let result: ParseResult;
+        let result: ParseResultWithIndex;
         if (typeof p === 'function') {
             result = p(tokens, index);
         } else {
             result = parse(grammar, p, tokens, index);
         }
 
-        if (!result.success) {
+        if (parseResultIsError(result)) {
             return result;
         }
 
@@ -87,7 +97,7 @@ const parseAlternative = (
     alternatives: AlternativeParser,
     tokens: Token[],
     index: number
-): ParseResult => {
+): ParseResultWithIndex => {
     const errors: ParseError[] = [];
     for (const parser of alternatives) {
         let result;
@@ -105,35 +115,39 @@ const parseAlternative = (
         }
     }
     return {
-        success: false,
-        error: {
-            found: unique(errors.map(e => e.found)).join('/'),
-            expected: unique(flatten(errors.map(e => e.expected))),
-        }
+        found: unique(errors.map(e => e.found)).join('/'),
+        expected: unique(flatten(errors.map(e => e.expected))),
     };
 };
 
-export const parse = (grammar: Grammar, firstRule: string, tokens: Token[], index: number): ParseResult => {
+export const parse = (grammar: Grammar, firstRule: string, tokens: Token[], index: number): ParseResultWithIndex => {
     const childrenParser = grammar[firstRule];
     if (typeof childrenParser === 'string') {
-        // Base Parser
         return parse(childrenParser, firstRule, tokens, index);
     } else if (isSequence(childrenParser)) {
-        // Sequence Parser
         return parseSequence(grammar, childrenParser, tokens, index);
     } else if (Array.isArray(childrenParser)) {
-        // Alternative Parser
         return parseAlternative(grammar, childrenParser, tokens, index);
     } else {
         throw debug();
     }
 };
 
+const plus = terminal('sum');
+const minus = terminal('subtraction');
+const leftBracket = terminal('leftBracket');
+const rightBracket = terminal('rightBracket');
+const int = terminal('number');
+const _return = terminal('return');
+
 export const parser: Grammar = {
-    program: { n: 'program', p: [_return, 'expression', endOfInput] },
-    expression: { n: 'addition1', p: ['addition'] },
+    program: { n: 'program', p: ['functionBody', endOfInput] },
+    functionBody: [
+        { n: 'returnStatement', p: [_return, 'expression'] }
+    ],
+    expression: ['addition'],
     addition: [
-        { n: 'subtraction1', p: ['subtraction', plus, 'expression'] },
+        { n: 'addition1', p: ['subtraction', plus, 'expression'] },
         'subtraction',
     ],
     subtraction: [

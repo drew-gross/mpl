@@ -4,6 +4,7 @@ import { lex, TokenType } from './lex.js';
 import { parse, compile } from './frontend.js';
 import { compileAndRun } from './test-utils.js';
 import { parser, parse as newParser, default as parseProgram } from './parser.js';
+import { stripResultIndexes } from './parser-combinator.js';
 
 test('lexer', t => {
     t.deepEqual(lex('123'), [
@@ -228,19 +229,11 @@ test('lowering of bracketedExpressions', t => {
     });
 });
 
-test.only('new parser', t => {
-    console.log('--- parser ---');
-    console.log(parser);
+test('new parser', t => {
     const input = lex('return 1 + ((2)) + (3 - 4)');
-    console.log('--- input ---');
-    console.log(input);
-    const newOutput = newParser(parser, 'program', input, 0);
-    console.log('--- new output ---');
-    console.log(newOutput);
-    const oldOutput = parseProgram(input, 0);
-    console.log('--- old output ---');
-    console.log(oldOutput);
-    t.deepEqual(newOutput, oldOutput as any);
+    const newOutput = stripResultIndexes(newParser(parser, 'program', input, 0));
+    const oldOutput = stripResultIndexes(parseProgram(input, 0));
+    t.deepEqual(newOutput, oldOutput);
 });
 
 test('bare return', compileAndRun, {
