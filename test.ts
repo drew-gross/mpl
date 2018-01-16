@@ -81,24 +81,21 @@ test('ast for number in brackets', t => {
 });
 
 test('ast for number in double brackets', t => {
-    t.deepEqual(parse(lex('return ((20))')), ({
-        parseErrors: [],
-        ast: {
-            type: 'program',
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(newParser(parser, 'program', lex('return ((20))'), 0))), ({
+        type: 'program' as any,
+        children: [{
+            type: 'returnStatement' as any,
             children: [{
-                type: 'returnStatement',
-                children: [{
-                    type: 'return',
-                    value: null,
-                }, {
-                    type: 'number',
-                    value: 20,
-                }],
+                type: 'return' as any,
+                value: null,
             }, {
-                type: 'endOfFile',
-                value: 'endOfFile',
+                type: 'number' as any,
+                value: 20,
             }],
-        },
+        }, {
+            type: 'endOfFile' as any,
+            value: 'endOfFile',
+        }],
     }));
 });
 
