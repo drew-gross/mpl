@@ -2,6 +2,7 @@ import { Token, TokenType } from './lex.js';
 import unique from './util/list/unique.js';
 import flatten from './util/list/flatten.js';
 import assertNever from './util/assertNever.js';
+import debug from './util/debug.js';
 
 export type AstNodeType =
     'return' |
@@ -123,40 +124,93 @@ const tokenTypeToAstNodeType = (token: TokenType): AstNodeType | undefined => {
     }
 };
 
-const alternative = parsers => (tokens: Token[], index): ParseResultWithIndex => {
-    const errors: ParseError[] = [];
-    for (const parser of parsers) {
-        const result = parser(tokens, index);
-        if (parseResultWithIndexIsError(result)) {
-            errors.push(result);
-        } else {
-            return result;
-        }
-    }
 
-    return {
-        found: unique(errors.map(e => e.found)).join('/'),
-        expected: unique(flatten(errors.map(e => e.expected))),
-    };
+type BaseParser = (tokens: Token[], index: number) => ParseResultWithIndex;
+type SequenceParser = { n: string, p: (string | BaseParser)[] };
+type AlternativeParser = (SequenceParser | string | BaseParser)[];
+
+interface Grammar {
+    [index: string]: SequenceParser | AlternativeParser,
 }
 
-const sequence = (type, parsers) => (tokens: Token[], index): ParseResultWithIndex => {
-    const results: AstNodeWithIndex[] = []
-    for (const parser of parsers) {
-        const result = parser(tokens, index);
-        if (!result.success) {
+const isSequence = (val: SequenceParser | AlternativeParser): val is SequenceParser =>  {
+    return 'n' in val;
+}
+
+const parseSequence = (
+    grammar: Grammar,
+    parser: SequenceParser,
+    tokens: Token[],
+    index: number
+): ParseResultWithIndex => {
+    const results: AstNodeWithIndex[] = [];
+    for (const p of parser.p) {
+        let result: ParseResultWithIndex;
+        if (typeof p === 'function') {
+            result = p(tokens, index);
+        } else {
+            result = parse(grammar, p, tokens, index);
+        }
+
+        if (parseResultIsError(result)) {
             return result;
         }
+
         results.push(result);
-        index = result.newIndex;
+        index = result.newIndex as number;
     }
+
     return {
         success: true,
         newIndex: index,
-        type: type,
+        type: parser.n as AstNodeType,
         children: results,
     };
-}
+};
+
+const parseAlternative = (
+    grammar: Grammar,
+    alternatives: AlternativeParser,
+    tokens: Token[],
+    index: number
+): ParseResultWithIndex => {
+    const errors: ParseError[] = [];
+    for (const parser of alternatives) {
+        let result;
+        if (typeof parser === 'string') {
+            result = parse(grammar, parser, tokens, index);
+        } else if (typeof parser === 'function') {
+            result = parser(tokens, index);
+        } else {
+            result = parseSequence(grammar, parser, tokens, index);
+        }
+        if (result.success) {
+            return result;
+        } else {
+            errors.push(result);
+        }
+    }
+    return {
+        found: unique(errors.map(e => {
+            if (!e) debug();
+            return e.found;
+        })).join('/'),
+        expected: unique(flatten(errors.map(e => e.expected))),
+    };
+};
+
+export const parse = (grammar: Grammar, firstRule: string, tokens: Token[], index: number): ParseResultWithIndex => {
+    const childrenParser = grammar[firstRule];
+    if (typeof childrenParser === 'string') {
+        return parse(childrenParser, firstRule, tokens, index);
+    } else if (isSequence(childrenParser)) {
+        return parseSequence(grammar, childrenParser, tokens, index);
+    } else if (Array.isArray(childrenParser)) {
+        return parseAlternative(grammar, childrenParser, tokens, index);
+    } else {
+        throw debug();
+    }
+};
 
 const terminal = (terminal: TokenType) => (tokens: Token[], index): ParseResultWithIndex => {
     if (index >= tokens.length) {
@@ -205,8 +259,6 @@ const endOfInput = (tokens: Token[], index: number): ParseResultWithIndex => {
 }
 
 export {
-    alternative,
-    sequence,
     terminal,
     endOfInput,
     ParseResultWithIndex,

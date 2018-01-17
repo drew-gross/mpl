@@ -1,7 +1,7 @@
 import { Backend, BackendInputs } from './api.js';
 import { LoweredAst } from './ast.js';
 import { lex } from './lex.js';
-import { parse, compile } from './frontend.js';
+import { parseMpl, compile } from './frontend.js';
 import { file as tmpFile} from 'tmp-promise';
 import { writeFile } from 'fs-extra';
 import assertNever from './util/assertNever.js';
@@ -84,7 +84,7 @@ export const compileAndRun = async (t, {
         console.log(JSON.stringify(lexResult, null, 2));
     }
 
-    const parseResult = parse(lexResult);
+    const parseResult = parseMpl(lexResult);
     if (printSubsteps.includes('ast')) {
         console.log(JSON.stringify(parseResult, null, 2));
     }

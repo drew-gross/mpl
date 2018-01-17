@@ -2,8 +2,15 @@ import flatten from './util/list/flatten.js';
 import unique from './util/list/unique.js';
 import debug from './util/debug.js';
 import { lex, Token } from './lex.js';
-import parseProgram from './parser.js'
-import { ParseResult, AstNode, AstInteriorNode, AstLeaf, parseResultIsError } from './parser-combinator.js';
+import grammar from './grammar.js'
+import {
+    ParseResult,
+    AstNode,
+    AstInteriorNode,
+    AstLeaf,
+    parseResultIsError,
+    parse,
+} from './parser-combinator.js';
 import { Type, VariableDeclaration, IdentifierDict, Function, MemoryCategory, BackendInputs } from './api.js';
 import * as Ast from './ast.js';
 
@@ -29,7 +36,9 @@ const flattenAst = (ast: AstNode): any => {
 }
 
 const repairAssociativity = (nodeTypeToRepair, ast) => {
-    if (ast.type === nodeTypeToRepair && ast.children[1].type === nodeTypeToRepair) {
+    if (ast.type === nodeTypeToRepair && !ast.children) debug();
+    if (ast.type === nodeTypeToRepair && ast.children[2].type === nodeTypeToRepair) {
+        if (!ast.children[2]) debug();
         return {
             type: nodeTypeToRepair,
             children: [
@@ -37,10 +46,10 @@ const repairAssociativity = (nodeTypeToRepair, ast) => {
                     type: nodeTypeToRepair,
                     children: [
                         repairAssociativity(nodeTypeToRepair, ast.children[0]),
-                        repairAssociativity(nodeTypeToRepair, ast.children[1].children[0]),
+                        repairAssociativity(nodeTypeToRepair, ast.children[2].children[0]),
                     ],
                 },
-                repairAssociativity(nodeTypeToRepair, ast.children[1].children[1]),
+                repairAssociativity(nodeTypeToRepair, ast.children[2].children[0]),
             ],
         };
     } else if ('children' in ast) {
@@ -242,8 +251,8 @@ const getMemoryCategory = (ast): MemoryCategory => {
 
 const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[1], ast, true);
 
-const parse = (tokens: Token[]): { ast?: any, parseErrors: string[] } => {
-    const parseResult: ParseResult = parseProgram(tokens, 0)
+const parseMpl = (tokens: Token[]): { ast?: any, parseErrors: string[] } => {
+    const parseResult: ParseResult = parse(grammar, 'program', tokens, 0)
 
     if (parseResultIsError(parseResult)) {
         const errorMessage = `Expected ${parseResult.expected.join(' or ')}, found ${parseResult.found}`;
@@ -269,12 +278,8 @@ const parse = (tokens: Token[]): { ast?: any, parseErrors: string[] } => {
         };
     }, ast, true);
 
-
-    // Product 1 -> product
-    ast = transformAst('product1', node => ({ type: 'product', children: [node.children[0], node.children[2]] }), ast, true);
-
     // repair associativity of product
-    ast = repairAssociativity('product', ast);
+    ast = repairAssociativity('product1', ast);
 
     // Subtraction 1 -> subtraction
     ast = transformAst(
@@ -311,7 +316,7 @@ const countTemporariesInExpression = ast => {
     }
     switch (ast.type) {
         case 'returnStatement': return countTemporariesInExpression(ast.children[1]);
-        case 'product': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
+        case 'product1': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
         case 'addition':
         case 'subtraction': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
         case 'typedAssignment': return 1;
@@ -354,9 +359,9 @@ export const typeOfExpression = ({ type, children, value }, knownIdentifiers: Id
         case 'number': return { type: { name: 'Integer' }, errors: [] };
         case 'subtraction':
         case 'addition':
-        case 'product': {
+        case 'product1': {
             const leftType = typeOfExpression(children[0], knownIdentifiers);
-            const rightType = typeOfExpression(children[1], knownIdentifiers);
+            const rightType = typeOfExpression(children[2], knownIdentifiers);
             if (leftType.errors.length > 0 || rightType.errors.length > 0) {
                 return { type: {} as any, errors: leftType.errors.concat(rightType.errors) };
             }
@@ -589,10 +594,10 @@ const lowerAst = (ast: any): Ast.LoweredAst => {
             kind: 'identifier',
             value: ast.value,
         }
-        case 'product': return {
+        case 'product1': return {
             kind: 'product',
             lhs: lowerAst(ast.children[0]),
-            rhs: lowerAst(ast.children[1]),
+            rhs: lowerAst(ast.children[2]),
         }
         case 'ternary': return {
             kind: 'ternary',
@@ -653,7 +658,7 @@ const lowerAst = (ast: any): Ast.LoweredAst => {
 
 const compile = (source: string): FrontendOutput => {
     const tokens = lex(source);
-    const { ast, parseErrors } = parse(tokens);
+    const { ast, parseErrors } = parseMpl(tokens);
 
     if (parseErrors.length > 0) {
         return { parseErrors };
@@ -732,4 +737,4 @@ const compile = (source: string): FrontendOutput => {
     };
 };
 
-export { parse, lex, compile, removeBracketsFromAst };
+export { parseMpl, lex, compile, removeBracketsFromAst };

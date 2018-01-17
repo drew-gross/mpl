@@ -1,10 +1,10 @@
 import test from 'ava';
 
 import { lex, TokenType } from './lex.js';
-import { parse, compile } from './frontend.js';
+import { parseMpl, compile } from './frontend.js';
 import { compileAndRun } from './test-utils.js';
-import { grammar, parse as newParser, default as parseProgram } from './parser.js';
-import { stripResultIndexes, ParseResult, AstNode } from './parser-combinator.js';
+import grammar from './grammar.js';
+import { stripResultIndexes, ParseResult, AstNode, parse } from './parser-combinator.js';
 import { removeBracketsFromAst } from './frontend.js';
 
 test('lexer', t => {
@@ -41,7 +41,7 @@ test('lex with initial whitespace', t => {
 
 test('ast for single number', t => {
     const tokens = lex('return 7');
-    const parseResult: ParseResult = stripResultIndexes(newParser(grammar, 'program', tokens, 0));
+    const parseResult: ParseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
     const expectedResult: AstNode = {
         type: 'program' as any,
         children: [{
@@ -62,7 +62,7 @@ test('ast for single number', t => {
 });
 
 test('ast for number in brackets', t => {
-    t.deepEqual(removeBracketsFromAst(stripResultIndexes(newParser(grammar, 'program', lex(' return (5)'), 0))), ({
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(' return (5)'), 0))), ({
         type: 'program' as any,
         children: [{
             type: 'returnStatement' as any,
@@ -81,7 +81,7 @@ test('ast for number in brackets', t => {
 });
 
 test('ast for number in double brackets', t => {
-    t.deepEqual(removeBracketsFromAst(stripResultIndexes(newParser(grammar, 'program', lex('return ((20))'), 0))), ({
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex('return ((20))'), 0))), ({
         type: 'program' as any,
         children: [{
             type: 'returnStatement' as any,
@@ -100,7 +100,7 @@ test('ast for number in double brackets', t => {
 });
 
 test('ast for product with brackets', t => {
-    t.deepEqual(removeBracketsFromAst(stripResultIndexes(newParser(grammar, 'program', lex('return 3 * (4 * 5)'), 0))), ({
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex('return 3 * (4 * 5)'), 0))), ({
         type: 'program' as any,
         children: [{
             type: 'returnStatement' as any,
@@ -138,69 +138,66 @@ test('ast for product with brackets', t => {
 
 test('ast for assignment then return', t => {
     const expected = {
-        parseErrors: [],
-        ast: {
-            type: 'program',
+        type: 'program',
+        children: [{
+            type: 'statement',
             children: [{
-                type: 'statement',
+                type: 'assignment',
                 children: [{
-                    type: 'assignment',
-                    children: [{
-                        type: 'identifier',
-                        value: 'constThree',
-                    }, {
-                        type: 'assignment',
-                        value: null,
-                    }, {
-                        type: 'function',
-                        children: [{
-                            type: 'arg',
-                            children: [{
-                                type: 'identifier',
-                                value: 'a'
-                            }, {
-                                type: 'colon',
-                                value: null,
-                            }, {
-                                type: 'type',
-                                value: 'Integer',
-                            }],
-                        }, {
-                            type: 'fatArrow',
-                            value: null,
-                        }, {
-                            type: 'number',
-                            value: 3,
-                        }],
-                    }],
+                    type: 'identifier',
+                    value: 'constThree',
                 }, {
-                    type: 'statementSeparator',
+                    type: 'assignment',
                     value: null,
                 }, {
-                    type: 'returnStatement',
+                    type: 'function',
                     children: [{
-                        type: 'return',
+                        type: 'arg',
+                        children: [{
+                            type: 'identifier',
+                            value: 'a'
+                        }, {
+                            type: 'colon',
+                            value: null,
+                        }, {
+                            type: 'type',
+                            value: 'Integer',
+                        }],
+                    }, {
+                        type: 'fatArrow',
                         value: null,
                     }, {
                         type: 'number',
-                        value: 10,
+                        value: 3,
                     }],
                 }],
             }, {
-                type: 'endOfFile',
-                value: 'endOfFile',
+                type: 'statementSeparator',
+                value: null,
+            }, {
+                type: 'returnStatement',
+                children: [{
+                    type: 'return',
+                    value: null,
+                }, {
+                    type: 'number',
+                    value: 10,
+                }],
             }],
-        },
+        }, {
+            type: 'endOfFile',
+            value: 'endOfFile',
+        }],
     };
-    const astWithSemicolon = parse(lex('constThree = a: Integer => 3; return 10'));
-    const astWithNewline = parse(lex('constThree = a: Integer => 3\n return 10'));
+    const astWithSemicolon = removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex('constThree = a: Integer => 3; return 10'), 0)));
+    const astWithNewline = removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex('constThree = a: Integer => 3\n return 10'), 0)));
 
     t.deepEqual(astWithSemicolon, expected);
     t.deepEqual(astWithNewline, expected);
 });
 
 test('lowering of bracketedExpressions', t => {
-    t.deepEqual(parse(lex('return (8 * ((7)))')), {
+    t.deepEqual(parseMpl(lex('return (8 * ((7)))')), {
         parseErrors: [],
         ast: {
             type: 'program',
@@ -227,20 +224,13 @@ test('lowering of bracketedExpressions', t => {
     });
 });
 
-test('new parser', t => {
-    const input = lex('return 1 + ((2)) + (3 - 4)');
-    const newOutput = stripResultIndexes(newParser(grammar, 'program', input, 0));
-    const oldOutput = stripResultIndexes(parseProgram(input, 0));
-    t.deepEqual(newOutput, oldOutput);
-});
-
 test('bare return', compileAndRun, {
     source: 'return 7',
     expectedExitCode: 7,
 });
 
 
-test('single product', compileAndRun, {
+test.only('single product', compileAndRun, {
     source: 'return 2 * 2',
     expectedExitCode: 4,
 });
