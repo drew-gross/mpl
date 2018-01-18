@@ -1,6 +1,7 @@
 import { Token, TokenType } from './lex.js';
 import unique from './util/list/unique.js';
 import flatten from './util/list/flatten.js';
+import last from './util/list/last.js';
 import assertNever from './util/assertNever.js';
 import debug from './util/debug.js';
 
@@ -133,7 +134,8 @@ interface Grammar {
     [index: string]: SequenceParser | AlternativeParser,
 }
 
-const isSequence = (val: SequenceParser | AlternativeParser): val is SequenceParser =>  {
+const isSequence = (val: SequenceParser | AlternativeParser | BaseParser | string): val is SequenceParser =>  {
+    if (typeof val === 'string') return false;
     return 'n' in val;
 }
 
@@ -174,28 +176,111 @@ const parseAlternative = (
     tokens: Token[],
     index: number
 ): ParseResultWithIndex => {
-    const errors: ParseError[] = [];
-    for (const parser of alternatives) {
-        let result;
-        if (typeof parser === 'string') {
-            result = parse(grammar, parser, tokens, index);
-        } else if (typeof parser === 'function') {
-            result = parser(tokens, index);
-        } else {
-            result = parseSequence(grammar, parser, tokens, index);
+    const alternativeIndex: number = 0;
+    const progressCache: ParseResultWithIndex[][] = alternatives.map(_ => []);
+    for (let alternativeIndex = 0; alternativeIndex < alternatives.length; alternativeIndex++) {
+        let currentParser = alternatives[alternativeIndex];
+        const currentProgress = progressCache[alternativeIndex];
+        let currentResult: ParseResultWithIndex;
+        let currentIndex: number;
+
+        // Check if we have cached an error for this parser. If we have, continue to the next parser.
+        let currentProgressLastItem = last(currentProgress);
+        if (currentProgressLastItem !== null && parseResultIsError(currentProgressLastItem)) {
+            continue;
         }
-        if (result.success) {
-            return result;
+
+        if (typeof currentParser === 'string') {
+            // Reference to another rule.
+            if (currentProgressLastItem !== null) {
+                // We already finished this one earlier. It must be a prefix of an earlier rule.
+                return currentProgressLastItem;
+            } else {
+                // We haven't tried this parser yet. Try it now.
+                currentResult = parse(grammar, currentParser, tokens, index);
+                currentIndex = 0;
+                if (!parseResultIsError(currentResult)) {
+                    return currentResult;
+                }
+            }
+        } else if (typeof currentParser === 'function') {
+            // Terminal.
+            if (currentProgressLastItem !== null) {
+                // We already finished this one earlier. It must be a prefix of an earlier rule.
+                return currentProgressLastItem;
+            } else {
+                // We haven't tried this parser yet. Try it now.
+                currentResult = currentParser(tokens, index);
+                currentIndex = 0;
+                if (!parseResultIsError(currentResult)) {
+                    return currentResult;
+                }
+            }
         } else {
-            errors.push(result);
+            // Sequence. This is the complex one.
+
+            // Next get the parser for the next item in the sequence based on how much progress we have made due
+            // to being a prefix of previous rules.
+            const sequence = currentParser;
+            currentParser = currentParser.p[currentProgress.length];
+
+            // Try the parser
+            if (typeof currentParser === 'function') {
+                currentResult = currentParser(tokens, index);
+                currentIndex = currentProgress.length;
+            } else {
+                const tokenIndex = currentProgressLastItem !== null ? currentProgressLastItem.newIndex : index;
+                currentResult = parse(grammar, currentParser, tokens, tokenIndex);
+                currentIndex = currentProgress.length;
+            }
+
+            // Push the results into the cache for the current parser
+            progressCache[alternativeIndex].push(currentResult);
+
+            // Check if we are done
+            if (!parseResultIsError(currentResult) && progressCache[alternativeIndex].length == sequence.p.length) {
+                const cachedSuccess = progressCache[alternativeIndex];
+                const cachedSuccessFinal = last(cachedSuccess);
+                if (cachedSuccessFinal === null) throw debug();
+                const result: AstNodeWithIndex = {
+                    newIndex: (cachedSuccessFinal as AstNodeWithIndex).newIndex,
+                    success: true,
+                    children: (cachedSuccess as any),
+                    type: sequence.n as AstNodeType,
+                };
+                return result;
+            }
+        }
+
+        // Now we have a parse result and the index it was found at. Push it into the progress cache
+        // for each alternative that has parsed up to that index and expects the next item to be of that type.
+        for (let progressCacheIndex = alternativeIndex; progressCacheIndex < alternatives.length; progressCacheIndex++) {
+            const parser = alternatives[progressCacheIndex];
+            if (progressCache[progressCacheIndex].length == currentIndex) {
+                if (typeof parser === 'string' && currentParser == parser) {
+                    progressCache[progressCacheIndex].push(currentResult);
+                } else if (typeof parser === 'function' && currentParser == parser) {
+                    progressCache[progressCacheIndex].push(currentResult);
+                } else if (isSequence(parser) && currentParser === parser.p[currentIndex]) {
+                    progressCache[progressCacheIndex].push(currentResult);
+                }
+            }
         }
     }
+
+    const errors = progressCache.map(last);
+
     return {
-        found: unique(errors.map(e => {
-            if (!e) debug();
-            return e.found;
+        found: unique(errors.map(error => {
+            if (error == null) throw debug();
+            if (!parseResultIsError(error)) throw debug();
+            return error.found;
         })).join('/'),
-        expected: unique(flatten(errors.map(e => e.expected))),
+        expected: unique(flatten(errors.map(error => {
+            if (error == null) throw debug();
+            if (!parseResultIsError(error)) throw debug();
+            return error.expected;
+        }))),
     };
 };
 

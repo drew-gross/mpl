@@ -39,7 +39,7 @@ test('lex with initial whitespace', t => {
     ]);
 });
 
-test('ast for single number', t => {
+test.only('ast for single number', t => {
     const tokens = lex('return 7');
     const parseResult: ParseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
     const expectedResult: AstNode = {
@@ -101,36 +101,36 @@ test('ast for number in double brackets', t => {
 
 test('ast for product with brackets', t => {
     t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex('return 3 * (4 * 5)'), 0))), ({
-        type: 'program' as any,
+        type: 'program',
         children: [{
-            type: 'returnStatement' as any,
+            type: 'returnStatement',
             children: [{
-                type: 'return' as any,
+                type: 'return',
                 value: null,
             }, {
-                type: 'product' as any,
+                type: 'product1',
                 children: [{
-                    type: 'number' as any,
+                    type: 'number',
                     value: 3
                 }, {
                    type: 'product',
                    value: null,
                 }, {
-                    type: 'product' as any,
+                    type: 'product1',
                     children: [{
-                        type: 'number' as any,
+                        type: 'number',
                         value: 4
                     }, {
                        type: 'product',
                        value: null,
                     }, {
-                        type: 'number' as any,
+                        type: 'number',
                         value: 5
                     }]
                 }]
             }]
         }, {
-            type: 'endOfFile' as any,
+            type: 'endOfFile',
             value: 'endOfFile',
         }],
     }));
@@ -230,7 +230,7 @@ test('bare return', compileAndRun, {
 });
 
 
-test.only('single product', compileAndRun, {
+test('single product', compileAndRun, {
     source: 'return 2 * 2',
     expectedExitCode: 4,
 });
