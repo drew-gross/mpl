@@ -66,10 +66,7 @@ interface ParseError {
 type ParseResultWithIndex = ParseError | AstNodeWithIndex;
 type ParseResult = ParseError | AstNode;
 
-const parseResultIsError = (r: ParseResult): r is ParseError => {
-    return 'found' in r && 'expected' in r;
-};
-const parseResultWithIndexIsError = (r: ParseResultWithIndex): r is ParseError => {
+const parseResultIsError = (r: ParseResult | ParseResultWithIndex | AstNodeWithIndex[]): r is ParseError => {
     return 'found' in r && 'expected' in r;
 };
 const parseResultWithIndexIsLeaf = (r: ParseResultWithIndex): r is AstLeafWithIndex => {
@@ -90,7 +87,7 @@ const stripNodeIndexes = (r: AstNodeWithIndex): AstNode => {
 };
 
 const stripResultIndexes = (r: ParseResultWithIndex): ParseResult => {
-    if (parseResultWithIndexIsError(r)) {
+    if (parseResultIsError(r)) {
         return r;
     }
     return stripNodeIndexes(r);
@@ -177,24 +174,23 @@ const parseAlternative = (
     index: number
 ): ParseResultWithIndex => {
     const alternativeIndex: number = 0;
-    const progressCache: ParseResultWithIndex[][] = alternatives.map(_ => []);
+    const progressCache: (ParseError | AstNodeWithIndex[])[] = alternatives.map(_ => []);
     for (let alternativeIndex = 0; alternativeIndex < alternatives.length; alternativeIndex++) {
         let currentParser = alternatives[alternativeIndex];
-        const currentProgress = progressCache[alternativeIndex];
+        const currentProgressRef = progressCache[alternativeIndex];
         let currentResult: ParseResultWithIndex;
         let currentIndex: number;
 
         // Check if we have cached an error for this parser. If we have, continue to the next parser.
-        let currentProgressLastItem = last(currentProgress);
-        if (currentProgressLastItem !== null && parseResultIsError(currentProgressLastItem)) {
+        if (parseResultIsError(currentProgressRef)) {
             continue;
         }
 
         if (typeof currentParser === 'string') {
             // Reference to another rule.
-            if (currentProgressLastItem !== null) {
+            if (currentProgressRef.length == 1) {
                 // We already finished this one earlier. It must be a prefix of an earlier rule.
-                return currentProgressLastItem;
+                return currentProgressRef[0];
             } else {
                 // We haven't tried this parser yet. Try it now.
                 currentResult = parse(grammar, currentParser, tokens, index);
@@ -205,9 +201,9 @@ const parseAlternative = (
             }
         } else if (typeof currentParser === 'function') {
             // Terminal.
-            if (currentProgressLastItem !== null) {
+            if (currentProgressRef.length == 1) {
                 // We already finished this one earlier. It must be a prefix of an earlier rule.
-                return currentProgressLastItem;
+                return currentProgressRef[0];
             } else {
                 // We haven't tried this parser yet. Try it now.
                 currentResult = currentParser(tokens, index);
@@ -222,30 +218,34 @@ const parseAlternative = (
             // Next get the parser for the next item in the sequence based on how much progress we have made due
             // to being a prefix of previous rules.
             const sequence = currentParser;
-            currentParser = currentParser.p[currentProgress.length];
+            currentParser = currentParser.p[currentProgressRef.length];
 
             // Try the parser
             if (typeof currentParser === 'function') {
                 currentResult = currentParser(tokens, index);
-                currentIndex = currentProgress.length;
+                currentIndex = currentProgressRef.length;
             } else {
+                const currentProgressLastItem = last(currentProgressRef);
                 const tokenIndex = currentProgressLastItem !== null ? currentProgressLastItem.newIndex : index;
                 currentResult = parse(grammar, currentParser, tokens, tokenIndex);
-                currentIndex = currentProgress.length;
+                currentIndex = currentProgressRef.length;
             }
 
             // Push the results into the cache for the current parser
-            progressCache[alternativeIndex].push(currentResult);
+            if (parseResultIsError(currentResult)) {
+                progressCache[alternativeIndex] = currentResult;
+            } else {
+                currentProgressRef.push(currentResult);
+            }
 
             // Check if we are done
-            if (!parseResultIsError(currentResult) && progressCache[alternativeIndex].length == sequence.p.length) {
-                const cachedSuccess = progressCache[alternativeIndex];
-                const cachedSuccessFinal = last(cachedSuccess);
-                if (cachedSuccessFinal === null) throw debug();
+            if (!parseResultIsError(currentResult) && currentProgressRef.length == sequence.p.length) {
+                const cachedSuccess = last(currentProgressRef);
+                if (cachedSuccess === null) throw debug();
                 const result: AstNodeWithIndex = {
-                    newIndex: (cachedSuccessFinal as AstNodeWithIndex).newIndex,
+                    newIndex: cachedSuccess.newIndex,
                     success: true,
-                    children: (cachedSuccess as any),
+                    children: currentProgressRef,
                     type: sequence.n as AstNodeType,
                 };
                 return result;
@@ -256,28 +256,41 @@ const parseAlternative = (
         // for each alternative that has parsed up to that index and expects the next item to be of that type.
         for (let progressCacheIndex = alternativeIndex; progressCacheIndex < alternatives.length; progressCacheIndex++) {
             const parser = alternatives[progressCacheIndex];
-            if (progressCache[progressCacheIndex].length == currentIndex) {
+            const progressRef = progressCache[progressCacheIndex];
+            if (!parseResultIsError(progressRef) && progressRef.length == currentIndex) {
                 if (typeof parser === 'string' && currentParser == parser) {
-                    progressCache[progressCacheIndex].push(currentResult);
+                    if (parseResultIsError(currentResult)) {
+                        progressCache[alternativeIndex] = currentResult;
+                    } else {
+                        progressRef.push(currentResult);
+                    }
                 } else if (typeof parser === 'function' && currentParser == parser) {
-                    progressCache[progressCacheIndex].push(currentResult);
+                    if (parseResultIsError(currentResult)) {
+                        progressCache[alternativeIndex] = currentResult;
+                    } else {
+                        progressRef.push(currentResult);
+                    }
                 } else if (isSequence(parser) && currentParser === parser.p[currentIndex]) {
-                    progressCache[progressCacheIndex].push(currentResult);
+                    if (parseResultIsError(currentResult)) {
+                        progressCache[alternativeIndex] = currentResult;
+                    } else {
+                        progressRef.push(currentResult);
+                    }
                 }
             }
         }
     }
 
-    const errors = progressCache.map(last);
-
+    progressCache.map((error: (ParseError | AstNodeWithIndex[])) => {
+        if (!parseResultIsError(error)) throw debug();
+        return error.found;
+    })
     return {
-        found: unique(errors.map(error => {
-            if (error == null) throw debug();
+        found: unique(progressCache.map(error => {
             if (!parseResultIsError(error)) throw debug();
             return error.found;
         })).join('/'),
-        expected: unique(flatten(errors.map(error => {
-            if (error == null) throw debug();
+        expected: unique(flatten(progressCache.map(error => {
             if (!parseResultIsError(error)) throw debug();
             return error.expected;
         }))),
