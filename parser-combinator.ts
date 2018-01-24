@@ -67,9 +67,11 @@ type ParseResultWithIndex = ParseError | AstNodeWithIndex;
 type ParseResult = ParseError | AstNode;
 
 const parseResultIsError = (r: ParseResult | ParseResultWithIndex | AstNodeWithIndex[]): r is ParseError => {
+    if (!r) throw debug();
     return 'found' in r && 'expected' in r;
 };
 const parseResultWithIndexIsLeaf = (r: ParseResultWithIndex): r is AstLeafWithIndex => {
+    if (!r) throw debug();
     return 'value' in r;
 };
 
@@ -133,6 +135,7 @@ interface Grammar {
 
 const isSequence = (val: SequenceParser | AlternativeParser | BaseParser | string): val is SequenceParser =>  {
     if (typeof val === 'string') return false;
+    if (!val) throw debug();
     return 'n' in val;
 }
 
@@ -176,6 +179,7 @@ const parseAlternative = (
     const alternativeIndex: number = 0;
     const progressCache: (ParseError | AstNodeWithIndex[])[] = alternatives.map(_ => []);
     for (let alternativeIndex = 0; alternativeIndex < alternatives.length; alternativeIndex++) {
+        let alternativeNeedsSubtracting = false;
         let currentParser = alternatives[alternativeIndex];
         const currentProgressRef = progressCache[alternativeIndex];
         let currentResult: ParseResultWithIndex;
@@ -220,13 +224,25 @@ const parseAlternative = (
             const sequence = currentParser;
             currentParser = currentParser.p[currentProgressRef.length];
 
+
+            const currentProgressLastItem = last(currentProgressRef);
+            const tokenIndex = currentProgressLastItem !== null ? currentProgressLastItem.newIndex : index;
+            // Check if this parser has been completed due to being a successful prefix of a previous alternative
+            if (currentProgressLastItem !== null && !parseResultIsError(currentProgressLastItem) && currentProgressRef.length === sequence.p.length) {
+                const result: AstNodeWithIndex = {
+                    newIndex: currentProgressLastItem.newIndex,
+                    success: true,
+                    children: currentProgressRef,
+                    type: sequence.n as AstNodeType,
+                };
+                return result;
+            }
+
             // Try the parser
             if (typeof currentParser === 'function') {
-                currentResult = currentParser(tokens, index);
+                currentResult = currentParser(tokens, tokenIndex);
                 currentIndex = currentProgressRef.length;
             } else {
-                const currentProgressLastItem = last(currentProgressRef);
-                const tokenIndex = currentProgressLastItem !== null ? currentProgressLastItem.newIndex : index;
                 currentResult = parse(grammar, currentParser, tokens, tokenIndex);
                 currentIndex = currentProgressRef.length;
             }
@@ -236,6 +252,11 @@ const parseAlternative = (
                 progressCache[alternativeIndex] = currentResult;
             } else {
                 currentProgressRef.push(currentResult);
+
+                // When we return to the top of this loop, we want to continue parsing the current sequence.
+                // In order to make this happen, flag that we need to subtract one from alternativesIndex.
+                // TODO: Be less janky.
+                alternativeNeedsSubtracting = true;
             }
 
             // Check if we are done
@@ -279,10 +300,23 @@ const parseAlternative = (
                 }
             }
         }
+
+        if (alternativeNeedsSubtracting) {
+            alternativeIndex--;
+        }
     }
 
     progressCache.map((error: (ParseError | AstNodeWithIndex[])) => {
-        if (!parseResultIsError(error)) throw debug();
+        if (!parseResultIsError(error)) {
+            debugger
+            parseAlternative(
+                grammar,
+                alternatives,
+                tokens,
+                index
+            )
+            throw debug();
+        }
         return error.found;
     })
     return {
@@ -299,6 +333,7 @@ const parseAlternative = (
 
 export const parse = (grammar: Grammar, firstRule: string, tokens: Token[], index: number): ParseResultWithIndex => {
     const childrenParser = grammar[firstRule];
+    if (!childrenParser) throw debug();
     if (typeof childrenParser === 'string') {
         return parse(childrenParser, firstRule, tokens, index);
     } else if (isSequence(childrenParser)) {

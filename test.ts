@@ -39,7 +39,7 @@ test('lex with initial whitespace', t => {
     ]);
 });
 
-test.only('ast for single number', t => {
+test('ast for single number', t => {
     const tokens = lex('return 7');
     const parseResult: ParseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
     const expectedResult: AstNode = {
@@ -61,7 +61,8 @@ test.only('ast for single number', t => {
     t.deepEqual(parseResult, expectedResult);
 });
 
-test('ast for number in brackets', t => {
+test.only('ast for number in brackets', t => {
+    debugger;
     t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(' return (5)'), 0))), ({
         type: 'program' as any,
         children: [{
