@@ -61,8 +61,7 @@ test('ast for single number', t => {
     t.deepEqual(parseResult, expectedResult);
 });
 
-test.only('ast for number in brackets', t => {
-    debugger;
+test('ast for number in brackets', t => {
     t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(' return (5)'), 0))), ({
         type: 'program' as any,
         children: [{
@@ -197,7 +196,7 @@ test('ast for assignment then return', t => {
     t.deepEqual(astWithNewline, expected);
 });
 
-test('lowering of bracketedExpressions', t => {
+test.only('lowering of bracketedExpressions', t => {
     t.deepEqual(parseMpl(lex('return (8 * ((7)))')), {
         parseErrors: [],
         ast: {
@@ -208,10 +207,13 @@ test('lowering of bracketedExpressions', t => {
                     type: 'return',
                     value: null,
                 }, {
-                    type: 'product',
+                    type: 'product1',
                     children: [{
                         type: 'number',
                         value: 8
+                    }, {
+                        type: 'product',
+                        value: null
                     }, {
                         type: 'number',
                         value: 7,
