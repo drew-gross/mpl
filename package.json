@@ -11,11 +11,12 @@
     ]
   },
   "scripts": {
-    "test": "rimraf built && tsc && ava --verbose",
+    "test": "rimraf built && npm run prettier-check && tsc && ava --verbose",
     "test-watch": "ava --watch --no-color",
     "tsc-watch": "tsc --watch",
     "test-debug": "tsc && inspect --debug-exception node_modules/ava/profile.js built/test.js",
-    "cloc": "cloc --exclude-dir=node_modules,built ."
+    "cloc": "cloc --exclude-dir=node_modules,built .",
+    "prettier-check": "prettier --list-different **/*.ts"
   },
   "author": "Drew Gross",
   "dependencies": {
@@ -27,6 +28,7 @@
     "@types/node": "8.5.1",
     "ava": "0.24.0",
     "inspect-process": "0.5.0",
+    "prettier": "1.10.2",
     "rimraf": "2.6.2",
     "typescript": "2.6.2"
   }
