@@ -377,24 +377,9 @@ export const typeOfExpression = (stuff, knownIdentifiers: IdentifierDict): { typ
     if (!type) debug();
     switch (type) {
         case 'number': return { type: { name: 'Integer' }, errors: [] };
-        case 'addition': {
-            // TODO: Unify with subtraction
-            const leftType = typeOfExpression(children[0], knownIdentifiers);
-            const rightType = typeOfExpression(children[2], knownIdentifiers);
-            if (leftType.errors.length > 0 || rightType.errors.length > 0) {
-                return { type: {} as any, errors: leftType.errors.concat(rightType.errors) };
-            }
-            if (!typesAreEqual(leftType.type, { name: 'Integer' })) {
-                return { type: {} as any, errors: [`Left hand side of ${type} was not integer`] };
-            }
-            if (!typesAreEqual(rightType.type, { name: 'Integer' })) {
-                return { type: {} as any, errors: [`Right hand side of ${type} was not integer`] };
-            }
-            return { type: { name: 'Integer' }, errors: [] };
-        }
+        case 'addition':
         case 'product':
         case 'subtraction': {
-            // TODO: Unify with addition
             const leftType = typeOfExpression(children[0], knownIdentifiers);
             const rightType = typeOfExpression(children[1], knownIdentifiers);
             if (leftType.errors.length > 0 || rightType.errors.length > 0) {

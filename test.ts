@@ -230,7 +230,7 @@ test('bare return', compileAndRun, {
 });
 
 
-test.only('single product', compileAndRun, {
+test('single product', compileAndRun, {
     source: 'return 2 * 2',
     expectedExitCode: 4,
 });
@@ -617,7 +617,7 @@ test('parsing fails for extra invalid tokens', compileAndRun, {
     expectedParseErrors: ['Expected endOfFile, found leftBracket'],
 });
 
-test('addition', compileAndRun, {
+test.only('addition', compileAndRun, {
     source: `return length("foo") + 5`,
     expectedExitCode: 8,
 });
