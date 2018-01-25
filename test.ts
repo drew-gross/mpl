@@ -238,7 +238,7 @@ test('single product', compileAndRun, {
     expectedExitCode: 4,
 });
 
-test.only('double product', compileAndRun, {
+test('double product', compileAndRun, {
     source: 'return 5 * 3 * 4',
     expectedExitCode: 60,
     expectedAst: {
@@ -391,7 +391,7 @@ test('double function', compileAndRun, {
     expectedExitCode: 200,
 });
 
-test.only('subtraction', compileAndRun, {
+test('subtraction', compileAndRun, {
     source: 'return 7 - 5',
     expectedExitCode: 2,
 });
@@ -406,7 +406,7 @@ test('associativity of subtraction', compileAndRun, {
     expectedExitCode: 2,
 });
 
-test.only('ternary true', compileAndRun, {
+test('ternary true', compileAndRun, {
     source: 'return 1 == 1 ? 5 : 6',
     expectedExitCode: 5,
 });
@@ -489,7 +489,7 @@ test.failing('assign function to typed var', compileAndRun, {
     expectedExitCode: 37,
 });
 
-test('return local integer', compileAndRun, {
+test.only('return local integer', compileAndRun, {
     source: 'myVar: Integer = 3 * 3; return myVar',
     expectedExitCode: 9,
 });

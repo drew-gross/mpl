@@ -308,6 +308,13 @@ const parseMpl = (tokens: Token[]): { ast?: any, parseErrors: string[] } => {
         true,
     );
 
+    ast = transformAst(
+        'product1',
+        node => ({ type: 'product', children: [node.children[0], node.children[2]] }),
+        ast,
+        true,
+    );
+
     // repair associativity of subtraction
     // ast = repairAssociativity('subtraction', ast); // TODO: Need to settle on when associativity repair happens.
 
@@ -370,8 +377,7 @@ export const typeOfExpression = (stuff, knownIdentifiers: IdentifierDict): { typ
     if (!type) debug();
     switch (type) {
         case 'number': return { type: { name: 'Integer' }, errors: [] };
-        case 'addition':
-        case 'product1': {
+        case 'addition': {
             // TODO: Unify with subtraction
             const leftType = typeOfExpression(children[0], knownIdentifiers);
             const rightType = typeOfExpression(children[2], knownIdentifiers);
@@ -386,8 +392,9 @@ export const typeOfExpression = (stuff, knownIdentifiers: IdentifierDict): { typ
             }
             return { type: { name: 'Integer' }, errors: [] };
         }
+        case 'product':
         case 'subtraction': {
-            // TODO: Unify with addition and product
+            // TODO: Unify with addition
             const leftType = typeOfExpression(children[0], knownIdentifiers);
             const rightType = typeOfExpression(children[1], knownIdentifiers);
             if (leftType.errors.length > 0 || rightType.errors.length > 0) {
@@ -622,10 +629,10 @@ const lowerAst = (ast: any): Ast.LoweredAst => {
             kind: 'identifier',
             value: ast.value,
         }
-        case 'product1': return {
+        case 'product': return {
             kind: 'product',
             lhs: lowerAst(ast.children[0]),
-            rhs: lowerAst(ast.children[2]),
+            rhs: lowerAst(ast.children[1]),
         }
         case 'ternary': return {
             kind: 'ternary',
