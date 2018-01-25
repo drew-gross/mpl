@@ -196,7 +196,7 @@ test('ast for assignment then return', t => {
     t.deepEqual(astWithNewline, expected);
 });
 
-test.only('lowering of bracketedExpressions', t => {
+test('lowering of bracketedExpressions', t => {
     t.deepEqual(parseMpl(lex('return (8 * ((7)))')), {
         parseErrors: [],
         ast: {
@@ -230,7 +230,7 @@ test('bare return', compileAndRun, {
 });
 
 
-test('single product', compileAndRun, {
+test.only('single product', compileAndRun, {
     source: 'return 2 * 2',
     expectedExitCode: 4,
 });

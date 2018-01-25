@@ -334,7 +334,7 @@ const countTemporariesInExpression = ast => {
     }
     switch (ast.type) {
         case 'returnStatement': return countTemporariesInExpression(ast.children[1]);
-        case 'product1': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
+        case 'product': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
         case 'addition':
         case 'subtraction': return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
         case 'typedAssignment': return 1;
