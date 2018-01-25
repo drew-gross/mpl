@@ -196,7 +196,7 @@ test('ast for assignment then return', t => {
     t.deepEqual(astWithNewline, expected);
 });
 
-test('lowering of bracketedExpressions', t => {
+test.only('lowering of bracketedExpressions', t => {
     t.deepEqual(parseMpl(lex('return (8 * ((7)))')), {
         parseErrors: [],
         ast: {
@@ -207,13 +207,10 @@ test('lowering of bracketedExpressions', t => {
                     type: 'return',
                     value: null,
                 }, {
-                    type: 'product1',
+                    type: 'product',
                     children: [{
                         type: 'number',
                         value: 8
-                    }, {
-                        type: 'product',
-                        value: null
                     }, {
                         type: 'number',
                         value: 7,
@@ -489,7 +486,7 @@ test.failing('assign function to typed var', compileAndRun, {
     expectedExitCode: 37,
 });
 
-test.only('return local integer', compileAndRun, {
+test('return local integer', compileAndRun, {
     source: 'myVar: Integer = 3 * 3; return myVar',
     expectedExitCode: 9,
 });
