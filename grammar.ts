@@ -48,23 +48,23 @@ export default {
         'addition',
     ],
     addition: [
-        { n: 'addition1', p: ['subtraction', plus, 'expression'] },
+        { n: 'addition1', p: ['subtraction', plus, 'addition'] },
         'subtraction',
     ],
     subtraction: [
-        { n: 'subtraction1', p: ['product', minus, 'expression'] },
+        { n: 'subtraction1', p: ['product', minus, 'subtraction'] },
         'product',
     ],
     product: [
-        { n: 'product1', p: ['equality', times, 'expression'] },
+        { n: 'product1', p: ['equality', times, 'product'] },
         'equality',
     ],
     equality: [
-        { n: 'equality', p: ['concatenation', equality, 'expression'] },
+        { n: 'equality', p: ['concatenation', equality, 'equality'] },
         'concatenation',
     ],
     concatenation: [
-        { n: 'concatenation', p: ['simpleExpression', concatenation, 'expression'] },
+        { n: 'concatenation', p: ['simpleExpression', concatenation, 'concatenation'] },
         'simpleExpression',
     ],
     simpleExpression: [
