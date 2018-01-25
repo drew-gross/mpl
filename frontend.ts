@@ -21,6 +21,7 @@ type VariableDeclarationWithNoMemory = {
 
 let tokensToString = tokens => tokens.map(token => token.string).join('');
 
+// TODO: Pretty sure this is redundant with stripNodeIndexes
 const flattenAst = (ast: AstNode): any => {
     if ((ast as AstInteriorNode).children) {
         return {
@@ -36,24 +37,32 @@ const flattenAst = (ast: AstNode): any => {
 }
 
 const repairAssociativity = (nodeTypeToRepair, ast) => {
+    if (!ast) debug();
     if (ast.type === nodeTypeToRepair && !ast.children) debug();
-    if (ast.type === nodeTypeToRepair && ast.children[2].type === nodeTypeToRepair) {
+    if (ast.type === nodeTypeToRepair) {
         if (!ast.children[2]) debug();
-        return {
-            type: nodeTypeToRepair,
-            children: [
-                {
-                    type: nodeTypeToRepair,
-                    children: [
-                        repairAssociativity(nodeTypeToRepair, ast.children[0]),
-                        ast.children[2].children[1],
-                        repairAssociativity(nodeTypeToRepair, ast.children[2].children[0]),
-                    ],
-                },
-                ast.children[1],
-                repairAssociativity(nodeTypdeToRepair, ast.children[2].children[2]),
-            ],
-        };
+        if (ast.children[2].type === nodeTypeToRepair) {
+            return {
+                type: nodeTypeToRepair,
+                children: [
+                    {
+                        type: nodeTypeToRepair,
+                        children: [
+                            repairAssociativity(nodeTypeToRepair, ast.children[0]),
+                            ast.children[2].children[1],
+                            repairAssociativity(nodeTypeToRepair, ast.children[2].children[0]),
+                        ],
+                    },
+                    ast.children[1],
+                    repairAssociativity(nodeTypeToRepair, ast.children[2].children[2]),
+                ],
+            };
+        } else {
+            return {
+                type: ast.type,
+                children: ast.children.map(child => repairAssociativity(nodeTypeToRepair, child)),
+            }
+        }
     } else if ('children' in ast) {
         return {
             type: ast.type,
@@ -300,7 +309,7 @@ const parseMpl = (tokens: Token[]): { ast?: any, parseErrors: string[] } => {
     );
 
     // repair associativity of subtraction
-    ast = repairAssociativity('subtraction', ast);
+    // ast = repairAssociativity('subtraction', ast); // TODO: Need to settle on when associativity repair happens.
 
     // Bracketed expressions -> nothing. Must happen after associativity repair or we will break
     // associativity of brackets.
@@ -361,11 +370,26 @@ export const typeOfExpression = (stuff, knownIdentifiers: IdentifierDict): { typ
     if (!type) debug();
     switch (type) {
         case 'number': return { type: { name: 'Integer' }, errors: [] };
-        case 'subtraction':
         case 'addition':
         case 'product1': {
+            // TODO: Unify with subtraction
             const leftType = typeOfExpression(children[0], knownIdentifiers);
             const rightType = typeOfExpression(children[2], knownIdentifiers);
+            if (leftType.errors.length > 0 || rightType.errors.length > 0) {
+                return { type: {} as any, errors: leftType.errors.concat(rightType.errors) };
+            }
+            if (!typesAreEqual(leftType.type, { name: 'Integer' })) {
+                return { type: {} as any, errors: [`Left hand side of ${type} was not integer`] };
+            }
+            if (!typesAreEqual(rightType.type, { name: 'Integer' })) {
+                return { type: {} as any, errors: [`Right hand side of ${type} was not integer`] };
+            }
+            return { type: { name: 'Integer' }, errors: [] };
+        }
+        case 'subtraction': {
+            // TODO: Unify with addition and product
+            const leftType = typeOfExpression(children[0], knownIdentifiers);
+            const rightType = typeOfExpression(children[1], knownIdentifiers);
             if (leftType.errors.length > 0 || rightType.errors.length > 0) {
                 return { type: {} as any, errors: leftType.errors.concat(rightType.errors) };
             }

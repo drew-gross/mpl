@@ -391,7 +391,7 @@ test('double function', compileAndRun, {
     expectedExitCode: 200,
 });
 
-test('subtraction', compileAndRun, {
+test.only('subtraction', compileAndRun, {
     source: 'return 7 - 5',
     expectedExitCode: 2,
 });
