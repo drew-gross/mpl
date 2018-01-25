@@ -46,10 +46,12 @@ const repairAssociativity = (nodeTypeToRepair, ast) => {
                     type: nodeTypeToRepair,
                     children: [
                         repairAssociativity(nodeTypeToRepair, ast.children[0]),
+                        ast.children[2].children[1],
                         repairAssociativity(nodeTypeToRepair, ast.children[2].children[0]),
                     ],
                 },
-                repairAssociativity(nodeTypeToRepair, ast.children[2].children[0]),
+                ast.children[1],
+                repairAssociativity(nodeTypdeToRepair, ast.children[2].children[2]),
             ],
         };
     } else if ('children' in ast) {
@@ -353,7 +355,9 @@ const typesAreEqual = (a, b) => {
     return true;
 }
 
-export const typeOfExpression = ({ type, children, value }, knownIdentifiers: IdentifierDict): { type: Type, errors: string[] } => {
+export const typeOfExpression = (stuff, knownIdentifiers: IdentifierDict): { type: Type, errors: string[] } => {
+    if (!stuff) debug();
+    const { type, children, value } = stuff;
     if (!type) debug();
     switch (type) {
         case 'number': return { type: { name: 'Integer' }, errors: [] };
