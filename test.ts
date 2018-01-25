@@ -248,22 +248,16 @@ test('double product', compileAndRun, {
                     type: 'return',
                     value: null,
                 }, {
-                    type: 'product1',
+                    type: 'product',
                     children: [{
-                        type: 'product1',
+                        type: 'product',
                         children: [{
                             type: 'number',
                             value: 5,
                         }, {
-                            type: 'product',
-                            value: null
-                        }, {
                             type: 'number',
                             value: 3,
                         }]
-                    }, {
-                        type: 'product',
-                        value: null
                     }, {
                         type: 'number',
                         value: 4,
@@ -617,7 +611,7 @@ test('parsing fails for extra invalid tokens', compileAndRun, {
     expectedParseErrors: ['Expected endOfFile, found leftBracket'],
 });
 
-test.only('addition', compileAndRun, {
+test('addition', compileAndRun, {
     source: `return length("foo") + 5`,
     expectedExitCode: 8,
 });
