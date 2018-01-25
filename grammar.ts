@@ -26,12 +26,12 @@ export default {
     program: { n: 'program', p: ['functionBody', endOfInput] },
     function: [
         { n: 'function', p: ['argList', fatArrow, 'expression'] },
-        { n: 'functionWithBlock', p: ['argList', fatArrow, leftCurlyBrace, 'functionBody', rightCurlyBrace] },
+        {
+            n: 'functionWithBlock',
+            p: ['argList', fatArrow, leftCurlyBrace, 'functionBody', rightCurlyBrace],
+        },
     ],
-    argList: [
-        { n: 'argList', p: ['arg', comma, 'argList'] },
-        'arg',
-    ],
+    argList: [{ n: 'argList', p: ['arg', comma, 'argList'] }, 'arg'],
     arg: { n: 'arg', p: [identifier, colon, type] },
     functionBody: [
         { n: 'statement', p: ['statement', statementSeparator, 'functionBody'] },
@@ -47,22 +47,10 @@ export default {
         { n: 'ternary', p: ['addition', ternaryOperator, 'addition', colon, 'addition'] },
         'addition',
     ],
-    addition: [
-        { n: 'addition1', p: ['subtraction', plus, 'addition'] },
-        'subtraction',
-    ],
-    subtraction: [
-        { n: 'subtraction1', p: ['product', minus, 'subtraction'] },
-        'product',
-    ],
-    product: [
-        { n: 'product1', p: ['equality', times, 'product'] },
-        'equality',
-    ],
-    equality: [
-        { n: 'equality', p: ['concatenation', equality, 'equality'] },
-        'concatenation',
-    ],
+    addition: [{ n: 'addition1', p: ['subtraction', plus, 'addition'] }, 'subtraction'],
+    subtraction: [{ n: 'subtraction1', p: ['product', minus, 'subtraction'] }, 'product'],
+    product: [{ n: 'product1', p: ['equality', times, 'product'] }, 'equality'],
+    equality: [{ n: 'equality', p: ['concatenation', equality, 'equality'] }, 'concatenation'],
     concatenation: [
         { n: 'concatenation', p: ['simpleExpression', concatenation, 'concatenation'] },
         'simpleExpression',
@@ -76,8 +64,5 @@ export default {
         'function',
         identifier,
     ],
-    paramList: [
-        { n: 'paramList', p: ['expression', comma, 'paramList'] },
-        'expression',
-    ],
+    paramList: [{ n: 'paramList', p: ['expression', comma, 'paramList'] }, 'expression'],
 };

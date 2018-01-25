@@ -3,16 +3,16 @@ import flatten from './util/list/flatten.js';
 type ExpressionCompiler = (expressions: string[][]) => string[];
 
 export type CompiledExpression = {
-    prepare: string[],
-    execute: string[],
-    cleanup: string[],
-}
+    prepare: string[];
+    execute: string[];
+    cleanup: string[];
+};
 
 export type CompiledProgram = {
-    prepare: string[],
-    execute: string[],
-    cleanup: string[],
-}
+    prepare: string[];
+    execute: string[];
+    cleanup: string[];
+};
 
 export const compileExpression = (
     subExpressions: CompiledExpression[],

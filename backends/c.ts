@@ -1,5 +1,5 @@
 import * as Ast from '../ast.js';
-import { file as tmpFile} from 'tmp-promise';
+import { file as tmpFile } from 'tmp-promise';
 import { VariableDeclaration, Type, BackendInputs, Function, ExecutionResult } from '../api.js';
 import flatten from '../util/list/flatten.js';
 import { typeOfExpression } from '../frontend.js';
@@ -13,44 +13,40 @@ import { errors } from '../runtime-strings.js';
 const mplTypeToCDeclaration = (type: Type, name: string) => {
     if (!type) debug();
     switch (type.name) {
-        case 'Function': return `unsigned char (*${name})(unsigned char)`
-        case 'Integer': return `uint8_t ${name}`;
-        case 'String': return `char *${name}`;
-        default: throw debug();
+        case 'Function':
+            return `unsigned char (*${name})(unsigned char)`;
+        case 'Integer':
+            return `uint8_t ${name}`;
+        case 'String':
+            return `char *${name}`;
+        default:
+            throw debug();
     }
 };
 
 type BackendInput = {
-    ast: Ast.LoweredAst,
-    globalDeclarations: VariableDeclaration[],
-    localDeclarations: VariableDeclaration[],
-    stringLiterals: string[],
+    ast: Ast.LoweredAst;
+    globalDeclarations: VariableDeclaration[];
+    localDeclarations: VariableDeclaration[];
+    stringLiterals: string[];
 };
 
 type CompiledAssignment = {
-    prepare: string[],
-    execute: string[],
-    cleanup: string[],
-}
+    prepare: string[];
+    execute: string[];
+    cleanup: string[];
+};
 
-const compileAssignment = (
-    destination: string,
-    rhs: CompiledExpression,
-): CompiledAssignment => {
+const compileAssignment = (destination: string, rhs: CompiledExpression): CompiledAssignment => {
     return {
         prepare: rhs.prepare,
         execute: [`${destination} = `, ...rhs.execute, ';'],
         cleanup: rhs.cleanup,
     };
-}
+};
 
 const astToC = (input: BackendInput): CompiledProgram => {
-    const {
-        ast,
-        globalDeclarations,
-        stringLiterals,
-        localDeclarations,
-    } = input;
+    const { ast, globalDeclarations, stringLiterals, localDeclarations } = input;
     const recurse = newInput => astToC({ ...input, ...newInput });
     if (!ast) debug();
     switch (ast.kind) {
@@ -58,7 +54,8 @@ const astToC = (input: BackendInput): CompiledProgram => {
             const subExpression = recurse({ ast: ast.expression });
             return compileExpression([subExpression], ([e1]) => ['return', ...e1, ';']);
         }
-        case 'number': return compileExpression([], ([]) => [ast.value.toString()]);
+        case 'number':
+            return compileExpression([], ([]) => [ast.value.toString()]);
         case 'product': {
             const lhs = recurse({ ast: ast.lhs });
             const rhs = recurse({ ast: ast.rhs });
@@ -78,15 +75,23 @@ const astToC = (input: BackendInput): CompiledProgram => {
             const lhs = recurse({ ast: ast.lhs });
             const rhs = recurse({ ast: ast.rhs });
             const prepAndCleanup = {
-                prepare: [`char *temporary_string = my_malloc(length(${join(lhs.execute, ' ')}) + length(${join(rhs.execute, ' ')}) + 1);`],
+                prepare: [
+                    `char *temporary_string = my_malloc(length(${join(
+                        lhs.execute,
+                        ' '
+                    )}) + length(${join(rhs.execute, ' ')}) + 1);`,
+                ],
                 execute: [],
                 cleanup: ['my_free(temporary_string);'],
-            }
-            return compileExpression(
-                [lhs, rhs, prepAndCleanup],
-                ([e1, e2, _]) => ['string_concatenate(', ...e1, ', ', ...e2,', temporary_string)']
-            );
-        };
+            };
+            return compileExpression([lhs, rhs, prepAndCleanup], ([e1, e2, _]) => [
+                'string_concatenate(',
+                ...e1,
+                ', ',
+                ...e2,
+                ', temporary_string)',
+            ]);
+        }
         case 'statement': {
             const childResults = ast.children.map(child => recurse({ ast: child }));
             return compileExpression(childResults, flatten);
@@ -95,18 +100,23 @@ const astToC = (input: BackendInput): CompiledProgram => {
             const lhs = ast.destination;
             const rhs = recurse({ ast: ast.expression });
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
-                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
+                const declaration = globalDeclarations.find(
+                    declaration => declaration.name === lhs
+                );
                 if (!declaration) throw debug();
                 switch (declaration.type.name) {
-                    case 'Function': return compileAssignment(lhs, rhs);
+                    case 'Function':
+                        return compileAssignment(lhs, rhs);
                     case 'String': {
                         const rhsWillAlloc = compileExpression([rhs], ([e]) => [
-                                `string_copy(${e}, my_malloc(length(${e}) + 1));`,
-                            ])
+                            `string_copy(${e}, my_malloc(length(${e}) + 1));`,
+                        ]);
                         return compileAssignment(lhs, rhsWillAlloc);
                     }
-                    case 'Integer': return compileAssignment(lhs, rhs);
-                    default: debug();
+                    case 'Integer':
+                        return compileAssignment(lhs, rhs);
+                    default:
+                        debug();
                 }
             } else {
                 const declaration = localDeclarations.find(declaration => declaration.name === lhs);
@@ -115,32 +125,46 @@ const astToC = (input: BackendInput): CompiledProgram => {
                 if (!declaration.type.name) throw debug();
                 switch (declaration.type.name) {
                     case 'Function':
-                    case 'Integer': return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
+                    case 'Integer':
+                        return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
                     case 'String':
                         switch (declaration.memoryCategory) {
                             case 'Stack':
                             case 'Dynamic': {
-                                const rhsWillAlloc = compileExpression(
-                                    [rhs],
-                                    ([e1]) => ['string_copy(', ...e1, ', my_malloc(length(', ...e1, ') + 1))'],
+                                const rhsWillAlloc = compileExpression([rhs], ([e1]) => [
+                                    'string_copy(',
+                                    ...e1,
+                                    ', my_malloc(length(',
+                                    ...e1,
+                                    ') + 1))',
+                                ]);
+                                return compileAssignment(
+                                    mplTypeToCDeclaration(declaration.type, lhs),
+                                    rhsWillAlloc
                                 );
-                                return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhsWillAlloc);
-                            };
-                            case 'GlobalStatic': return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
-                            default: debug();
+                            }
+                            case 'GlobalStatic':
+                                return compileAssignment(
+                                    mplTypeToCDeclaration(declaration.type, lhs),
+                                    rhs
+                                );
+                            default:
+                                debug();
                         }
-                    default: debug();
+                    default:
+                        debug();
                 }
             }
             throw debug();
-
         }
-        case 'functionLiteral': return compileExpression([], ([]) => [`&${ast.deanonymizedName}`]);
+        case 'functionLiteral':
+            return compileExpression([], ([]) => [`&${ast.deanonymizedName}`]);
         case 'callExpression': {
             const argC = recurse({ ast: ast.argument });
             return compileExpression([argC], ([e1]) => [`(*${ast.name})(`, ...e1, ')']);
-        };
-        case 'identifier': return compileExpression([], ([]) => [ast.value]);
+        }
+        case 'identifier':
+            return compileExpression([], ([]) => [ast.value]);
         case 'ternary': {
             const comparatorC = recurse({ ast: ast.condition });
             const ifTrueC = recurse({ ast: ast.ifTrue });
@@ -149,37 +173,47 @@ const astToC = (input: BackendInput): CompiledProgram => {
                 [comparatorC, ifTrueC, ifFalseC],
                 ([compare, ifTrue, ifFalse]) => [...compare, '?', ...ifTrue, ':', ...ifFalse]
             );
-        };
+        }
         case 'equality': {
             const lhs = recurse({ ast: ast.lhs });
             const rhs = recurse({ ast: ast.rhs });
             return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '==', ...e2]);
-        };
+        }
         case 'stringEquality': {
             const lhs = recurse({ ast: ast.lhs });
             const rhs = recurse({ ast: ast.rhs });
-            return compileExpression([lhs, rhs], ([e1, e2]) => ['string_compare(', ...e1, ',', ...e2, ')']);
+            return compileExpression([lhs, rhs], ([e1, e2]) => [
+                'string_compare(',
+                ...e1,
+                ',',
+                ...e2,
+                ')',
+            ]);
         }
-        case 'booleanLiteral': return compileExpression([], ([]) => [ast.value ? '1' : '0']);
-        case 'stringLiteral': return compileExpression([], ([]) => [`string_literal_${ast.value}`]);
-        default: debug();
-    };
+        case 'booleanLiteral':
+            return compileExpression([], ([]) => [ast.value ? '1' : '0']);
+        case 'stringLiteral':
+            return compileExpression([], ([]) => [`string_literal_${ast.value}`]);
+        default:
+            debug();
+    }
     return debug();
 };
 
-const stringLiteralDeclaration = stringLiteral => `char *string_literal_${stringLiteral} = "${stringLiteral}";`;
+const stringLiteralDeclaration = stringLiteral =>
+    `char *string_literal_${stringLiteral} = "${stringLiteral}";`;
 
 type MakeCFunctionBodyInputs = {
-    name: any,
-    argument: any,
-    statements: Ast.LoweredAst[],
-    variables: any,
-    globalDeclarations: any,
-    stringLiterals: any,
-    buildSignature: any,
-    returnType: any,
-    beforeExit?: string[],
-}
+    name: any;
+    argument: any;
+    statements: Ast.LoweredAst[];
+    variables: any;
+    globalDeclarations: any;
+    stringLiterals: any;
+    buildSignature: any;
+    returnType: any;
+    beforeExit?: string[];
+};
 
 const makeCfunctionBody = ({
     name,
@@ -190,7 +224,7 @@ const makeCfunctionBody = ({
     stringLiterals,
     buildSignature,
     returnType,
-    beforeExit = []
+    beforeExit = [],
 }: MakeCFunctionBodyInputs) => {
     const nonReturnStatements = statements.slice(0, statements.length - 1);
     const returnStatement = statements[statements.length - 1];
@@ -202,11 +236,14 @@ const makeCfunctionBody = ({
             stringLiterals,
             localDeclarations: variables,
         });
-        return join([
-            join(statementLogic.prepare, '\n'),
-            join(statementLogic.execute, ' '),
-            join(statementLogic.cleanup, '\n'),
-        ], '\n');
+        return join(
+            [
+                join(statementLogic.prepare, '\n'),
+                join(statementLogic.execute, ' '),
+                join(statementLogic.cleanup, '\n'),
+            ],
+            '\n'
+        );
     });
     const frees = variables
         // TODO: Make a better memory model for dynamic/global frees.
@@ -219,19 +256,22 @@ const makeCfunctionBody = ({
         stringLiterals,
         localDeclarations: variables,
     });
-    return join([
-        buildSignature(name, argument),
-        '{',
-        ...body,
-        ...returnCode.prepare,
-        `${mplTypeToCDeclaration(returnType, 'result')} = ${join(returnCode.execute, ' ')};`,
-        ...returnCode.cleanup,
-        ...frees,
-        ...beforeExit,
-        `return result;`,
-        '}',
-    ], '\n');
-}
+    return join(
+        [
+            buildSignature(name, argument),
+            '{',
+            ...body,
+            ...returnCode.prepare,
+            `${mplTypeToCDeclaration(returnType, 'result')} = ${join(returnCode.execute, ' ')};`,
+            ...returnCode.cleanup,
+            ...frees,
+            ...beforeExit,
+            `return result;`,
+            '}',
+        ],
+        '\n'
+    );
+};
 
 const toExectuable = ({
     functions,
@@ -239,16 +279,19 @@ const toExectuable = ({
     globalDeclarations,
     stringLiterals,
 }: BackendInputs) => {
-    const Cfunctions = functions.map(({ name, argument, statements, variables }) => makeCfunctionBody({
-        name,
-        argument,
-        statements,
-        variables,
-        globalDeclarations,
-        stringLiterals,
-        buildSignature: (name, argument) => `unsigned char ${name}(unsigned char ${argument.name})`,
-        returnType: { name: 'Integer' }, // Can currently only return integer
-    }));
+    const Cfunctions = functions.map(({ name, argument, statements, variables }) =>
+        makeCfunctionBody({
+            name,
+            argument,
+            statements,
+            variables,
+            globalDeclarations,
+            stringLiterals,
+            buildSignature: (name, argument) =>
+                `unsigned char ${name}(unsigned char ${argument.name})`,
+            returnType: { name: 'Integer' }, // Can currently only return integer
+        })
+    );
     const Cprogram = makeCfunctionBody({
         name: 'main', // Unused for now
         argument: {} as any, // Unused for now

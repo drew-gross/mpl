@@ -6,34 +6,34 @@ import assertNever from './util/assertNever.js';
 import debug from './util/debug.js';
 
 export type AstNodeType =
-    'return' |
-    'booleanLiteral' |
-    'number' |
-    'product' |
-    'assignment' |
-    'typedAssignment' |
-    'subtraction' |
-    'identifier' |
-    'equality' |
-    'stringLiteral' |
-    'fatArrow' |
-    'type' |
-    'sum' |
-    'ternaryOperator' |
-    'statementSeparator' |
-    'leftBracket' |
-    'rightBracket' |
-    'leftCurlyBrace' |
-    'rightCurlyBrace' |
-    'endOfFile' |
-    'colon' |
-    'concatenation' |
-    'comma';
+    | 'return'
+    | 'booleanLiteral'
+    | 'number'
+    | 'product'
+    | 'assignment'
+    | 'typedAssignment'
+    | 'subtraction'
+    | 'identifier'
+    | 'equality'
+    | 'stringLiteral'
+    | 'fatArrow'
+    | 'type'
+    | 'sum'
+    | 'ternaryOperator'
+    | 'statementSeparator'
+    | 'leftBracket'
+    | 'rightBracket'
+    | 'leftCurlyBrace'
+    | 'rightCurlyBrace'
+    | 'endOfFile'
+    | 'colon'
+    | 'concatenation'
+    | 'comma';
 
 interface AstInteriorNode {
     type: AstNodeType;
     children: AstNode[];
-};
+}
 
 type AstLeaf = {
     type: AstNodeType;
@@ -43,30 +43,32 @@ type AstLeaf = {
 type AstNode = AstInteriorNode | AstLeaf;
 
 interface AstLeafWithIndex {
-    success: true,
-    newIndex: number,
-    type: AstNodeType,
-    value: string | number | null | undefined,
-};
+    success: true;
+    newIndex: number;
+    type: AstNodeType;
+    value: string | number | null | undefined;
+}
 
 interface AstInteriorNodeWithIndex {
-    success: true,
-    newIndex: number,
-    type: AstNodeType,
-    children: AstNodeWithIndex[],
-};
+    success: true;
+    newIndex: number;
+    type: AstNodeType;
+    children: AstNodeWithIndex[];
+}
 
 type AstNodeWithIndex = AstInteriorNodeWithIndex | AstLeafWithIndex;
 
 interface ParseError {
-    found: string,
-    expected: TokenType[],
-};
+    found: string;
+    expected: TokenType[];
+}
 
 type ParseResultWithIndex = ParseError | AstNodeWithIndex;
 type ParseResult = ParseError | AstNode;
 
-const parseResultIsError = (r: ParseResult | ParseResultWithIndex | AstNodeWithIndex[]): r is ParseError => {
+const parseResultIsError = (
+    r: ParseResult | ParseResultWithIndex | AstNodeWithIndex[]
+): r is ParseError => {
     if (!r) throw debug();
     return 'found' in r && 'expected' in r;
 };
@@ -97,47 +99,72 @@ const stripResultIndexes = (r: ParseResultWithIndex): ParseResult => {
 
 const tokenTypeToAstNodeType = (token: TokenType): AstNodeType | undefined => {
     switch (token) {
-        case 'return': return 'return';
-        case 'number': return 'number';
-        case 'booleanLiteral': return 'booleanLiteral';
-        case 'product': return 'product';
-        case 'assignment': return 'assignment';
-        case 'subtraction': return 'subtraction';
-        case 'identifier': return 'identifier';
-        case 'equality': return 'equality';
-        case 'stringLiteral': return 'stringLiteral';
-        case 'type': return 'type';
-        case 'fatArrow': return 'fatArrow';
-        case 'sum': return 'sum';
-        case 'ternaryOperator': return 'ternaryOperator';
-        case 'statementSeparator': return 'statementSeparator';
-        case 'leftBracket': return 'leftBracket';
-        case 'rightBracket': return 'rightBracket';
-        case 'leftCurlyBrace': return 'leftCurlyBrace';
-        case 'rightCurlyBrace': return 'rightCurlyBrace';
-        case 'endOfFile': return 'endOfFile';
-        case 'colon': return 'colon';
-        case 'comma': return 'comma';
-        case 'invalid': return undefined;
-        case 'concatenation': return 'concatenation';
-        default: return assertNever(token);
+        case 'return':
+            return 'return';
+        case 'number':
+            return 'number';
+        case 'booleanLiteral':
+            return 'booleanLiteral';
+        case 'product':
+            return 'product';
+        case 'assignment':
+            return 'assignment';
+        case 'subtraction':
+            return 'subtraction';
+        case 'identifier':
+            return 'identifier';
+        case 'equality':
+            return 'equality';
+        case 'stringLiteral':
+            return 'stringLiteral';
+        case 'type':
+            return 'type';
+        case 'fatArrow':
+            return 'fatArrow';
+        case 'sum':
+            return 'sum';
+        case 'ternaryOperator':
+            return 'ternaryOperator';
+        case 'statementSeparator':
+            return 'statementSeparator';
+        case 'leftBracket':
+            return 'leftBracket';
+        case 'rightBracket':
+            return 'rightBracket';
+        case 'leftCurlyBrace':
+            return 'leftCurlyBrace';
+        case 'rightCurlyBrace':
+            return 'rightCurlyBrace';
+        case 'endOfFile':
+            return 'endOfFile';
+        case 'colon':
+            return 'colon';
+        case 'comma':
+            return 'comma';
+        case 'invalid':
+            return undefined;
+        case 'concatenation':
+            return 'concatenation';
+        default:
+            return assertNever(token);
     }
 };
 
-
 type BaseParser = (tokens: Token[], index: number) => ParseResultWithIndex;
-type SequenceParser = { n: string, p: (string | BaseParser)[] };
+type SequenceParser = { n: string; p: (string | BaseParser)[] };
 type AlternativeParser = (SequenceParser | string | BaseParser)[];
 
 interface Grammar {
-    [index: string]: SequenceParser | AlternativeParser,
+    [index: string]: SequenceParser | AlternativeParser;
 }
 
-const isSequence = (val: SequenceParser | AlternativeParser | BaseParser | string): val is SequenceParser =>  {
+const isSequence = (
+    val: SequenceParser | AlternativeParser | BaseParser | string
+): val is SequenceParser => {
     if (typeof val === 'string') return false;
     if (!val) throw debug();
     return 'n' in val;
-}
+};
 
 const parseSequence = (
     grammar: Grammar,
@@ -224,11 +251,15 @@ const parseAlternative = (
             const sequence = currentParser;
             currentParser = currentParser.p[currentProgressRef.length];
 
-
             const currentProgressLastItem = last(currentProgressRef);
-            const tokenIndex = currentProgressLastItem !== null ? currentProgressLastItem.newIndex : index;
+            const tokenIndex =
+                currentProgressLastItem !== null ? currentProgressLastItem.newIndex : index;
             // Check if this parser has been completed due to being a successful prefix of a previous alternative
-            if (currentProgressLastItem !== null && !parseResultIsError(currentProgressLastItem) && currentProgressRef.length === sequence.p.length) {
+            if (
+                currentProgressLastItem !== null &&
+                !parseResultIsError(currentProgressLastItem) &&
+                currentProgressRef.length === sequence.p.length
+            ) {
                 const result: AstNodeWithIndex = {
                     newIndex: currentProgressLastItem.newIndex,
                     success: true,
@@ -260,7 +291,10 @@ const parseAlternative = (
             }
 
             // Check if we are done
-            if (!parseResultIsError(currentResult) && currentProgressRef.length == sequence.p.length) {
+            if (
+                !parseResultIsError(currentResult) &&
+                currentProgressRef.length == sequence.p.length
+            ) {
                 const cachedSuccess = last(currentProgressRef);
                 if (cachedSuccess === null) throw debug();
                 const result: AstNodeWithIndex = {
@@ -275,7 +309,11 @@ const parseAlternative = (
 
         // Now we have a parse result and the index it was found at. Push it into the progress cache
         // for each alternative that has parsed up to that index and expects the next item to be of that type.
-        for (let progressCacheIndex = alternativeIndex; progressCacheIndex < alternatives.length; progressCacheIndex++) {
+        for (
+            let progressCacheIndex = alternativeIndex;
+            progressCacheIndex < alternatives.length;
+            progressCacheIndex++
+        ) {
             const parser = alternatives[progressCacheIndex];
             const progressRef = progressCache[progressCacheIndex];
             if (!parseResultIsError(progressRef) && progressRef.length == currentIndex) {
@@ -306,32 +344,38 @@ const parseAlternative = (
         }
     }
 
-    progressCache.map((error: (ParseError | AstNodeWithIndex[])) => {
+    progressCache.map((error: ParseError | AstNodeWithIndex[]) => {
         if (!parseResultIsError(error)) {
-            debugger
-            parseAlternative(
-                grammar,
-                alternatives,
-                tokens,
-                index
-            )
+            debugger;
+            parseAlternative(grammar, alternatives, tokens, index);
             throw debug();
         }
         return error.found;
-    })
+    });
     return {
-        found: unique(progressCache.map(error => {
-            if (!parseResultIsError(error)) throw debug();
-            return error.found;
-        })).join('/'),
-        expected: unique(flatten(progressCache.map(error => {
-            if (!parseResultIsError(error)) throw debug();
-            return error.expected;
-        }))),
+        found: unique(
+            progressCache.map(error => {
+                if (!parseResultIsError(error)) throw debug();
+                return error.found;
+            })
+        ).join('/'),
+        expected: unique(
+            flatten(
+                progressCache.map(error => {
+                    if (!parseResultIsError(error)) throw debug();
+                    return error.expected;
+                })
+            )
+        ),
     };
 };
 
-export const parse = (grammar: Grammar, firstRule: string, tokens: Token[], index: number): ParseResultWithIndex => {
+export const parse = (
+    grammar: Grammar,
+    firstRule: string,
+    tokens: Token[],
+    index: number
+): ParseResultWithIndex => {
     const childrenParser = grammar[firstRule];
     if (!childrenParser) throw debug();
     if (typeof childrenParser === 'string') {
@@ -360,12 +404,12 @@ const terminal = (terminal: TokenType) => (tokens: Token[], index): ParseResultW
                 newIndex: index + 1,
                 value: tokens[index].value,
                 type: astNodeType,
-            }
+            };
         } else {
             return {
                 expected: [terminal],
                 found: tokens[index].type,
-            }
+            };
         }
     }
 
@@ -373,7 +417,7 @@ const terminal = (terminal: TokenType) => (tokens: Token[], index): ParseResultW
         expected: [terminal],
         found: tokens[index].type,
     };
-}
+};
 
 const endOfInput = (tokens: Token[], index: number): ParseResultWithIndex => {
     if (index == tokens.length) {
@@ -382,14 +426,14 @@ const endOfInput = (tokens: Token[], index: number): ParseResultWithIndex => {
             newIndex: index + 1,
             value: 'endOfFile',
             type: 'endOfFile',
-        }
+        };
     } else {
         return {
             expected: ['endOfFile'],
             found: tokens[index].type,
-        }
+        };
     }
-}
+};
 
 export {
     terminal,

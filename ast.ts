@@ -76,7 +76,7 @@ export type Product = {
 export type BooleanLiteral = {
     kind: 'booleanLiteral';
     value: boolean;
-}
+};
 
 export type StringLiteral = {
     kind: 'stringLiteral';
@@ -90,19 +90,19 @@ export type Concatenation = {
 };
 
 export type LoweredAst =
-    ReturnStatement |
-    Number |
-    Ternary |
-    Identifier |
-    Equality |
-    TypedAssignment |
-    FunctionCall |
-    FunctionLiteral |
-    Statement |
-    Subtraction |
-    Addition |
-    Product |
-    BooleanLiteral |
-    StringEquality |
-    StringLiteral |
-    Concatenation;
+    | ReturnStatement
+    | Number
+    | Ternary
+    | Identifier
+    | Equality
+    | TypedAssignment
+    | FunctionCall
+    | FunctionLiteral
+    | Statement
+    | Subtraction
+    | Addition
+    | Product
+    | BooleanLiteral
+    | StringEquality
+    | StringLiteral
+    | Concatenation;
