@@ -15,7 +15,7 @@ export default async (command): Promise<ExecutionResult> => {
             };
         } else {
             return {
-                error: `Couldn't get exit code: ${e}`
+                error: `Couldn't get exit code: ${e}`,
             };
         }
     }

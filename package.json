@@ -6,9 +6,7 @@
   "license": "UNLICENSED",
   "main": "built/index.js",
   "ava": {
-    "files": [
-      "built/test.js"
-    ]
+    "files": ["built/test.js"]
   },
   "scripts": {
     "test": "rimraf built && npm run prettier-check && tsc && ava --verbose",
@@ -16,7 +14,7 @@
     "tsc-watch": "tsc --watch",
     "test-debug": "tsc && inspect --debug-exception node_modules/ava/profile.js built/test.js",
     "cloc": "cloc --exclude-dir=node_modules,built .",
-    "prettier-check": "prettier --list-different **/*.ts"
+    "prettier-check": "prettier --config prettier-config.json --list-different **/*.ts"
   },
   "author": "Drew Gross",
   "dependencies": {

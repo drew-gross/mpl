@@ -1,1 +1,4 @@
-export default (): never => { debugger; throw 'debugger'; };
+export default (): never => {
+    debugger;
+    throw 'debugger';
+};
