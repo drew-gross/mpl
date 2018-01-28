@@ -72,9 +72,9 @@ const lex = (input: string): Token[] => {
             toString: x => x,
         },
         {
-            token: ';|\\n',
+            token: ';',
             type: 'statementSeparator',
-            toString: _ => '\n',
+            toString: _ => ';\n',
         },
         {
             token: '=>',
@@ -163,7 +163,7 @@ const lex = (input: string): Token[] => {
     let tokens: Token[] = [];
     while (input.length > 0) {
         for (const tokenSpec of tokenSpecs) {
-            const match = input.match(RegExp(`^(${tokenSpec.token})[ \\t]*`));
+            const match = input.match(RegExp(`^(${tokenSpec.token})[ \\t\\n]*`));
             if (!match) continue;
             input = input.slice(match[0].length);
             const action = tokenSpec.action || (() => null);

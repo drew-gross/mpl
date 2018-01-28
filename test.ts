@@ -227,6 +227,10 @@ test('ast for assignment then return', t => {
                                 type: 'number',
                                 value: 10,
                             },
+                            {
+                                type: 'statementSeparator',
+                                value: null,
+                            },
                         ],
                     },
                 ],
@@ -238,14 +242,9 @@ test('ast for assignment then return', t => {
         ],
     };
     const astWithSemicolon = removeBracketsFromAst(
-        stripResultIndexes(parse(grammar, 'program', lex('constThree = a: Integer => 3; return 10'), 0))
+        stripResultIndexes(parse(grammar, 'program', lex('constThree = a: Integer => 3; return 10;'), 0))
     );
-    const astWithNewline = removeBracketsFromAst(
-        stripResultIndexes(parse(grammar, 'program', lex('constThree = a: Integer => 3\n return 10'), 0))
-    );
-
     t.deepEqual(astWithSemicolon, expected);
-    t.deepEqual(astWithNewline, expected);
 });
 
 test('lowering of bracketedExpressions', t => {
@@ -408,9 +407,9 @@ test('assign function and call it', compileAndRun, {
 
 test('multiple variables called', compileAndRun, {
     source: `
-const11 = a: Integer => 11
-const12 = a: Integer => 12
-return const11(1) * const12(2)`,
+const11 = a: Integer => 11;
+const12 = a: Integer => 12;
+return const11(1) * const12(2);`,
     expectedExitCode: 132,
 });
 
@@ -513,36 +512,36 @@ test('parse error', compileAndRun, {
 
 test('ternary in function false', compileAndRun, {
     source: `
-ternary = a: Boolean => a ? 9 : 5
-return ternary(false)`,
+ternary = a: Boolean => a ? 9 : 5;
+return ternary(false);`,
     expectedExitCode: 5,
 });
 
 test('ternary in function then subtract', compileAndRun, {
     source: `
-ternaryFunc = a:Boolean => a ? 9 : 3
-return ternaryFunc(true) - ternaryFunc(false)`,
+ternaryFunc = a:Boolean => a ? 9 : 3;
+return ternaryFunc(true) - ternaryFunc(false);`,
     expectedExitCode: 6,
 });
 
 test('equality comparison true', compileAndRun, {
     source: `
-isFive = five: Integer => five == 5 ? 2 : 7
-return isFive(5)`,
+isFive = five: Integer => five == 5 ? 2 : 7;
+return isFive(5);`,
     expectedExitCode: 2,
 });
 
 test('equality comparison false', compileAndRun, {
     source: `
-isFive = notFive: Integer => notFive == 5 ? 2 : 7
-return isFive(11)`,
+isFive = notFive: Integer => notFive == 5 ? 2 : 7;
+return isFive(11);`,
     expectedExitCode: 7,
 });
 
 test('factorial', compileAndRun, {
     source: `
-factorial = x: Integer => x == 1 ? 1 : x * factorial(x - 1)
-return factorial(5)`,
+factorial = x: Integer => x == 1 ? 1 : x * factorial(x - 1);
+return factorial(5);`,
     expectedExitCode: 120,
 });
 
@@ -563,8 +562,8 @@ test('boolean literal true', compileAndRun, {
 
 test('wrong type for arg', compileAndRun, {
     source: `
-boolFunc = a: Boolean => 1
-return boolFunc(7)`,
+boolFunc = a: Boolean => 1;
+return boolFunc(7);`,
     expectedTypeErrors: ['You passed a Integer as an argument to boolFunc. It expects a Boolean'],
 });
 
@@ -591,25 +590,25 @@ test('many temporaries, spill to ram', compileAndRun, {
 
 test('multi statement function with locals', compileAndRun, {
     source: `
-quadrupleWithLocal = a: Integer => { b: Integer = 2 * a; return 2 * b }
+quadrupleWithLocal = a: Integer => { b: Integer = 2 * a; return 2 * b; };
 return quadrupleWithLocal(5);`,
     expectedExitCode: 20,
 });
 
 test('mutil statement function with type error', compileAndRun, {
     source: `
-boolTimesInt = a: Integer => { b: Boolean = false; return a * b }
+boolTimesInt = a: Integer => { b: Boolean = false; return a * b; };
 return boolTimesInt(1);`,
     expectedTypeErrors: ['Right hand side of product was not integer'],
 });
 
 // TODO: rethink statment separators
-test.failing('multi statement function on multiple lines', compileAndRun, {
+test('multi statement function on multiple lines', compileAndRun, {
     source: `
 quadrupleWithLocal = a: Integer => {
-    b: Integer = 2 * a
-    return 2 * b
-}
+    b: Integer = 2 * a;
+    return 2 * b;
+};
 
 return quadrupleWithLocal(5);`,
     expectedExitCode: 20,
@@ -642,38 +641,38 @@ test('string copy', compileAndRun, {
 });
 
 test('string equality: equal', compileAndRun, {
-    source: `str1 = "a"
-str2 = "a"
-return str1 == str2 ? 1 : 2
+    source: `str1 = "a";
+str2 = "a";
+return str1 == str2 ? 1 : 2;
 `,
     expectedExitCode: 1,
 });
 
 test('string equality: inequal same length', compileAndRun, {
-    source: `str1 = "a"
-str2 = "b"
-return str1 == str2 ? 1 : 2
+    source: `str1 = "a";
+str2 = "b";
+return str1 == str2 ? 1 : 2;
 `,
     expectedExitCode: 2,
 });
 
 test('string equality: inequal different length', compileAndRun, {
-    source: `str1 = "aa"
-str2 = "a"
-return str1 == str2 ? 7 : 2
+    source: `str1 = "aa";
+str2 = "a";
+return str1 == str2 ? 7 : 2;
 `,
     expectedExitCode: 2,
 });
 
 test('wrong type global', compileAndRun, {
-    source: `str: String = 5; return length(str)`,
+    source: `str: String = 5; return length(str);`,
     expectedTypeErrors: ['You tried to assign a Integer to "str", which has type String'],
 });
 
 test('string concatenation', compileAndRun, {
-    source: `str1: String = "a"
-str2: String = "b"
-return str1 ++ str2 == "ab" ? 5 : 10`,
+    source: `str1: String = "a";
+str2: String = "b";
+return str1 ++ str2 == "ab" ? 5 : 10;`,
     expectedExitCode: 5,
 });
 
@@ -684,22 +683,27 @@ test('concatenate and get length then subtract', compileAndRun, {
 
 // TODO: Problem extracting variables
 test('semi-complex string concatenation', compileAndRun, {
-    source: `lenFunc = dummy: Integer => { str1 = "abc"; str2 = str1 ++ str1; return str2 == "abcabc" ? 40 : 50 }
-return lenFunc(5)`,
+    source: `
+lenFunc = dummy: Integer => {
+    str1 = "abc";
+    str2 = str1 ++ str1;
+    return str2 == "abcabc" ? 40 : 50;
+};
+return lenFunc(5);`,
     expectedExitCode: 40,
 });
 
 // TODO: causes bad behaviour in parser, takes forever
 test.failing('complex string concatenation', compileAndRun, {
     source: `lenFunc = dummy: Integer => {
-    str1 = "abc"
-    str2 = "def"
-    str3 = "abc"
-    concat1 = str1 ++ str2 ++ str3
-    concat2 = str3 ++ str2 ++ str3
-    return concat1 == concat2 ? (length(str1 ++ str2)) : 99
-}
-return lenFunc(5)`,
+    str1 = "abc";
+    str2 = "def";
+    str3 = "abc";
+    concat1 = str1 ++ str2 ++ str3;
+    concat2 = str3 ++ str2 ++ str3;
+    return concat1 == concat2 ? (length(str1 ++ str2)) : 99;
+};
+return lenFunc(5);`,
     expectedExitCode: 6,
 });
 
@@ -709,6 +713,6 @@ test('parsing fails for extra invalid tokens', compileAndRun, {
 });
 
 test('addition', compileAndRun, {
-    source: `return length("foo") + 5`,
+    source: `return length("foo") + 5;`,
     expectedExitCode: 8,
 });
