@@ -3,7 +3,15 @@ import unique from './util/list/unique.js';
 import debug from './util/debug.js';
 import { lex, Token } from './lex.js';
 import grammar from './grammar.js';
-import { ParseResult, AstNode, AstInteriorNode, AstLeaf, parseResultIsError, parse } from './parser-combinator.js';
+import {
+    ParseResult,
+    AstNode,
+    AstInteriorNode,
+    AstLeaf,
+    parseResultIsError,
+    parse,
+    stripResultIndexes,
+} from './parser-combinator.js';
 import { Type, VariableDeclaration, IdentifierDict, Function, MemoryCategory, BackendInputs } from './api.js';
 import * as Ast from './ast.js';
 
@@ -13,21 +21,6 @@ type VariableDeclarationWithNoMemory = {
 };
 
 let tokensToString = tokens => tokens.map(token => token.string).join('');
-
-// TODO: Pretty sure this is redundant with stripNodeIndexes
-const flattenAst = (ast: AstNode): any => {
-    if ((ast as AstInteriorNode).children) {
-        return {
-            type: ast.type,
-            children: (ast as AstInteriorNode).children.map(flattenAst),
-        };
-    } else {
-        return {
-            type: ast.type,
-            value: (ast as AstLeaf).value,
-        };
-    }
-};
 
 const repairAssociativity = (nodeTypeToRepair, ast) => {
     if (!ast) debug();
@@ -257,7 +250,7 @@ const getMemoryCategory = (ast): MemoryCategory => {
 const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[1], ast, true);
 
 const parseMpl = (tokens: Token[]): { ast?: any; parseErrors: string[] } => {
-    const parseResult: ParseResult = parse(grammar, 'program', tokens, 0);
+    const parseResult: ParseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
 
     if (parseResultIsError(parseResult)) {
         const errorMessage = `Expected ${parseResult.expected.join(' or ')}, found ${parseResult.found}`;
@@ -266,7 +259,7 @@ const parseMpl = (tokens: Token[]): { ast?: any; parseErrors: string[] } => {
             parseErrors: [errorMessage],
         };
     }
-    let ast = flattenAst(parseResult);
+    let ast = parseResult;
 
     // repair associativity of addition and subtraction
     ast = repairAssociativity('subtraction1', ast);
