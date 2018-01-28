@@ -3,22 +3,8 @@ import unique from './util/list/unique.js';
 import debug from './util/debug.js';
 import { lex, Token } from './lex.js';
 import grammar from './grammar.js';
-import {
-    ParseResult,
-    AstNode,
-    AstInteriorNode,
-    AstLeaf,
-    parseResultIsError,
-    parse,
-} from './parser-combinator.js';
-import {
-    Type,
-    VariableDeclaration,
-    IdentifierDict,
-    Function,
-    MemoryCategory,
-    BackendInputs,
-} from './api.js';
+import { ParseResult, AstNode, AstInteriorNode, AstLeaf, parseResultIsError, parse } from './parser-combinator.js';
+import { Type, VariableDeclaration, IdentifierDict, Function, MemoryCategory, BackendInputs } from './api.js';
 import * as Ast from './ast.js';
 
 type VariableDeclarationWithNoMemory = {
@@ -91,9 +77,7 @@ const transformAst = (nodeType, f, ast: AstNode, recurseOnNew: boolean) => {
             } else {
                 return {
                     type: newNode.type,
-                    children: newNode.children.map(child =>
-                        transformAst(nodeType, f, child, recurseOnNew)
-                    ),
+                    children: newNode.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
                 };
             }
         } else {
@@ -102,9 +86,7 @@ const transformAst = (nodeType, f, ast: AstNode, recurseOnNew: boolean) => {
     } else if ('children' in ast) {
         return {
             type: ast.type,
-            children: (ast as AstInteriorNode).children.map(child =>
-                transformAst(nodeType, f, child, recurseOnNew)
-            ),
+            children: (ast as AstInteriorNode).children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
         };
     } else {
         return ast;
@@ -155,10 +137,8 @@ const statementTreeToFunction = (functionAst: FunctionAst, knownIdentifiers): Fu
     }
     const argumentIdentifier: IdentifierDict = {};
     if (functionAst.argument) {
-        const argumentName = ((functionAst.argument as AstInteriorNode).children[0] as AstLeaf)
-            .value as string;
-        const argumentTypeName = ((functionAst.argument as AstInteriorNode).children[2] as AstLeaf)
-            .value as string;
+        const argumentName = ((functionAst.argument as AstInteriorNode).children[0] as AstLeaf).value as string;
+        const argumentTypeName = ((functionAst.argument as AstInteriorNode).children[2] as AstLeaf).value as string;
         argumentIdentifier[argumentName] = { name: argumentTypeName } as any;
         functionArgument = {
             name: argumentName,
@@ -184,13 +164,10 @@ const statementTreeToFunction = (functionAst: FunctionAst, knownIdentifiers): Fu
     variables.forEach((variable: VariableDeclaration, index) => {
         const rhsIndex = functionStatements[index].type === 'assignment' ? 2 : 4;
         const statement = functionStatements[index] as AstInteriorNode;
-        variablesAsIdentifiers[variable.name] = typeOfExpression(
-            statement.children[rhsIndex] as any,
-            {
-                ...knownIdentifiers,
-                ...variablesAsIdentifiers,
-            }
-        ).type;
+        variablesAsIdentifiers[variable.name] = typeOfExpression(statement.children[rhsIndex] as any, {
+            ...knownIdentifiers,
+            ...variablesAsIdentifiers,
+        }).type;
     });
 
     return {
@@ -277,16 +254,13 @@ const getMemoryCategory = (ast): MemoryCategory => {
     }
 };
 
-const removeBracketsFromAst = ast =>
-    transformAst('bracketedExpression', node => node.children[1], ast, true);
+const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[1], ast, true);
 
 const parseMpl = (tokens: Token[]): { ast?: any; parseErrors: string[] } => {
     const parseResult: ParseResult = parse(grammar, 'program', tokens, 0);
 
     if (parseResultIsError(parseResult)) {
-        const errorMessage = `Expected ${parseResult.expected.join(' or ')}, found ${
-            parseResult.found
-        }`;
+        const errorMessage = `Expected ${parseResult.expected.join(' or ')}, found ${parseResult.found}`;
         return {
             ast: {},
             parseErrors: [errorMessage],
@@ -299,12 +273,7 @@ const parseMpl = (tokens: Token[]): { ast?: any; parseErrors: string[] } => {
     ast = repairAssociativity('addition1', ast);
 
     // Product 3 -> product 1
-    ast = transformAst(
-        'product3',
-        node => ({ type: 'product1', children: node.children }),
-        ast,
-        true
-    );
+    ast = transformAst('product3', node => ({ type: 'product1', children: node.children }), ast, true);
 
     // Product 2 -> product 1
     ast = transformAst(
@@ -389,20 +358,14 @@ const countTemporariesInExpression = ast => {
         case 'equality':
             return (
                 1 +
-                Math.max(
-                    countTemporariesInExpression(ast.children[0]),
-                    countTemporariesInExpression(ast.children[2])
-                )
+                Math.max(countTemporariesInExpression(ast.children[0]), countTemporariesInExpression(ast.children[2]))
             );
         case 'program':
             return countTemporariesInExpression(ast.children[0]);
         case 'concatenation':
             return (
                 2 +
-                Math.max(
-                    countTemporariesInExpression(ast.children[0]),
-                    countTemporariesInExpression(ast.children[2])
-                )
+                Math.max(countTemporariesInExpression(ast.children[0]), countTemporariesInExpression(ast.children[2]))
             );
         default:
             debug();
@@ -421,10 +384,7 @@ const typesAreEqual = (a, b) => {
     return true;
 };
 
-export const typeOfExpression = (
-    stuff,
-    knownIdentifiers: IdentifierDict
-): { type: Type; errors: string[] } => {
+export const typeOfExpression = (stuff, knownIdentifiers: IdentifierDict): { type: Type; errors: string[] } => {
     if (!stuff) debug();
     const { type, children, value } = stuff;
     if (!type) debug();
@@ -495,9 +455,7 @@ export const typeOfExpression = (
                 return {
                     type: {} as any,
                     errors: [
-                        `You tried to call ${functionName}, but it's not a function (it's a ${
-                            functionName.type
-                        })`,
+                        `You tried to call ${functionName}, but it's not a function (it's a ${functionName.type})`,
                     ],
                 };
             }
@@ -506,9 +464,7 @@ export const typeOfExpression = (
                 return {
                     type: {} as any,
                     errors: [
-                        `You passed a ${
-                            argType.type.name
-                        } as an argument to ${functionName}. It expects a ${
+                        `You passed a ${argType.type.name} as an argument to ${functionName}. It expects a ${
                             functionType.arg.type.name
                         }`,
                     ],
@@ -534,9 +490,7 @@ export const typeOfExpression = (
             ) {
                 return {
                     type: {} as any,
-                    errors: conditionType.errors
-                        .concat(trueBranchType.errors)
-                        .concat(falseBranchType.errors),
+                    errors: conditionType.errors.concat(trueBranchType.errors).concat(falseBranchType.errors),
                 };
             }
             if (!typesAreEqual(conditionType.type, { name: 'Boolean' })) {
@@ -572,10 +526,7 @@ export const typeOfExpression = (
     }
 };
 
-const typeCheckStatement = (
-    { type, children },
-    knownIdentifiers
-): { errors: string[]; newIdentifiers: any } => {
+const typeCheckStatement = ({ type, children }, knownIdentifiers): { errors: string[]; newIdentifiers: any } => {
     switch (type) {
         case 'returnStatement': {
             const result = typeOfExpression(children[1], knownIdentifiers);
@@ -609,9 +560,7 @@ const typeCheckStatement = (
             if (!typesAreEqual(rightType.type, leftType)) {
                 return {
                     errors: [
-                        `You tried to assign a ${
-                            rightType.type.name
-                        } to "${varName}", which has type ${leftType.name}`,
+                        `You tried to assign a ${rightType.type.name} to "${varName}", which has type ${leftType.name}`,
                     ],
                     newIdentifiers: {},
                 };
@@ -632,10 +581,7 @@ const builtinIdentifiers: IdentifierDict = {
     },
 };
 
-const typeCheckProgram = (
-    { statements, argument }: Function,
-    previouslyKnownIdentifiers: IdentifierDict
-) => {
+const typeCheckProgram = ({ statements, argument }: Function, previouslyKnownIdentifiers: IdentifierDict) => {
     let knownIdentifiers = Object.assign(builtinIdentifiers, previouslyKnownIdentifiers);
 
     if (argument) {
@@ -645,10 +591,7 @@ const typeCheckProgram = (
     const allErrors: any = [];
     statements.forEach(statement => {
         if (allErrors.length == 0) {
-            const { errors, newIdentifiers } = typeCheckStatement(
-                statement as any,
-                knownIdentifiers
-            );
+            const { errors, newIdentifiers } = typeCheckStatement(statement as any, knownIdentifiers);
             for (const identifier in newIdentifiers) {
                 knownIdentifiers[identifier] = newIdentifiers[identifier].type;
             }
@@ -854,9 +797,7 @@ const compile = (source: string): FrontendOutput => {
         ...knownIdentifiers,
         ...programTypeCheck.identifiers,
     };
-    let typeErrors = functionsWithStatementList.map(
-        f => typeCheckProgram(f, knownIdentifiers).typeErrors
-    );
+    let typeErrors = functionsWithStatementList.map(f => typeCheckProgram(f, knownIdentifiers).typeErrors);
     typeErrors.push(programTypeCheck.typeErrors);
 
     typeErrors = flatten(typeErrors);

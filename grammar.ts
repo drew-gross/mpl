@@ -43,10 +43,7 @@ export default {
         { n: 'assignment', p: [identifier, assignment, 'expression'] },
     ],
     expression: ['ternary'],
-    ternary: [
-        { n: 'ternary', p: ['addition', ternaryOperator, 'addition', colon, 'addition'] },
-        'addition',
-    ],
+    ternary: [{ n: 'ternary', p: ['addition', ternaryOperator, 'addition', colon, 'addition'] }, 'addition'],
     addition: [{ n: 'addition1', p: ['subtraction', plus, 'addition'] }, 'subtraction'],
     subtraction: [{ n: 'subtraction1', p: ['product', minus, 'subtraction'] }, 'product'],
     product: [{ n: 'product1', p: ['equality', times, 'product'] }, 'equality'],

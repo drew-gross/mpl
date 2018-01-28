@@ -66,9 +66,7 @@ interface ParseError {
 type ParseResultWithIndex = ParseError | AstNodeWithIndex;
 type ParseResult = ParseError | AstNode;
 
-const parseResultIsError = (
-    r: ParseResult | ParseResultWithIndex | AstNodeWithIndex[]
-): r is ParseError => {
+const parseResultIsError = (r: ParseResult | ParseResultWithIndex | AstNodeWithIndex[]): r is ParseError => {
     if (!r) throw debug();
     return 'found' in r && 'expected' in r;
 };
@@ -158,9 +156,7 @@ interface Grammar {
     [index: string]: SequenceParser | AlternativeParser;
 }
 
-const isSequence = (
-    val: SequenceParser | AlternativeParser | BaseParser | string
-): val is SequenceParser => {
+const isSequence = (val: SequenceParser | AlternativeParser | BaseParser | string): val is SequenceParser => {
     if (typeof val === 'string') return false;
     if (!val) throw debug();
     return 'n' in val;
@@ -252,8 +248,7 @@ const parseAlternative = (
             currentParser = currentParser.p[currentProgressRef.length];
 
             const currentProgressLastItem = last(currentProgressRef);
-            const tokenIndex =
-                currentProgressLastItem !== null ? currentProgressLastItem.newIndex : index;
+            const tokenIndex = currentProgressLastItem !== null ? currentProgressLastItem.newIndex : index;
             // Check if this parser has been completed due to being a successful prefix of a previous alternative
             if (
                 currentProgressLastItem !== null &&
@@ -291,10 +286,7 @@ const parseAlternative = (
             }
 
             // Check if we are done
-            if (
-                !parseResultIsError(currentResult) &&
-                currentProgressRef.length == sequence.p.length
-            ) {
+            if (!parseResultIsError(currentResult) && currentProgressRef.length == sequence.p.length) {
                 const cachedSuccess = last(currentProgressRef);
                 if (cachedSuccess === null) throw debug();
                 const result: AstNodeWithIndex = {
@@ -370,12 +362,7 @@ const parseAlternative = (
     };
 };
 
-export const parse = (
-    grammar: Grammar,
-    firstRule: string,
-    tokens: Token[],
-    index: number
-): ParseResultWithIndex => {
+export const parse = (grammar: Grammar, firstRule: string, tokens: Token[], index: number): ParseResultWithIndex => {
     const childrenParser = grammar[firstRule];
     if (!childrenParser) throw debug();
     if (typeof childrenParser === 'string') {

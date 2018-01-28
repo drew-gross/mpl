@@ -62,117 +62,104 @@ test('ast for single number', t => {
 });
 
 test('ast for number in brackets', t => {
-    t.deepEqual(
-        removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(' return (5)'), 0))),
-        {
-            type: 'program' as any,
-            children: [
-                {
-                    type: 'returnStatement' as any,
-                    children: [
-                        {
-                            type: 'return' as any,
-                            value: null,
-                        },
-                        {
-                            type: 'number' as any,
-                            value: 5,
-                        },
-                    ],
-                },
-                {
-                    type: 'endOfFile' as any,
-                    value: 'endOfFile',
-                },
-            ],
-        }
-    );
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(' return (5)'), 0))), {
+        type: 'program' as any,
+        children: [
+            {
+                type: 'returnStatement' as any,
+                children: [
+                    {
+                        type: 'return' as any,
+                        value: null,
+                    },
+                    {
+                        type: 'number' as any,
+                        value: 5,
+                    },
+                ],
+            },
+            {
+                type: 'endOfFile' as any,
+                value: 'endOfFile',
+            },
+        ],
+    });
 });
 
 test('ast for number in double brackets', t => {
-    t.deepEqual(
-        removeBracketsFromAst(
-            stripResultIndexes(parse(grammar, 'program', lex('return ((20))'), 0))
-        ),
-        {
-            type: 'program' as any,
-            children: [
-                {
-                    type: 'returnStatement' as any,
-                    children: [
-                        {
-                            type: 'return' as any,
-                            value: null,
-                        },
-                        {
-                            type: 'number' as any,
-                            value: 20,
-                        },
-                    ],
-                },
-                {
-                    type: 'endOfFile' as any,
-                    value: 'endOfFile',
-                },
-            ],
-        }
-    );
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex('return ((20))'), 0))), {
+        type: 'program' as any,
+        children: [
+            {
+                type: 'returnStatement' as any,
+                children: [
+                    {
+                        type: 'return' as any,
+                        value: null,
+                    },
+                    {
+                        type: 'number' as any,
+                        value: 20,
+                    },
+                ],
+            },
+            {
+                type: 'endOfFile' as any,
+                value: 'endOfFile',
+            },
+        ],
+    });
 });
 
 test('ast for product with brackets', t => {
-    t.deepEqual(
-        removeBracketsFromAst(
-            stripResultIndexes(parse(grammar, 'program', lex('return 3 * (4 * 5)'), 0))
-        ),
-        {
-            type: 'program',
-            children: [
-                {
-                    type: 'returnStatement',
-                    children: [
-                        {
-                            type: 'return',
-                            value: null,
-                        },
-                        {
-                            type: 'product1',
-                            children: [
-                                {
-                                    type: 'number',
-                                    value: 3,
-                                },
-                                {
-                                    type: 'product',
-                                    value: null,
-                                },
-                                {
-                                    type: 'product1',
-                                    children: [
-                                        {
-                                            type: 'number',
-                                            value: 4,
-                                        },
-                                        {
-                                            type: 'product',
-                                            value: null,
-                                        },
-                                        {
-                                            type: 'number',
-                                            value: 5,
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    type: 'endOfFile',
-                    value: 'endOfFile',
-                },
-            ],
-        }
-    );
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex('return 3 * (4 * 5)'), 0))), {
+        type: 'program',
+        children: [
+            {
+                type: 'returnStatement',
+                children: [
+                    {
+                        type: 'return',
+                        value: null,
+                    },
+                    {
+                        type: 'product1',
+                        children: [
+                            {
+                                type: 'number',
+                                value: 3,
+                            },
+                            {
+                                type: 'product',
+                                value: null,
+                            },
+                            {
+                                type: 'product1',
+                                children: [
+                                    {
+                                        type: 'number',
+                                        value: 4,
+                                    },
+                                    {
+                                        type: 'product',
+                                        value: null,
+                                    },
+                                    {
+                                        type: 'number',
+                                        value: 5,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                type: 'endOfFile',
+                value: 'endOfFile',
+            },
+        ],
+    });
 });
 
 test('ast for assignment then return', t => {
@@ -251,14 +238,10 @@ test('ast for assignment then return', t => {
         ],
     };
     const astWithSemicolon = removeBracketsFromAst(
-        stripResultIndexes(
-            parse(grammar, 'program', lex('constThree = a: Integer => 3; return 10'), 0)
-        )
+        stripResultIndexes(parse(grammar, 'program', lex('constThree = a: Integer => 3; return 10'), 0))
     );
     const astWithNewline = removeBracketsFromAst(
-        stripResultIndexes(
-            parse(grammar, 'program', lex('constThree = a: Integer => 3\n return 10'), 0)
-        )
+        stripResultIndexes(parse(grammar, 'program', lex('constThree = a: Integer => 3\n return 10'), 0))
     );
 
     t.deepEqual(astWithSemicolon, expected);
@@ -602,8 +585,7 @@ test('return local integer', compileAndRun, {
 });
 
 test('many temporaries, spill to ram', compileAndRun, {
-    source:
-        'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
+    source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
     expectedExitCode: 1,
 });
 
