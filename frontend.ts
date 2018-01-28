@@ -12,7 +12,15 @@ import {
     parse,
     stripResultIndexes,
 } from './parser-combinator.js';
-import { Type, VariableDeclaration, IdentifierDict, Function, MemoryCategory, BackendInputs } from './api.js';
+import {
+    Type,
+    VariableDeclaration,
+    IdentifierDict,
+    Function,
+    MemoryCategory,
+    BackendInputs,
+    ParseError,
+} from './api.js';
 import * as Ast from './ast.js';
 
 type VariableDeclarationWithNoMemory = {
@@ -249,15 +257,12 @@ const getMemoryCategory = (ast): MemoryCategory => {
 
 const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[1], ast, true);
 
-const parseMpl = (tokens: Token[]): { ast?: any; parseErrors: string[] } => {
+const parseMpl = (tokens: Token[]): AstNode | ParseError[] => {
     const parseResult: ParseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
 
     if (parseResultIsError(parseResult)) {
         const errorMessage = `Expected ${parseResult.expected.join(' or ')}, found ${parseResult.found}`;
-        return {
-            ast: {},
-            parseErrors: [errorMessage],
-        };
+        return [errorMessage];
     }
     let ast = parseResult;
 
@@ -314,10 +319,7 @@ const parseMpl = (tokens: Token[]): { ast?: any; parseErrors: string[] } => {
     // associativity of brackets.
     ast = removeBracketsFromAst(ast);
 
-    return {
-        ast,
-        parseErrors: [],
-    };
+    return ast;
 };
 
 const countTemporariesInExpression = ast => {
@@ -663,7 +665,7 @@ const fixOperators = (knownIdentifiers, statement) => {
     return typedAssignment;
 };
 
-type FrontendOutput = BackendInputs | { parseErrors: string[] } | { typeErrors: string[] };
+type FrontendOutput = BackendInputs | { parseErrors: ParseError[] } | { typeErrors: string[] };
 
 const lowerAst = (ast: any): Ast.LoweredAst => {
     if (!ast) debug();
@@ -760,11 +762,12 @@ const lowerAst = (ast: any): Ast.LoweredAst => {
 
 const compile = (source: string): FrontendOutput => {
     const tokens = lex(source);
-    const { ast, parseErrors } = parseMpl(tokens);
+    const parseResult = parseMpl(tokens);
 
-    if (parseErrors.length > 0) {
-        return { parseErrors };
+    if (Array.isArray(parseResult)) {
+        return { parseErrors: parseResult };
     }
+    const ast = parseResult;
 
     const { functions, program } = extractFunctions(ast);
     const stringLiterals = extractStringLiterals(ast);

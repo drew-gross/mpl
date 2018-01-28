@@ -249,39 +249,36 @@ test('ast for assignment then return', t => {
 
 test('lowering of bracketedExpressions', t => {
     t.deepEqual(parseMpl(lex('return (8 * ((7)))')), {
-        parseErrors: [],
-        ast: {
-            type: 'program',
-            children: [
-                {
-                    type: 'returnStatement',
-                    children: [
-                        {
-                            type: 'return',
-                            value: null,
-                        },
-                        {
-                            type: 'product',
-                            children: [
-                                {
-                                    type: 'number',
-                                    value: 8,
-                                },
-                                {
-                                    type: 'number',
-                                    value: 7,
-                                },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    type: 'endOfFile',
-                    value: 'endOfFile',
-                },
-            ],
-        },
-    });
+        type: 'program',
+        children: [
+            {
+                type: 'returnStatement',
+                children: [
+                    {
+                        type: 'return',
+                        value: null,
+                    },
+                    {
+                        type: 'product',
+                        children: [
+                            {
+                                type: 'number',
+                                value: 8,
+                            },
+                            {
+                                type: 'number',
+                                value: 7,
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                type: 'endOfFile',
+                value: 'endOfFile',
+            },
+        ],
+    } as any);
 });
 
 test('bare return', compileAndRun, {
@@ -298,47 +295,44 @@ test('double product', compileAndRun, {
     source: 'return 5 * 3 * 4',
     expectedExitCode: 60,
     expectedAst: {
-        parseErrors: [],
-        ast: {
-            type: 'program',
-            children: [
-                {
-                    type: 'returnStatement',
-                    children: [
-                        {
-                            type: 'return',
-                            value: null,
-                        },
-                        {
-                            type: 'product',
-                            children: [
-                                {
-                                    type: 'product',
-                                    children: [
-                                        {
-                                            type: 'number',
-                                            value: 5,
-                                        },
-                                        {
-                                            type: 'number',
-                                            value: 3,
-                                        },
-                                    ],
-                                },
-                                {
-                                    type: 'number',
-                                    value: 4,
-                                },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    type: 'endOfFile',
-                    value: 'endOfFile',
-                },
-            ],
-        },
+        type: 'program',
+        children: [
+            {
+                type: 'returnStatement',
+                children: [
+                    {
+                        type: 'return',
+                        value: null,
+                    },
+                    {
+                        type: 'product',
+                        children: [
+                            {
+                                type: 'product',
+                                children: [
+                                    {
+                                        type: 'number',
+                                        value: 5,
+                                    },
+                                    {
+                                        type: 'number',
+                                        value: 3,
+                                    },
+                                ],
+                            },
+                            {
+                                type: 'number',
+                                value: 4,
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                type: 'endOfFile',
+                value: 'endOfFile',
+            },
+        ],
     },
 });
 
@@ -351,47 +345,44 @@ test('brackets product', compileAndRun, {
     source: 'return (3 * 4) * 5',
     expectedExitCode: 60,
     expectedAst: {
-        parseErrors: [],
-        ast: {
-            type: 'program',
-            children: [
-                {
-                    type: 'returnStatement',
-                    children: [
-                        {
-                            type: 'return',
-                            value: null,
-                        },
-                        {
-                            type: 'product',
-                            children: [
-                                {
-                                    type: 'product',
-                                    children: [
-                                        {
-                                            type: 'number',
-                                            value: 3,
-                                        },
-                                        {
-                                            type: 'number',
-                                            value: 4,
-                                        },
-                                    ],
-                                },
-                                {
-                                    type: 'number',
-                                    value: 5,
-                                },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    type: 'endOfFile',
-                    value: 'endOfFile',
-                },
-            ],
-        },
+        type: 'program',
+        children: [
+            {
+                type: 'returnStatement',
+                children: [
+                    {
+                        type: 'return',
+                        value: null,
+                    },
+                    {
+                        type: 'product',
+                        children: [
+                            {
+                                type: 'product',
+                                children: [
+                                    {
+                                        type: 'number',
+                                        value: 3,
+                                    },
+                                    {
+                                        type: 'number',
+                                        value: 4,
+                                    },
+                                ],
+                            },
+                            {
+                                type: 'number',
+                                value: 5,
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                type: 'endOfFile',
+                value: 'endOfFile',
+            },
+        ],
     },
 });
 
@@ -417,56 +408,53 @@ test('double product with brackets', compileAndRun, {
     source: 'return 2 * (3 * 4) * 5',
     expectedExitCode: 120,
     expectedAst: {
-        parseErrors: [],
-        ast: {
-            type: 'program',
-            children: [
-                {
-                    type: 'returnStatement',
-                    children: [
-                        {
-                            type: 'return',
-                            value: null,
-                        },
-                        {
-                            type: 'product',
-                            children: [
-                                {
-                                    type: 'product',
-                                    children: [
-                                        {
-                                            type: 'number',
-                                            value: 2,
-                                        },
-                                        {
-                                            type: 'product',
-                                            children: [
-                                                {
-                                                    type: 'number',
-                                                    value: 3,
-                                                },
-                                                {
-                                                    type: 'number',
-                                                    value: 4,
-                                                },
-                                            ],
-                                        },
-                                    ],
-                                },
-                                {
-                                    type: 'number',
-                                    value: 5,
-                                },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    type: 'endOfFile',
-                    value: 'endOfFile',
-                },
-            ],
-        },
+        type: 'program',
+        children: [
+            {
+                type: 'returnStatement',
+                children: [
+                    {
+                        type: 'return',
+                        value: null,
+                    },
+                    {
+                        type: 'product',
+                        children: [
+                            {
+                                type: 'product',
+                                children: [
+                                    {
+                                        type: 'number',
+                                        value: 2,
+                                    },
+                                    {
+                                        type: 'product',
+                                        children: [
+                                            {
+                                                type: 'number',
+                                                value: 3,
+                                            },
+                                            {
+                                                type: 'number',
+                                                value: 4,
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                            {
+                                type: 'number',
+                                value: 5,
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                type: 'endOfFile',
+                value: 'endOfFile',
+            },
+        ],
     },
 });
 

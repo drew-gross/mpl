@@ -46,6 +46,7 @@ export type ExecutionResult =
     | {
           error: string;
       };
+export type ParseError = string;
 export type Backend = {
     name: string;
     toExectuable: (BackendInputs) => string;
