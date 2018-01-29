@@ -1,3 +1,5 @@
+import debug from './util/debug.js';
+
 type TokenType =
     | 'return'
     | 'booleanLiteral'
@@ -148,6 +150,11 @@ const lex = (input: string): Token[] => {
             toString: _ => '?',
         },
         {
+            token: ',',
+            type: 'comma',
+            toString: _ => ',',
+        },
+        {
             token: '.*',
             type: 'invalid',
             action: x => x,
@@ -156,7 +163,7 @@ const lex = (input: string): Token[] => {
     ];
 
     // slurp initial whitespace
-    if (!input) debugger;
+    if (!input) throw debug();
     input = input.trim();
 
     // consume input reading tokens

@@ -703,3 +703,10 @@ test('addition', compileAndRun, {
     source: `return length("foo") + 5;`,
     expectedExitCode: 8,
 });
+
+test.only('multi-arg function', compileAndRun, {
+    source: `
+myAdd = (l: Integer, r: Integer) => l + r;
+return myAdd(1, 2);`,
+    expectedExitCode: 2,
+});

@@ -31,7 +31,7 @@ export default {
             p: ['argList', fatArrow, leftCurlyBrace, 'functionBody', rightCurlyBrace],
         },
     ],
-    argList: [{ n: 'argList', p: ['arg', comma, 'argList'] }, 'arg'],
+    argList: [{ n: 'argList', p: [leftBracket, 'arg', comma, 'argList', rightBracket] }, 'arg'],
     arg: { n: 'arg', p: [identifier, colon, type] },
     functionBody: [
         { n: 'statement', p: ['statement', statementSeparator, 'functionBody'] },
