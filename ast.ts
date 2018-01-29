@@ -1,3 +1,7 @@
+// Leaf nodes
+
+type Leaf = Number | Identifier | BooleanLiteral | StringLiteral;
+
 export type Number = {
     kind: 'number';
     value: number;
@@ -8,6 +12,17 @@ export type Identifier = {
     value: string;
 };
 
+export type BooleanLiteral = {
+    kind: 'booleanLiteral';
+    value: boolean;
+};
+
+export type StringLiteral = {
+    kind: 'stringLiteral';
+    value: string;
+};
+
+// Typed versions of things (...kinda)
 export type ReturnStatement = {
     kind: 'returnStatement';
     expression: LoweredAst;
@@ -73,16 +88,6 @@ export type Product = {
     rhs: LoweredAst;
 };
 
-export type BooleanLiteral = {
-    kind: 'booleanLiteral';
-    value: boolean;
-};
-
-export type StringLiteral = {
-    kind: 'stringLiteral';
-    value: string;
-};
-
 export type Concatenation = {
     kind: 'concatenation';
     lhs: LoweredAst;
@@ -90,10 +95,9 @@ export type Concatenation = {
 };
 
 export type LoweredAst =
+    | Leaf
     | ReturnStatement
-    | Number
     | Ternary
-    | Identifier
     | Equality
     | TypedAssignment
     | FunctionCall
@@ -102,7 +106,100 @@ export type LoweredAst =
     | Subtraction
     | Addition
     | Product
-    | BooleanLiteral
     | StringEquality
-    | StringLiteral
     | Concatenation;
+
+// Untyped versions (...kinda)
+
+export type UninferredReturnStatement = {
+    kind: 'returnStatement';
+    expression: UninferredAst;
+};
+
+export type UninferredTernary = {
+    kind: 'ternary';
+    condition: UninferredAst;
+    ifTrue: UninferredAst;
+    ifFalse: UninferredAst;
+};
+
+// TODO: merge Equality with StringEquality and add type to ast node
+export type UninferredEquality = {
+    kind: 'equality';
+    lhs: UninferredAst;
+    rhs: UninferredAst;
+};
+
+export type UninferredStringEquality = {
+    kind: 'stringEquality';
+    lhs: UninferredAst;
+    rhs: UninferredAst;
+};
+
+export type UninferredTypedAssignment = {
+    kind: 'typedAssignment';
+    destination: string;
+    expression: UninferredAst;
+};
+
+export type UninferredFunctionCall = {
+    kind: 'callExpression';
+    name: string;
+    argument: UninferredAst;
+};
+
+export type UninferredFunctionLiteral = {
+    kind: 'functionLiteral';
+    deanonymizedName: string;
+};
+
+export type UninferredStatement = {
+    kind: 'statement';
+    children: any;
+};
+
+export type UninferredAddition = {
+    kind: 'addition';
+    lhs: UninferredAst;
+    rhs: UninferredAst;
+};
+
+export type UninferredSubtraction = {
+    kind: 'subtraction';
+    lhs: UninferredAst;
+    rhs: UninferredAst;
+};
+
+export type UninferredProduct = {
+    kind: 'product';
+    lhs: UninferredAst;
+    rhs: UninferredAst;
+};
+
+export type UninferredConcatenation = {
+    kind: 'concatenation';
+    lhs: UninferredAst;
+    rhs: UninferredAst;
+};
+
+export type UninferredAssignment = {
+    kind: 'assignment';
+    destination: string;
+    expression: UninferredAst;
+};
+
+export type UninferredAst =
+    | Leaf
+    | UninferredReturnStatement
+    | UninferredTernary
+    | UninferredEquality
+    | UninferredTypedAssignment
+    | UninferredFunctionCall
+    | UninferredFunctionLiteral
+    | UninferredStatement
+    | UninferredSubtraction
+    | UninferredAddition
+    | UninferredProduct
+    | UninferredStringEquality
+    | UninferredConcatenation
+    | UninferredAssignment;

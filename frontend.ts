@@ -95,6 +95,77 @@ const transformAst = (nodeType, f, ast: AstNode, recurseOnNew: boolean) => {
     }
 };
 
+const transformUninferredAst = (
+    nodeKind,
+    f: ((n: Ast.UninferredAst) => Ast.UninferredAst),
+    ast: Ast.UninferredAst,
+    recurseOnNew: boolean
+) => {
+    if (!ast) debug();
+    const recurse = (ast: Ast.UninferredAst) => transformUninferredAst(nodeKind, f, ast, recurseOnNew);
+    if (ast.kind == nodeKind) {
+        const newNode = f(ast);
+        // If we aren't supposed to recurse, don't re-tranform the node we just made
+        if (recurseOnNew) {
+            return recurse(newNode);
+        }
+        ast = newNode;
+    }
+    switch (ast.kind) {
+        case 'returnStatement':
+            return {
+                kind: ast.kind,
+                expression: recurse(ast.expression),
+            };
+        case 'statement':
+            return {
+                kind: ast.kind,
+                children: ast.children.map(recurse),
+            };
+        case 'assignment':
+        case 'typedAssignment':
+            return {
+                kind: ast.kind,
+                destination: ast.destination,
+                expression: recurse(ast.expression),
+            };
+        case 'callExpression':
+            return {
+                kind: ast.kind,
+                name: ast.name,
+                argument: recurse(ast.argument),
+            };
+        case 'ternary':
+            return {
+                kind: ast.kind,
+                condition: recurse(ast.condition),
+                ifTrue: recurse(ast.ifTrue),
+                ifFalse: recurse(ast.ifFalse),
+            };
+        // Operators all work with lhs/rhs
+        case 'concatenation':
+        case 'stringEquality':
+        case 'equality':
+        case 'addition':
+        case 'subtraction':
+        case 'product':
+            return {
+                kind: ast.kind,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+            };
+        // No children to recurse on in these node types
+        case 'booleanLiteral':
+        case 'stringLiteral':
+        case 'functionLiteral':
+        case 'identifier':
+        case 'number':
+            return ast;
+        default:
+            throw debug();
+    }
+};
+
 const extractVariables = (ast, knownIdentifiers: IdentifierDict): VariableDeclaration[] => {
     if (ast.type === 'assignment' || ast.type === 'typedAssignment') {
         const rhsIndex = ast.type === 'assignment' ? 2 : 4;
@@ -517,6 +588,127 @@ export const typeOfExpression = (stuff, knownIdentifiers: IdentifierDict): Type 
     }
 };
 
+export const typeOfLoweredExpression = (
+    ast: Ast.UninferredAst,
+    knownIdentifiers: IdentifierDict
+): Type | TypeError[] => {
+    switch (ast.kind) {
+        case 'number':
+            return { name: 'Integer' };
+        case 'addition':
+        case 'product':
+        case 'subtraction': {
+            const leftType = typeOfLoweredExpression(ast.lhs, knownIdentifiers);
+            const rightType = typeOfLoweredExpression(ast.rhs, knownIdentifiers);
+            const combinedErrors = combineErrors([leftType, rightType]);
+            if (combinedErrors) {
+                return combinedErrors;
+            }
+            if (!typesAreEqual(leftType, { name: 'Integer' })) {
+                return [`Left hand side of ${ast.kind} was not integer`];
+            }
+            if (!typesAreEqual(rightType, { name: 'Integer' })) {
+                return [`Right hand side of ${ast.kind} was not integer`];
+            }
+            return { name: 'Integer' };
+        }
+        case 'equality': {
+            const leftType = typeOfLoweredExpression(ast.lhs, knownIdentifiers);
+            const rightType = typeOfLoweredExpression(ast.rhs, knownIdentifiers);
+            const combinedErrors = combineErrors([leftType, rightType]);
+            if (combinedErrors) {
+                return combinedErrors;
+            }
+            if (!typesAreEqual(leftType, rightType)) {
+                return [
+                    `Equality comparisons must compare values of the same type.. You tried to compare a ${
+                        (leftType as Type).name
+                    } (lhs) with a ${(rightType as Type).name} (rhs)`,
+                ];
+            }
+            return { name: 'Boolean' };
+        }
+        case 'concatenation': {
+            const leftType = typeOfLoweredExpression(ast.lhs, knownIdentifiers);
+            const rightType = typeOfLoweredExpression(ast.rhs, knownIdentifiers);
+            const combinedErrors = combineErrors([leftType, rightType]);
+            if (combinedErrors) {
+                return combinedErrors;
+            }
+            if ((leftType as Type).name !== 'String' || (rightType as Type).name !== 'String') {
+                return ['Only strings can be concatenated right now'];
+            }
+            return { name: 'String' };
+        }
+        case 'functionLiteral': {
+            const functionType = knownIdentifiers[ast.deanonymizedName];
+            if (!functionType) debug();
+            return functionType;
+        }
+        case 'callExpression': {
+            const argType = typeOfLoweredExpression(ast.argument, knownIdentifiers);
+            if (isTypeError(argType)) {
+                return argType;
+            }
+            const functionName = ast.name;
+            if (!(functionName in knownIdentifiers)) {
+                return [`Unknown identifier: ${functionName}`];
+            }
+            const functionType = knownIdentifiers[functionName];
+            if (!functionType) throw debug();
+            if (functionType.name !== 'Function') {
+                return [`You tried to call ${functionName}, but it's not a function (it's a ${functionType})`];
+            }
+            if (!argType || !functionType.arg) debug();
+            if (!typesAreEqual(argType, functionType.arg.type)) {
+                return [
+                    `You passed a ${argType.name} as an argument to ${functionName}. It expects a ${
+                        functionType.arg.type.name
+                    }`,
+                ];
+            }
+            return { name: 'Integer' };
+        }
+        case 'identifier': {
+            if (ast.value in knownIdentifiers) {
+                return knownIdentifiers[ast.value];
+            } else {
+                return [`Identifier ${ast.value} has unknown type.`];
+            }
+        }
+        case 'ternary': {
+            const conditionType = typeOfLoweredExpression(ast.condition, knownIdentifiers);
+            const trueBranchType = typeOfLoweredExpression(ast.ifTrue, knownIdentifiers);
+            const falseBranchType = typeOfLoweredExpression(ast.ifFalse, knownIdentifiers);
+            const combinedErrors = combineErrors([conditionType, trueBranchType, falseBranchType]);
+            if (combinedErrors) {
+                return combinedErrors;
+            }
+            if (!typesAreEqual(conditionType, { name: 'Boolean' })) {
+                return [
+                    `You tried to use a ${
+                        (conditionType as any).name
+                    } as the condition in a ternary. Boolean is required`,
+                ];
+            }
+            if (!typesAreEqual(trueBranchType, falseBranchType)) {
+                return [
+                    `Type mismatch in branches of ternary. True branch had ${
+                        (trueBranchType as any).name
+                    }, false branch had ${(falseBranchType as any).name}.`,
+                ];
+            }
+            return trueBranchType;
+        }
+        case 'booleanLiteral':
+            return { name: 'Boolean' };
+        case 'stringLiteral':
+            return { name: 'String' };
+        default:
+            throw debug();
+    }
+};
+
 const typeCheckStatement = (
     { type, children },
     knownIdentifiers
@@ -603,32 +795,28 @@ const getFunctionTypeMap = functions => {
     return result;
 };
 
-const assignmentToDeclaration = (ast, knownIdentifiers): VariableDeclarationWithNoMemory => {
-    const result = typeOfExpression(ast.children[4], knownIdentifiers);
+const assignmentToDeclaration = (ast: Ast.TypedAssignment, knownIdentifiers): VariableDeclarationWithNoMemory => {
+    const result = typeOfLoweredExpression(ast.expression, knownIdentifiers);
     if (isTypeError(result)) throw debug();
     return {
-        name: ast.children[0].value,
+        name: ast.destination,
         type: result,
     };
 };
 
-const fixOperators = (knownIdentifiers, statement) => {
-    const typedEquality = transformAst(
+const inferOperators = (knownIdentifiers, statement: Ast.UninferredAst) => {
+    const typedEquality = transformUninferredAst(
         'equality',
-        node => {
-            if ('children' in node) {
-                let leftType = typeOfExpression(node.children[0], knownIdentifiers);
-                let rightType = typeOfExpression(node.children[0], knownIdentifiers);
-                const combinedErrors = combineErrors([leftType, rightType]);
-                if (combinedErrors) throw debug();
-                if ((leftType as any).name === 'String' && (rightType as any).name === 'String') {
-                    return {
-                        ...node,
-                        type: 'stringEquality',
-                    };
-                } else {
-                    return node;
-                }
+        (node: Ast.UninferredEquality): Ast.UninferredAst => {
+            let leftType = typeOfLoweredExpression(node.lhs, knownIdentifiers);
+            let rightType = typeOfLoweredExpression(node.rhs, knownIdentifiers);
+            const combinedErrors = combineErrors([leftType, rightType]);
+            if (combinedErrors) throw debug();
+            if ((leftType as any).name === 'String' && (rightType as any).name === 'String') {
+                return {
+                    ...node,
+                    kind: 'stringEquality',
+                };
             } else {
                 return node;
             }
@@ -636,26 +824,15 @@ const fixOperators = (knownIdentifiers, statement) => {
         statement,
         false
     );
-    const typedAssignment = transformAst(
+    // TODO: Seems like this doesn't do anything
+    const typedAssignment = transformUninferredAst(
         'assignment',
-        node => {
-            if ('children' in node) {
-                return {
-                    children: [
-                        node.children[0],
-                        { type: 'colon', value: null },
-                        {
-                            type: 'type',
-                            value: (typeOfExpression(node.children[2], knownIdentifiers) as any).name,
-                        },
-                        { type: 'assignment', value: null },
-                        node.children[2],
-                    ],
-                    type: 'typedAssignment',
-                };
-            } else {
-                return node;
-            }
+        (node: Ast.UninferredAssignment): Ast.UninferredAst => {
+            return {
+                kind: 'typedAssignment',
+                destination: node.destination,
+                expression: node.expression,
+            };
         },
         typedEquality,
         false
@@ -665,7 +842,7 @@ const fixOperators = (knownIdentifiers, statement) => {
 
 type FrontendOutput = BackendInputs | { parseErrors: ParseError[] } | { typeErrors: TypeError[] };
 
-const lowerAst = (ast: any): Ast.LoweredAst => {
+const lowerAst = (ast: any): Ast.UninferredAst => {
     if (!ast) debug();
     switch (ast.type) {
         case 'returnStatement':
@@ -719,6 +896,12 @@ const lowerAst = (ast: any): Ast.LoweredAst => {
                 kind: 'addition',
                 lhs: lowerAst(ast.children[0]),
                 rhs: lowerAst(ast.children[1]),
+            };
+        case 'assignment':
+            return {
+                kind: 'assignment',
+                destination: ast.children[0].value,
+                expression: lowerAst(ast.children[2]),
             };
         case 'typedAssignment':
             return {
@@ -799,29 +982,6 @@ const compile = (source: string): FrontendOutput => {
         return { typeErrors };
     }
 
-    // Modifications here :(
-    functionsWithStatementList.forEach(f => {
-        f.statements = f.statements.map(s =>
-            fixOperators(
-                {
-                    ...knownIdentifiers,
-                    ...f.knownIdentifiers,
-                    [f.argument.name]: f.argument.type,
-                },
-                s
-            )
-        );
-    });
-
-    // Now that we have type information, go through and insert typed
-    // versions of operators
-    programWithStatementList.statements = programWithStatementList.statements.map(s =>
-        fixOperators(knownIdentifiers, s)
-    );
-    programWithStatementList.statements.forEach(statement => {
-        if (statement.type === 'assignment') debug();
-    });
-
     const loweredFunctionsWithStatementList = functionsWithStatementList.map(f => ({
         ...f,
         statements: f.statements.map(lowerAst),
@@ -832,10 +992,30 @@ const compile = (source: string): FrontendOutput => {
         statements: programWithStatementList.statements.map(lowerAst),
     };
 
-    const globalDeclarations: VariableDeclaration[] = programWithStatementList.statements
-        .filter(s => s.type === 'typedAssignment')
+    // Modifications here :(
+    // Now that we have type information, go through and insert typed
+    // versions of operators
+    loweredFunctionsWithStatementList.forEach(f => {
+        f.statements = f.statements.map(s =>
+            inferOperators(
+                {
+                    ...knownIdentifiers,
+                    ...f.knownIdentifiers,
+                    [f.argument.name]: f.argument.type,
+                },
+                s
+            )
+        );
+    });
+
+    loweredProgramWithStatementList.statements = loweredProgramWithStatementList.statements.map(s =>
+        inferOperators(knownIdentifiers, s)
+    );
+
+    const globalDeclarations: VariableDeclaration[] = loweredProgramWithStatementList.statements
+        .filter(s => s.kind === 'typedAssignment' || s.kind === 'assignment')
         .map(assignment => {
-            const result = assignmentToDeclaration(assignment, {
+            const result = assignmentToDeclaration(assignment as any, {
                 ...builtinIdentifiers,
                 ...functionIdentifierTypes,
                 ...programTypeCheck.identifiers,
@@ -845,8 +1025,8 @@ const compile = (source: string): FrontendOutput => {
         }) as any;
 
     return {
-        functions: loweredFunctionsWithStatementList,
-        program: loweredProgramWithStatementList,
+        functions: loweredFunctionsWithStatementList as any,
+        program: loweredProgramWithStatementList as any,
         globalDeclarations,
         stringLiterals,
     };
