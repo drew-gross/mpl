@@ -679,6 +679,7 @@ return lenFunc(5);`,
     expectedExitCode: 40,
 });
 
+// TODO: Improve how temporaries get spilled
 test('complex string concatenation', compileAndRun, {
     source: `lenFunc = dummy: Integer => {
     str1 = "abc";
