@@ -20,6 +20,7 @@ import {
     MemoryCategory,
     BackendInputs,
     ParseError,
+    TypeError,
 } from './api.js';
 import * as Ast from './ast.js';
 
@@ -101,7 +102,7 @@ const extractVariables = (ast, knownIdentifiers: IdentifierDict): VariableDeclar
             {
                 name: ast.children[0].value,
                 memoryCategory: getMemoryCategory(ast),
-                type: typeOfExpression(ast.children[rhsIndex], knownIdentifiers).type,
+                type: typeOfExpression(ast.children[rhsIndex], knownIdentifiers) as Type,
             },
         ];
     } else if ('children' in ast) {
@@ -168,7 +169,7 @@ const statementTreeToFunction = (functionAst: FunctionAst, knownIdentifiers): Fu
         variablesAsIdentifiers[variable.name] = typeOfExpression(statement.children[rhsIndex] as any, {
             ...knownIdentifiers,
             ...variablesAsIdentifiers,
-        }).type;
+        }) as Type;
     });
 
     return {
@@ -379,141 +380,135 @@ const typesAreEqual = (a, b) => {
     return true;
 };
 
-export const typeOfExpression = (stuff, knownIdentifiers: IdentifierDict): { type: Type; errors: string[] } => {
+const isTypeError = (val: Type | TypeError[]): val is TypeError[] => {
+    return Array.isArray(val);
+};
+
+const combineErrors = (potentialErrors: (Type | TypeError[])[]): TypeError[] | null => {
+    const result: TypeError[] = [];
+    potentialErrors.forEach(e => {
+        if (isTypeError(e)) {
+            result.push(...e);
+        }
+    });
+    return result;
+};
+
+export const typeOfExpression = (stuff, knownIdentifiers: IdentifierDict): Type | TypeError[] => {
     if (!stuff) debug();
     const { type, children, value } = stuff;
     if (!type) debug();
     switch (type) {
         case 'number':
-            return { type: { name: 'Integer' }, errors: [] };
+            return { name: 'Integer' };
         case 'addition':
         case 'product':
         case 'subtraction': {
             const leftType = typeOfExpression(children[0], knownIdentifiers);
             const rightType = typeOfExpression(children[1], knownIdentifiers);
-            if (leftType.errors.length > 0 || rightType.errors.length > 0) {
-                return { type: {} as any, errors: leftType.errors.concat(rightType.errors) };
+            const combinedErrors = combineErrors([leftType, rightType]);
+            if (combinedErrors) {
+                return combinedErrors;
             }
-            if (!typesAreEqual(leftType.type, { name: 'Integer' })) {
-                return { type: {} as any, errors: [`Left hand side of ${type} was not integer`] };
+            if (!typesAreEqual(leftType, { name: 'Integer' })) {
+                return [`Left hand side of ${type} was not integer`];
             }
-            if (!typesAreEqual(rightType.type, { name: 'Integer' })) {
-                return { type: {} as any, errors: [`Right hand side of ${type} was not integer`] };
+            if (!typesAreEqual(rightType, { name: 'Integer' })) {
+                return [`Right hand side of ${type} was not integer`];
             }
-            return { type: { name: 'Integer' }, errors: [] };
+            return { name: 'Integer' };
         }
         case 'equality': {
             const leftType = typeOfExpression(children[0], knownIdentifiers);
             const rightType = typeOfExpression(children[2], knownIdentifiers);
-            if (leftType.errors.length > 0 || rightType.errors.length > 0) {
-                return { type: {} as any, errors: leftType.errors.concat(rightType.errors) };
+            const combinedErrors = combineErrors([leftType, rightType]);
+            if (combinedErrors) {
+                return combinedErrors;
             }
-            if (!typesAreEqual(leftType.type, rightType.type)) {
-                return {
-                    type: {} as any,
-                    errors: [
-                        `Equality comparisons must compare values of the same type.. You tried to compare a ${
-                            leftType.type.name
-                        } (lhs) with a ${rightType.type.name} (rhs)`,
-                    ],
-                };
+            if (!typesAreEqual(leftType, rightType)) {
+                return [
+                    `Equality comparisons must compare values of the same type.. You tried to compare a ${
+                        (leftType as Type).name
+                    } (lhs) with a ${(rightType as Type).name} (rhs)`,
+                ];
             }
-            return { type: { name: 'Boolean' }, errors: [] };
+            return { name: 'Boolean' };
         }
         case 'concatenation': {
             const leftType = typeOfExpression(children[0], knownIdentifiers);
             const rightType = typeOfExpression(children[2], knownIdentifiers);
-            if (leftType.errors.length > 0 || rightType.errors.length > 0) {
-                return { type: {} as any, errors: leftType.errors.concat(rightType.errors) };
+            const combinedErrors = combineErrors([leftType, rightType]);
+            if (combinedErrors) {
+                return combinedErrors;
             }
-            if (leftType.type.name !== 'String' || rightType.type.name !== 'String') {
-                return { type: {} as any, errors: ['Only strings can be concatenated right now'] };
+            if ((leftType as Type).name !== 'String' || (rightType as Type).name !== 'String') {
+                return ['Only strings can be concatenated right now'];
             }
-            return { type: { name: 'String' }, errors: [] };
+            return { name: 'String' };
         }
         case 'functionLiteral': {
             const functionType = knownIdentifiers[value];
             if (!functionType) debug();
-            return { type: functionType, errors: [] };
+            return functionType;
         }
         case 'callExpression': {
             const argType = typeOfExpression(children[2], knownIdentifiers);
-            if (argType.errors.length > 0) {
+            if (isTypeError(argType)) {
                 return argType;
             }
             const functionName = children[0].value;
             if (!(functionName in knownIdentifiers)) {
-                return { type: {} as any, errors: [`Unknown identifier: ${functionName}`] };
+                return [`Unknown identifier: ${functionName}`];
             }
             const functionType = knownIdentifiers[functionName];
             if (functionType.name !== 'Function') {
-                return {
-                    type: {} as any,
-                    errors: [
-                        `You tried to call ${functionName}, but it's not a function (it's a ${functionName.type})`,
-                    ],
-                };
+                return [`You tried to call ${functionName}, but it's not a function (it's a ${functionName.type})`];
             }
             if (!argType || !functionType.arg) debug();
-            if (!typesAreEqual(argType.type, functionType.arg.type)) {
-                return {
-                    type: {} as any,
-                    errors: [
-                        `You passed a ${argType.type.name} as an argument to ${functionName}. It expects a ${
-                            functionType.arg.type.name
-                        }`,
-                    ],
-                };
+            if (!typesAreEqual((argType as any).type, functionType.arg.type)) {
+                return [
+                    `You passed a ${(argType as any).type.name} as an argument to ${functionName}. It expects a ${
+                        functionType.arg.type.name
+                    }`,
+                ];
             }
-            return { type: { name: 'Integer' }, errors: [] };
+            return { name: 'Integer' };
         }
         case 'identifier': {
             if (value in knownIdentifiers) {
-                return { type: knownIdentifiers[value], errors: [] };
+                return knownIdentifiers[value];
             } else {
-                return { type: {} as any, errors: [`Identifier ${value} has unknown type.`] };
+                return [`Identifier ${value} has unknown type.`];
             }
         }
         case 'ternary': {
             const conditionType = typeOfExpression(children[0], knownIdentifiers);
             const trueBranchType = typeOfExpression(children[2], knownIdentifiers);
             const falseBranchType = typeOfExpression(children[4], knownIdentifiers);
-            if (
-                conditionType.errors.length > 0 ||
-                trueBranchType.errors.length > 0 ||
-                falseBranchType.errors.length > 0
-            ) {
-                return {
-                    type: {} as any,
-                    errors: conditionType.errors.concat(trueBranchType.errors).concat(falseBranchType.errors),
-                };
+            const combinedErrors = combineErrors([conditionType, trueBranchType, falseBranchType]);
+            if (combinedErrors) {
+                return combinedErrors;
             }
-            if (!typesAreEqual(conditionType.type, { name: 'Boolean' })) {
-                return {
-                    type: {} as any,
-                    errors: [
-                        `You tried to use a ${
-                            conditionType.type.name
-                        } as the condition in a ternary. Boolean is required`,
-                    ],
-                };
+            if (!typesAreEqual(conditionType, { name: 'Boolean' })) {
+                return [
+                    `You tried to use a ${
+                        (conditionType as any).name
+                    } as the condition in a ternary. Boolean is required`,
+                ];
             }
-            if (!typesAreEqual(trueBranchType.type, falseBranchType.type)) {
-                return {
-                    type: {} as any,
-                    errors: [
-                        `Type mismatch in branches of ternary. True branch had ${
-                            trueBranchType.type
-                        }, false branch had ${falseBranchType.type}.`,
-                    ],
-                };
+            if (!typesAreEqual(trueBranchType, falseBranchType)) {
+                return [
+                    `Type mismatch in branches of ternary. True branch had ${
+                        (trueBranchType as any).name
+                    }, false branch had ${(falseBranchType as any).name}.`,
+                ];
             }
-            return { type: trueBranchType.type, errors: [] };
+            return trueBranchType;
         }
         case 'booleanLiteral':
-            return { type: { name: 'Boolean' }, errors: [] };
+            return { name: 'Boolean' };
         case 'stringLiteral':
-            return { type: { name: 'String' }, errors: [] };
+            return { name: 'String' };
         case 'program':
             return typeOfExpression(children[0], knownIdentifiers);
         default:
@@ -525,12 +520,12 @@ const typeCheckStatement = ({ type, children }, knownIdentifiers): { errors: str
     switch (type) {
         case 'returnStatement': {
             const result = typeOfExpression(children[1], knownIdentifiers);
-            if (result.errors.length > 0) {
-                return { errors: result.errors, newIdentifiers: {} };
+            if (isTypeError(result)) {
+                return { errors: result, newIdentifiers: {} };
             }
-            if (!typesAreEqual(result.type, { name: 'Integer' })) {
+            if (!typesAreEqual(result, { name: 'Integer' })) {
                 return {
-                    errors: [`You tried to return a ${result.type.name}`],
+                    errors: [`You tried to return a ${result.name}`],
                     newIdentifiers: {},
                 };
             }
@@ -538,8 +533,8 @@ const typeCheckStatement = ({ type, children }, knownIdentifiers): { errors: str
         }
         case 'assignment': {
             const rightType = typeOfExpression(children[2], knownIdentifiers);
-            if (rightType.errors.length > 0) {
-                return { errors: rightType.errors, newIdentifiers: {} };
+            if (isTypeError(rightType)) {
+                return { errors: rightType, newIdentifiers: {} };
             }
             // Left type is inferred as right type
             return { errors: [], newIdentifiers: { [children[0].value]: rightType } };
@@ -549,13 +544,13 @@ const typeCheckStatement = ({ type, children }, knownIdentifiers): { errors: str
             const varName = children[0].value;
             const rightType = typeOfExpression(children[4], knownIdentifiers);
             const leftType = { name: children[2].value };
-            if (rightType.errors.length > 0) {
-                return { errors: rightType.errors, newIdentifiers: {} };
+            if (isTypeError(rightType)) {
+                return { errors: rightType, newIdentifiers: {} };
             }
-            if (!typesAreEqual(rightType.type, leftType)) {
+            if (!typesAreEqual(rightType, leftType)) {
                 return {
                     errors: [
-                        `You tried to assign a ${rightType.type.name} to "${varName}", which has type ${leftType.name}`,
+                        `You tried to assign a ${rightType.name} to "${varName}", which has type ${leftType.name}`,
                     ],
                     newIdentifiers: {},
                 };
@@ -563,8 +558,7 @@ const typeCheckStatement = ({ type, children }, knownIdentifiers): { errors: str
             return { errors: [], newIdentifiers: { [varName]: { type: leftType } } };
         }
         default:
-            debugger;
-            return { errors: ['Unknown type'], newIdentifiers: {} };
+            throw debug();
     }
 };
 
@@ -606,12 +600,10 @@ const getFunctionTypeMap = functions => {
 
 const assignmentToDeclaration = (ast, knownIdentifiers): VariableDeclarationWithNoMemory => {
     const result = typeOfExpression(ast.children[4], knownIdentifiers);
-    if (result.errors.length > 0) {
-        debugger;
-    }
+    if (isTypeError(result)) throw debug();
     return {
         name: ast.children[0].value,
-        type: result.type,
+        type: result,
     };
 };
 
@@ -622,8 +614,9 @@ const fixOperators = (knownIdentifiers, statement) => {
             if ('children' in node) {
                 let leftType = typeOfExpression(node.children[0], knownIdentifiers);
                 let rightType = typeOfExpression(node.children[0], knownIdentifiers);
-                if (leftType.errors.length > 0 || rightType.errors.length > 0) debug();
-                if (leftType.type.name === 'String' && rightType.type.name === 'String') {
+                const combinedErrors = combineErrors([leftType, rightType]);
+                if (combinedErrors) throw debug();
+                if ((leftType as any).name === 'String' && (rightType as any).name === 'String') {
                     return {
                         ...node,
                         type: 'stringEquality',
@@ -648,7 +641,7 @@ const fixOperators = (knownIdentifiers, statement) => {
                         { type: 'colon', value: null },
                         {
                             type: 'type',
-                            value: typeOfExpression(node.children[2], knownIdentifiers).type.name,
+                            value: (typeOfExpression(node.children[2], knownIdentifiers) as any).name,
                         },
                         { type: 'assignment', value: null },
                         node.children[2],

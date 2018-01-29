@@ -9,6 +9,7 @@ export type Type =
           name: 'Function';
           arg: { type: Type };
       };
+export type TypeError = string;
 export type MemoryCategory = 'GlobalStatic' | 'Dynamic' | 'Stack';
 export type VariableDeclaration = {
     name: string;
