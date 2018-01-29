@@ -590,7 +590,6 @@ return boolTimesInt(1);`,
     expectedTypeErrors: ['Right hand side of product was not integer'],
 });
 
-// TODO: rethink statment separators
 test('multi statement function on multiple lines', compileAndRun, {
     source: `
 quadrupleWithLocal = a: Integer => {
@@ -669,7 +668,6 @@ test('concatenate and get length then subtract', compileAndRun, {
     expectedExitCode: 5,
 });
 
-// TODO: Problem extracting variables
 test('semi-complex string concatenation', compileAndRun, {
     source: `
 lenFunc = dummy: Integer => {
@@ -681,7 +679,6 @@ return lenFunc(5);`,
     expectedExitCode: 40,
 });
 
-// TODO: causes bad behaviour in parser, takes forever
 test('complex string concatenation', compileAndRun, {
     source: `lenFunc = dummy: Integer => {
     str1 = "abc";
