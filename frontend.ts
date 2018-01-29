@@ -391,7 +391,7 @@ const combineErrors = (potentialErrors: (Type | TypeError[])[]): TypeError[] | n
             result.push(...e);
         }
     });
-    return result;
+    return result.length > 0 ? result : null;
 };
 
 export const typeOfExpression = (stuff, knownIdentifiers: IdentifierDict): Type | TypeError[] => {
@@ -461,13 +461,14 @@ export const typeOfExpression = (stuff, knownIdentifiers: IdentifierDict): Type 
                 return [`Unknown identifier: ${functionName}`];
             }
             const functionType = knownIdentifiers[functionName];
+            if (!functionType) throw debug();
             if (functionType.name !== 'Function') {
                 return [`You tried to call ${functionName}, but it's not a function (it's a ${functionName.type})`];
             }
             if (!argType || !functionType.arg) debug();
-            if (!typesAreEqual((argType as any).type, functionType.arg.type)) {
+            if (!typesAreEqual(argType, functionType.arg.type)) {
                 return [
-                    `You passed a ${(argType as any).type.name} as an argument to ${functionName}. It expects a ${
+                    `You passed a ${argType.name} as an argument to ${functionName}. It expects a ${
                         functionType.arg.type.name
                     }`,
                 ];
@@ -516,7 +517,10 @@ export const typeOfExpression = (stuff, knownIdentifiers: IdentifierDict): Type 
     }
 };
 
-const typeCheckStatement = ({ type, children }, knownIdentifiers): { errors: string[]; newIdentifiers: any } => {
+const typeCheckStatement = (
+    { type, children },
+    knownIdentifiers
+): { errors: string[]; newIdentifiers: IdentifierDict } => {
     switch (type) {
         case 'returnStatement': {
             const result = typeOfExpression(children[1], knownIdentifiers);
@@ -555,7 +559,7 @@ const typeCheckStatement = ({ type, children }, knownIdentifiers): { errors: str
                     newIdentifiers: {},
                 };
             }
-            return { errors: [], newIdentifiers: { [varName]: { type: leftType } } };
+            return { errors: [], newIdentifiers: { [varName]: leftType } };
         }
         default:
             throw debug();
@@ -574,6 +578,7 @@ const typeCheckProgram = ({ statements, argument }: Function, previouslyKnownIde
     let knownIdentifiers = Object.assign(builtinIdentifiers, previouslyKnownIdentifiers);
 
     if (argument) {
+        if (!argument.type) throw debug();
         knownIdentifiers[argument.name] = argument.type;
     }
 
@@ -582,7 +587,7 @@ const typeCheckProgram = ({ statements, argument }: Function, previouslyKnownIde
         if (allErrors.length == 0) {
             const { errors, newIdentifiers } = typeCheckStatement(statement as any, knownIdentifiers);
             for (const identifier in newIdentifiers) {
-                knownIdentifiers[identifier] = newIdentifiers[identifier].type;
+                knownIdentifiers[identifier] = newIdentifiers[identifier];
             }
             allErrors.push(...errors);
         }
@@ -658,7 +663,7 @@ const fixOperators = (knownIdentifiers, statement) => {
     return typedAssignment;
 };
 
-type FrontendOutput = BackendInputs | { parseErrors: ParseError[] } | { typeErrors: string[] };
+type FrontendOutput = BackendInputs | { parseErrors: ParseError[] } | { typeErrors: TypeError[] };
 
 const lowerAst = (ast: any): Ast.LoweredAst => {
     if (!ast) debug();
