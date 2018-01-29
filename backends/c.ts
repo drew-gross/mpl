@@ -45,6 +45,12 @@ const compileAssignment = (destination: string, rhs: CompiledExpression): Compil
     };
 };
 
+let currentTemporaryId = 0;
+const getTemporaryId = () => {
+    currentTemporaryId++;
+    return currentTemporaryId;
+};
+
 const astToC = (input: BackendInput): CompiledProgram => {
     const { ast, globalDeclarations, stringLiterals, localDeclarations } = input;
     const recurse = newInput => astToC({ ...input, ...newInput });
@@ -74,23 +80,20 @@ const astToC = (input: BackendInput): CompiledProgram => {
         case 'concatenation': {
             const lhs = recurse({ ast: ast.lhs });
             const rhs = recurse({ ast: ast.rhs });
+            const temporaryName = `temporary_string_${getTemporaryId()}`;
+            const lhsName = `concat_lhs_${getTemporaryId()}`;
+            const rhsName = `concat_rhs_${getTemporaryId()}`;
             const prepAndCleanup = {
                 prepare: [
-                    `char *temporary_string = my_malloc(length(${join(
-                        lhs.execute,
-                        ' '
-                    )}) + length(${join(rhs.execute, ' ')}) + 1);`,
+                    `char *${lhsName} = ${join(lhs.execute, ' ')};`,
+                    `char *${rhsName} = ${join(rhs.execute, ' ')};`,
+                    `char *${temporaryName} = my_malloc(length(${lhsName}) + length(${rhsName}) + 1);`,
+                    `string_concatenate(${lhsName}, ${rhsName}, ${temporaryName});`,
                 ],
                 execute: [],
-                cleanup: ['my_free(temporary_string);'],
+                cleanup: [`my_free(${temporaryName});`],
             };
-            return compileExpression([lhs, rhs, prepAndCleanup], ([e1, e2, _]) => [
-                'string_concatenate(',
-                ...e1,
-                ', ',
-                ...e2,
-                ', temporary_string)',
-            ]);
+            return compileExpression([lhs, rhs, prepAndCleanup], ([_1, _2, _3]) => [temporaryName]);
         }
         case 'statement': {
             const childResults = ast.children.map(child => recurse({ ast: child }));
@@ -327,6 +330,16 @@ struct block_info {
 
 struct block_info *first_block = NULL; // Set to null because in the beginning, there are no blocks
 
+bool done_searching_for_block(struct block_info *block, size_t requested_size) {
+    if (block == NULL) {
+        return true;
+    }
+    if (block->free && block->size >= requested_size) {
+        return true;
+    }
+    return false;
+}
+
 void *my_malloc(size_t requested_size) {
     // Error out if we request zero bytes, that should never happen
     if (requested_size == 0) {
@@ -338,7 +351,7 @@ void *my_malloc(size_t requested_size) {
     struct block_info *previous_block = NULL;
 
     // Find the first free block that is large enough
-    while (current_block != NULL && current_block->free == false && current_block->size >= requested_size) {
+    while (!done_searching_for_block(current_block, requested_size)) {
         previous_block = current_block;
         current_block = current_block->next_block;
     }
@@ -457,8 +470,21 @@ const execute = async (path: string): Promise<ExecutionResult> => {
     }
 };
 
+/*
+const debugWithLldb = async path => {
+    const exeFile = await tmpFile();
+    try {
+        await exec(`clang -Wall -Werror ${path} -g -o ${exeFile.path}`);
+    } catch (e) {
+        return { error: `Failed to compile generated C code:\n${e.stderr}` };
+    }
+    return exec(`lldb ${exeFile.path}`);
+};
+*/
+
 export default {
     toExectuable,
     execute,
     name: 'c',
+    //debug: debugWithLldb,
 };

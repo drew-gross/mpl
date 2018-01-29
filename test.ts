@@ -682,7 +682,7 @@ return lenFunc(5);`,
 });
 
 // TODO: causes bad behaviour in parser, takes forever
-test.failing('complex string concatenation', compileAndRun, {
+test('complex string concatenation', compileAndRun, {
     source: `lenFunc = dummy: Integer => {
     str1 = "abc";
     str2 = "def";
@@ -693,6 +693,7 @@ test.failing('complex string concatenation', compileAndRun, {
 };
 return lenFunc(5);`,
     expectedExitCode: 6,
+    failing: 'mips',
 });
 
 test('parsing fails for extra invalid tokens', compileAndRun, {
