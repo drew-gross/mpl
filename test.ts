@@ -562,7 +562,7 @@ test('assign wrong type', compileAndRun, {
 
 // Needs function types with args in syntax
 test.failing('assign function to typed var', compileAndRun, {
-    source: 'myFunc: Function = a: Integer => a; return a(37);',
+    source: 'myFunc: Function = a: Integer => a; return myFunc(37);',
     expectedExitCode: 37,
 });
 

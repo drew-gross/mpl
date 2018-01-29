@@ -66,7 +66,7 @@ const lex = (input: string): Token[] => {
             toString: x => x,
         },
         {
-            token: 'Integer|Boolean|Function|String',
+            token: '[A-Z][a-z]*',
             type: 'type',
             action: x => x,
             toString: x => x,
