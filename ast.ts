@@ -1,3 +1,5 @@
+import { Type } from './api.js';
+
 // Leaf nodes
 
 type Leaf = Number | Identifier | BooleanLiteral | StringLiteral;
@@ -50,6 +52,7 @@ export type StringEquality = {
 
 export type TypedAssignment = {
     kind: 'typedAssignment';
+    type: Type;
     destination: string;
     expression: LoweredAst;
 };
@@ -139,6 +142,7 @@ export type UninferredStringEquality = {
 export type UninferredTypedAssignment = {
     kind: 'typedAssignment';
     destination: string;
+    type: Type;
     expression: UninferredAst;
 };
 
