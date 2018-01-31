@@ -36,7 +36,6 @@ export default {
     functionBody: [
         { n: 'statement', p: ['statement', statementSeparator, 'functionBody'] },
         { n: 'returnStatement', p: [_return, 'expression', statementSeparator] },
-        { n: 'returnStatement', p: [_return, 'expression'] },
     ],
     statement: [
         { n: 'typedAssignment', p: [identifier, colon, type, assignment, 'expression'] },

@@ -281,7 +281,7 @@ test('lowering of bracketedExpressions', t => {
     } as any);
 });
 
-test.only('bare return', compileAndRun, {
+test('bare return', compileAndRun, {
     source: 'return 7',
     expectedExitCode: 7,
 });
@@ -616,7 +616,7 @@ test('string length with type inferred', compileAndRun, {
     expectedExitCode: 5,
 });
 
-test('struture is equal for inferred string type', t => {
+test.only('struture is equal for inferred string type', t => {
     const inferredStructure = compile('myStr = "test"; return length(myStr);');
     const suppliedStructure = compile('myStr: String = "test"; return length(myStr);');
     t.deepEqual(inferredStructure, suppliedStructure);

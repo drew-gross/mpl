@@ -844,6 +844,18 @@ const inferOperators = (knownIdentifiers, statement: Ast.UninferredAst) => {
 
 type FrontendOutput = BackendInputs | { parseErrors: ParseError[] } | { typeErrors: TypeError[] };
 
+const makeProgramAstNodeFromStatmentParseResult = (ast: any): Ast.UninferredStatement[] => {
+    const children: Ast.UninferredStatement[] = [];
+    debugger;
+    if (ast.type === 'statement') {
+        children.push(lowerAst(ast.children[0]) as Ast.UninferredStatement);
+        children.push(...makeProgramAstNodeFromStatmentParseResult(ast.children[2]));
+    } else {
+        children.push(lowerAst(ast) as Ast.UninferredStatement);
+    }
+    return children;
+};
+
 const lowerAst = (ast: any): Ast.UninferredAst => {
     if (!ast) debug();
     switch (ast.type) {
@@ -942,7 +954,7 @@ const lowerAst = (ast: any): Ast.UninferredAst => {
         case 'program':
             return {
                 kind: 'program',
-                children: ast.children.slice(0, ast.children.length - 1).map(lowerAst),
+                children: makeProgramAstNodeFromStatmentParseResult(ast.children[0]),
             };
         default:
             throw debug();
@@ -950,7 +962,6 @@ const lowerAst = (ast: any): Ast.UninferredAst => {
 };
 
 const compile = (source: string): FrontendOutput => {
-    debugger;
     const tokens = lex(source);
     const parseResult = parseMpl(tokens);
 
