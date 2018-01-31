@@ -276,15 +276,6 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 ]
             );
         }
-        case 'statement': {
-            const childResults = ast.children.map(child =>
-                recurse({
-                    ast: child,
-                    destination: '(TODO: READ FROM REGISTER ASSIGNMENT)',
-                })
-            );
-            return compileExpression(childResults, flatten);
-        }
         case 'functionLiteral': {
             if (destination.type !== 'register') throw debug(); // TODO: Figure out how to guarantee this doesn't happen
             return compileExpression([], ([]) => [

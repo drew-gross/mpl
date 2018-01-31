@@ -281,7 +281,7 @@ test('lowering of bracketedExpressions', t => {
     } as any);
 });
 
-test('bare return', compileAndRun, {
+test.only('bare return', compileAndRun, {
     source: 'return 7',
     expectedExitCode: 7,
 });

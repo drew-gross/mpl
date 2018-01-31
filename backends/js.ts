@@ -29,8 +29,6 @@ const astToJS = ({
             return [...recurse({ ast: ast.lhs }), '-', ...recurse({ ast: ast.rhs })];
         case 'addition':
             return [...recurse({ ast: ast.lhs }), '+', ...recurse({ ast: ast.rhs })];
-        case 'statement':
-            return flatten(ast.children.map(child => recurse({ ast: child })));
         case 'typedAssignment':
             return [`const ${ast.destination} = `, ...recurse({ ast: ast.expression }), ';'];
         case 'functionLiteral':

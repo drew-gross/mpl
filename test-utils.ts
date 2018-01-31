@@ -50,8 +50,6 @@ const astToString = (ast: LoweredAst) => {
             return `${astToString(ast.lhs)} - ${astToString(ast.rhs)}`;
         case 'stringLiteral':
             return `"${ast.value}"`;
-        case 'statement':
-            return ast.children.map(astToString);
         case 'booleanLiteral':
             return ast.value ? 'True' : 'False';
         case 'concatenation':

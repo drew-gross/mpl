@@ -1,5 +1,4 @@
-import { AstNode } from './parser-combinator.js'; // TODO: This shouldn't be necessary
-import { LoweredAst } from './ast.js';
+import { LoweredAst, UninferredStatement } from './ast.js';
 
 export type Type =
     | {
@@ -19,7 +18,7 @@ export type VariableDeclaration = {
 export type IdentifierDict = { [name: string]: Type }; // TODO: Don't export this (or rethink it)
 export type Function = {
     name: string;
-    statements: AstNode[];
+    statements: UninferredStatement[];
     variables: VariableDeclaration[];
     argument: VariableDeclaration;
     temporaryCount: number;

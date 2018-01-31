@@ -117,11 +117,6 @@ const transformUninferredAst = (
                 kind: ast.kind,
                 expression: recurse(ast.expression),
             };
-        case 'statement':
-            return {
-                kind: ast.kind,
-                children: ast.children.map(recurse),
-            };
         case 'assignment':
             return {
                 kind: ast.kind,
@@ -189,35 +184,22 @@ const extractVariables = (ast, knownIdentifiers: IdentifierDict): VariableDeclar
     }
 };
 
-type FunctionAst = {
-    name: string;
-    argument?: AstNode;
-    body: AstNode;
-};
-
-const statementTreeToFunction = (functionAst: FunctionAst, knownIdentifiers): Function => {
-    const functionName: string = functionAst.name;
-    let functionStatements: AstNode[] = [];
-    let currentStatement = functionAst.body as any;
+const statementTreeToFunction = (
+    ast: Ast.UninferredProgram,
+    name: string,
+    argument: undefined | any,
+    knownIdentifiers
+): Function => {
+    // We allow a function to be a single expression, if it is the function returns the result of that expression
+    const statements: Ast.UninferredStatement[] =
+        ast.children.length === 1 && ast.children[0].kind !== 'returnStatement'
+            ? [{ kind: 'returnStatement', expression: ast.children[0] }]
+            : ast.children;
     let functionArgument;
-    while (currentStatement.type === 'statement') {
-        functionStatements.push(currentStatement.children[0]);
-        currentStatement = currentStatement.children[2];
-    }
-    // Final statement of function. If it is a bare expression and is the only statement,
-    // and is not a returns statement, turn it into a return statement.
-    if (functionStatements.length === 0 && currentStatement.type !== 'returnStatement') {
-        functionStatements.push({
-            type: 'returnStatement',
-            children: [{ type: 'return', value: null }, currentStatement],
-        } as any);
-    } else {
-        functionStatements.push(currentStatement);
-    }
     const argumentIdentifier: IdentifierDict = {};
-    if (functionAst.argument) {
-        const argumentName = ((functionAst.argument as AstInteriorNode).children[0] as AstLeaf).value as string;
-        const argumentTypeName = ((functionAst.argument as AstInteriorNode).children[2] as AstLeaf).value as string;
+    if (argument) {
+        const argumentName = ((argument as AstInteriorNode).children[0] as AstLeaf).value as string;
+        const argumentTypeName = ((argument as AstInteriorNode).children[2] as AstLeaf).value as string;
         argumentIdentifier[argumentName] = { name: argumentTypeName } as any;
         functionArgument = {
             name: argumentName,
@@ -229,7 +211,7 @@ const statementTreeToFunction = (functionAst: FunctionAst, knownIdentifiers): Fu
     }
     const variablesAsIdentifiers: IdentifierDict = {};
     const variables: VariableDeclaration[] = [];
-    functionStatements.forEach(statement => {
+    statements.forEach(statement => {
         extractVariables(statement, {
             ...knownIdentifiers,
             ...variablesAsIdentifiers,
@@ -241,20 +223,21 @@ const statementTreeToFunction = (functionAst: FunctionAst, knownIdentifiers): Fu
     });
 
     variables.forEach((variable: VariableDeclaration, index) => {
-        const rhsIndex = functionStatements[index].type === 'assignment' ? 2 : 4;
-        const statement = functionStatements[index] as AstInteriorNode;
-        variablesAsIdentifiers[variable.name] = typeOfExpression(statement.children[rhsIndex] as any, {
-            ...knownIdentifiers,
-            ...variablesAsIdentifiers,
-        }) as Type;
+        const statement = statements[index];
+        if (statement.kind !== 'returnStatement') {
+            variablesAsIdentifiers[statement.destination] = typeOfExpression(statement.expression, {
+                ...knownIdentifiers,
+                ...variablesAsIdentifiers,
+            }) as Type;
+        }
     });
 
     return {
-        name: functionName,
-        statements: functionStatements,
+        name,
+        statements,
         argument: functionArgument,
         variables,
-        temporaryCount: countTemporariesInFunction({ statements: functionStatements }),
+        temporaryCount: countTemporariesInFunction({ statements }),
         knownIdentifiers: { ...knownIdentifiers, ...variablesAsIdentifiers },
     };
 };
@@ -400,18 +383,20 @@ const parseMpl = (tokens: Token[]): AstNode | ParseError[] => {
     return ast;
 };
 
-const countTemporariesInExpression = ast => {
+const countTemporariesInExpression = (ast: Ast.UninferredAst) => {
     if ('value' in ast) {
         return 0;
     }
-    switch (ast.type) {
+    switch (ast.kind) {
         case 'returnStatement':
-            return countTemporariesInExpression(ast.children[1]);
+            return countTemporariesInExpression(ast.expression);
         case 'product':
-            return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
         case 'addition':
         case 'subtraction':
-            return 1 + Math.max(...ast.children.map(countTemporariesInExpression));
+        case 'equality':
+        case 'stringEquality':
+        case 'concatenation':
+            return 1 + Math.max(countTemporariesInExpression(ast.lhs), countTemporariesInExpression(ast.rhs));
         case 'typedAssignment':
             return 1;
         case 'assignment':
@@ -422,24 +407,13 @@ const countTemporariesInExpression = ast => {
             return (
                 2 +
                 Math.max(
-                    countTemporariesInExpression(ast.children[0]),
-                    countTemporariesInExpression(ast.children[2]),
-                    countTemporariesInExpression(ast.children[4])
+                    countTemporariesInExpression(ast.condition),
+                    countTemporariesInExpression(ast.ifTrue),
+                    countTemporariesInExpression(ast.ifFalse)
                 )
             );
-        case 'stringEquality':
-        case 'equality':
-            return (
-                1 +
-                Math.max(countTemporariesInExpression(ast.children[0]), countTemporariesInExpression(ast.children[2]))
-            );
         case 'program':
-            return countTemporariesInExpression(ast.children[0]);
-        case 'concatenation':
-            return (
-                2 +
-                Math.max(countTemporariesInExpression(ast.children[0]), countTemporariesInExpression(ast.children[2]))
-            );
+            return Math.max(...ast.children.map(countTemporariesInExpression));
         default:
             debug();
     }
@@ -965,12 +939,18 @@ const lowerAst = (ast: any): Ast.UninferredAst => {
                 kind: 'booleanLiteral',
                 value: ast.value == 'true',
             };
+        case 'program':
+            return {
+                kind: 'program',
+                children: ast.children.slice(0, ast.children.length - 1).map(lowerAst),
+            };
         default:
             throw debug();
     }
 };
 
 const compile = (source: string): FrontendOutput => {
+    debugger;
     const tokens = lex(source);
     const parseResult = parseMpl(tokens);
 
@@ -988,26 +968,27 @@ const compile = (source: string): FrontendOutput => {
         ...functionIdentifierTypes,
     };
 
-    const functionsWithStatementList: Function[] = functions.map(statement =>
-        statementTreeToFunction(statement, knownIdentifiers)
-    );
-    // program has type "program", get it's first statement via children[0]
-    const programWithStatementList: Function = statementTreeToFunction(
-        { body: program.children[0], name: 'main' },
-        knownIdentifiers
-    );
-
-    const loweredFunctionsWithStatementList = functionsWithStatementList.map(f => ({
+    const loweredFunctions = functions.map(f => ({
         ...f,
         statements: f.statements.map(lowerAst),
     }));
 
-    const loweredProgramWithStatementList = {
-        ...programWithStatementList,
-        statements: programWithStatementList.statements.map(lowerAst),
-    };
+    if (!program.children) throw debug();
+    const loweredProgram = lowerAst(program);
 
-    const programTypeCheck = typeCheckProgram(loweredProgramWithStatementList, knownIdentifiers);
+    const functionsWithStatementList: Function[] = loweredFunctions.map(f => {
+        throw debug();
+        //return statementTreeToFunction(f, (console.log(f) as any, '' as any, knownIdentifiers)
+    });
+    // program has type "program", get it's first statement via children[0]
+    const programWithStatementList: Function = statementTreeToFunction(
+        loweredProgram as Ast.UninferredProgram,
+        'main',
+        undefined,
+        knownIdentifiers
+    );
+
+    const programTypeCheck = typeCheckProgram(programWithStatementList, knownIdentifiers);
 
     knownIdentifiers = {
         ...knownIdentifiers,
@@ -1017,7 +998,7 @@ const compile = (source: string): FrontendOutput => {
     // Modifications here :(
     // Now that we have type information, go through and insert typed
     // versions of operators
-    loweredFunctionsWithStatementList.forEach(f => {
+    functionsWithStatementList.forEach(f => {
         f.statements = f.statements.map(s =>
             inferOperators(
                 {
@@ -1030,11 +1011,11 @@ const compile = (source: string): FrontendOutput => {
         );
     });
 
-    loweredProgramWithStatementList.statements = loweredProgramWithStatementList.statements.map(s =>
+    programWithStatementList.statements = programWithStatementList.statements.map(s =>
         inferOperators(knownIdentifiers, s)
     );
 
-    let typeErrors = loweredFunctionsWithStatementList.map(f => typeCheckProgram(f, knownIdentifiers).typeErrors);
+    let typeErrors = functionsWithStatementList.map(f => typeCheckProgram(f, knownIdentifiers).typeErrors);
     typeErrors.push(programTypeCheck.typeErrors);
 
     typeErrors = flatten(typeErrors);
@@ -1042,7 +1023,7 @@ const compile = (source: string): FrontendOutput => {
         return { typeErrors };
     }
 
-    const globalDeclarations: VariableDeclaration[] = loweredProgramWithStatementList.statements
+    const globalDeclarations: VariableDeclaration[] = programWithStatementList.statements
         .filter(s => s.kind === 'typedAssignment' || s.kind === 'assignment')
         .map(assignment => {
             const result = assignmentToDeclaration(assignment as any, {
@@ -1055,8 +1036,8 @@ const compile = (source: string): FrontendOutput => {
         }) as any;
 
     return {
-        functions: loweredFunctionsWithStatementList as any,
-        program: loweredProgramWithStatementList as any,
+        functions: functionsWithStatementList as any,
+        program: programWithStatementList as any,
         globalDeclarations,
         stringLiterals,
     };

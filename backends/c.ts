@@ -95,10 +95,6 @@ const astToC = (input: BackendInput): CompiledProgram => {
             };
             return compileExpression([lhs, rhs, prepAndCleanup], ([_1, _2, _3]) => [temporaryName]);
         }
-        case 'statement': {
-            const childResults = ast.children.map(child => recurse({ ast: child }));
-            return compileExpression(childResults, flatten);
-        }
         case 'typedAssignment': {
             const lhs = ast.destination;
             const rhs = recurse({ ast: ast.expression });

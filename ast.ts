@@ -68,10 +68,7 @@ export type FunctionLiteral = {
     deanonymizedName: string;
 };
 
-export type Statement = {
-    kind: 'statement';
-    children: Statement[];
-};
+export type Statement = TypedAssignment | ReturnStatement;
 
 export type Addition = {
     kind: 'addition';
@@ -99,10 +96,8 @@ export type Concatenation = {
 
 export type LoweredAst =
     | Leaf
-    | ReturnStatement
     | Ternary
     | Equality
-    | TypedAssignment
     | FunctionCall
     | FunctionLiteral
     | Statement
@@ -157,10 +152,7 @@ export type UninferredFunctionLiteral = {
     deanonymizedName: string;
 };
 
-export type UninferredStatement = {
-    kind: 'statement';
-    children: UninferredStatement[];
-};
+export type UninferredStatement = UninferredTypedAssignment | UninferredAssignment | UninferredReturnStatement;
 
 export type UninferredAddition = {
     kind: 'addition';
@@ -192,12 +184,15 @@ export type UninferredAssignment = {
     expression: UninferredAst;
 };
 
+export type UninferredProgram = {
+    kind: 'program';
+    children: UninferredStatement[];
+};
+
 export type UninferredAst =
     | Leaf
-    | UninferredReturnStatement
     | UninferredTernary
     | UninferredEquality
-    | UninferredTypedAssignment
     | UninferredFunctionCall
     | UninferredFunctionLiteral
     | UninferredStatement
@@ -206,4 +201,4 @@ export type UninferredAst =
     | UninferredProduct
     | UninferredStringEquality
     | UninferredConcatenation
-    | UninferredAssignment;
+    | UninferredProgram;
