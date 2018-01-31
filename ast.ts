@@ -70,7 +70,7 @@ export type FunctionLiteral = {
 
 export type Statement = {
     kind: 'statement';
-    children: any;
+    children: Statement[];
 };
 
 export type Addition = {
@@ -159,7 +159,7 @@ export type UninferredFunctionLiteral = {
 
 export type UninferredStatement = {
     kind: 'statement';
-    children: any;
+    children: UninferredStatement[];
 };
 
 export type UninferredAddition = {
