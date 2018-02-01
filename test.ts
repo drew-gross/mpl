@@ -34,7 +34,7 @@ test('lex with initial whitespace', t => {
 });
 
 test('ast for single number', t => {
-    const tokens = lex('return 7');
+    const tokens = lex('return 7;');
     const parseResult: ParseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
     const expectedResult: AstNode = {
         type: 'program' as any,
@@ -50,6 +50,10 @@ test('ast for single number', t => {
                         type: 'number' as any,
                         value: 7,
                     },
+                    {
+                        type: 'statementSeparator' as any,
+                        value: null,
+                    },
                 ],
             },
             {
@@ -62,7 +66,7 @@ test('ast for single number', t => {
 });
 
 test('ast for number in brackets', t => {
-    t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(' return (5)'), 0))), {
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(' return (5);'), 0))), {
         type: 'program' as any,
         children: [
             {
@@ -76,6 +80,10 @@ test('ast for number in brackets', t => {
                         type: 'number' as any,
                         value: 5,
                     },
+                    {
+                        type: 'statementSeparator' as any,
+                        value: null,
+                    },
                 ],
             },
             {
@@ -87,7 +95,7 @@ test('ast for number in brackets', t => {
 });
 
 test('ast for number in double brackets', t => {
-    t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex('return ((20))'), 0))), {
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex('return ((20));'), 0))), {
         type: 'program' as any,
         children: [
             {
@@ -101,6 +109,10 @@ test('ast for number in double brackets', t => {
                         type: 'number' as any,
                         value: 20,
                     },
+                    {
+                        type: 'statementSeparator' as any,
+                        value: null,
+                    },
                 ],
             },
             {
@@ -112,7 +124,7 @@ test('ast for number in double brackets', t => {
 });
 
 test('ast for product with brackets', t => {
-    t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex('return 3 * (4 * 5)'), 0))), {
+    t.deepEqual(removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex('return 3 * (4 * 5);'), 0))), {
         type: 'program',
         children: [
             {
@@ -151,6 +163,10 @@ test('ast for product with brackets', t => {
                                 ],
                             },
                         ],
+                    },
+                    {
+                        type: 'statementSeparator' as any,
+                        value: null,
                     },
                 ],
             },
@@ -576,7 +592,7 @@ test('many temporaries, spill to ram', compileAndRun, {
     expectedExitCode: 1,
 });
 
-test('multi statement function with locals', compileAndRun, {
+test.only('multi statement function with locals', compileAndRun, {
     source: `
 quadrupleWithLocal = a: Integer => { b: Integer = 2 * a; return 2 * b; };
 return quadrupleWithLocal(5);`,
@@ -616,7 +632,7 @@ test('string length with type inferred', compileAndRun, {
     expectedExitCode: 5,
 });
 
-test.only('struture is equal for inferred string type', t => {
+test('struture is equal for inferred string type', t => {
     const inferredStructure = compile('myStr = "test"; return length(myStr);');
     const suppliedStructure = compile('myStr: String = "test"; return length(myStr);');
     t.deepEqual(inferredStructure, suppliedStructure);

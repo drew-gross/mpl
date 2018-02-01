@@ -167,18 +167,15 @@ const transformUninferredAst = (
     }
 };
 
-const extractVariables = (ast, knownIdentifiers: IdentifierDict): VariableDeclaration[] => {
-    if (ast.type === 'assignment' || ast.type === 'typedAssignment') {
-        const rhsIndex = ast.type === 'assignment' ? 2 : 4;
+const extractVariables = (ast: Ast.UninferredAst, knownIdentifiers: IdentifierDict): VariableDeclaration[] => {
+    if (ast.kind === 'assignment' || ast.kind === 'typedAssignment') {
         return [
             {
-                name: ast.children[0].value,
+                name: ast.destination,
                 memoryCategory: getMemoryCategory(ast),
-                type: typeOfExpression(ast.children[rhsIndex], knownIdentifiers) as Type,
+                type: typeOfExpression(ast.expression, knownIdentifiers) as Type,
             },
         ];
-    } else if ('children' in ast) {
-        return flatten(ast.children.map(extractVariables));
     } else {
         return [];
     }
@@ -191,10 +188,11 @@ const statementTreeToFunction = (
     knownIdentifiers
 ): Function => {
     // We allow a function to be a single expression, if it is the function returns the result of that expression
-    const statements: Ast.UninferredStatement[] =
-        ast.children.length === 1 && ast.children[0].kind !== 'returnStatement'
-            ? [{ kind: 'returnStatement', expression: ast.children[0] }]
-            : ast.children;
+    const statements: Ast.UninferredStatement[] = !ast.children
+        ? [{ kind: 'returnStatement', expression: ast }]
+        : ast.children.length === 1 && ast.children[0].kind !== 'returnStatement'
+          ? [{ kind: 'returnStatement', expression: ast.children[0] }]
+          : ast.children;
     let functionArgument;
     const argumentIdentifier: IdentifierDict = {};
     if (argument) {
@@ -242,50 +240,79 @@ const statementTreeToFunction = (
     };
 };
 
-let functionId = 0;
-const extractFunctions = ast => {
-    const newFunctions: any = [];
-    const newAst: any = {};
-    if (ast.type === 'function') {
-        const functionName = `anonymous_${functionId}`;
-        functionId++;
-        newFunctions.push({
-            name: functionName,
-            argument: ast.children[0],
-            body: ast.children[2],
-        });
-        newAst.type = 'functionLiteral';
-        newAst.value = functionName;
-    } else if (ast.type === 'functionWithBlock') {
-        const functionName = `anonymous_${functionId}`;
-        functionId++;
-        newFunctions.push({
-            name: functionName,
-            argument: ast.children[0],
-            body: ast.children[3],
-        });
-        (newAst.type = 'functionLiteral'), (newAst.value = functionName);
-    } else if ('children' in ast) {
-        const otherFunctions = ast.children.map(extractFunctions);
-        newAst.type = ast.type;
-        newAst.children = [];
-        otherFunctions.forEach(({ functions, program }) => {
-            newFunctions.push(...functions);
-            newAst.children.push(program);
-        });
-    } else {
-        newAst.type = ast.type;
-        newAst.value = ast.value;
-    }
-    return { functions: newFunctions, program: newAst };
+type ExtractFunctionsResult = {
+    functions: Function[];
+    program: Ast.UninferredProgram;
 };
 
-const extractStringLiterals = (ast): string[] => {
+let functionId = 0;
+const extractFunctions = (ast: Ast.UninferredAst): ExtractFunctionsResult => {
+    const functions: Function[] = [];
+    if (ast.kind === 'functionLiteral') {
+        const functionName = `anonymous_${functionId}`;
+        functionId++;
+        functions.push({
+            name: functionName,
+            statements: [],
+            variables: [],
+            argument: [],
+            temporaryCount: [],
+            knownIdentifiers: [],
+        } as any);
+        return {
+            functions,
+            program: {
+                kind: 'program',
+                children: [],
+            },
+        };
+    } else if ((ast.kind as any) === 'functionWithBlock') {
+        const functionName = `anonymous_${functionId}`;
+        functionId++;
+        functions.push({
+            name: functionName,
+            statements: [],
+            variables: [],
+            argument: [],
+            temporaryCount: [],
+            knownIdentifiers: [],
+        } as any);
+        return {
+            functions,
+            program: {
+                kind: 'program',
+                children: [],
+            },
+        };
+    } else if ('children' in ast) {
+        const otherFunctions = (ast as any).children.map(extractFunctions);
+        const program = {
+            kind: 'program' as 'program',
+            children: [] as Ast.UninferredStatement[],
+        };
+        otherFunctions.forEach((f: any) => {
+            functions.push(...f.functions);
+            program.children.push(f.program);
+        });
+
+        return { functions, program };
+    } else {
+        return {
+            functions,
+            program: {
+                kind: 'program',
+                children: [],
+            },
+        };
+    }
+};
+
+const extractStringLiterals = (ast: Ast.UninferredAst): string[] => {
     let newLiterals = [];
-    if (ast.type === 'stringLiteral') {
+    if (ast.kind === 'stringLiteral') {
         newLiterals.push(ast.value as never);
     } else if ('children' in ast) {
-        newLiterals = newLiterals.concat(ast.children.map(extractStringLiterals));
+        newLiterals = newLiterals.concat((ast as any).children.map(extractStringLiterals));
     }
     return unique(flatten(newLiterals));
 };
@@ -413,6 +440,7 @@ const countTemporariesInExpression = (ast: Ast.UninferredAst) => {
                 )
             );
         case 'program':
+            if (!ast.children) debug();
             return Math.max(...ast.children.map(countTemporariesInExpression));
         default:
             debug();
@@ -709,6 +737,7 @@ const typeCheckStatement = (
     ast: Ast.UninferredAst,
     knownIdentifiers
 ): { errors: string[]; newIdentifiers: IdentifierDict } => {
+    if (!ast.kind) debug();
     switch (ast.kind) {
         case 'returnStatement': {
             const result = typeOfLoweredExpression(ast.expression, knownIdentifiers);
@@ -764,19 +793,11 @@ const builtinIdentifiers: IdentifierDict = {
     },
 };
 
-const typeCheckProgram = (
-    { statements, argument }: { statements: Ast.UninferredAst[]; argument: VariableDeclaration },
-    previouslyKnownIdentifiers: IdentifierDict
-) => {
+const typeCheckProgram = (ast: Ast.UninferredProgram, previouslyKnownIdentifiers: IdentifierDict) => {
     let knownIdentifiers = { ...builtinIdentifiers, ...previouslyKnownIdentifiers };
 
-    if (argument) {
-        if (!argument.type) throw debug();
-        knownIdentifiers[argument.name] = argument.type;
-    }
-
     const allErrors: any = [];
-    statements.forEach(statement => {
+    ast.children.forEach(statement => {
         if (allErrors.length == 0) {
             const { errors, newIdentifiers } = typeCheckStatement(statement, knownIdentifiers);
             for (const identifier in newIdentifiers) {
@@ -846,7 +867,6 @@ type FrontendOutput = BackendInputs | { parseErrors: ParseError[] } | { typeErro
 
 const makeProgramAstNodeFromStatmentParseResult = (ast: any): Ast.UninferredStatement[] => {
     const children: Ast.UninferredStatement[] = [];
-    debugger;
     if (ast.type === 'statement') {
         children.push(lowerAst(ast.children[0]) as Ast.UninferredStatement);
         children.push(...makeProgramAstNodeFromStatmentParseResult(ast.children[2]));
@@ -856,31 +876,37 @@ const makeProgramAstNodeFromStatmentParseResult = (ast: any): Ast.UninferredStat
     return children;
 };
 
-const lowerAst = (ast: any): Ast.UninferredAst => {
+const lowerAst = (ast2: AstNode): Ast.UninferredAst => {
+    const ast = ast2 as any;
     if (!ast) debug();
     switch (ast.type) {
         case 'returnStatement':
+            if (!ast.children) throw debug();
             return {
                 kind: 'returnStatement',
                 expression: lowerAst(ast.children[1]),
             };
         case 'number':
+            if (!ast.value) throw debug();
             return {
                 kind: 'number',
-                value: ast.value,
+                value: ast.value as any,
             };
         case 'identifier':
+            if (!ast.value) throw debug();
             return {
                 kind: 'identifier',
-                value: ast.value,
+                value: ast.value as any,
             };
         case 'product':
+            if (!ast.children) throw debug();
             return {
                 kind: 'product',
                 lhs: lowerAst(ast.children[0]),
                 rhs: lowerAst(ast.children[1]),
             };
         case 'ternary':
+            if (!ast.children) throw debug();
             return {
                 kind: 'ternary',
                 condition: lowerAst(ast.children[0]),
@@ -888,54 +914,64 @@ const lowerAst = (ast: any): Ast.UninferredAst => {
                 ifFalse: lowerAst(ast.children[4]),
             };
         case 'equality':
+            if (!ast.children) throw debug();
             return {
                 kind: 'equality',
                 lhs: lowerAst(ast.children[0]),
                 rhs: lowerAst(ast.children[2]),
             };
         case 'callExpression':
+            if (!ast.children) throw debug();
+            if (!ast.children[0]) throw debug();
             return {
                 kind: 'callExpression',
-                name: ast.children[0].value,
+                name: ast.children[0].value as any,
                 argument: lowerAst(ast.children[2]),
             };
         case 'subtraction':
+            if (!ast.children) throw debug();
             return {
                 kind: 'subtraction',
                 lhs: lowerAst(ast.children[0]),
                 rhs: lowerAst(ast.children[1]),
             };
         case 'addition':
+            if (!ast.children) throw debug();
             return {
                 kind: 'addition',
                 lhs: lowerAst(ast.children[0]),
                 rhs: lowerAst(ast.children[1]),
             };
         case 'assignment':
+            if (!ast.children) throw debug();
             return {
                 kind: 'assignment',
-                destination: ast.children[0].value,
+                destination: ast.children[0].value as any,
                 expression: lowerAst(ast.children[2]),
             };
         case 'typedAssignment':
+            if (!ast.children) throw debug();
             return {
                 kind: 'typedAssignment',
-                destination: ast.children[0].value,
-                type: { name: ast.children[2].value },
+                destination: ast.children[0].value as any,
+                type: { name: ast.children[2].value as any },
                 expression: lowerAst(ast.children[4]),
             };
         case 'stringLiteral':
+            if (!ast.value) throw debug();
             return {
                 kind: 'stringLiteral',
-                value: ast.value,
+                value: ast.value as any,
             };
         case 'concatenation':
+            if (!ast.children) throw debug();
             return {
                 kind: 'concatenation',
                 lhs: lowerAst(ast.children[0]),
                 rhs: lowerAst(ast.children[2]),
             };
         case 'stringEquality':
+            if (!ast.children) throw debug();
             return {
                 kind: 'stringEquality',
                 lhs: lowerAst(ast.children[0]),
@@ -944,7 +980,12 @@ const lowerAst = (ast: any): Ast.UninferredAst => {
         case 'functionLiteral':
             return {
                 kind: 'functionLiteral',
-                deanonymizedName: ast.value,
+                deanonymizedName: ast.value as any,
+            };
+        case 'functionWithBlock':
+            return {
+                kind: 'functionLiteral',
+                deanonymizedName: 'todo_better_function_name',
             };
         case 'booleanLiteral':
             return {
@@ -952,6 +993,7 @@ const lowerAst = (ast: any): Ast.UninferredAst => {
                 value: ast.value == 'true',
             };
         case 'program':
+            if (!ast.children) throw debug();
             return {
                 kind: 'program',
                 children: makeProgramAstNodeFromStatmentParseResult(ast.children[0]),
@@ -968,7 +1010,7 @@ const compile = (source: string): FrontendOutput => {
     if (Array.isArray(parseResult)) {
         return { parseErrors: parseResult };
     }
-    const ast = parseResult;
+    const ast = lowerAst(parseResult);
 
     const { functions, program } = extractFunctions(ast);
     const stringLiterals = extractStringLiterals(ast);
@@ -979,27 +1021,13 @@ const compile = (source: string): FrontendOutput => {
         ...functionIdentifierTypes,
     };
 
-    const loweredFunctions = functions.map(f => ({
-        ...f,
-        statements: f.statements.map(lowerAst),
-    }));
-
-    if (!program.children) throw debug();
-    const loweredProgram = lowerAst(program);
-
-    const functionsWithStatementList: Function[] = loweredFunctions.map(f => {
-        throw debug();
-        //return statementTreeToFunction(f, (console.log(f) as any, '' as any, knownIdentifiers)
+    const functionsWithStatementList: Function[] = (functions as any).map(({ argument, body, name }) => {
+        return statementTreeToFunction(body, name, argument, knownIdentifiers);
     });
     // program has type "program", get it's first statement via children[0]
-    const programWithStatementList: Function = statementTreeToFunction(
-        loweredProgram as Ast.UninferredProgram,
-        'main',
-        undefined,
-        knownIdentifiers
-    );
+    const programWithStatementList: Function = statementTreeToFunction(program, 'main', undefined, knownIdentifiers);
 
-    const programTypeCheck = typeCheckProgram(programWithStatementList, knownIdentifiers);
+    const programTypeCheck = typeCheckProgram(program, knownIdentifiers);
 
     knownIdentifiers = {
         ...knownIdentifiers,
@@ -1026,7 +1054,9 @@ const compile = (source: string): FrontendOutput => {
         inferOperators(knownIdentifiers, s)
     );
 
-    let typeErrors = functionsWithStatementList.map(f => typeCheckProgram(f, knownIdentifiers).typeErrors);
+    let typeErrors = functions.map(
+        f => typeCheckProgram({ kind: 'program', children: f.statements }, knownIdentifiers).typeErrors
+    );
     typeErrors.push(programTypeCheck.typeErrors);
 
     typeErrors = flatten(typeErrors);
