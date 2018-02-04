@@ -6,6 +6,7 @@ import { file as tmpFile } from 'tmp-promise';
 import { writeFile } from 'fs-extra';
 import assertNever from './util/assertNever.js';
 import debug from './util/debug.js';
+import { tokenSpecs } from './grammar.js';
 
 import mipsBackend from './backends/mips.js';
 import jsBackend from './backends/js.js';
@@ -89,7 +90,7 @@ export const compileAndRun = async (
     });
 
     // Make sure it parses
-    const lexResult = lex(source);
+    const lexResult = lex(tokenSpecs, source);
     lexResult.forEach(({ string, type }) => {
         if (type === 'invalid') {
             t.fail(`Unable to lex. Invalid token: ${string}`);

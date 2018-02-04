@@ -2,16 +2,16 @@ import flatten from './util/list/flatten.js';
 import unique from './util/list/unique.js';
 import debug from './util/debug.js';
 import { lex, Token } from './lex.js';
-import grammar from './grammar.js';
 import {
-    ParseResult,
-    AstNode,
-    AstInteriorNode,
-    AstLeaf,
-    parseResultIsError,
-    parse,
-    stripResultIndexes,
-} from './parser-combinator.js';
+    tokenSpecs,
+    grammar,
+    MplAstLeafNode,
+    MplAstInteriorNode,
+    MplAstNode,
+    MplParseResult,
+    MplToken,
+} from './grammar.js';
+import { ParseResult, parseResultIsError, parse, stripResultIndexes } from './parser-combinator.js';
 import {
     Type,
     VariableDeclaration,
@@ -68,7 +68,7 @@ const repairAssociativity = (nodeTypeToRepair, ast) => {
     }
 };
 
-const transformAst = (nodeType, f, ast: AstNode, recurseOnNew: boolean) => {
+const transformAst = (nodeType, f, ast: MplAstNode, recurseOnNew: boolean) => {
     if (!ast) debug();
     if (ast.type === nodeType) {
         const newNode = f(ast);
@@ -88,7 +88,7 @@ const transformAst = (nodeType, f, ast: AstNode, recurseOnNew: boolean) => {
     } else if ('children' in ast) {
         return {
             type: ast.type,
-            children: (ast as AstInteriorNode).children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
+            children: (ast as any).children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
         };
     } else {
         return ast;
@@ -196,8 +196,8 @@ const statementTreeToFunction = (
     let functionArgument;
     const argumentIdentifier: IdentifierDict = {};
     if (argument) {
-        const argumentName = ((argument as AstInteriorNode).children[0] as AstLeaf).value as string;
-        const argumentTypeName = ((argument as AstInteriorNode).children[2] as AstLeaf).value as string;
+        const argumentName = ((argument as any).children[0] as MplAstLeafNode).value as string;
+        const argumentTypeName = ((argument as any).children[2] as MplAstLeafNode).value as string;
         argumentIdentifier[argumentName] = { name: argumentTypeName } as any;
         functionArgument = {
             name: argumentName,
@@ -240,70 +240,44 @@ const statementTreeToFunction = (
     };
 };
 
-type ExtractFunctionsResult = {
-    functions: Function[];
-    program: Ast.UninferredProgram;
-};
-
 let functionId = 0;
-const extractFunctions = (ast: Ast.UninferredAst): ExtractFunctionsResult => {
+const extractFunctions = (ast: Ast.UninferredAst): Function[] => {
     const functions: Function[] = [];
-    if (ast.kind === 'functionLiteral') {
-        const functionName = `anonymous_${functionId}`;
-        functionId++;
-        functions.push({
-            name: functionName,
-            statements: [],
-            variables: [],
-            argument: [],
-            temporaryCount: [],
-            knownIdentifiers: [],
-        } as any);
-        return {
-            functions,
-            program: {
-                kind: 'program',
-                children: [],
-            },
-        };
-    } else if ((ast.kind as any) === 'functionWithBlock') {
-        const functionName = `anonymous_${functionId}`;
-        functionId++;
-        functions.push({
-            name: functionName,
-            statements: [],
-            variables: [],
-            argument: [],
-            temporaryCount: [],
-            knownIdentifiers: [],
-        } as any);
-        return {
-            functions,
-            program: {
-                kind: 'program',
-                children: [],
-            },
-        };
-    } else if ('children' in ast) {
-        const otherFunctions = (ast as any).children.map(extractFunctions);
-        const program = {
-            kind: 'program' as 'program',
-            children: [] as Ast.UninferredStatement[],
-        };
-        otherFunctions.forEach((f: any) => {
-            functions.push(...f.functions);
-            program.children.push(f.program);
-        });
-
-        return { functions, program };
-    } else {
-        return {
-            functions,
-            program: {
-                kind: 'program',
-                children: [],
-            },
-        };
+    switch (ast.kind) {
+        case 'returnStatement':
+        case 'typedAssignment':
+        case 'assignment':
+            return extractFunctions(ast.expression);
+        case 'product':
+        case 'addition':
+        case 'subtraction':
+        case 'equality':
+        case 'stringEquality':
+        case 'concatenation':
+            return extractFunctions(ast.lhs).concat(extractFunctions(ast.rhs));
+        case 'callExpression':
+            return extractFunctions(ast.argument);
+        case 'ternary':
+            return extractFunctions(ast.condition)
+                .concat(extractFunctions(ast.ifTrue))
+                .concat(extractFunctions(ast.ifFalse));
+        case 'program':
+            return flatten(ast.children.map(extractFunctions));
+        case 'functionLiteral':
+            functionId++;
+            return [
+                {
+                    name: `anonymous_${functionId}`,
+                    statements: ast.body,
+                    variables: [],
+                    argument: {} as any,
+                    temporaryCount: countTemporariesInExpression(ast.body),
+                    knownIdentifiers: {},
+                },
+                ...extractFunctions(ast.body),
+            ];
+        default:
+            throw debug();
     }
 };
 
@@ -345,8 +319,8 @@ const getMemoryCategory = (ast): MemoryCategory => {
 
 const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[1], ast, true);
 
-const parseMpl = (tokens: Token[]): AstNode | ParseError[] => {
-    const parseResult: ParseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
+const parseMpl = (tokens: Token<MplToken>[]): MplAstNode | ParseError[] => {
+    const parseResult: MplParseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
 
     if (parseResultIsError(parseResult)) {
         const errorMessage = `Expected ${parseResult.expected.join(' or ')}, found ${parseResult.found}`;
@@ -411,9 +385,6 @@ const parseMpl = (tokens: Token[]): AstNode | ParseError[] => {
 };
 
 const countTemporariesInExpression = (ast: Ast.UninferredAst) => {
-    if ('value' in ast) {
-        return 0;
-    }
     switch (ast.kind) {
         case 'returnStatement':
             return countTemporariesInExpression(ast.expression);
@@ -817,7 +788,7 @@ const getFunctionTypeMap = functions => {
     return result;
 };
 
-const assignmentToDeclaration = (ast: Ast.TypedAssignment, knownIdentifiers): VariableDeclarationWithNoMemory => {
+const assignmentToDeclaration = (ast: Ast.UninferredAssignment, knownIdentifiers): VariableDeclarationWithNoMemory => {
     const result = typeOfLoweredExpression(ast.expression, knownIdentifiers);
     if (isTypeError(result)) throw debug();
     return {
@@ -876,12 +847,10 @@ const makeProgramAstNodeFromStatmentParseResult = (ast: any): Ast.UninferredStat
     return children;
 };
 
-const lowerAst = (ast2: AstNode): Ast.UninferredAst => {
-    const ast = ast2 as any;
+const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
     if (!ast) debug();
     switch (ast.type) {
         case 'returnStatement':
-            if (!ast.children) throw debug();
             return {
                 kind: 'returnStatement',
                 expression: lowerAst(ast.children[1]),
@@ -898,7 +867,7 @@ const lowerAst = (ast2: AstNode): Ast.UninferredAst => {
                 kind: 'identifier',
                 value: ast.value as any,
             };
-        case 'product':
+        case 'product1':
             if (!ast.children) throw debug();
             return {
                 kind: 'product',
@@ -906,7 +875,6 @@ const lowerAst = (ast2: AstNode): Ast.UninferredAst => {
                 rhs: lowerAst(ast.children[1]),
             };
         case 'ternary':
-            if (!ast.children) throw debug();
             return {
                 kind: 'ternary',
                 condition: lowerAst(ast.children[0]),
@@ -921,21 +889,19 @@ const lowerAst = (ast2: AstNode): Ast.UninferredAst => {
                 rhs: lowerAst(ast.children[2]),
             };
         case 'callExpression':
-            if (!ast.children) throw debug();
-            if (!ast.children[0]) throw debug();
             return {
                 kind: 'callExpression',
-                name: ast.children[0].value as any,
+                name: (ast.children[0] as any).value as any,
                 argument: lowerAst(ast.children[2]),
             };
-        case 'subtraction':
+        case 'subtraction1':
             if (!ast.children) throw debug();
             return {
                 kind: 'subtraction',
                 lhs: lowerAst(ast.children[0]),
                 rhs: lowerAst(ast.children[1]),
             };
-        case 'addition':
+        case 'addition1':
             if (!ast.children) throw debug();
             return {
                 kind: 'addition',
@@ -946,19 +912,18 @@ const lowerAst = (ast2: AstNode): Ast.UninferredAst => {
             if (!ast.children) throw debug();
             return {
                 kind: 'assignment',
-                destination: ast.children[0].value as any,
+                destination: (ast.children[0] as any).value as any,
                 expression: lowerAst(ast.children[2]),
             };
         case 'typedAssignment':
             if (!ast.children) throw debug();
             return {
                 kind: 'typedAssignment',
-                destination: ast.children[0].value as any,
-                type: { name: ast.children[2].value as any },
+                destination: (ast.children[0] as any).value as any,
+                type: { name: (ast.children[2] as any).value as any },
                 expression: lowerAst(ast.children[4]),
             };
         case 'stringLiteral':
-            if (!ast.value) throw debug();
             return {
                 kind: 'stringLiteral',
                 value: ast.value as any,
@@ -970,22 +935,23 @@ const lowerAst = (ast2: AstNode): Ast.UninferredAst => {
                 lhs: lowerAst(ast.children[0]),
                 rhs: lowerAst(ast.children[2]),
             };
-        case 'stringEquality':
-            if (!ast.children) throw debug();
+        case 'equality':
             return {
-                kind: 'stringEquality',
+                kind: 'equality',
                 lhs: lowerAst(ast.children[0]),
                 rhs: lowerAst(ast.children[2]),
             };
-        case 'functionLiteral':
+        case 'function':
             return {
                 kind: 'functionLiteral',
-                deanonymizedName: ast.value as any,
+                deanonymizedName: (ast as any).value as any,
+                body: [],
             };
         case 'functionWithBlock':
             return {
                 kind: 'functionLiteral',
                 deanonymizedName: 'todo_better_function_name',
+                body: [],
             };
         case 'booleanLiteral':
             return {
@@ -993,7 +959,6 @@ const lowerAst = (ast2: AstNode): Ast.UninferredAst => {
                 value: ast.value == 'true',
             };
         case 'program':
-            if (!ast.children) throw debug();
             return {
                 kind: 'program',
                 children: makeProgramAstNodeFromStatmentParseResult(ast.children[0]),
@@ -1004,15 +969,20 @@ const lowerAst = (ast2: AstNode): Ast.UninferredAst => {
 };
 
 const compile = (source: string): FrontendOutput => {
-    const tokens = lex(source);
+    const tokens = lex<MplToken>(tokenSpecs, source);
     const parseResult = parseMpl(tokens);
 
     if (Array.isArray(parseResult)) {
         return { parseErrors: parseResult };
     }
+
     const ast = lowerAst(parseResult);
 
-    const { functions, program } = extractFunctions(ast);
+    if (ast.kind !== 'program') {
+        return { parseErrors: ['Failed to parse. Top Level of AST was not a program'] };
+    }
+
+    const functions = extractFunctions(ast);
     const stringLiterals = extractStringLiterals(ast);
 
     const functionIdentifierTypes = getFunctionTypeMap(functions);
@@ -1025,9 +995,9 @@ const compile = (source: string): FrontendOutput => {
         return statementTreeToFunction(body, name, argument, knownIdentifiers);
     });
     // program has type "program", get it's first statement via children[0]
-    const programWithStatementList: Function = statementTreeToFunction(program, 'main', undefined, knownIdentifiers);
+    const programWithStatementList: Function = statementTreeToFunction(ast, 'main', undefined, knownIdentifiers);
 
-    const programTypeCheck = typeCheckProgram(program, knownIdentifiers);
+    const programTypeCheck = typeCheckProgram(ast, knownIdentifiers);
 
     knownIdentifiers = {
         ...knownIdentifiers,

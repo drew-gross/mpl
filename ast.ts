@@ -150,6 +150,7 @@ export type UninferredFunctionCall = {
 export type UninferredFunctionLiteral = {
     kind: 'functionLiteral';
     deanonymizedName: string;
+    body: any;
 };
 
 export type UninferredStatement = UninferredTypedAssignment | UninferredAssignment | UninferredReturnStatement;
