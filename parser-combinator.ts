@@ -12,8 +12,8 @@ interface AstInteriorNode<AstInteriorNodeType, AstLeafNodeType> {
     children: AstNode<AstInteriorNodeType, AstLeafNodeType>[];
 }
 
-type AstLeaf<AstLeafNodeType> = {
-    type: AstLeafNodeType | 'endOfFile';
+type AstLeaf<TokenType> = {
+    type: TokenType | 'endOfFile';
     value: string | number | null | undefined;
 };
 
@@ -21,10 +21,10 @@ type AstNode<AstInteriorNodeType, AstLeafNodeType> =
     | AstInteriorNode<AstInteriorNodeType, AstLeafNodeType>
     | AstLeaf<AstLeafNodeType>;
 
-interface AstLeafWithIndex<AstLeafNodeType> {
+interface AstLeafWithIndex<TokenType> {
     success: true;
     newIndex: number;
-    type: AstLeafNodeType | 'endOfFile';
+    type: TokenType | 'endOfFile';
     value: string | number | null | undefined;
 }
 
@@ -35,34 +35,32 @@ interface AstInteriorNodeWithIndex<AstInteriorNodeType, AstLeafNodeType> {
     children: AstNodeWithIndex<AstInteriorNodeType, AstLeafNodeType>[];
 }
 
-type AstNodeWithIndex<AstInteriorNodeType, AstLeafNodeType> =
-    | AstInteriorNodeWithIndex<AstInteriorNodeType, AstLeafNodeType>
-    | AstLeafWithIndex<AstLeafNodeType>;
+type AstNodeWithIndex<AstInteriorNodeType, TokenType> =
+    | AstInteriorNodeWithIndex<AstInteriorNodeType, TokenType>
+    | AstLeafWithIndex<TokenType>;
 
 interface ParseError<TokenType> {
     found: (TokenType | 'endOfFile')[];
     expected: (TokenType | 'endOfFile')[];
 }
 
-type ParseResultWithIndex<AstInteriorNodeType, AstLeafNodeType, TokenType> =
+type ParseResultWithIndex<InteriorNodeType, TokenType> =
     | ParseError<TokenType>
-    | AstNodeWithIndex<AstInteriorNodeType, AstLeafNodeType>;
-type ParseResult<AstInteriorNodeType, AstLeafNodeType, TokenType> =
-    | ParseError<TokenType>
-    | AstNode<AstInteriorNodeType, AstLeafNodeType>;
+    | AstNodeWithIndex<InteriorNodeType, TokenType>;
+type ParseResult<InteriorNodeType, TokenType> = ParseError<TokenType> | AstNode<InteriorNodeType, TokenType>;
 
 const parseResultIsError = <AstInteriorNodeType, AstLeafNodeType, TokenType>(
     result:
-        | ParseResult<AstInteriorNodeType, AstLeafNodeType, TokenType>
-        | ParseResultWithIndex<AstInteriorNodeType, AstLeafNodeType, TokenType>
+        | ParseResult<AstInteriorNodeType, TokenType>
+        | ParseResultWithIndex<AstInteriorNodeType, TokenType>
         | AstNodeWithIndex<AstInteriorNodeType, AstLeafNodeType>[]
 ): result is ParseError<TokenType> => {
     if (!result) throw debug();
     return 'found' in result && 'expected' in result;
 };
-const parseResultWithIndexIsLeaf = <AstInteriorNodeType, AstLeafNodeType, TokenType>(
-    r: ParseResultWithIndex<AstInteriorNodeType, AstLeafNodeType, TokenType>
-): r is AstLeafWithIndex<AstLeafNodeType> => {
+const parseResultWithIndexIsLeaf = <AstInteriorNodeType, TokenType>(
+    r: ParseResultWithIndex<AstInteriorNodeType, TokenType>
+): r is AstLeafWithIndex<TokenType> => {
     if (!r) throw debug();
     return 'value' in r;
 };
@@ -82,57 +80,57 @@ const stripNodeIndexes = <AstInteriorNodeType, AstLeafNodeType>(
     };
 };
 
-const stripResultIndexes = <InteriorNodeType, LeafNodeType, TokenType>(
-    r: ParseResultWithIndex<InteriorNodeType, LeafNodeType, TokenType>
-): ParseResult<InteriorNodeType, LeafNodeType, TokenType> => {
+const stripResultIndexes = <InteriorNodeType, TokenType>(
+    r: ParseResultWithIndex<InteriorNodeType, TokenType>
+): ParseResult<InteriorNodeType, TokenType> => {
     if (parseResultIsError(r)) {
         return r;
     }
     return stripNodeIndexes(r);
 };
 
-export type BaseParser<InteriorNodeType, LeafNodeType, TokenType> = (
+export type BaseParser<InteriorNodeType, TokenType> = (
     tokens: Token<TokenType>[],
     index: number
-) => ParseResultWithIndex<InteriorNodeType, LeafNodeType, TokenType>;
-export type SequenceParser<InteriorNodeType, LeafNodeType, TokenType> = {
+) => ParseResultWithIndex<InteriorNodeType, TokenType>;
+export type SequenceParser<InteriorNodeType, TokenType> = {
     n: InteriorNodeType;
-    p: (string | BaseParser<InteriorNodeType, LeafNodeType, TokenType>)[];
+    p: (string | BaseParser<InteriorNodeType, TokenType>)[];
 };
-type AlternativeParser<InteriorNodeType, LeafNodeType, TokenType> = (
-    | SequenceParser<InteriorNodeType, LeafNodeType, TokenType>
+type AlternativeParser<InteriorNodeType, TokenType> = (
+    | SequenceParser<InteriorNodeType, TokenType>
     | string
-    | BaseParser<InteriorNodeType, LeafNodeType, TokenType>)[];
+    | BaseParser<InteriorNodeType, TokenType>)[];
 
-export interface Grammar<InteriorNodeType, LeafNodeType, TokenType> {
+export interface Grammar<InteriorNodeType, TokenType> {
     // Ideally would have InteriorNodeType instead of string here but typescript doesn't allow that.
     [index: string]:
-        | SequenceParser<InteriorNodeType, LeafNodeType, TokenType>
-        | SequenceParser<InteriorNodeType, LeafNodeType, TokenType>[]
-        | AlternativeParser<InteriorNodeType, LeafNodeType, TokenType>;
+        | SequenceParser<InteriorNodeType, TokenType>
+        | SequenceParser<InteriorNodeType, TokenType>[]
+        | AlternativeParser<InteriorNodeType, TokenType>;
 }
 
-const isSequence = <InteriorNodeType, LeafNodeType, TokenType>(
+const isSequence = <InteriorNodeType, TokenType>(
     val:
-        | SequenceParser<InteriorNodeType, LeafNodeType, TokenType>
-        | AlternativeParser<InteriorNodeType, LeafNodeType, TokenType>
-        | BaseParser<InteriorNodeType, LeafNodeType, TokenType>
+        | SequenceParser<InteriorNodeType, TokenType>
+        | AlternativeParser<InteriorNodeType, TokenType>
+        | BaseParser<InteriorNodeType, TokenType>
         | string
-): val is SequenceParser<InteriorNodeType, LeafNodeType, TokenType> => {
+): val is SequenceParser<InteriorNodeType, TokenType> => {
     if (typeof val === 'string') return false;
     if (!val) throw debug();
     return 'n' in val;
 };
 
-const parseSequence = <InteriorNodeType, LeafNodeType, TokenType>(
-    grammar: Grammar<InteriorNodeType, LeafNodeType, TokenType>,
-    parser: SequenceParser<InteriorNodeType, LeafNodeType, TokenType>,
+const parseSequence = <InteriorNodeType, TokenType>(
+    grammar: Grammar<InteriorNodeType, TokenType>,
+    parser: SequenceParser<InteriorNodeType, TokenType>,
     tokens: Token<TokenType>[],
     index: number
-): ParseResultWithIndex<InteriorNodeType, LeafNodeType, TokenType> => {
-    const results: AstNodeWithIndex<InteriorNodeType, LeafNodeType>[] = [];
+): ParseResultWithIndex<InteriorNodeType, TokenType> => {
+    const results: AstNodeWithIndex<InteriorNodeType, TokenType>[] = [];
     for (const p of parser.p) {
-        let result: ParseResultWithIndex<InteriorNodeType, LeafNodeType, TokenType>;
+        let result: ParseResultWithIndex<InteriorNodeType, TokenType>;
         if (typeof p === 'function') {
             result = p(tokens, index);
         } else {
@@ -146,7 +144,7 @@ const parseSequence = <InteriorNodeType, LeafNodeType, TokenType>(
         results.push(result);
         index = result.newIndex as number;
     }
-    const result: AstNodeWithIndex<InteriorNodeType, LeafNodeType> = {
+    const result: AstNodeWithIndex<InteriorNodeType, TokenType> = {
         success: true,
         newIndex: index,
         type: parser.n,
@@ -155,22 +153,22 @@ const parseSequence = <InteriorNodeType, LeafNodeType, TokenType>(
     return result;
 };
 
-const parseAlternative = <InteriorNodeType, LeafNodeType, TokenType>(
-    grammar: Grammar<InteriorNodeType, LeafNodeType, TokenType>,
-    alternatives: AlternativeParser<InteriorNodeType, LeafNodeType, TokenType>,
+const parseAlternative = <InteriorNodeType, TokenType>(
+    grammar: Grammar<InteriorNodeType, TokenType>,
+    alternatives: AlternativeParser<InteriorNodeType, TokenType>,
     tokens: Token<TokenType>[],
     index: number
-): ParseResultWithIndex<InteriorNodeType, LeafNodeType, TokenType> => {
+): ParseResultWithIndex<InteriorNodeType, TokenType> => {
     const alternativeIndex: number = 0;
-    const progressCache: (
-        | ParseError<TokenType>
-        | AstNodeWithIndex<InteriorNodeType, LeafNodeType>[])[] = alternatives.map(_ => []);
+    const progressCache: (ParseError<TokenType> | AstNodeWithIndex<InteriorNodeType, TokenType>[])[] = alternatives.map(
+        _ => []
+    );
     for (let alternativeIndex = 0; alternativeIndex < alternatives.length; alternativeIndex++) {
         let alternativeNeedsSubtracting = false;
         let currentParser = alternatives[alternativeIndex];
-        const currentProgressRef: ParseError<TokenType> | AstNodeWithIndex<InteriorNodeType, LeafNodeType>[] =
+        const currentProgressRef: ParseError<TokenType> | AstNodeWithIndex<InteriorNodeType, TokenType>[] =
             progressCache[alternativeIndex];
-        let currentResult: ParseResultWithIndex<InteriorNodeType, LeafNodeType, TokenType>;
+        let currentResult: ParseResultWithIndex<InteriorNodeType, TokenType>;
         let currentIndex: number;
 
         // Check if we have cached an error for this parser. If we have, continue to the next parser.
@@ -220,7 +218,7 @@ const parseAlternative = <InteriorNodeType, LeafNodeType, TokenType>(
                 !parseResultIsError(currentProgressLastItem) &&
                 currentProgressRef.length === sequence.p.length
             ) {
-                const result: AstNodeWithIndex<InteriorNodeType, LeafNodeType> = {
+                const result: AstNodeWithIndex<InteriorNodeType, TokenType> = {
                     newIndex: currentProgressLastItem.newIndex,
                     success: true,
                     children: currentProgressRef,
@@ -254,7 +252,7 @@ const parseAlternative = <InteriorNodeType, LeafNodeType, TokenType>(
             if (!parseResultIsError(currentResult) && currentProgressRef.length == sequence.p.length) {
                 const cachedSuccess = last(currentProgressRef);
                 if (cachedSuccess === null) throw debug();
-                const result: AstNodeWithIndex<InteriorNodeType, LeafNodeType> = {
+                const result: AstNodeWithIndex<InteriorNodeType, TokenType> = {
                     newIndex: cachedSuccess.newIndex,
                     success: true,
                     children: currentProgressRef,
@@ -301,7 +299,7 @@ const parseAlternative = <InteriorNodeType, LeafNodeType, TokenType>(
         }
     }
 
-    progressCache.map((error: ParseError<TokenType> | AstNodeWithIndex<InteriorNodeType, LeafNodeType>[]) => {
+    progressCache.map((error: ParseError<TokenType> | AstNodeWithIndex<InteriorNodeType, TokenType>[]) => {
         if (!parseResultIsError(error)) {
             debugger;
             parseAlternative(grammar, alternatives, tokens, index);
@@ -329,12 +327,12 @@ const parseAlternative = <InteriorNodeType, LeafNodeType, TokenType>(
     };
 };
 
-export const parse = <InteriorNodeType, LeafNodeType, TokenType>(
-    grammar: Grammar<InteriorNodeType, LeafNodeType, TokenType>,
+export const parse = <InteriorNodeType, TokenType>(
+    grammar: Grammar<InteriorNodeType, TokenType>,
     firstRule: string,
     tokens: Token<TokenType>[],
     index: number
-): ParseResultWithIndex<InteriorNodeType, LeafNodeType, TokenType> => {
+): ParseResultWithIndex<InteriorNodeType, TokenType> => {
     const childrenParser = grammar[firstRule];
     if (!childrenParser) throw debug();
     if (typeof childrenParser === 'string') {
@@ -348,13 +346,10 @@ export const parse = <InteriorNodeType, LeafNodeType, TokenType>(
     }
 };
 
-const terminal = <InteriorNodeType, LeafNodeType, TokenType>(
-    tokenToLeafNode: (t: TokenType) => LeafNodeType,
-    terminal: TokenType
-): BaseParser<InteriorNodeType, LeafNodeType, TokenType> => (
+const terminal = <InteriorNodeType, TokenType>(terminal: TokenType): BaseParser<InteriorNodeType, TokenType> => (
     tokens: Token<TokenType>[],
     index
-): ParseResultWithIndex<InteriorNodeType, LeafNodeType, TokenType> => {
+): ParseResultWithIndex<InteriorNodeType, TokenType> => {
     if (index >= tokens.length) {
         const result: ParseError<TokenType> = {
             found: ['endOfFile'],
@@ -363,21 +358,12 @@ const terminal = <InteriorNodeType, LeafNodeType, TokenType>(
         return result;
     }
     if (tokens[index].type == terminal) {
-        const astNodeType: LeafNodeType = tokenToLeafNode(terminal);
-        if (astNodeType !== undefined) {
-            return {
-                success: true,
-                newIndex: index + 1,
-                value: tokens[index].value,
-                type: astNodeType,
-            };
-        } else {
-            const result: ParseError<TokenType> = {
-                expected: [terminal],
-                found: [tokens[index].type],
-            };
-            return result;
-        }
+        return {
+            success: true,
+            newIndex: index + 1,
+            value: tokens[index].value,
+            type: tokens[index].type,
+        };
     }
 
     return {
@@ -386,10 +372,10 @@ const terminal = <InteriorNodeType, LeafNodeType, TokenType>(
     };
 };
 
-const endOfInput = <InteriorNodeType, LeafNodeType, TokenType>(
+const endOfInput = <InteriorNodeType, TokenType>(
     tokens: Token<TokenType>[],
     index: number
-): ParseResultWithIndex<InteriorNodeType, LeafNodeType, TokenType> => {
+): ParseResultWithIndex<InteriorNodeType, TokenType> => {
     if (index == tokens.length) {
         return {
             success: true,

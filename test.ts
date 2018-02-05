@@ -3,7 +3,7 @@ import test from 'ava';
 import { lex } from './lex.js';
 import { parseMpl, compile } from './frontend.js';
 import { compileAndRun } from './test-utils.js';
-import { grammar, tokenSpecs, MplToken, MplAstInteriorNode, MplAstLeafNode } from './grammar.js';
+import { grammar, tokenSpecs, MplToken, MplAstInteriorNode } from './grammar.js';
 import { stripResultIndexes, ParseResult, AstNode, parse } from './parser-combinator.js';
 import { removeBracketsFromAst } from './frontend.js';
 
@@ -429,7 +429,7 @@ return const11(1) * const12(2);`,
     expectedExitCode: 132,
 });
 
-test('double product with brackets', compileAndRun, {
+test.only('double product with brackets', compileAndRun, {
     source: 'return 2 * (3 * 4) * 5',
     expectedExitCode: 120,
     expectedAst: {
@@ -454,10 +454,18 @@ test('double product with brackets', compileAndRun, {
                                     },
                                     {
                                         type: 'product',
+                                        value: null,
+                                    },
+                                    {
+                                        type: 'product',
                                         children: [
                                             {
                                                 type: 'number',
                                                 value: 3,
+                                            },
+                                            {
+                                                type: 'product',
+                                                value: null,
                                             },
                                             {
                                                 type: 'number',
@@ -466,6 +474,10 @@ test('double product with brackets', compileAndRun, {
                                         ],
                                     },
                                 ],
+                            },
+                            {
+                                type: 'product',
+                                value: null,
                             },
                             {
                                 type: 'number',
@@ -601,7 +613,7 @@ test('many temporaries, spill to ram', compileAndRun, {
     expectedExitCode: 1,
 });
 
-test.only('multi statement function with locals', compileAndRun, {
+test('multi statement function with locals', compileAndRun, {
     source: `
 quadrupleWithLocal = a: Integer => { b: Integer = 2 * a; return 2 * b; };
 return quadrupleWithLocal(5);`,

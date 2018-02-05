@@ -3,16 +3,8 @@ import unique from './util/list/unique.js';
 import sum from './util/list/sum.js';
 import debug from './util/debug.js';
 import { lex, Token } from './lex.js';
-import {
-    tokenSpecs,
-    grammar,
-    MplAstLeafNode,
-    MplAstInteriorNode,
-    MplAstNode,
-    MplParseResult,
-    MplToken,
-} from './grammar.js';
-import { ParseResult, parseResultIsError, parse, stripResultIndexes } from './parser-combinator.js';
+import { tokenSpecs, grammar, MplAstInteriorNode, MplAstNode, MplParseResult, MplToken } from './grammar.js';
+import { ParseResult, parseResultIsError, parse, stripResultIndexes, AstLeaf } from './parser-combinator.js';
 import {
     Type,
     VariableDeclaration,
@@ -34,7 +26,8 @@ let tokensToString = tokens => tokens.map(token => token.string).join('');
 
 const repairAssociativity = (nodeTypeToRepair, ast) => {
     if (!ast) debug();
-    if (ast.type === nodeTypeToRepair && !ast.children) debug();
+    // Let this slide because TokenType overlaps InteriorNodeType right now
+    if (ast.type === nodeTypeToRepair && !ast.children) /*debug()*/ return ast;
     if (ast.type === nodeTypeToRepair) {
         if (!ast.children[2]) debug();
         if (ast.children[2].type === nodeTypeToRepair) {
@@ -283,54 +276,9 @@ const parseMpl = (tokens: Token<MplToken>[]): MplAstNode | ParseError[] => {
     }
     let ast = parseResult;
 
-    // repair associativity of addition and subtraction
-    ast = repairAssociativity('subtraction1', ast);
-    ast = repairAssociativity('addition1', ast);
-
-    // Product 3 -> product 1
-    ast = transformAst('product3', node => ({ type: 'product1', children: node.children }), ast, true);
-
-    // Product 2 -> product 1
-    ast = transformAst(
-        'product2',
-        node => {
-            return {
-                type: 'product1',
-                children: [node.children[1], { type: 'product', value: null }, node.children[4]],
-            };
-        },
-        ast,
-        true
-    );
-
-    // repair associativity of product
-    ast = repairAssociativity('product1', ast);
-
-    // Subtraction 1 -> subtraction
-    ast = transformAst(
-        'subtraction1',
-        node => ({ type: 'subtraction', children: [node.children[0], node.children[2]] }),
-        ast,
-        true
-    );
-
-    // Addtion 1 -> addition
-    ast = transformAst(
-        'addition1',
-        node => ({ type: 'addition', children: [node.children[0], node.children[2]] }),
-        ast,
-        true
-    );
-
-    ast = transformAst(
-        'product1',
-        node => ({ type: 'product', children: [node.children[0], node.children[2]] }),
-        ast,
-        true
-    );
-
-    // repair associativity of subtraction
-    // ast = repairAssociativity('subtraction', ast); // TODO: Need to settle on when associativity repair happens.
+    ast = repairAssociativity('subtraction', ast);
+    ast = repairAssociativity('addition', ast);
+    ast = repairAssociativity('product', ast);
 
     // Bracketed expressions -> nothing. Must happen after associativity repair or we will break
     // associativity of brackets.
@@ -729,7 +677,7 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
                 value: ast.value as any,
             };
         case 'product':
-            if (!ast.children) throw debug();
+            if (!('children' in ast)) throw debug();
             return {
                 kind: 'product',
                 lhs: lowerAst(ast.children[0]),
@@ -743,7 +691,7 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
                 ifFalse: lowerAst(ast.children[4]),
             };
         case 'equality':
-            if (!ast.children) throw debug();
+            if (!('children' in ast)) throw debug();
             return {
                 kind: 'equality',
                 lhs: lowerAst(ast.children[0]),
@@ -756,28 +704,28 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
                 argument: lowerAst(ast.children[2]),
             };
         case 'subtraction':
-            if (!ast.children) throw debug();
+            if (!('children' in ast)) throw debug();
             return {
                 kind: 'subtraction',
                 lhs: lowerAst(ast.children[0]),
                 rhs: lowerAst(ast.children[2]),
             };
         case 'addition':
-            if (!ast.children) throw debug();
+            if (!('children' in ast)) throw debug();
             return {
                 kind: 'addition',
                 lhs: lowerAst(ast.children[0]),
                 rhs: lowerAst(ast.children[2]),
             };
         case 'assignment':
-            if (!ast.children) throw debug();
+            if (!('children' in ast)) throw debug();
             return {
                 kind: 'assignment',
                 destination: (ast.children[0] as any).value as any,
                 expression: lowerAst(ast.children[2]),
             };
         case 'typedAssignment':
-            if (!ast.children) throw debug();
+            if (!('children' in ast)) throw debug();
             return {
                 kind: 'typedAssignment',
                 destination: (ast.children[0] as any).value as any,
@@ -790,13 +738,14 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
                 value: ast.value as any,
             };
         case 'concatenation':
-            if (!ast.children) throw debug();
+            if (!('children' in ast)) throw debug();
             return {
                 kind: 'concatenation',
                 lhs: lowerAst(ast.children[0]),
                 rhs: lowerAst(ast.children[2]),
             };
         case 'equality':
+            if (!('children' in ast)) throw debug();
             return {
                 kind: 'equality',
                 lhs: lowerAst(ast.children[0]),
@@ -817,9 +766,9 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
                 deanonymizedName: `anonymous_${functionId}`,
                 body: extractFunctionBodyFromParseTree(ast.children[3]),
                 argument: {
-                    name: ((ast.children[0] as MplAstInteriorNode).children[0] as MplAstLeafNode).value as string,
+                    name: ((ast.children[0] as MplAstInteriorNode).children[0] as AstLeaf<MplToken>).value as string,
                     type: {
-                        name: ((ast.children[0] as MplAstInteriorNode).children[2] as MplAstLeafNode).value as
+                        name: ((ast.children[0] as MplAstInteriorNode).children[2] as AstLeaf<MplToken>).value as
                             | 'String'
                             | 'Integer'
                             | 'Boolean',

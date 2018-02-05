@@ -12,105 +12,6 @@ import {
 import { TokenSpec } from './lex.js';
 import debug from './util/debug.js';
 
-const tokenToLeafNode = (token: MplToken): MplAstLeafNodeType => {
-    switch (token) {
-        case 'number':
-            return 'number';
-        case 'booleanLiteral':
-            return 'booleanLiteral';
-        case 'identifier':
-            return 'identifier';
-        case 'type':
-            return 'type';
-        case 'stringLiteral':
-            return 'stringLiteral';
-        case 'return':
-        case 'statementSeparator':
-        case 'fatArrow':
-        case 'equality':
-        case 'assignment':
-        case 'sum':
-        case 'product':
-        case 'subtraction':
-        case 'leftBracket':
-        case 'rightBracket':
-        case 'leftCurlyBrace':
-        case 'rightCurlyBrace':
-        case 'colon':
-        case 'comma':
-        case 'ternaryOperator':
-        case 'endOfFile':
-        case 'concatenation':
-        case 'invalid':
-        default:
-            return `TOKEN IS INVALID MplLeafNode: ${token}` as any;
-    }
-};
-
-const plus: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(tokenToLeafNode, 'sum');
-const minus: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(
-    tokenToLeafNode,
-    'subtraction'
-);
-const times: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(tokenToLeafNode, 'product');
-const leftBracket: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(
-    tokenToLeafNode,
-    'leftBracket'
-);
-const rightBracket: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(
-    tokenToLeafNode,
-    'rightBracket'
-);
-const int: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(tokenToLeafNode, 'number');
-const identifier: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(
-    tokenToLeafNode,
-    'identifier'
-);
-const colon: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(tokenToLeafNode, 'colon');
-const ternaryOperator: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(
-    tokenToLeafNode,
-    'ternaryOperator'
-);
-const type: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(tokenToLeafNode, 'type');
-const assignment: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(
-    tokenToLeafNode,
-    'assignment'
-);
-const _return: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(tokenToLeafNode, 'return');
-const statementSeparator: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(
-    tokenToLeafNode,
-    'statementSeparator'
-);
-const fatArrow: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(
-    tokenToLeafNode,
-    'fatArrow'
-);
-const leftCurlyBrace: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(
-    tokenToLeafNode,
-    'leftCurlyBrace'
-);
-const rightCurlyBrace: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(
-    tokenToLeafNode,
-    'rightCurlyBrace'
-);
-const comma: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(tokenToLeafNode, 'comma');
-const concatenation: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(
-    tokenToLeafNode,
-    'concatenation'
-);
-const equality: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(
-    tokenToLeafNode,
-    'equality'
-);
-const boolean: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(
-    tokenToLeafNode,
-    'booleanLiteral'
-);
-const stringLiteral: BaseParser<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = terminal(
-    tokenToLeafNode,
-    'stringLiteral'
-);
-
 export type MplToken =
     | 'return'
     | 'booleanLiteral'
@@ -135,6 +36,50 @@ export type MplToken =
     | 'endOfFile'
     | 'concatenation'
     | 'invalid';
+
+const plus: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('sum');
+const minus: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('subtraction');
+const times: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('product');
+const leftBracket: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
+    'leftBracket'
+);
+const rightBracket: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
+    'rightBracket'
+);
+const int: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('number');
+const identifier: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
+    'identifier'
+);
+const colon: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('colon');
+const ternaryOperator: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
+    'ternaryOperator'
+);
+const type: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('type');
+const assignment: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
+    'assignment'
+);
+const _return: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('return');
+const statementSeparator: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
+    'statementSeparator'
+);
+const fatArrow: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('fatArrow');
+const leftCurlyBrace: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
+    'leftCurlyBrace'
+);
+const rightCurlyBrace: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
+    'rightCurlyBrace'
+);
+const comma: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('comma');
+const concatenation: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
+    'concatenation'
+);
+const equality: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('equality');
+const boolean: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
+    'booleanLiteral'
+);
+const stringLiteral: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
+    'stringLiteral'
+);
 
 export const tokenSpecs: TokenSpec<MplToken>[] = [
     {
@@ -274,14 +219,11 @@ export type MplAstInteriorNodeType =
     | 'callExpression'
     | 'paramList';
 
-export type MplAstLeafNodeType = 'number' | 'booleanLiteral' | 'identifier' | 'type' | 'stringLiteral';
+export type MplAstNode = AstNode<MplAstInteriorNodeType, MplToken>;
+export type MplAstInteriorNode = AstInteriorNode<MplAstInteriorNodeType, MplToken>;
+export type MplParseResult = ParseResult<MplAstInteriorNodeType, MplToken>;
 
-export type MplAstNode = AstNode<MplAstInteriorNodeType, MplAstLeafNodeType>;
-export type MplAstLeafNode = AstLeaf<MplAstLeafNodeType>;
-export type MplAstInteriorNode = AstInteriorNode<MplAstInteriorNodeType, MplAstLeafNodeType>;
-export type MplParseResult = ParseResult<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken>;
-
-export const grammar: Grammar<MplAstInteriorNodeType, MplAstLeafNodeType, MplToken> = {
+export const grammar: Grammar<MplAstInteriorNodeType, MplToken> = {
     program: { n: 'program', p: ['functionBody', endOfInput] },
     function: [
         { n: 'function', p: ['argList', fatArrow, 'expression'] },
