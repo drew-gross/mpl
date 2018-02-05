@@ -223,6 +223,7 @@ const extractFunctions = (ast: Ast.UninferredAst): Function[] => {
             ]);
         case 'number':
         case 'identifier':
+        case 'stringLiteral':
             return [];
         default:
             throw debug();
@@ -230,36 +231,33 @@ const extractFunctions = (ast: Ast.UninferredAst): Function[] => {
 };
 
 const extractStringLiterals = (ast: Ast.UninferredAst): string[] => {
-    let newLiterals = [];
-    if (ast.kind === 'stringLiteral') {
-        newLiterals.push(ast.value as never);
-    } else if ('children' in ast) {
-        newLiterals = newLiterals.concat((ast as any).children.map(extractStringLiterals));
-    }
-    return unique(flatten(newLiterals));
-};
-
-const getMemoryCategory = (ast): MemoryCategory => {
-    let rhsType;
-    if (ast.type === 'typedAssignment') {
-        rhsType = ast.children[4].type;
-    } else if (ast.type === 'assignment') {
-        rhsType = ast.children[2].type;
-    } else {
-        debug();
-    }
-
-    switch (rhsType) {
-        case 'stringLiteral':
-        case 'functionLiteral':
-        case 'booleanLiteral':
-            return 'GlobalStatic';
-        case 'identifier':
-            return 'Dynamic'; // TODO: Should sometimes be stack based on type
+    switch (ast.kind) {
+        case 'returnStatement':
+        case 'typedAssignment':
+        case 'assignment':
+            return extractStringLiterals(ast.expression);
         case 'product':
-        case 'number':
+        case 'addition':
+        case 'subtraction':
+        case 'equality':
+        case 'stringEquality':
         case 'concatenation':
-            return 'Stack';
+            return extractStringLiterals(ast.lhs).concat(extractStringLiterals(ast.rhs));
+        case 'callExpression':
+            return extractStringLiterals(ast.argument);
+        case 'ternary':
+            return extractStringLiterals(ast.condition)
+                .concat(extractStringLiterals(ast.ifTrue))
+                .concat(extractStringLiterals(ast.ifFalse));
+        case 'program':
+            return flatten(ast.statements.map(extractStringLiterals));
+        case 'functionLiteral':
+            return ast.body.map(extractStringLiterals);
+        case 'number':
+        case 'identifier':
+            return [];
+        case 'stringLiteral':
+            return [ast.value];
         default:
             throw debug();
     }

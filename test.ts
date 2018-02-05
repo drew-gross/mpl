@@ -340,10 +340,18 @@ test('double product', compileAndRun, {
                                         value: 5,
                                     },
                                     {
+                                        type: 'product',
+                                        value: null,
+                                    },
+                                    {
                                         type: 'number',
                                         value: 3,
                                     },
                                 ],
+                            },
+                            {
+                                type: 'product',
+                                value: null,
                             },
                             {
                                 type: 'number',
@@ -390,10 +398,18 @@ test('brackets product', compileAndRun, {
                                         value: 3,
                                     },
                                     {
+                                        type: 'product',
+                                        value: null,
+                                    },
+                                    {
                                         type: 'number',
                                         value: 4,
                                     },
                                 ],
+                            },
+                            {
+                                type: 'product',
+                                value: null,
                             },
                             {
                                 type: 'number',
@@ -429,7 +445,7 @@ return const11(1) * const12(2);`,
     expectedExitCode: 132,
 });
 
-test.only('double product with brackets', compileAndRun, {
+test('double product with brackets', compileAndRun, {
     source: 'return 2 * (3 * 4) * 5',
     expectedExitCode: 120,
     expectedAst: {
@@ -736,7 +752,7 @@ test('parsing fails for extra invalid tokens', compileAndRun, {
     expectedParseErrors: ['Expected endOfFile, found leftBracket'],
 });
 
-test('addition', compileAndRun, {
+test.only('addition', compileAndRun, {
     source: `return length("foo") + 5;`,
     expectedExitCode: 8,
 });
