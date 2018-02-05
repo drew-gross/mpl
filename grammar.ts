@@ -37,49 +37,27 @@ export type MplToken =
     | 'concatenation'
     | 'invalid';
 
-const plus: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('sum');
-const minus: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('subtraction');
-const times: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('product');
-const leftBracket: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
-    'leftBracket'
-);
-const rightBracket: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
-    'rightBracket'
-);
-const int: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('number');
-const identifier: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
-    'identifier'
-);
-const colon: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('colon');
-const ternaryOperator: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
-    'ternaryOperator'
-);
-const type: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('type');
-const assignment: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
-    'assignment'
-);
-const _return: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('return');
-const statementSeparator: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
-    'statementSeparator'
-);
-const fatArrow: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('fatArrow');
-const leftCurlyBrace: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
-    'leftCurlyBrace'
-);
-const rightCurlyBrace: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
-    'rightCurlyBrace'
-);
-const comma: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('comma');
-const concatenation: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
-    'concatenation'
-);
-const equality: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>('equality');
-const boolean: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
-    'booleanLiteral'
-);
-const stringLiteral: BaseParser<MplAstInteriorNodeType, MplToken> = terminal<MplAstInteriorNodeType, MplToken>(
-    'stringLiteral'
-);
+const plus = terminal<MplAstInteriorNodeType, MplToken>('sum');
+const minus = terminal<MplAstInteriorNodeType, MplToken>('subtraction');
+const times = terminal<MplAstInteriorNodeType, MplToken>('product');
+const leftBracket = terminal<MplAstInteriorNodeType, MplToken>('leftBracket');
+const rightBracket = terminal<MplAstInteriorNodeType, MplToken>('rightBracket');
+const int = terminal<MplAstInteriorNodeType, MplToken>('number');
+const identifier = terminal<MplAstInteriorNodeType, MplToken>('identifier');
+const colon = terminal<MplAstInteriorNodeType, MplToken>('colon');
+const ternaryOperator = terminal<MplAstInteriorNodeType, MplToken>('ternaryOperator');
+const type = terminal<MplAstInteriorNodeType, MplToken>('type');
+const assignment = terminal<MplAstInteriorNodeType, MplToken>('assignment');
+const _return = terminal<MplAstInteriorNodeType, MplToken>('return');
+const statementSeparator = terminal<MplAstInteriorNodeType, MplToken>('statementSeparator');
+const fatArrow = terminal<MplAstInteriorNodeType, MplToken>('fatArrow');
+const leftCurlyBrace = terminal<MplAstInteriorNodeType, MplToken>('leftCurlyBrace');
+const rightCurlyBrace = terminal<MplAstInteriorNodeType, MplToken>('rightCurlyBrace');
+const comma = terminal<MplAstInteriorNodeType, MplToken>('comma');
+const concatenation = terminal<MplAstInteriorNodeType, MplToken>('concatenation');
+const equality = terminal<MplAstInteriorNodeType, MplToken>('equality');
+const boolean = terminal<MplAstInteriorNodeType, MplToken>('booleanLiteral');
+const stringLiteral = terminal<MplAstInteriorNodeType, MplToken>('stringLiteral');
 
 export const tokenSpecs: TokenSpec<MplToken>[] = [
     {
