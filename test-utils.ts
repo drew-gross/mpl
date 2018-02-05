@@ -55,6 +55,8 @@ const astToString = (ast: UninferredAst) => {
             return ast.value ? 'True' : 'False';
         case 'concatenation':
             return `${ast.lhs} ++ ${ast.rhs}`;
+        case 'assignment':
+            return `${ast.destination} = ${astToString(ast.expression)};`;
         default:
             throw debug();
     }

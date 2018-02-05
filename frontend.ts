@@ -168,21 +168,30 @@ const transformUninferredAst = (
     }
 };
 
-const extractVariables = (ast: Ast.UninferredAst, knownIdentifiers: IdentifierDict): VariableDeclaration[] => {
-    if (ast.kind === 'assignment' || ast.kind === 'typedAssignment') {
-        return [
-            {
-                name: ast.destination,
-                memoryCategory: getMemoryCategory(ast),
-                type: typeOfExpression(ast.expression, knownIdentifiers) as Type,
-            },
-        ];
-    } else {
-        return [];
-    }
+const extractVariables = (
+    statements: Ast.UninferredStatement[],
+    knownIdentifiers: IdentifierDict
+): VariableDeclaration[] => {
+    const result: VariableDeclaration[] = [];
+    statements.forEach(statement => {
+        switch (statement.kind) {
+            case 'assignment':
+            case 'typedAssignment':
+                result.push({
+                    name: statement.destination,
+                    memoryCategory: 'TODO: Fix memory category (extractVariables)' as any,
+                    type: typeOfLoweredExpression(statement.expression, knownIdentifiers) as Type,
+                });
+                break;
+            case 'returnStatement':
+                break;
+            default:
+                throw debug();
+        }
+    });
+    return result;
 };
 
-let functionId = 0;
 const extractFunctions = (ast: Ast.UninferredAst): Function[] => {
     switch (ast.kind) {
         case 'returnStatement':
@@ -209,11 +218,11 @@ const extractFunctions = (ast: Ast.UninferredAst): Function[] => {
             return flatten([
                 [
                     {
-                        name: `anonymous_${functionId}`,
+                        name: ast.deanonymizedName,
                         statements: ast.body,
-                        variables: [],
+                        variables: extractVariables(ast.body, { [ast.argument.name]: ast.argument.type }),
                         argument: ast.argument,
-                        temporaryCount: sum(ast.body.map(countTemporariesInExpression)),
+                        temporaryCount: Math.max(...ast.body.map(countTemporariesInExpression)),
                         knownIdentifiers: {},
                     },
                 ],
@@ -390,129 +399,6 @@ const combineErrors = (potentialErrors: (Type | TypeError[])[]): TypeError[] | n
         }
     });
     return result.length > 0 ? result : null;
-};
-
-export const typeOfExpression = (stuff, knownIdentifiers: IdentifierDict): Type | TypeError[] => {
-    if (!stuff) debug();
-    const { type, children, value } = stuff;
-    if (!type) debug();
-    switch (type) {
-        case 'number':
-            return { name: 'Integer' };
-        case 'addition':
-        case 'product':
-        case 'subtraction': {
-            const leftType = typeOfExpression(children[0], knownIdentifiers);
-            const rightType = typeOfExpression(children[1], knownIdentifiers);
-            const combinedErrors = combineErrors([leftType, rightType]);
-            if (combinedErrors) {
-                return combinedErrors;
-            }
-            if (!typesAreEqual(leftType, { name: 'Integer' })) {
-                return [`Left hand side of ${type} was not integer`];
-            }
-            if (!typesAreEqual(rightType, { name: 'Integer' })) {
-                return [`Right hand side of ${type} was not integer`];
-            }
-            return { name: 'Integer' };
-        }
-        case 'equality': {
-            const leftType = typeOfExpression(children[0], knownIdentifiers);
-            const rightType = typeOfExpression(children[2], knownIdentifiers);
-            const combinedErrors = combineErrors([leftType, rightType]);
-            if (combinedErrors) {
-                return combinedErrors;
-            }
-            if (!typesAreEqual(leftType, rightType)) {
-                return [
-                    `Equality comparisons must compare values of the same type.. You tried to compare a ${
-                        (leftType as Type).name
-                    } (lhs) with a ${(rightType as Type).name} (rhs)`,
-                ];
-            }
-            return { name: 'Boolean' };
-        }
-        case 'concatenation': {
-            const leftType = typeOfExpression(children[0], knownIdentifiers);
-            const rightType = typeOfExpression(children[2], knownIdentifiers);
-            const combinedErrors = combineErrors([leftType, rightType]);
-            if (combinedErrors) {
-                return combinedErrors;
-            }
-            if ((leftType as Type).name !== 'String' || (rightType as Type).name !== 'String') {
-                return ['Only strings can be concatenated right now'];
-            }
-            return { name: 'String' };
-        }
-        case 'functionLiteral': {
-            const functionType = knownIdentifiers[value];
-            if (!functionType) debug();
-            return functionType;
-        }
-        case 'callExpression': {
-            const argType = typeOfExpression(children[2], knownIdentifiers);
-            if (isTypeError(argType)) {
-                return argType;
-            }
-            const functionName = children[0].value;
-            if (!(functionName in knownIdentifiers)) {
-                return [`Unknown identifier: ${functionName}`];
-            }
-            const functionType = knownIdentifiers[functionName];
-            if (!functionType) throw debug();
-            if (functionType.name !== 'Function') {
-                return [`You tried to call ${functionName}, but it's not a function (it's a ${functionName.type})`];
-            }
-            if (!argType || !functionType.arg) debug();
-            if (!typesAreEqual(argType, functionType.arg.type)) {
-                return [
-                    `You passed a ${argType.name} as an argument to ${functionName}. It expects a ${
-                        functionType.arg.type.name
-                    }`,
-                ];
-            }
-            return { name: 'Integer' };
-        }
-        case 'identifier': {
-            if (value in knownIdentifiers) {
-                return knownIdentifiers[value];
-            } else {
-                return [`Identifier ${value} has unknown type.`];
-            }
-        }
-        case 'ternary': {
-            const conditionType = typeOfExpression(children[0], knownIdentifiers);
-            const trueBranchType = typeOfExpression(children[2], knownIdentifiers);
-            const falseBranchType = typeOfExpression(children[4], knownIdentifiers);
-            const combinedErrors = combineErrors([conditionType, trueBranchType, falseBranchType]);
-            if (combinedErrors) {
-                return combinedErrors;
-            }
-            if (!typesAreEqual(conditionType, { name: 'Boolean' })) {
-                return [
-                    `You tried to use a ${
-                        (conditionType as any).name
-                    } as the condition in a ternary. Boolean is required`,
-                ];
-            }
-            if (!typesAreEqual(trueBranchType, falseBranchType)) {
-                return [
-                    `Type mismatch in branches of ternary. True branch had ${
-                        (trueBranchType as any).name
-                    }, false branch had ${(falseBranchType as any).name}.`,
-                ];
-            }
-            return trueBranchType;
-        }
-        case 'booleanLiteral':
-            return { name: 'Boolean' };
-        case 'stringLiteral':
-            return { name: 'String' };
-        case 'program':
-            return typeOfExpression(children[0], knownIdentifiers);
-        default:
-            throw debug();
-    }
 };
 
 export const typeOfLoweredExpression = (
@@ -727,6 +613,22 @@ const typeCheckProgram = (ast: Ast.UninferredProgram, previouslyKnownIdentifiers
     return { typeErrors: allErrors, identifiers: knownIdentifiers };
 };
 
+const typeCheckFunction = (f: Function, previouslyKnownIdentifiers: IdentifierDict) => {
+    let knownIdentifiers = { ...builtinIdentifiers, ...previouslyKnownIdentifiers, [f.argument.name]: f.argument.type };
+
+    const allErrors: any = [];
+    f.statements.forEach(statement => {
+        if (allErrors.length == 0) {
+            const { errors, newIdentifiers } = typeCheckStatement(statement, knownIdentifiers);
+            for (const identifier in newIdentifiers) {
+                knownIdentifiers[identifier] = newIdentifiers[identifier];
+            }
+            allErrors.push(...errors);
+        }
+    });
+    return { typeErrors: allErrors, identifiers: knownIdentifiers };
+};
+
 const getFunctionTypeMap = (functions: Function[]) => {
     const result = {};
     functions.forEach(({ name, argument }) => {
@@ -805,6 +707,7 @@ const extractFunctionBodyFromParseTree = node => {
     }
 };
 
+let functionId = 0;
 const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
     if (!ast) debug();
     switch (ast.type) {
@@ -908,9 +811,10 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
                 argument: {} as any,
             };
         case 'functionWithBlock':
+            functionId++;
             return {
                 kind: 'functionLiteral',
-                deanonymizedName: 'todo_better_function_with_block_name',
+                deanonymizedName: `anonymous_${functionId}`,
                 body: extractFunctionBodyFromParseTree(ast.children[3]),
                 argument: {
                     name: ((ast.children[0] as MplAstInteriorNode).children[0] as MplAstLeafNode).value as string,
@@ -960,7 +864,6 @@ const compile = (source: string): FrontendOutput => {
         knownIdentifiers: {},
     };
 
-    debugger;
     const functions = extractFunctions(ast);
     const stringLiterals = extractStringLiterals(ast);
 
@@ -977,9 +880,7 @@ const compile = (source: string): FrontendOutput => {
         ...programTypeCheck.identifiers,
     };
 
-    let typeErrors = functions.map(
-        f => typeCheckProgram({ kind: 'program', statements: f.statements }, knownIdentifiers).typeErrors
-    );
+    let typeErrors = functions.map(f => typeCheckFunction(f, knownIdentifiers).typeErrors);
     typeErrors.push(programTypeCheck.typeErrors);
 
     typeErrors = flatten(typeErrors);

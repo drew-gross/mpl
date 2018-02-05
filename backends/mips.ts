@@ -324,6 +324,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 moveMipsDeprecated(destination, functionResult),
             ]);
         }
+        case 'assignment':
         case 'typedAssignment': {
             const lhs = ast.destination;
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {

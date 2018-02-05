@@ -2,7 +2,6 @@ import * as Ast from '../ast.js';
 import { file as tmpFile } from 'tmp-promise';
 import { VariableDeclaration, Type, BackendInputs, Function, ExecutionResult } from '../api.js';
 import flatten from '../util/list/flatten.js';
-import { typeOfExpression } from '../frontend.js';
 import { exec } from 'child-process-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import debug from '../util/debug.js';
@@ -95,6 +94,7 @@ const astToC = (input: BackendInput): CompiledProgram => {
             };
             return compileExpression([lhs, rhs, prepAndCleanup], ([_1, _2, _3]) => [temporaryName]);
         }
+        case 'assignment':
         case 'typedAssignment': {
             const lhs = ast.destination;
             const rhs = recurse({ ast: ast.expression });
