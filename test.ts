@@ -143,7 +143,7 @@ test('ast for product with brackets', t => {
                             value: null,
                         },
                         {
-                            type: 'product1',
+                            type: 'product',
                             children: [
                                 {
                                     type: 'number',
@@ -154,7 +154,7 @@ test('ast for product with brackets', t => {
                                     value: null,
                                 },
                                 {
-                                    type: 'product1',
+                                    type: 'product',
                                     children: [
                                         {
                                             type: 'number',
@@ -272,7 +272,7 @@ test('ast for assignment then return', t => {
     t.deepEqual(astWithSemicolon, expected);
 });
 
-test('lowering of bracketedExpressions', t => {
+test.only('lowering of bracketedExpressions', t => {
     t.deepEqual(parseMpl(lex(tokenSpecs, 'return (8 * ((7)))')), {
         type: 'program',
         children: [
@@ -291,6 +291,10 @@ test('lowering of bracketedExpressions', t => {
                                 value: 8,
                             },
                             {
+                                type: 'product',
+                                value: null,
+                            },
+                            {
                                 type: 'number',
                                 value: 7,
                             },
@@ -303,7 +307,7 @@ test('lowering of bracketedExpressions', t => {
                 value: 'endOfFile',
             },
         ],
-    } as any);
+    });
 });
 
 test('bare return', compileAndRun, {
@@ -643,7 +647,7 @@ return boolTimesInt(1);`,
     expectedTypeErrors: ['Right hand side of product was not integer'],
 });
 
-test.only('multi statement function on multiple lines', compileAndRun, {
+test('multi statement function on multiple lines', compileAndRun, {
     source: `
 quadrupleWithLocal = a: Integer => {
     b: Integer = 2 * a;
