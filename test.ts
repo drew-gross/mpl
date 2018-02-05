@@ -643,7 +643,7 @@ return boolTimesInt(1);`,
     expectedTypeErrors: ['Right hand side of product was not integer'],
 });
 
-test('multi statement function on multiple lines', compileAndRun, {
+test.only('multi statement function on multiple lines', compileAndRun, {
     source: `
 quadrupleWithLocal = a: Integer => {
     b: Integer = 2 * a;
@@ -752,7 +752,7 @@ test('parsing fails for extra invalid tokens', compileAndRun, {
     expectedParseErrors: ['Expected endOfFile, found leftBracket'],
 });
 
-test.only('addition', compileAndRun, {
+test('addition', compileAndRun, {
     source: `return length("foo") + 5;`,
     expectedExitCode: 8,
 });

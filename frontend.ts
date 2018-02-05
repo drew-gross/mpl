@@ -252,7 +252,7 @@ const extractStringLiterals = (ast: Ast.UninferredAst): string[] => {
         case 'program':
             return flatten(ast.statements.map(extractStringLiterals));
         case 'functionLiteral':
-            return ast.body.map(extractStringLiterals);
+            return flatten(ast.body.map(extractStringLiterals));
         case 'number':
         case 'identifier':
             return [];
