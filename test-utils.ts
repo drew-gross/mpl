@@ -1,5 +1,5 @@
 import { Backend, BackendInputs } from './api.js';
-import { LoweredAst } from './ast.js';
+import { UninferredAst } from './ast.js';
 import { lex } from './lex.js';
 import { parseMpl, compile } from './frontend.js';
 import { file as tmpFile } from 'tmp-promise';
@@ -23,7 +23,7 @@ type CompileAndRunOptions = {
     failing?: string[] | string;
 };
 
-const astToString = (ast: LoweredAst) => {
+const astToString = (ast: UninferredAst) => {
     if (!ast) debug();
     switch (ast.kind) {
         case 'returnStatement':
@@ -56,7 +56,7 @@ const astToString = (ast: LoweredAst) => {
         case 'concatenation':
             return `${ast.lhs} ++ ${ast.rhs}`;
         default:
-            /* assertNever(ast.kind); */ throw debug();
+            throw debug();
     }
 };
 

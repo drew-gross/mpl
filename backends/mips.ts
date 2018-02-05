@@ -1,6 +1,6 @@
 import { exec } from 'child-process-promise';
 import flatten from '../util/list/flatten.js';
-import { VariableDeclaration, BackendInputs, ExecutionResult, LoweredFunction } from '../api.js';
+import { VariableDeclaration, BackendInputs, ExecutionResult, Function } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import { CompiledProgram, compileExpression } from '../backend-utils.js';
@@ -144,7 +144,7 @@ const runtimeFunctions = ['length'];
 let labelId = 0;
 
 type AstToMipsOptions = {
-    ast: Ast.LoweredAst;
+    ast: Ast.UninferredAst;
     registerAssignment: any;
     destination: StorageSpec;
     currentTemporary: StorageSpec;
@@ -648,7 +648,7 @@ const restoreRegistersCode = (numRegisters: number): string[] => {
     return result.reverse();
 };
 
-const constructMipsFunction = (f: LoweredFunction, globalDeclarations, stringLiterals) => {
+const constructMipsFunction = (f: Function, globalDeclarations, stringLiterals) => {
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
     const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
 

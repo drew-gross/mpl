@@ -1,4 +1,4 @@
-import { Type } from './api.js';
+import { Type, VariableDeclaration } from './api.js';
 
 // Leaf nodes
 
@@ -151,6 +151,7 @@ export type UninferredFunctionLiteral = {
     kind: 'functionLiteral';
     deanonymizedName: string;
     body: any;
+    argument: VariableDeclaration;
 };
 
 export type UninferredStatement = UninferredTypedAssignment | UninferredAssignment | UninferredReturnStatement;
@@ -187,7 +188,7 @@ export type UninferredAssignment = {
 
 export type UninferredProgram = {
     kind: 'program';
-    children: UninferredStatement[];
+    statements: UninferredStatement[];
 };
 
 export type UninferredAst =

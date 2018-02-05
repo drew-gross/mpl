@@ -24,17 +24,9 @@ export type Function = {
     temporaryCount: number;
     knownIdentifiers: IdentifierDict;
 };
-export type LoweredFunction = {
-    name: string;
-    statements: LoweredAst[];
-    variables: VariableDeclaration[];
-    argument: VariableDeclaration;
-    temporaryCount: number;
-    knownIdentifiers: IdentifierDict;
-};
 export type BackendInputs = {
-    functions: LoweredFunction[];
-    program: LoweredFunction;
+    functions: Function[];
+    program: Function;
     globalDeclarations: VariableDeclaration[];
     stringLiterals;
 };

@@ -43,7 +43,7 @@ const tokenToLeafNode = (token: MplToken): MplAstLeafNodeType => {
         case 'concatenation':
         case 'invalid':
         default:
-            throw debug();
+            return `TOKEN IS INVALID MplLeafNode: ${token}` as any;
     }
 };
 
@@ -265,9 +265,9 @@ export type MplAstInteriorNodeType =
     | 'typedAssignment'
     | 'assignment'
     | 'ternary'
-    | 'addition1'
-    | 'subtraction1'
-    | 'product1'
+    | 'addition'
+    | 'subtraction'
+    | 'product'
     | 'equality'
     | 'concatenation'
     | 'bracketedExpression'
@@ -303,9 +303,9 @@ export const grammar: Grammar<MplAstInteriorNodeType, MplAstLeafNodeType, MplTok
     ],
     expression: ['ternary'],
     ternary: [{ n: 'ternary', p: ['addition', ternaryOperator, 'addition', colon, 'addition'] }, 'addition'],
-    addition: [{ n: 'addition1', p: ['subtraction', plus, 'addition'] }, 'subtraction'],
-    subtraction: [{ n: 'subtraction1', p: ['product', minus, 'subtraction'] }, 'product'],
-    product: [{ n: 'product1', p: ['equality', times, 'product'] }, 'equality'],
+    addition: [{ n: 'addition', p: ['subtraction', plus, 'addition'] }, 'subtraction'],
+    subtraction: [{ n: 'subtraction', p: ['product', minus, 'subtraction'] }, 'product'],
+    product: [{ n: 'product', p: ['equality', times, 'product'] }, 'equality'],
     equality: [{ n: 'equality', p: ['concatenation', equality, 'equality'] }, 'concatenation'],
     concatenation: [
         { n: 'concatenation', p: ['simpleExpression', concatenation, 'concatenation'] },

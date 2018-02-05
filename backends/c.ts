@@ -25,7 +25,7 @@ const mplTypeToCDeclaration = (type: Type, name: string) => {
 };
 
 type BackendInput = {
-    ast: Ast.LoweredAst;
+    ast: Ast.UninferredAst;
     globalDeclarations: VariableDeclaration[];
     localDeclarations: VariableDeclaration[];
     stringLiterals: string[];
@@ -205,7 +205,7 @@ const stringLiteralDeclaration = stringLiteral =>
 type MakeCFunctionBodyInputs = {
     name: any;
     argument: any;
-    statements: Ast.LoweredAst[];
+    statements: Ast.UninferredStatement[];
     variables: any;
     globalDeclarations: any;
     stringLiterals: any;

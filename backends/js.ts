@@ -8,7 +8,7 @@ const astToJS = ({
     ast,
     exitInsteadOfReturn,
 }: {
-    ast: Ast.LoweredAst;
+    ast: Ast.UninferredAst;
     exitInsteadOfReturn: boolean;
 }) => {
     if (!ast) debugger;
