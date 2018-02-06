@@ -308,8 +308,8 @@ const parseAlternative = <InteriorNodeType, TokenType>(
         return error.found;
     });
     return {
-        found: flatten(
-            unique(
+        found: unique(
+            flatten(
                 progressCache.map(error => {
                     if (!parseResultIsError(error)) throw debug();
                     return error.found;
