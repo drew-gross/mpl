@@ -317,6 +317,7 @@ const countTemporariesInExpression = (ast: Ast.UninferredAst) => {
             return Math.max(...ast.statements.map(countTemporariesInExpression));
         case 'number':
         case 'identifier':
+        case 'booleanLiteral':
             return 0;
         default:
             debug();
