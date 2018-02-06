@@ -224,6 +224,7 @@ const extractFunctions = (ast: Ast.UninferredAst): Function[] => {
         case 'number':
         case 'identifier':
         case 'stringLiteral':
+        case 'booleanLiteral':
             return [];
         default:
             throw debug();
@@ -255,6 +256,7 @@ const extractStringLiterals = (ast: Ast.UninferredAst): string[] => {
             return flatten(ast.body.map(extractStringLiterals));
         case 'number':
         case 'identifier':
+        case 'booleanLiteral':
             return [];
         case 'stringLiteral':
             return [ast.value];
