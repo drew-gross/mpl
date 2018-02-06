@@ -750,12 +750,26 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
                 rhs: lowerAst(ast.children[2]),
             };
         case 'function':
-            debug(); // TODO: need to create a return with the expression, and extract the argumnet
+            functionId++;
             return {
                 kind: 'functionLiteral',
-                deanonymizedName: 'todo_better_function_name',
-                body: [],
-                argument: {} as any,
+                deanonymizedName: `anonymous_${functionId}`,
+                body: [
+                    {
+                        kind: 'returnStatement',
+                        expression: lowerAst(ast.children[2]),
+                    },
+                ],
+                argument: {
+                    name: ((ast.children[0] as MplAstInteriorNode).children[0] as AstLeaf<MplToken>).value as string,
+                    type: {
+                        name: ((ast.children[0] as MplAstInteriorNode).children[2] as AstLeaf<MplToken>).value as
+                            | 'String'
+                            | 'Integer'
+                            | 'Boolean',
+                    },
+                    memoryCategory: 'FAKE MemoryCategory (functionWithBlock)' as any,
+                },
             };
         case 'functionWithBlock':
             functionId++;

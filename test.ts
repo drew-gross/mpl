@@ -272,7 +272,7 @@ test('ast for assignment then return', t => {
     t.deepEqual(astWithSemicolon, expected);
 });
 
-test.only('lowering of bracketedExpressions', t => {
+test('lowering of bracketedExpressions', t => {
     t.deepEqual(parseMpl(lex(tokenSpecs, 'return (8 * ((7)))')), {
         type: 'program',
         children: [
@@ -673,7 +673,8 @@ test('string length with type inferred', compileAndRun, {
     expectedExitCode: 5,
 });
 
-test('struture is equal for inferred string type', t => {
+// TODO: Decide how/if we care about typed assignment
+test.failing('struture is equal for inferred string type', t => {
     const inferredStructure = compile('myStr = "test"; return length(myStr);');
     const suppliedStructure = compile('myStr: String = "test"; return length(myStr);');
     t.deepEqual(inferredStructure, suppliedStructure);
