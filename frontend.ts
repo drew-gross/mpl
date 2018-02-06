@@ -663,7 +663,7 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
                 expression: lowerAst(ast.children[1]),
             };
         case 'number':
-            if (!ast.value) throw debug();
+            if (ast.value === undefined) throw debug();
             return {
                 kind: 'number',
                 value: ast.value as any,
