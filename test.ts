@@ -431,7 +431,7 @@ test('brackets product', compileAndRun, {
     },
 });
 
-test('assign function and return', compileAndRun, {
+test.only('assign function and return', compileAndRun, {
     source: 'constThree = a: Integer => 3; return 10',
     expectedExitCode: 10,
 });
@@ -673,8 +673,7 @@ test('string length with type inferred', compileAndRun, {
     expectedExitCode: 5,
 });
 
-// TODO: Decide how/if we care about typed assignment
-test.failing('struture is equal for inferred string type', t => {
+test('struture is equal for inferred string type', t => {
     const inferredStructure = compile('myStr = "test"; return length(myStr);');
     const suppliedStructure = compile('myStr: String = "test"; return length(myStr);');
     t.deepEqual(inferredStructure, suppliedStructure);
@@ -714,7 +713,7 @@ test('wrong type global', compileAndRun, {
     expectedTypeErrors: ['You tried to assign a Integer to "str", which has type String'],
 });
 
-test.only('string concatenation', compileAndRun, {
+test('string concatenation', compileAndRun, {
     source: `str1: String = "a";
 str2: String = "b";
 return str1 ++ str2 == "ab" ? 5 : 10;`,

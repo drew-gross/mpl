@@ -660,6 +660,11 @@ const inferOperators = (ast: Ast.UninferredAst, knownIdentifiers): Ast.Ast => {
                 ifTrue: recurse(ast.ifTrue),
                 ifFalse: recurse(ast.ifFalse),
             };
+        case 'functionLiteral':
+            return {
+                kind: 'functionLiteral',
+                deanonymizedName: ast.deanonymizedName,
+            };
         case 'number':
         case 'identifier':
         case 'booleanLiteral':
