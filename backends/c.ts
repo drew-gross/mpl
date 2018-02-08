@@ -24,7 +24,7 @@ const mplTypeToCDeclaration = (type: Type, name: string) => {
 };
 
 type BackendInput = {
-    ast: Ast.UninferredAst;
+    ast: Ast.Ast;
     globalDeclarations: VariableDeclaration[];
     localDeclarations: VariableDeclaration[];
     stringLiterals: string[];
@@ -94,7 +94,6 @@ const astToC = (input: BackendInput): CompiledProgram => {
             };
             return compileExpression([lhs, rhs, prepAndCleanup], ([_1, _2, _3]) => [temporaryName]);
         }
-        case 'assignment':
         case 'typedAssignment': {
             const lhs = ast.destination;
             const rhs = recurse({ ast: ast.expression });
@@ -176,18 +175,17 @@ const astToC = (input: BackendInput): CompiledProgram => {
         case 'equality': {
             const lhs = recurse({ ast: ast.lhs });
             const rhs = recurse({ ast: ast.rhs });
-            return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '==', ...e2]);
-        }
-        case 'stringEquality': {
-            const lhs = recurse({ ast: ast.lhs });
-            const rhs = recurse({ ast: ast.rhs });
-            return compileExpression([lhs, rhs], ([e1, e2]) => [
-                'string_compare(',
-                ...e1,
-                ',',
-                ...e2,
-                ')',
-            ]);
+            if (ast.type.name == 'String') {
+                return compileExpression([lhs, rhs], ([e1, e2]) => [
+                    'string_compare(',
+                    ...e1,
+                    ',',
+                    ...e2,
+                    ')',
+                ]);
+            } else {
+                return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '==', ...e2]);
+            }
         }
         case 'booleanLiteral':
             return compileExpression([], ([]) => [ast.value ? '1' : '0']);
@@ -205,7 +203,7 @@ const stringLiteralDeclaration = stringLiteral =>
 type MakeCFunctionBodyInputs = {
     name: any;
     argument: any;
-    statements: Ast.UninferredStatement[];
+    statements: Ast.Statement[];
     variables: any;
     globalDeclarations: any;
     stringLiterals: any;

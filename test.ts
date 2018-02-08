@@ -714,7 +714,7 @@ test('wrong type global', compileAndRun, {
     expectedTypeErrors: ['You tried to assign a Integer to "str", which has type String'],
 });
 
-test('string concatenation', compileAndRun, {
+test.only('string concatenation', compileAndRun, {
     source: `str1: String = "a";
 str2: String = "b";
 return str1 ++ str2 == "ab" ? 5 : 10;`,

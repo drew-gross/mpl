@@ -144,7 +144,7 @@ const runtimeFunctions = ['length'];
 let labelId = 0;
 
 type AstToMipsOptions = {
-    ast: Ast.UninferredAst;
+    ast: Ast.Ast;
     registerAssignment: any;
     destination: StorageSpec;
     currentTemporary: StorageSpec;
@@ -324,7 +324,6 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 moveMipsDeprecated(destination, functionResult),
             ]);
         }
-        case 'assignment':
         case 'typedAssignment': {
             const lhs = ast.destination;
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
@@ -455,75 +454,76 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
             );
         }
         case 'equality': {
-            const leftSideDestination = currentTemporary;
-            const rightSideDestination = destination;
-            const subExpressionTemporary = nextTemporary(currentTemporary);
-            const storeLeftInstructions = recurse({
-                ast: ast.lhs,
-                destination: leftSideDestination,
-                currentTemporary: subExpressionTemporary,
-            });
-            const storeRightInstructions = recurse({
-                ast: ast.rhs,
-                destination: rightSideDestination,
-                currentTemporary: subExpressionTemporary,
-            });
+            if (ast.type.name == 'String') {
+                // Put left in s0 and right in s1 for passing to string equality function
+                const storeLeftInstructions = recurse({
+                    ast: ast.lhs,
+                    destination: {
+                        type: 'register',
+                        destination: argument1,
+                    },
+                });
+                const storeRightInstructions = recurse({
+                    ast: ast.rhs,
+                    destination: {
+                        type: 'register',
+                        destination: argument2,
+                    },
+                });
+                return compileExpression(
+                    [storeLeftInstructions, storeRightInstructions],
+                    ([e1, e2]) => [
+                        `# Store left side in s0`,
+                        ...e1,
+                        `# Store right side in s1`,
+                        ...e2,
+                        `# Call stringEquality`,
+                        `jal stringEquality`,
+                        `# Return value in ${functionResult}. Move to destination`,
+                        moveMipsDeprecated(destination as any, functionResult),
+                    ]
+                );
+            } else {
+                const leftSideDestination = currentTemporary;
+                const rightSideDestination = destination;
+                const subExpressionTemporary = nextTemporary(currentTemporary);
+                const storeLeftInstructions = recurse({
+                    ast: ast.lhs,
+                    destination: leftSideDestination,
+                    currentTemporary: subExpressionTemporary,
+                });
+                const storeRightInstructions = recurse({
+                    ast: ast.rhs,
+                    destination: rightSideDestination,
+                    currentTemporary: subExpressionTemporary,
+                });
 
-            const equalLabel = labelId;
-            labelId++;
-            const endOfConditionLabel = labelId;
-            labelId++;
+                const equalLabel = labelId;
+                labelId++;
+                const endOfConditionLabel = labelId;
+                labelId++;
 
-            let jumpIfEqualInstructions = [];
+                let jumpIfEqualInstructions = [];
 
-            return compileExpression(
-                [storeLeftInstructions, storeRightInstructions],
-                ([storeLeft, storeRight]) => [
-                    `# Store left side of equality in temporary`,
-                    ...storeLeft,
-                    `# Store right side of equality in temporary`,
-                    ...storeRight,
-                    `# Goto set 1 if equal`,
-                    mipsBranchIfEqual(leftSideDestination, rightSideDestination, `L${equalLabel}`),
-                    `# Not equal, set 0`,
-                    storeLiteralMips(destination as any, '0'),
-                    `# And goto exit`,
-                    `b L${endOfConditionLabel}`,
-                    `L${equalLabel}:`,
-                    storeLiteralMips(destination as any, '1'),
-                    `L${endOfConditionLabel}:`,
-                ]
-            );
-        }
-        case 'stringEquality': {
-            // Put left in s0 and right in s1 for passing to string equality function
-            const storeLeftInstructions = recurse({
-                ast: ast.lhs,
-                destination: {
-                    type: 'register',
-                    destination: argument1,
-                },
-            });
-            const storeRightInstructions = recurse({
-                ast: ast.rhs,
-                destination: {
-                    type: 'register',
-                    destination: argument2,
-                },
-            });
-            return compileExpression(
-                [storeLeftInstructions, storeRightInstructions],
-                ([e1, e2]) => [
-                    `# Store left side in s0`,
-                    ...e1,
-                    `# Store right side in s1`,
-                    ...e2,
-                    `# Call stringEquality`,
-                    `jal stringEquality`,
-                    `# Return value in ${functionResult}. Move to destination`,
-                    moveMipsDeprecated(destination as any, functionResult),
-                ]
-            );
+                return compileExpression(
+                    [storeLeftInstructions, storeRightInstructions],
+                    ([storeLeft, storeRight]) => [
+                        `# Store left side of equality in temporary`,
+                        ...storeLeft,
+                        `# Store right side of equality in temporary`,
+                        ...storeRight,
+                        `# Goto set 1 if equal`,
+                        mipsBranchIfEqual(leftSideDestination, rightSideDestination, `L${equalLabel}`),
+                        `# Not equal, set 0`,
+                        storeLiteralMips(destination as any, '0'),
+                        `# And goto exit`,
+                        `b L${endOfConditionLabel}`,
+                        `L${equalLabel}:`,
+                        storeLiteralMips(destination as any, '1'),
+                        `L${endOfConditionLabel}:`,
+                    ]
+                );
+            }
         }
         case 'stringLiteral': {
             return compileExpression([], ([]) => [

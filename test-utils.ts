@@ -1,5 +1,5 @@
 import { Backend, BackendInputs } from './api.js';
-import { UninferredAst } from './ast.js';
+import { Ast } from './ast.js';
 import { lex } from './lex.js';
 import { parseMpl, compile } from './frontend.js';
 import { file as tmpFile } from 'tmp-promise';
@@ -23,14 +23,14 @@ type CompileAndRunOptions = {
     failing?: string[] | string;
 };
 
-const astToString = (ast: UninferredAst) => {
+const astToString = (ast: Ast) => {
     if (!ast) debug();
     switch (ast.kind) {
         case 'returnStatement':
             return `return ${astToString(ast.expression)}`;
         case 'ternary':
             return `${astToString(ast.condition)} ? ${astToString(ast.ifTrue)} : ${astToString(ast.ifFalse)}`;
-        case 'stringEquality':
+        case 'equality':
         case 'equality':
             return `${astToString(ast.lhs)} == ${astToString(ast.rhs)}`;
         case 'identifier':
@@ -55,8 +55,8 @@ const astToString = (ast: UninferredAst) => {
             return ast.value ? 'True' : 'False';
         case 'concatenation':
             return `${ast.lhs} ++ ${ast.rhs}`;
-        case 'assignment':
-            return `${ast.destination} = ${astToString(ast.expression)};`;
+        case 'typedAssignment':
+            return `${ast.destination}: ${ast.type.name} = ${astToString(ast.expression)};`;
         default:
             throw debug();
     }

@@ -27,40 +27,34 @@ export type StringLiteral = {
 // Typed versions of things (...kinda)
 export type ReturnStatement = {
     kind: 'returnStatement';
-    expression: LoweredAst;
+    expression: Ast;
 };
 
 export type Ternary = {
     kind: 'ternary';
-    condition: LoweredAst;
-    ifTrue: LoweredAst;
-    ifFalse: LoweredAst;
+    condition: Ast;
+    ifTrue: Ast;
+    ifFalse: Ast;
 };
 
-// TODO: merge Equality with StringEquality and add type to ast node
 export type Equality = {
     kind: 'equality';
-    lhs: LoweredAst;
-    rhs: LoweredAst;
-};
-
-export type StringEquality = {
-    kind: 'stringEquality';
-    lhs: LoweredAst;
-    rhs: LoweredAst;
+    lhs: Ast;
+    rhs: Ast;
+    type: Type;
 };
 
 export type TypedAssignment = {
     kind: 'typedAssignment';
     type: Type;
     destination: string;
-    expression: LoweredAst;
+    expression: Ast;
 };
 
 export type FunctionCall = {
     kind: 'callExpression';
     name: string;
-    argument: LoweredAst;
+    argument: Ast;
 };
 
 export type FunctionLiteral = {
@@ -72,29 +66,29 @@ export type Statement = TypedAssignment | ReturnStatement;
 
 export type Addition = {
     kind: 'addition';
-    lhs: LoweredAst;
-    rhs: LoweredAst;
+    lhs: Ast;
+    rhs: Ast;
 };
 
 export type Subtraction = {
     kind: 'subtraction';
-    lhs: LoweredAst;
-    rhs: LoweredAst;
+    lhs: Ast;
+    rhs: Ast;
 };
 
 export type Product = {
     kind: 'product';
-    lhs: LoweredAst;
-    rhs: LoweredAst;
+    lhs: Ast;
+    rhs: Ast;
 };
 
 export type Concatenation = {
     kind: 'concatenation';
-    lhs: LoweredAst;
-    rhs: LoweredAst;
+    lhs: Ast;
+    rhs: Ast;
 };
 
-export type LoweredAst =
+export type Ast =
     | Leaf
     | Ternary
     | Equality
@@ -104,7 +98,6 @@ export type LoweredAst =
     | Subtraction
     | Addition
     | Product
-    | StringEquality
     | Concatenation;
 
 // Untyped versions (...kinda)

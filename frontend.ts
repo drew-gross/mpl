@@ -10,6 +10,7 @@ import {
     VariableDeclaration,
     IdentifierDict,
     Function,
+    UninferredFunction,
     MemoryCategory,
     BackendInputs,
     ParseError,
@@ -185,7 +186,7 @@ const extractVariables = (
     return result;
 };
 
-const extractFunctions = (ast: Ast.UninferredAst): Function[] => {
+const extractFunctions = (ast: Ast.UninferredAst): UninferredFunction[] => {
     switch (ast.kind) {
         case 'returnStatement':
         case 'typedAssignment':
@@ -318,6 +319,7 @@ const countTemporariesInExpression = (ast: Ast.UninferredAst) => {
         case 'number':
         case 'identifier':
         case 'booleanLiteral':
+        case 'stringLiteral':
             return 0;
         default:
             debug();
@@ -562,7 +564,7 @@ const typeCheckProgram = (ast: Ast.UninferredProgram, previouslyKnownIdentifiers
     return { typeErrors: allErrors, identifiers: knownIdentifiers };
 };
 
-const typeCheckFunction = (f: Function, previouslyKnownIdentifiers: IdentifierDict) => {
+const typeCheckFunction = (f: UninferredFunction, previouslyKnownIdentifiers: IdentifierDict) => {
     let knownIdentifiers = { ...builtinIdentifiers, ...previouslyKnownIdentifiers, [f.argument.name]: f.argument.type };
 
     const allErrors: any = [];
@@ -578,7 +580,7 @@ const typeCheckFunction = (f: Function, previouslyKnownIdentifiers: IdentifierDi
     return { typeErrors: allErrors, identifiers: knownIdentifiers };
 };
 
-const getFunctionTypeMap = (functions: Function[]) => {
+const getFunctionTypeMap = (functions: UninferredFunction[]) => {
     const result = {};
     functions.forEach(({ name, argument }) => {
         result[name] = { name: 'Function', arg: { type: argument } };
@@ -595,41 +597,77 @@ const assignmentToDeclaration = (ast: Ast.UninferredAssignment, knownIdentifiers
     };
 };
 
-const inferOperators = (knownIdentifiers, statement: Ast.UninferredAst) => {
-    const typedEquality = transformUninferredAst(
-        'equality',
-        (node: Ast.UninferredEquality): Ast.UninferredAst => {
-            let leftType = typeOfLoweredExpression(node.lhs, knownIdentifiers);
-            let rightType = typeOfLoweredExpression(node.rhs, knownIdentifiers);
-            const combinedErrors = combineErrors([leftType, rightType]);
-            if (combinedErrors) throw debug();
-            if ((leftType as any).name === 'String' && (rightType as any).name === 'String') {
-                return {
-                    ...node,
-                    kind: 'stringEquality',
-                };
-            } else {
-                return node;
-            }
-        },
-        statement,
-        false
-    );
-    // TODO: Seems like this doesn't do anything
-    const typedAssignment = transformUninferredAst(
-        'assignment',
-        (node: Ast.UninferredAssignment): Ast.UninferredAst => {
+const inferOperators = (ast: Ast.UninferredAst, knownIdentifiers): Ast.Ast => {
+    const recurse = ast => inferOperators(ast, knownIdentifiers);
+    switch (ast.kind) {
+        case 'returnStatement':
+            return { kind: 'returnStatement', expression: recurse(ast.expression) };
+        case 'equality':
+            return {
+                kind: 'equality',
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+                type: typeOfLoweredExpression(ast.lhs, knownIdentifiers) as Type,
+            };
+        case 'product':
+            return {
+                kind: ast.kind,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+            };
+        case 'addition':
+            return {
+                kind: ast.kind,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+            };
+        case 'subtraction':
+            return {
+                kind: ast.kind,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+            };
+        case 'concatenation':
+            return {
+                kind: ast.kind,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+            };
+        case 'typedAssignment':
             return {
                 kind: 'typedAssignment',
-                destination: node.destination,
-                type: typeOfLoweredExpression(node.expression, knownIdentifiers) as any,
-                expression: node.expression,
+                expression: recurse(ast.expression),
+                type: ast.type,
+                destination: ast.destination,
             };
-        },
-        typedEquality,
-        false
-    );
-    return typedAssignment;
+        case 'assignment':
+            return {
+                kind: 'typedAssignment',
+                expression: recurse(ast.expression),
+                type: typeOfLoweredExpression(ast.expression, knownIdentifiers) as Type,
+                destination: ast.destination,
+            };
+        case 'callExpression':
+            return {
+                kind: 'callExpression',
+                name: ast.name,
+                argument: recurse(ast.argument),
+            };
+        case 'ternary':
+            return {
+                kind: 'ternary',
+                condition: recurse(ast.condition),
+                ifTrue: recurse(ast.ifTrue),
+                ifFalse: recurse(ast.ifFalse),
+            };
+        case 'number':
+        case 'identifier':
+        case 'booleanLiteral':
+        case 'stringLiteral':
+            return ast;
+        default:
+            throw debug();
+    }
 };
 
 type FrontendOutput = BackendInputs | { parseErrors: ParseError[] } | { typeErrors: TypeError[] };
@@ -864,9 +902,22 @@ const compile = (source: string): FrontendOutput => {
             return result;
         }) as any;
 
+    const typedProgramStatements = program.statements.map(s => inferOperators(s, knownIdentifiers));
+
+    const typedFunctions: Function[] = [];
+    functions.forEach(f => {
+        typedFunctions.push({
+            ...f,
+            statements: f.statements.map(s => inferOperators(s, knownIdentifiers)) as Ast.Statement[],
+        });
+    });
+
     return {
-        functions,
-        program,
+        functions: typedFunctions,
+        program: {
+            ...program,
+            statements: typedProgramStatements,
+        },
         globalDeclarations,
         stringLiterals,
     } as BackendInputs;

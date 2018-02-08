@@ -8,7 +8,7 @@ const astToJS = ({
     ast,
     exitInsteadOfReturn,
 }: {
-    ast: Ast.UninferredAst;
+    ast: Ast.Ast;
     exitInsteadOfReturn: boolean;
 }) => {
     if (!ast) debugger;
@@ -29,7 +29,6 @@ const astToJS = ({
             return [...recurse({ ast: ast.lhs }), '-', ...recurse({ ast: ast.rhs })];
         case 'addition':
             return [...recurse({ ast: ast.lhs }), '+', ...recurse({ ast: ast.rhs })];
-        case 'assignment':
         case 'typedAssignment':
             return [`const ${ast.destination} = `, ...recurse({ ast: ast.expression }), ';'];
         case 'functionLiteral':
@@ -47,8 +46,6 @@ const astToJS = ({
                 ...recurse({ ast: ast.ifFalse }),
             ];
         case 'equality':
-            return [...recurse({ ast: ast.lhs }), '==', ...recurse({ ast: ast.rhs })];
-        case 'stringEquality':
             return [...recurse({ ast: ast.lhs }), '==', ...recurse({ ast: ast.rhs })];
         case 'booleanLiteral':
             return [ast.value];

@@ -1,4 +1,4 @@
-import { LoweredAst, UninferredStatement } from './ast.js';
+import { UninferredStatement, Statement } from './ast.js';
 
 export type Type =
     | {
@@ -16,9 +16,18 @@ export type VariableDeclaration = {
     memoryCategory: MemoryCategory;
 };
 export type IdentifierDict = { [name: string]: Type }; // TODO: Don't export this (or rethink it)
-export type Function = {
+export type UninferredFunction = {
+    // TODO: Don't export this (or rethink it)
     name: string;
     statements: UninferredStatement[];
+    variables: VariableDeclaration[];
+    argument: VariableDeclaration;
+    temporaryCount: number;
+    knownIdentifiers: IdentifierDict;
+};
+export type Function = {
+    name: string;
+    statements: Statement[];
     variables: VariableDeclaration[];
     argument: VariableDeclaration;
     temporaryCount: number;
