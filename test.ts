@@ -431,7 +431,7 @@ test('brackets product', compileAndRun, {
     },
 });
 
-test.only('assign function and return', compileAndRun, {
+test('assign function and return', compileAndRun, {
     source: 'constThree = a: Integer => 3; return 10',
     expectedExitCode: 10,
 });
@@ -684,7 +684,7 @@ test('string copy', compileAndRun, {
     expectedExitCode: 7,
 });
 
-test('string equality: equal', compileAndRun, {
+test.only('string equality: equal', compileAndRun, {
     source: `str1 = "a";
 str2 = "a";
 return str1 == str2 ? 1 : 2;

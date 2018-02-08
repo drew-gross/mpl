@@ -872,7 +872,7 @@ const compile = (source: string): FrontendOutput => {
     };
 
     const functions = extractFunctions(ast);
-    const stringLiterals = extractStringLiterals(ast);
+    const stringLiterals = unique(extractStringLiterals(ast));
 
     const functionIdentifierTypes = getFunctionTypeMap(functions);
     let knownIdentifiers = {
