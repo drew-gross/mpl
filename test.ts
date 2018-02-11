@@ -725,7 +725,7 @@ test('concatenate and get length then subtract', compileAndRun, {
     expectedExitCode: 5,
 });
 
-test.only('semi-complex string concatenation', compileAndRun, {
+test('semi-complex string concatenation', compileAndRun, {
     source: `
 lenFunc = dummy: Integer => {
     str1 = "abc";
