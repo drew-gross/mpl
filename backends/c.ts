@@ -98,9 +98,7 @@ const astToC = (input: BackendInput): CompiledProgram => {
             const lhs = ast.destination;
             const rhs = recurse({ ast: ast.expression });
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
-                const declaration = globalDeclarations.find(
-                    declaration => declaration.name === lhs
-                );
+                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug();
                 switch (declaration.type.name) {
                     case 'Function':
@@ -136,16 +134,10 @@ const astToC = (input: BackendInput): CompiledProgram => {
                                     ...e1,
                                     ') + 1))',
                                 ]);
-                                return compileAssignment(
-                                    mplTypeToCDeclaration(declaration.type, lhs),
-                                    rhsWillAlloc
-                                );
+                                return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhsWillAlloc);
                             }
                             case 'GlobalStatic':
-                                return compileAssignment(
-                                    mplTypeToCDeclaration(declaration.type, lhs),
-                                    rhs
-                                );
+                                return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
                             default:
                                 debug();
                         }
@@ -167,22 +159,19 @@ const astToC = (input: BackendInput): CompiledProgram => {
             const comparatorC = recurse({ ast: ast.condition });
             const ifTrueC = recurse({ ast: ast.ifTrue });
             const ifFalseC = recurse({ ast: ast.ifFalse });
-            return compileExpression(
-                [comparatorC, ifTrueC, ifFalseC],
-                ([compare, ifTrue, ifFalse]) => [...compare, '?', ...ifTrue, ':', ...ifFalse]
-            );
+            return compileExpression([comparatorC, ifTrueC, ifFalseC], ([compare, ifTrue, ifFalse]) => [
+                ...compare,
+                '?',
+                ...ifTrue,
+                ':',
+                ...ifFalse,
+            ]);
         }
         case 'equality': {
             const lhs = recurse({ ast: ast.lhs });
             const rhs = recurse({ ast: ast.rhs });
             if (ast.type.name == 'String') {
-                return compileExpression([lhs, rhs], ([e1, e2]) => [
-                    'string_compare(',
-                    ...e1,
-                    ',',
-                    ...e2,
-                    ')',
-                ]);
+                return compileExpression([lhs, rhs], ([e1, e2]) => ['string_compare(', ...e1, ',', ...e2, ')']);
             } else {
                 return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '==', ...e2]);
             }
@@ -197,8 +186,7 @@ const astToC = (input: BackendInput): CompiledProgram => {
     return debug();
 };
 
-const stringLiteralDeclaration = stringLiteral =>
-    `char *string_literal_${stringLiteral} = "${stringLiteral}";`;
+const stringLiteralDeclaration = stringLiteral => `char *string_literal_${stringLiteral} = "${stringLiteral}";`;
 
 type MakeCFunctionBodyInputs = {
     name: any;
@@ -234,11 +222,7 @@ const makeCfunctionBody = ({
             localDeclarations: variables,
         });
         return join(
-            [
-                join(statementLogic.prepare, '\n'),
-                join(statementLogic.execute, ' '),
-                join(statementLogic.cleanup, '\n'),
-            ],
+            [join(statementLogic.prepare, '\n'), join(statementLogic.execute, ' '), join(statementLogic.cleanup, '\n')],
             '\n'
         );
     });
@@ -270,12 +254,7 @@ const makeCfunctionBody = ({
     );
 };
 
-const toExectuable = ({
-    functions,
-    program,
-    globalDeclarations,
-    stringLiterals,
-}: BackendInputs) => {
+const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     const Cfunctions = functions.map(({ name, argument, statements, variables }) =>
         makeCfunctionBody({
             name,
@@ -284,8 +263,7 @@ const toExectuable = ({
             variables,
             globalDeclarations,
             stringLiterals,
-            buildSignature: (name, argument) =>
-                `unsigned char ${name}(unsigned char ${argument.name})`,
+            buildSignature: (name, argument) => `unsigned char ${name}(unsigned char ${argument.name})`,
             returnType: { name: 'Integer' }, // Can currently only return integer
         })
     );

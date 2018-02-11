@@ -163,27 +163,26 @@ const transformUninferredAst = (
 };
 
 const extractVariables = (
-    statements: Ast.UninferredStatement[],
-    knownIdentifiers: IdentifierDict
+    statement: Ast.UninferredStatement,
+    knownIdentifiers: IdentifierDict,
+    isGlobal: boolean
 ): VariableDeclaration[] => {
     const result: VariableDeclaration[] = [];
-    statements.forEach(statement => {
-        switch (statement.kind) {
-            case 'assignment':
-            case 'typedAssignment':
-                result.push({
+    switch (statement.kind) {
+        case 'assignment':
+        case 'typedAssignment':
+            return [
+                {
                     name: statement.destination,
-                    memoryCategory: 'TODO: Fix memory category (extractVariables)' as any,
+                    memoryCategory: isGlobal ? 'GlobalStatic' : 'Stack',
                     type: typeOfLoweredExpression(statement.expression, knownIdentifiers) as Type,
-                });
-                break;
-            case 'returnStatement':
-                break;
-            default:
-                throw debug();
-        }
-    });
-    return result;
+                },
+            ];
+        case 'returnStatement':
+            return [];
+        default:
+            throw debug();
+    }
 };
 
 const extractFunctions = (ast: Ast.UninferredAst): UninferredFunction[] => {
@@ -209,15 +208,33 @@ const extractFunctions = (ast: Ast.UninferredAst): UninferredFunction[] => {
             return flatten(ast.statements.map(extractFunctions));
         case 'functionLiteral':
             functionId++;
+            const knownIdentifiers = { [ast.argument.name]: ast.argument.type };
+            const variables: VariableDeclaration[] = [];
+            ast.body.forEach((statement: Ast.UninferredStatement) => {
+                switch (statement.kind) {
+                    case 'returnStatement':
+                        break;
+                    case 'assignment':
+                    case 'typedAssignment':
+                        variables.push(...extractVariables(statement, knownIdentifiers, false));
+                        knownIdentifiers[statement.destination] = typeOfLoweredExpression(
+                            statement.expression,
+                            knownIdentifiers
+                        ) as Type;
+                        break;
+                    default:
+                        throw debug();
+                }
+            });
             return flatten([
                 [
                     {
                         name: ast.deanonymizedName,
                         statements: ast.body,
-                        variables: extractVariables(ast.body, { [ast.argument.name]: ast.argument.type }),
+                        variables,
                         argument: ast.argument,
                         temporaryCount: Math.max(...ast.body.map(countTemporariesInExpression)),
-                        knownIdentifiers: {},
+                        knownIdentifiers,
                     },
                 ],
                 ...ast.body.map(extractFunctions),
@@ -913,7 +930,9 @@ const compile = (source: string): FrontendOutput => {
     functions.forEach(f => {
         typedFunctions.push({
             ...f,
-            statements: f.statements.map(s => inferOperators(s, knownIdentifiers)) as Ast.Statement[],
+            statements: f.statements.map(s =>
+                inferOperators(s, { ...knownIdentifiers, ...f.knownIdentifiers })
+            ) as Ast.Statement[],
         });
     });
 
