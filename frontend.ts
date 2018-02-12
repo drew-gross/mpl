@@ -97,7 +97,7 @@ const extractVariables = (
                 {
                     name: statement.destination,
                     memoryCategory: isGlobal ? 'GlobalStatic' : 'Stack',
-                    type: typeOfLoweredExpression(statement.expression, variablesInScope) as Type,
+                    type: typeOfExpression(statement.expression, variablesInScope) as Type,
                 },
             ];
         case 'returnStatement':
@@ -282,7 +282,7 @@ const combineErrors = (potentialErrors: (Type | TypeError[])[]): TypeError[] | n
     return result.length > 0 ? result : null;
 };
 
-export const typeOfLoweredExpression = (
+export const typeOfExpression = (
     ast: Ast.UninferredAst,
     variablesInScope: VariableDeclaration[]
 ): Type | TypeError[] => {
@@ -292,8 +292,8 @@ export const typeOfLoweredExpression = (
         case 'addition':
         case 'product':
         case 'subtraction': {
-            const leftType = typeOfLoweredExpression(ast.lhs, variablesInScope);
-            const rightType = typeOfLoweredExpression(ast.rhs, variablesInScope);
+            const leftType = typeOfExpression(ast.lhs, variablesInScope);
+            const rightType = typeOfExpression(ast.rhs, variablesInScope);
             const combinedErrors = combineErrors([leftType, rightType]);
             if (combinedErrors) {
                 return combinedErrors;
@@ -307,8 +307,8 @@ export const typeOfLoweredExpression = (
             return { name: 'Integer' };
         }
         case 'equality': {
-            const leftType = typeOfLoweredExpression(ast.lhs, variablesInScope);
-            const rightType = typeOfLoweredExpression(ast.rhs, variablesInScope);
+            const leftType = typeOfExpression(ast.lhs, variablesInScope);
+            const rightType = typeOfExpression(ast.rhs, variablesInScope);
             const combinedErrors = combineErrors([leftType, rightType]);
             if (combinedErrors) {
                 return combinedErrors;
@@ -323,8 +323,8 @@ export const typeOfLoweredExpression = (
             return { name: 'Boolean' };
         }
         case 'concatenation': {
-            const leftType = typeOfLoweredExpression(ast.lhs, variablesInScope);
-            const rightType = typeOfLoweredExpression(ast.rhs, variablesInScope);
+            const leftType = typeOfExpression(ast.lhs, variablesInScope);
+            const rightType = typeOfExpression(ast.rhs, variablesInScope);
             const combinedErrors = combineErrors([leftType, rightType]);
             if (combinedErrors) {
                 return combinedErrors;
@@ -338,7 +338,7 @@ export const typeOfLoweredExpression = (
             return { name: 'Function', parameters: ast.parameters };
         case 'callExpression': {
             const argTypes: (Type | TypeError[])[] = ast.arguments.map(argument =>
-                typeOfLoweredExpression(argument, variablesInScope)
+                typeOfExpression(argument, variablesInScope)
             );
             const argTypeErrors: TypeError[] = [];
             argTypes.forEach(argType => {
@@ -380,9 +380,9 @@ export const typeOfLoweredExpression = (
             return declaration.type;
         }
         case 'ternary': {
-            const conditionType = typeOfLoweredExpression(ast.condition, variablesInScope);
-            const trueBranchType = typeOfLoweredExpression(ast.ifTrue, variablesInScope);
-            const falseBranchType = typeOfLoweredExpression(ast.ifFalse, variablesInScope);
+            const conditionType = typeOfExpression(ast.condition, variablesInScope);
+            const trueBranchType = typeOfExpression(ast.ifTrue, variablesInScope);
+            const falseBranchType = typeOfExpression(ast.ifFalse, variablesInScope);
             const combinedErrors = combineErrors([conditionType, trueBranchType, falseBranchType]);
             if (combinedErrors) {
                 return combinedErrors;
@@ -419,7 +419,7 @@ const typeCheckStatement = (
     if (!ast.kind) debug();
     switch (ast.kind) {
         case 'returnStatement': {
-            const result = typeOfLoweredExpression(ast.expression, variablesInScope);
+            const result = typeOfExpression(ast.expression, variablesInScope);
             if (isTypeError(result)) {
                 return { errors: result, newVariables: [] };
             }
@@ -432,7 +432,7 @@ const typeCheckStatement = (
             return { errors: [], newVariables: [] };
         }
         case 'assignment': {
-            const rightType = typeOfLoweredExpression(ast.expression, variablesInScope);
+            const rightType = typeOfExpression(ast.expression, variablesInScope);
             if (isTypeError(rightType)) {
                 return { errors: rightType, newVariables: [] };
             }
@@ -444,7 +444,7 @@ const typeCheckStatement = (
         }
         case 'typedAssignment': {
             // Check that type of var being assigned to matches type being assigned
-            const rightType = typeOfLoweredExpression(ast.expression, variablesInScope);
+            const rightType = typeOfExpression(ast.expression, variablesInScope);
             if (!(ast as any).type) throw debug();
             const leftType = (ast as any).type;
             if (isTypeError(rightType)) {
@@ -516,7 +516,7 @@ const assignmentToDeclaration = (
     ast: Ast.UninferredAssignment,
     variablesInScope: VariableDeclaration[]
 ): VariableDeclaration => {
-    const result = typeOfLoweredExpression(ast.expression, variablesInScope);
+    const result = typeOfExpression(ast.expression, variablesInScope);
     if (isTypeError(result)) throw debug();
     return {
         name: ast.destination,
@@ -535,7 +535,7 @@ const inferOperators = (ast: Ast.UninferredAst, knownIdentifiers: VariableDeclar
                 kind: 'equality',
                 lhs: recurse(ast.lhs),
                 rhs: recurse(ast.rhs),
-                type: typeOfLoweredExpression(ast.lhs, knownIdentifiers) as Type,
+                type: typeOfExpression(ast.lhs, knownIdentifiers) as Type,
             };
         case 'product':
             return {
@@ -572,7 +572,7 @@ const inferOperators = (ast: Ast.UninferredAst, knownIdentifiers: VariableDeclar
             return {
                 kind: 'typedAssignment',
                 expression: recurse(ast.expression),
-                type: typeOfLoweredExpression(ast.expression, knownIdentifiers) as Type,
+                type: typeOfExpression(ast.expression, knownIdentifiers) as Type,
                 destination: ast.destination,
             };
         case 'callExpression':
