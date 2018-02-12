@@ -1,7 +1,7 @@
 import test from 'ava';
 
 import { lex } from './lex.js';
-import { parseMpl, compile } from './frontend.js';
+import { parseMpl, compile, typeCheckStatement } from './frontend.js';
 import { compileAndRun } from './test-utils.js';
 import { grammar, tokenSpecs, MplToken, MplAstInteriorNode } from './grammar.js';
 import { stripResultIndexes, ParseResult, AstNode, parse } from './parser-combinator.js';
@@ -759,4 +759,39 @@ test('parsing fails for extra invalid tokens', compileAndRun, {
 test('addition', compileAndRun, {
     source: `return length("foo") + 5;`,
     expectedExitCode: 8,
+});
+
+test.only('two args', compileAndRun, {
+    source: `
+myAdd = a: Integer, b: Integer => a + b;
+return myAdd(7, 4);`,
+    expectedExitCode: 11,
+});
+
+test.failing('three args', compileAndRun, {
+    source: `
+myAdd = a: Integer, b: Integer, c: Integer => a + b + c;
+return myAdd(7, 4, 5);`,
+    expectedExitCode: 16,
+});
+
+test.failing('zero args', compileAndRun, {
+    source: `
+const11 = => 11;
+return const11();`,
+    expectedExitCode: 11,
+});
+
+test.failing('call with wrong number of args', compileAndRun, {
+    source: `
+threeArgs = a: Integer, b: Integer, c: Integer => a + b + c;
+return threeArgs(7, 4);`,
+    expectedExitCode: 16,
+});
+
+test.failing('call with wrong arg type', compileAndRun, {
+    source: `
+threeArgs = a: Integer, b: Integer, c: Integer => a + b + c;
+return threeArgs(7, 4, "notAnInteger");`,
+    expectedExitCode: 16,
 });

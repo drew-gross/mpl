@@ -13,7 +13,7 @@ const mplTypeToCDeclaration = (type: Type, name: string) => {
     if (!type) debug();
     switch (type.name) {
         case 'Function':
-            return `unsigned char (*${name})(unsigned char)`;
+            return `unsigned char (*${name})(${join(Array(type.parameters.length).fill('unsigned char'), ', ')})`;
         case 'Integer':
             return `uint8_t ${name}`;
         case 'String':
@@ -150,8 +150,8 @@ const astToC = (input: BackendInput): CompiledProgram => {
         case 'functionLiteral':
             return compileExpression([], ([]) => [`&${ast.deanonymizedName}`]);
         case 'callExpression': {
-            const argC = recurse({ ast: ast.argument });
-            return compileExpression([argC], ([e1]) => [`(*${ast.name})(`, ...e1, ')']);
+            const argumentsC = ast.arguments.map(argument => recurse({ ast: argument }));
+            return compileExpression(argumentsC, argCode => [`(*${ast.name})(`, join(flatten(argCode), ', '), ')']);
         }
         case 'identifier':
             return compileExpression([], ([]) => [ast.value]);
@@ -188,21 +188,23 @@ const astToC = (input: BackendInput): CompiledProgram => {
 
 const stringLiteralDeclaration = stringLiteral => `char *string_literal_${stringLiteral} = "${stringLiteral}";`;
 
+type SignatureBuilder = (name: String, parameters: VariableDeclaration[]) => string;
+
 type MakeCFunctionBodyInputs = {
     name: any;
-    argument: any;
+    parameters: VariableDeclaration[];
     statements: Ast.Statement[];
     variables: any;
     globalDeclarations: any;
     stringLiterals: any;
-    buildSignature: any;
+    buildSignature: SignatureBuilder;
     returnType: any;
     beforeExit?: string[];
 };
 
 const makeCfunctionBody = ({
     name,
-    argument,
+    parameters,
     statements,
     variables,
     globalDeclarations,
@@ -239,7 +241,7 @@ const makeCfunctionBody = ({
     });
     return join(
         [
-            buildSignature(name, argument),
+            buildSignature(name, parameters),
             '{',
             ...body,
             ...returnCode.prepare,
@@ -255,21 +257,25 @@ const makeCfunctionBody = ({
 };
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
-    const Cfunctions = functions.map(({ name, argument, statements, variables }) =>
+    const Cfunctions = functions.map(({ name, parameters, statements, variables }) =>
         makeCfunctionBody({
             name,
-            argument,
+            parameters,
             statements,
             variables,
             globalDeclarations,
             stringLiterals,
-            buildSignature: (name, argument) => `unsigned char ${name}(unsigned char ${argument.name})`,
+            buildSignature: (name, parameters) => {
+                const parameterNames = parameters.map(parameter => parameter.name);
+                const parameterDeclarations = parameterNames.map(name => `unsigned char ${name}`);
+                return `unsigned char ${name}(${join(parameterDeclarations, ', ')})`;
+            },
             returnType: { name: 'Integer' }, // Can currently only return integer
         })
     );
     const Cprogram = makeCfunctionBody({
         name: 'main', // Unused for now
-        argument: {} as any, // Unused for now
+        parameters: [], // Unused for now
         statements: program.statements,
         variables: program.variables,
         globalDeclarations,

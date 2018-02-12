@@ -3,14 +3,9 @@ import execAndGetResult from '../util/execAndGetResult.js';
 import { BackendInputs, ExecutionResult } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
+import join from '../util/join.js';
 
-const astToJS = ({
-    ast,
-    exitInsteadOfReturn,
-}: {
-    ast: Ast.Ast;
-    exitInsteadOfReturn: boolean;
-}) => {
+const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.Ast; exitInsteadOfReturn: boolean }): string[] => {
     if (!ast) debugger;
     const recurse = newInput => astToJS({ ast, exitInsteadOfReturn, ...newInput });
     switch (ast.kind) {
@@ -34,7 +29,8 @@ const astToJS = ({
         case 'functionLiteral':
             return [ast.deanonymizedName];
         case 'callExpression':
-            return [`${ast.name}(`, ...recurse({ ast: ast.argument }), `)`];
+            const jsArguments: string[][] = ast.arguments.map(argument => recurse({ ast: argument }));
+            return [`${ast.name}(`, join(jsArguments.map(argument => join(argument, ' ')), ', '), `)`];
         case 'identifier':
             return [ast.value];
         case 'ternary':
@@ -48,40 +44,29 @@ const astToJS = ({
         case 'equality':
             return [...recurse({ ast: ast.lhs }), '==', ...recurse({ ast: ast.rhs })];
         case 'booleanLiteral':
-            return [ast.value];
+            return [ast.value ? 'true' : 'false'];
         case 'stringLiteral':
             return [`"${ast.value}"`];
         case 'concatenation':
-            return [
-                '(',
-                ...recurse({ ast: ast.lhs }),
-                ').concat(',
-                ...recurse({ ast: ast.rhs }),
-                ')',
-            ];
+            return ['(', ...recurse({ ast: ast.lhs }), ').concat(', ...recurse({ ast: ast.rhs }), ')'];
         default:
             throw debug();
     }
 };
 
-const toExectuable = ({
-    functions,
-    program,
-    globalDeclarations,
-    stringLiterals,
-}: BackendInputs) => {
-    let JSfunctions = functions.map(({ name, argument, statements }) => {
-        const prefix = `${name} = ${argument.name} => {`;
+const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
+    let JSfunctions = functions.map(({ name, parameters, statements }) => {
+        const prefix = `${name} = (${join(parameters.map(parameter => parameter.name), ', ')}) => {`;
         const suffix = `}`;
 
         const body = statements.map(statement => {
-            return astToJS({ ast: statement, exitInsteadOfReturn: false }).join(' ');
+            return join(astToJS({ ast: statement, exitInsteadOfReturn: false }), ' ');
         });
 
         return [prefix, ...body, suffix].join(' ');
     });
 
-    let JS = flatten(
+    let JS: string[] = flatten(
         program.statements.map(child =>
             astToJS({
                 ast: child,
@@ -91,8 +76,8 @@ const toExectuable = ({
     );
     return `
 const length = str => str.length;
-${JSfunctions.join('\n')}
-${JS.join('\n')}`;
+${join(JSfunctions, '\n')}
+${join(JS, '\n')}`;
 };
 
 const execute = async (path: string): Promise<ExecutionResult> => {

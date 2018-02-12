@@ -71,6 +71,11 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
         toString: x => x,
     },
     {
+        token: ',',
+        type: 'comma',
+        toString: () => ', ',
+    },
+    {
         token: 'return',
         type: 'return',
         toString: () => 'return',

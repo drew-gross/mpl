@@ -6,6 +6,7 @@ import { file as tmpFile } from 'tmp-promise';
 import { writeFile } from 'fs-extra';
 import assertNever from './util/assertNever.js';
 import debug from './util/debug.js';
+import join from './util/join.js';
 import { tokenSpecs } from './grammar.js';
 
 import mipsBackend from './backends/mips.js';
@@ -40,7 +41,8 @@ const astToString = (ast: Ast) => {
         case 'typedAssignment':
             return `${ast.destination}: (TODO: put type here) = ${astToString(ast.expression)}`;
         case 'callExpression':
-            return `${ast.name}(${astToString(ast.argument)})`;
+            const args = join(ast.arguments.map(astToString), ', ');
+            return `${ast.name}(${args})`;
         case 'functionLiteral':
             return ast.deanonymizedName;
         case 'product':
@@ -154,7 +156,7 @@ export const compileAndRun = async (
     const structure = frontendOutput as BackendInputs;
     printStructure('Functions:');
     structure.functions.forEach(f => {
-        printStructure(`-> ${f.name}(${f.argument.type.name})`);
+        printStructure(`-> ${f.name}(${join(f.parameters.map(p => p.type.name), ', ')})`);
         f.statements.forEach(statement => {
             printStructure(`---> `, astToString(statement));
         });

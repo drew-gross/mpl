@@ -54,7 +54,7 @@ export type TypedAssignment = {
 export type FunctionCall = {
     kind: 'callExpression';
     name: string;
-    argument: Ast;
+    arguments: Ast[];
 };
 
 export type FunctionLiteral = {
@@ -137,14 +137,14 @@ export type UninferredTypedAssignment = {
 export type UninferredFunctionCall = {
     kind: 'callExpression';
     name: string;
-    argument: UninferredAst;
+    arguments: UninferredAst[];
 };
 
 export type UninferredFunctionLiteral = {
     kind: 'functionLiteral';
     deanonymizedName: string;
     body: any;
-    argument: VariableDeclaration;
+    parameters: VariableDeclaration[];
 };
 
 export type UninferredStatement = UninferredTypedAssignment | UninferredAssignment | UninferredReturnStatement;

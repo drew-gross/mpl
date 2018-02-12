@@ -129,7 +129,7 @@ const transformUninferredAst = (
             return {
                 kind: ast.kind,
                 name: ast.name,
-                argument: recurse(ast.argument),
+                arguments: ast.arguments.map(recurse),
             };
         case 'ternary':
             return {
@@ -199,7 +199,7 @@ const extractFunctions = (ast: Ast.UninferredAst): UninferredFunction[] => {
         case 'concatenation':
             return extractFunctions(ast.lhs).concat(extractFunctions(ast.rhs));
         case 'callExpression':
-            return extractFunctions(ast.argument);
+            return flatten(ast.arguments.map(extractFunctions));
         case 'ternary':
             return extractFunctions(ast.condition)
                 .concat(extractFunctions(ast.ifTrue))
@@ -208,7 +208,11 @@ const extractFunctions = (ast: Ast.UninferredAst): UninferredFunction[] => {
             return flatten(ast.statements.map(extractFunctions));
         case 'functionLiteral':
             functionId++;
-            const knownIdentifiers = { [ast.argument.name]: ast.argument.type };
+            const knownIdentifiers = {};
+            ast.parameters.forEach(parameter => {
+                knownIdentifiers[parameter.name] = parameter.type;
+            });
+
             const variables: VariableDeclaration[] = [];
             ast.body.forEach((statement: Ast.UninferredStatement) => {
                 switch (statement.kind) {
@@ -232,7 +236,7 @@ const extractFunctions = (ast: Ast.UninferredAst): UninferredFunction[] => {
                         name: ast.deanonymizedName,
                         statements: ast.body,
                         variables,
-                        argument: ast.argument,
+                        parameters: ast.parameters,
                         temporaryCount: Math.max(...ast.body.map(countTemporariesInExpression)),
                         knownIdentifiers,
                     },
@@ -263,7 +267,7 @@ const extractStringLiterals = (ast: Ast.UninferredAst): string[] => {
         case 'concatenation':
             return extractStringLiterals(ast.lhs).concat(extractStringLiterals(ast.rhs));
         case 'callExpression':
-            return extractStringLiterals(ast.argument);
+            return flatten(ast.arguments.map(extractStringLiterals));
         case 'ternary':
             return extractStringLiterals(ast.condition)
                 .concat(extractStringLiterals(ast.ifTrue))
@@ -438,13 +442,18 @@ export const typeOfLoweredExpression = (
             return { name: 'String' };
         }
         case 'functionLiteral': {
-            return { name: 'Function', arg: { type: ast.argument.type } };
+            return { name: 'Function', parameters: ast.parameters };
         }
         case 'callExpression': {
-            const argType = typeOfLoweredExpression(ast.argument, knownIdentifiers);
-            if (isTypeError(argType)) {
-                return argType;
-            }
+            const argTypes: (Type | TypeError[])[] = ast.arguments.map(argument =>
+                typeOfLoweredExpression(argument, knownIdentifiers)
+            );
+            const argTypeErrors: TypeError[] = [];
+            argTypes.forEach(argType => {
+                if (isTypeError(argType)) {
+                    argTypeErrors.push(...argType);
+                }
+            });
             const functionName = ast.name;
             if (!(functionName in knownIdentifiers)) {
                 return [`Unknown identifier: ${functionName}`];
@@ -454,13 +463,22 @@ export const typeOfLoweredExpression = (
             if (functionType.name !== 'Function') {
                 return [`You tried to call ${functionName}, but it's not a function (it's a ${functionType})`];
             }
-            if (!argType || !functionType.arg) debug();
-            if (!typesAreEqual(argType, functionType.arg.type)) {
+            if (argTypes.length !== functionType.parameters.length) {
+                debugger;
                 return [
-                    `You passed a ${argType.name} as an argument to ${functionName}. It expects a ${
-                        functionType.arg.type.name
+                    `You tried to call ${functionName} with ${argTypes.length} arguments when it needs ${
+                        functionType.parameters.length
                     }`,
                 ];
+            }
+            for (let i = 0; i < argTypes.length; i++) {
+                if (!typesAreEqual(argTypes[i], functionType.parameters[i].type)) {
+                    return [
+                        `You passed a ${(argTypes[i] as Type).name} as an argument to ${functionName}. It expects a ${
+                            functionType.parameters[i].type.name
+                        }`,
+                    ];
+                }
             }
             return { name: 'Integer' };
         }
@@ -560,7 +578,7 @@ const builtinIdentifiers: IdentifierDict = {
     // TODO: Require these to be imported
     length: {
         name: 'Function',
-        arg: { type: { name: 'String' } },
+        parameters: [{ type: { name: 'String' } }],
     },
 };
 
@@ -582,7 +600,10 @@ const typeCheckProgram = (ast: Ast.UninferredProgram, previouslyKnownIdentifiers
 };
 
 const typeCheckFunction = (f: UninferredFunction, previouslyKnownIdentifiers: IdentifierDict) => {
-    let knownIdentifiers = { ...builtinIdentifiers, ...previouslyKnownIdentifiers, [f.argument.name]: f.argument.type };
+    let knownIdentifiers = { ...builtinIdentifiers, ...previouslyKnownIdentifiers };
+    f.parameters.forEach(({ name, type }) => {
+        knownIdentifiers[name] = type;
+    });
 
     const allErrors: any = [];
     f.statements.forEach(statement => {
@@ -597,10 +618,10 @@ const typeCheckFunction = (f: UninferredFunction, previouslyKnownIdentifiers: Id
     return { typeErrors: allErrors, identifiers: knownIdentifiers };
 };
 
-const getFunctionTypeMap = (functions: UninferredFunction[]) => {
+const getFunctionTypeMap = (functions: UninferredFunction[]): IdentifierDict => {
     const result = {};
-    functions.forEach(({ name, argument }) => {
-        result[name] = { name: 'Function', arg: { type: argument } };
+    functions.forEach(({ name, parameters }) => {
+        result[name] = { name: 'Function', parameters };
     });
     return result;
 };
@@ -668,7 +689,7 @@ const inferOperators = (ast: Ast.UninferredAst, knownIdentifiers): Ast.Ast => {
             return {
                 kind: 'callExpression',
                 name: ast.name,
-                argument: recurse(ast.argument),
+                arguments: ast.arguments.map(recurse),
             };
         case 'ternary':
             return {
@@ -713,6 +734,37 @@ const extractFunctionBodyFromParseTree = node => {
             return [lowerAst(node.children[0]), ...extractFunctionBodyFromParseTree(node.children[2])];
         default:
             throw debug();
+    }
+};
+
+const extractArgumentList = (ast: MplAstNode): MplAstNode[] => {
+    if (!('children' in ast)) {
+        return [ast];
+    }
+    if (ast.children.length == 1) {
+        return [ast.children[0]];
+    } else if (ast.children.length == 3) {
+        return [ast.children[0], ...extractArgumentList(ast.children[2])];
+    } else {
+        throw debug();
+    }
+};
+
+const extractParameterList = (ast: MplAstNode): VariableDeclaration[] => {
+    if (ast.type == 'arg') {
+        return [
+            {
+                name: (ast.children[0] as AstLeaf<MplToken>).value as string,
+                type: {
+                    name: (ast.children[2] as AstLeaf<MplToken>).value as 'String' | 'Integer' | 'Boolean',
+                },
+                memoryCategory: 'FAKE MemoryCategory' as any,
+            },
+        ];
+    } else if (ast.type == 'argList') {
+        return [...extractParameterList(ast.children[0]), ...extractParameterList(ast.children[2])];
+    } else {
+        throw debug();
     }
 };
 
@@ -762,7 +814,7 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
             return {
                 kind: 'callExpression',
                 name: (ast.children[0] as any).value as any,
-                argument: lowerAst(ast.children[2]),
+                arguments: extractArgumentList(ast.children[2]).map(lowerAst),
             };
         case 'subtraction':
             if (!('children' in ast)) throw debug();
@@ -814,6 +866,7 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
             };
         case 'function':
             functionId++;
+            const parameters: VariableDeclaration[] = extractParameterList(ast.children[0]);
             return {
                 kind: 'functionLiteral',
                 deanonymizedName: `anonymous_${functionId}`,
@@ -823,33 +876,16 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
                         expression: lowerAst(ast.children[2]),
                     },
                 ],
-                argument: {
-                    name: ((ast.children[0] as MplAstInteriorNode).children[0] as AstLeaf<MplToken>).value as string,
-                    type: {
-                        name: ((ast.children[0] as MplAstInteriorNode).children[2] as AstLeaf<MplToken>).value as
-                            | 'String'
-                            | 'Integer'
-                            | 'Boolean',
-                    },
-                    memoryCategory: 'FAKE MemoryCategory (functionWithBlock)' as any,
-                },
+                parameters,
             };
         case 'functionWithBlock':
             functionId++;
+            const parameters2: VariableDeclaration[] = extractParameterList(ast.children[0]);
             return {
                 kind: 'functionLiteral',
                 deanonymizedName: `anonymous_${functionId}`,
                 body: extractFunctionBodyFromParseTree(ast.children[3]),
-                argument: {
-                    name: ((ast.children[0] as MplAstInteriorNode).children[0] as AstLeaf<MplToken>).value as string,
-                    type: {
-                        name: ((ast.children[0] as MplAstInteriorNode).children[2] as AstLeaf<MplToken>).value as
-                            | 'String'
-                            | 'Integer'
-                            | 'Boolean',
-                    },
-                    memoryCategory: 'FAKE MemoryCategory (functionWithBlock)' as any,
-                },
+                parameters: parameters2,
             };
         case 'booleanLiteral':
             return {
@@ -879,11 +915,11 @@ const compile = (source: string): FrontendOutput => {
     if (ast.kind !== 'program') {
         return { parseErrors: ['Failed to parse. Top Level of AST was not a program'] };
     }
-    const program = {
+    const program: UninferredFunction = {
         name: `main_program`,
         statements: ast.statements,
         variables: [],
-        argument: undefined as any,
+        parameters: [],
         temporaryCount: Math.max(...ast.statements.map(countTemporariesInExpression)),
         knownIdentifiers: {},
     };
@@ -947,4 +983,4 @@ const compile = (source: string): FrontendOutput => {
     } as BackendInputs;
 };
 
-export { parseMpl, lex, compile, removeBracketsFromAst };
+export { parseMpl, lex, compile, removeBracketsFromAst, typeCheckStatement };

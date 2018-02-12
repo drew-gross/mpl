@@ -6,7 +6,7 @@ export type Type =
       }
     | {
           name: 'Function';
-          arg: { type: Type };
+          parameters: { type: Type }[];
       };
 export type TypeError = string;
 export type MemoryCategory = 'GlobalStatic' | 'Dynamic' | 'Stack';
@@ -21,7 +21,7 @@ export type UninferredFunction = {
     name: string;
     statements: UninferredStatement[];
     variables: VariableDeclaration[];
-    argument: VariableDeclaration;
+    parameters: VariableDeclaration[];
     temporaryCount: number;
     knownIdentifiers: IdentifierDict;
 };
@@ -29,7 +29,7 @@ export type Function = {
     name: string;
     statements: Statement[];
     variables: VariableDeclaration[];
-    argument: VariableDeclaration;
+    parameters: VariableDeclaration[];
     temporaryCount: number;
     knownIdentifiers: IdentifierDict;
 };
