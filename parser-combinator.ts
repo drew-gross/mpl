@@ -5,17 +5,17 @@ import last from './util/list/last.js';
 import assertNever from './util/assertNever.js';
 import debug from './util/debug.js';
 
-interface AstInteriorNode<NodeType, LeafType> {
+interface Node<NodeType, LeafType> {
     type: NodeType;
     children: Ast<NodeType, LeafType>[];
 }
 
-type AstLeaf<TokenType> = {
+type Leaf<TokenType> = {
     type: TokenType | 'endOfFile';
     value: string | number | null | undefined;
 };
 
-type Ast<NodeType, LeafType> = AstInteriorNode<NodeType, LeafType> | AstLeaf<LeafType>;
+type Ast<NodeType, LeafType> = Node<NodeType, LeafType> | Leaf<LeafType>;
 
 interface LeafWithIndex<TokenType> {
     success: true;
@@ -390,8 +390,7 @@ export {
     ParseError,
     Ast,
     AstWithIndex,
-    AstLeaf,
-    AstInteriorNode,
+    Leaf,
     parseResultIsError,
     stripResultIndexes,
 };

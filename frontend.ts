@@ -4,7 +4,7 @@ import sum from './util/list/sum.js';
 import debug from './util/debug.js';
 import { lex, Token } from './lex.js';
 import { tokenSpecs, grammar, MplAst, MplParseResult, MplToken } from './grammar.js';
-import { ParseResult, parseResultIsError, parse, stripResultIndexes, AstLeaf } from './parser-combinator.js';
+import { ParseResult, parseResultIsError, parse, stripResultIndexes, Leaf as AstLeaf } from './parser-combinator.js';
 import {
     Type,
     VariableDeclaration,

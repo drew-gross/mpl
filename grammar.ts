@@ -3,7 +3,7 @@ import {
     endOfInput,
     Grammar,
     Ast,
-    AstLeaf,
+    Leaf as AstLeaf,
     ParseResult,
     SequenceParser,
     BaseParser,
