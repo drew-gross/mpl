@@ -5,8 +5,6 @@ import last from './util/list/last.js';
 import assertNever from './util/assertNever.js';
 import debug from './util/debug.js';
 
-type AstNodeType<NodeType, LeafType> = NodeType | LeafType;
-
 interface AstInteriorNode<NodeType, LeafType> {
     type: NodeType;
     children: Ast<NodeType, LeafType>[];
@@ -26,14 +24,14 @@ interface AstLeafWithIndex<TokenType> {
     value: string | number | null | undefined;
 }
 
-interface AstInteriorNodeWithIndex<NodeType, LeafType> {
+interface AstNodeWithIndex<NodeType, LeafType> {
     success: true;
     newIndex: number;
     type: NodeType;
     children: AstWithIndex<NodeType, LeafType>[];
 }
 
-type AstWithIndex<NodeType, TokenType> = AstInteriorNodeWithIndex<NodeType, TokenType> | AstLeafWithIndex<TokenType>;
+type AstWithIndex<NodeType, TokenType> = AstNodeWithIndex<NodeType, TokenType> | AstLeafWithIndex<TokenType>;
 
 interface ParseError<TokenType> {
     found: (TokenType | 'endOfFile')[];
