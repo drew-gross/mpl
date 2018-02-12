@@ -134,7 +134,6 @@ const transformUninferredAst = (
             };
         // Operators all work with lhs/rhs
         case 'concatenation':
-        case 'stringEquality':
         case 'equality':
         case 'addition':
         case 'subtraction':
@@ -189,7 +188,6 @@ const extractFunctions = (ast: Ast.UninferredAst): UninferredFunction[] => {
         case 'addition':
         case 'subtraction':
         case 'equality':
-        case 'stringEquality':
         case 'concatenation':
             return extractFunctions(ast.lhs).concat(extractFunctions(ast.rhs));
         case 'callExpression':
@@ -247,7 +245,6 @@ const extractStringLiterals = (ast: Ast.UninferredAst): string[] => {
         case 'addition':
         case 'subtraction':
         case 'equality':
-        case 'stringEquality':
         case 'concatenation':
             return extractStringLiterals(ast.lhs).concat(extractStringLiterals(ast.rhs));
         case 'callExpression':
@@ -301,7 +298,6 @@ const countTemporariesInExpression = (ast: Ast.UninferredAst) => {
         case 'addition':
         case 'subtraction':
         case 'equality':
-        case 'stringEquality':
         case 'concatenation':
             return 1 + Math.max(countTemporariesInExpression(ast.lhs), countTemporariesInExpression(ast.rhs));
         case 'typedAssignment':
@@ -380,22 +376,6 @@ export const typeOfLoweredExpression = (
                 return [`Right hand side of ${ast.kind} was not integer`];
             }
             return { name: 'Integer' };
-        }
-        case 'stringEquality': {
-            const leftType = typeOfLoweredExpression(ast.lhs, variablesInScope);
-            const rightType = typeOfLoweredExpression(ast.rhs, variablesInScope);
-            const combinedErrors = combineErrors([leftType, rightType]);
-            if (combinedErrors) {
-                return combinedErrors;
-            }
-            if (!typesAreEqual(leftType, rightType)) {
-                return [
-                    `Equality comparisons must compare values of the same type.. You tried to compare a ${
-                        (leftType as Type).name
-                    } (lhs) with a ${(rightType as Type).name} (rhs)`,
-                ];
-            }
-            return { name: 'Boolean' };
         }
         case 'equality': {
             const leftType = typeOfLoweredExpression(ast.lhs, variablesInScope);

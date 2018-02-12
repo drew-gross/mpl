@@ -121,12 +121,6 @@ export type UninferredEquality = {
     rhs: UninferredAst;
 };
 
-export type UninferredStringEquality = {
-    kind: 'stringEquality';
-    lhs: UninferredAst;
-    rhs: UninferredAst;
-};
-
 export type UninferredTypedAssignment = {
     kind: 'typedAssignment';
     destination: string;
@@ -194,6 +188,5 @@ export type UninferredAst =
     | UninferredSubtraction
     | UninferredAddition
     | UninferredProduct
-    | UninferredStringEquality
     | UninferredConcatenation
     | UninferredProgram;
