@@ -761,14 +761,21 @@ test('addition', compileAndRun, {
     expectedExitCode: 8,
 });
 
-test.only('two args', compileAndRun, {
+test('two args', compileAndRun, {
     source: `
 myAdd = a: Integer, b: Integer => a + b;
 return myAdd(7, 4);`,
     expectedExitCode: 11,
 });
 
-test.failing('three args', compileAndRun, {
+test('two args with expression argument', compileAndRun, {
+    source: `
+myAdd = a: Integer, b: Integer => a + b;
+return myAdd(7 + 7, 4);`,
+    expectedExitCode: 18,
+});
+
+test('three args', compileAndRun, {
     source: `
 myAdd = a: Integer, b: Integer, c: Integer => a + b + c;
 return myAdd(7, 4, 5);`,

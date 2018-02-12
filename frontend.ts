@@ -464,7 +464,6 @@ export const typeOfLoweredExpression = (
                 return [`You tried to call ${functionName}, but it's not a function (it's a ${functionType})`];
             }
             if (argTypes.length !== functionType.parameters.length) {
-                debugger;
                 return [
                     `You tried to call ${functionName} with ${argTypes.length} arguments when it needs ${
                         functionType.parameters.length
@@ -738,15 +737,11 @@ const extractFunctionBodyFromParseTree = node => {
 };
 
 const extractArgumentList = (ast: MplAstNode): MplAstNode[] => {
-    if (!('children' in ast)) {
-        return [ast];
-    }
-    if (ast.children.length == 1) {
-        return [ast.children[0]];
-    } else if (ast.children.length == 3) {
-        return [ast.children[0], ...extractArgumentList(ast.children[2])];
-    } else {
-        throw debug();
+    switch (ast.type) {
+        case 'paramList':
+            return [ast.children[0], ...extractArgumentList(ast.children[2])];
+        default:
+            return [ast];
     }
 };
 
@@ -810,6 +805,8 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
                 lhs: lowerAst(ast.children[0]),
                 rhs: lowerAst(ast.children[2]),
             };
+        case 'paramList':
+            throw debug(); //Should have been caught in "callExpression"
         case 'callExpression':
             return {
                 kind: 'callExpression',

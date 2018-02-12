@@ -151,7 +151,11 @@ const astToC = (input: BackendInput): CompiledProgram => {
             return compileExpression([], ([]) => [`&${ast.deanonymizedName}`]);
         case 'callExpression': {
             const argumentsC = ast.arguments.map(argument => recurse({ ast: argument }));
-            return compileExpression(argumentsC, argCode => [`(*${ast.name})(`, join(flatten(argCode), ', '), ')']);
+            return compileExpression(argumentsC, argCode => [
+                `(*${ast.name})(`,
+                join(argCode.map(code => join(code, ' ')), ', '),
+                ')',
+            ]);
         }
         case 'identifier':
             return compileExpression([], ([]) => [ast.value]);
