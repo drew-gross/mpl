@@ -84,77 +84,6 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
     }
 };
 
-const transformUninferredAst = (
-    nodeKind,
-    f: ((n: Ast.UninferredAst) => Ast.UninferredAst),
-    ast: Ast.UninferredAst,
-    recurseOnNew: boolean
-) => {
-    if (!ast) debug();
-    const recurse = (ast: Ast.UninferredAst) => transformUninferredAst(nodeKind, f, ast, recurseOnNew);
-    if (ast.kind == nodeKind) {
-        const newNode = f(ast);
-        // If we aren't supposed to recurse, don't re-tranform the node we just made
-        if (recurseOnNew) {
-            return recurse(newNode);
-        }
-        ast = newNode;
-    }
-    switch (ast.kind) {
-        case 'returnStatement':
-            return {
-                kind: ast.kind,
-                expression: recurse(ast.expression),
-            };
-        case 'assignment':
-            return {
-                kind: ast.kind,
-                destination: ast.destination,
-                expression: recurse(ast.expression),
-            };
-        case 'typedAssignment':
-            return {
-                kind: ast.kind,
-                destination: ast.destination,
-                expression: recurse(ast.expression),
-                type: ast.type,
-            };
-        case 'callExpression':
-            return {
-                kind: ast.kind,
-                name: ast.name,
-                arguments: ast.arguments.map(recurse),
-            };
-        case 'ternary':
-            return {
-                kind: ast.kind,
-                condition: recurse(ast.condition),
-                ifTrue: recurse(ast.ifTrue),
-                ifFalse: recurse(ast.ifFalse),
-            };
-        // Operators all work with lhs/rhs
-        case 'concatenation':
-        case 'equality':
-        case 'addition':
-        case 'subtraction':
-        case 'product':
-            return {
-                kind: ast.kind,
-                lhs: recurse(ast.lhs),
-                rhs: recurse(ast.rhs),
-            };
-        // No children to recurse on in these node types
-        case 'booleanLiteral':
-        case 'stringLiteral':
-        case 'functionLiteral':
-        case 'identifier':
-        case 'number':
-            return ast;
-        default:
-            throw debug();
-    }
-};
-
 const extractVariables = (
     statement: Ast.UninferredStatement,
     variablesInScope: VariableDeclaration[],
@@ -405,9 +334,8 @@ export const typeOfLoweredExpression = (
             }
             return { name: 'String' };
         }
-        case 'functionLiteral': {
+        case 'functionLiteral':
             return { name: 'Function', parameters: ast.parameters };
-        }
         case 'callExpression': {
             const argTypes: (Type | TypeError[])[] = ast.arguments.map(argument =>
                 typeOfLoweredExpression(argument, variablesInScope)
@@ -901,11 +829,7 @@ const compile = (source: string): FrontendOutput => {
 
     const globalDeclarations: VariableDeclaration[] = program.statements
         .filter(s => s.kind === 'typedAssignment' || s.kind === 'assignment')
-        .map(assignment => {
-            const result = assignmentToDeclaration(assignment as any, variablesInScope);
-            if (!result.type) debug();
-            return result;
-        }) as any;
+        .map(assignment => assignmentToDeclaration(assignment as any, variablesInScope));
 
     const typedProgramStatements = program.statements.map(s => inferOperators(s, variablesInScope));
 
