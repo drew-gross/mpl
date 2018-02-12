@@ -291,7 +291,6 @@ const parseAlternative = <NodeType, TokenType>(
 
     progressCache.map((error: ParseError<TokenType> | AstWithIndex<NodeType, TokenType>[]) => {
         if (!parseResultIsError(error)) {
-            debugger;
             parseAlternative(grammar, alternatives, tokens, index);
             throw debug();
         }
