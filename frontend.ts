@@ -8,7 +8,6 @@ import { ParseResult, parseResultIsError, parse, stripResultIndexes, Leaf as Ast
 import {
     Type,
     VariableDeclaration,
-    IdentifierDict,
     Function,
     UninferredFunction,
     MemoryCategory,
@@ -17,11 +16,6 @@ import {
     TypeError,
 } from './api.js';
 import * as Ast from './ast.js';
-
-type VariableDeclarationWithNoMemory = {
-    name: string;
-    type: Type;
-};
 
 let tokensToString = tokens => tokens.map(token => token.string).join('');
 
@@ -164,7 +158,7 @@ const transformUninferredAst = (
 
 const extractVariables = (
     statement: Ast.UninferredStatement,
-    knownIdentifiers: IdentifierDict,
+    variablesInScope: VariableDeclaration[],
     isGlobal: boolean
 ): VariableDeclaration[] => {
     const result: VariableDeclaration[] = [];
@@ -175,7 +169,7 @@ const extractVariables = (
                 {
                     name: statement.destination,
                     memoryCategory: isGlobal ? 'GlobalStatic' : 'Stack',
-                    type: typeOfLoweredExpression(statement.expression, knownIdentifiers) as Type,
+                    type: typeOfLoweredExpression(statement.expression, variablesInScope) as Type,
                 },
             ];
         case 'returnStatement':
@@ -208,23 +202,14 @@ const extractFunctions = (ast: Ast.UninferredAst): UninferredFunction[] => {
             return flatten(ast.statements.map(extractFunctions));
         case 'functionLiteral':
             functionId++;
-            const knownIdentifiers = {};
-            ast.parameters.forEach(parameter => {
-                knownIdentifiers[parameter.name] = parameter.type;
-            });
-
-            const variables: VariableDeclaration[] = [];
+            const variables: VariableDeclaration[] = [...ast.parameters];
             ast.body.forEach((statement: Ast.UninferredStatement) => {
                 switch (statement.kind) {
                     case 'returnStatement':
                         break;
                     case 'assignment':
                     case 'typedAssignment':
-                        variables.push(...extractVariables(statement, knownIdentifiers, false));
-                        knownIdentifiers[statement.destination] = typeOfLoweredExpression(
-                            statement.expression,
-                            knownIdentifiers
-                        ) as Type;
+                        variables.push(...extractVariables(statement, variables, false));
                         break;
                     default:
                         throw debug();
@@ -238,7 +223,6 @@ const extractFunctions = (ast: Ast.UninferredAst): UninferredFunction[] => {
                         variables,
                         parameters: ast.parameters,
                         temporaryCount: Math.max(...ast.body.map(countTemporariesInExpression)),
-                        knownIdentifiers,
                     },
                 ],
                 ...ast.body.map(extractFunctions),
@@ -375,7 +359,7 @@ const combineErrors = (potentialErrors: (Type | TypeError[])[]): TypeError[] | n
 
 export const typeOfLoweredExpression = (
     ast: Ast.UninferredAst,
-    knownIdentifiers: IdentifierDict
+    variablesInScope: VariableDeclaration[]
 ): Type | TypeError[] => {
     switch (ast.kind) {
         case 'number':
@@ -383,8 +367,8 @@ export const typeOfLoweredExpression = (
         case 'addition':
         case 'product':
         case 'subtraction': {
-            const leftType = typeOfLoweredExpression(ast.lhs, knownIdentifiers);
-            const rightType = typeOfLoweredExpression(ast.rhs, knownIdentifiers);
+            const leftType = typeOfLoweredExpression(ast.lhs, variablesInScope);
+            const rightType = typeOfLoweredExpression(ast.rhs, variablesInScope);
             const combinedErrors = combineErrors([leftType, rightType]);
             if (combinedErrors) {
                 return combinedErrors;
@@ -398,8 +382,8 @@ export const typeOfLoweredExpression = (
             return { name: 'Integer' };
         }
         case 'stringEquality': {
-            const leftType = typeOfLoweredExpression(ast.lhs, knownIdentifiers);
-            const rightType = typeOfLoweredExpression(ast.rhs, knownIdentifiers);
+            const leftType = typeOfLoweredExpression(ast.lhs, variablesInScope);
+            const rightType = typeOfLoweredExpression(ast.rhs, variablesInScope);
             const combinedErrors = combineErrors([leftType, rightType]);
             if (combinedErrors) {
                 return combinedErrors;
@@ -414,8 +398,8 @@ export const typeOfLoweredExpression = (
             return { name: 'Boolean' };
         }
         case 'equality': {
-            const leftType = typeOfLoweredExpression(ast.lhs, knownIdentifiers);
-            const rightType = typeOfLoweredExpression(ast.rhs, knownIdentifiers);
+            const leftType = typeOfLoweredExpression(ast.lhs, variablesInScope);
+            const rightType = typeOfLoweredExpression(ast.rhs, variablesInScope);
             const combinedErrors = combineErrors([leftType, rightType]);
             if (combinedErrors) {
                 return combinedErrors;
@@ -430,8 +414,8 @@ export const typeOfLoweredExpression = (
             return { name: 'Boolean' };
         }
         case 'concatenation': {
-            const leftType = typeOfLoweredExpression(ast.lhs, knownIdentifiers);
-            const rightType = typeOfLoweredExpression(ast.rhs, knownIdentifiers);
+            const leftType = typeOfLoweredExpression(ast.lhs, variablesInScope);
+            const rightType = typeOfLoweredExpression(ast.rhs, variablesInScope);
             const combinedErrors = combineErrors([leftType, rightType]);
             if (combinedErrors) {
                 return combinedErrors;
@@ -446,7 +430,7 @@ export const typeOfLoweredExpression = (
         }
         case 'callExpression': {
             const argTypes: (Type | TypeError[])[] = ast.arguments.map(argument =>
-                typeOfLoweredExpression(argument, knownIdentifiers)
+                typeOfLoweredExpression(argument, variablesInScope)
             );
             const argTypeErrors: TypeError[] = [];
             argTypes.forEach(argType => {
@@ -455,26 +439,25 @@ export const typeOfLoweredExpression = (
                 }
             });
             const functionName = ast.name;
-            if (!(functionName in knownIdentifiers)) {
+            const declaration = variablesInScope.find(({ name }) => functionName == name);
+            if (!declaration) {
                 return [`Unknown identifier: ${functionName}`];
             }
-            const functionType = knownIdentifiers[functionName];
-            if (!functionType) throw debug();
-            if (functionType.name !== 'Function') {
-                return [`You tried to call ${functionName}, but it's not a function (it's a ${functionType})`];
+            if (declaration.type.name !== 'Function') {
+                return [`You tried to call ${functionName}, but it's not a function (it's a ${declaration.type})`];
             }
-            if (argTypes.length !== functionType.parameters.length) {
+            if (argTypes.length !== declaration.type.parameters.length) {
                 return [
                     `You tried to call ${functionName} with ${argTypes.length} arguments when it needs ${
-                        functionType.parameters.length
+                        declaration.type.parameters.length
                     }`,
                 ];
             }
             for (let i = 0; i < argTypes.length; i++) {
-                if (!typesAreEqual(argTypes[i], functionType.parameters[i].type)) {
+                if (!typesAreEqual(argTypes[i], declaration.type.parameters[i].type)) {
                     return [
                         `You passed a ${(argTypes[i] as Type).name} as an argument to ${functionName}. It expects a ${
-                            functionType.parameters[i].type.name
+                            declaration.type.parameters[i].type.name
                         }`,
                     ];
                 }
@@ -482,16 +465,16 @@ export const typeOfLoweredExpression = (
             return { name: 'Integer' };
         }
         case 'identifier': {
-            if (ast.value in knownIdentifiers) {
-                return knownIdentifiers[ast.value];
-            } else {
+            const declaration = variablesInScope.find(({ name }) => ast.value == name);
+            if (!declaration) {
                 return [`Identifier ${ast.value} has unknown type.`];
             }
+            return declaration.type;
         }
         case 'ternary': {
-            const conditionType = typeOfLoweredExpression(ast.condition, knownIdentifiers);
-            const trueBranchType = typeOfLoweredExpression(ast.ifTrue, knownIdentifiers);
-            const falseBranchType = typeOfLoweredExpression(ast.ifFalse, knownIdentifiers);
+            const conditionType = typeOfLoweredExpression(ast.condition, variablesInScope);
+            const trueBranchType = typeOfLoweredExpression(ast.ifTrue, variablesInScope);
+            const falseBranchType = typeOfLoweredExpression(ast.ifFalse, variablesInScope);
             const combinedErrors = combineErrors([conditionType, trueBranchType, falseBranchType]);
             if (combinedErrors) {
                 return combinedErrors;
@@ -523,38 +506,41 @@ export const typeOfLoweredExpression = (
 
 const typeCheckStatement = (
     ast: Ast.UninferredAst,
-    knownIdentifiers
-): { errors: string[]; newIdentifiers: IdentifierDict } => {
+    variablesInScope: VariableDeclaration[]
+): { errors: string[]; newVariables: VariableDeclaration[] } => {
     if (!ast.kind) debug();
     switch (ast.kind) {
         case 'returnStatement': {
-            const result = typeOfLoweredExpression(ast.expression, knownIdentifiers);
+            const result = typeOfLoweredExpression(ast.expression, variablesInScope);
             if (isTypeError(result)) {
-                return { errors: result, newIdentifiers: {} };
+                return { errors: result, newVariables: [] };
             }
             if (!typesAreEqual(result, { name: 'Integer' })) {
                 return {
                     errors: [`You tried to return a ${result.name}`],
-                    newIdentifiers: {},
+                    newVariables: [],
                 };
             }
-            return { errors: [], newIdentifiers: {} };
+            return { errors: [], newVariables: [] };
         }
         case 'assignment': {
-            const rightType = typeOfLoweredExpression(ast.expression, knownIdentifiers);
+            const rightType = typeOfLoweredExpression(ast.expression, variablesInScope);
             if (isTypeError(rightType)) {
-                return { errors: rightType, newIdentifiers: {} };
+                return { errors: rightType, newVariables: [] };
             }
             // Left type is inferred as right type
-            return { errors: [], newIdentifiers: { [ast.destination]: rightType } };
+            return {
+                errors: [],
+                newVariables: [{ name: ast.destination, type: rightType, memoryCategory: 'FAKE' as any }],
+            };
         }
         case 'typedAssignment': {
             // Check that type of var being assigned to matches type being assigned
-            const rightType = typeOfLoweredExpression(ast.expression, knownIdentifiers);
+            const rightType = typeOfLoweredExpression(ast.expression, variablesInScope);
             if (!(ast as any).type) throw debug();
             const leftType = (ast as any).type;
             if (isTypeError(rightType)) {
-                return { errors: rightType, newIdentifiers: {} };
+                return { errors: rightType, newVariables: [] };
             }
             if (!typesAreEqual(rightType, leftType)) {
                 return {
@@ -563,78 +549,75 @@ const typeCheckStatement = (
                             leftType.name
                         }`,
                     ],
-                    newIdentifiers: {},
+                    newVariables: [],
                 };
             }
-            return { errors: [], newIdentifiers: { [ast.destination]: leftType } };
+            return {
+                errors: [],
+                newVariables: [{ name: ast.destination, type: leftType, memoryCategory: 'FAKE' as any }],
+            };
         }
         default:
             throw debug();
     }
 };
 
-const builtinIdentifiers: IdentifierDict = {
-    // TODO: Require these to be imported
-    length: {
-        name: 'Function',
-        parameters: [{ type: { name: 'String' } }],
+// TODO: Require these to be imported
+const builtins: VariableDeclaration[] = [
+    {
+        name: 'length',
+        type: {
+            name: 'Function',
+            parameters: [{ type: { name: 'String' } }],
+        },
+        memoryCategory: 'FAKE' as any,
     },
-};
+];
 
-const typeCheckProgram = (ast: Ast.UninferredProgram, previouslyKnownIdentifiers: IdentifierDict) => {
-    let knownIdentifiers = { ...builtinIdentifiers, ...previouslyKnownIdentifiers };
-
-    const allErrors: any = [];
-    if (!ast.statements) debug();
-    ast.statements.forEach(statement => {
-        if (allErrors.length == 0) {
-            const { errors, newIdentifiers } = typeCheckStatement(statement, knownIdentifiers);
-            for (const identifier in newIdentifiers) {
-                knownIdentifiers[identifier] = newIdentifiers[identifier];
-            }
-            allErrors.push(...errors);
+const mergeDeclarations = (left: VariableDeclaration[], right: VariableDeclaration[]): VariableDeclaration[] => {
+    const result = [...right];
+    left.forEach(declaration => {
+        if (!result.some(({ name }) => name == declaration.name)) {
+            result.unshift(declaration);
         }
-    });
-    return { typeErrors: allErrors, identifiers: knownIdentifiers };
-};
-
-const typeCheckFunction = (f: UninferredFunction, previouslyKnownIdentifiers: IdentifierDict) => {
-    let knownIdentifiers = { ...builtinIdentifiers, ...previouslyKnownIdentifiers };
-    f.parameters.forEach(({ name, type }) => {
-        knownIdentifiers[name] = type;
-    });
-
-    const allErrors: any = [];
-    f.statements.forEach(statement => {
-        if (allErrors.length == 0) {
-            const { errors, newIdentifiers } = typeCheckStatement(statement, knownIdentifiers);
-            for (const identifier in newIdentifiers) {
-                knownIdentifiers[identifier] = newIdentifiers[identifier];
-            }
-            allErrors.push(...errors);
-        }
-    });
-    return { typeErrors: allErrors, identifiers: knownIdentifiers };
-};
-
-const getFunctionTypeMap = (functions: UninferredFunction[]): IdentifierDict => {
-    const result = {};
-    functions.forEach(({ name, parameters }) => {
-        result[name] = { name: 'Function', parameters };
     });
     return result;
 };
 
-const assignmentToDeclaration = (ast: Ast.UninferredAssignment, knownIdentifiers): VariableDeclarationWithNoMemory => {
-    const result = typeOfLoweredExpression(ast.expression, knownIdentifiers);
+const typeCheckFunction = (f: UninferredFunction, variablesInScope: VariableDeclaration[]) => {
+    variablesInScope = mergeDeclarations(variablesInScope, f.parameters);
+    const allErrors: any = [];
+    f.statements.forEach(statement => {
+        if (allErrors.length == 0) {
+            const { errors, newVariables } = typeCheckStatement(statement, variablesInScope);
+            variablesInScope = mergeDeclarations(variablesInScope, newVariables);
+            allErrors.push(...errors);
+        }
+    });
+    return { typeErrors: allErrors, identifiers: variablesInScope };
+};
+
+const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaration[] =>
+    functions.map(({ name, parameters }) => ({
+        name: name,
+        type: { name: 'Function' as 'Function', parameters },
+        memoryCategory: 'FAKE' as any,
+    }));
+
+const assignmentToDeclaration = (
+    ast: Ast.UninferredAssignment,
+    variablesInScope: VariableDeclaration[]
+): VariableDeclaration => {
+    const result = typeOfLoweredExpression(ast.expression, variablesInScope);
     if (isTypeError(result)) throw debug();
     return {
         name: ast.destination,
         type: result,
+        memoryCategory: 'FAKE' as any,
     };
 };
 
-const inferOperators = (ast: Ast.UninferredAst, knownIdentifiers): Ast.Ast => {
+const inferOperators = (ast: Ast.UninferredAst, knownIdentifiers: VariableDeclaration[]): Ast.Ast => {
     const recurse = ast => inferOperators(ast, knownIdentifiers);
     switch (ast.kind) {
         case 'returnStatement':
@@ -918,26 +901,17 @@ const compile = (source: string): FrontendOutput => {
         variables: [],
         parameters: [],
         temporaryCount: Math.max(...ast.statements.map(countTemporariesInExpression)),
-        knownIdentifiers: {},
     };
 
     const functions = extractFunctions(ast);
     const stringLiterals = unique(extractStringLiterals(ast));
 
-    const functionIdentifierTypes = getFunctionTypeMap(functions);
-    let knownIdentifiers = {
-        ...builtinIdentifiers,
-        ...functionIdentifierTypes,
-    };
+    let variablesInScope = builtins;
+    variablesInScope = mergeDeclarations(variablesInScope, getFunctionTypeMap(functions));
+    const programTypeCheck = typeCheckFunction(program, variablesInScope);
+    variablesInScope = mergeDeclarations(variablesInScope, programTypeCheck.identifiers);
 
-    const programTypeCheck = typeCheckProgram(ast, knownIdentifiers);
-
-    knownIdentifiers = {
-        ...knownIdentifiers,
-        ...programTypeCheck.identifiers,
-    };
-
-    let typeErrors = functions.map(f => typeCheckFunction(f, knownIdentifiers).typeErrors);
+    let typeErrors = functions.map(f => typeCheckFunction(f, variablesInScope).typeErrors);
     typeErrors.push(programTypeCheck.typeErrors);
 
     typeErrors = flatten(typeErrors);
@@ -948,23 +922,19 @@ const compile = (source: string): FrontendOutput => {
     const globalDeclarations: VariableDeclaration[] = program.statements
         .filter(s => s.kind === 'typedAssignment' || s.kind === 'assignment')
         .map(assignment => {
-            const result = assignmentToDeclaration(assignment as any, {
-                ...builtinIdentifiers,
-                ...functionIdentifierTypes,
-                ...programTypeCheck.identifiers,
-            });
+            const result = assignmentToDeclaration(assignment as any, variablesInScope);
             if (!result.type) debug();
             return result;
         }) as any;
 
-    const typedProgramStatements = program.statements.map(s => inferOperators(s, knownIdentifiers));
+    const typedProgramStatements = program.statements.map(s => inferOperators(s, variablesInScope));
 
     const typedFunctions: Function[] = [];
     functions.forEach(f => {
         typedFunctions.push({
             ...f,
             statements: f.statements.map(s =>
-                inferOperators(s, { ...knownIdentifiers, ...f.knownIdentifiers })
+                inferOperators(s, mergeDeclarations(variablesInScope, f.variables))
             ) as Ast.Statement[],
         });
     });

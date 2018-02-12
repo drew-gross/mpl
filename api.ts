@@ -15,7 +15,6 @@ export type VariableDeclaration = {
     type: Type;
     memoryCategory: MemoryCategory;
 };
-export type IdentifierDict = { [name: string]: Type }; // TODO: Don't export this (or rethink it)
 export type UninferredFunction = {
     // TODO: Don't export this (or rethink it)
     name: string;
@@ -23,7 +22,6 @@ export type UninferredFunction = {
     variables: VariableDeclaration[];
     parameters: VariableDeclaration[];
     temporaryCount: number;
-    knownIdentifiers: IdentifierDict;
 };
 export type Function = {
     name: string;
@@ -31,7 +29,6 @@ export type Function = {
     variables: VariableDeclaration[];
     parameters: VariableDeclaration[];
     temporaryCount: number;
-    knownIdentifiers: IdentifierDict;
 };
 export type BackendInputs = {
     functions: Function[];
