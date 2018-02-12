@@ -283,7 +283,6 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 debug();
             }
 
-            debugger;
             const computeArgumentsMips = ast.arguments.map((argument, index) => {
                 let register;
                 switch (index) {
