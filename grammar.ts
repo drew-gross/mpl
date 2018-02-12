@@ -4,7 +4,6 @@ import {
     Grammar,
     Ast,
     AstLeaf,
-    AstInteriorNode,
     ParseResult,
     SequenceParser,
     BaseParser,
@@ -203,7 +202,6 @@ export type MplAstNode =
     | 'paramList';
 
 export type MplAst = Ast<MplAstNode, MplToken>;
-export type MplAstInteriorNode = AstInteriorNode<MplAstNode, MplToken>;
 export type MplParseResult = ParseResult<MplAstNode, MplToken>;
 
 export const grammar: Grammar<MplAstNode, MplToken> = {
