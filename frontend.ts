@@ -3,7 +3,7 @@ import unique from './util/list/unique.js';
 import sum from './util/list/sum.js';
 import debug from './util/debug.js';
 import { lex, Token } from './lex.js';
-import { tokenSpecs, grammar, MplAstInteriorNode, MplAstNode, MplParseResult, MplToken } from './grammar.js';
+import { tokenSpecs, grammar, MplAstInteriorNode, MplAst, MplParseResult, MplToken } from './grammar.js';
 import { ParseResult, parseResultIsError, parse, stripResultIndexes, AstLeaf } from './parser-combinator.js';
 import {
     Type,
@@ -63,7 +63,7 @@ const repairAssociativity = (nodeTypeToRepair, ast) => {
     }
 };
 
-const transformAst = (nodeType, f, ast: MplAstNode, recurseOnNew: boolean) => {
+const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
     if (!ast) debug();
     if (ast.type === nodeType) {
         const newNode = f(ast);
@@ -289,7 +289,7 @@ const extractStringLiterals = (ast: Ast.UninferredAst): string[] => {
 
 const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[1], ast, true);
 
-const parseMpl = (tokens: Token<MplToken>[]): MplAstNode | ParseError[] => {
+const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
     const parseResult: MplParseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
 
     if (parseResultIsError(parseResult)) {
@@ -717,10 +717,10 @@ type FrontendOutput = BackendInputs | { parseErrors: ParseError[] } | { typeErro
 const makeProgramAstNodeFromStatmentParseResult = (ast): Ast.UninferredStatement[] => {
     const children: Ast.UninferredStatement[] = [];
     if (ast.type === 'statement') {
-        children.push(lowerAst(ast.children[0]) as Ast.UninferredStatement);
+        children.push(astFromParseResult(ast.children[0]) as Ast.UninferredStatement);
         children.push(...makeProgramAstNodeFromStatmentParseResult(ast.children[2]));
     } else {
-        children.push(lowerAst(ast) as Ast.UninferredStatement);
+        children.push(astFromParseResult(ast) as Ast.UninferredStatement);
     }
     return children;
 };
@@ -728,15 +728,15 @@ const makeProgramAstNodeFromStatmentParseResult = (ast): Ast.UninferredStatement
 const extractFunctionBodyFromParseTree = node => {
     switch (node.type) {
         case 'returnStatement':
-            return [lowerAst(node)];
+            return [astFromParseResult(node)];
         case 'statement':
-            return [lowerAst(node.children[0]), ...extractFunctionBodyFromParseTree(node.children[2])];
+            return [astFromParseResult(node.children[0]), ...extractFunctionBodyFromParseTree(node.children[2])];
         default:
             throw debug();
     }
 };
 
-const extractArgumentList = (ast: MplAstNode): MplAstNode[] => {
+const extractArgumentList = (ast: MplAst): MplAst[] => {
     switch (ast.type) {
         case 'paramList':
             return [ast.children[0], ...extractArgumentList(ast.children[2])];
@@ -745,7 +745,7 @@ const extractArgumentList = (ast: MplAstNode): MplAstNode[] => {
     }
 };
 
-const extractParameterList = (ast: MplAstNode): VariableDeclaration[] => {
+const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
     if (ast.type == 'arg') {
         return [
             {
@@ -764,13 +764,13 @@ const extractParameterList = (ast: MplAstNode): VariableDeclaration[] => {
 };
 
 let functionId = 0;
-const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
+const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
     if (!ast) debug();
     switch (ast.type) {
         case 'returnStatement':
             return {
                 kind: 'returnStatement',
-                expression: lowerAst(ast.children[1]),
+                expression: astFromParseResult(ast.children[1]),
             };
         case 'number':
             if (ast.value === undefined) throw debug();
@@ -788,22 +788,22 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
             if (!('children' in ast)) throw debug();
             return {
                 kind: 'product',
-                lhs: lowerAst(ast.children[0]),
-                rhs: lowerAst(ast.children[2]),
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
             };
         case 'ternary':
             return {
                 kind: 'ternary',
-                condition: lowerAst(ast.children[0]),
-                ifTrue: lowerAst(ast.children[2]),
-                ifFalse: lowerAst(ast.children[4]),
+                condition: astFromParseResult(ast.children[0]),
+                ifTrue: astFromParseResult(ast.children[2]),
+                ifFalse: astFromParseResult(ast.children[4]),
             };
         case 'equality':
             if (!('children' in ast)) throw debug();
             return {
                 kind: 'equality',
-                lhs: lowerAst(ast.children[0]),
-                rhs: lowerAst(ast.children[2]),
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
             };
         case 'paramList':
             throw debug(); //Should have been caught in "callExpression"
@@ -811,28 +811,28 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
             return {
                 kind: 'callExpression',
                 name: (ast.children[0] as any).value as any,
-                arguments: extractArgumentList(ast.children[2]).map(lowerAst),
+                arguments: extractArgumentList(ast.children[2]).map(astFromParseResult),
             };
         case 'subtraction':
             if (!('children' in ast)) throw debug();
             return {
                 kind: 'subtraction',
-                lhs: lowerAst(ast.children[0]),
-                rhs: lowerAst(ast.children[2]),
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
             };
         case 'addition':
             if (!('children' in ast)) throw debug();
             return {
                 kind: 'addition',
-                lhs: lowerAst(ast.children[0]),
-                rhs: lowerAst(ast.children[2]),
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
             };
         case 'assignment':
             if (!('children' in ast)) throw debug();
             return {
                 kind: 'assignment',
                 destination: (ast.children[0] as any).value as any,
-                expression: lowerAst(ast.children[2]),
+                expression: astFromParseResult(ast.children[2]),
             };
         case 'typedAssignment':
             if (!('children' in ast)) throw debug();
@@ -840,7 +840,7 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
                 kind: 'typedAssignment',
                 destination: (ast.children[0] as any).value as any,
                 type: { name: (ast.children[2] as any).value as any },
-                expression: lowerAst(ast.children[4]),
+                expression: astFromParseResult(ast.children[4]),
             };
         case 'stringLiteral':
             return {
@@ -851,15 +851,15 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
             if (!('children' in ast)) throw debug();
             return {
                 kind: 'concatenation',
-                lhs: lowerAst(ast.children[0]),
-                rhs: lowerAst(ast.children[2]),
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
             };
         case 'equality':
             if (!('children' in ast)) throw debug();
             return {
                 kind: 'equality',
-                lhs: lowerAst(ast.children[0]),
-                rhs: lowerAst(ast.children[2]),
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
             };
         case 'function':
             functionId++;
@@ -870,7 +870,7 @@ const lowerAst = (ast: MplAstNode): Ast.UninferredAst => {
                 body: [
                     {
                         kind: 'returnStatement',
-                        expression: lowerAst(ast.children[2]),
+                        expression: astFromParseResult(ast.children[2]),
                     },
                 ],
                 parameters,
@@ -907,7 +907,7 @@ const compile = (source: string): FrontendOutput => {
         return { parseErrors: parseResult };
     }
 
-    const ast = lowerAst(parseResult);
+    const ast = astFromParseResult(parseResult);
 
     if (ast.kind !== 'program') {
         return { parseErrors: ['Failed to parse. Top Level of AST was not a program'] };

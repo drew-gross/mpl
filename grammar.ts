@@ -2,7 +2,7 @@ import {
     terminal,
     endOfInput,
     Grammar,
-    AstNode,
+    Ast,
     AstLeaf,
     AstInteriorNode,
     ParseResult,
@@ -37,27 +37,27 @@ export type MplToken =
     | 'concatenation'
     | 'invalid';
 
-const plus = terminal<MplAstInteriorNodeType, MplToken>('sum');
-const minus = terminal<MplAstInteriorNodeType, MplToken>('subtraction');
-const times = terminal<MplAstInteriorNodeType, MplToken>('product');
-const leftBracket = terminal<MplAstInteriorNodeType, MplToken>('leftBracket');
-const rightBracket = terminal<MplAstInteriorNodeType, MplToken>('rightBracket');
-const int = terminal<MplAstInteriorNodeType, MplToken>('number');
-const identifier = terminal<MplAstInteriorNodeType, MplToken>('identifier');
-const colon = terminal<MplAstInteriorNodeType, MplToken>('colon');
-const ternaryOperator = terminal<MplAstInteriorNodeType, MplToken>('ternaryOperator');
-const type = terminal<MplAstInteriorNodeType, MplToken>('type');
-const assignment = terminal<MplAstInteriorNodeType, MplToken>('assignment');
-const _return = terminal<MplAstInteriorNodeType, MplToken>('return');
-const statementSeparator = terminal<MplAstInteriorNodeType, MplToken>('statementSeparator');
-const fatArrow = terminal<MplAstInteriorNodeType, MplToken>('fatArrow');
-const leftCurlyBrace = terminal<MplAstInteriorNodeType, MplToken>('leftCurlyBrace');
-const rightCurlyBrace = terminal<MplAstInteriorNodeType, MplToken>('rightCurlyBrace');
-const comma = terminal<MplAstInteriorNodeType, MplToken>('comma');
-const concatenation = terminal<MplAstInteriorNodeType, MplToken>('concatenation');
-const equality = terminal<MplAstInteriorNodeType, MplToken>('equality');
-const boolean = terminal<MplAstInteriorNodeType, MplToken>('booleanLiteral');
-const stringLiteral = terminal<MplAstInteriorNodeType, MplToken>('stringLiteral');
+const plus = terminal<MplAstNode, MplToken>('sum');
+const minus = terminal<MplAstNode, MplToken>('subtraction');
+const times = terminal<MplAstNode, MplToken>('product');
+const leftBracket = terminal<MplAstNode, MplToken>('leftBracket');
+const rightBracket = terminal<MplAstNode, MplToken>('rightBracket');
+const int = terminal<MplAstNode, MplToken>('number');
+const identifier = terminal<MplAstNode, MplToken>('identifier');
+const colon = terminal<MplAstNode, MplToken>('colon');
+const ternaryOperator = terminal<MplAstNode, MplToken>('ternaryOperator');
+const type = terminal<MplAstNode, MplToken>('type');
+const assignment = terminal<MplAstNode, MplToken>('assignment');
+const _return = terminal<MplAstNode, MplToken>('return');
+const statementSeparator = terminal<MplAstNode, MplToken>('statementSeparator');
+const fatArrow = terminal<MplAstNode, MplToken>('fatArrow');
+const leftCurlyBrace = terminal<MplAstNode, MplToken>('leftCurlyBrace');
+const rightCurlyBrace = terminal<MplAstNode, MplToken>('rightCurlyBrace');
+const comma = terminal<MplAstNode, MplToken>('comma');
+const concatenation = terminal<MplAstNode, MplToken>('concatenation');
+const equality = terminal<MplAstNode, MplToken>('equality');
+const boolean = terminal<MplAstNode, MplToken>('booleanLiteral');
+const stringLiteral = terminal<MplAstNode, MplToken>('stringLiteral');
 
 export const tokenSpecs: TokenSpec<MplToken>[] = [
     {
@@ -182,7 +182,7 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
     },
 ];
 
-export type MplAstInteriorNodeType =
+export type MplAstNode =
     | 'program'
     | 'function'
     | 'functionWithBlock'
@@ -202,11 +202,11 @@ export type MplAstInteriorNodeType =
     | 'callExpression'
     | 'paramList';
 
-export type MplAstNode = AstNode<MplAstInteriorNodeType, MplToken>;
-export type MplAstInteriorNode = AstInteriorNode<MplAstInteriorNodeType, MplToken>;
-export type MplParseResult = ParseResult<MplAstInteriorNodeType, MplToken>;
+export type MplAst = Ast<MplAstNode, MplToken>;
+export type MplAstInteriorNode = AstInteriorNode<MplAstNode, MplToken>;
+export type MplParseResult = ParseResult<MplAstNode, MplToken>;
 
-export const grammar: Grammar<MplAstInteriorNodeType, MplToken> = {
+export const grammar: Grammar<MplAstNode, MplToken> = {
     program: { n: 'program', p: ['functionBody', endOfInput] },
     function: [
         { n: 'function', p: ['argList', fatArrow, 'expression'] },

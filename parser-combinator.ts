@@ -9,7 +9,7 @@ type AstNodeType<AstInteriorNodeType, AstLeafNodeType> = AstInteriorNodeType | A
 
 interface AstInteriorNode<AstInteriorNodeType, AstLeafNodeType> {
     type: AstInteriorNodeType;
-    children: AstNode<AstInteriorNodeType, AstLeafNodeType>[];
+    children: Ast<AstInteriorNodeType, AstLeafNodeType>[];
 }
 
 type AstLeaf<TokenType> = {
@@ -17,7 +17,7 @@ type AstLeaf<TokenType> = {
     value: string | number | null | undefined;
 };
 
-type AstNode<AstInteriorNodeType, AstLeafNodeType> =
+type Ast<AstInteriorNodeType, AstLeafNodeType> =
     | AstInteriorNode<AstInteriorNodeType, AstLeafNodeType>
     | AstLeaf<AstLeafNodeType>;
 
@@ -47,7 +47,7 @@ interface ParseError<TokenType> {
 type ParseResultWithIndex<InteriorNodeType, TokenType> =
     | ParseError<TokenType>
     | AstNodeWithIndex<InteriorNodeType, TokenType>;
-type ParseResult<InteriorNodeType, TokenType> = ParseError<TokenType> | AstNode<InteriorNodeType, TokenType>;
+type ParseResult<InteriorNodeType, TokenType> = ParseError<TokenType> | Ast<InteriorNodeType, TokenType>;
 
 const parseResultIsError = <AstInteriorNodeType, AstLeafNodeType, TokenType>(
     result:
@@ -67,7 +67,7 @@ const parseResultWithIndexIsLeaf = <AstInteriorNodeType, TokenType>(
 
 const stripNodeIndexes = <AstInteriorNodeType, AstLeafNodeType>(
     r: AstNodeWithIndex<AstInteriorNodeType, AstLeafNodeType>
-): AstNode<AstInteriorNodeType, AstLeafNodeType> => {
+): Ast<AstInteriorNodeType, AstLeafNodeType> => {
     if (parseResultWithIndexIsLeaf(r)) {
         return {
             value: r.value,
@@ -398,7 +398,7 @@ export {
     ParseResultWithIndex,
     ParseResult,
     ParseError,
-    AstNode,
+    Ast,
     AstNodeWithIndex,
     AstLeaf,
     AstInteriorNode,

@@ -4,7 +4,7 @@ import { lex } from './lex.js';
 import { parseMpl, compile, typeCheckStatement } from './frontend.js';
 import { compileAndRun } from './test-utils.js';
 import { grammar, tokenSpecs, MplToken, MplAstInteriorNode } from './grammar.js';
-import { stripResultIndexes, ParseResult, AstNode, parse } from './parser-combinator.js';
+import { stripResultIndexes, ParseResult, parse } from './parser-combinator.js';
 import { removeBracketsFromAst } from './frontend.js';
 
 test('lexer', t => {
