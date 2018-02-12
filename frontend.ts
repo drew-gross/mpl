@@ -256,21 +256,9 @@ const countTemporariesInExpression = (ast: Ast.UninferredAst) => {
     }
 };
 
-const countTemporariesInFunction = ({ statements }) => {
-    return Math.max(...statements.map(countTemporariesInExpression));
-};
+const typesAreEqual = (a, b) => a.name == b.name;
 
-const typesAreEqual = (a, b) => {
-    if (!a || !b) debug();
-    if (a.name !== b.name) {
-        return false;
-    }
-    return true;
-};
-
-const isTypeError = (val: Type | TypeError[]): val is TypeError[] => {
-    return Array.isArray(val);
-};
+const isTypeError = (val: Type | TypeError[]): val is TypeError[] => Array.isArray(val);
 
 const combineErrors = (potentialErrors: (Type | TypeError[])[]): TypeError[] | null => {
     const result: TypeError[] = [];
