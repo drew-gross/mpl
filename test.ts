@@ -789,16 +789,16 @@ return const11();`,
     expectedExitCode: 11,
 });
 
-test.failing('call with wrong number of args', compileAndRun, {
+test('call with wrong number of args', compileAndRun, {
     source: `
 threeArgs = a: Integer, b: Integer, c: Integer => a + b + c;
 return threeArgs(7, 4);`,
-    expectedExitCode: 16,
+    expectedTypeErrors: ['You tried to call threeArgs with 2 arguments when it needs 3'],
 });
 
-test.failing('call with wrong arg type', compileAndRun, {
+test('call with wrong arg type', compileAndRun, {
     source: `
 threeArgs = a: Integer, b: Integer, c: Integer => a + b + c;
 return threeArgs(7, 4, "notAnInteger");`,
-    expectedExitCode: 16,
+    expectedTypeErrors: ['You passed a String as an argument to threeArgs. It expects a Integer'],
 });
