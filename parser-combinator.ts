@@ -17,21 +17,21 @@ type AstLeaf<TokenType> = {
 
 type Ast<NodeType, LeafType> = AstInteriorNode<NodeType, LeafType> | AstLeaf<LeafType>;
 
-interface AstLeafWithIndex<TokenType> {
+interface LeafWithIndex<TokenType> {
     success: true;
     newIndex: number;
     type: TokenType | 'endOfFile';
     value: string | number | null | undefined;
 }
 
-interface AstNodeWithIndex<NodeType, LeafType> {
+interface NodeWithIndex<NodeType, LeafType> {
     success: true;
     newIndex: number;
     type: NodeType;
     children: AstWithIndex<NodeType, LeafType>[];
 }
 
-type AstWithIndex<NodeType, TokenType> = AstNodeWithIndex<NodeType, TokenType> | AstLeafWithIndex<TokenType>;
+type AstWithIndex<NodeType, TokenType> = NodeWithIndex<NodeType, TokenType> | LeafWithIndex<TokenType>;
 
 interface ParseError<TokenType> {
     found: (TokenType | 'endOfFile')[];
@@ -52,7 +52,7 @@ const parseResultIsError = <NodeType, LeafType, TokenType>(
 };
 const parseResultWithIndexIsLeaf = <NodeType, TokenType>(
     r: ParseResultWithIndex<NodeType, TokenType>
-): r is AstLeafWithIndex<TokenType> => {
+): r is LeafWithIndex<TokenType> => {
     if (!r) throw debug();
     return 'value' in r;
 };
