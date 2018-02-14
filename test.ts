@@ -441,12 +441,13 @@ test('assign function and call it', compileAndRun, {
     expectedExitCode: 11,
 });
 
-test('multiple variables called', compileAndRun, {
+test.only('multiple variables called', compileAndRun, {
     source: `
 const11 = a: Integer => 11;
 const12 = a: Integer => 12;
 return const11(1) * const12(2);`,
     expectedExitCode: 132,
+    vizAst: true,
 });
 
 test('double product with brackets', compileAndRun, {

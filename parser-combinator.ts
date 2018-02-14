@@ -4,6 +4,8 @@ import flatten from './util/list/flatten.js';
 import last from './util/list/last.js';
 import assertNever from './util/assertNever.js';
 import debug from './util/debug.js';
+import { Graph } from 'graphlib';
+import dot from 'graphlib-dot';
 
 interface Node<NodeType, LeafType> {
     type: NodeType;
@@ -381,6 +383,14 @@ const endOfInput = <NodeType, TokenType>(
     }
 };
 
+const toDotFile = <NodeType, TokenType>(ast: Ast<NodeType, TokenType>) => {
+    const digraph = new Graph();
+    digraph.setNode(1);
+    digraph.setNode(2);
+    digraph.setEdge(1, 2, { label: 'A label' });
+    return digraph;
+};
+
 export {
     terminal,
     endOfInput,
@@ -392,4 +402,5 @@ export {
     Leaf,
     parseResultIsError,
     stripResultIndexes,
+    toDotFile,
 };

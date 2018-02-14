@@ -3,11 +3,13 @@ import { Ast } from './ast.js';
 import { lex } from './lex.js';
 import { parseMpl, compile } from './frontend.js';
 import { file as tmpFile } from 'tmp-promise';
-import { writeFile } from 'fs-extra';
+import { writeFile, outputFile } from 'fs-extra';
 import assertNever from './util/assertNever.js';
 import debug from './util/debug.js';
 import join from './util/join.js';
-import { tokenSpecs } from './grammar.js';
+import { tokenSpecs, grammar } from './grammar.js';
+import { parse, stripResultIndexes, toDotFile, parseResultIsError } from './parser-combinator.js';
+import * as dot from 'graphlib-dot';
 
 import mipsBackend from './backends/mips.js';
 import jsBackend from './backends/js.js';
@@ -22,6 +24,7 @@ type CompileAndRunOptions = {
     printSubsteps?: string[] | string;
     debugSubsteps?: string[] | string;
     failing?: string[] | string;
+    vizAst: boolean;
 };
 
 const astToString = (ast: Ast) => {
@@ -75,6 +78,7 @@ export const compileAndRun = async (
         printSubsteps = [],
         debugSubsteps = [],
         failing = [],
+        vizAst = false,
     }: CompileAndRunOptions
 ) => {
     if (typeof printSubsteps === 'string') {
@@ -108,6 +112,16 @@ export const compileAndRun = async (
     const parseResult = parseMpl(lexResult);
     if (printSubsteps.includes('ast')) {
         console.log(JSON.stringify(parseResult, null, 2));
+    }
+
+    if (vizAst) {
+        const parseResult = stripResultIndexes(parse(grammar, 'program', lexResult, 0));
+        if (parseResultIsError(parseResult)) {
+            t.fail('Bad parse result');
+            return;
+        }
+        console.log(__dirname + '/../parse.dot');
+        await outputFile(__dirname + '/../parse.dot', dot.write(toDotFile(parseResult)));
     }
 
     // Frontend
