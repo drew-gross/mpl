@@ -185,6 +185,7 @@ export type MplAstNode =
     | 'program'
     | 'function'
     | 'functionWithBlock'
+    | 'bracketedArgList'
     | 'argList'
     | 'arg'
     | 'statement'
@@ -212,6 +213,10 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
             n: 'functionWithBlock',
             p: ['argList', fatArrow, leftCurlyBrace, 'functionBody', rightCurlyBrace],
         },
+    ],
+    bracketedArgList: [
+        { n: 'bracketedArgList', p: [leftBracket, rightBracket] },
+        { n: 'bracketedArgList', p: [leftBracket, 'argList', rightBracket] },
     ],
     argList: [{ n: 'argList', p: ['arg', comma, 'argList'] }, 'arg'],
     arg: { n: 'arg', p: [identifier, colon, type] },
