@@ -1,3 +1,5 @@
+import * as open from 'open';
+import { exec } from 'child-process-promise';
 import { Backend, BackendInputs } from './api.js';
 import { Ast } from './ast.js';
 import { lex } from './lex.js';
@@ -120,8 +122,11 @@ export const compileAndRun = async (
             t.fail('Bad parse result');
             return;
         }
-        console.log(__dirname + '/../parse.dot');
-        await outputFile(__dirname + '/../parse.dot', dot.write(toDotFile(parseResult)));
+        const dotFile = await tmpFile({ postfix: 'dot' });
+        const svgFile = await tmpFile({ postfix: 'svg' });
+        await writeFile(dotFile.fd, dot.write(toDotFile(parseResult)));
+        await exec(`dot -Tsvg -o${svgFile.path} ${dotFile.path}`);
+        await open(svgFile.path, 'Google Chrome');
     }
 
     // Frontend

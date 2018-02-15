@@ -385,9 +385,21 @@ const endOfInput = <NodeType, TokenType>(
 
 const toDotFile = <NodeType, TokenType>(ast: Ast<NodeType, TokenType>) => {
     const digraph = new Graph();
-    digraph.setNode(1);
-    digraph.setNode(2);
-    digraph.setEdge(1, 2, { label: 'A label' });
+    let id = 0;
+    const traverse = (ast: Ast<NodeType, TokenType>): number => {
+        let myId = id;
+        id++;
+        const nodeString = 'children' in ast ? ast.type : `${ast.type}\n${ast.value ? ast.value : ''}`;
+        digraph.setNode(myId, { label: nodeString });
+        if ('children' in ast) {
+            const childIds = ast.children.map(traverse);
+            ast.children.forEach((child, index) => {
+                digraph.setEdge(myId, childIds[index]);
+            });
+        }
+        return myId;
+    };
+    traverse(ast);
     return digraph;
 };
 
