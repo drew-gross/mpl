@@ -199,7 +199,9 @@ export type MplAstNode =
     | 'equality'
     | 'concatenation'
     | 'bracketedExpression'
+    // TOOD: unify these.
     | 'callExpression'
+    | 'callExpressionNoArgs'
     | 'paramList';
 
 export type MplAst = Ast<MplAstNode, MplToken>;
@@ -218,7 +220,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         { n: 'bracketedArgList', p: [leftBracket, rightBracket] },
         { n: 'bracketedArgList', p: [leftBracket, 'argList', rightBracket] },
     ],
-    argList: [{ n: 'argList', p: ['arg', comma, 'argList'] }, 'arg'],
+    argList: [{ n: 'argList', p: ['arg', comma, 'argList'] }, 'bracketedArgList', 'arg'],
     arg: { n: 'arg', p: [identifier, colon, type] },
     functionBody: [
         { n: 'statement', p: ['statement', statementSeparator, 'functionBody'] },
@@ -241,6 +243,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     ],
     simpleExpression: [
         { n: 'bracketedExpression', p: [leftBracket, 'expression', rightBracket] },
+        { n: 'callExpressionNoArgs', p: [identifier, leftBracket, rightBracket] },
         { n: 'callExpression', p: [identifier, leftBracket, 'paramList', rightBracket] },
         int,
         boolean,

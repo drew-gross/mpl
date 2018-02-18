@@ -637,6 +637,12 @@ const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
         ];
     } else if (ast.type == 'argList') {
         return [...extractParameterList(ast.children[0]), ...extractParameterList(ast.children[2])];
+    } else if (ast.type == 'bracketedArgList') {
+        if (ast.children.length > 2) {
+            return extractParameterList(ast.children[1]);
+        } else {
+            return [];
+        }
     } else {
         throw debug();
     }
@@ -686,6 +692,12 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
             };
         case 'paramList':
             throw debug(); //Should have been caught in "callExpression"
+        case 'callExpressionNoArgs':
+            return {
+                kind: 'callExpression',
+                name: (ast.children[0] as any).value as any,
+                arguments: [],
+            };
         case 'callExpression':
             return {
                 kind: 'callExpression',

@@ -726,7 +726,6 @@ test('concatenate and get length then subtract', compileAndRun, {
 });
 
 test('semi-complex string concatenation', compileAndRun, {
-    vizAst: true,
     source: `
 lenFunc = dummy: Integer => {
     str1 = "abc";
@@ -783,12 +782,25 @@ return myAdd(7, 4, 5);`,
     expectedExitCode: 16,
 });
 
-test.only('zero args', compileAndRun, {
+test('zero args', compileAndRun, {
     source: `
 const11 = () => 11;
 return const11();`,
     expectedExitCode: 11,
-    printSubsteps: 'tokens',
+});
+
+test('one bracketed arg', compileAndRun, {
+    source: `
+times11 = (a: Integer) => a * 11;
+return times11(1);`,
+    expectedExitCode: 11,
+});
+
+test('two bracketed args', compileAndRun, {
+    source: `
+times = (a: Integer, b: Integer) => a * b;
+return times(11, 1);`,
+    expectedExitCode: 11,
 });
 
 test('call with wrong number of args', compileAndRun, {

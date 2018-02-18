@@ -119,11 +119,11 @@ export const compileAndRun = async (
     if (vizAst) {
         const parseResult = stripResultIndexes(parse(grammar, 'program', lexResult, 0));
         if (parseResultIsError(parseResult)) {
-            t.fail('Bad parse result');
+            t.fail(`Bad parse result. Found: ${parseResult.found}. Expected: ${parseResult.expected}`);
             return;
         }
-        const dotFile = await tmpFile({ postfix: 'dot' });
-        const svgFile = await tmpFile({ postfix: 'svg' });
+        const dotFile = await tmpFile({ postfix: '.dot' });
+        const svgFile = await tmpFile({ postfix: '.svg' });
         await writeFile(dotFile.fd, dot.write(toDotFile(parseResult)));
         await exec(`dot -Tsvg -o${svgFile.path} ${dotFile.path}`);
         await open(svgFile.path, 'Google Chrome');
