@@ -1,3 +1,5 @@
+import debug from './util/debug.js';
+
 type TokenSpec<TokenType> = {
     token: string;
     type: TokenType;
@@ -13,8 +15,13 @@ type Token<TokenType> = {
 
 const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string): Token<TokenType>[] => {
     // slurp initial whitespace
-    if (!input) debugger;
-    input = input.trim();
+    if (!input) throw debug();
+    let currentSourceLine = 0;
+    let currentSourceColumn = 0;
+    const initialWhitespaceMatch = input.match(/^[ \t\n]*/);
+    if (!initialWhitespaceMatch) throw debug();
+    const initialWhitespace = initialWhitespaceMatch[0];
+    input = input.slice(initialWhitespace.length);
 
     // consume input reading tokens
     let tokens: Token<TokenType>[] = [];

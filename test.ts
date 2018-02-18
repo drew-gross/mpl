@@ -555,6 +555,18 @@ test('parse error', compileAndRun, {
     expectedParseErrors: ['Expected identifier or return, found fatArrow'],
 });
 
+test.failing('new parse error', compileAndRun, {
+    source: '=>',
+    expectedParseErrors: [
+        {
+            found: 'fatArrow',
+            expected: ['identifier', 'return'],
+            sourceLine: 1,
+            sourceColumn: 1,
+        },
+    ],
+});
+
 test('ternary in function false', compileAndRun, {
     source: `
 ternary = a: Boolean => a ? 9 : 5;
