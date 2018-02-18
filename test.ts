@@ -783,11 +783,12 @@ return myAdd(7, 4, 5);`,
     expectedExitCode: 16,
 });
 
-test.failing('zero args', compileAndRun, {
+test.only('zero args', compileAndRun, {
     source: `
-const11 = => 11;
+const11 = () => 11;
 return const11();`,
     expectedExitCode: 11,
+    printSubsteps: 'tokens',
 });
 
 test('call with wrong number of args', compileAndRun, {
