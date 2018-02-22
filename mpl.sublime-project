@@ -8,9 +8,6 @@
     ],
     "settings": {
         "js_prettier": {
-            "additional_cli_args": {
-                "--config": "prettier-config.json"
-            }
         }
     }
 }
