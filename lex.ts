@@ -11,16 +11,31 @@ type Token<TokenType> = {
     type: TokenType;
     string: string;
     value?: string | number | null;
+    sourceLine: number;
+    sourceColumn: number;
 };
 
 const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string): Token<TokenType>[] => {
+    // Source location tracking
+    let currentSourceLine = 1;
+    let currentSourceColumn = 1;
+    const updateSourceLocation = (matchString: string) => {
+        for (const char of matchString) {
+            if (char == '\n') {
+                currentSourceLine++;
+                currentSourceColumn = 1;
+            } else {
+                currentSourceColumn++;
+            }
+        }
+    };
+
     // slurp initial whitespace
-    if (!input) throw debug();
-    let currentSourceLine = 0;
-    let currentSourceColumn = 0;
     const initialWhitespaceMatch = input.match(/^[ \t\n]*/);
     if (!initialWhitespaceMatch) throw debug();
     const initialWhitespace = initialWhitespaceMatch[0];
+    updateSourceLocation(initialWhitespace);
+
     input = input.slice(initialWhitespace.length);
 
     // consume input reading tokens
@@ -36,7 +51,10 @@ const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string): Toke
                 type: tokenSpec.type,
                 value,
                 string: tokenSpec.toString(value),
+                sourceLine: currentSourceLine,
+                sourceColumn: currentSourceColumn,
             });
+            updateSourceLocation(match[0]);
             break;
         }
     }

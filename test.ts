@@ -8,29 +8,35 @@ import { stripResultIndexes, ParseResult, parse } from './parser-combinator.js';
 import { removeBracketsFromAst } from './frontend.js';
 
 test('lexer', t => {
-    t.deepEqual(lex(tokenSpecs, '123'), [{ type: 'number', value: 123, string: '123' }]);
-    t.deepEqual(lex(tokenSpecs, '123 456'), [
-        { type: 'number', value: 123, string: '123' },
-        { type: 'number', value: 456, string: '456' },
+    t.deepEqual(lex(tokenSpecs, '123'), [
+        { type: 'number', value: 123, string: '123', sourceLine: 1, sourceColumn: 1 },
     ]);
-    t.deepEqual(lex(tokenSpecs, '&&&&&'), [{ type: 'invalid', value: '&&&&&', string: '&&&&&' }]);
+    t.deepEqual(lex(tokenSpecs, '123 456'), [
+        { type: 'number', value: 123, string: '123', sourceLine: 1, sourceColumn: 1 },
+        { type: 'number', value: 456, string: '456', sourceLine: 1, sourceColumn: 5 },
+    ]);
+    t.deepEqual(lex(tokenSpecs, '&&&&&'), [
+        { type: 'invalid', value: '&&&&&', string: '&&&&&', sourceLine: 1, sourceColumn: 1 },
+    ]);
     t.deepEqual(lex(tokenSpecs, '(1)'), [
-        { type: 'leftBracket', value: null, string: '(' },
-        { type: 'number', value: 1, string: '1' },
-        { type: 'rightBracket', value: null, string: ')' },
+        { type: 'leftBracket', value: null, string: '(', sourceLine: 1, sourceColumn: 1 },
+        { type: 'number', value: 1, string: '1', sourceLine: 1, sourceColumn: 2 },
+        { type: 'rightBracket', value: null, string: ')', sourceLine: 1, sourceColumn: 3 },
     ]);
     t.deepEqual(lex(tokenSpecs, 'return 100'), [
-        { type: 'return', value: null, string: 'return' },
-        { type: 'number', value: 100, string: '100' },
+        { type: 'return', value: null, string: 'return', sourceLine: 1, sourceColumn: 1 },
+        { type: 'number', value: 100, string: '100', sourceLine: 1, sourceColumn: 8 },
     ]);
     t.deepEqual(lex(tokenSpecs, 'return "test string"'), [
-        { type: 'return', value: null, string: 'return' },
-        { type: 'stringLiteral', value: 'test string', string: 'test string' },
+        { type: 'return', value: null, string: 'return', sourceLine: 1, sourceColumn: 1 },
+        { type: 'stringLiteral', value: 'test string', string: 'test string', sourceLine: 1, sourceColumn: 8 },
     ]);
 });
 
 test('lex with initial whitespace', t => {
-    t.deepEqual(lex(tokenSpecs, ' 123'), [{ type: 'number', value: 123, string: '123' }]);
+    t.deepEqual(lex(tokenSpecs, ' 123'), [
+        { type: 'number', value: 123, string: '123', sourceLine: 1, sourceColumn: 2 },
+    ]);
 });
 
 test('ast for single number', t => {
