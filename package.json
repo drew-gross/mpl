@@ -36,6 +36,7 @@
     "rimraf": "2.6.2",
     "typescript": "2.7.2"
   },
+  "Ideally would put prettier config back in it's own file, having it in package.json works around bugs in JsPrettier": "",
   "prettier": {
     "printWidth": 120,
     "singleQuote": true,
