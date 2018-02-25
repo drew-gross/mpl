@@ -38,6 +38,8 @@ type AstWithIndex<NodeType, TokenType> = NodeWithIndex<NodeType, TokenType> | Le
 interface ParseError<TokenType> {
     found: (TokenType | 'endOfFile')[];
     expected: (TokenType | 'endOfFile')[];
+    sourceLine: number;
+    sourceColumn: number;
 }
 
 type ParseResultWithIndex<NodeType, TokenType> = ParseError<TokenType> | AstWithIndex<NodeType, TokenType>;
@@ -315,6 +317,8 @@ const parseAlternative = <NodeType, TokenType>(
                 })
             )
         ),
+        sourceLine: tokens[index].sourceLine,
+        sourceColumn: tokens[index].sourceColumn,
     };
 };
 
@@ -345,6 +349,9 @@ const terminal = <NodeType, TokenType>(terminal: TokenType): BaseParser<NodeType
         const result: ParseError<TokenType> = {
             found: ['endOfFile'],
             expected: [terminal],
+            // TODO: Put the end of file instead, this is just the last token.
+            sourceLine: tokens[index - 1].sourceLine,
+            sourceColumn: tokens[index - 1].sourceColumn,
         };
         return result;
     }
@@ -360,6 +367,8 @@ const terminal = <NodeType, TokenType>(terminal: TokenType): BaseParser<NodeType
     return {
         expected: [terminal],
         found: [tokens[index].type],
+        sourceLine: tokens[index].sourceLine,
+        sourceColumn: tokens[index].sourceColumn,
     };
 };
 
@@ -375,11 +384,12 @@ const endOfInput = <NodeType, TokenType>(
             type: 'endOfFile',
         };
     } else {
-        const result: ParseError<TokenType> = {
+        return {
             expected: ['endOfFile'],
             found: [tokens[index].type],
+            sourceLine: tokens[index].sourceLine,
+            sourceColumn: tokens[index].sourceColumn,
         };
-        return result;
     }
 };
 

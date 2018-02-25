@@ -17,7 +17,7 @@
     "cloc":
       "cloc --exclude-dir=node_modules,built --not-match-f='package.json|tsconfig.json|prettier-config.json|test.ts|test-utils.ts' .",
     "cloc-all": "cloc --exclude-dir=node_modules,built .",
-    "prettier-check": "prettier --config prettier-config.json --list-different *.ts"
+    "prettier-check": "prettier --config package.json --list-different *.ts"
   },
   "author": "Drew Gross",
   "dependencies": {
@@ -36,7 +36,6 @@
     "rimraf": "2.6.2",
     "typescript": "2.7.2"
   },
-  "Ideally would put prettier config back in it's own file, having it in package.json works around bugs in JsPrettier": "",
   "prettier": {
     "printWidth": 120,
     "singleQuote": true,

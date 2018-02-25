@@ -3,7 +3,7 @@ import { exec } from 'child-process-promise';
 import { Backend, BackendInputs } from './api.js';
 import { Ast } from './ast.js';
 import { lex } from './lex.js';
-import { parseMpl, compile } from './frontend.js';
+import { parseMpl, compile, parseErrorToString } from './frontend.js';
 import { file as tmpFile } from 'tmp-promise';
 import { writeFile, outputFile } from 'fs-extra';
 import assertNever from './util/assertNever.js';
@@ -135,13 +135,11 @@ export const compileAndRun = async (
     }
     const frontendOutput = compile(source);
     if (expectedParseErrors && 'parseErrors' in frontendOutput) {
-        t.deepEqual(expectedParseErrors, (frontendOutput as { parseErrors: string[] }).parseErrors);
+        t.deepEqual(expectedParseErrors, frontendOutput.parseErrors);
         return;
     } else if ('parseErrors' in frontendOutput) {
         t.fail(
-            `Found parse errors when none expected: ${(frontendOutput as {
-                parseErrors: string[];
-            }).parseErrors.join(', ')}`
+            `Found parse errors when none expected: ${join(frontendOutput.parseErrors.map(parseErrorToString), ', ')}`
         );
     } else if (expectedParseErrors) {
         t.fail('Expected parse errors and none found');

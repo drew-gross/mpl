@@ -203,8 +203,15 @@ const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
     const parseResult: MplParseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
 
     if (parseResultIsError(parseResult)) {
-        const errorMessage = `Expected ${parseResult.expected.join(' or ')}, found ${parseResult.found}`;
-        return [errorMessage];
+        return [
+            {
+                kind: 'unexpectedToken',
+                found: parseResult.found,
+                expected: parseResult.expected,
+                sourceLine: parseResult.sourceLine,
+                sourceColumn: parseResult.sourceColumn,
+            },
+        ];
     }
     let ast = parseResult;
 
@@ -790,6 +797,17 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
     }
 };
 
+const parseErrorToString = (e: ParseError): string => {
+    switch (e.kind) {
+        case 'unexpectedProgram':
+            return 'Failed to parse. Top Level of AST was not a program.';
+        case 'unexpectedToken':
+            return `Expected ${e.expected.join(' or ')}, found ${e.found}`;
+        default:
+            throw debug();
+    }
+};
+
 const compile = (source: string): FrontendOutput => {
     const tokens = lex<MplToken>(tokenSpecs, source);
     const parseResult = parseMpl(tokens);
@@ -801,7 +819,7 @@ const compile = (source: string): FrontendOutput => {
     const ast = astFromParseResult(parseResult);
 
     if (ast.kind !== 'program') {
-        return { parseErrors: ['Failed to parse. Top Level of AST was not a program'] };
+        return { parseErrors: [{ kind: 'unexpectedProgram' }] };
     }
     const program: UninferredFunction = {
         name: `main_program`,
@@ -854,4 +872,4 @@ const compile = (source: string): FrontendOutput => {
     } as BackendInputs;
 };
 
-export { parseMpl, lex, compile, removeBracketsFromAst, typeCheckStatement };
+export { parseMpl, lex, compile, removeBracketsFromAst, typeCheckStatement, parseErrorToString };

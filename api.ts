@@ -44,7 +44,17 @@ export type ExecutionResult =
     | {
           error: string;
       };
-export type ParseError = string;
+export type ParseError =
+    | {
+          kind: 'unexpectedToken';
+          expected: string[];
+          found: string[];
+          sourceLine: number;
+          sourceColumn: number;
+      }
+    | {
+          kind: 'unexpectedProgram';
+      };
 export type Backend = {
     name: string;
     toExectuable: (BackendInputs) => string;

@@ -558,14 +558,10 @@ test('ternary false', compileAndRun, {
 
 test('parse error', compileAndRun, {
     source: '=>',
-    expectedParseErrors: ['Expected identifier or return, found fatArrow'],
-});
-
-test.failing('new parse error', compileAndRun, {
-    source: '=>',
     expectedParseErrors: [
         {
-            found: 'fatArrow',
+            kind: 'unexpectedToken',
+            found: ['fatArrow'],
             expected: ['identifier', 'return'],
             sourceLine: 1,
             sourceColumn: 1,
@@ -771,7 +767,15 @@ return lenFunc(5);`,
 
 test('parsing fails for extra invalid tokens', compileAndRun, {
     source: `return 5 (`,
-    expectedParseErrors: ['Expected endOfFile, found leftBracket'],
+    expectedParseErrors: [
+        {
+            kind: 'unexpectedToken',
+            found: ['leftBracket'],
+            expected: ['endOfFile'],
+            sourceLine: 1,
+            sourceColumn: 10,
+        },
+    ],
 });
 
 test('addition', compileAndRun, {
