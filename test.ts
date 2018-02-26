@@ -838,3 +838,37 @@ threeArgs = a: Integer, b: Integer, c: Integer => a + b + c;
 return threeArgs(7, 4, "notAnInteger");`,
     expectedTypeErrors: ['You passed a String as an argument to threeArgs. It expects a Integer'],
 });
+
+test('print', compileAndRun, {
+    source: `
+dummy = print("sample_string");
+return 1;`,
+    expectedExitCode: 1,
+    expectedStdOut: 'sample_string',
+});
+
+test.failing('print string with space', compileAndRun, {
+    source: `
+dummy = print("sample string with space");
+return 1;`,
+    expectedExitCode: 1,
+    expectedStdOut: 'sample string with space',
+});
+
+test.failing('require/force no return value for print', compileAndRun, {
+    source: `
+print("sample string");
+return 1;`,
+    expectedExitCode: 1,
+    expectedStdOut: 'sample string',
+});
+
+test.failing('print string containing number', compileAndRun, {
+    source: `
+print("1");
+return 1;`,
+    expectedExitCode: 1,
+    expectedStdOut: '1',
+    // Fails mips because of the silly way we extract exit codes.
+    failing: ['mips'],
+});

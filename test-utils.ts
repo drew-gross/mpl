@@ -22,6 +22,7 @@ type CompileAndRunOptions = {
     expectedExitCode: number;
     expectedTypeErrors: [any];
     expectedParseErrors: [any];
+    expectedStdOut: string;
     expectedAst: [any];
     printSubsteps?: string[] | string;
     debugSubsteps?: string[] | string;
@@ -36,7 +37,6 @@ const astToString = (ast: Ast) => {
             return `return ${astToString(ast.expression)}`;
         case 'ternary':
             return `${astToString(ast.condition)} ? ${astToString(ast.ifTrue)} : ${astToString(ast.ifFalse)}`;
-        case 'equality':
         case 'equality':
             return `${astToString(ast.lhs)} == ${astToString(ast.rhs)}`;
         case 'identifier':
@@ -76,6 +76,7 @@ export const compileAndRun = async (
         expectedExitCode,
         expectedTypeErrors,
         expectedParseErrors,
+        expectedStdOut = '',
         expectedAst,
         printSubsteps = [],
         debugSubsteps = [],
@@ -209,14 +210,15 @@ export const compileAndRun = async (
             }
             const result = await backend.execute(exeFile.path);
             if ('error' in result) {
-                t.fail(`${backend.name} execution failed: ${(result as any).error}`);
+                t.fail(`${backend.name} execution failed: ${result.error}`);
+                return;
             }
-            const result2 = result as any;
 
-            if (result2.exitCode !== expectedExitCode) {
+            if (result.exitCode !== expectedExitCode || result.stdout !== expectedStdOut) {
                 const errorMessage = `${backend.name} had unexpected output.
-Exit code: ${result2.exitCode}. Expected: ${expectedExitCode}.
-Stdout: "${result2.stdout}".`;
+Exit code: ${result.exitCode}. Expected: ${expectedExitCode}.
+Stdout: "${result.stdout}".
+Expected: "${expectedStdOut}"`;
                 t.fail(errorMessage);
             }
         }

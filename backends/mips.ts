@@ -5,6 +5,7 @@ import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import { CompiledProgram, compileExpression } from '../backend-utils.js';
 import { errors } from '../runtime-strings.js';
+import { builtins } from '../frontend.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 const argument1 = '$s0';
@@ -138,8 +139,6 @@ const nextTemporary = (storage: StorageSpec): StorageSpec => {
     }
 };
 
-const runtimeFunctions = ['length'];
-
 let labelId = 0;
 
 type AstToMipsOptions = {
@@ -265,7 +264,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
             if (destination.type !== 'register') throw debug();
             const functionName = ast.name;
             let callInstructions: string[] = [];
-            if (runtimeFunctions.includes(functionName)) {
+            if (builtins.map(b => b.name).includes(functionName)) {
                 callInstructions = [
                     `# Call runtime function`,
                     `la ${currentTemporary.destination}, ${functionName}`,
@@ -705,6 +704,15 @@ const lengthRuntimeFunction = () => {
     jr $ra`;
 };
 
+const printRuntimeFunction = () => {
+    return `print:
+li ${syscallSelect}, 4
+${move({ to: syscallArg1, from: argument1 })}
+syscall
+${move({ from: syscallResult, to: functionResult })}
+jr $ra`;
+};
+
 const stringEqualityRuntimeFunction = () => {
     const leftByte = '$t1';
     const rightByte = '$t2';
@@ -967,6 +975,7 @@ first_block: .word 0
 
 .text
 ${lengthRuntimeFunction()}
+${printRuntimeFunction()}
 ${stringEqualityRuntimeFunction()}
 ${stringCopyRuntimeFunction()}
 ${myMallocRuntimeFunction()}
@@ -990,16 +999,19 @@ syscall`;
 };
 
 const execute = async (path: string): Promise<ExecutionResult> => {
+    // This string is always printed with spim starts. Strip it from stdout. TODO: Look in to MARS, maybe it doesn't do this?
+    const exceptionsLoadedPreamble = 'Loaded: /usr/local/Cellar/spim/9.1.17/share/exceptions.s\n';
     try {
         const result = await exec(`spim -file ${path}`);
         if (result.stderr !== '') {
             return { error: `Spim error: ${result.stderr}` };
         }
-        const lines = result.stdout.split('\n');
-        const mipsExitCode = parseInt(lines[lines.length - 1]);
+        const trimmedStdout = result.stdout.slice(exceptionsLoadedPreamble.length);
+        const lines = trimmedStdout.split('\n');
+        const mipsExitCode = parseInt(lines[lines.length - 1].match(/[0-9]*$/)[0]);
         return {
             exitCode: mipsExitCode,
-            stdout: result.stdout,
+            stdout: trimmedStdout.slice(0, trimmedStdout.length - mipsExitCode.toString().length),
         };
     } catch (e) {
         return {

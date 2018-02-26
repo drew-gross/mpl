@@ -465,10 +465,18 @@ const typeCheckStatement = (
     }
 };
 
-// TODO: Require these to be imported
-const builtins: VariableDeclaration[] = [
+// TODO: Require these to be imported in user code
+export const builtins: VariableDeclaration[] = [
     {
         name: 'length',
+        type: {
+            name: 'Function',
+            parameters: [{ type: { name: 'String' } }],
+        },
+        memoryCategory: 'FAKE' as any,
+    },
+    {
+        name: 'print',
         type: {
             name: 'Function',
             parameters: [{ type: { name: 'String' } }],
@@ -802,7 +810,9 @@ const parseErrorToString = (e: ParseError): string => {
         case 'unexpectedProgram':
             return 'Failed to parse. Top Level of AST was not a program.';
         case 'unexpectedToken':
-            return `Expected ${e.expected.join(' or ')}, found ${e.found}`;
+            return `Expected ${e.expected.join(' or ')}, on line ${e.sourceLine} column ${e.sourceColumn}, found ${
+                e.found
+            }`;
         default:
             throw debug();
     }

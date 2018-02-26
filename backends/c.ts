@@ -395,6 +395,15 @@ int length(char *str) {
     return len;
 }
 
+int print(char *str) {
+    int result = printf("%s", str);
+    if (result < 0) {
+        printf("${errors.printFailed.value}");
+        exit(-1);
+    }
+    return result;
+}
+
 char *string_copy(char *in, char *out) {
     char *original_out = out;
     while ((*out++ = *in++)) {}
