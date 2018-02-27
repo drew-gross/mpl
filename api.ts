@@ -1,13 +1,9 @@
 import { UninferredStatement, Statement } from './ast.js';
 
-export type Type =
-    | {
-          name: 'String' | 'Integer' | 'Boolean';
-      }
-    | {
-          name: 'Function';
-          parameters: { type: Type }[];
-      };
+export type Type = {
+    name: 'String' | 'Integer' | 'Boolean' | 'Function';
+    arguments: Type[];
+};
 export type TypeError = string;
 export type MemoryCategory = 'GlobalStatic' | 'Dynamic' | 'Stack';
 export type VariableDeclaration = {

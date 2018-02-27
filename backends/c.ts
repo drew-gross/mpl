@@ -13,7 +13,7 @@ const mplTypeToCDeclaration = (type: Type, name: string) => {
     if (!type) debug();
     switch (type.name) {
         case 'Function':
-            return `unsigned char (*${name})(${join(Array(type.parameters.length).fill('unsigned char'), ', ')})`;
+            return `unsigned char (*${name})(${join(Array(type.arguments.length).fill('unsigned char'), ', ')})`;
         case 'Integer':
             return `uint8_t ${name}`;
         case 'String':
