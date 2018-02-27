@@ -283,7 +283,7 @@ export const typeOfExpression = (
 ): Type | TypeError[] => {
     switch (ast.kind) {
         case 'number':
-            return { name: 'Integer' };
+            return { name: 'Integer', arguments: [] };
         case 'addition':
         case 'product':
         case 'subtraction': {
@@ -299,7 +299,7 @@ export const typeOfExpression = (
             if (!typesAreEqual(rightType, { name: 'Integer' })) {
                 return [`Right hand side of ${ast.kind} was not integer`];
             }
-            return { name: 'Integer' };
+            return { name: 'Integer', arguments: [] };
         }
         case 'equality': {
             const leftType = typeOfExpression(ast.lhs, variablesInScope);
@@ -315,7 +315,7 @@ export const typeOfExpression = (
                     } (lhs) with a ${(rightType as Type).name} (rhs)`,
                 ];
             }
-            return { name: 'Boolean' };
+            return { name: 'Boolean', arguments: [] };
         }
         case 'concatenation': {
             const leftType = typeOfExpression(ast.lhs, variablesInScope);
@@ -327,10 +327,10 @@ export const typeOfExpression = (
             if ((leftType as Type).name !== 'String' || (rightType as Type).name !== 'String') {
                 return ['Only strings can be concatenated right now'];
             }
-            return { name: 'String' };
+            return { name: 'String', arguments: [] };
         }
         case 'functionLiteral':
-            return { name: 'Function', parameters: ast.parameters };
+            return { name: 'Function', arguments: ast.parameters.map(p => p.type) };
         case 'callExpression': {
             const argTypes: (Type | TypeError[])[] = ast.arguments.map(argument =>
                 typeOfExpression(argument, variablesInScope)
@@ -349,23 +349,23 @@ export const typeOfExpression = (
             if (declaration.type.name !== 'Function') {
                 return [`You tried to call ${functionName}, but it's not a function (it's a ${declaration.type})`];
             }
-            if (argTypes.length !== declaration.type.parameters.length) {
+            if (argTypes.length !== declaration.type.arguments.length) {
                 return [
                     `You tried to call ${functionName} with ${argTypes.length} arguments when it needs ${
-                        declaration.type.parameters.length
+                        declaration.type.arguments.length
                     }`,
                 ];
             }
             for (let i = 0; i < argTypes.length; i++) {
-                if (!typesAreEqual(argTypes[i], declaration.type.parameters[i].type)) {
+                if (!typesAreEqual(argTypes[i], declaration.type.arguments[i])) {
                     return [
                         `You passed a ${(argTypes[i] as Type).name} as an argument to ${functionName}. It expects a ${
-                            declaration.type.parameters[i].type.name
+                            declaration.type.arguments[i].type.name
                         }`,
                     ];
                 }
             }
-            return { name: 'Integer' };
+            return { name: 'Integer', arguments: [] };
         }
         case 'identifier': {
             const declaration = variablesInScope.find(({ name }) => ast.value == name);
@@ -663,6 +663,17 @@ const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
     }
 };
 
+const parseType = (ast: MplAst): Type => {
+    switch (ast.type) {
+        case 'typeWithArgs':
+            return {
+                name: (ast.children[0] as any).value,
+            };
+        default:
+            throw debug();
+    }
+};
+
 let functionId = 0;
 const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
     if (!ast) debug();
@@ -745,7 +756,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
             return {
                 kind: 'typedAssignment',
                 destination: (ast.children[0] as any).value as any,
-                type: { name: (ast.children[2] as any).value as any },
+                type: parseType(ast.children[2]),
                 expression: astFromParseResult(ast.children[4]),
             };
         case 'stringLiteral':
@@ -825,6 +836,8 @@ const compile = (source: string): FrontendOutput => {
     if (Array.isArray(parseResult)) {
         return { parseErrors: parseResult };
     }
+
+    debugger;
 
     const ast = astFromParseResult(parseResult);
 

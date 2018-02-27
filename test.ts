@@ -632,9 +632,45 @@ test('assign wrong type', compileAndRun, {
 });
 
 // Needs function types with args in syntax
-test.failing('assign function to typed var', compileAndRun, {
-    source: 'myFunc: Function = a: Integer => a; return myFunc(37);',
+test.only('assign function to typed var', compileAndRun, {
+    source: 'myFunc: Function<Integer -> Integer> = a: Integer => a; return myFunc(37);',
     expectedExitCode: 37,
+});
+
+test('assign function with multiple args to typed var', compileAndRun, {
+    source: `
+myFunc: Function<Integer, String -> Integer> = (a: Integer, b: String) => a + length(b);
+return myFunc(4 + "four");`,
+    expectedExitCode: 8,
+});
+
+test('assign function with no args to typed var', compileAndRun, {
+    source: `
+myFunc: Function<() -> Integer> = () => 111;
+return myFunc();`,
+    expectedExitCode: 111,
+});
+
+test('assign function to wrong args number', compileAndRun, {
+    source: `
+myFunc: Function<Integer -> Integer> = () => 111;
+return myFunc();`,
+    expectedTypeErrors: [],
+});
+
+test('assign function to wrong args type', compileAndRun, {
+    source: `
+myFunc: Function<Integer -> Integer> = (a: String) => 111;
+return myFunc("");`,
+    expectedTypeErrors: [],
+});
+
+// Need return types
+test.failing('assign function to wrong return type', compileAndRun, {
+    source: `
+myFunc: Function<Integer -> Boolean> = (a: String) => 111;
+return myFunc("");`,
+    expectedTypeErrors: [],
 });
 
 test('return local integer', compileAndRun, {

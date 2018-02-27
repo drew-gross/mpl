@@ -16,9 +16,10 @@ export type MplToken =
     | 'booleanLiteral'
     | 'stringLiteral'
     | 'identifier'
-    | 'type'
+    | 'typeIdentifier'
     | 'statementSeparator'
     | 'fatArrow'
+    | 'thinArrow'
     | 'equality'
     | 'assignment'
     | 'number'
@@ -34,6 +35,8 @@ export type MplToken =
     | 'ternaryOperator'
     | 'endOfFile'
     | 'concatenation'
+    | 'lessThan'
+    | 'greaterThan'
     | 'invalid';
 
 const plus = terminal<MplAstNode, MplToken>('sum');
@@ -45,11 +48,12 @@ const int = terminal<MplAstNode, MplToken>('number');
 const identifier = terminal<MplAstNode, MplToken>('identifier');
 const colon = terminal<MplAstNode, MplToken>('colon');
 const ternaryOperator = terminal<MplAstNode, MplToken>('ternaryOperator');
-const type = terminal<MplAstNode, MplToken>('type');
+const typeIdentifier = terminal<MplAstNode, MplToken>('typeIdentifier');
 const assignment = terminal<MplAstNode, MplToken>('assignment');
 const _return = terminal<MplAstNode, MplToken>('return');
 const statementSeparator = terminal<MplAstNode, MplToken>('statementSeparator');
 const fatArrow = terminal<MplAstNode, MplToken>('fatArrow');
+const thinArrow = terminal<MplAstNode, MplToken>('thinArrow');
 const leftCurlyBrace = terminal<MplAstNode, MplToken>('leftCurlyBrace');
 const rightCurlyBrace = terminal<MplAstNode, MplToken>('rightCurlyBrace');
 const comma = terminal<MplAstNode, MplToken>('comma');
@@ -57,6 +61,8 @@ const concatenation = terminal<MplAstNode, MplToken>('concatenation');
 const equality = terminal<MplAstNode, MplToken>('equality');
 const boolean = terminal<MplAstNode, MplToken>('booleanLiteral');
 const stringLiteral = terminal<MplAstNode, MplToken>('stringLiteral');
+const lessThan = terminal<MplAstNode, MplToken>('lessThan');
+const greaterThan = terminal<MplAstNode, MplToken>('greaterThan');
 
 export const tokenSpecs: TokenSpec<MplToken>[] = [
     {
@@ -93,7 +99,7 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
     },
     {
         token: '[A-Z][a-z]*',
-        type: 'type',
+        type: 'typeIdentifier',
         action: x => x,
         toString: x => x,
     },
@@ -106,6 +112,11 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
         token: '=>',
         type: 'fatArrow',
         toString: _ => '=>',
+    },
+    {
+        token: '->',
+        type: 'thinArrow',
+        toString: _ => '->',
     },
     {
         token: '==',
@@ -174,6 +185,16 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
         toString: _ => '?',
     },
     {
+        token: '<',
+        type: 'lessThan',
+        toString: _ => '<',
+    },
+    {
+        token: '>',
+        type: 'greaterThan',
+        toString: _ => '>',
+    },
+    {
         token: '.*',
         type: 'invalid',
         action: x => x,
@@ -202,6 +223,8 @@ export type MplAstNode =
     // TOOD: unify these.
     | 'callExpression'
     | 'callExpressionNoArgs'
+    | 'typeWithArgs'
+    | 'typeWithoutArgs'
     | 'paramList';
 
 export type MplAst = Ast<MplAstNode, MplToken>;
@@ -221,15 +244,19 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         { n: 'bracketedArgList', p: [leftBracket, 'argList', rightBracket] },
     ],
     argList: [{ n: 'argList', p: ['arg', comma, 'argList'] }, 'bracketedArgList', 'arg'],
-    arg: { n: 'arg', p: [identifier, colon, type] },
+    arg: { n: 'arg', p: [identifier, colon, 'type'] },
     functionBody: [
         { n: 'statement', p: ['statement', statementSeparator, 'functionBody'] },
         { n: 'returnStatement', p: [_return, 'expression', statementSeparator] },
         { n: 'returnStatement', p: [_return, 'expression'] },
     ],
     statement: [
-        { n: 'typedAssignment', p: [identifier, colon, type, assignment, 'expression'] },
+        { n: 'typedAssignment', p: [identifier, colon, 'type', assignment, 'expression'] },
         { n: 'assignment', p: [identifier, assignment, 'expression'] },
+    ],
+    type: [
+        { n: 'typeWithArgs', p: [typeIdentifier, lessThan, 'type', thinArrow, 'type', greaterThan] },
+        { n: 'typeWithoutArgs', p: [typeIdentifier] },
     ],
     expression: ['ternary'],
     ternary: [{ n: 'ternary', p: ['addition', ternaryOperator, 'addition', colon, 'addition'] }, 'addition'],
