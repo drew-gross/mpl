@@ -349,18 +349,17 @@ export const typeOfExpression = (
             if (declaration.type.name !== 'Function') {
                 return [`You tried to call ${functionName}, but it's not a function (it's a ${declaration.type})`];
             }
-            if (argTypes.length !== declaration.type.arguments.length) {
+            if (argTypes.length !== declaration.type.arguments.length - 1) {
                 return [
-                    `You tried to call ${functionName} with ${argTypes.length} arguments when it needs ${
-                        declaration.type.arguments.length
-                    }`,
+                    `You tried to call ${functionName} with ${argTypes.length} arguments when it needs ${declaration
+                        .type.arguments.length - 1}`,
                 ];
             }
             for (let i = 0; i < argTypes.length; i++) {
                 if (!typesAreEqual(argTypes[i], declaration.type.arguments[i])) {
                     return [
                         `You passed a ${(argTypes[i] as Type).name} as an argument to ${functionName}. It expects a ${
-                            declaration.type.arguments[i].type.name
+                            declaration.type.arguments[i].name
                         }`,
                     ];
                 }
@@ -399,9 +398,9 @@ export const typeOfExpression = (
             return trueBranchType;
         }
         case 'booleanLiteral':
-            return { name: 'Boolean' };
+            return { name: 'Boolean', arguments: [] };
         case 'stringLiteral':
-            return { name: 'String' };
+            return { name: 'String', arguments: [] };
         default:
             throw debug();
     }
@@ -471,7 +470,7 @@ export const builtins: VariableDeclaration[] = [
         name: 'length',
         type: {
             name: 'Function',
-            parameters: [{ type: { name: 'String' } }],
+            arguments: [{ name: 'String', arguments: [] }],
         },
         memoryCategory: 'FAKE' as any,
     },
@@ -479,7 +478,7 @@ export const builtins: VariableDeclaration[] = [
         name: 'print',
         type: {
             name: 'Function',
-            parameters: [{ type: { name: 'String' } }],
+            arguments: [{ name: 'String', arguments: [] }],
         },
         memoryCategory: 'FAKE' as any,
     },
@@ -511,7 +510,7 @@ const typeCheckFunction = (f: UninferredFunction, variablesInScope: VariableDecl
 const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaration[] =>
     functions.map(({ name, parameters }) => ({
         name: name,
-        type: { name: 'Function' as 'Function', parameters },
+        type: { name: 'Function' as 'Function', arguments: parameters.map(p => p.type) },
         memoryCategory: 'FAKE' as any,
     }));
 
@@ -641,15 +640,17 @@ const extractArgumentList = (ast: MplAst): MplAst[] => {
 
 const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
     if (ast.type == 'arg') {
-        return [
-            {
-                name: (ast.children[0] as AstLeaf<MplToken>).value as string,
-                type: {
-                    name: (ast.children[2] as AstLeaf<MplToken>).value as 'String' | 'Integer' | 'Boolean',
+        if (ast.children[2].type == 'typeWithoutArgs') {
+            return [
+                {
+                    name: (ast.children[0] as AstLeaf<MplToken>).value as string,
+                    type: parseType(ast.children[2]),
+                    memoryCategory: 'FAKE MemoryCategory' as any,
                 },
-                memoryCategory: 'FAKE MemoryCategory' as any,
-            },
-        ];
+            ];
+        } else {
+            throw debug();
+        }
     } else if (ast.type == 'argList') {
         return [...extractParameterList(ast.children[0]), ...extractParameterList(ast.children[2])];
     } else if (ast.type == 'bracketedArgList') {
@@ -668,6 +669,12 @@ const parseType = (ast: MplAst): Type => {
         case 'typeWithArgs':
             return {
                 name: (ast.children[0] as any).value,
+                arguments: [parseType(ast.children[2]), parseType(ast.children[4])],
+            };
+        case 'typeWithoutArgs':
+            return {
+                name: (ast.children[0] as any).value,
+                arguments: [],
             };
         default:
             throw debug();
@@ -836,8 +843,6 @@ const compile = (source: string): FrontendOutput => {
     if (Array.isArray(parseResult)) {
         return { parseErrors: parseResult };
     }
-
-    debugger;
 
     const ast = astFromParseResult(parseResult);
 
