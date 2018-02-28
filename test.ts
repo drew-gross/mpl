@@ -655,8 +655,8 @@ test('assign wrong type', compileAndRun, {
     expectedTypeErrors: ['You tried to assign a Boolean to "myInt", which has type Integer'],
 });
 
-test.only('assign function to typed var', compileAndRun, {
-    source: 'myFunc: Function<Integer -> Integer> = a: Integer => a; return myFunc(37);',
+test('assign function to typed var', compileAndRun, {
+    source: 'myFunc: Function<Integer, Integer> = a: Integer => a; return myFunc(37);',
     expectedExitCode: 37,
 });
 
@@ -666,12 +666,11 @@ test.failing('assign function with multiple args to typed var', compileAndRun, {
 myFunc: Function<Integer, String, Integer> = (a: Integer, b: String) => a + length(b);
 return myFunc(4, "four");`,
     expectedExitCode: 8,
-    printSubsteps: 'c',
 });
 
 test('assign function with no args to typed var', compileAndRun, {
     source: `
-myFunc: Function<() -> Integer> = () => 111;
+myFunc: Function<Integer> = () => 111;
 return myFunc();`,
     expectedExitCode: 111,
 });

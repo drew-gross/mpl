@@ -2,6 +2,7 @@ import * as Ast from '../ast.js';
 import { file as tmpFile } from 'tmp-promise';
 import { VariableDeclaration, Type, BackendInputs, Function, ExecutionResult } from '../api.js';
 import flatten from '../util/list/flatten.js';
+import last from '../util/list/last.js';
 import { exec } from 'child-process-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import debug from '../util/debug.js';
@@ -9,19 +10,26 @@ import join from '../util/join.js';
 import { CompiledProgram, CompiledExpression, compileExpression } from '../backend-utils.js';
 import { errors } from '../runtime-strings.js';
 
-const mplTypeToCDeclaration = (type: Type, name: string) => {
-    if (!type) debug();
+const mplTypeToCType = (type: Type): ((name: string) => string) => {
     switch (type.name) {
-        case 'Function':
-            return `unsigned char (*${name})(${join(Array(type.arguments.length).fill('unsigned char'), ', ')})`;
         case 'Integer':
-            return `uint8_t ${name}`;
+            return name => `uint8_t ${name}`;
         case 'String':
-            return `char *${name}`;
+            return name => `char *${name}`;
+        case 'Function':
+            const returnType = mplTypeToCType(last(type.arguments) as Type)('');
+            const argumentTypes = type.arguments
+                .slice(0, type.arguments.length - 1)
+                .map(mplTypeToCType)
+                .map(f => f(''));
+            const argumentsString = join(argumentTypes, ', ');
+            return name => `${returnType} (*${name})(${argumentsString})`;
         default:
             throw debug();
     }
 };
+
+const mplTypeToCDeclaration = (type: Type, name: string): string => mplTypeToCType(type)(name);
 
 type BackendInput = {
     ast: Ast.Ast;
