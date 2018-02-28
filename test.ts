@@ -677,24 +677,30 @@ return myFunc();`,
 
 test('assign function to wrong args number', compileAndRun, {
     source: `
-myFunc: Function<Integer -> Integer> = () => 111;
+myFunc: Function<Integer, Integer> = () => 111;
 return myFunc();`,
-    expectedTypeErrors: [],
+    expectedTypeErrors: [
+        'You tried to assign a Function<Integer> to "myFunc", which has type Function<Integer, Integer>',
+    ],
 });
 
 test('assign function to wrong args type', compileAndRun, {
     source: `
-myFunc: Function<Integer -> Integer> = (a: String) => 111;
+myFunc: Function<Integer, Integer> = (a: String) => 111;
 return myFunc("");`,
-    expectedTypeErrors: [],
+    expectedTypeErrors: [
+        'You tried to assign a Function<String, Integer> to "myFunc", which has type Function<Integer, Integer>',
+    ],
 });
 
 // Need return types
-test.failing('assign function to wrong return type', compileAndRun, {
+test('assign function to wrong return type', compileAndRun, {
     source: `
-myFunc: Function<Integer -> Boolean> = (a: String) => 111;
+myFunc: Function<Integer, Boolean> = (a: String) => 111;
 return myFunc("");`,
-    expectedTypeErrors: [],
+    expectedTypeErrors: [
+        'You tried to assign a Function<String, Integer> to "myFunc", which has type Function<Integer, Boolean>',
+    ],
 });
 
 test('return local integer', compileAndRun, {

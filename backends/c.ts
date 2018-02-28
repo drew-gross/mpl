@@ -14,6 +14,8 @@ const mplTypeToCType = (type: Type): ((name: string) => string) => {
     switch (type.name) {
         case 'Integer':
             return name => `uint8_t ${name}`;
+        case 'Boolean':
+            return name => `bool ${name}`;
         case 'String':
             return name => `char *${name}`;
         case 'Function':
@@ -278,8 +280,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             globalDeclarations,
             stringLiterals,
             buildSignature: (name, parameters) => {
-                const parameterNames = parameters.map(parameter => parameter.name);
-                const parameterDeclarations = parameterNames.map(name => `unsigned char ${name}`);
+                const parameterDeclarations = parameters.map(p => mplTypeToCDeclaration(p.type, p.name));
                 return `unsigned char ${name}(${join(parameterDeclarations, ', ')})`;
             },
             returnType: { name: 'Integer' }, // Can currently only return integer

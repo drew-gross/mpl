@@ -1,6 +1,7 @@
 import flatten from './util/list/flatten.js';
 import unique from './util/list/unique.js';
 import sum from './util/list/sum.js';
+import join from './util/join.js';
 import last from './util/list/last.js';
 import debug from './util/debug.js';
 import { lex, Token } from './lex.js';
@@ -264,7 +265,16 @@ const countTemporariesInExpression = (ast: Ast.UninferredAst) => {
     }
 };
 
-const typesAreEqual = (a, b) => a.name == b.name;
+const typesAreEqual = (a: Type, b: Type): boolean => {
+    if (a.name != b.name) return false;
+    if (a.arguments.length != b.arguments.length) return false;
+    for (let i = 0; i < a.arguments.length; i++) {
+        if (!typesAreEqual(a.arguments[i], b.arguments[i])) {
+            return false;
+        }
+    }
+    return true;
+};
 
 const isTypeError = (val: Type | TypeError[]): val is TypeError[] => Array.isArray(val);
 
@@ -294,10 +304,10 @@ export const typeOfExpression = (
             if (combinedErrors) {
                 return combinedErrors;
             }
-            if (!typesAreEqual(leftType, builtinTypes.Integer)) {
+            if (!typesAreEqual(leftType as Type, builtinTypes.Integer)) {
                 return [`Left hand side of ${ast.kind} was not integer`];
             }
-            if (!typesAreEqual(rightType, builtinTypes.Integer)) {
+            if (!typesAreEqual(rightType as Type, builtinTypes.Integer)) {
                 debugger;
                 return [`Right hand side of ${ast.kind} was not integer`];
             }
@@ -310,7 +320,7 @@ export const typeOfExpression = (
             if (combinedErrors) {
                 return combinedErrors;
             }
-            if (!typesAreEqual(leftType, rightType)) {
+            if (!typesAreEqual(leftType as Type, rightType as Type)) {
                 return [
                     `Equality comparisons must compare values of the same type.. You tried to compare a ${
                         (leftType as Type).name
@@ -365,7 +375,7 @@ export const typeOfExpression = (
                 ];
             }
             for (let i = 0; i < argTypes.length; i++) {
-                if (!typesAreEqual(argTypes[i], functionType.arguments[i])) {
+                if (!typesAreEqual(argTypes[i] as Type, functionType.arguments[i])) {
                     return [
                         `You passed a ${(argTypes[i] as Type).name} as an argument to ${functionName}. It expects a ${
                             functionType.arguments[i].name
@@ -390,14 +400,14 @@ export const typeOfExpression = (
             if (combinedErrors) {
                 return combinedErrors;
             }
-            if (!typesAreEqual(conditionType, builtinTypes.Boolean)) {
+            if (!typesAreEqual(conditionType as Type, builtinTypes.Boolean)) {
                 return [
                     `You tried to use a ${
                         (conditionType as any).name
                     } as the condition in a ternary. Boolean is required`,
                 ];
             }
-            if (!typesAreEqual(trueBranchType, falseBranchType)) {
+            if (!typesAreEqual(trueBranchType as Type, falseBranchType as Type)) {
                 return [
                     `Type mismatch in branches of ternary. True branch had ${
                         (trueBranchType as any).name
@@ -413,6 +423,11 @@ export const typeOfExpression = (
         default:
             throw debug();
     }
+};
+
+const typeToString = (type: Type): string => {
+    if (type.arguments.length == 0) return type.name;
+    return type.name + '<' + join(type.arguments.map(typeToString), ', ') + '>';
 };
 
 const typeCheckStatement = (
@@ -447,25 +462,24 @@ const typeCheckStatement = (
         }
         case 'typedAssignment': {
             // Check that type of var being assigned to matches type being assigned
-            const rightType = typeOfExpression(ast.expression, variablesInScope);
-            if (!(ast as any).type) throw debug();
-            const leftType = (ast as any).type;
-            if (isTypeError(rightType)) {
-                return { errors: rightType, newVariables: [] };
+            const expressionType = typeOfExpression(ast.expression, variablesInScope);
+            const destinationType = ast.type;
+            if (isTypeError(expressionType)) {
+                return { errors: expressionType, newVariables: [] };
             }
-            if (!typesAreEqual(rightType, leftType)) {
+            if (!typesAreEqual(expressionType, destinationType)) {
                 return {
                     errors: [
-                        `You tried to assign a ${rightType.name} to "${ast.destination}", which has type ${
-                            leftType.name
-                        }`,
+                        `You tried to assign a ${typeToString(expressionType)} to "${
+                            ast.destination
+                        }", which has type ${typeToString(destinationType)}`,
                     ],
                     newVariables: [],
                 };
             }
             return {
                 errors: [],
-                newVariables: [{ name: ast.destination, type: leftType, memoryCategory: 'FAKE' as any }],
+                newVariables: [{ name: ast.destination, type: destinationType, memoryCategory: 'FAKE' as any }],
             };
         }
         default:
