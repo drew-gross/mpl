@@ -1,9 +1,9 @@
 import test from 'ava';
 
 import { lex } from './lex.js';
-import { parseMpl, compile, typeCheckStatement } from './frontend.js';
+import { parseMpl, compile, typeCheckStatement, astFromParseResult, typeOfExpression } from './frontend.js';
 import { compileAndRun } from './test-utils.js';
-import { grammar, tokenSpecs } from './grammar.js';
+import { grammar, tokenSpecs, MplParseResult, MplAst } from './grammar.js';
 import { stripResultIndexes, ParseResult, parse } from './parser-combinator.js';
 import { removeBracketsFromAst } from './frontend.js';
 
@@ -226,8 +226,13 @@ test('ast for assignment then return', t => {
                                                 value: null,
                                             },
                                             {
-                                                type: 'type',
-                                                value: 'Integer',
+                                                type: 'typeWithoutArgs',
+                                                children: [
+                                                    {
+                                                        type: 'typeIdentifier',
+                                                        value: 'Integer',
+                                                    },
+                                                ],
                                             },
                                         ],
                                     },
@@ -442,6 +447,25 @@ test('assign function and return', compileAndRun, {
     expectedExitCode: 10,
 });
 
+test('correct inferred type for function', t => {
+    const functionSource = 'a: Integer => 11';
+    const parseResult: MplParseResult = parse(grammar, 'function', lex(tokenSpecs, functionSource), 0);
+    const ast = astFromParseResult(parseResult as MplAst);
+    t.deepEqual(typeOfExpression(ast, []), {
+        name: 'Function',
+        arguments: [
+            {
+                name: 'Integer',
+                arguments: [],
+            },
+            {
+                name: 'Integer',
+                arguments: [],
+            },
+        ],
+    });
+});
+
 test('assign function and call it', compileAndRun, {
     source: 'takeItToEleven = a: Integer => 11; return takeItToEleven(0)',
     expectedExitCode: 11,
@@ -631,17 +655,18 @@ test('assign wrong type', compileAndRun, {
     expectedTypeErrors: ['You tried to assign a Boolean to "myInt", which has type Integer'],
 });
 
-// Needs function types with args in syntax
-test.only('assign function to typed var', compileAndRun, {
+test('assign function to typed var', compileAndRun, {
     source: 'myFunc: Function<Integer -> Integer> = a: Integer => a; return myFunc(37);',
     expectedExitCode: 37,
 });
 
-test('assign function with multiple args to typed var', compileAndRun, {
+// TODO: string arguments (don't free your arguments! c needs right type!)
+test.failing('assign function with multiple args to typed var', compileAndRun, {
     source: `
-myFunc: Function<Integer, String -> Integer> = (a: Integer, b: String) => a + length(b);
-return myFunc(4 + "four");`,
+myFunc: Function<Integer, String, Integer> = (a: Integer, b: String) => a + length(b);
+return myFunc(4, "four");`,
     expectedExitCode: 8,
+    printSubsteps: 'c',
 });
 
 test('assign function with no args to typed var', compileAndRun, {

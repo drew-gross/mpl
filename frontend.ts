@@ -1,6 +1,7 @@
 import flatten from './util/list/flatten.js';
 import unique from './util/list/unique.js';
 import sum from './util/list/sum.js';
+import last from './util/list/last.js';
 import debug from './util/debug.js';
 import { lex, Token } from './lex.js';
 import { tokenSpecs, grammar, MplAst, MplParseResult, MplToken } from './grammar.js';
@@ -297,6 +298,7 @@ export const typeOfExpression = (
                 return [`Left hand side of ${ast.kind} was not integer`];
             }
             if (!typesAreEqual(rightType, { name: 'Integer' })) {
+                debugger;
                 return [`Right hand side of ${ast.kind} was not integer`];
             }
             return { name: 'Integer', arguments: [] };
@@ -330,7 +332,10 @@ export const typeOfExpression = (
             return { name: 'String', arguments: [] };
         }
         case 'functionLiteral':
-            return { name: 'Function', arguments: ast.parameters.map(p => p.type) };
+            return {
+                name: 'Function',
+                arguments: [...ast.parameters.map(p => p.type), { name: 'Integer', arguments: [] }],
+            };
         case 'callExpression': {
             const argTypes: (Type | TypeError[])[] = ast.arguments.map(argument =>
                 typeOfExpression(argument, variablesInScope)
@@ -341,25 +346,29 @@ export const typeOfExpression = (
                     argTypeErrors.push(...argType);
                 }
             });
+            if (argTypeErrors.length > 0) {
+                return argTypeErrors;
+            }
             const functionName = ast.name;
             const declaration = variablesInScope.find(({ name }) => functionName == name);
             if (!declaration) {
                 return [`Unknown identifier: ${functionName}`];
             }
-            if (declaration.type.name !== 'Function') {
-                return [`You tried to call ${functionName}, but it's not a function (it's a ${declaration.type})`];
+            const functionType = declaration.type;
+            if (functionType.name !== 'Function') {
+                return [`You tried to call ${functionName}, but it's not a function (it's a ${functionType})`];
             }
-            if (argTypes.length !== declaration.type.arguments.length - 1) {
+            if (argTypes.length !== functionType.arguments.length - 1) {
                 return [
                     `You tried to call ${functionName} with ${argTypes.length} arguments when it needs ${declaration
                         .type.arguments.length - 1}`,
                 ];
             }
             for (let i = 0; i < argTypes.length; i++) {
-                if (!typesAreEqual(argTypes[i], declaration.type.arguments[i])) {
+                if (!typesAreEqual(argTypes[i], functionType.arguments[i])) {
                     return [
                         `You passed a ${(argTypes[i] as Type).name} as an argument to ${functionName}. It expects a ${
-                            declaration.type.arguments[i].name
+                            functionType.arguments[i].name
                         }`,
                     ];
                 }
@@ -470,7 +479,7 @@ export const builtins: VariableDeclaration[] = [
         name: 'length',
         type: {
             name: 'Function',
-            arguments: [{ name: 'String', arguments: [] }],
+            arguments: [{ name: 'String', arguments: [] }, { name: 'Integer', arguments: [] }],
         },
         memoryCategory: 'FAKE' as any,
     },
@@ -478,7 +487,7 @@ export const builtins: VariableDeclaration[] = [
         name: 'print',
         type: {
             name: 'Function',
-            arguments: [{ name: 'String', arguments: [] }],
+            arguments: [{ name: 'String', arguments: [] }, { name: 'Integer', arguments: [] }],
         },
         memoryCategory: 'FAKE' as any,
     },
@@ -629,6 +638,7 @@ const extractFunctionBodyFromParseTree = node => {
     }
 };
 
+// TODO: Unify extractParameterList, extractArgumentList, extractTypeList
 const extractArgumentList = (ast: MplAst): MplAst[] => {
     switch (ast.type) {
         case 'paramList':
@@ -664,12 +674,21 @@ const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
     }
 };
 
+const extractTypeList = (ast: MplAst): Type[] => {
+    switch (ast.type) {
+        case 'typeList':
+            return [parseType(ast.children[0]), ...extractTypeList(ast.children[2])];
+        default:
+            return [parseType(ast)];
+    }
+};
+
 const parseType = (ast: MplAst): Type => {
     switch (ast.type) {
         case 'typeWithArgs':
             return {
                 name: (ast.children[0] as any).value,
-                arguments: [parseType(ast.children[2]), parseType(ast.children[4])],
+                arguments: extractTypeList(ast.children[2]),
             };
         case 'typeWithoutArgs':
             return {
@@ -900,4 +919,4 @@ const compile = (source: string): FrontendOutput => {
     } as BackendInputs;
 };
 
-export { parseMpl, lex, compile, removeBracketsFromAst, typeCheckStatement, parseErrorToString };
+export { parseMpl, lex, compile, removeBracketsFromAst, typeCheckStatement, parseErrorToString, astFromParseResult };

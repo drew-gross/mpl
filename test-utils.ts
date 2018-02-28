@@ -142,27 +142,25 @@ export const compileAndRun = async (
         t.fail(
             `Found parse errors when none expected: ${join(frontendOutput.parseErrors.map(parseErrorToString), ', ')}`
         );
+        return;
     } else if (expectedParseErrors) {
         t.fail('Expected parse errors and none found');
+        return;
     }
 
     if (expectedTypeErrors && 'typeErrors' in frontendOutput) {
-        t.deepEqual(expectedTypeErrors, (frontendOutput as { typeErrors: string[] }).typeErrors);
+        t.deepEqual(expectedTypeErrors, frontendOutput.typeErrors);
         return;
     } else if ('typeErrors' in frontendOutput) {
-        t.fail(
-            `Found type errors when none expected: ${(frontendOutput as {
-                typeErrors: string[];
-            }).typeErrors.join(', ')}`
-        );
+        t.fail(`Found type errors when none expected: ${frontendOutput.typeErrors.join(', ')}`);
+        return;
     } else if (expectedTypeErrors) {
         t.fail('Expected type errors and none found');
+        return;
     }
 
-    const fo = frontendOutput as BackendInputs;
-
     // Run valdations on frontend output (currently just detects values that don't match their type)
-    fo.functions.forEach(f => {
+    frontendOutput.functions.forEach(f => {
         f.variables.forEach(v => {
             if (!v.type.name) {
                 t.fail(`Invalid frontend output: ${v.name} (in ${f.name}) had a bad type!`);

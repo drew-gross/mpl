@@ -225,6 +225,7 @@ export type MplAstNode =
     | 'callExpressionNoArgs'
     | 'typeWithArgs'
     | 'typeWithoutArgs'
+    | 'typeList'
     | 'paramList';
 
 export type MplAst = Ast<MplAstNode, MplToken>;
@@ -254,8 +255,9 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         { n: 'typedAssignment', p: [identifier, colon, 'type', assignment, 'expression'] },
         { n: 'assignment', p: [identifier, assignment, 'expression'] },
     ],
+    typeList: [{ n: 'typeList', p: ['type', comma, 'typeList'] }, 'type'],
     type: [
-        { n: 'typeWithArgs', p: [typeIdentifier, lessThan, 'type', thinArrow, 'type', greaterThan] },
+        { n: 'typeWithArgs', p: [typeIdentifier, lessThan, 'typeList', greaterThan] },
         { n: 'typeWithoutArgs', p: [typeIdentifier] },
     ],
     expression: ['ternary'],
