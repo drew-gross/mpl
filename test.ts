@@ -655,7 +655,7 @@ test('assign wrong type', compileAndRun, {
     expectedTypeErrors: ['You tried to assign a Boolean to "myInt", which has type Integer'],
 });
 
-test('assign function to typed var', compileAndRun, {
+test.only('assign function to typed var', compileAndRun, {
     source: 'myFunc: Function<Integer -> Integer> = a: Integer => a; return myFunc(37);',
     expectedExitCode: 37,
 });

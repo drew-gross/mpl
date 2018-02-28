@@ -5,7 +5,7 @@ import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import { CompiledProgram, compileExpression } from '../backend-utils.js';
 import { errors } from '../runtime-strings.js';
-import { builtins } from '../frontend.js';
+import { builtinFunctions } from '../frontend.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 const argument1 = '$s0';
@@ -264,7 +264,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
             if (destination.type !== 'register') throw debug();
             const functionName = ast.name;
             let callInstructions: string[] = [];
-            if (builtins.map(b => b.name).includes(functionName)) {
+            if (builtinFunctions.map(b => b.name).includes(functionName)) {
                 callInstructions = [
                     `# Call runtime function`,
                     `la ${currentTemporary.destination}, ${functionName}`,

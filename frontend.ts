@@ -284,7 +284,7 @@ export const typeOfExpression = (
 ): Type | TypeError[] => {
     switch (ast.kind) {
         case 'number':
-            return { name: 'Integer', arguments: [] };
+            return builtinTypes.Integer;
         case 'addition':
         case 'product':
         case 'subtraction': {
@@ -294,14 +294,14 @@ export const typeOfExpression = (
             if (combinedErrors) {
                 return combinedErrors;
             }
-            if (!typesAreEqual(leftType, { name: 'Integer' })) {
+            if (!typesAreEqual(leftType, builtinTypes.Integer)) {
                 return [`Left hand side of ${ast.kind} was not integer`];
             }
-            if (!typesAreEqual(rightType, { name: 'Integer' })) {
+            if (!typesAreEqual(rightType, builtinTypes.Integer)) {
                 debugger;
                 return [`Right hand side of ${ast.kind} was not integer`];
             }
-            return { name: 'Integer', arguments: [] };
+            return builtinTypes.Integer;
         }
         case 'equality': {
             const leftType = typeOfExpression(ast.lhs, variablesInScope);
@@ -317,7 +317,7 @@ export const typeOfExpression = (
                     } (lhs) with a ${(rightType as Type).name} (rhs)`,
                 ];
             }
-            return { name: 'Boolean', arguments: [] };
+            return builtinTypes.Boolean;
         }
         case 'concatenation': {
             const leftType = typeOfExpression(ast.lhs, variablesInScope);
@@ -329,12 +329,12 @@ export const typeOfExpression = (
             if ((leftType as Type).name !== 'String' || (rightType as Type).name !== 'String') {
                 return ['Only strings can be concatenated right now'];
             }
-            return { name: 'String', arguments: [] };
+            return builtinTypes.String;
         }
         case 'functionLiteral':
             return {
                 name: 'Function',
-                arguments: [...ast.parameters.map(p => p.type), { name: 'Integer', arguments: [] }],
+                arguments: [...ast.parameters.map(p => p.type), builtinTypes.Integer],
             };
         case 'callExpression': {
             const argTypes: (Type | TypeError[])[] = ast.arguments.map(argument =>
@@ -373,7 +373,7 @@ export const typeOfExpression = (
                     ];
                 }
             }
-            return { name: 'Integer', arguments: [] };
+            return builtinTypes.Integer;
         }
         case 'identifier': {
             const declaration = variablesInScope.find(({ name }) => ast.value == name);
@@ -390,7 +390,7 @@ export const typeOfExpression = (
             if (combinedErrors) {
                 return combinedErrors;
             }
-            if (!typesAreEqual(conditionType, { name: 'Boolean' })) {
+            if (!typesAreEqual(conditionType, builtinTypes.Boolean)) {
                 return [
                     `You tried to use a ${
                         (conditionType as any).name
@@ -407,9 +407,9 @@ export const typeOfExpression = (
             return trueBranchType;
         }
         case 'booleanLiteral':
-            return { name: 'Boolean', arguments: [] };
+            return builtinTypes.Boolean;
         case 'stringLiteral':
-            return { name: 'String', arguments: [] };
+            return builtinTypes.String;
         default:
             throw debug();
     }
@@ -426,7 +426,7 @@ const typeCheckStatement = (
             if (isTypeError(result)) {
                 return { errors: result, newVariables: [] };
             }
-            if (!typesAreEqual(result, { name: 'Integer' })) {
+            if (!typesAreEqual(result, builtinTypes.Integer)) {
                 return {
                     errors: [`You tried to return a ${result.name}`],
                     newVariables: [],
@@ -473,13 +473,18 @@ const typeCheckStatement = (
     }
 };
 
+const builtinTypes: { [index: string]: Type } = {
+    String: { name: 'String', arguments: [] },
+    Integer: { name: 'Integer', arguments: [] },
+    Boolean: { name: 'Boolean', arguments: [] },
+};
 // TODO: Require these to be imported in user code
-export const builtins: VariableDeclaration[] = [
+export const builtinFunctions: VariableDeclaration[] = [
     {
         name: 'length',
         type: {
             name: 'Function',
-            arguments: [{ name: 'String', arguments: [] }, { name: 'Integer', arguments: [] }],
+            arguments: [builtinTypes.String, builtinTypes.Integer],
         },
         memoryCategory: 'FAKE' as any,
     },
@@ -487,7 +492,7 @@ export const builtins: VariableDeclaration[] = [
         name: 'print',
         type: {
             name: 'Function',
-            arguments: [{ name: 'String', arguments: [] }, { name: 'Integer', arguments: [] }],
+            arguments: [builtinTypes.String, builtinTypes.Integer],
         },
         memoryCategory: 'FAKE' as any,
     },
@@ -879,7 +884,7 @@ const compile = (source: string): FrontendOutput => {
     const functions = extractFunctions(ast);
     const stringLiterals = unique(extractStringLiterals(ast));
 
-    let variablesInScope = builtins;
+    let variablesInScope = builtinFunctions;
     variablesInScope = mergeDeclarations(variablesInScope, getFunctionTypeMap(functions));
     const programTypeCheck = typeCheckFunction(program, variablesInScope);
     variablesInScope = mergeDeclarations(variablesInScope, programTypeCheck.identifiers);
