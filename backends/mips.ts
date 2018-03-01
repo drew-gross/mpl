@@ -1,6 +1,6 @@
 import { exec } from 'child-process-promise';
 import flatten from '../util/list/flatten.js';
-import { VariableDeclaration, BackendInputs, ExecutionResult, Function } from '../api.js';
+import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import { CompiledProgram, compileExpression } from '../backend-utils.js';
@@ -147,7 +147,7 @@ type AstToMipsOptions = {
     destination: StorageSpec;
     currentTemporary: StorageSpec;
     globalDeclarations: VariableDeclaration[];
-    stringLiterals: any;
+    stringLiterals: StringLiteralData[];
 };
 
 const astToMips = (input: AstToMipsOptions): CompiledProgram => {
@@ -500,9 +500,11 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
             }
         }
         case 'stringLiteral': {
+            const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
+            if (!stringLiteralData) throw debug();
             return compileExpression([], ([]) => [
                 `# Load string literal address into register`,
-                loadAddressOfGlobal(destination as any, `string_constant_${ast.value}`),
+                loadAddressOfGlobal(destination as any, stringLiteralName(stringLiteralData)),
             ]);
         }
         case 'concatenation': {
@@ -926,6 +928,11 @@ const verifyNoLeaks = () => {
     jr $ra`;
 };
 
+const stringLiteralName = ({ id, value }: StringLiteralData) =>
+    `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
+const stringLiteralDeclaration = (literal: StringLiteralData) =>
+    `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
+
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f => constructMipsFunction(f, globalDeclarations, stringLiterals));
     const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);
@@ -965,7 +972,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
     return `
 .data
 ${globalDeclarations.map(name => `${name.name}: .word 0`).join('\n')}
-${stringLiterals.map(text => `string_constant_${text}: .asciiz "${text}"`).join('\n')}
+${stringLiterals.map(stringLiteralDeclaration).join('\n')}
 ${Object.keys(errors)
         .map(key => `${errors[key].name}: .asciiz "${errors[key].value}"`)
         .join('\n')}

@@ -1,6 +1,6 @@
 import * as Ast from '../ast.js';
 import { file as tmpFile } from 'tmp-promise';
-import { VariableDeclaration, Type, BackendInputs, Function, ExecutionResult } from '../api.js';
+import { VariableDeclaration, Type, BackendInputs, Function, ExecutionResult, StringLiteralData } from '../api.js';
 import flatten from '../util/list/flatten.js';
 import last from '../util/list/last.js';
 import { exec } from 'child-process-promise';
@@ -37,7 +37,7 @@ type BackendInput = {
     ast: Ast.Ast;
     globalDeclarations: VariableDeclaration[];
     localDeclarations: VariableDeclaration[];
-    stringLiterals: string[];
+    stringLiterals: StringLiteralData[];
 };
 
 type CompiledAssignment = {
@@ -193,14 +193,19 @@ const astToC = (input: BackendInput): CompiledProgram => {
         case 'booleanLiteral':
             return compileExpression([], ([]) => [ast.value ? '1' : '0']);
         case 'stringLiteral':
-            return compileExpression([], ([]) => [`string_literal_${ast.value}`]);
+            const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
+            if (!stringLiteralData) throw debug();
+            return compileExpression([], ([]) => [stringLiteralName(stringLiteralData)]);
         default:
             debug();
     }
     return debug();
 };
 
-const stringLiteralDeclaration = stringLiteral => `char *string_literal_${stringLiteral} = "${stringLiteral}";`;
+const stringLiteralName = ({ id, value }: StringLiteralData) =>
+    `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
+const stringLiteralDeclaration = (literal: StringLiteralData) =>
+    `char *${stringLiteralName(literal)} = "${literal.value}";`;
 
 type SignatureBuilder = (name: String, parameters: VariableDeclaration[]) => string;
 
@@ -210,7 +215,7 @@ type MakeCFunctionBodyInputs = {
     statements: Ast.Statement[];
     variables: any;
     globalDeclarations: any;
-    stringLiterals: any;
+    stringLiterals: StringLiteralData[];
     buildSignature: SignatureBuilder;
     returnType: any;
     beforeExit?: string[];

@@ -26,11 +26,12 @@ export type Function = {
     parameters: VariableDeclaration[];
     temporaryCount: number;
 };
+export type StringLiteralData = { id: number; value: string };
 export type BackendInputs = {
     functions: Function[];
     program: Function;
     globalDeclarations: VariableDeclaration[];
-    stringLiterals;
+    stringLiterals: StringLiteralData[];
 };
 export type ExecutionResult =
     | {

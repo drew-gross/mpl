@@ -54,7 +54,7 @@ const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.Ast; exitInsteadOfRetu
     }
 };
 
-const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
+const toExectuable = ({ functions, program, globalDeclarations }: BackendInputs) => {
     let JSfunctions = functions.map(({ name, parameters, statements }) => {
         const prefix = `${name} = (${join(parameters.map(parameter => parameter.name), ', ')}) => {`;
         const suffix = `}`;

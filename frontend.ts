@@ -1,5 +1,6 @@
 import flatten from './util/list/flatten.js';
 import unique from './util/list/unique.js';
+import uniqueBy from './util/list/uniqueBy.js';
 import sum from './util/list/sum.js';
 import join from './util/join.js';
 import last from './util/list/last.js';
@@ -16,6 +17,7 @@ import {
     BackendInputs,
     ParseError,
     TypeError,
+    StringLiteralData,
 } from './api.js';
 import * as Ast from './ast.js';
 
@@ -169,7 +171,8 @@ const extractFunctions = (ast: Ast.UninferredAst, variablesInScope: VariableDecl
     }
 };
 
-const extractStringLiterals = (ast: Ast.UninferredAst): string[] => {
+let stringLiteralId = 0;
+const extractStringLiterals = (ast: Ast.UninferredAst): StringLiteralData[] => {
     switch (ast.kind) {
         case 'returnStatement':
         case 'typedAssignment':
@@ -196,7 +199,8 @@ const extractStringLiterals = (ast: Ast.UninferredAst): string[] => {
         case 'booleanLiteral':
             return [];
         case 'stringLiteral':
-            return [ast.value];
+            stringLiteralId++;
+            return [{ id: stringLiteralId, value: ast.value }];
         default:
             throw debug();
     }
@@ -877,6 +881,7 @@ const parseErrorToString = (e: ParseError): string => {
 };
 
 const compile = (source: string): FrontendOutput => {
+    stringLiteralId = 0; // Hacky, too much global state.
     const tokens = lex<MplToken>(tokenSpecs, source);
     const parseResult = parseMpl(tokens);
 
@@ -898,7 +903,7 @@ const compile = (source: string): FrontendOutput => {
     };
 
     const functions = extractFunctions(ast, builtinFunctions);
-    const stringLiterals = unique(extractStringLiterals(ast));
+    const stringLiterals: StringLiteralData[] = uniqueBy(s => s.value, extractStringLiterals(ast));
 
     let variablesInScope = builtinFunctions;
     variablesInScope = mergeDeclarations(variablesInScope, getFunctionTypeMap(functions));
@@ -934,10 +939,10 @@ const compile = (source: string): FrontendOutput => {
         program: {
             ...program,
             statements: typedProgramStatements,
-        },
+        } as Function,
         globalDeclarations,
         stringLiterals,
-    } as BackendInputs;
+    };
 };
 
 export { parseMpl, lex, compile, removeBracketsFromAst, typeCheckStatement, parseErrorToString, astFromParseResult };

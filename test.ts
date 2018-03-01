@@ -753,7 +753,7 @@ test('string length with type inferred', compileAndRun, {
     expectedExitCode: 5,
 });
 
-test('struture is equal for inferred string type', t => {
+test('structure is equal for inferred string type', t => {
     const inferredStructure = compile('myStr = "test"; return length(myStr);');
     const suppliedStructure = compile('myStr: String = "test"; return length(myStr);');
     t.deepEqual(inferredStructure, suppliedStructure);
@@ -913,7 +913,7 @@ return 1;`,
     expectedStdOut: 'sample_string',
 });
 
-test.failing('print string with space', compileAndRun, {
+test('print string with space', compileAndRun, {
     source: `
 dummy = print("sample string with space");
 return 1;`,
@@ -949,7 +949,7 @@ return lengthOfFoo(1);`,
     expectedExitCode: 3,
 });
 
-// Need to make builtins available in functions
+// Need to make strings with spaces and specials work
 test.failing('string args', compileAndRun, {
     source: `
 excitmentifier = (boring: String) => {
