@@ -109,26 +109,27 @@ const extractVariables = (
     }
 };
 
-const extractFunctions = (ast: Ast.UninferredAst): UninferredFunction[] => {
+const extractFunctions = (ast: Ast.UninferredAst, variablesInScope: VariableDeclaration[]): UninferredFunction[] => {
+    const recurse = ast => extractFunctions(ast, variablesInScope);
     switch (ast.kind) {
         case 'returnStatement':
         case 'typedAssignment':
         case 'assignment':
-            return extractFunctions(ast.expression);
+            return recurse(ast.expression);
         case 'product':
         case 'addition':
         case 'subtraction':
         case 'equality':
         case 'concatenation':
-            return extractFunctions(ast.lhs).concat(extractFunctions(ast.rhs));
+            return recurse(ast.lhs).concat(recurse(ast.rhs));
         case 'callExpression':
-            return flatten(ast.arguments.map(extractFunctions));
+            return flatten(ast.arguments.map(recurse));
         case 'ternary':
-            return extractFunctions(ast.condition)
-                .concat(extractFunctions(ast.ifTrue))
-                .concat(extractFunctions(ast.ifFalse));
+            return recurse(ast.condition)
+                .concat(recurse(ast.ifTrue))
+                .concat(recurse(ast.ifFalse));
         case 'program':
-            return flatten(ast.statements.map(extractFunctions));
+            return flatten(ast.statements.map(recurse));
         case 'functionLiteral':
             functionId++;
             const variables: VariableDeclaration[] = [...ast.parameters];
@@ -138,7 +139,9 @@ const extractFunctions = (ast: Ast.UninferredAst): UninferredFunction[] => {
                         break;
                     case 'assignment':
                     case 'typedAssignment':
-                        variables.push(...extractVariables(statement, variables, false));
+                        variables.push(
+                            ...extractVariables(statement, mergeDeclarations(variablesInScope, variables), false)
+                        );
                         break;
                     default:
                         throw debug();
@@ -154,7 +157,7 @@ const extractFunctions = (ast: Ast.UninferredAst): UninferredFunction[] => {
                         temporaryCount: Math.max(...ast.body.map(countTemporariesInExpression)),
                     },
                 ],
-                ...ast.body.map(extractFunctions),
+                ...ast.body.map(recurse),
             ]);
         case 'number':
         case 'identifier':
@@ -308,7 +311,6 @@ export const typeOfExpression = (
                 return [`Left hand side of ${ast.kind} was not integer`];
             }
             if (!typesAreEqual(rightType as Type, builtinTypes.Integer)) {
-                debugger;
                 return [`Right hand side of ${ast.kind} was not integer`];
             }
             return builtinTypes.Integer;
@@ -895,7 +897,7 @@ const compile = (source: string): FrontendOutput => {
         temporaryCount: Math.max(...ast.statements.map(countTemporariesInExpression)),
     };
 
-    const functions = extractFunctions(ast);
+    const functions = extractFunctions(ast, builtinFunctions);
     const stringLiterals = unique(extractStringLiterals(ast));
 
     let variablesInScope = builtinFunctions;

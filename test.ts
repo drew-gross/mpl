@@ -938,3 +938,25 @@ return 1;`,
     // Fails mips because of the silly way we extract exit codes.
     failing: ['mips'],
 });
+
+test('assign result of call to builtin to local in function', compileAndRun, {
+    source: `
+lengthOfFoo = (dummy: Integer) => {
+    dumme = length("foo");
+    return dumme;
+};
+return lengthOfFoo(1);`,
+    expectedExitCode: 3,
+});
+
+// Need to make builtins available in functions
+test.failing('string args', compileAndRun, {
+    source: `
+excitmentifier = (boring: String) => {
+    dummy = print(boring ++ "!");
+    return 11;
+};
+return excitmentifier("Hello World");`,
+    expectedStdOut: 'Hello World!',
+    expectedExitCode: 11,
+});
