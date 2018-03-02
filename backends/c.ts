@@ -134,9 +134,8 @@ const astToC = (input: BackendInput): CompiledProgram => {
                     case 'Integer':
                         return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
                     case 'String':
-                        switch (declaration.memoryCategory) {
-                            case 'Stack':
-                            case 'Dynamic': {
+                        switch (declaration.location) {
+                            case 'Stack': {
                                 const rhsWillAlloc = compileExpression([rhs], ([e1]) => [
                                     'string_copy(',
                                     ...e1,
@@ -146,7 +145,8 @@ const astToC = (input: BackendInput): CompiledProgram => {
                                 ]);
                                 return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhsWillAlloc);
                             }
-                            case 'GlobalStatic':
+                            case 'Parameter':
+                            case 'Global':
                                 return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
                             default:
                                 debug();
@@ -249,7 +249,7 @@ const makeCfunctionBody = ({
     });
     const frees = variables
         // TODO: Make a better memory model for dynamic/global frees.
-        .filter(s => s.memoryCategory !== 'GlobalStatic')
+        .filter(s => s.location === 'Stack')
         .filter(s => s.type.name == 'String')
         .map(s => `my_free(${s.name});`);
     const returnCode = astToC({

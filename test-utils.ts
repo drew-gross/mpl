@@ -180,7 +180,7 @@ export const compileAndRun = async (
     printStructure('Program:');
     printStructure('-> Globals:');
     structure.globalDeclarations.forEach(declaration => {
-        printStructure(`---> ${declaration.type.name} ${declaration.name} (${declaration.memoryCategory})`);
+        printStructure(`---> ${declaration.type.name} ${declaration.name} (${declaration.location})`);
     });
     printStructure('-> Statements:');
     structure.program.statements.forEach(statement => {

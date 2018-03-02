@@ -13,7 +13,6 @@ import {
     VariableDeclaration,
     Function,
     UninferredFunction,
-    MemoryCategory,
     BackendInputs,
     ParseError,
     TypeError,
@@ -100,7 +99,7 @@ const extractVariables = (
             return [
                 {
                     name: statement.destination,
-                    memoryCategory: isGlobal ? 'GlobalStatic' : 'Stack',
+                    location: isGlobal ? 'Global' : 'Stack',
                     type: typeOfExpression(statement.expression, variablesInScope) as Type,
                 },
             ];
@@ -463,7 +462,7 @@ const typeCheckStatement = (
             // Left type is inferred as right type
             return {
                 errors: [],
-                newVariables: [{ name: ast.destination, type: rightType, memoryCategory: 'FAKE' as any }],
+                newVariables: [{ name: ast.destination, type: rightType, location: 'FAKE' as any }],
             };
         }
         case 'typedAssignment': {
@@ -485,7 +484,7 @@ const typeCheckStatement = (
             }
             return {
                 errors: [],
-                newVariables: [{ name: ast.destination, type: destinationType, memoryCategory: 'FAKE' as any }],
+                newVariables: [{ name: ast.destination, type: destinationType, location: 'Stack' }],
             };
         }
         default:
@@ -506,7 +505,7 @@ export const builtinFunctions: VariableDeclaration[] = [
             name: 'Function',
             arguments: [builtinTypes.String, builtinTypes.Integer],
         },
-        memoryCategory: 'FAKE' as any,
+        location: 'Global',
     },
     {
         name: 'print',
@@ -514,7 +513,7 @@ export const builtinFunctions: VariableDeclaration[] = [
             name: 'Function',
             arguments: [builtinTypes.String, builtinTypes.Integer],
         },
-        memoryCategory: 'FAKE' as any,
+        location: 'Global',
     },
 ];
 
@@ -545,7 +544,7 @@ const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaratio
     functions.map(({ name, parameters }) => ({
         name: name,
         type: { name: 'Function' as 'Function', arguments: parameters.map(p => p.type) },
-        memoryCategory: 'FAKE' as any,
+        location: 'Unknown' as any,
     }));
 
 const assignmentToDeclaration = (
@@ -557,7 +556,7 @@ const assignmentToDeclaration = (
     return {
         name: ast.destination,
         type: result,
-        memoryCategory: 'FAKE' as any,
+        location: 'Unknown' as any,
     };
 };
 
@@ -680,7 +679,7 @@ const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
                 {
                     name: (ast.children[0] as AstLeaf<MplToken>).value as string,
                     type: parseType(ast.children[2]),
-                    memoryCategory: 'FAKE MemoryCategory' as any,
+                    location: 'Parameter',
                 },
             ];
         } else {

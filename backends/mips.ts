@@ -658,8 +658,8 @@ const constructMipsFunction = (f: Function, globalDeclarations, stringLiterals) 
                 stringLiterals,
             });
             const freeLocals = f.variables
-                // TODO: Make a better memory model for dynamic/global frees.
-                .filter(s => s.memoryCategory !== 'GlobalStatic')
+                // TODO: Make a better memory model for frees.
+                .filter(s => s.location === 'Stack')
                 .filter(s => s.type.name == 'String')
                 .map(s => {
                     const memoryForVariable: StorageSpec = registerAssignment[s.name];

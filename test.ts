@@ -660,8 +660,7 @@ test('assign function to typed var', compileAndRun, {
     expectedExitCode: 37,
 });
 
-// TODO: string arguments (don't free your arguments! c needs right type!)
-test.failing('assign function with multiple args to typed var', compileAndRun, {
+test('assign function with multiple args to typed var', compileAndRun, {
     source: `
 myFunc: Function<Integer, String, Integer> = (a: Integer, b: String) => a + length(b);
 return myFunc(4, "four");`,
@@ -929,10 +928,10 @@ return 1;`,
     expectedStdOut: 'sample string',
 });
 
-test.failing('print string containing number', compileAndRun, {
+test('print string containing number', compileAndRun, {
     source: `
-print("1");
-return 1;`,
+dummy = print("1");
+return 1 + dummy - dummy;`,
     expectedExitCode: 1,
     expectedStdOut: '1',
     // Fails mips because of the silly way we extract exit codes.
@@ -949,12 +948,11 @@ return lengthOfFoo(1);`,
     expectedExitCode: 3,
 });
 
-// Need to make strings with spaces and specials work
-test.failing('string args', compileAndRun, {
+test('string args', compileAndRun, {
     source: `
 excitmentifier = (boring: String) => {
     dummy = print(boring ++ "!");
-    return 11;
+    return 11 + dummy - dummy;
 };
 return excitmentifier("Hello World");`,
     expectedStdOut: 'Hello World!',

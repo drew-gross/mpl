@@ -5,11 +5,11 @@ export type Type = {
     arguments: Type[];
 };
 export type TypeError = string;
-export type MemoryCategory = 'GlobalStatic' | 'Dynamic' | 'Stack';
+export type VariableLocation = 'Global' | 'Parameter' | 'Stack';
 export type VariableDeclaration = {
     name: string;
     type: Type;
-    memoryCategory: MemoryCategory;
+    location: VariableLocation;
 };
 export type UninferredFunction = {
     // TODO: Don't export this (or rethink it)
