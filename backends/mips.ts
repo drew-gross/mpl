@@ -333,18 +333,11 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 if (currentTemporary.type !== 'register') throw debug();
                 switch (declaration.type.name) {
                     case 'Function':
-                        // TODO: unify these
-                        return compileExpression([rhs], ([e1]) => [
-                            `# Put function pointer into temporary`,
-                            ...e1,
-                            `# Put function pointer into global`,
-                            `sw ${currentTemporary.destination}, ${lhs}`,
-                        ]);
                     case 'Integer':
                         return compileExpression([rhs], ([e1]) => [
-                            `# Put integer pointer into temporary`,
+                            `# Put ${declaration.type.name} into temporary`,
                             ...e1,
-                            `# Store into global`,
+                            `# Put ${declaration.type.name} into global`,
                             `sw ${currentTemporary.destination}, ${lhs}`,
                         ]);
                     case 'String':
