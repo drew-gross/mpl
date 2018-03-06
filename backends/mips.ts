@@ -363,7 +363,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                         throw debug();
                 }
             } else if (lhs in registerAssignment) {
-                const rhs = recurse({
+                return recurse({
                     ast: ast.expression,
                     // TODO: Allow spilling of variables
                     destination: {
@@ -371,11 +371,6 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                         destination: `${registerAssignment[lhs].destination}`,
                     },
                 });
-                // TODO: All this does is add a comment.
-                return compileExpression([rhs], ([e1]) => [
-                    `# Run rhs of assignment and store to ${lhs} (${registerAssignment[lhs].destination})`,
-                    ...e1,
-                ]);
             } else {
                 throw debug();
             }
@@ -408,7 +403,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                         throw debug();
                 }
             } else if (lhs in registerAssignment) {
-                const rhs = recurse({
+                return recurse({
                     ast: ast.expression,
                     // TODO: Allow spilling of variables
                     destination: {
@@ -416,11 +411,6 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                         destination: `${registerAssignment[lhs].destination}`,
                     },
                 });
-                // TODO: All this does is add a comment.
-                return compileExpression([rhs], ([e1]) => [
-                    `# Run rhs of assignment and store to ${lhs} (${registerAssignment[lhs].destination})`,
-                    ...e1,
-                ]);
             } else {
                 throw debug();
             }
@@ -579,10 +569,12 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 prepare: [],
                 execute: [],
                 cleanup: [
-                    `# Freeing temporary from concat`,
-                    move({ from: mallocResultTemporary.destination, to: argument1 }),
-                    // TODO: maybe not valid? This destination may have been reused for something else by the time we get to cleanup
-                    `jal my_free`,
+                    [
+                        `# Freeing temporary from concat`,
+                        move({ from: mallocResultTemporary.destination, to: argument1 }),
+                        // TODO: maybe not valid? This destination may have been reused for something else by the time we get to cleanup
+                        `jal my_free`,
+                    ].join('\n'),
                 ],
             };
             return compileExpression([storeLeftInstructions, storeRightInstructions, cleanup], ([e1, e2, _]) => [
