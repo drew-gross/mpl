@@ -104,10 +104,10 @@ const astToC = (input: BackendInput): CompiledProgram => {
             };
             return compileExpression([lhs, rhs, prepAndCleanup], ([_1, _2, _3]) => [temporaryName]);
         }
+        // TODO: Unify these somehow typedDeclarationAssignment and reassignment
         case 'typedDeclarationAssignment': {
             const lhs = ast.destination;
             const rhs = recurse({ ast: ast.expression });
-            // TODO: Unify these somehow
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug();

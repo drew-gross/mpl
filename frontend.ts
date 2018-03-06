@@ -22,38 +22,37 @@ import * as Ast from './ast.js';
 
 let tokensToString = tokens => tokens.map(token => token.string).join('');
 
-const repairAssociativity = (nodeTypeToRepair, ast) => {
-    if (!ast) debug();
+const repairAssociativity = (nodeType, ast) => {
     // Let this slide because TokenType overlaps InteriorNodeType right now
-    if (ast.type === nodeTypeToRepair && !ast.children) /*debug()*/ return ast;
-    if (ast.type === nodeTypeToRepair) {
+    if (ast.type === nodeType && !ast.children) /*debug()*/ return ast;
+    if (ast.type === nodeType) {
         if (!ast.children[2]) debug();
-        if (ast.children[2].type === nodeTypeToRepair) {
+        if (ast.children[2].type === nodeType) {
             return {
-                type: nodeTypeToRepair,
+                type: nodeType,
                 children: [
                     {
-                        type: nodeTypeToRepair,
+                        type: nodeType,
                         children: [
-                            repairAssociativity(nodeTypeToRepair, ast.children[0]),
+                            repairAssociativity(nodeType, ast.children[0]),
                             ast.children[2].children[1],
-                            repairAssociativity(nodeTypeToRepair, ast.children[2].children[0]),
+                            repairAssociativity(nodeType, ast.children[2].children[0]),
                         ],
                     },
                     ast.children[1],
-                    repairAssociativity(nodeTypeToRepair, ast.children[2].children[2]),
+                    repairAssociativity(nodeType, ast.children[2].children[2]),
                 ],
             };
         } else {
             return {
                 type: ast.type,
-                children: ast.children.map(child => repairAssociativity(nodeTypeToRepair, child)),
+                children: ast.children.map(child => repairAssociativity(nodeType, child)),
             };
         }
     } else if ('children' in ast) {
         return {
             type: ast.type,
-            children: ast.children.map(child => repairAssociativity(nodeTypeToRepair, child)),
+            children: ast.children.map(child => repairAssociativity(nodeType, child)),
         };
     } else {
         return ast;
@@ -61,7 +60,6 @@ const repairAssociativity = (nodeTypeToRepair, ast) => {
 };
 
 const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
-    if (!ast) debug();
     if (ast.type === nodeType) {
         const newNode = f(ast);
         if ('children' in newNode) {
@@ -971,10 +969,6 @@ const compile = (source: string): FrontendOutput => {
         return { typeErrors };
     }
 
-    const globalDeclarations: VariableDeclaration[] = program.statements
-        .filter(s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment')
-        .map(assignment => assignmentToDeclaration(assignment as any, variablesInScope));
-
     const typedProgramStatements = program.statements.map(s => inferOperators(s, variablesInScope));
 
     const typedFunctions: Function[] = [];
@@ -986,6 +980,10 @@ const compile = (source: string): FrontendOutput => {
             ) as Ast.Statement[],
         });
     });
+
+    const globalDeclarations: VariableDeclaration[] = program.statements
+        .filter(s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment')
+        .map(assignment => assignmentToDeclaration(assignment as any, variablesInScope));
 
     return {
         functions: typedFunctions,
