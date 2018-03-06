@@ -24,8 +24,10 @@ const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.Ast; exitInsteadOfRetu
             return [...recurse({ ast: ast.lhs }), '-', ...recurse({ ast: ast.rhs })];
         case 'addition':
             return [...recurse({ ast: ast.lhs }), '+', ...recurse({ ast: ast.rhs })];
-        case 'typedAssignment':
-            return [`const ${ast.destination} = `, ...recurse({ ast: ast.expression }), ';'];
+        case 'reassignment':
+            return [ast.destination, '=', ...recurse({ ast: ast.expression })];
+        case 'typedDeclarationAssignment':
+            return [`let ${ast.destination} = `, ...recurse({ ast: ast.expression }), ';'];
         case 'functionLiteral':
             return [ast.deanonymizedName];
         case 'callExpression':

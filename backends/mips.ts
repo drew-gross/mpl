@@ -1,4 +1,5 @@
 import { exec } from 'child-process-promise';
+import { isEqual } from 'lodash';
 import flatten from '../util/list/flatten.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from '../api.js';
 import * as Ast from '../ast.js';
@@ -152,6 +153,7 @@ type AstToMipsOptions = {
 
 const astToMips = (input: AstToMipsOptions): CompiledProgram => {
     const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
+    if (isEqual(currentTemporary, destination)) throw debug(); // Sanity check to make sure caller remembered to provide a new temporary
     const recurse = newInput => astToMips({ ...input, ...newInput });
     if (!ast) debug();
     switch (ast.kind) {
@@ -317,15 +319,21 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 moveMipsDeprecated(destination, functionResult),
             ]);
         }
-        case 'typedAssignment': {
+        case 'typedDeclarationAssignment': {
             const lhs = ast.destination;
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
-                const rhs = recurse({ ast: ast.expression, destination: currentTemporary });
+                const subExpressionTemporary = nextTemporary(currentTemporary);
+                const rhs = recurse({
+                    ast: ast.expression,
+                    destination: currentTemporary,
+                    currentTemporary: subExpressionTemporary,
+                });
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug();
                 if (currentTemporary.type !== 'register') throw debug();
                 switch (declaration.type.name) {
                     case 'Function':
+                        // TODO: unify these
                         return compileExpression([rhs], ([e1]) => [
                             `# Put function pointer into temporary`,
                             ...e1,
@@ -370,6 +378,52 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                         destination: `${registerAssignment[lhs].destination}`,
                     },
                 });
+                // TODO: All this does is add a comment.
+                return compileExpression([rhs], ([e1]) => [
+                    `# Run rhs of assignment and store to ${lhs} (${registerAssignment[lhs].destination})`,
+                    ...e1,
+                ]);
+            } else {
+                throw debug();
+            }
+        }
+        case 'reassignment': {
+            const lhs = ast.destination;
+            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
+                const subExpressionTemporary = nextTemporary(currentTemporary);
+                const rhs = recurse({
+                    ast: ast.expression,
+                    destination: currentTemporary,
+                    currentTemporary: subExpressionTemporary,
+                });
+                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
+                if (!declaration) throw debug();
+                if (currentTemporary.type !== 'register') throw debug();
+                switch (declaration.type.name) {
+                    case 'Function':
+                    case 'Integer':
+                        return compileExpression([rhs], ([e1]) => [
+                            `# Put ${declaration.type.name} into temporary`,
+                            ...e1,
+                            `# Store into global`,
+                            `sw ${currentTemporary.destination}, ${lhs}`,
+                        ]);
+                    case 'String':
+                        //TODO: need to de-alloc the thing we are overwriting.
+                        throw debug();
+                    default:
+                        throw debug();
+                }
+            } else if (lhs in registerAssignment) {
+                const rhs = recurse({
+                    ast: ast.expression,
+                    // TODO: Allow spilling of variables
+                    destination: {
+                        type: 'register',
+                        destination: `${registerAssignment[lhs].destination}`,
+                    },
+                });
+                // TODO: All this does is add a comment.
                 return compileExpression([rhs], ([e1]) => [
                     `# Run rhs of assignment and store to ${lhs} (${registerAssignment[lhs].destination})`,
                     ...e1,
@@ -641,7 +695,7 @@ const constructMipsFunction = (f: Function, globalDeclarations, stringLiterals) 
     };
 
     f.statements.forEach(statement => {
-        if (statement.kind === 'typedAssignment') {
+        if (statement.kind === 'typedDeclarationAssignment') {
             registerAssignment[statement.destination] = currentTemporary;
             currentTemporary = nextTemporary(currentTemporary);
         }

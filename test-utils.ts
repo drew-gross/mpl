@@ -43,8 +43,6 @@ const astToString = (ast: Ast) => {
             return ast.value;
         case 'number':
             return ast.value.toString();
-        case 'typedAssignment':
-            return `${ast.destination}: (TODO: put type here) = ${astToString(ast.expression)}`;
         case 'callExpression':
             const args = join(ast.arguments.map(astToString), ', ');
             return `${ast.name}(${args})`;
@@ -62,8 +60,10 @@ const astToString = (ast: Ast) => {
             return ast.value ? 'True' : 'False';
         case 'concatenation':
             return `${ast.lhs} ++ ${ast.rhs}`;
-        case 'typedAssignment':
+        case 'typedDeclarationAssignment':
             return `${ast.destination}: ${ast.type.name} = ${astToString(ast.expression)};`;
+        case 'reassignment':
+            return `${ast.destination} = ${astToString(ast.expression)};`;
         default:
             throw debug();
     }

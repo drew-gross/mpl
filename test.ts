@@ -201,11 +201,15 @@ test('ast for assignment then return', t => {
                 type: 'statement',
                 children: [
                     {
-                        type: 'assignment',
+                        type: 'declarationAssignment',
                         children: [
                             {
                                 type: 'identifier',
                                 value: 'constThree',
+                            },
+                            {
+                                type: 'colon',
+                                value: null,
                             },
                             {
                                 type: 'assignment',
@@ -278,7 +282,7 @@ test('ast for assignment then return', t => {
         ],
     };
     const astWithSemicolon = removeBracketsFromAst(
-        stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'constThree = a: Integer => 3; return 10;'), 0))
+        stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'constThree := a: Integer => 3; return 10;'), 0))
     );
     t.deepEqual(astWithSemicolon, expected);
 });
@@ -443,7 +447,7 @@ test('brackets product', compileAndRun, {
 });
 
 test('assign function and return', compileAndRun, {
-    source: 'constThree = a: Integer => 3; return 10',
+    source: 'constThree := a: Integer => 3; return 10',
     expectedExitCode: 10,
 });
 
@@ -467,14 +471,14 @@ test('correct inferred type for function', t => {
 });
 
 test('assign function and call it', compileAndRun, {
-    source: 'takeItToEleven = a: Integer => 11; return takeItToEleven(0)',
+    source: 'takeItToEleven := a: Integer => 11; return takeItToEleven(0)',
     expectedExitCode: 11,
 });
 
 test('multiple variables called', compileAndRun, {
     source: `
-const11 = a: Integer => 11;
-const12 = a: Integer => 12;
+const11 := a: Integer => 11;
+const12 := a: Integer => 12;
 return const11(1) * const12(2);`,
     expectedExitCode: 132,
 });
@@ -546,12 +550,12 @@ test('double product with brackets', compileAndRun, {
 });
 
 test('id function', compileAndRun, {
-    source: 'id = a: Integer => a; return id(5)',
+    source: 'id := a: Integer => a; return id(5)',
     expectedExitCode: 5,
 });
 
 test('double function', compileAndRun, {
-    source: 'doubleIt = a: Integer => 2 * a; return doubleIt(100)',
+    source: 'doubleIt := a: Integer => 2 * a; return doubleIt(100)',
     expectedExitCode: 200,
 });
 
@@ -595,35 +599,35 @@ test('parse error', compileAndRun, {
 
 test('ternary in function false', compileAndRun, {
     source: `
-ternary = a: Boolean => a ? 9 : 5;
+ternary := a: Boolean => a ? 9 : 5;
 return ternary(false);`,
     expectedExitCode: 5,
 });
 
 test('ternary in function then subtract', compileAndRun, {
     source: `
-ternaryFunc = a:Boolean => a ? 9 : 3;
+ternaryFunc := a:Boolean => a ? 9 : 3;
 return ternaryFunc(true) - ternaryFunc(false);`,
     expectedExitCode: 6,
 });
 
 test('equality comparison true', compileAndRun, {
     source: `
-isFive = five: Integer => five == 5 ? 2 : 7;
+isFive := five: Integer => five == 5 ? 2 : 7;
 return isFive(5);`,
     expectedExitCode: 2,
 });
 
 test('equality comparison false', compileAndRun, {
     source: `
-isFive = notFive: Integer => notFive == 5 ? 2 : 7;
+isFive := notFive: Integer => notFive == 5 ? 2 : 7;
 return isFive(11);`,
     expectedExitCode: 7,
 });
 
 test('factorial', compileAndRun, {
     source: `
-factorial = x: Integer => x == 1 ? 1 : x * factorial(x - 1);
+factorial := x: Integer => x == 1 ? 1 : x * factorial(x - 1);
 return factorial(5);`,
     expectedExitCode: 120,
 });
@@ -645,7 +649,7 @@ test('boolean literal true', compileAndRun, {
 
 test('wrong type for arg', compileAndRun, {
     source: `
-boolFunc = a: Boolean => 1;
+boolFunc := a: Boolean => 1;
 return boolFunc(7);`,
     expectedTypeErrors: ['You passed a Integer as an argument to boolFunc. It expects a Boolean'],
 });
@@ -714,21 +718,21 @@ test('many temporaries, spill to ram', compileAndRun, {
 
 test('multi statement function with locals', compileAndRun, {
     source: `
-quadrupleWithLocal = a: Integer => { b: Integer = 2 * a; return 2 * b; };
+quadrupleWithLocal := a: Integer => { b: Integer = 2 * a; return 2 * b; };
 return quadrupleWithLocal(5);`,
     expectedExitCode: 20,
 });
 
 test('mutil statement function with type error', compileAndRun, {
     source: `
-boolTimesInt = a: Integer => { b: Boolean = false; return a * b; };
+boolTimesInt := a: Integer => { b: Boolean = false; return a * b; };
 return boolTimesInt(1);`,
     expectedTypeErrors: ['Right hand side of product was not integer'],
 });
 
 test('multi statement function on multiple lines', compileAndRun, {
     source: `
-quadrupleWithLocal = a: Integer => {
+quadrupleWithLocal := a: Integer => {
     b: Integer = 2 * a;
     return 2 * b;
 };
@@ -748,12 +752,12 @@ test('empty string length', compileAndRun, {
 });
 
 test('string length with type inferred', compileAndRun, {
-    source: `myStr = "test2"; return length(myStr);`,
+    source: `myStr := "test2"; return length(myStr);`,
     expectedExitCode: 5,
 });
 
 test('structure is equal for inferred string type', t => {
-    const inferredStructure = compile('myStr = "test"; return length(myStr);');
+    const inferredStructure = compile('myStr := "test"; return length(myStr);');
     const suppliedStructure = compile('myStr: String = "test"; return length(myStr);');
     t.deepEqual(inferredStructure, suppliedStructure);
 });
@@ -764,24 +768,24 @@ test('string copy', compileAndRun, {
 });
 
 test('string equality: equal', compileAndRun, {
-    source: `str1 = "a";
-str2 = "a";
+    source: `str1 := "a";
+str2 := "a";
 return str1 == str2 ? 1 : 2;
 `,
     expectedExitCode: 1,
 });
 
 test('string equality: inequal same length', compileAndRun, {
-    source: `str1 = "a";
-str2 = "b";
+    source: `str1 := "a";
+str2 := "b";
 return str1 == str2 ? 1 : 2;
 `,
     expectedExitCode: 2,
 });
 
 test('string equality: inequal different length', compileAndRun, {
-    source: `str1 = "aa";
-str2 = "a";
+    source: `str1 := "aa";
+str2 := "a";
 return str1 == str2 ? 7 : 2;
 `,
     expectedExitCode: 2,
@@ -806,9 +810,9 @@ test('concatenate and get length then subtract', compileAndRun, {
 
 test('semi-complex string concatenation', compileAndRun, {
     source: `
-lenFunc = dummy: Integer => {
-    str1 = "abc";
-    str2 = str1 ++ str1;
+lenFunc := dummy: Integer => {
+    str1 := "abc";
+    str2 := str1 ++ str1;
     return str2 == "abcabc" ? 40 : 50;
 };
 return lenFunc(5);`,
@@ -817,12 +821,12 @@ return lenFunc(5);`,
 
 // TODO: Improve how temporaries get spilled
 test('complex string concatenation', compileAndRun, {
-    source: `lenFunc = dummy: Integer => {
-    str1 = "abc";
-    str2 = "def";
-    str3 = "abc";
-    concat1 = str1 ++ str2 ++ str3;
-    concat2 = str3 ++ str2 ++ str3;
+    source: `lenFunc := dummy: Integer => {
+    str1 := "abc";
+    str2 := "def";
+    str3 := "abc";
+    concat1 := str1 ++ str2 ++ str3;
+    concat2 := str3 ++ str2 ++ str3;
     return concat1 == concat2 ? (length(str1 ++ str2)) : 99;
 };
 return lenFunc(5);`,
@@ -850,63 +854,63 @@ test('addition', compileAndRun, {
 
 test('two args', compileAndRun, {
     source: `
-myAdd = a: Integer, b: Integer => a + b;
+myAdd := a: Integer, b: Integer => a + b;
 return myAdd(7, 4);`,
     expectedExitCode: 11,
 });
 
 test('two args with expression argument', compileAndRun, {
     source: `
-myAdd = a: Integer, b: Integer => a + b;
+myAdd := a: Integer, b: Integer => a + b;
 return myAdd(7 + 7, 4);`,
     expectedExitCode: 18,
 });
 
 test('three args', compileAndRun, {
     source: `
-myAdd = a: Integer, b: Integer, c: Integer => a + b + c;
+myAdd := a: Integer, b: Integer, c: Integer => a + b + c;
 return myAdd(7, 4, 5);`,
     expectedExitCode: 16,
 });
 
 test('zero args', compileAndRun, {
     source: `
-const11 = () => 11;
+const11 := () => 11;
 return const11();`,
     expectedExitCode: 11,
 });
 
 test('one bracketed arg', compileAndRun, {
     source: `
-times11 = (a: Integer) => a * 11;
+times11 := (a: Integer) => a * 11;
 return times11(1);`,
     expectedExitCode: 11,
 });
 
 test('two bracketed args', compileAndRun, {
     source: `
-times = (a: Integer, b: Integer) => a * b;
+times := (a: Integer, b: Integer) => a * b;
 return times(11, 1);`,
     expectedExitCode: 11,
 });
 
 test('call with wrong number of args', compileAndRun, {
     source: `
-threeArgs = a: Integer, b: Integer, c: Integer => a + b + c;
+threeArgs := a: Integer, b: Integer, c: Integer => a + b + c;
 return threeArgs(7, 4);`,
     expectedTypeErrors: ['You tried to call threeArgs with 2 arguments when it needs 3'],
 });
 
 test('call with wrong arg type', compileAndRun, {
     source: `
-threeArgs = a: Integer, b: Integer, c: Integer => a + b + c;
+threeArgs := a: Integer, b: Integer, c: Integer => a + b + c;
 return threeArgs(7, 4, "notAnInteger");`,
     expectedTypeErrors: ['You passed a String as an argument to threeArgs. It expects a Integer'],
 });
 
 test('print', compileAndRun, {
     source: `
-dummy = print("sample_string");
+dummy := print("sample_string");
 return 1;`,
     expectedExitCode: 1,
     expectedStdOut: 'sample_string',
@@ -914,7 +918,7 @@ return 1;`,
 
 test('print string with space', compileAndRun, {
     source: `
-dummy = print("sample string with space");
+dummy := print("sample string with space");
 return 1;`,
     expectedExitCode: 1,
     expectedStdOut: 'sample string with space',
@@ -930,7 +934,7 @@ return 1;`,
 
 test('print string containing number', compileAndRun, {
     source: `
-dummy = print("1");
+dummy := print("1");
 return 1 + dummy - dummy;`,
     expectedExitCode: 1,
     expectedStdOut: '1',
@@ -940,8 +944,8 @@ return 1 + dummy - dummy;`,
 
 test('assign result of call to builtin to local in function', compileAndRun, {
     source: `
-lengthOfFoo = (dummy: Integer) => {
-    dumme = length("foo");
+lengthOfFoo := (dummy: Integer) => {
+    dumme := length("foo");
     return dumme;
 };
 return lengthOfFoo(1);`,
@@ -950,11 +954,106 @@ return lengthOfFoo(1);`,
 
 test('string args', compileAndRun, {
     source: `
-excitmentifier = (boring: String) => {
-    dummy = print(boring ++ "!");
+excitmentifier := (boring: String) => {
+    dummy := print(boring ++ "!");
     return 11 + dummy - dummy;
 };
 return excitmentifier("Hello World");`,
     expectedStdOut: 'Hello World!',
     expectedExitCode: 11,
+});
+
+test('reassign integer', compileAndRun, {
+    source: `
+a := 1;
+bb := a + 5;
+a = 2;
+c := a + bb;
+return c;`,
+    expectedExitCode: 8,
+});
+
+test.failing('reassign to undeclared identifier', compileAndRun, {
+    source: `
+a := 1;
+b = 2;
+return a + b;`,
+    expectedTypeErrors: [`Couldn't find b`],
+});
+
+test.failing('reassigning wrong type', compileAndRun, {
+    source: `
+a := 1;
+a = True;
+return a;`,
+    expectedTypeErrors: ['wrong type for a'],
+});
+
+test.failing('reassign string', compileAndRun, {
+    source: `
+a := 'Hello';
+dummy := print(a);
+a = 'World!!!!!';
+dummy = print(a);
+return dummy - dummy;`,
+    expectedExitCode: 0,
+    expectedStdOut: 'HelloWorld!!!!!',
+});
+
+test.failing('reassign integer inside function', compileAndRun, {
+    source: `
+foo = () => {
+    a := 1;
+    b := a + 5;
+    a = 2;
+    c := a + b;
+    return c;
+}
+return foo();`,
+    expectedExitCode: 8,
+    printSubsteps: 'js',
+});
+
+test.failing('reassign to undeclared identifier inside function', compileAndRun, {
+    source: `
+foo = () => {
+    a := 1;
+    b = 2;
+    return a + b;
+}
+return foo()`,
+    expectedTypeErrors: [`Couldn't find b`],
+});
+
+test.failing('reassigning wrong type inside function', compileAndRun, {
+    source: `
+foo = () => {
+    a := 1;
+    a = True;
+    return a;
+}
+return foo();`,
+    expectedTypeErrors: ['wrong type for a'],
+});
+
+test.failing('reassign string inside function', compileAndRun, {
+    source: `
+foo = () => {
+    a := 'Hello';
+    dummy := print(a);
+    a = 'World!!!!!';
+    dummy = print(a);
+    return dummy - dummy;
+}
+return foo()
+`,
+    expectedExitCode: 0,
+    expectedStdOut: 'HelloWorld!!!!!',
+});
+
+test.failing('variable named b', compileAndRun, {
+    source: `
+b := 2;
+return b;`,
+    expectedExitCode: 2,
 });

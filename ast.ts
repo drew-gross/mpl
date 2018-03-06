@@ -44,9 +44,15 @@ export type Equality = {
     type: Type;
 };
 
-export type TypedAssignment = {
-    kind: 'typedAssignment';
+export type TypedDeclarationAssignment = {
+    kind: 'typedDeclarationAssignment';
     type: Type;
+    destination: string;
+    expression: Ast;
+};
+
+export type Reassignment = {
+    kind: 'reassignment';
     destination: string;
     expression: Ast;
 };
@@ -62,7 +68,7 @@ export type FunctionLiteral = {
     deanonymizedName: string;
 };
 
-export type Statement = TypedAssignment | ReturnStatement;
+export type Statement = TypedDeclarationAssignment | Reassignment | ReturnStatement;
 
 export type Addition = {
     kind: 'addition';
@@ -114,17 +120,22 @@ export type UninferredTernary = {
     ifFalse: UninferredAst;
 };
 
-// TODO: merge Equality with StringEquality and add type to ast node
 export type UninferredEquality = {
     kind: 'equality';
     lhs: UninferredAst;
     rhs: UninferredAst;
 };
 
-export type UninferredTypedAssignment = {
-    kind: 'typedAssignment';
+export type UninferredTypedDeclarationAssignment = {
+    kind: 'typedDeclarationAssignment';
     destination: string;
     type: Type;
+    expression: UninferredAst;
+};
+
+export type UninferredReassignment = {
+    kind: 'reassignment';
+    destination: string;
     expression: UninferredAst;
 };
 
@@ -141,7 +152,11 @@ export type UninferredFunctionLiteral = {
     parameters: VariableDeclaration[];
 };
 
-export type UninferredStatement = UninferredTypedAssignment | UninferredAssignment | UninferredReturnStatement;
+export type UninferredStatement =
+    | UninferredTypedDeclarationAssignment
+    | UninferredDeclarationAssignment
+    | UninferredReassignment
+    | UninferredReturnStatement;
 
 export type UninferredAddition = {
     kind: 'addition';
@@ -167,8 +182,8 @@ export type UninferredConcatenation = {
     rhs: UninferredAst;
 };
 
-export type UninferredAssignment = {
-    kind: 'assignment';
+export type UninferredDeclarationAssignment = {
+    kind: 'declarationAssignment';
     destination: string;
     expression: UninferredAst;
 };

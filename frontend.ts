@@ -87,35 +87,63 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
     }
 };
 
-const extractVariables = (
+const extractVariable = (
     statement: Ast.UninferredStatement,
     variablesInScope: VariableDeclaration[],
     isGlobal: boolean
-): VariableDeclaration[] => {
+): VariableDeclaration | undefined => {
     const result: VariableDeclaration[] = [];
     switch (statement.kind) {
-        case 'assignment':
-        case 'typedAssignment':
-            return [
-                {
-                    name: statement.destination,
-                    location: isGlobal ? 'Global' : 'Stack',
-                    type: typeOfExpression(statement.expression, variablesInScope) as Type,
-                },
-            ];
+        case 'reassignment':
+        case 'declarationAssignment':
+        case 'typedDeclarationAssignment':
+            return {
+                name: statement.destination,
+                location: isGlobal ? 'Global' : 'Stack',
+                type: typeOfExpression(statement.expression, variablesInScope) as Type,
+            };
         case 'returnStatement':
-            return [];
+            return undefined;
         default:
             throw debug();
     }
+};
+
+const extractVariables = (
+    statements: Ast.UninferredStatement[],
+    variablesInScope: VariableDeclaration[]
+): VariableDeclaration[] => {
+    const variables: VariableDeclaration[] = [];
+    statements.forEach((statement: Ast.UninferredStatement) => {
+        switch (statement.kind) {
+            case 'returnStatement':
+                break;
+            case 'reassignment':
+            case 'declarationAssignment':
+            case 'typedDeclarationAssignment':
+                const potentialVariable = extractVariable(
+                    statement,
+                    mergeDeclarations(variablesInScope, variables),
+                    false
+                );
+                if (potentialVariable) {
+                    variables.push(potentialVariable);
+                }
+                break;
+            default:
+                throw debug();
+        }
+    });
+    return variables;
 };
 
 const extractFunctions = (ast: Ast.UninferredAst, variablesInScope: VariableDeclaration[]): UninferredFunction[] => {
     const recurse = ast => extractFunctions(ast, variablesInScope);
     switch (ast.kind) {
         case 'returnStatement':
-        case 'typedAssignment':
-        case 'assignment':
+        case 'typedDeclarationAssignment':
+        case 'declarationAssignment':
+        case 'reassignment':
             return recurse(ast.expression);
         case 'product':
         case 'addition':
@@ -133,27 +161,15 @@ const extractFunctions = (ast: Ast.UninferredAst, variablesInScope: VariableDecl
             return flatten(ast.statements.map(recurse));
         case 'functionLiteral':
             functionId++;
-            const variables: VariableDeclaration[] = [...ast.parameters];
-            ast.body.forEach((statement: Ast.UninferredStatement) => {
-                switch (statement.kind) {
-                    case 'returnStatement':
-                        break;
-                    case 'assignment':
-                    case 'typedAssignment':
-                        variables.push(
-                            ...extractVariables(statement, mergeDeclarations(variablesInScope, variables), false)
-                        );
-                        break;
-                    default:
-                        throw debug();
-                }
-            });
             return flatten([
                 [
                     {
                         name: ast.deanonymizedName,
                         statements: ast.body,
-                        variables,
+                        variables: [
+                            ...ast.parameters,
+                            ...extractVariables(ast.body, mergeDeclarations(variablesInScope, ast.parameters)),
+                        ],
                         parameters: ast.parameters,
                         temporaryCount: Math.max(...ast.body.map(countTemporariesInExpression)),
                     },
@@ -174,8 +190,9 @@ let stringLiteralId = 0;
 const extractStringLiterals = (ast: Ast.UninferredAst): StringLiteralData[] => {
     switch (ast.kind) {
         case 'returnStatement':
-        case 'typedAssignment':
-        case 'assignment':
+        case 'typedDeclarationAssignment':
+        case 'declarationAssignment':
+        case 'reassignment':
             return extractStringLiterals(ast.expression);
         case 'product':
         case 'addition':
@@ -234,6 +251,7 @@ const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
     return ast;
 };
 
+// TODO: Probably makes more sense to do this after inferring.
 const countTemporariesInExpression = (ast: Ast.UninferredAst) => {
     switch (ast.kind) {
         case 'returnStatement':
@@ -244,9 +262,10 @@ const countTemporariesInExpression = (ast: Ast.UninferredAst) => {
         case 'equality':
         case 'concatenation':
             return 1 + Math.max(countTemporariesInExpression(ast.lhs), countTemporariesInExpression(ast.rhs));
-        case 'typedAssignment':
+        case 'typedDeclarationAssignment':
+        case 'declarationAssignment':
             return 1;
-        case 'assignment':
+        case 'reassignment':
             return 1;
         case 'callExpression':
             return 1;
@@ -454,7 +473,7 @@ const typeCheckStatement = (
             }
             return { errors: [], newVariables: [] };
         }
-        case 'assignment': {
+        case 'declarationAssignment': {
             const rightType = typeOfExpression(ast.expression, variablesInScope);
             if (isTypeError(rightType)) {
                 return { errors: rightType, newVariables: [] };
@@ -465,7 +484,29 @@ const typeCheckStatement = (
                 newVariables: [{ name: ast.destination, type: rightType, location: 'FAKE' as any }],
             };
         }
-        case 'typedAssignment': {
+        case 'reassignment': {
+            const rightType = typeOfExpression(ast.expression, variablesInScope);
+            if (isTypeError(rightType)) {
+                return { errors: rightType, newVariables: [] };
+            }
+            const leftType = variablesInScope.find(v => v.name == ast.destination);
+            if (!leftType) {
+                return {
+                    errors: [`You tried to assign to ${ast.destination}, which we couldn't find`],
+                    newVariables: [],
+                };
+            }
+            if (!typesAreEqual(leftType.type, rightType)) {
+                return {
+                    errors: [
+                        `You tried to assign the wrong type to ${ast.destination}, its a ___ and you assigned ___`,
+                    ],
+                    newVariables: [],
+                };
+            }
+            return { errors: [], newVariables: [] };
+        }
+        case 'typedDeclarationAssignment': {
             // Check that type of var being assigned to matches type being assigned
             const expressionType = typeOfExpression(ast.expression, variablesInScope);
             const destinationType = ast.type;
@@ -548,7 +589,7 @@ const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaratio
     }));
 
 const assignmentToDeclaration = (
-    ast: Ast.UninferredAssignment,
+    ast: Ast.UninferredDeclarationAssignment,
     variablesInScope: VariableDeclaration[]
 ): VariableDeclaration => {
     const result = typeOfExpression(ast.expression, variablesInScope);
@@ -596,18 +637,24 @@ const inferOperators = (ast: Ast.UninferredAst, knownIdentifiers: VariableDeclar
                 lhs: recurse(ast.lhs),
                 rhs: recurse(ast.rhs),
             };
-        case 'typedAssignment':
+        case 'typedDeclarationAssignment':
             return {
-                kind: 'typedAssignment',
+                kind: 'typedDeclarationAssignment',
                 expression: recurse(ast.expression),
                 type: ast.type,
                 destination: ast.destination,
             };
-        case 'assignment':
+        case 'declarationAssignment':
             return {
-                kind: 'typedAssignment',
+                kind: 'typedDeclarationAssignment',
                 expression: recurse(ast.expression),
                 type: typeOfExpression(ast.expression, knownIdentifiers) as Type,
+                destination: ast.destination,
+            };
+        case 'reassignment':
+            return {
+                kind: 'reassignment',
+                expression: recurse(ast.expression),
                 destination: ast.destination,
             };
         case 'callExpression':
@@ -794,17 +841,24 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
             };
-        case 'assignment':
+        case 'reassignment':
             if (!('children' in ast)) throw debug();
             return {
-                kind: 'assignment',
+                kind: 'reassignment',
                 destination: (ast.children[0] as any).value as any,
                 expression: astFromParseResult(ast.children[2]),
             };
-        case 'typedAssignment':
+        case 'declarationAssignment':
             if (!('children' in ast)) throw debug();
             return {
-                kind: 'typedAssignment',
+                kind: 'declarationAssignment',
+                destination: (ast.children[0] as any).value as any,
+                expression: astFromParseResult(ast.children[3]),
+            };
+        case 'typedDeclarationAssignment':
+            if (!('children' in ast)) throw debug();
+            return {
+                kind: 'typedDeclarationAssignment',
                 destination: (ast.children[0] as any).value as any,
                 type: parseType(ast.children[2]),
                 expression: astFromParseResult(ast.children[4]),
@@ -893,18 +947,18 @@ const compile = (source: string): FrontendOutput => {
     if (ast.kind !== 'program') {
         return { parseErrors: [{ kind: 'unexpectedProgram' }] };
     }
+
+    let variablesInScope = builtinFunctions;
     const program: UninferredFunction = {
         name: `main_program`,
         statements: ast.statements,
-        variables: [],
+        variables: extractVariables(ast.statements, variablesInScope),
         parameters: [],
         temporaryCount: Math.max(...ast.statements.map(countTemporariesInExpression)),
     };
 
     const functions = extractFunctions(ast, builtinFunctions);
     const stringLiterals: StringLiteralData[] = uniqueBy(s => s.value, extractStringLiterals(ast));
-
-    let variablesInScope = builtinFunctions;
     variablesInScope = mergeDeclarations(variablesInScope, getFunctionTypeMap(functions));
     const programTypeCheck = typeCheckFunction(program, variablesInScope);
     variablesInScope = mergeDeclarations(variablesInScope, programTypeCheck.identifiers);
@@ -918,7 +972,7 @@ const compile = (source: string): FrontendOutput => {
     }
 
     const globalDeclarations: VariableDeclaration[] = program.statements
-        .filter(s => s.kind === 'typedAssignment' || s.kind === 'assignment')
+        .filter(s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment')
         .map(assignment => assignmentToDeclaration(assignment as any, variablesInScope));
 
     const typedProgramStatements = program.statements.map(s => inferOperators(s, variablesInScope));

@@ -211,8 +211,9 @@ export type MplAstNode =
     | 'arg'
     | 'statement'
     | 'returnStatement'
-    | 'typedAssignment'
-    | 'assignment'
+    | 'typedDeclarationAssignment'
+    | 'declarationAssignment'
+    | 'reassignment'
     | 'ternary'
     | 'addition'
     | 'subtraction'
@@ -252,8 +253,9 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         { n: 'returnStatement', p: [_return, 'expression'] },
     ],
     statement: [
-        { n: 'typedAssignment', p: [identifier, colon, 'type', assignment, 'expression'] },
-        { n: 'assignment', p: [identifier, assignment, 'expression'] },
+        { n: 'typedDeclarationAssignment', p: [identifier, colon, 'type', assignment, 'expression'] },
+        { n: 'declarationAssignment', p: [identifier, colon, assignment, 'expression'] },
+        { n: 'reassignment', p: [identifier, assignment, 'expression'] },
     ],
     typeList: [{ n: 'typeList', p: ['type', comma, 'typeList'] }, 'type'],
     type: [

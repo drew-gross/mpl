@@ -104,14 +104,16 @@ const astToC = (input: BackendInput): CompiledProgram => {
             };
             return compileExpression([lhs, rhs, prepAndCleanup], ([_1, _2, _3]) => [temporaryName]);
         }
-        case 'typedAssignment': {
+        case 'typedDeclarationAssignment': {
             const lhs = ast.destination;
             const rhs = recurse({ ast: ast.expression });
+            // TODO: Unify these somehow
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug();
                 switch (declaration.type.name) {
                     case 'Function':
+                    case 'Integer':
                         return compileAssignment(lhs, rhs);
                     case 'String': {
                         const rhsWillAlloc = compileExpression([rhs], ([e]) => [
@@ -119,16 +121,12 @@ const astToC = (input: BackendInput): CompiledProgram => {
                         ]);
                         return compileAssignment(lhs, rhsWillAlloc);
                     }
-                    case 'Integer':
-                        return compileAssignment(lhs, rhs);
                     default:
                         debug();
                 }
             } else {
                 const declaration = localDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug();
-                if (!declaration.type) throw debug();
-                if (!declaration.type.name) throw debug();
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
@@ -149,13 +147,44 @@ const astToC = (input: BackendInput): CompiledProgram => {
                             case 'Global':
                                 return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
                             default:
-                                debug();
+                                throw debug();
                         }
                     default:
-                        debug();
+                        throw debug();
                 }
             }
             throw debug();
+        }
+        case 'reassignment': {
+            const lhs = ast.destination;
+            const rhs = recurse({ ast: ast.expression });
+            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
+                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
+                if (!declaration) throw debug();
+                switch (declaration.type.name) {
+                    case 'Function':
+                    case 'Integer':
+                        return compileAssignment(lhs, rhs);
+                    case 'String':
+                        //TODO: need to de-alloc the thing we are overwriting.
+                        throw debug();
+                    default:
+                        throw debug();
+                }
+            } else {
+                const declaration = localDeclarations.find(declaration => declaration.name === lhs);
+                if (!declaration) throw debug();
+                switch (declaration.type.name) {
+                    case 'Function':
+                    case 'Integer':
+                        return compileAssignment(lhs, rhs);
+                    case 'String':
+                        //TODO: need to de-alloc the thing we are overwriting.
+                        throw debug();
+                    default:
+                        throw debug();
+                }
+            }
         }
         case 'functionLiteral':
             return compileExpression([], ([]) => [`&${ast.deanonymizedName}`]);
