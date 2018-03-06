@@ -78,7 +78,7 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
     } else if ('children' in ast) {
         return {
             type: ast.type,
-            children: (ast as any).children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
+            children: ast.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
         };
     } else {
         return ast;
