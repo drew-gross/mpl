@@ -1,4 +1,4 @@
-import { Type, VariableDeclaration } from './api.js';
+import { Type, VariableDeclaration, SourceLocation } from './api.js';
 
 // Leaf nodes
 
@@ -152,11 +152,12 @@ export type UninferredFunctionLiteral = {
     parameters: VariableDeclaration[];
 };
 
-export type UninferredStatement =
-    | UninferredTypedDeclarationAssignment
-    | UninferredDeclarationAssignment
-    | UninferredReassignment
-    | UninferredReturnStatement;
+export type UninferredStatement = SourceLocation &
+    (
+        | UninferredTypedDeclarationAssignment
+        | UninferredDeclarationAssignment
+        | UninferredReassignment
+        | UninferredReturnStatement);
 
 export type UninferredAddition = {
     kind: 'addition';
@@ -193,15 +194,16 @@ export type UninferredProgram = {
     statements: UninferredStatement[];
 };
 
-export type UninferredAst =
-    | Leaf
-    | UninferredTernary
-    | UninferredEquality
-    | UninferredFunctionCall
-    | UninferredFunctionLiteral
-    | UninferredStatement
-    | UninferredSubtraction
-    | UninferredAddition
-    | UninferredProduct
-    | UninferredConcatenation
-    | UninferredProgram;
+export type UninferredAst = SourceLocation &
+    (
+        | Leaf
+        | UninferredTernary
+        | UninferredEquality
+        | UninferredFunctionCall
+        | UninferredFunctionLiteral
+        | UninferredStatement
+        | UninferredSubtraction
+        | UninferredAddition
+        | UninferredProduct
+        | UninferredConcatenation
+        | UninferredProgram);

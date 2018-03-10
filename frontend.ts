@@ -38,21 +38,29 @@ const repairAssociativity = (nodeType, ast) => {
                             ast.children[2].children[1],
                             repairAssociativity(nodeType, ast.children[2].children[0]),
                         ],
+                        sourceLine: ast.sourceLine,
+                        sourceColumn: ast.sourceColumn,
                     },
                     ast.children[1],
                     repairAssociativity(nodeType, ast.children[2].children[2]),
                 ],
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         } else {
             return {
                 type: ast.type,
                 children: ast.children.map(child => repairAssociativity(nodeType, child)),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         }
     } else if ('children' in ast) {
         return {
             type: ast.type,
             children: ast.children.map(child => repairAssociativity(nodeType, child)),
+            sourceLine: ast.sourceLine,
+            sourceColumn: ast.sourceColumn,
         };
     } else {
         return ast;
@@ -70,6 +78,8 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
                 return {
                     type: newNode.type,
                     children: newNode.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
+                    sourceLine: ast.sourceLine,
+                    sourceColumn: ast.sourceColumn,
                 };
             }
         } else {
@@ -79,6 +89,8 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
         return {
             type: ast.type,
             children: ast.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
+            sourceLine: ast.sourceLine,
+            sourceColumn: ast.sourceColumn,
         };
     } else {
         return ast;
@@ -328,10 +340,30 @@ export const typeOfExpression = (
                 return combinedErrors;
             }
             if (!typesAreEqual(leftType as Type, builtinTypes.Integer)) {
-                return [`Left hand side of ${ast.kind} was not integer`];
+                return [
+                    {
+                        kind: 'wrongTypeForOperator',
+                        operator: ast.kind,
+                        expected: 'Integer',
+                        found: leftType as Type,
+                        side: 'left',
+                        sourceLine: ast.sourceLine,
+                        sourceColumn: ast.sourceColumn,
+                    },
+                ];
             }
             if (!typesAreEqual(rightType as Type, builtinTypes.Integer)) {
-                return [`Right hand side of ${ast.kind} was not integer`];
+                return [
+                    {
+                        kind: 'wrongTypeForOperator',
+                        operator: ast.kind,
+                        expected: 'Integer',
+                        found: rightType as Type,
+                        side: 'right',
+                        sourceLine: ast.sourceLine,
+                        sourceColumn: ast.sourceColumn,
+                    },
+                ];
             }
             return builtinTypes.Integer;
         }
@@ -344,9 +376,14 @@ export const typeOfExpression = (
             }
             if (!typesAreEqual(leftType as Type, rightType as Type)) {
                 return [
-                    `Equality comparisons must compare values of the same type.. You tried to compare a ${
-                        (leftType as Type).name
-                    } (lhs) with a ${(rightType as Type).name} (rhs)`,
+                    {
+                        kind: 'typeMismatchForOperator',
+                        leftType: leftType as Type,
+                        rightType: rightType as Type,
+                        operator: 'equality',
+                        sourceLine: ast.sourceLine,
+                        sourceColumn: ast.sourceColumn,
+                    },
                 ];
             }
             return builtinTypes.Boolean;
@@ -358,8 +395,31 @@ export const typeOfExpression = (
             if (combinedErrors) {
                 return combinedErrors;
             }
-            if ((leftType as Type).name !== 'String' || (rightType as Type).name !== 'String') {
-                return ['Only strings can be concatenated right now'];
+            if ((leftType as Type).name !== 'String') {
+                return [
+                    {
+                        kind: 'wrongTypeForOperator',
+                        found: leftType as Type,
+                        expected: 'String',
+                        operator: 'concatenation',
+                        side: 'left',
+                        sourceLine: ast.sourceLine,
+                        sourceColumn: ast.sourceColumn,
+                    },
+                ];
+            }
+            if ((rightType as Type).name !== 'String') {
+                return [
+                    {
+                        kind: 'wrongTypeForOperator',
+                        found: rightType as Type,
+                        expected: 'String',
+                        operator: 'concatenation',
+                        side: 'right',
+                        sourceLine: ast.sourceLine,
+                        sourceColumn: ast.sourceColumn,
+                    },
+                ];
             }
             return builtinTypes.String;
         }
@@ -384,24 +444,50 @@ export const typeOfExpression = (
             const functionName = ast.name;
             const declaration = variablesInScope.find(({ name }) => functionName == name);
             if (!declaration) {
-                return [`Unknown identifier: ${functionName}`];
+                return [
+                    {
+                        kind: 'unknownIdentifier',
+                        name: functionName,
+                        sourceLine: ast.sourceLine,
+                        sourceColumn: ast.sourceColumn,
+                    },
+                ];
             }
             const functionType = declaration.type;
             if (functionType.name !== 'Function') {
-                return [`You tried to call ${functionName}, but it's not a function (it's a ${functionType})`];
+                return [
+                    {
+                        kind: 'calledNonFunction',
+                        identifierName: functionName,
+                        actualType: functionType,
+                        sourceLine: ast.sourceLine,
+                        sourceColumn: ast.sourceColumn,
+                    },
+                ];
             }
             if (argTypes.length !== functionType.arguments.length - 1) {
                 return [
-                    `You tried to call ${functionName} with ${argTypes.length} arguments when it needs ${declaration
-                        .type.arguments.length - 1}`,
+                    {
+                        kind: 'wrongNumberOfArguments',
+                        targetFunction: functionName,
+                        passedArgumentCount: argTypes.length,
+                        expectedArgumentCount: declaration.type.arguments.length - 1,
+                        sourceLine: ast.sourceLine,
+                        sourceColumn: ast.sourceColumn,
+                    },
                 ];
             }
             for (let i = 0; i < argTypes.length; i++) {
                 if (!typesAreEqual(argTypes[i] as Type, functionType.arguments[i])) {
                     return [
-                        `You passed a ${(argTypes[i] as Type).name} as an argument to ${functionName}. It expects a ${
-                            functionType.arguments[i].name
-                        }`,
+                        {
+                            kind: 'wrongArgumentType',
+                            targetFunction: functionName,
+                            passedType: argTypes[i] as Type,
+                            expectedType: functionType.arguments[i],
+                            sourceLine: ast.sourceLine,
+                            sourceColumn: ast.sourceColumn,
+                        } as TypeError,
                     ];
                 }
             }
@@ -410,7 +496,14 @@ export const typeOfExpression = (
         case 'identifier': {
             const declaration = variablesInScope.find(({ name }) => ast.value == name);
             if (!declaration) {
-                return [`Identifier ${ast.value} has unknown type.`];
+                return [
+                    {
+                        kind: 'unknownTypeForIdentifier',
+                        identifierName: ast.value,
+                        sourceLine: ast.sourceLine,
+                        sourceColumn: ast.sourceColumn,
+                    },
+                ];
             }
             return declaration.type;
         }
@@ -424,16 +517,26 @@ export const typeOfExpression = (
             }
             if (!typesAreEqual(conditionType as Type, builtinTypes.Boolean)) {
                 return [
-                    `You tried to use a ${
-                        (conditionType as any).name
-                    } as the condition in a ternary. Boolean is required`,
+                    {
+                        kind: 'wrongTypeForOperator',
+                        found: (conditionType as any).name,
+                        expected: 'Boolean',
+                        operator: 'Ternary',
+                        side: 'left',
+                        sourceLine: ast.sourceLine,
+                        sourceColumn: ast.sourceColumn,
+                    },
                 ];
             }
             if (!typesAreEqual(trueBranchType as Type, falseBranchType as Type)) {
                 return [
-                    `Type mismatch in branches of ternary. True branch had ${
-                        (trueBranchType as any).name
-                    }, false branch had ${(falseBranchType as any).name}.`,
+                    {
+                        kind: 'ternaryBranchMismatch',
+                        trueBranchType: trueBranchType,
+                        falseBranchType: falseBranchType,
+                        sourceLine: ast.sourceLine,
+                        sourceColumn: ast.sourceColumn,
+                    } as TypeError,
                 ];
             }
             return trueBranchType;
@@ -455,7 +558,7 @@ const typeToString = (type: Type): string => {
 const typeCheckStatement = (
     ast: Ast.UninferredAst,
     variablesInScope: VariableDeclaration[]
-): { errors: string[]; newVariables: VariableDeclaration[] } => {
+): { errors: TypeError[]; newVariables: VariableDeclaration[] } => {
     if (!ast.kind) debug();
     switch (ast.kind) {
         case 'returnStatement': {
@@ -465,7 +568,14 @@ const typeCheckStatement = (
             }
             if (!typesAreEqual(result, builtinTypes.Integer)) {
                 return {
-                    errors: [`You tried to return a ${result.name}`],
+                    errors: [
+                        {
+                            kind: 'wrongTypeReturn',
+                            expressionType: result,
+                            sourceLine: ast.sourceLine,
+                            sourceColumn: ast.sourceColumn,
+                        },
+                    ],
                     newVariables: [],
                 };
             }
@@ -490,14 +600,28 @@ const typeCheckStatement = (
             const leftType = variablesInScope.find(v => v.name == ast.destination);
             if (!leftType) {
                 return {
-                    errors: [`You tried to assign to ${ast.destination}, which we couldn't find`],
+                    errors: [
+                        {
+                            kind: 'assignUndeclaredIdentifer',
+                            destinationName: ast.destination,
+                            sourceLine: ast.sourceLine,
+                            sourceColumn: ast.sourceColumn,
+                        },
+                    ],
                     newVariables: [],
                 };
             }
             if (!typesAreEqual(leftType.type, rightType)) {
                 return {
                     errors: [
-                        `You tried to assign the wrong type to ${ast.destination}, its a ___ and you assigned ___`,
+                        {
+                            kind: 'assignWrongType',
+                            lhsName: ast.destination,
+                            lhsType: leftType.type,
+                            rhsType: rightType,
+                            sourceLine: ast.sourceLine,
+                            sourceColumn: ast.sourceColumn,
+                        },
                     ],
                     newVariables: [],
                 };
@@ -514,9 +638,14 @@ const typeCheckStatement = (
             if (!typesAreEqual(expressionType, destinationType)) {
                 return {
                     errors: [
-                        `You tried to assign a ${typeToString(expressionType)} to "${
-                            ast.destination
-                        }", which has type ${typeToString(destinationType)}`,
+                        {
+                            kind: 'assignWrongType',
+                            lhsName: ast.destination,
+                            lhsType: destinationType,
+                            rhsType: expressionType,
+                            sourceLine: ast.sourceLine,
+                            sourceColumn: ast.sourceColumn,
+                        },
                     ],
                     newVariables: [],
                 };
@@ -771,24 +900,29 @@ const parseType = (ast: MplAst): Type => {
 
 let functionId = 0;
 const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
-    if (!ast) debug();
     switch (ast.type) {
         case 'returnStatement':
             return {
                 kind: 'returnStatement',
                 expression: astFromParseResult(ast.children[1]),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'number':
             if (ast.value === undefined) throw debug();
             return {
                 kind: 'number',
                 value: ast.value as any,
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'identifier':
             if (!ast.value) throw debug();
             return {
                 kind: 'identifier',
                 value: ast.value as any,
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'product':
             if (!('children' in ast)) throw debug();
@@ -796,6 +930,8 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 kind: 'product',
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'ternary':
             return {
@@ -803,6 +939,8 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 condition: astFromParseResult(ast.children[0]),
                 ifTrue: astFromParseResult(ast.children[2]),
                 ifFalse: astFromParseResult(ast.children[4]),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'equality':
             if (!('children' in ast)) throw debug();
@@ -810,6 +948,8 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 kind: 'equality',
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'paramList':
             throw debug(); //Should have been caught in "callExpression"
@@ -818,12 +958,16 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 kind: 'callExpression',
                 name: (ast.children[0] as any).value as any,
                 arguments: [],
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'callExpression':
             return {
                 kind: 'callExpression',
                 name: (ast.children[0] as any).value as any,
                 arguments: extractArgumentList(ast.children[2]).map(astFromParseResult),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'subtraction':
             if (!('children' in ast)) throw debug();
@@ -831,6 +975,8 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 kind: 'subtraction',
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'addition':
             if (!('children' in ast)) throw debug();
@@ -838,6 +984,8 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 kind: 'addition',
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'reassignment':
             if (!('children' in ast)) throw debug();
@@ -845,6 +993,8 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 kind: 'reassignment',
                 destination: (ast.children[0] as any).value as any,
                 expression: astFromParseResult(ast.children[2]),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'declarationAssignment':
             if (!('children' in ast)) throw debug();
@@ -852,6 +1002,8 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 kind: 'declarationAssignment',
                 destination: (ast.children[0] as any).value as any,
                 expression: astFromParseResult(ast.children[3]),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'typedDeclarationAssignment':
             if (!('children' in ast)) throw debug();
@@ -860,11 +1012,15 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 destination: (ast.children[0] as any).value as any,
                 type: parseType(ast.children[2]),
                 expression: astFromParseResult(ast.children[4]),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'stringLiteral':
             return {
                 kind: 'stringLiteral',
                 value: ast.value as any,
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'concatenation':
             if (!('children' in ast)) throw debug();
@@ -872,6 +1028,8 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 kind: 'concatenation',
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'equality':
             if (!('children' in ast)) throw debug();
@@ -879,6 +1037,8 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 kind: 'equality',
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'function':
             functionId++;
@@ -893,6 +1053,8 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                     },
                 ],
                 parameters,
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'functionWithBlock':
             functionId++;
@@ -902,16 +1064,22 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 deanonymizedName: `anonymous_${functionId}`,
                 body: extractFunctionBodyFromParseTree(ast.children[3]),
                 parameters: parameters2,
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'booleanLiteral':
             return {
                 kind: 'booleanLiteral',
                 value: ast.value == 'true',
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         case 'program':
             return {
                 kind: 'program',
                 statements: makeProgramAstNodeFromStatmentParseResult(ast.children[0]),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
             };
         default:
             throw debug();

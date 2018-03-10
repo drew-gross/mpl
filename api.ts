@@ -1,10 +1,11 @@
 import { UninferredStatement, Statement } from './ast.js';
 
+export type SourceLocation = { sourceLine: number; sourceColumn: number };
+
 export type Type = {
     name: 'String' | 'Integer' | 'Boolean' | 'Function';
     arguments: Type[];
 };
-export type TypeError = string;
 export type VariableLocation = 'Global' | 'Parameter' | 'Stack';
 export type VariableDeclaration = {
     name: string;
@@ -52,6 +53,33 @@ export type ParseError =
     | {
           kind: 'unexpectedProgram';
       };
+export type TypeError = SourceLocation &
+    (
+        | {
+              kind: 'unknownIdentifier';
+              name: string;
+          }
+        | {
+              kind: 'wrongTypeForOperator';
+              found: Type;
+              expected: string;
+              operator: string;
+              side: 'left' | 'right';
+          }
+        | { kind: 'assignUndeclaredIdentifer'; destinationName: string }
+        | { kind: 'wrongTypeReturn'; expressionType: Type }
+        | { kind: 'wrongArgumentType'; targetFunction: string; passedType: Type; expectedType: Type }
+        | { kind: 'calledNonFunction'; identifierName: string; actualType: Type }
+        | {
+              kind: 'wrongNumberOfArguments';
+              targetFunction: string;
+              passedArgumentCount: number;
+              expectedArgumentCount: number;
+          }
+        | { kind: 'unknownTypeForIdentifier'; identifierName: string }
+        | { kind: 'ternaryBranchMismatch'; trueBranchType: Type; falseBranchType: Type }
+        | { kind: 'typeMismatchForOperator'; leftType: Type; rightType: Type; operator: string }
+        | { kind: 'assignWrongType'; lhsName: string; lhsType: Type; rhsType: Type });
 export type Backend = {
     name: string;
     toExectuable: (BackendInputs) => string;

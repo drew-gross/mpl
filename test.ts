@@ -51,24 +51,34 @@ test('ast for single number', t => {
                     {
                         type: 'return' as any,
                         value: null,
+                        sourceLine: -1, // TODO: fix
+                        sourceColumn: -1, // TODO: fix
                     },
                     {
                         type: 'number' as any,
                         value: 7,
+                        sourceLine: -1, // TODO: fix
+                        sourceColumn: -1, // TODO: fix
                     },
                     {
                         type: 'statementSeparator' as any,
                         value: null,
+                        sourceLine: -1, // TODO: fix
+                        sourceColumn: -1, // TODO: fix
                     },
                 ],
             },
             {
                 type: 'endOfFile' as any,
                 value: 'endOfFile',
+                sourceLine: -1, // TODO: fix
+                sourceColumn: -1, // TODO: fix
             },
         ],
+        sourceLine: -1, // TODO: fix
+        sourceColumn: -1, // TODO: fix
     };
-    t.deepEqual(parseResult, expectedResult);
+    t.deepEqual(parseResult, expectedResult as any);
 });
 
 test('ast for number in brackets', t => {
@@ -297,6 +307,8 @@ test('lowering of bracketedExpressions', t => {
                     {
                         type: 'return',
                         value: null,
+                        sourceLine: -1, // TODO: fix
+                        sourceColumn: -1, // TODO: fix
                     },
                     {
                         type: 'product',
@@ -304,24 +316,41 @@ test('lowering of bracketedExpressions', t => {
                             {
                                 type: 'number',
                                 value: 8,
+                                sourceLine: -1, // TODO: fix
+                                sourceColumn: -1, // TODO: fix
                             },
                             {
                                 type: 'product',
                                 value: null,
+                                sourceLine: -1, // TODO: fix
+                                sourceColumn: -1, // TODO: fix
                             },
                             {
                                 type: 'number',
                                 value: 7,
+                                sourceLine: -1, // TODO: fix
+                                sourceColumn: -1, // TODO: fix
                             },
                         ],
+                        sourceLine: -1, // TODO: fix
+                        sourceColumn: -1, // TODO: fix
                     },
                 ],
+
+                sourceLine: -1, // TODO: fix
+                sourceColumn: -1, // TODO: fix
             },
             {
                 type: 'endOfFile',
                 value: 'endOfFile',
+
+                sourceLine: -1, // TODO: fix
+                sourceColumn: -1, // TODO: fix
             },
         ],
+
+        sourceLine: -1, // TODO: fix
+        sourceColumn: -1, // TODO: fix
     });
 });
 
@@ -973,12 +1002,12 @@ return c;`,
     expectedExitCode: 8,
 });
 
-test.failing('reassign to undeclared identifier', compileAndRun, {
+test.only('reassign to undeclared identifier', compileAndRun, {
     source: `
 a := 1;
 b = 2;
 return a + b;`,
-    expectedTypeErrors: [`Couldn't find b`],
+    expectedTypeErrors: [{ kind: 'assignUndeclaredIdentifer', destinationName: 'b', sourceLine: 3, sourceColumn: 1 }],
 });
 
 test.failing('reassigning wrong type', compileAndRun, {

@@ -6,6 +6,7 @@ import assertNever from './util/assertNever.js';
 import debug from './util/debug.js';
 import { Graph } from 'graphlib';
 import dot from 'graphlib-dot';
+import { SourceLocation } from './api.js';
 
 interface Node<NodeType, LeafType> {
     type: NodeType;
@@ -17,13 +18,15 @@ type Leaf<TokenType> = {
     value: string | number | null | undefined;
 };
 
-type Ast<NodeType, LeafType> = Node<NodeType, LeafType> | Leaf<LeafType>;
+type Ast<NodeType, LeafType> = (Node<NodeType, LeafType> | Leaf<LeafType>) & SourceLocation;
 
 interface LeafWithIndex<TokenType> {
     success: true;
     newIndex: number;
     type: TokenType | 'endOfFile';
     value: string | number | null | undefined;
+    sourceLine: number;
+    sourceColumn: number;
 }
 
 interface NodeWithIndex<NodeType, LeafType> {
@@ -31,9 +34,12 @@ interface NodeWithIndex<NodeType, LeafType> {
     newIndex: number;
     type: NodeType;
     children: AstWithIndex<NodeType, LeafType>[];
+    sourceLine: number;
+    sourceColumn: number;
 }
 
-type AstWithIndex<NodeType, TokenType> = NodeWithIndex<NodeType, TokenType> | LeafWithIndex<TokenType>;
+type AstWithIndex<NodeType, TokenType> = (NodeWithIndex<NodeType, TokenType> | LeafWithIndex<TokenType>) &
+    SourceLocation;
 
 interface ParseError<TokenType> {
     found: (TokenType | 'endOfFile')[];
@@ -68,11 +74,15 @@ const stripNodeIndexes = <NodeType, AstLeafNodeType>(
         return {
             value: r.value,
             type: r.type,
+            sourceLine: r.sourceLine,
+            sourceColumn: r.sourceColumn,
         };
     }
     return {
         type: r.type,
         children: r.children.map(stripNodeIndexes),
+        sourceLine: r.sourceLine,
+        sourceColumn: r.sourceColumn,
     };
 };
 
@@ -118,6 +128,19 @@ const isSequence = <NodeType, TokenType>(
     return 'n' in val;
 };
 
+const getSourceLocation = <TokenType>(tokens: Token<TokenType>[], index: number): SourceLocation => {
+    if (index >= tokens.length) {
+        const lastToken: Token<TokenType> = last(tokens) as Token<TokenType>;
+        return {
+            sourceLine: lastToken.sourceLine + lastToken.string.length,
+            sourceColumn: lastToken.sourceColumn + lastToken.string.length,
+        };
+    } else {
+        const token: Token<TokenType> = tokens[index];
+        return { sourceLine: token.sourceLine, sourceColumn: token.sourceColumn };
+    }
+};
+
 const parseSequence = <NodeType, TokenType>(
     grammar: Grammar<NodeType, TokenType>,
     parser: SequenceParser<NodeType, TokenType>,
@@ -145,6 +168,7 @@ const parseSequence = <NodeType, TokenType>(
         newIndex: index,
         type: parser.n,
         children: results,
+        ...getSourceLocation(tokens, index),
     };
     return result;
 };
@@ -217,6 +241,7 @@ const parseAlternative = <NodeType, TokenType>(
                     success: true,
                     children: currentProgressRef,
                     type: sequence.n,
+                    ...getSourceLocation(tokens, index),
                 };
                 return result;
             }
@@ -251,6 +276,7 @@ const parseAlternative = <NodeType, TokenType>(
                     success: true,
                     children: currentProgressRef,
                     type: sequence.n,
+                    ...getSourceLocation(tokens, index),
                 };
                 return result;
             }
@@ -349,9 +375,7 @@ const terminal = <NodeType, TokenType>(terminal: TokenType): BaseParser<NodeType
         const result: ParseError<TokenType> = {
             found: ['endOfFile'],
             expected: [terminal],
-            // TODO: Put the end of file instead, this is just the last token.
-            sourceLine: tokens[index - 1].sourceLine,
-            sourceColumn: tokens[index - 1].sourceColumn,
+            ...getSourceLocation(tokens, index),
         };
         return result;
     }
@@ -361,6 +385,8 @@ const terminal = <NodeType, TokenType>(terminal: TokenType): BaseParser<NodeType
             newIndex: index + 1,
             value: tokens[index].value,
             type: tokens[index].type,
+            sourceLine: tokens[index].sourceLine,
+            sourceColumn: tokens[index].sourceColumn,
         };
     }
 
@@ -382,6 +408,8 @@ const endOfInput = <NodeType, TokenType>(
             newIndex: index + 1,
             value: 'endOfFile',
             type: 'endOfFile',
+            sourceLine: tokens[index - 1].sourceLine, // TODO: add length
+            sourceColumn: tokens[index - 1].sourceColumn, // TODO: add length
         };
     } else {
         return {
