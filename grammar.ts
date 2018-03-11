@@ -106,7 +106,7 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
     {
         token: ';',
         type: 'statementSeparator',
-        toString: _ => ';\n',
+        toString: _ => ';',
     },
     {
         token: '=>',

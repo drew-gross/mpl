@@ -132,7 +132,7 @@ const getSourceLocation = <TokenType>(tokens: Token<TokenType>[], index: number)
     if (index >= tokens.length) {
         const lastToken: Token<TokenType> = last(tokens) as Token<TokenType>;
         return {
-            sourceLine: lastToken.sourceLine + lastToken.string.length,
+            sourceLine: lastToken.sourceLine,
             sourceColumn: lastToken.sourceColumn + lastToken.string.length,
         };
     } else {
@@ -147,6 +147,7 @@ const parseSequence = <NodeType, TokenType>(
     tokens: Token<TokenType>[],
     index: number
 ): ParseResultWithIndex<NodeType, TokenType> => {
+    const originalIndex = index;
     const results: AstWithIndex<NodeType, TokenType>[] = [];
     for (const p of parser.p) {
         let result: ParseResultWithIndex<NodeType, TokenType>;
@@ -161,14 +162,14 @@ const parseSequence = <NodeType, TokenType>(
         }
 
         results.push(result);
-        index = result.newIndex as number;
+        index = result.newIndex;
     }
     const result: AstWithIndex<NodeType, TokenType> = {
         success: true,
         newIndex: index,
         type: parser.n,
         children: results,
-        ...getSourceLocation(tokens, index),
+        ...getSourceLocation(tokens, originalIndex),
     };
     return result;
 };
@@ -343,8 +344,7 @@ const parseAlternative = <NodeType, TokenType>(
                 })
             )
         ),
-        sourceLine: tokens[index].sourceLine,
-        sourceColumn: tokens[index].sourceColumn,
+        ...getSourceLocation(tokens, index),
     };
 };
 
@@ -385,16 +385,14 @@ const terminal = <NodeType, TokenType>(terminal: TokenType): BaseParser<NodeType
             newIndex: index + 1,
             value: tokens[index].value,
             type: tokens[index].type,
-            sourceLine: tokens[index].sourceLine,
-            sourceColumn: tokens[index].sourceColumn,
+            ...getSourceLocation(tokens, index),
         };
     }
 
     return {
         expected: [terminal],
         found: [tokens[index].type],
-        sourceLine: tokens[index].sourceLine,
-        sourceColumn: tokens[index].sourceColumn,
+        ...getSourceLocation(tokens, index),
     };
 };
 
@@ -408,15 +406,13 @@ const endOfInput = <NodeType, TokenType>(
             newIndex: index + 1,
             value: 'endOfFile',
             type: 'endOfFile',
-            sourceLine: tokens[index - 1].sourceLine, // TODO: add length
-            sourceColumn: tokens[index - 1].sourceColumn, // TODO: add length
+            ...getSourceLocation(tokens, index),
         };
     } else {
         return {
             expected: ['endOfFile'],
             found: [tokens[index].type],
-            sourceLine: tokens[index].sourceLine,
-            sourceColumn: tokens[index].sourceColumn,
+            ...getSourceLocation(tokens, index),
         };
     }
 };

@@ -4,7 +4,7 @@ import { lex } from './lex.js';
 import { parseMpl, compile, typeCheckStatement, astFromParseResult, typeOfExpression } from './frontend.js';
 import { compileAndRun } from './test-utils.js';
 import { grammar, tokenSpecs, MplParseResult, MplAst } from './grammar.js';
-import { stripResultIndexes, ParseResult, parse } from './parser-combinator.js';
+import { stripResultIndexes, ParseResult, parse, parseResultIsError } from './parser-combinator.js';
 import { removeBracketsFromAst } from './frontend.js';
 
 test('lexer', t => {
@@ -39,46 +39,52 @@ test('lex with initial whitespace', t => {
     ]);
 });
 
-test('ast for single number', t => {
+test.only('ast for single number', t => {
     const tokens = lex(tokenSpecs, 'return 7;');
     const parseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
+    if (parseResultIsError(parseResult)) {
+        t.fail('Parse Failed');
+        return;
+    }
     const expectedResult = {
-        type: 'program' as any,
+        type: 'program',
         children: [
             {
-                type: 'returnStatement' as any,
+                type: 'returnStatement',
+                sourceLine: 1,
+                sourceColumn: 1,
                 children: [
                     {
-                        type: 'return' as any,
+                        type: 'return',
                         value: null,
-                        sourceLine: -1, // TODO: fix
-                        sourceColumn: -1, // TODO: fix
+                        sourceLine: 1,
+                        sourceColumn: 1,
                     },
                     {
-                        type: 'number' as any,
+                        type: 'number',
                         value: 7,
-                        sourceLine: -1, // TODO: fix
-                        sourceColumn: -1, // TODO: fix
+                        sourceLine: 1,
+                        sourceColumn: 8,
                     },
                     {
-                        type: 'statementSeparator' as any,
+                        type: 'statementSeparator',
                         value: null,
-                        sourceLine: -1, // TODO: fix
-                        sourceColumn: -1, // TODO: fix
+                        sourceLine: 1,
+                        sourceColumn: 9,
                     },
                 ],
             },
             {
-                type: 'endOfFile' as any,
+                type: 'endOfFile',
                 value: 'endOfFile',
-                sourceLine: -1, // TODO: fix
-                sourceColumn: -1, // TODO: fix
+                sourceLine: 1,
+                sourceColumn: 10,
             },
         ],
-        sourceLine: -1, // TODO: fix
-        sourceColumn: -1, // TODO: fix
-    };
-    t.deepEqual(parseResult, expectedResult as any);
+        sourceLine: 1,
+        sourceColumn: 1,
+    } as MplAst;
+    t.deepEqual(expectedResult, parseResult);
 });
 
 test('ast for number in brackets', t => {
@@ -1002,7 +1008,7 @@ return c;`,
     expectedExitCode: 8,
 });
 
-test.only('reassign to undeclared identifier', compileAndRun, {
+test('reassign to undeclared identifier', compileAndRun, {
     source: `
 a := 1;
 b = 2;
