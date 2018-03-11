@@ -87,7 +87,7 @@ test('ast for single number', t => {
     t.deepEqual(expectedResult, parseResult);
 });
 
-test.only('ast for number in brackets', t => {
+test('ast for number in brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, ' return (5);'), 0))),
         {
@@ -135,28 +135,40 @@ test('ast for number in double brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'return ((20));'), 0))),
         {
-            type: 'program' as any,
+            type: 'program',
+            sourceLine: 1,
+            sourceColumn: 1,
             children: [
                 {
-                    type: 'returnStatement' as any,
+                    type: 'returnStatement',
+                    sourceLine: 1,
+                    sourceColumn: 1,
                     children: [
                         {
-                            type: 'return' as any,
+                            type: 'return',
                             value: null,
+                            sourceLine: 1,
+                            sourceColumn: 1,
                         },
                         {
-                            type: 'number' as any,
+                            type: 'number',
                             value: 20,
+                            sourceLine: 1,
+                            sourceColumn: 10,
                         },
                         {
-                            type: 'statementSeparator' as any,
+                            type: 'statementSeparator',
                             value: null,
+                            sourceLine: 1,
+                            sourceColumn: 14,
                         },
                     ],
                 },
                 {
-                    type: 'endOfFile' as any,
+                    type: 'endOfFile',
                     value: 'endOfFile',
+                    sourceLine: 1,
+                    sourceColumn: 15,
                 },
             ],
         }
