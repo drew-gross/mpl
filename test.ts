@@ -39,7 +39,7 @@ test('lex with initial whitespace', t => {
     ]);
 });
 
-test.only('ast for single number', t => {
+test('ast for single number', t => {
     const tokens = lex(tokenSpecs, 'return 7;');
     const parseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
     if (parseResultIsError(parseResult)) {
@@ -87,32 +87,44 @@ test.only('ast for single number', t => {
     t.deepEqual(expectedResult, parseResult);
 });
 
-test('ast for number in brackets', t => {
+test.only('ast for number in brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, ' return (5);'), 0))),
         {
-            type: 'program' as any,
+            type: 'program',
+            sourceLine: 1,
+            sourceColumn: 2,
             children: [
                 {
-                    type: 'returnStatement' as any,
+                    type: 'returnStatement',
+                    sourceLine: 1,
+                    sourceColumn: 2,
                     children: [
                         {
-                            type: 'return' as any,
+                            type: 'return',
                             value: null,
+                            sourceLine: 1,
+                            sourceColumn: 2,
                         },
                         {
-                            type: 'number' as any,
+                            type: 'number',
                             value: 5,
+                            sourceLine: 1,
+                            sourceColumn: 10,
                         },
                         {
-                            type: 'statementSeparator' as any,
+                            type: 'statementSeparator',
                             value: null,
+                            sourceLine: 1,
+                            sourceColumn: 12,
                         },
                     ],
                 },
                 {
-                    type: 'endOfFile' as any,
+                    type: 'endOfFile',
                     value: 'endOfFile',
+                    sourceLine: 1,
+                    sourceColumn: 13,
                 },
             ],
         }
