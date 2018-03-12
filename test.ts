@@ -1,10 +1,23 @@
 import test from 'ava';
 
 import { lex } from './lex.js';
-import { parseMpl, compile, typeCheckStatement, astFromParseResult, typeOfExpression } from './frontend.js';
+import {
+    parseMpl,
+    compile,
+    typeCheckStatement,
+    astFromParseResult,
+    typeOfExpression,
+    builtinTypes,
+} from './frontend.js';
 import { compileAndRun } from './test-utils.js';
 import { grammar, tokenSpecs, MplParseResult, MplAst } from './grammar.js';
-import { stripResultIndexes, ParseResult, parse, parseResultIsError } from './parser-combinator.js';
+import {
+    stripResultIndexes,
+    ParseResult,
+    parse,
+    parseResultIsError,
+    stripSourceLocation,
+} from './parser-combinator.js';
 import { removeBracketsFromAst } from './frontend.js';
 
 test('lexer', t => {
@@ -256,20 +269,6 @@ test('ast for product with brackets', t => {
         }
     );
 });
-
-const stripSourceLocation = ast => {
-    if ('children' in ast) {
-        return {
-            type: ast.type,
-            children: ast.children.map(stripSourceLocation),
-        };
-    } else {
-        return {
-            type: ast.type,
-            value: ast.value,
-        };
-    }
-};
 
 test('ast for assignment then return', t => {
     const expected = {
@@ -716,7 +715,14 @@ return factorial(5);`,
 
 test('return bool fail', compileAndRun, {
     source: 'return 1 == 2',
-    expectedTypeErrors: ['You tried to return a Boolean'],
+    expectedTypeErrors: [
+        {
+            kind: 'wrongTypeReturn',
+            expressionType: builtinTypes.Boolean,
+            sourceLine: 1,
+            sourceColumn: 1,
+        },
+    ],
 });
 
 test('boolean literal false', compileAndRun, {
@@ -733,12 +739,30 @@ test('wrong type for arg', compileAndRun, {
     source: `
 boolFunc := a: Boolean => 1;
 return boolFunc(7);`,
-    expectedTypeErrors: ['You passed a Integer as an argument to boolFunc. It expects a Boolean'],
+    expectedTypeErrors: [
+        {
+            kind: 'wrongArgumentType',
+            targetFunction: 'boolFunc',
+            passedType: builtinTypes.Integer,
+            expectedType: builtinTypes.Boolean,
+            sourceLine: 3,
+            sourceColumn: 8,
+        },
+    ],
 });
 
 test('assign wrong type', compileAndRun, {
     source: 'myInt: Integer = false; return myInt;',
-    expectedTypeErrors: ['You tried to assign a Boolean to "myInt", which has type Integer'],
+    expectedTypeErrors: [
+        {
+            kind: 'assignWrongType',
+            lhsName: 'myInt',
+            lhsType: builtinTypes.Integer,
+            rhsType: builtinTypes.Boolean,
+            sourceLine: 1,
+            sourceColumn: 1,
+        },
+    ],
 });
 
 test('assign function to typed var', compileAndRun, {
@@ -765,7 +789,20 @@ test('assign function to wrong args number', compileAndRun, {
 myFunc: Function<Integer, Integer> = () => 111;
 return myFunc();`,
     expectedTypeErrors: [
-        'You tried to assign a Function<Integer> to "myFunc", which has type Function<Integer, Integer>',
+        {
+            kind: 'assignWrongType',
+            lhsName: 'myFunc',
+            lhsType: {
+                name: 'Function',
+                arguments: [builtinTypes.Integer, builtinTypes.Integer],
+            },
+            rhsType: {
+                name: 'Function',
+                arguments: [builtinTypes.Integer],
+            },
+            sourceLine: 2,
+            sourceColumn: 1,
+        },
     ],
 });
 
@@ -774,17 +811,58 @@ test('assign function to wrong args type', compileAndRun, {
 myFunc: Function<Integer, Integer> = (a: String) => 111;
 return myFunc("");`,
     expectedTypeErrors: [
-        'You tried to assign a Function<String, Integer> to "myFunc", which has type Function<Integer, Integer>',
+        {
+            kind: 'assignWrongType',
+            lhsName: 'myFunc',
+            lhsType: {
+                name: 'Function',
+                arguments: [builtinTypes.Integer, builtinTypes.Integer],
+            },
+            rhsType: {
+                name: 'Function',
+                arguments: [builtinTypes.String, builtinTypes.Integer],
+            },
+            sourceLine: 2,
+            sourceColumn: 1,
+        },
     ],
 });
 
 // Need return types
+test.failing('return boolean', compileAndRun, {
+    source: `
+isFive: Function<Integer, Boolean> = a: Integer => a == 5;
+return isFive(5) ? 1 : 0`,
+    expectedExitCode: 1,
+});
+
+// Need return types
+test.failing('return string', compileAndRun, {
+    source: `
+isFive: Function<Integer, Boolean> = a: Integer => a == 5 ? "isFive" : "isNotFive";
+return length(isFive(5))`,
+    expectedExitCode: 6,
+});
+
 test('assign function to wrong return type', compileAndRun, {
     source: `
 myFunc: Function<Integer, Boolean> = (a: String) => 111;
 return myFunc("");`,
     expectedTypeErrors: [
-        'You tried to assign a Function<String, Integer> to "myFunc", which has type Function<Integer, Boolean>',
+        {
+            kind: 'assignWrongType',
+            lhsName: 'myFunc',
+            lhsType: {
+                name: 'Function',
+                arguments: [builtinTypes.Integer, builtinTypes.Boolean],
+            },
+            rhsType: {
+                name: 'Function',
+                arguments: [builtinTypes.String, builtinTypes.Integer],
+            },
+            sourceLine: 2,
+            sourceColumn: 1,
+        },
     ],
 });
 
@@ -809,7 +887,17 @@ test('mutil statement function with type error', compileAndRun, {
     source: `
 boolTimesInt := a: Integer => { b: Boolean = false; return a * b; };
 return boolTimesInt(1);`,
-    expectedTypeErrors: ['Right hand side of product was not integer'],
+    expectedTypeErrors: [
+        {
+            kind: 'wrongTypeForOperator',
+            operator: 'product',
+            side: 'right',
+            found: builtinTypes.Boolean,
+            expected: 'Integer',
+            sourceLine: 2,
+            sourceColumn: 60,
+        },
+    ],
 });
 
 test('multi statement function on multiple lines', compileAndRun, {
@@ -838,7 +926,7 @@ test('string length with type inferred', compileAndRun, {
     expectedExitCode: 5,
 });
 
-test.only('structure is equal for inferred string type', t => {
+test('structure is equal for inferred string type', t => {
     const inferredStructure = compile('myStr := "test"; return length(myStr);');
     const suppliedStructure = compile('myStr: String = "test"; return length(myStr);');
     // TODO:  remove this awful hack. Need to either strip source location from structure,
@@ -879,7 +967,16 @@ return str1 == str2 ? 7 : 2;
 
 test('wrong type global', compileAndRun, {
     source: `str: String = 5; return length(str);`,
-    expectedTypeErrors: ['You tried to assign a Integer to "str", which has type String'],
+    expectedTypeErrors: [
+        {
+            kind: 'assignWrongType',
+            lhsName: 'str',
+            lhsType: builtinTypes.String,
+            rhsType: builtinTypes.Integer,
+            sourceLine: 1,
+            sourceColumn: 1,
+        },
+    ],
 });
 
 test('string concatenation', compileAndRun, {
@@ -984,14 +1081,32 @@ test('call with wrong number of args', compileAndRun, {
     source: `
 threeArgs := a: Integer, b: Integer, c: Integer => a + b + c;
 return threeArgs(7, 4);`,
-    expectedTypeErrors: ['You tried to call threeArgs with 2 arguments when it needs 3'],
+    expectedTypeErrors: [
+        {
+            kind: 'wrongNumberOfArguments',
+            targetFunction: 'threeArgs',
+            passedArgumentCount: 2,
+            expectedArgumentCount: 3,
+            sourceLine: 3,
+            sourceColumn: 8,
+        },
+    ],
 });
 
 test('call with wrong arg type', compileAndRun, {
     source: `
 threeArgs := a: Integer, b: Integer, c: Integer => a + b + c;
 return threeArgs(7, 4, "notAnInteger");`,
-    expectedTypeErrors: ['You passed a String as an argument to threeArgs. It expects a Integer'],
+    expectedTypeErrors: [
+        {
+            kind: 'wrongArgumentType',
+            targetFunction: 'threeArgs',
+            expectedType: builtinTypes.Integer,
+            passedType: builtinTypes.String,
+            sourceColumn: 8,
+            sourceLine: 3,
+        },
+    ],
 });
 
 test('print', compileAndRun, {
@@ -1067,12 +1182,21 @@ return a + b;`,
     expectedTypeErrors: [{ kind: 'assignUndeclaredIdentifer', destinationName: 'b', sourceLine: 3, sourceColumn: 1 }],
 });
 
-test.failing('reassigning wrong type', compileAndRun, {
+test.only('reassigning wrong type', compileAndRun, {
     source: `
 a := 1;
-a = True;
+a = true;
 return a;`,
-    expectedTypeErrors: ['wrong type for a'],
+    expectedTypeErrors: [
+        {
+            kind: 'assignWrongType',
+            lhsName: 'a',
+            lhsType: builtinTypes.Integer,
+            rhsType: builtinTypes.Boolean,
+            sourceLine: 3,
+            sourceColumn: 1,
+        },
+    ],
 });
 
 test.failing('reassign string', compileAndRun, {

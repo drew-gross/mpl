@@ -660,7 +660,7 @@ const typeCheckStatement = (
     }
 };
 
-const builtinTypes: { [index: string]: Type } = {
+export const builtinTypes: { [index: string]: Type } = {
     String: { name: 'String', arguments: [] },
     Integer: { name: 'Integer', arguments: [] },
     Boolean: { name: 'Boolean', arguments: [] },

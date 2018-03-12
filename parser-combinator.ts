@@ -95,6 +95,20 @@ const stripResultIndexes = <NodeType, TokenType>(
     return stripNodeIndexes(r);
 };
 
+const stripSourceLocation = ast => {
+    if ('children' in ast) {
+        return {
+            type: ast.type,
+            children: ast.children.map(stripSourceLocation),
+        };
+    } else {
+        return {
+            type: ast.type,
+            value: ast.value,
+        };
+    }
+};
+
 export type BaseParser<NodeType, TokenType> = (
     tokens: Token<TokenType>[],
     index: number
@@ -448,5 +462,6 @@ export {
     Leaf,
     parseResultIsError,
     stripResultIndexes,
+    stripSourceLocation,
     toDotFile,
 };

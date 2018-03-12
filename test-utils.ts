@@ -10,7 +10,7 @@ import assertNever from './util/assertNever.js';
 import debug from './util/debug.js';
 import join from './util/join.js';
 import { tokenSpecs, grammar } from './grammar.js';
-import { parse, stripResultIndexes, toDotFile, parseResultIsError } from './parser-combinator.js';
+import { parse, stripResultIndexes, toDotFile, parseResultIsError, stripSourceLocation } from './parser-combinator.js';
 import * as dot from 'graphlib-dot';
 
 import mipsBackend from './backends/mips.js';
@@ -132,7 +132,7 @@ export const compileAndRun = async (
 
     // Frontend
     if (expectedAst) {
-        t.deepEqual(parseResult, expectedAst);
+        t.deepEqual(stripSourceLocation(parseResult), expectedAst);
     }
     const frontendOutput = compile(source);
     if (expectedParseErrors && 'parseErrors' in frontendOutput) {
