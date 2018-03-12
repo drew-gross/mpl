@@ -10,6 +10,9 @@ import join from '../util/join.js';
 import { CompiledProgram, CompiledExpression, compileExpression } from '../backend-utils.js';
 import { errors } from '../runtime-strings.js';
 
+// Beginnings of experiment with tracing code from source to target
+const callFree = (target: string, reason: string) => `my_free(${target}); // ${reason}`;
+
 const mplTypeToCType = (type: Type): ((name: string) => string) => {
     switch (type.name) {
         case 'Integer':
@@ -100,7 +103,7 @@ const astToC = (input: BackendInput): CompiledProgram => {
                     `string_concatenate(${lhsName}, ${rhsName}, ${temporaryName});`,
                 ],
                 execute: [],
-                cleanup: [`my_free(${temporaryName});`],
+                cleanup: [callFree(temporaryName, 'Free temporary from concatenation')],
             };
             return compileExpression([lhs, rhs, prepAndCleanup], ([_1, _2, _3]) => [temporaryName]);
         }
@@ -166,8 +169,31 @@ const astToC = (input: BackendInput): CompiledProgram => {
                     case 'Integer':
                         return compileAssignment(lhs, rhs);
                     case 'String':
-                        //TODO: need to de-alloc the thing we are overwriting.
-                        throw debug();
+                        switch (declaration.location) {
+                            case 'Stack':
+                                // Free old value, copy new value.
+                                const rhs = recurse({ ast: ast.expression });
+                                const savedOldValue = `saved_old_${getTemporaryId()}`;
+                                const temporaryName = `reassign_temporary_${getTemporaryId()}`;
+                                const prepAndCleanup = {
+                                    prepare: [
+                                        `char *${savedOldValue} = ${declaration.name};`,
+                                        `char *${temporaryName} = ${join(rhs.execute, ' ')};`,
+                                        `char *${declaration.name} = my_malloc(length(${temporaryName}));`,
+                                        `string_copy(${temporaryName}, ${declaration.name}),`,
+                                    ],
+                                    execute: [],
+                                    cleanup: [callFree(savedOldValue, 'free inaccessible value after reassignment')],
+                                };
+                                return prepAndCleanup;
+                            case 'Global':
+                                throw debug();
+                            case 'Parameter':
+                                // Shouldn't be possible, can't reassign parameters
+                                throw debug();
+                            default:
+                                throw debug();
+                        }
                     default:
                         throw debug();
                 }
@@ -276,11 +302,11 @@ const makeCfunctionBody = ({
             '\n'
         );
     });
-    const frees = variables
+    const endOfFunctionFrees = variables
         // TODO: Make a better memory model for dynamic/global frees.
         .filter(s => s.location === 'Stack')
         .filter(s => s.type.name == 'String')
-        .map(s => `my_free(${s.name});`);
+        .map(s => callFree(s.name, 'Freeing Stack String at end of function'));
     const returnCode = astToC({
         ast: returnStatement.expression,
         globalDeclarations,
@@ -295,7 +321,7 @@ const makeCfunctionBody = ({
             ...returnCode.prepare,
             `${mplTypeToCDeclaration(returnType, 'result')} = ${join(returnCode.execute, ' ')};`,
             ...returnCode.cleanup,
-            ...frees,
+            ...endOfFunctionFrees,
             ...beforeExit,
             `return result;`,
             '}',
@@ -330,9 +356,10 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         buildSignature: (_1, _2) => 'int main(int argc, char **argv)',
         returnType: { name: 'Integer' }, // Main can only ever return integer
         beforeExit: [
-            ...globalDeclarations
-                .filter(declaration => declaration.type.name === 'String')
-                .map(declaration => `my_free(${declaration.name});`),
+            // Pretty sure this needs to not be here, keeping it around until all tests pass
+            // ...globalDeclarations
+            //     .filter(declaration => declaration.type.name === 'String')
+            //     .map(declaration => callFree(declaration.name, 'Freeing global string at end of main program')),
             'verify_no_leaks();',
         ],
     });
@@ -417,6 +444,10 @@ void my_free(void *pointer) {
     // TODO: Merge blocks
     // Get a pointer to the space after the block info (-1 actually subtracts sizeof(struct block_info))
     struct block_info *block_to_free = ((struct block_info *)pointer) - 1;
+    if (block_to_free->free) {
+        printf("${errors.doubleFree.value}");
+        exit(-1);
+    }
     block_to_free->free = true;
 }
 

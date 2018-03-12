@@ -127,8 +127,8 @@ const extractVariables = (
     statements.forEach((statement: Ast.UninferredStatement) => {
         switch (statement.kind) {
             case 'returnStatement':
-                break;
             case 'reassignment':
+                break;
             case 'declarationAssignment':
             case 'typedDeclarationAssignment':
                 const potentialVariable = extractVariable(
@@ -712,7 +712,7 @@ const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaratio
     functions.map(({ name, parameters }) => ({
         name: name,
         type: { name: 'Function' as 'Function', arguments: parameters.map(p => p.type) },
-        location: 'Unknown' as any,
+        location: debug() as any,
     }));
 
 const assignmentToDeclaration = (
@@ -724,7 +724,7 @@ const assignmentToDeclaration = (
     return {
         name: ast.destination,
         type: result,
-        location: 'Unknown' as any,
+        location: 'Stack',
     };
 };
 

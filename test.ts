@@ -1182,7 +1182,7 @@ return a + b;`,
     expectedTypeErrors: [{ kind: 'assignUndeclaredIdentifer', destinationName: 'b', sourceLine: 3, sourceColumn: 1 }],
 });
 
-test.only('reassigning wrong type', compileAndRun, {
+test('reassigning wrong type', compileAndRun, {
     source: `
 a := 1;
 a = true;
@@ -1199,15 +1199,26 @@ return a;`,
     ],
 });
 
-test.failing('reassign string', compileAndRun, {
+// Need to figure out why a gets freed 3 times at the end
+test.only('reassign string', compileAndRun, {
     source: `
-a := 'Hello';
+a := "Hello";
 dummy := print(a);
-a = 'World!!!!!';
+a = "World!!!!!";
 dummy = print(a);
 return dummy - dummy;`,
     expectedExitCode: 0,
     expectedStdOut: 'HelloWorld!!!!!',
+    printSubsteps: 'c',
+});
+
+test.failing('reassign to a using expression including a', compileAndRun, {
+    source: `
+excite := str: String => str ++ "!";
+hello := "HelloWorld";
+hello = excite(hello);
+return length(hello);`,
+    expectedExitCode: 11,
 });
 
 test.failing('reassign integer inside function', compileAndRun, {
