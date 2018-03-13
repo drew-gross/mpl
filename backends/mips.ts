@@ -379,10 +379,11 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
             const lhs = ast.destination;
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const subExpressionTemporary = nextTemporary(currentTemporary);
+                const savedPointerForFreeing = subExpressionTemporary;
                 const rhs = recurse({
                     ast: ast.expression,
                     destination: currentTemporary,
-                    currentTemporary: subExpressionTemporary,
+                    currentTemporary: nextTemporary(subExpressionTemporary),
                 });
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug();
@@ -397,8 +398,34 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                             `sw ${currentTemporary.destination}, ${lhs}`,
                         ]);
                     case 'String':
-                        //TODO: need to de-alloc the thing we are overwriting.
-                        throw debug();
+                        if (!('destination' in savedPointerForFreeing)) throw debug();
+                        const prepAndCleanup = {
+                            prepare: [
+                                `# Save global for freeing after assignment`,
+                                `lw ${savedPointerForFreeing.destination}, ${lhs}`,
+                            ],
+                            execute: [],
+                            cleanup: [
+                                `# Free string that is no longer accessible`,
+                                move({ from: savedPointerForFreeing.destination, to: argument1 }),
+                                `jal my_free`,
+                            ],
+                        };
+                        return compileExpression([rhs, prepAndCleanup], ([e1, _]) => [
+                            ...e1,
+                            `# Get length of new string`,
+                            move({ from: currentTemporary.destination, to: argument1 }),
+                            `jal length`,
+                            `# Allocate enough space for new string`,
+                            move({ from: functionResult, to: argument1 }),
+                            `jal my_malloc`,
+                            `# Store location of alloocated memory to global`,
+                            `sw ${functionResult}, ${lhs}`,
+                            `# Copy string to allocated memory`,
+                            move({ from: functionResult, to: argument2 }),
+                            move({ from: currentTemporary.destination, to: argument1 }),
+                            `jal string_copy`,
+                        ]);
                     default:
                         throw debug();
                 }

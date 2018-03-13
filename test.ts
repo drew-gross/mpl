@@ -1209,7 +1209,6 @@ dummy = print(a);
 return dummy - dummy;`,
     expectedExitCode: 0,
     expectedStdOut: 'HelloWorld!!!!!',
-    printSubsteps: 'c',
 });
 
 test.failing('reassign to a using expression including a', compileAndRun, {
