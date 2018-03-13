@@ -68,6 +68,7 @@ const loadGlobalMips = ({ type, destination, spOffset }, value) => {
 
 const move = ({ from, to }: { from: string; to: string }) => `move ${to}, ${from}`;
 const add = ({ l, r, to }: { l: string; r: string; to: string }) => `add ${to}, ${l}, ${r}`;
+const call = ({ f, why }: { f: string; why: string }) => `jal ${f} # ${why}`;
 
 const multiplyMips = (destination, left, right) => {
     let leftRegister = left.destination;
@@ -413,18 +414,15 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                         };
                         return compileExpression([rhs, prepAndCleanup], ([e1, _]) => [
                             ...e1,
-                            `# Get length of new string`,
                             move({ from: currentTemporary.destination, to: argument1 }),
-                            `jal length`,
-                            `# Allocate enough space for new string`,
+                            call({ f: 'length', why: 'Get length of new string' }),
                             move({ from: functionResult, to: argument1 }),
-                            `jal my_malloc`,
+                            call({ f: 'my_malloc', why: 'Allocate space for new string' }),
                             `# Store location of alloocated memory to global`,
                             `sw ${functionResult}, ${lhs}`,
-                            `# Copy string to allocated memory`,
                             move({ from: functionResult, to: argument2 }),
                             move({ from: currentTemporary.destination, to: argument1 }),
-                            `jal string_copy`,
+                            call({ f: 'string_copy', why: 'Copy new string to destination' }),
                         ]);
                     default:
                         throw debug();
