@@ -1200,7 +1200,7 @@ return a;`,
 });
 
 // Need to figure out why a gets freed 3 times at the end
-test.only('reassign string', compileAndRun, {
+test('reassign string', compileAndRun, {
     source: `
 a := "Hello";
 dummy := print(a);

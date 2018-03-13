@@ -355,13 +355,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         stringLiterals,
         buildSignature: (_1, _2) => 'int main(int argc, char **argv)',
         returnType: { name: 'Integer' }, // Main can only ever return integer
-        beforeExit: [
-            // Pretty sure this needs to not be here, keeping it around until all tests pass
-            // ...globalDeclarations
-            //     .filter(declaration => declaration.type.name === 'String')
-            //     .map(declaration => callFree(declaration.name, 'Freeing global string at end of main program')),
-            'verify_no_leaks();',
-        ],
+        beforeExit: ['verify_no_leaks();'],
     });
     const Cdeclarations = globalDeclarations
         .map(declaration => mplTypeToCDeclaration(declaration.type, declaration.name))

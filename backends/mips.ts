@@ -962,6 +962,7 @@ const myFreeRuntimeFunction = () => {
     syscall
     free_null_check_passed:
     # TODO: merge blocks
+    # TODO: check if already free
     li ${one}, 1,
     sw ${one}, ${-1 * bytesInWord}(${argument1}) # free = work before space
     ${restoreRegistersCode(1).join('\n')}

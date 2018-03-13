@@ -712,7 +712,7 @@ const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaratio
     functions.map(({ name, parameters }) => ({
         name: name,
         type: { name: 'Function' as 'Function', arguments: parameters.map(p => p.type) },
-        location: debug() as any,
+        location: 'Global' as 'Global',
     }));
 
 const assignmentToDeclaration = (
