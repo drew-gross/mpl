@@ -269,15 +269,13 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
             let callInstructions: string[] = [];
             if (builtinFunctions.map(b => b.name).includes(functionName)) {
                 callInstructions = [
-                    `# Call runtime function`,
                     `la ${currentTemporary.destination}, ${functionName}`,
-                    `jal ${currentTemporary.destination}`,
+                    call({ f: currentTemporary.destination, why: 'Call runtime function' }),
                 ];
             } else if (globalDeclarations.some(declaration => declaration.name === functionName)) {
                 callInstructions = [
-                    `# Call global function`,
                     `lw ${currentTemporary.destination}, ${functionName}`,
-                    `jal ${currentTemporary.destination}`,
+                    call({ f: currentTemporary.destination, why: 'Call global function' }),
                 ];
             } else if (functionName in registerAssignment) {
                 callInstructions = [`# Call register function`, `jal ${registerAssignment[functionName].destination}`];
