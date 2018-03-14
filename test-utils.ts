@@ -1,6 +1,6 @@
 import * as open from 'open';
 import { exec } from 'child-process-promise';
-import { Backend, BackendInputs } from './api.js';
+import { Backend, BackendInputs, TypeError } from './api.js';
 import { Ast } from './ast.js';
 import { lex } from './lex.js';
 import { parseMpl, compile, parseErrorToString } from './frontend.js';
@@ -68,6 +68,8 @@ const astToString = (ast: Ast) => {
             throw debug();
     }
 };
+
+const typeErrorToString = (e: TypeError): string => JSON.stringify(e, null, 2);
 
 export const compileAndRun = async (
     t,
@@ -152,7 +154,7 @@ export const compileAndRun = async (
         t.deepEqual(expectedTypeErrors, frontendOutput.typeErrors);
         return;
     } else if ('typeErrors' in frontendOutput) {
-        t.fail(`Found type errors when none expected: ${frontendOutput.typeErrors.join(', ')}`);
+        t.fail(`Found type errors when none expected: ${join(frontendOutput.typeErrors.map(typeErrorToString), ', ')}`);
         return;
     } else if (expectedTypeErrors) {
         t.fail('Expected type errors and none found');

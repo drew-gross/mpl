@@ -1199,7 +1199,6 @@ return a;`,
     ],
 });
 
-// Need to figure out why a gets freed 3 times at the end
 test('reassign string', compileAndRun, {
     source: `
 a := "Hello";
@@ -1211,13 +1210,14 @@ return dummy - dummy;`,
     expectedStdOut: 'HelloWorld!!!!!',
 });
 
-test.failing('reassign to a using expression including a', compileAndRun, {
+// Still need mips
+test('reassign to a using expression including a', compileAndRun, {
     source: `
-excite := str: String => str ++ "!";
 hello := "HelloWorld";
-hello = excite(hello);
+hello = hello ++ "!";
 return length(hello);`,
     expectedExitCode: 11,
+    failing: 'mips', // TODO next
 });
 
 test.failing('reassign integer inside function', compileAndRun, {
@@ -1231,7 +1231,6 @@ foo = () => {
 }
 return foo();`,
     expectedExitCode: 8,
-    printSubsteps: 'js',
 });
 
 test.failing('reassign to undeclared identifier inside function', compileAndRun, {

@@ -175,17 +175,23 @@ const astToC = (input: BackendInput): CompiledProgram => {
                                 const rhs = recurse({ ast: ast.expression });
                                 const savedOldValue = `saved_old_${getTemporaryId()}`;
                                 const temporaryName = `reassign_temporary_${getTemporaryId()}`;
-                                const prepAndCleanup = {
+                                const assign = {
                                     prepare: [
                                         `char *${savedOldValue} = ${declaration.name};`,
                                         `char *${temporaryName} = ${join(rhs.execute, ' ')};`,
-                                        `char *${declaration.name} = my_malloc(length(${temporaryName}));`,
-                                        `string_copy(${temporaryName}, ${declaration.name}),`,
                                     ],
-                                    execute: [],
-                                    cleanup: [callFree(savedOldValue, 'free inaccessible value after reassignment')],
+                                    execute: [`my_malloc(length(${temporaryName}))`],
+                                    cleanup: [
+                                        `string_copy(${temporaryName}, ${declaration.name});`,
+                                        callFree(savedOldValue, 'free inaccessible value after reassignment'),
+                                    ],
                                 };
-                                return prepAndCleanup;
+                                const expression = compileExpression(
+                                    [rhs, assign],
+                                    // Can ignore rhs because it is executed during assign.
+                                    ([executeRhs, executeAssign]) => executeAssign
+                                );
+                                return compileAssignment(`char *${declaration.name}`, expression);
                             case 'Global':
                                 throw debug();
                             case 'Parameter':
