@@ -278,7 +278,9 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                     call({ f: currentTemporary.destination, why: 'Call global function' }),
                 ];
             } else if (functionName in registerAssignment) {
-                callInstructions = [`# Call register function`, `jal ${registerAssignment[functionName].destination}`];
+                callInstructions = [
+                    call({ f: registerAssignment[functionName].destination, why: 'Call register function' }),
+                ];
             } else {
                 debug();
             }
@@ -343,18 +345,15 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                         return compileExpression([rhs], ([e1]) => [
                             `# Put string pointer into temporary`,
                             ...e1,
-                            `# Get string length`,
                             move({ to: argument1, from: currentTemporary.destination }),
-                            `jal length`,
+                            call({ f: 'length', why: 'Get string length' }),
                             `# add one for null terminator`,
                             `addiu ${functionResult}, ${functionResult}, 1`,
-                            `# Allocate that much space`,
                             move({ to: argument1, from: functionResult }),
-                            `jal my_malloc`,
-                            `# copy string into allocated space`,
+                            call({ f: 'my_malloc', why: 'Allocate that much space' }),
                             move({ to: argument1, from: currentTemporary.destination }),
                             move({ to: argument2, from: functionResult }),
-                            `jal string_copy`,
+                            call({ f: 'string_copy', why: 'Copy string into allocated space ' }),
                             `# Store into global`,
                             `sw ${functionResult}, ${lhs}`,
                         ]);
@@ -405,9 +404,8 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                             ],
                             execute: [],
                             cleanup: [
-                                `# Free string that is no longer accessible`,
                                 move({ from: savedPointerForFreeing.destination, to: argument1 }),
-                                `jal my_free`,
+                                call({ f: 'my_free', why: 'Free string that is no longer accessible' }),
                             ],
                         };
                         return compileExpression([rhs, prepAndCleanup], ([e1, _]) => [
@@ -416,7 +414,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                             call({ f: 'length', why: 'Get length of new string' }),
                             move({ from: functionResult, to: argument1 }),
                             call({ f: 'my_malloc', why: 'Allocate space for new string' }),
-                            `# Store location of alloocated memory to global`,
+                            `# Store location of allocated memory to global`,
                             `sw ${functionResult}, ${lhs}`,
                             move({ from: functionResult, to: argument2 }),
                             move({ from: currentTemporary.destination, to: argument1 }),
@@ -515,8 +513,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                     ...e1,
                     `# Store right side in s1`,
                     ...e2,
-                    `# Call stringEquality`,
-                    `jal stringEquality`,
+                    call({ f: 'stringEquality', why: 'Call stringEquality' }),
                     `# Return value in ${functionResult}. Move to destination`,
                     moveMipsDeprecated(destination as any, functionResult),
                 ]);
@@ -593,10 +590,9 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 execute: [],
                 cleanup: [
                     [
-                        `# Freeing temporary from concat`,
                         move({ from: mallocResultTemporary.destination, to: argument1 }),
                         // TODO: maybe not valid? This destination may have been reused for something else by the time we get to cleanup
-                        `jal my_free`,
+                        call({ f: 'my_free', why: 'Freeing temporary from concat' }),
                     ].join('\n'),
                 ],
             };
@@ -607,32 +603,28 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 ...e1,
                 `# Compute rhs`,
                 ...e2,
-                `# Compute the length of lhs and add it to length temporary`,
                 move({ from: leftSideDestination.destination, to: argument1 }),
-                `jal length`,
+                call({ f: 'length', why: 'Compute the length of lhs and add it to length temporary' }),
                 add({
                     l: functionResult,
                     r: newStringLengthTemporary.destination,
                     to: newStringLengthTemporary.destination,
                 }),
-                `# Compute the length of rhs and add it to length temporary`,
                 move({ from: rightSideDestination.destination, to: argument1 }),
-                `jal length`,
+                call({ f: 'length', why: 'Compute the length of rhs and add it to length temporary' }),
                 add({
                     l: functionResult,
                     r: newStringLengthTemporary.destination,
                     to: newStringLengthTemporary.destination,
                 }),
-                `# Malloc that much space`,
                 move({ from: newStringLengthTemporary.destination, to: argument1 }),
-                `jal my_malloc`,
+                call({ f: 'my_malloc', why: 'Malloc that much space' }),
                 `# Save result`,
                 move({ from: functionResult, to: mallocResultTemporary.destination }),
-                `# Concatenate the strings and write to malloced space`,
                 move({ from: leftSideDestination.destination, to: argument1 }),
                 move({ from: rightSideDestination.destination, to: argument2 }),
                 move({ from: mallocResultTemporary.destination, to: argument3 }),
-                `jal string_concatenate`,
+                call({ f: 'string_concatenate', why: 'Concatenate the strings and write to malloced space' }),
                 `# Move malloced pointer to final destination`,
                 move({ from: mallocResultTemporary.destination, to: destination.destination }),
             ]);
@@ -726,7 +718,10 @@ const constructMipsFunction = (f: Function, globalDeclarations, stringLiterals) 
                 .map(s => {
                     const memoryForVariable: StorageSpec = registerAssignment[s.name];
                     if (memoryForVariable.type !== 'register') throw debug();
-                    return [move({ from: memoryForVariable.destination, to: argument1 }), `jal my_free`];
+                    return [
+                        move({ from: memoryForVariable.destination, to: argument1 }),
+                        call({ f: 'my_free', why: 'Free Stack String at end of scope' }),
+                    ];
                 });
 
             return [
@@ -1019,7 +1014,10 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
 
     const freeGlobals = globalDeclarations
         .filter(declaration => declaration.type.name === 'String')
-        .map(declaration => [`lw ${argument1}, ${declaration.name}`, `jal my_free`]);
+        .map(declaration => [
+            `lw ${argument1}, ${declaration.name}`,
+            call({ f: 'my_free', why: 'Free gloabal string at end of program' }),
+        ]);
 
     // Create space for spilled tempraries
     const numSpilledTemporaries = program.temporaryCount - 10;
@@ -1059,8 +1057,7 @@ ${makeSpillSpaceCode.join('\n')}
 ${mipsProgram.join('\n')}
 ${removeSpillSpaceCode.join('\n')}
 ${flatten(freeGlobals).join('\n')}
-# Check for leaks
-jal verify_no_leaks
+${call({ f: ' verify_no_leaks', why: 'Check for leaks' })}
 # print "exit code" and exit
 li $v0, 1
 syscall
