@@ -399,8 +399,9 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                         if (!('destination' in savedPointerForFreeing)) throw debug();
                         const prepAndCleanup = {
                             prepare: [
-                                `# Save global for freeing after assignment`,
-                                `lw ${savedPointerForFreeing.destination}, ${lhs}`,
+                                `lw ${
+                                    savedPointerForFreeing.destination
+                                }, ${lhs} # Save global for freeing after assignment`,
                             ],
                             execute: [],
                             cleanup: [
@@ -414,8 +415,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                             call({ f: 'length', why: 'Get length of new string' }),
                             move({ from: functionResult, to: argument1 }),
                             call({ f: 'my_malloc', why: 'Allocate space for new string' }),
-                            `# Store location of allocated memory to global`,
-                            `sw ${functionResult}, ${lhs}`,
+                            `sw ${functionResult}, ${lhs} # Store location of allocated memory to global`,
                             move({ from: functionResult, to: argument2 }),
                             move({ from: currentTemporary.destination, to: argument1 }),
                             call({ f: 'string_copy', why: 'Copy new string to destination' }),

@@ -1217,7 +1217,6 @@ hello := "HelloWorld";
 hello = hello ++ "!";
 return length(hello);`,
     expectedExitCode: 11,
-    failing: 'mips', // TODO next
 });
 
 test.failing('reassign integer inside function', compileAndRun, {

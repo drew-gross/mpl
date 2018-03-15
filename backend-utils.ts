@@ -20,5 +20,5 @@ export const compileExpression = (
 ): CompiledExpression => ({
     prepare: flatten(subExpressions.map(input => input.prepare)),
     execute: expressionCompiler(subExpressions.map(input => input.execute)),
-    cleanup: flatten(subExpressions.map(input => input.cleanup)).reverse(),
+    cleanup: flatten(subExpressions.reverse().map(input => input.cleanup)),
 });
