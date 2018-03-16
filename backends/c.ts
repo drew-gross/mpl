@@ -39,8 +39,6 @@ const mplTypeToCDeclaration = (type: Type, name: string): string => mplTypeToCTy
 
 type BackendInput = {
     ast: Ast.Ast;
-    globalDeclarations: VariableDeclaration[];
-    localDeclarations: VariableDeclaration[];
     declarations: VariableDeclaration[];
     stringLiterals: StringLiteralData[];
 };
@@ -66,7 +64,7 @@ const getTemporaryId = () => {
 };
 
 const astToC = (input: BackendInput): CompiledProgram => {
-    const { ast, globalDeclarations, stringLiterals, localDeclarations, declarations } = input;
+    const { ast, stringLiterals, declarations } = input;
     const recurse = newInput => astToC({ ...input, ...newInput });
     if (!ast) debug();
     switch (ast.kind) {
@@ -282,9 +280,7 @@ const makeCfunctionBody = ({
     const body = nonReturnStatements.map(statement => {
         const statementLogic = astToC({
             ast: statement,
-            globalDeclarations,
             stringLiterals,
-            localDeclarations: variables,
             declarations: mergeDeclarations(variables, globalDeclarations),
         });
         return join(
@@ -299,9 +295,7 @@ const makeCfunctionBody = ({
         .map(s => callFree(s.name, 'Freeing Stack String at end of function'));
     const returnCode = astToC({
         ast: returnStatement.expression,
-        globalDeclarations,
         stringLiterals,
-        localDeclarations: variables,
         declarations: mergeDeclarations(variables, globalDeclarations),
     });
     return join(
