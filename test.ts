@@ -1210,7 +1210,6 @@ return dummy - dummy;`,
     expectedStdOut: 'HelloWorld!!!!!',
 });
 
-// Still need mips
 test('reassign to a using expression including a', compileAndRun, {
     source: `
 hello := "HelloWorld";

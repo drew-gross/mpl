@@ -715,7 +715,7 @@ const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaratio
         location: 'Global' as 'Global',
     }));
 
-const assignmentToDeclaration = (
+const assignmentToGlobalDeclaration = (
     ast: Ast.UninferredDeclarationAssignment,
     variablesInScope: VariableDeclaration[]
 ): VariableDeclaration => {
@@ -724,7 +724,7 @@ const assignmentToDeclaration = (
     return {
         name: ast.destination,
         type: result,
-        location: 'Stack',
+        location: 'Global',
     };
 };
 
@@ -1151,7 +1151,7 @@ const compile = (source: string): FrontendOutput => {
 
     const globalDeclarations: VariableDeclaration[] = program.statements
         .filter(s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment')
-        .map(assignment => assignmentToDeclaration(assignment as any, variablesInScope));
+        .map(assignment => assignmentToGlobalDeclaration(assignment as any, variablesInScope));
 
     return {
         functions: typedFunctions,

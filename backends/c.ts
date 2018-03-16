@@ -113,52 +113,49 @@ const astToC = (input: BackendInput): CompiledProgram => {
         case 'typedDeclarationAssignment': {
             const lhs = ast.destination;
             const rhs = recurse({ ast: ast.expression });
-            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
-                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
-                if (!declaration) throw debug();
-                switch (declaration.type.name) {
-                    case 'Function':
-                    case 'Integer':
-                        return compileAssignment(lhs, rhs);
-                    case 'String': {
-                        const rhsWillAlloc = compileExpression([rhs], ([e]) => [
-                            `string_copy(${e}, my_malloc(length(${e}) + 1));`,
-                        ]);
-                        return compileAssignment(lhs, rhsWillAlloc);
+            const declaration = declarations.find(declaration => declaration.name === lhs);
+            if (!declaration) throw debug();
+            switch (declaration.type.name) {
+                case 'Function':
+                case 'Integer':
+                    switch (declaration.location) {
+                        case 'Stack':
+                            return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
+                        case 'Global':
+                            return compileAssignment(declaration.name, rhs);
+                        default:
+                            throw debug();
                     }
-                    default:
-                        debug();
-                }
-            } else {
-                const declaration = localDeclarations.find(declaration => declaration.name === lhs);
-                if (!declaration) throw debug();
-                switch (declaration.type.name) {
-                    case 'Function':
-                    case 'Integer':
-                        return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
-                    case 'String':
-                        switch (declaration.location) {
-                            case 'Stack': {
-                                const rhsWillAlloc = compileExpression([rhs], ([e1]) => [
-                                    'string_copy(',
-                                    ...e1,
-                                    ', my_malloc(length(',
-                                    ...e1,
-                                    ') + 1))',
-                                ]);
-                                return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhsWillAlloc);
-                            }
-                            case 'Parameter':
-                            case 'Global':
-                                return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
-                            default:
-                                throw debug();
+                case 'String':
+                    switch (declaration.location) {
+                        case 'Stack': {
+                            const rhsWillAlloc = compileExpression([rhs], ([e1]) => [
+                                'string_copy(',
+                                ...e1,
+                                ', my_malloc(length(',
+                                ...e1,
+                                ') + 1))',
+                            ]);
+                            return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhsWillAlloc);
                         }
-                    default:
-                        throw debug();
-                }
+                        case 'Global':
+                            const rhsWillAlloc = compileExpression([rhs], ([e1]) => [
+                                'string_copy(',
+                                ...e1,
+                                ', my_malloc(length(',
+                                ...e1,
+                                ') + 1))',
+                            ]);
+                            return compileAssignment(declaration.name, rhsWillAlloc);
+                        case 'Parameter':
+                            // Should never reassign to parameters
+                            throw debug();
+                        default:
+                            throw debug();
+                    }
+                default:
+                    throw debug();
             }
-            throw debug();
         }
         case 'reassignment': {
             const lhs = ast.destination;
@@ -172,6 +169,7 @@ const astToC = (input: BackendInput): CompiledProgram => {
                 case 'String':
                     switch (declaration.location) {
                         case 'Stack':
+                        case 'Global':
                             // Free old value, copy new value.
                             const rhs = recurse({ ast: ast.expression });
                             const savedOldValue = `saved_old_${getTemporaryId()}`;
@@ -193,8 +191,6 @@ const astToC = (input: BackendInput): CompiledProgram => {
                                 ([executeRhs, executeAssign]) => executeAssign
                             );
                             return compileAssignment(`char *${declaration.name}`, expression);
-                        case 'Global':
-                            throw debug();
                         case 'Parameter':
                             // Shouldn't be possible, can't reassign parameters
                             throw debug();
