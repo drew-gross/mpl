@@ -1281,14 +1281,14 @@ return foo();`,
 
 test.failing('reassign string inside function', compileAndRun, {
     source: `
-foo = () => {
-    a := 'Hello';
+foo := () => {
+    a := "Hello";
     dummy := print(a);
-    a = 'World!!!!!';
+    a = "World!!!!!";
     dummy = print(a);
     return dummy - dummy;
-}
-return foo()
+};
+return foo();
 `,
     expectedExitCode: 0,
     expectedStdOut: 'HelloWorld!!!!!',
