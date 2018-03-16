@@ -1241,26 +1241,42 @@ return foo();`,
     expectedExitCode: 8,
 });
 
-test.failing('reassign to undeclared identifier inside function', compileAndRun, {
+test('reassign to undeclared identifier inside function', compileAndRun, {
     source: `
-foo = () => {
+foo := () => {
     a := 1;
     b = 2;
     return a + b;
-}
+};
 return foo()`,
-    expectedTypeErrors: [`Couldn't find b`],
+    expectedTypeErrors: [
+        {
+            kind: 'assignUndeclaredIdentifer',
+            destinationName: 'b',
+            sourceLine: 4,
+            sourceColumn: 5,
+        },
+    ],
 });
 
-test.failing('reassigning wrong type inside function', compileAndRun, {
+test('reassigning wrong type inside function', compileAndRun, {
     source: `
-foo = () => {
+foo := () => {
     a := 1;
-    a = True;
+    a = true;
     return a;
-}
+};
 return foo();`,
-    expectedTypeErrors: ['wrong type for a'],
+    expectedTypeErrors: [
+        {
+            kind: 'assignWrongType',
+            lhsName: 'a',
+            lhsType: builtinTypes.Integer,
+            rhsType: builtinTypes.Boolean,
+            sourceLine: 4,
+            sourceColumn: 5,
+        },
+    ],
 });
 
 test.failing('reassign string inside function', compileAndRun, {
