@@ -66,6 +66,11 @@ const getTemporaryId = () => {
 const astToC = (input: BackendInput): CompiledProgram => {
     const { ast, stringLiterals, declarations } = input;
     const recurse = newInput => astToC({ ...input, ...newInput });
+    const binaryOperator = (operator: string) => {
+        const lhs = recurse({ ast: (ast as any).lhs });
+        const rhs = recurse({ ast: (ast as any).rhs });
+        return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, operator, ...e2]);
+    };
     if (!ast) debug();
     switch (ast.kind) {
         case 'returnStatement': {
@@ -74,21 +79,12 @@ const astToC = (input: BackendInput): CompiledProgram => {
         }
         case 'number':
             return compileExpression([], ([]) => [ast.value.toString()]);
-        case 'product': {
-            const lhs = recurse({ ast: ast.lhs });
-            const rhs = recurse({ ast: ast.rhs });
-            return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '*', ...e2]);
-        }
-        case 'addition': {
-            const lhs = recurse({ ast: ast.lhs });
-            const rhs = recurse({ ast: ast.rhs });
-            return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '+', ...e2]);
-        }
-        case 'subtraction': {
-            const lhs = recurse({ ast: ast.lhs });
-            const rhs = recurse({ ast: ast.rhs });
-            return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '-', ...e2]);
-        }
+        case 'product':
+            return binaryOperator('*');
+        case 'addition':
+            return binaryOperator('+');
+        case 'subtraction':
+            return binaryOperator('-');
         case 'concatenation': {
             const lhs = recurse({ ast: ast.lhs });
             const rhs = recurse({ ast: ast.rhs });
