@@ -9,6 +9,7 @@ import debug from '../util/debug.js';
 import join from '../util/join.js';
 import { CompiledProgram, CompiledExpression, compileExpression } from '../backend-utils.js';
 import { errors } from '../runtime-strings.js';
+import { mergeDeclarations } from '../frontend.js';
 
 // Beginnings of experiment with tracing code from source to target
 const callFree = (target: string, reason: string) => `my_free(${target}); // ${reason}`;
@@ -40,6 +41,7 @@ type BackendInput = {
     ast: Ast.Ast;
     globalDeclarations: VariableDeclaration[];
     localDeclarations: VariableDeclaration[];
+    declarations: VariableDeclaration[];
     stringLiterals: StringLiteralData[];
 };
 
@@ -64,7 +66,7 @@ const getTemporaryId = () => {
 };
 
 const astToC = (input: BackendInput): CompiledProgram => {
-    const { ast, globalDeclarations, stringLiterals, localDeclarations } = input;
+    const { ast, globalDeclarations, stringLiterals, localDeclarations, declarations } = input;
     const recurse = newInput => astToC({ ...input, ...newInput });
     if (!ast) debug();
     switch (ast.kind) {
@@ -161,61 +163,46 @@ const astToC = (input: BackendInput): CompiledProgram => {
         case 'reassignment': {
             const lhs = ast.destination;
             const rhs = recurse({ ast: ast.expression });
-            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
-                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
-                if (!declaration) throw debug();
-                switch (declaration.type.name) {
-                    case 'Function':
-                    case 'Integer':
-                        return compileAssignment(lhs, rhs);
-                    case 'String':
-                        switch (declaration.location) {
-                            case 'Stack':
-                                // Free old value, copy new value.
-                                const rhs = recurse({ ast: ast.expression });
-                                const savedOldValue = `saved_old_${getTemporaryId()}`;
-                                const temporaryName = `reassign_temporary_${getTemporaryId()}`;
-                                const assign = {
-                                    prepare: [
-                                        `char *${savedOldValue} = ${declaration.name};`,
-                                        `char *${temporaryName} = ${join(rhs.execute, ' ')};`,
-                                    ],
-                                    execute: [`my_malloc(length(${temporaryName}))`],
-                                    cleanup: [
-                                        `string_copy(${temporaryName}, ${declaration.name});`,
-                                        callFree(savedOldValue, 'free inaccessible value after reassignment'),
-                                    ],
-                                };
-                                const expression = compileExpression(
-                                    [rhs, assign],
-                                    // Can ignore rhs because it is executed during assign.
-                                    ([executeRhs, executeAssign]) => executeAssign
-                                );
-                                return compileAssignment(`char *${declaration.name}`, expression);
-                            case 'Global':
-                                throw debug();
-                            case 'Parameter':
-                                // Shouldn't be possible, can't reassign parameters
-                                throw debug();
-                            default:
-                                throw debug();
-                        }
-                    default:
-                        throw debug();
-                }
-            } else {
-                const declaration = localDeclarations.find(declaration => declaration.name === lhs);
-                if (!declaration) throw debug();
-                switch (declaration.type.name) {
-                    case 'Function':
-                    case 'Integer':
-                        return compileAssignment(lhs, rhs);
-                    case 'String':
-                        //TODO: need to de-alloc the thing we are overwriting.
-                        throw debug();
-                    default:
-                        throw debug();
-                }
+            const declaration = declarations.find(declaration => declaration.name === lhs);
+            if (!declaration) throw debug();
+            switch (declaration.type.name) {
+                case 'Function':
+                case 'Integer':
+                    return compileAssignment(lhs, rhs);
+                case 'String':
+                    switch (declaration.location) {
+                        case 'Stack':
+                            // Free old value, copy new value.
+                            const rhs = recurse({ ast: ast.expression });
+                            const savedOldValue = `saved_old_${getTemporaryId()}`;
+                            const temporaryName = `reassign_temporary_${getTemporaryId()}`;
+                            const assign = {
+                                prepare: [
+                                    `char *${savedOldValue} = ${declaration.name};`,
+                                    `char *${temporaryName} = ${join(rhs.execute, ' ')};`,
+                                ],
+                                execute: [`my_malloc(length(${temporaryName}))`],
+                                cleanup: [
+                                    `string_copy(${temporaryName}, ${declaration.name});`,
+                                    callFree(savedOldValue, 'free inaccessible value after reassignment'),
+                                ],
+                            };
+                            const expression = compileExpression(
+                                [rhs, assign],
+                                // Can ignore rhs because it is executed during assign.
+                                ([executeRhs, executeAssign]) => executeAssign
+                            );
+                            return compileAssignment(`char *${declaration.name}`, expression);
+                        case 'Global':
+                            throw debug();
+                        case 'Parameter':
+                            // Shouldn't be possible, can't reassign parameters
+                            throw debug();
+                        default:
+                            throw debug();
+                    }
+                default:
+                    throw debug();
             }
         }
         case 'functionLiteral':
@@ -302,6 +289,7 @@ const makeCfunctionBody = ({
             globalDeclarations,
             stringLiterals,
             localDeclarations: variables,
+            declarations: mergeDeclarations(variables, globalDeclarations),
         });
         return join(
             [join(statementLogic.prepare, '\n'), join(statementLogic.execute, ' '), join(statementLogic.cleanup, '\n')],
@@ -318,6 +306,7 @@ const makeCfunctionBody = ({
         globalDeclarations,
         stringLiterals,
         localDeclarations: variables,
+        declarations: mergeDeclarations(variables, globalDeclarations),
     });
     return join(
         [

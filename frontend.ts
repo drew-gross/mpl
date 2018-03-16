@@ -1164,4 +1164,13 @@ const compile = (source: string): FrontendOutput => {
     };
 };
 
-export { parseMpl, lex, compile, removeBracketsFromAst, typeCheckStatement, parseErrorToString, astFromParseResult };
+export {
+    parseMpl,
+    lex,
+    compile,
+    removeBracketsFromAst,
+    typeCheckStatement,
+    parseErrorToString,
+    astFromParseResult,
+    mergeDeclarations,
+};
