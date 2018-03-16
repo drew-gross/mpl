@@ -1,3 +1,4 @@
+import { exec } from 'child-process-promise';
 import flatten from '../util/list/flatten.js';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { BackendInputs, ExecutionResult } from '../api.js';
@@ -25,7 +26,7 @@ const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.Ast; exitInsteadOfRetu
         case 'addition':
             return [...recurse({ ast: ast.lhs }), '+', ...recurse({ ast: ast.rhs })];
         case 'reassignment':
-            return [ast.destination, '=', ...recurse({ ast: ast.expression })];
+            return [ast.destination, '=', ...recurse({ ast: ast.expression }), ';'];
         case 'typedDeclarationAssignment':
             return [`let ${ast.destination} = `, ...recurse({ ast: ast.expression }), ';'];
         case 'functionLiteral':
@@ -95,4 +96,5 @@ export default {
     toExectuable,
     execute,
     name: 'js',
+    debug: path => exec(`${__dirname}/../../node_modules/.bin/inspect ${path}`),
 };

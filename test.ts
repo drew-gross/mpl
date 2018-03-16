@@ -1219,15 +1219,24 @@ return length(hello);`,
     expectedExitCode: 11,
 });
 
-test.failing('reassign integer inside function', compileAndRun, {
+test.failing('good parse error for missing semi-colon', compileAndRun, {
     source: `
 foo = () => {
+    return 1;
+}
+return foo();`,
+    expectedParseErrors: ['you forgot a semi-colon'],
+});
+
+test('reassign integer inside function', compileAndRun, {
+    source: `
+foo := () => {
     a := 1;
     b := a + 5;
     a = 2;
     c := a + b;
     return c;
-}
+};
 return foo();`,
     expectedExitCode: 8,
 });

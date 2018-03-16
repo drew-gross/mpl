@@ -1087,13 +1087,9 @@ const execute = async (path: string): Promise<ExecutionResult> => {
     }
 };
 
-const debugWithQtSpim = async path => {
-    await exec(`${__dirname}/../../QtSpim.app/Contents/MacOS/QtSpim ${path}`);
-};
-
 export default {
     name: 'mips',
     toExectuable,
     execute,
-    debug: debugWithQtSpim,
+    debug: path => exec(`${__dirname}/../../QtSpim.app/Contents/MacOS/QtSpim ${path}`),
 };
