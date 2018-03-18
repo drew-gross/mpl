@@ -1,6 +1,6 @@
 import { exec } from 'child-process-promise';
 import { ExecutionResult } from '../api.js';
-export default async (command): Promise<ExecutionResult> => {
+export default async (command: string): Promise<ExecutionResult> => {
     try {
         const result = await exec(command);
         return {

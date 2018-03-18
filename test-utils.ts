@@ -16,6 +16,7 @@ import * as dot from 'graphlib-dot';
 import mipsBackend from './backends/mips.js';
 import jsBackend from './backends/js.js';
 import cBackend from './backends/c.js';
+import x64Backend from './backends/x64.js';
 
 type CompileAndRunOptions = {
     source: string;
@@ -190,7 +191,7 @@ export const compileAndRun = async (
     });
 
     // Backends
-    const backends: Backend[] = [jsBackend, cBackend, mipsBackend];
+    const backends: Backend[] = [jsBackend, cBackend, mipsBackend, x64Backend];
     for (let i = 0; i < backends.length; i++) {
         const backend = backends[i];
         if (!failing.includes(backend.name)) {
