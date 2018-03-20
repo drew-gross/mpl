@@ -22,3 +22,18 @@ export const compileExpression = (
     execute: expressionCompiler(subExpressions.map(input => input.execute)),
     cleanup: flatten(subExpressions.reverse().map(input => input.cleanup)),
 });
+
+///////////// Assembly spcecific utils. TODO: Move these to Register Tranfer Langauge utils //////////
+
+// TODO: Replace with register transfer langauge
+export type StorageSpec = { type: 'register'; destination: string } | { type: 'memory'; spOffset: number };
+export type RegisterAssignment = { [index: string]: StorageSpec };
+
+export const storageSpecToString = (spec: StorageSpec): string => {
+    switch (spec.type) {
+        case 'register':
+            return spec.destination;
+        case 'memory':
+            return `$sp-${spec.spOffset}`;
+    }
+};

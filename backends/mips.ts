@@ -4,7 +4,13 @@ import flatten from '../util/list/flatten.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
-import { CompiledProgram, compileExpression } from '../backend-utils.js';
+import {
+    CompiledProgram,
+    compileExpression,
+    StorageSpec,
+    RegisterAssignment,
+    storageSpecToString,
+} from '../backend-utils.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
 
@@ -106,17 +112,6 @@ const mipsBranchIfEqual = (left, right, label) => {
     return `beq ${left.destination}, ${right.destination}, ${label}`;
 };
 
-// TODO: global storage
-type StorageSpec = { type: 'register'; destination: string } | { type: 'memory'; spOffset: number };
-const storageSpecToString = (spec: StorageSpec): string => {
-    switch (spec.type) {
-        case 'register':
-            return spec.destination;
-        case 'memory':
-            return `$sp-${spec.spOffset}`;
-    }
-};
-
 const nextTemporary = (storage: StorageSpec): StorageSpec => {
     if (storage.type == 'register') {
         if (storage.destination == '$t9') {
@@ -145,7 +140,7 @@ let labelId = 0;
 
 type AstToMipsOptions = {
     ast: Ast.Ast;
-    registerAssignment: any;
+    registerAssignment: RegisterAssignment;
     destination: StorageSpec;
     currentTemporary: StorageSpec;
     globalDeclarations: VariableDeclaration[];
@@ -279,7 +274,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 ];
             } else if (functionName in registerAssignment) {
                 callInstructions = [
-                    call({ f: registerAssignment[functionName].destination, why: 'Call register function' }),
+                    call({ f: (registerAssignment[functionName] as any).destination, why: 'Call register function' }),
                 ];
             } else {
                 debug();
@@ -366,7 +361,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                     // TODO: Allow spilling of variables
                     destination: {
                         type: 'register',
-                        destination: `${registerAssignment[lhs].destination}`,
+                        destination: `${(registerAssignment[lhs] as any).destination}`,
                     },
                 });
             } else {
@@ -429,7 +424,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                     // TODO: Allow spilling of variables
                     destination: {
                         type: 'register',
-                        destination: `${registerAssignment[lhs].destination}`,
+                        destination: `${(registerAssignment[lhs] as any).destination}`,
                     },
                 });
             } else {
@@ -448,7 +443,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                     loadGlobalMips(destination as any, identifierName),
                 ]);
             }
-            const identifierRegister = registerAssignment[identifierName].destination;
+            const identifierRegister = (registerAssignment[identifierName] as any).destination;
             return compileExpression([], ([]) => [
                 `# Move from ${identifierName} (${identifierRegister}) into destination (${(destination as any)
                     .destination || (destination as any).spOffset})`,
@@ -636,7 +631,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
 
 const assignMipsRegisters = (
     variables: VariableDeclaration[]
-): { registerAssignment: any; firstTemporary: StorageSpec } => {
+): { registerAssignment: RegisterAssignment; firstTemporary: StorageSpec } => {
     // TODO: allow spilling of variables
     let currentRegister = 0;
     let registerAssignment = {};
