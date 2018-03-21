@@ -17,7 +17,7 @@
     "cloc":
       "cloc --exclude-dir=node_modules,built --not-match-f='package.json|tsconfig.json|prettier-config.json|test.ts|test-utils.ts' .",
     "cloc-all": "cloc --exclude-dir=node_modules,built .",
-    "prettier-check": "prettier --config package.json --list-different *.ts"
+    "prettier-check": "prettier --config package.json --list-different '**/*.ts'"
   },
   "author": "Drew Gross",
   "dependencies": {

@@ -7,7 +7,13 @@ import { exec } from 'child-process-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { CompiledProgram, CompiledExpression, compileExpression } from '../backend-utils.js';
+import {
+    CompiledProgram,
+    CompiledExpression,
+    compileExpression,
+    CompiledAssignment,
+    RegisterTransferLanguageExpression,
+} from '../backend-utils.js';
 import { errors } from '../runtime-strings.js';
 import { mergeDeclarations } from '../frontend.js';
 
@@ -43,12 +49,6 @@ type BackendInput = {
     stringLiterals: StringLiteralData[];
 };
 
-type CompiledAssignment = {
-    prepare: string[];
-    execute: string[];
-    cleanup: string[];
-};
-
 const compileAssignment = (destination: string, rhs: CompiledExpression): CompiledAssignment => {
     return {
         prepare: rhs.prepare,
@@ -61,6 +61,14 @@ let currentTemporaryId = 0;
 const getTemporaryId = () => {
     currentTemporaryId++;
     return currentTemporaryId;
+};
+
+//TODO: Don't use register transfer langauge for C
+const registerTransferLangaugeToC = (rtlCode: RegisterTransferLanguageExpression[], joiner: string): string => {
+    rtlCode.forEach(line => {
+        if (typeof line !== 'string') debug();
+    });
+    return join(rtlCode as string[], joiner);
 };
 
 const astToC = (input: BackendInput): CompiledProgram => {
@@ -93,8 +101,8 @@ const astToC = (input: BackendInput): CompiledProgram => {
             const rhsName = `concat_rhs_${getTemporaryId()}`;
             const prepAndCleanup = {
                 prepare: [
-                    `char *${lhsName} = ${join(lhs.execute, ' ')};`,
-                    `char *${rhsName} = ${join(rhs.execute, ' ')};`,
+                    `char *${lhsName} = ${registerTransferLangaugeToC(lhs.execute, ' ')};`,
+                    `char *${rhsName} = ${registerTransferLangaugeToC(rhs.execute, ' ')};`,
                     `char *${temporaryName} = my_malloc(length(${lhsName}) + length(${rhsName}) + 1);`,
                     `string_concatenate(${lhsName}, ${rhsName}, ${temporaryName});`,
                 ],
@@ -171,7 +179,7 @@ const astToC = (input: BackendInput): CompiledProgram => {
                             const assign = {
                                 prepare: [
                                     `char *${savedOldValue} = ${declaration.name};`,
-                                    `char *${temporaryName} = ${join(rhs.execute, ' ')};`,
+                                    `char *${temporaryName} = ${registerTransferLangaugeToC(rhs.execute, ' ')};`,
                                 ],
                                 execute: [`my_malloc(length(${temporaryName}))`],
                                 cleanup: [
@@ -201,7 +209,7 @@ const astToC = (input: BackendInput): CompiledProgram => {
             const argumentsC = ast.arguments.map(argument => recurse({ ast: argument }));
             return compileExpression(argumentsC, argCode => [
                 `(*${ast.name})(`,
-                join(argCode.map(code => join(code, ' ')), ', '),
+                join(argCode.map(code => registerTransferLangaugeToC(code, ' ')), ', '),
                 ')',
             ]);
         }
@@ -280,7 +288,11 @@ const makeCfunctionBody = ({
             declarations: mergeDeclarations(variables, globalDeclarations),
         });
         return join(
-            [join(statementLogic.prepare, '\n'), join(statementLogic.execute, ' '), join(statementLogic.cleanup, '\n')],
+            [
+                registerTransferLangaugeToC(statementLogic.prepare, '\n'),
+                registerTransferLangaugeToC(statementLogic.execute, ' '),
+                registerTransferLangaugeToC(statementLogic.cleanup, '\n'),
+            ],
             '\n'
         );
     });
@@ -300,7 +312,7 @@ const makeCfunctionBody = ({
             '{',
             ...body,
             ...returnCode.prepare,
-            `${mplTypeToCDeclaration(returnType, 'result')} = ${join(returnCode.execute, ' ')};`,
+            `${mplTypeToCDeclaration(returnType, 'result')} = ${registerTransferLangaugeToC(returnCode.execute, ' ')};`,
             ...returnCode.cleanup,
             ...endOfFunctionFrees,
             ...beforeExit,

@@ -1,19 +1,29 @@
 import flatten from './util/list/flatten.js';
 
-type ExpressionCompiler = (expressions: string[][]) => string[];
+// TODO: get rid of string!
+export type RegisterTransferLanguageExpression =
+    | string
+    | ({ kind: 'move'; from: string; to: string } & { why: string });
 
 export type CompiledExpression = {
-    prepare: string[];
-    execute: string[];
-    cleanup: string[];
+    prepare: RegisterTransferLanguageExpression[];
+    execute: RegisterTransferLanguageExpression[];
+    cleanup: RegisterTransferLanguageExpression[];
+};
+
+export type CompiledAssignment = {
+    prepare: RegisterTransferLanguageExpression[];
+    execute: RegisterTransferLanguageExpression[];
+    cleanup: RegisterTransferLanguageExpression[];
 };
 
 export type CompiledProgram = {
-    prepare: string[];
-    execute: string[];
-    cleanup: string[];
+    prepare: RegisterTransferLanguageExpression[];
+    execute: RegisterTransferLanguageExpression[];
+    cleanup: RegisterTransferLanguageExpression[];
 };
 
+type ExpressionCompiler = (expressions: RegisterTransferLanguageExpression[][]) => RegisterTransferLanguageExpression[];
 export const compileExpression = (
     subExpressions: CompiledExpression[],
     expressionCompiler: ExpressionCompiler

@@ -216,7 +216,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 ...storeLeft,
                 `# Store right side in destination (${rightSideDestination.destination})`,
                 ...storeRight,
-                `# Evaluate subtraction`,
+                `# Evaluate addition`,
                 add({
                     l: leftSideDestination.destination,
                     r: rightSideDestination.destination,
