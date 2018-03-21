@@ -10,9 +10,11 @@ import {
     StorageSpec,
     RegisterAssignment,
     storageSpecToString,
+    RegisterTransferLanguageExpression,
 } from '../backend-utils.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
+import join from '../util/join.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
 const argument1 = '$s0';
@@ -45,10 +47,10 @@ const subtractMips = ({ type, destination }, left, right) => {
     }
 };
 
-const moveMipsDeprecated = ({ type, destination }, source) => {
+const moveMipsDeprecated = ({ type, destination }, source): RegisterTransferLanguageExpression => {
     switch (type) {
         case 'register':
-            return move({ to: destination, from: source });
+            return { kind: 'move', to: destination, from: source, why: 'deprecated:(:(:(' };
         default:
             throw debug();
     }
@@ -72,7 +74,6 @@ const loadGlobalMips = ({ type, destination, spOffset }, value) => {
     }
 };
 
-const move = ({ from, to }: { from: string; to: string }) => `move ${to}, ${from}`;
 const add = ({ l, r, to }: { l: string; r: string; to: string }) => `add ${to}, ${l}, ${r}`;
 const call = ({ f, why }: { f: string; why: string }) => `jal ${f} # ${why}`;
 
@@ -338,16 +339,30 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                         ]);
                     case 'String':
                         return compileExpression([rhs], ([e1]) => [
-                            `# Put string pointer into temporary`,
                             ...e1,
-                            move({ to: argument1, from: currentTemporary.destination }),
+                            {
+                                kind: 'move',
+                                to: argument1,
+                                from: currentTemporary.destination,
+                                why: 'Put string pointer into temporary',
+                            },
                             call({ f: 'length', why: 'Get string length' }),
                             `# add one for null terminator`,
                             `addiu ${functionResult}, ${functionResult}, 1`,
-                            move({ to: argument1, from: functionResult }),
+                            { kind: 'move', to: argument1, from: functionResult, why: 'Move length to argument1' },
                             call({ f: 'my_malloc', why: 'Allocate that much space' }),
-                            move({ to: argument1, from: currentTemporary.destination }),
-                            move({ to: argument2, from: functionResult }),
+                            {
+                                kind: 'move',
+                                to: argument1,
+                                from: currentTemporary.destination,
+                                why: 'Move destination to argument 1',
+                            },
+                            {
+                                kind: 'move',
+                                to: argument2,
+                                from: functionResult,
+                                why: 'Move output pointer to argument 2',
+                            },
                             call({ f: 'string_copy', why: 'Copy string into allocated space ' }),
                             `# Store into global`,
                             `sw ${functionResult}, ${lhs}`,
@@ -373,7 +388,7 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const subExpressionTemporary = nextTemporary(currentTemporary);
                 const savedPointerForFreeing = subExpressionTemporary;
-                const rhs = recurse({
+                const rhs: CompiledProgram = recurse({
                     ast: ast.expression,
                     destination: currentTemporary,
                     currentTemporary: nextTemporary(subExpressionTemporary),
@@ -400,19 +415,44 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                             ],
                             execute: [],
                             cleanup: [
-                                move({ from: savedPointerForFreeing.destination, to: argument1 }),
+                                {
+                                    kind: 'move',
+                                    from: savedPointerForFreeing.destination,
+                                    to: argument1,
+                                    why: 'Move global to argument 1 of free',
+                                },
                                 call({ f: 'my_free', why: 'Free string that is no longer accessible' }),
-                            ],
+                            ] as RegisterTransferLanguageExpression[],
                         };
                         return compileExpression([rhs, prepAndCleanup], ([e1, _]) => [
                             ...e1,
-                            move({ from: currentTemporary.destination, to: argument1 }),
+                            {
+                                kind: 'move',
+                                from: currentTemporary.destination,
+                                to: argument1,
+                                why: 'Move from temporary to argument 1',
+                            },
                             call({ f: 'length', why: 'Get length of new string' }),
-                            move({ from: functionResult, to: argument1 }),
+                            {
+                                kind: 'move',
+                                from: functionResult,
+                                to: argument1,
+                                why: 'Move length of new string to argument of malloc',
+                            },
                             call({ f: 'my_malloc', why: 'Allocate space for new string' }),
                             `sw ${functionResult}, ${lhs} # Store location of allocated memory to global`,
-                            move({ from: functionResult, to: argument2 }),
-                            move({ from: currentTemporary.destination, to: argument1 }),
+                            {
+                                kind: 'move',
+                                from: functionResult,
+                                to: argument2,
+                                why: 'Move output pointer to argument 2 of string_copy',
+                            },
+                            {
+                                kind: 'move',
+                                from: currentTemporary.destination,
+                                to: argument1,
+                                why: 'move destination to argument 1 of string_copy',
+                            },
                             call({ f: 'string_copy', why: 'Copy new string to destination' }),
                         ]);
                     default:
@@ -585,7 +625,12 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 execute: [],
                 cleanup: [
                     [
-                        move({ from: mallocResultTemporary.destination, to: argument1 }),
+                        {
+                            kind: 'move',
+                            from: mallocResultTemporary.destination,
+                            to: argument1,
+                            why: 'Move pointer to new string to argument1',
+                        },
                         // TODO: maybe not valid? This destination may have been reused for something else by the time we get to cleanup
                         call({ f: 'my_free', why: 'Freeing temporary from concat' }),
                     ].join('\n'),
@@ -598,30 +643,48 @@ const astToMips = (input: AstToMipsOptions): CompiledProgram => {
                 ...e1,
                 `# Compute rhs`,
                 ...e2,
-                move({ from: leftSideDestination.destination, to: argument1 }),
+                { kind: 'move', from: leftSideDestination.destination, to: argument1, why: 'Move lhs to argument1' },
                 call({ f: 'length', why: 'Compute the length of lhs and add it to length temporary' }),
                 add({
                     l: functionResult,
                     r: newStringLengthTemporary.destination,
                     to: newStringLengthTemporary.destination,
                 }),
-                move({ from: rightSideDestination.destination, to: argument1 }),
+                { kind: 'move', from: rightSideDestination.destination, to: argument1, why: 'Move rhs to argument1' },
                 call({ f: 'length', why: 'Compute the length of rhs and add it to length temporary' }),
                 add({
                     l: functionResult,
                     r: newStringLengthTemporary.destination,
                     to: newStringLengthTemporary.destination,
                 }),
-                move({ from: newStringLengthTemporary.destination, to: argument1 }),
+                {
+                    kind: 'move',
+                    from: newStringLengthTemporary.destination,
+                    to: argument1,
+                    why: 'Move new string length to argument1',
+                },
                 call({ f: 'my_malloc', why: 'Malloc that much space' }),
-                `# Save result`,
-                move({ from: functionResult, to: mallocResultTemporary.destination }),
-                move({ from: leftSideDestination.destination, to: argument1 }),
-                move({ from: rightSideDestination.destination, to: argument2 }),
-                move({ from: mallocResultTemporary.destination, to: argument3 }),
+                {
+                    kind: 'move',
+                    from: functionResult,
+                    to: mallocResultTemporary.destination,
+                    why: 'Move malloc result to temporary',
+                },
+                { kind: 'move', from: leftSideDestination.destination, to: argument1, why: 'Move lhs to argument1' },
+                { kind: 'move', from: rightSideDestination.destination, to: argument2, why: 'Move rhs to argument2' },
+                {
+                    kind: 'move',
+                    from: mallocResultTemporary.destination,
+                    to: argument3,
+                    why: 'Move destintion to argument3',
+                },
                 call({ f: 'string_concatenate', why: 'Concatenate the strings and write to malloced space' }),
-                `# Move malloced pointer to final destination`,
-                move({ from: mallocResultTemporary.destination, to: destination.destination }),
+                {
+                    kind: 'move',
+                    from: mallocResultTemporary.destination,
+                    to: destination.destination,
+                    why: 'Move new string pointer to final destination',
+                },
             ]);
         }
         default:
@@ -671,6 +734,21 @@ const restoreRegistersCode = (numRegisters: number): string[] => {
     return result.reverse();
 };
 
+const registerTransferLangaugeToMips = (rtlCode: RegisterTransferLanguageExpression[]): string => {
+    return join(
+        rtlCode.map(line => {
+            if (typeof line == 'string') return line;
+            switch (line.kind) {
+                case 'move':
+                    return `move ${line.to}, ${line.from} # ${line.why}`;
+                default:
+                    throw debug();
+            }
+        }),
+        '\n'
+    );
+};
+
 const constructMipsFunction = (f: Function, globalDeclarations, stringLiterals) => {
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
     const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
@@ -714,7 +792,7 @@ const constructMipsFunction = (f: Function, globalDeclarations, stringLiterals) 
                     const memoryForVariable: StorageSpec = registerAssignment[s.name];
                     if (memoryForVariable.type !== 'register') throw debug();
                     return [
-                        move({ from: memoryForVariable.destination, to: argument1 }),
+                        { kind: 'move', from: memoryForVariable.destination, to: argument1 },
                         call({ f: 'my_free', why: 'Free Stack String at end of scope' }),
                     ];
                 });
@@ -730,7 +808,7 @@ const constructMipsFunction = (f: Function, globalDeclarations, stringLiterals) 
     return [
         `${f.name}:`,
         ...saveRegistersCode(scratchRegisterCount),
-        `${mipsCode.join('\n')}`,
+        `${registerTransferLangaugeToMips(mipsCode)}`,
         ...restoreRegistersCode(scratchRegisterCount),
         `jr $ra`,
     ].join('\n');
@@ -758,13 +836,15 @@ const lengthRuntimeFunction = () => {
     jr $ra`;
 };
 
-const printRuntimeFunction = () => {
-    return `print:
-li ${syscallSelect}, 4
-${move({ to: syscallArg1, from: argument1 })}
-syscall
-${move({ from: syscallResult, to: functionResult })}
-jr $ra`;
+const printRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
+    return [
+        `print:`,
+        `li ${syscallSelect}, 4`,
+        { kind: 'move', to: syscallArg1, from: argument1, why: 'Move print argument to syscall argument' },
+        `syscall`,
+        { kind: 'move', from: syscallResult, to: functionResult, why: 'Move syscall result to function result' },
+        `jr $ra`,
+    ];
 };
 
 const stringEqualityRuntimeFunction = () => {
@@ -852,89 +932,86 @@ const stringConcatenateRuntimeFunction = () => {
 
 const bytesInWord = 4;
 
-const myMallocRuntimeFunction = () => {
+const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     const currentBlockPointer = '$t1';
     const previousBlockPointer = '$t2';
     const scratch = '$t3';
-    return `my_malloc:
-    ${saveRegistersCode(3).join('\n')}
-    bne ${argument1}, 0, my_malloc_zero_size_check_passed
-    la $a0, ${errors.allocatedZero.name}
-    li $v0, 4
-    syscall
-    li $v0, 10
-    syscall
-    my_malloc_zero_size_check_passed:
-
-    la ${currentBlockPointer}, first_block
-    la ${previousBlockPointer}, 0
-
-    find_large_enough_free_block_loop:
-    # no blocks left (will require sbrk)
-    beq ${currentBlockPointer}, 0, find_large_enough_free_block_loop_exit
-    # current block not free, try next
-    lw ${scratch}, ${2 * bytesInWord}(${currentBlockPointer})
-    beq ${scratch}, 0, advance_pointers
-    # current block not large enough, try next
-    lw ${scratch}, 0(${currentBlockPointer})
-    bgt ${scratch}, ${argument1}, advance_pointers
-    # We found a large enough block! Hooray!
-    b find_large_enough_free_block_loop_exit
-
-    advance_pointers:
-    ${move({ to: previousBlockPointer, from: currentBlockPointer })}
-    lw ${currentBlockPointer}, ${1 * bytesInWord}(${currentBlockPointer})
-    b find_large_enough_free_block_loop
-
-    find_large_enough_free_block_loop_exit:
-    beq ${currentBlockPointer}, 0, sbrk_more_space
-
-    # Found a reusable block, mark it as not free
-    sw $0, ${2 * bytesInWord}(${currentBlockPointer})
-    # add 3 words to get actual space
-    ${move({ to: functionResult, from: currentBlockPointer })}
-    addiu ${functionResult}, ${3 * bytesInWord}
-    b my_malloc_return
-
-    sbrk_more_space:
-    ${move({ to: syscallArg1, from: argument1 })}
-    # Include space for management block
-    addiu ${syscallArg1}, ${3 * bytesInWord}
-    li ${syscallSelect}, 9
-    syscall
-    # If sbrk failed, exit
-    bne ${syscallResult}, -1, sbrk_exit_check_passed
-    la $a0, ${errors.allocationFailed.name}
-    li $v0, 4
-    syscall
-    li $v0, 10
-    syscall
-    sbrk_exit_check_passed:
-
-    # ${syscallResult} now contains pointer to block. Set up pointer to new block.
-    lw ${scratch}, first_block
-    bne ${scratch}, 0, assign_previous
-    sw ${syscallResult}, first_block
-    b set_up_new_space
-    assign_previous:
-    beq ${previousBlockPointer}, 0, set_up_new_space
-    sw ${syscallResult}, (${previousBlockPointer})
-
-    set_up_new_space:
-    # Save size to new block
-    sw ${argument1}, 0(${syscallResult})
-    # Save next pointer = nullptr
-    sw $0, ${1 * bytesInWord}(${syscallResult})
-    # Not free as we are about to use it
-    sw $0, ${2 * bytesInWord}(${syscallResult})
-    ${move({ to: functionResult, from: syscallResult })}
-    # add 3 words to get actual space
-    addiu ${functionResult}, ${3 * bytesInWord}
-
-    my_malloc_return:
-    ${restoreRegistersCode(3).join('\n')}
-    jr $ra
-    `;
+    return [
+        `my_malloc:`,
+        `${saveRegistersCode(3).join('\n')}`,
+        `bne ${argument1}, 0, my_malloc_zero_size_check_passed`,
+        `la $a0, ${errors.allocatedZero.name}`,
+        `li $v0, 4`,
+        `syscall`,
+        `li $v0, 10`,
+        `syscall`,
+        `my_malloc_zero_size_check_passed:`,
+        `la ${currentBlockPointer}, first_block`,
+        `la ${previousBlockPointer}, 0`,
+        `find_large_enough_free_block_loop:`,
+        `# no blocks left (will require sbrk)`,
+        `beq ${currentBlockPointer}, 0, find_large_enough_free_block_loop_exit`,
+        `# current block not free, try next`,
+        `lw ${scratch}, ${2 * bytesInWord}(${currentBlockPointer})`,
+        `beq ${scratch}, 0, advance_pointers`,
+        `# current block not large enough, try next`,
+        `lw ${scratch}, 0(${currentBlockPointer})`,
+        `bgt ${scratch}, ${argument1}, advance_pointers`,
+        `# We found a large enough block! Hooray!`,
+        `b find_large_enough_free_block_loop_exit`,
+        `advance_pointers:`,
+        {
+            kind: 'move',
+            to: previousBlockPointer,
+            from: currentBlockPointer,
+            why: 'Advance current block pointer to previous.',
+        },
+        `lw ${currentBlockPointer}, ${1 * bytesInWord}(${currentBlockPointer})`,
+        `b find_large_enough_free_block_loop`,
+        `find_large_enough_free_block_loop_exit:`,
+        `beq ${currentBlockPointer}, 0, sbrk_more_space`,
+        `# Found a reusable block, mark it as not free`,
+        `sw $0, ${2 * bytesInWord}(${currentBlockPointer})`,
+        { kind: 'move', to: functionResult, from: currentBlockPointer, why: 'Return current block pointer' },
+        `# add 3 words to get actual space`,
+        `addiu ${functionResult}, ${3 * bytesInWord}`,
+        `b my_malloc_return`,
+        `sbrk_more_space:`,
+        { kind: 'move', to: syscallArg1, from: argument1, why: 'Move amount of space to allocate to sbrk argument' },
+        `# Include space for management block`,
+        `addiu ${syscallArg1}, ${3 * bytesInWord}`,
+        `li ${syscallSelect}, 9`,
+        `syscall`,
+        `# If sbrk failed, exit`,
+        `bne ${syscallResult}, -1, sbrk_exit_check_passed`,
+        `la $a0, ${errors.allocationFailed.name}`,
+        `li $v0, 4`,
+        `syscall`,
+        `li $v0, 10`,
+        `syscall`,
+        `sbrk_exit_check_passed:`,
+        `# ${syscallResult} now contains pointer to block. Set up pointer to new block.`,
+        `lw ${scratch}, first_block`,
+        `bne ${scratch}, 0, assign_previous`,
+        `sw ${syscallResult}, first_block`,
+        `b set_up_new_space`,
+        `assign_previous:`,
+        `beq ${previousBlockPointer}, 0, set_up_new_space`,
+        `sw ${syscallResult}, (${previousBlockPointer})`,
+        `set_up_new_space:`,
+        `# Save size to new block`,
+        `sw ${argument1}, 0(${syscallResult})`,
+        `# Save next pointer = nullptr`,
+        `sw $0, ${1 * bytesInWord}(${syscallResult})`,
+        `# Not free as we are about to use it`,
+        `sw $0, ${2 * bytesInWord}(${syscallResult})`,
+        { kind: 'move', to: functionResult, from: syscallResult, why: 'Return result of sbrk' },
+        `# add 3 words to get actual space`,
+        `addiu ${functionResult}, ${3 * bytesInWord}`,
+        `my_malloc_return:`,
+        `${restoreRegistersCode(3).join('\n')}`,
+        `jr $ra`,
+    ];
 };
 
 const myFreeRuntimeFunction = () => {
@@ -1038,10 +1115,10 @@ first_block: .word 0
 
 .text
 ${lengthRuntimeFunction()}
-${printRuntimeFunction()}
+${registerTransferLangaugeToMips(printRuntimeFunction())}
 ${stringEqualityRuntimeFunction()}
 ${stringCopyRuntimeFunction()}
-${myMallocRuntimeFunction()}
+${registerTransferLangaugeToMips(myMallocRuntimeFunction())}
 ${myFreeRuntimeFunction()}
 ${stringConcatenateRuntimeFunction()}
 ${verifyNoLeaks()}
