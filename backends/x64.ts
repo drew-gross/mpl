@@ -4,6 +4,7 @@ import debug from '../util/debug.js';
 import * as Ast from '../ast.js';
 import {
     RegisterTransferLanguageExpression,
+    astToRegisterTransferLanguage,
     BackendOptions,
     CompiledProgram,
     StorageSpec,
@@ -73,9 +74,8 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
     const recurse = newInput => astToX64({ ...input, ...newInput });
     if (!ast) debug();
     switch (ast.kind) {
-        case 'number': {
-            return compileExpression([], ([]) => [{ kind: 'loadImmediate', value: ast.value, destination, why: '' }]);
-        }
+        case 'number':
+            return astToRegisterTransferLanguage(input);
         case 'product': {
             const leftSideDestination: StorageSpec = {
                 type: 'register',

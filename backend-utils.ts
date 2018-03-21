@@ -62,6 +62,13 @@ export type BackendOptions = {
     stringLiterals: StringLiteralData[];
 };
 
-export const astToRtl = (ast: BackendOptions): RegisterTransferLanguageExpression[] => {
-    throw debug();
+export const astToRegisterTransferLanguage = ({ ast, destination }: BackendOptions): CompiledExpression => {
+    switch (ast.kind) {
+        case 'number':
+            return compileExpression([], ([]) => [
+                { kind: 'loadImmediate', value: ast.value, destination: destination, why: '' },
+            ]);
+        default:
+            throw debug();
+    }
 };

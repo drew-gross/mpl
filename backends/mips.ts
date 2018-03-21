@@ -5,6 +5,7 @@ import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLi
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import {
+    astToRegisterTransferLanguage,
     CompiledProgram,
     BackendOptions,
     compileExpression,
@@ -159,7 +160,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 ...e1,
             ]);
         case 'number':
-            return compileExpression([], ([]) => [{ kind: 'loadImmediate', value: ast.value, destination, why: '' }]);
+            return astToRegisterTransferLanguage(input);
         case 'booleanLiteral':
             return compileExpression([], ([]) => [storeLiteralMips(destination as any, ast.value ? '1' : '0')]);
         case 'product': {
