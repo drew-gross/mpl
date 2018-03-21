@@ -150,7 +150,7 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
     switch (rtx.kind) {
         case 'loadImmediate':
             if (rtx.destination.type !== 'register') throw debug();
-            return `mov ${(rtx.destination as any).destination}, ${rtx.value}`;
+            return `mov ${rtx.destination.destination}, ${rtx.value}; ${rtx.why}`;
         default:
             throw debug();
     }

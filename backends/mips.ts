@@ -726,19 +726,14 @@ const restoreRegistersCode = (numRegisters: number): string[] => {
     return result.reverse();
 };
 
-const registerTransferLangaugeToMips = (rtlCode: RegisterTransferLanguageExpression[]): string => {
-    return join(
-        rtlCode.map(line => {
-            if (typeof line == 'string') return line;
-            switch (line.kind) {
-                case 'move':
-                    return `move ${line.to}, ${line.from} # ${line.why}`;
-                default:
-                    throw debug();
-            }
-        }),
-        '\n'
-    );
+const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpression): string => {
+    if (typeof rtx == 'string') return rtx;
+    switch (rtx.kind) {
+        case 'move':
+            return `move ${rtx.to}, ${rtx.from} # ${rtx.why}`;
+        default:
+            throw debug();
+    }
 };
 
 const constructMipsFunction = (f: Function, globalDeclarations, stringLiterals) => {
@@ -800,7 +795,7 @@ const constructMipsFunction = (f: Function, globalDeclarations, stringLiterals) 
     return [
         `${f.name}:`,
         ...saveRegistersCode(scratchRegisterCount),
-        `${registerTransferLangaugeToMips(mipsCode)}`,
+        join(mipsCode.map(registerTransferExpressionToMips), '\n'),
         ...restoreRegistersCode(scratchRegisterCount),
         `jr $ra`,
     ].join('\n');
@@ -1107,10 +1102,10 @@ first_block: .word 0
 
 .text
 ${lengthRuntimeFunction()}
-${registerTransferLangaugeToMips(printRuntimeFunction())}
+${join(printRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
 ${stringEqualityRuntimeFunction()}
 ${stringCopyRuntimeFunction()}
-${registerTransferLangaugeToMips(myMallocRuntimeFunction())}
+${join(myMallocRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
 ${myFreeRuntimeFunction()}
 ${stringConcatenateRuntimeFunction()}
 ${verifyNoLeaks()}
