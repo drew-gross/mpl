@@ -6,7 +6,6 @@ import { lex } from './lex.js';
 import { parseMpl, compile, parseErrorToString } from './frontend.js';
 import { file as tmpFile } from 'tmp-promise';
 import { writeFile, outputFile } from 'fs-extra';
-import assertNever from './util/assertNever.js';
 import debug from './util/debug.js';
 import join from './util/join.js';
 import { tokenSpecs, grammar } from './grammar.js';

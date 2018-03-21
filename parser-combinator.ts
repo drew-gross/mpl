@@ -2,7 +2,6 @@ import { Token } from './lex.js';
 import unique from './util/list/unique.js';
 import flatten from './util/list/flatten.js';
 import last from './util/list/last.js';
-import assertNever from './util/assertNever.js';
 import debug from './util/debug.js';
 import { Graph } from 'graphlib';
 import dot from 'graphlib-dot';
