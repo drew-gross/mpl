@@ -159,7 +159,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 ...e1,
             ]);
         case 'number':
-            return compileExpression([], ([]) => [storeLiteralMips(destination as any, ast.value)]);
+            return compileExpression([], ([]) => [{ kind: 'loadImmediate', value: ast.value, destination, why: '' }]);
         case 'booleanLiteral':
             return compileExpression([], ([]) => [storeLiteralMips(destination as any, ast.value ? '1' : '0')]);
         case 'product': {
@@ -731,6 +731,8 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
     switch (rtx.kind) {
         case 'move':
             return `move ${rtx.to}, ${rtx.from} # ${rtx.why}`;
+        case 'loadImmediate':
+            return storeLiteralMips(rtx.destination as any, rtx.value);
         default:
             throw debug();
     }
@@ -1113,7 +1115,7 @@ ${verifyNoLeaks()}
 ${mipsFunctions.join('\n')}
 main:
 ${makeSpillSpaceCode.join('\n')}
-${mipsProgram.join('\n')}
+${join(mipsProgram.map(registerTransferExpressionToMips), '\n')}
 ${removeSpillSpaceCode.join('\n')}
 ${flatten(freeGlobals).join('\n')}
 ${call({ f: ' verify_no_leaks', why: 'Check for leaks' })}
