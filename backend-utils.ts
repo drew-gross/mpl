@@ -1,3 +1,6 @@
+import * as Ast from './ast.js';
+import debug from './util/debug.js';
+import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from './api.js';
 import flatten from './util/list/flatten.js';
 
 // TODO: get rid of string!
@@ -46,4 +49,17 @@ export const storageSpecToString = (spec: StorageSpec): string => {
         case 'memory':
             return `$sp-${spec.spOffset}`;
     }
+};
+
+export type BackendOptions = {
+    ast: Ast.Ast;
+    registerAssignment: RegisterAssignment;
+    destination: StorageSpec;
+    currentTemporary: StorageSpec;
+    globalDeclarations: VariableDeclaration[];
+    stringLiterals: StringLiteralData[];
+};
+
+export const astToRtl = (ast: BackendOptions): RegisterTransferLanguageExpression[] => {
+    throw debug();
 };

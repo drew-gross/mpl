@@ -2,6 +2,7 @@ import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
 import * as Ast from '../ast.js';
 import {
+    BackendOptions,
     CompiledProgram,
     StorageSpec,
     RegisterAssignment,
@@ -35,16 +36,6 @@ start:    mov       rax, 0x02000004         ; system call for write
 message:  db        "Hello, World", 10      ; note the newline at the end
 `;
 
-// TODO: Unify with AstToMipsOptions
-type AstToX64Options = {
-    ast: Ast.Ast;
-    registerAssignment: any;
-    destination: StorageSpec;
-    currentTemporary: StorageSpec;
-    globalDeclarations: VariableDeclaration[];
-    stringLiterals: StringLiteralData[];
-};
-
 // TODO: unify with named registers in mips
 const functionResult = 'rax';
 
@@ -74,7 +65,7 @@ const nextTemporary = (storage: StorageSpec): StorageSpec => {
     }
 };
 
-const astToX64 = (input: AstToX64Options): CompiledProgram => {
+const astToX64 = (input: BackendOptions): CompiledProgram => {
     const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
     if (isEqual(currentTemporary, destination)) throw debug(); // Sanity check to make sure caller remembered to provide a new temporary
     const recurse = newInput => astToX64({ ...input, ...newInput });

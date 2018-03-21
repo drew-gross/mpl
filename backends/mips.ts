@@ -6,6 +6,7 @@ import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import {
     CompiledProgram,
+    BackendOptions,
     compileExpression,
     StorageSpec,
     RegisterAssignment,
@@ -139,16 +140,7 @@ const nextTemporary = (storage: StorageSpec): StorageSpec => {
 
 let labelId = 0;
 
-type AstToMipsOptions = {
-    ast: Ast.Ast;
-    registerAssignment: RegisterAssignment;
-    destination: StorageSpec;
-    currentTemporary: StorageSpec;
-    globalDeclarations: VariableDeclaration[];
-    stringLiterals: StringLiteralData[];
-};
-
-const astToMips = (input: AstToMipsOptions): CompiledProgram => {
+const astToMips = (input: BackendOptions): CompiledProgram => {
     const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
     if (isEqual(currentTemporary, destination)) throw debug(); // Sanity check to make sure caller remembered to provide a new temporary
     const recurse = newInput => astToMips({ ...input, ...newInput });
