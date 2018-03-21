@@ -416,7 +416,7 @@ test.only('single product', compileAndRun, {
     expectedExitCode: 4,
 });
 
-test('double product', compileAndRun, {
+test.only('double product', compileAndRun, {
     source: 'return 5 * 3 * 4',
     expectedExitCode: 60,
     expectedAst: {
