@@ -409,11 +409,13 @@ test('lowering of bracketedExpressions', t => {
 test.only('bare return', compileAndRun, {
     source: 'return 7',
     expectedExitCode: 7,
+    printSubsteps: 'x64',
 });
 
 test.only('single product', compileAndRun, {
     source: 'return 2 * 2',
     expectedExitCode: 4,
+    printSubsteps: 'x64',
 });
 
 test('double product', compileAndRun, {

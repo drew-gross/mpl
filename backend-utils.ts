@@ -3,10 +3,12 @@ import debug from './util/debug.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from './api.js';
 import flatten from './util/list/flatten.js';
 
+type PureRegisterTransferLanguageExpression =
+    | { kind: 'move'; from: string; to: string }
+    | { kind: 'loadImmediate'; value: number; destination: StorageSpec };
+
 // TODO: get rid of string!
-export type RegisterTransferLanguageExpression =
-    | string
-    | ({ kind: 'move'; from: string; to: string } & { why: string });
+export type RegisterTransferLanguageExpression = string | { why: string } & PureRegisterTransferLanguageExpression;
 
 export type CompiledExpression = {
     prepare: RegisterTransferLanguageExpression[];

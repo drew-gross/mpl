@@ -27,13 +27,13 @@ const syscallResult = '$v0';
 const syscallSelect = '$v0';
 const functionResult = '$a0';
 
-const storeLiteralMips = ({ type, destination, spOffset }, value) => {
-    if (type == undefined) debug();
-    switch (type) {
+const storeLiteralMips = (destination: StorageSpec, value) => {
+    if (destination.type == undefined) debug();
+    switch (destination.type) {
         case 'register':
-            return `li ${destination}, ${value}`;
+            return `li ${destination.destination}, ${value}`;
         case 'memory':
-            return [`li $s7, ${value}`, `sw $s7, -${spOffset}($sp)`].join('\n');
+            return [`li $s7, ${value}`, `sw $s7, -${destination.spOffset}($sp)`].join('\n');
         default:
             throw debug();
     }

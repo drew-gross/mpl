@@ -1,7 +1,9 @@
+import join from '../util/join.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
 import * as Ast from '../ast.js';
 import {
+    RegisterTransferLanguageExpression,
     BackendOptions,
     CompiledProgram,
     StorageSpec,
@@ -72,7 +74,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
     if (!ast) debug();
     switch (ast.kind) {
         case 'number': {
-            return compileExpression([], ([]) => [`mov ${(destination as any).destination}, ${ast.value}`]);
+            return compileExpression([], ([]) => [{ kind: 'loadImmediate', value: ast.value, destination, why: '' }]);
         }
         case 'product': {
             const leftSideDestination: StorageSpec = {
@@ -143,6 +145,17 @@ const assignX64Registers = (
     };
 };
 
+const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression): string => {
+    if (typeof rtx == 'string') return rtx;
+    switch (rtx.kind) {
+        case 'loadImmediate':
+            if (rtx.destination.type !== 'register') throw debug();
+            return `mov ${(rtx.destination as any).destination}, ${rtx.value}`;
+        default:
+            throw debug();
+    }
+};
+
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     const { registerAssignment, firstTemporary } = assignX64Registers(program.variables);
     let x64Program = flatten(
@@ -168,7 +181,7 @@ global start
 
 section .text
 start:
-${x64Program.join('\n')}
+${join(x64Program.map(registerTransferExpressionToX64), '\n')}
     mov rdi, rax; Move function call result to syscall arg
     mov rax, 0x02000001; system call for exit
     syscall
