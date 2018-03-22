@@ -406,17 +406,17 @@ test('lowering of bracketedExpressions', t => {
     });
 });
 
-test.only('bare return', compileAndRun, {
+test('bare return', compileAndRun, {
     source: 'return 7',
     expectedExitCode: 7,
 });
 
-test.only('single product', compileAndRun, {
+test('single product', compileAndRun, {
     source: 'return 2 * 2',
     expectedExitCode: 4,
 });
 
-test.only('double product', compileAndRun, {
+test('double product', compileAndRun, {
     source: 'return 5 * 3 * 4',
     expectedExitCode: 60,
     expectedAst: {

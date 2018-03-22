@@ -54,8 +54,7 @@ const nextTemporary = (storage: StorageSpec): StorageSpec => {
         } else {
             return {
                 type: 'register',
-                // TODO: handle registers with numbers > 9
-                destination: `r${parseInt(storage.destination[storage.destination.length - 1]) + 1}`,
+                destination: `r${parseInt(storage.destination.slice(1)) + 1}`,
             };
         }
     } else if (storage.type == 'memory') {
