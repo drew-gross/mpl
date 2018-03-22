@@ -75,7 +75,8 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
     if (!ast) debug();
     switch (ast.kind) {
         case 'number':
-            return astToRegisterTransferLanguage(input, nextTemporary);
+        case 'returnStatement':
+            return astToRegisterTransferLanguage(input, nextTemporary, recurse);
         case 'product': {
             const leftSideDestination: StorageSpec = currentTemporary;
             const rightSideDestination = destination;
@@ -111,17 +112,6 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
                 },
             ]);
         }
-        case 'returnStatement':
-            const subExpression = recurse({
-                ast: ast.expression,
-                destination: currentTemporary,
-                currentTemporary: nextTemporary(currentTemporary),
-            });
-            return compileExpression([subExpression], ([e1]) => [
-                `; evaluate expression of return statement, put in ${(currentTemporary as any).destination}`,
-                ...e1,
-                { kind: 'move', from: (currentTemporary as any).destination, to: 'rax', why: 'rax is function result' },
-            ]);
         default:
             throw debug();
     }
@@ -158,6 +148,9 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
             return `mov ${rtx.destination.destination}, ${rtx.value}; ${rtx.why}`;
         case 'move':
             return `mov ${rtx.to}, ${rtx.from}; ${rtx.why}`;
+        case 'return':
+            if (rtx.source.type !== 'register') throw debug();
+            return `mov ${functionResult}, ${rtx.source.destination}; ${rtx.why}`;
         default:
             throw debug();
     }

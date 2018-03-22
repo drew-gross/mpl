@@ -6,7 +6,8 @@ import flatten from './util/list/flatten.js';
 
 type PureRegisterTransferLanguageExpression =
     | { kind: 'move'; from: string; to: string }
-    | { kind: 'loadImmediate'; value: number; destination: StorageSpec };
+    | { kind: 'loadImmediate'; value: number; destination: StorageSpec }
+    | { kind: 'return'; source: StorageSpec };
 
 // TODO: get rid of string!
 export type RegisterTransferLanguageExpression = string | { why: string } & PureRegisterTransferLanguageExpression;
@@ -63,10 +64,9 @@ export type BackendOptions = {
     stringLiterals: StringLiteralData[];
 };
 
-export const astToRegisterTransferLanguage = (input: BackendOptions, nextTemporary): CompiledExpression => {
+export const astToRegisterTransferLanguage = (input: BackendOptions, nextTemporary, recurse): CompiledExpression => {
     const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
     if (isEqual(currentTemporary, destination)) throw debug(); // Sanity check to make sure caller remembered to provide a new temporary
-    const recurse = newInput => astToRegisterTransferLanguage({ ...input, ...newInput }, nextTemporary);
     switch (ast.kind) {
         case 'number':
             return compileExpression([], ([]) => [
@@ -79,9 +79,12 @@ export const astToRegisterTransferLanguage = (input: BackendOptions, nextTempora
                 currentTemporary: nextTemporary(currentTemporary),
             });
             return compileExpression([subExpression], ([e1]) => [
-                `; evaluate expression of return statement, put in ${(currentTemporary as any).destination}`,
                 ...e1,
-                { kind: 'move', from: (currentTemporary as any).destination, to: 'rax', why: 'rax is function result' },
+                {
+                    kind: 'return',
+                    source: currentTemporary,
+                    why: 'Retrun previous expression',
+                },
             ]);
         default:
             throw debug();

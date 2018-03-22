@@ -147,20 +147,9 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
     const recurse = newInput => astToMips({ ...input, ...newInput });
     if (!ast) debug();
     switch (ast.kind) {
-        case 'returnStatement':
-            const subExpression = recurse({
-                ast: ast.expression,
-                destination: {
-                    type: 'register',
-                    destination: functionResult,
-                },
-            });
-            return compileExpression([subExpression], ([e1]) => [
-                `# evaluate expression of return statement, put in ${functionResult}`,
-                ...e1,
-            ]);
         case 'number':
-            return astToRegisterTransferLanguage(input, nextTemporary);
+        case 'returnStatement':
+            return astToRegisterTransferLanguage(input, nextTemporary, recurse);
         case 'booleanLiteral':
             return compileExpression([], ([]) => [storeLiteralMips(destination as any, ast.value ? '1' : '0')]);
         case 'product': {
@@ -734,6 +723,9 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
             return `move ${rtx.to}, ${rtx.from} # ${rtx.why}`;
         case 'loadImmediate':
             return storeLiteralMips(rtx.destination as any, rtx.value);
+        case 'return':
+            if (rtx.source.type !== 'register') throw debug();
+            return `move ${functionResult}, ${rtx.source.destination} # ${rtx.why}`;
         default:
             throw debug();
     }
