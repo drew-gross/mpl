@@ -1,3 +1,4 @@
+import { isEqual } from 'lodash';
 import * as Ast from './ast.js';
 import debug from './util/debug.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from './api.js';
@@ -62,11 +63,25 @@ export type BackendOptions = {
     stringLiterals: StringLiteralData[];
 };
 
-export const astToRegisterTransferLanguage = ({ ast, destination }: BackendOptions): CompiledExpression => {
+export const astToRegisterTransferLanguage = (input: BackendOptions, nextTemporary): CompiledExpression => {
+    const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
+    if (isEqual(currentTemporary, destination)) throw debug(); // Sanity check to make sure caller remembered to provide a new temporary
+    const recurse = newInput => astToRegisterTransferLanguage({ ...input, ...newInput }, nextTemporary);
     switch (ast.kind) {
         case 'number':
             return compileExpression([], ([]) => [
                 { kind: 'loadImmediate', value: ast.value, destination: destination, why: '' },
+            ]);
+        case 'returnStatement':
+            const subExpression = recurse({
+                ast: ast.expression,
+                destination: currentTemporary,
+                currentTemporary: nextTemporary(currentTemporary),
+            });
+            return compileExpression([subExpression], ([e1]) => [
+                `; evaluate expression of return statement, put in ${(currentTemporary as any).destination}`,
+                ...e1,
+                { kind: 'move', from: (currentTemporary as any).destination, to: 'rax', why: 'rax is function result' },
             ]);
         default:
             throw debug();

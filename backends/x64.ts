@@ -55,7 +55,7 @@ const nextTemporary = (storage: StorageSpec): StorageSpec => {
             return {
                 type: 'register',
                 // TODO: handle registers with numbers > 9
-                destination: `%r${parseInt(storage.destination[storage.destination.length - 1]) + 1}`,
+                destination: `r${parseInt(storage.destination[storage.destination.length - 1]) + 1}`,
             };
         }
     } else if (storage.type == 'memory') {
@@ -75,12 +75,9 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
     if (!ast) debug();
     switch (ast.kind) {
         case 'number':
-            return astToRegisterTransferLanguage(input);
+            return astToRegisterTransferLanguage(input, nextTemporary);
         case 'product': {
-            const leftSideDestination: StorageSpec = {
-                type: 'register',
-                destination: 'rax', // mul instruction multiples rax * arg, puts result in rax + rdx
-            };
+            const leftSideDestination: StorageSpec = currentTemporary;
             const rightSideDestination = destination;
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
@@ -99,23 +96,31 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
                 ...storeLeft,
                 `; Store right side of product in destination (${storageSpecToString(rightSideDestination)})`,
                 ...storeRight,
-                `; Evaluate product`,
+                {
+                    kind: 'move',
+                    from: (leftSideDestination as any).destination,
+                    to: 'rax',
+                    why: 'Multiply does rax * arg',
+                },
                 `mul ${(rightSideDestination as any).destination}`,
-                `mov ${(destination as any).destination}, ${(leftSideDestination as any).destination}`,
+                {
+                    kind: 'move',
+                    from: 'rax',
+                    to: (destination as any).destination,
+                    why: 'Multiply puts result in rax:rdx, move it to final destination',
+                },
             ]);
         }
-
         case 'returnStatement':
             const subExpression = recurse({
                 ast: ast.expression,
-                destination: {
-                    type: 'register',
-                    destination: functionResult,
-                },
+                destination: currentTemporary,
+                currentTemporary: nextTemporary(currentTemporary),
             });
             return compileExpression([subExpression], ([e1]) => [
-                `; evaluate expression of return statement, put in ${functionResult}`,
+                `; evaluate expression of return statement, put in ${(currentTemporary as any).destination}`,
                 ...e1,
+                { kind: 'move', from: (currentTemporary as any).destination, to: 'rax', why: 'rax is function result' },
             ]);
         default:
             throw debug();
@@ -151,6 +156,8 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
         case 'loadImmediate':
             if (rtx.destination.type !== 'register') throw debug();
             return `mov ${rtx.destination.destination}, ${rtx.value}; ${rtx.why}`;
+        case 'move':
+            return `mov ${rtx.to}, ${rtx.from}; ${rtx.why}`;
         default:
             throw debug();
     }

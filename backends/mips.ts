@@ -160,7 +160,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 ...e1,
             ]);
         case 'number':
-            return astToRegisterTransferLanguage(input);
+            return astToRegisterTransferLanguage(input, nextTemporary);
         case 'booleanLiteral':
             return compileExpression([], ([]) => [storeLiteralMips(destination as any, ast.value ? '1' : '0')]);
         case 'product': {
