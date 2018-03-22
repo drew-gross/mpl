@@ -131,12 +131,18 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
     const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
     if (isEqual(currentTemporary, destination)) throw debug(); // Sanity check to make sure caller remembered to provide a new temporary
     const recurse = newInput => astToMips({ ...input, ...newInput });
+    const makeLabel = (name: string) => {
+        const result = `${name}${labelId}`;
+        labelId++;
+        return result;
+    };
     if (!ast) debug();
     switch (ast.kind) {
         case 'number':
         case 'returnStatement':
+        case 'ternary':
         case 'subtraction':
-            return astToRegisterTransferLanguage(input, nextTemporary, recurse);
+            return astToRegisterTransferLanguage(input, nextTemporary, makeLabel, recurse);
         case 'booleanLiteral':
             return compileExpression([], ([]) => [storeLiteralMips(destination as any, ast.value ? '1' : '0')]);
         case 'product': {
@@ -431,42 +437,6 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 `# Move from ${identifierName} (${identifierRegister}) into destination (${(destination as any)
                     .destination || (destination as any).spOffset})`,
                 moveMipsDeprecated(destination as any, identifierRegister),
-            ]);
-        }
-        case 'ternary': {
-            const booleanTemporary = currentTemporary;
-            const subExpressionTemporary = nextTemporary(currentTemporary);
-            const falseBranchLabel = `${labelId}`;
-            labelId++;
-            const endOfTernaryLabel = `${labelId}`;
-            labelId++;
-            const boolExpression = recurse({
-                ast: ast.condition,
-                destination: booleanTemporary,
-                currentTemporary: subExpressionTemporary,
-            });
-            const ifTrueExpression = recurse({
-                ast: ast.ifTrue,
-                currentTemporary: subExpressionTemporary,
-            });
-            const ifFalseExpression = recurse({
-                ast: ast.ifFalse,
-                currentTemporary: subExpressionTemporary,
-            });
-            return compileExpression([boolExpression, ifTrueExpression, ifFalseExpression], ([e1, e2, e3]) => [
-                ...e1,
-                {
-                    kind: 'gotoIfEqual',
-                    lhs: booleanTemporary,
-                    rhs: { type: 'register', destination: '$0' },
-                    label: falseBranchLabel,
-                    why: 'Go to false branch if zero',
-                },
-                ...e2,
-                { kind: 'goto', label: endOfTernaryLabel, why: 'Jump to end of ternary' },
-                { kind: 'label', name: falseBranchLabel, why: 'False branch begin' },
-                ...e3,
-                { kind: 'label', name: endOfTernaryLabel, why: 'End of ternary label' },
             ]);
         }
         case 'equality': {

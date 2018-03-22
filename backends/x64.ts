@@ -67,16 +67,23 @@ const nextTemporary = (storage: StorageSpec): StorageSpec => {
     }
 };
 
+let labelId = 0;
+
 const astToX64 = (input: BackendOptions): CompiledProgram => {
     const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
     if (isEqual(currentTemporary, destination)) throw debug(); // Sanity check to make sure caller remembered to provide a new temporary
     const recurse = newInput => astToX64({ ...input, ...newInput });
+    const makeLabel = (name: string) => {
+        const result = `${name}${labelId}`;
+        labelId++;
+        return result;
+    };
     if (!ast) debug();
     switch (ast.kind) {
         case 'number':
         case 'returnStatement':
         case 'subtraction':
-            return astToRegisterTransferLanguage(input, nextTemporary, recurse);
+            return astToRegisterTransferLanguage(input, nextTemporary, makeLabel, recurse);
         case 'product': {
             const leftSideDestination: StorageSpec = currentTemporary;
             const rightSideDestination = destination;
