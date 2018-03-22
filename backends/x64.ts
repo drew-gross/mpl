@@ -83,7 +83,12 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'number':
         case 'returnStatement':
         case 'subtraction':
+        case 'ternary':
             return astToRegisterTransferLanguage(input, nextTemporary, makeLabel, recurse);
+        case 'booleanLiteral':
+            return compileExpression([], ([]) => [
+                { kind: 'loadImmediate', value: ast.value ? 1 : 0, destination: destination, why: '' },
+            ]);
         case 'product': {
             const leftSideDestination: StorageSpec = currentTemporary;
             const rightSideDestination = destination;
@@ -166,6 +171,13 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
                 `mov ${rtx.destination.destination}, ${rtx.lhs.destination}`,
                 `sub ${rtx.destination.destination}, ${rtx.rhs.destination}`,
             ];
+        case 'gotoIfEqual':
+            if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug();
+            return [`cmp ${rtx.lhs.destination}, ${rtx.rhs.destination}`, `je ${rtx.label}`];
+        case 'goto':
+            return [`jmp ${rtx.label}`];
+        case 'label':
+            return [`${rtx.name}:`];
         default:
             throw debug();
     }

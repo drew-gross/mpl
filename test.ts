@@ -725,10 +725,9 @@ test('return bool fail', compileAndRun, {
     ],
 });
 
-test.only('boolean literal false', compileAndRun, {
+test('boolean literal false', compileAndRun, {
     source: `return false ? 1 : 2`,
     expectedExitCode: 2,
-    failing: 'x64',
 });
 
 test('boolean literal true', compileAndRun, {
