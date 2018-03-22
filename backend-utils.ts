@@ -7,6 +7,7 @@ import flatten from './util/list/flatten.js';
 type PureRegisterTransferLanguageExpression =
     | { kind: 'move'; from: string; to: string }
     | { kind: 'loadImmediate'; value: number; destination: StorageSpec }
+    | { kind: 'subtract'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec; why: string }
     | { kind: 'return'; source: StorageSpec };
 
 // TODO: get rid of string!
@@ -86,6 +87,37 @@ export const astToRegisterTransferLanguage = (input: BackendOptions, nextTempora
                     why: 'Retrun previous expression',
                 },
             ]);
+        case 'subtraction': {
+            const leftSideDestination = destination;
+            if (leftSideDestination.type !== 'register') throw debug();
+            const rightSideDestination = currentTemporary;
+            if (rightSideDestination.type !== 'register') throw debug();
+            const subExpressionTemporary = nextTemporary(currentTemporary);
+
+            const storeLeftInstructions = recurse({
+                ast: ast.lhs,
+                destination: leftSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+            const storeRightInstructions = recurse({
+                ast: ast.rhs,
+                destination: rightSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+            return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
+                `# Store left side in temporary (${leftSideDestination.destination})`,
+                ...storeLeft,
+                `# Store right side in destination (${rightSideDestination.destination})`,
+                ...storeRight,
+                {
+                    kind: 'subtract',
+                    lhs: leftSideDestination,
+                    rhs: rightSideDestination,
+                    destination: destination,
+                    why: 'Evaluate subtraction',
+                },
+            ]);
+        }
         default:
             throw debug();
     }

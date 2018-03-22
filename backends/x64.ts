@@ -75,6 +75,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
     switch (ast.kind) {
         case 'number':
         case 'returnStatement':
+        case 'subtraction':
             return astToRegisterTransferLanguage(input, nextTemporary, recurse);
         case 'product': {
             const leftSideDestination: StorageSpec = currentTemporary;
@@ -139,17 +140,25 @@ const assignX64Registers = (
     };
 };
 
-const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression): string => {
-    if (typeof rtx == 'string') return rtx;
+const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression): string[] => {
+    if (typeof rtx == 'string') return [rtx];
     switch (rtx.kind) {
         case 'loadImmediate':
             if (rtx.destination.type !== 'register') throw debug();
-            return `mov ${rtx.destination.destination}, ${rtx.value}; ${rtx.why}`;
+            return [`mov ${rtx.destination.destination}, ${rtx.value}; ${rtx.why}`];
         case 'move':
-            return `mov ${rtx.to}, ${rtx.from}; ${rtx.why}`;
+            return [`mov ${rtx.to}, ${rtx.from}; ${rtx.why}`];
         case 'return':
             if (rtx.source.type !== 'register') throw debug();
-            return `mov ${functionResult}, ${rtx.source.destination}; ${rtx.why}`;
+            return [`mov ${functionResult}, ${rtx.source.destination}; ${rtx.why}`];
+        case 'subtract':
+            if (rtx.lhs.type !== 'register') throw debug();
+            if (rtx.rhs.type !== 'register') throw debug();
+            if (rtx.destination.type !== 'register') throw debug();
+            return [
+                `mov ${rtx.destination.destination}, ${rtx.lhs.destination}`,
+                `sub ${rtx.destination.destination}, ${rtx.rhs.destination}`,
+            ];
         default:
             throw debug();
     }
@@ -180,7 +189,7 @@ global start
 
 section .text
 start:
-${join(x64Program.map(registerTransferExpressionToX64), '\n')}
+${join(flatten(x64Program.map(registerTransferExpressionToX64)), '\n')}
     mov rdi, rax; Move function call result to syscall arg
     mov rax, 0x02000001; system call for exit
     syscall

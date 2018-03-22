@@ -40,15 +40,6 @@ const storeLiteralMips = (destination: StorageSpec, value) => {
     }
 };
 
-const subtractMips = ({ type, destination }, left, right) => {
-    switch (type) {
-        case 'register':
-            return `sub ${destination}, ${left.destination}, ${right.destination}`;
-        default:
-            throw debug();
-    }
-};
-
 const moveMipsDeprecated = ({ type, destination }, source): RegisterTransferLanguageExpression => {
     switch (type) {
         case 'register':
@@ -149,6 +140,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
     switch (ast.kind) {
         case 'number':
         case 'returnStatement':
+        case 'subtraction':
             return astToRegisterTransferLanguage(input, nextTemporary, recurse);
         case 'booleanLiteral':
             return compileExpression([], ([]) => [storeLiteralMips(destination as any, ast.value ? '1' : '0')]);
@@ -205,32 +197,6 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     r: rightSideDestination.destination,
                     to: destination.destination,
                 }),
-            ]);
-        }
-        case 'subtraction': {
-            const leftSideDestination = currentTemporary;
-            if (leftSideDestination.type !== 'register') throw debug();
-            const rightSideDestination = destination;
-            if (rightSideDestination.type !== 'register') throw debug();
-            const subExpressionTemporary = nextTemporary(currentTemporary);
-
-            const storeLeftInstructions = recurse({
-                ast: ast.lhs,
-                destination: leftSideDestination,
-                currentTemporary: subExpressionTemporary,
-            });
-            const storeRightInstructions = recurse({
-                ast: ast.rhs,
-                destination: rightSideDestination,
-                currentTemporary: subExpressionTemporary,
-            });
-            return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
-                `# Store left side in temporary (${leftSideDestination.destination})`,
-                ...storeLeft,
-                `# Store right side in destination (${rightSideDestination.destination})`,
-                ...storeRight,
-                `# Evaluate subtraction`,
-                subtractMips(destination as any, leftSideDestination, rightSideDestination),
             ]);
         }
         case 'functionLiteral': {
@@ -726,6 +692,11 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
         case 'return':
             if (rtx.source.type !== 'register') throw debug();
             return `move ${functionResult}, ${rtx.source.destination} # ${rtx.why}`;
+        case 'subtract':
+            if (rtx.lhs.type !== 'register') throw debug();
+            if (rtx.rhs.type !== 'register') throw debug();
+            if (rtx.destination.type !== 'register') throw debug();
+            return `sub ${rtx.destination.destination}, ${rtx.lhs.destination}, ${rtx.rhs.destination}`;
         default:
             throw debug();
     }
