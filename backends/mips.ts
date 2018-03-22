@@ -101,11 +101,6 @@ const multiplyMips = (destination, left, right) => {
     ].join('\n');
 };
 
-const mipsBranchIfEqual = (left, right, label) => {
-    if (left.type !== 'register' || right.type !== 'register') debug();
-    return `beq ${left.destination}, ${right.destination}, ${label}`;
-};
-
 const nextTemporary = (storage: StorageSpec): StorageSpec => {
     if (storage.type == 'register') {
         if (storage.destination == '$t9') {
@@ -441,9 +436,9 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
         case 'ternary': {
             const booleanTemporary = currentTemporary;
             const subExpressionTemporary = nextTemporary(currentTemporary);
-            const falseBranchLabel = labelId;
+            const falseBranchLabel = `${labelId}`;
             labelId++;
-            const endOfTernaryLabel = labelId;
+            const endOfTernaryLabel = `${labelId}`;
             labelId++;
             const boolExpression = recurse({
                 ast: ast.condition,
@@ -461,17 +456,20 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
             return compileExpression([boolExpression, ifTrueExpression, ifFalseExpression], ([e1, e2, e3]) => [
                 `# Compute boolean and store in temporary`,
                 ...e1,
-                `# Go to false branch if zero`,
-                mipsBranchIfEqual(booleanTemporary, { type: 'register', destination: '$0' }, `L${falseBranchLabel}`),
+                {
+                    kind: 'gotoIfEqual',
+                    lhs: booleanTemporary,
+                    rhs: { type: 'register', destination: '$0' },
+                    label: falseBranchLabel,
+                    why: 'Go to false branch if zero',
+                },
                 `# Execute true branch`,
                 ...e2,
-                `# Jump to end of ternary`,
-                `b L${endOfTernaryLabel}`,
+                { kind: 'goto', label: endOfTernaryLabel, why: 'Jump to end of ternary' },
                 `L${falseBranchLabel}:`,
                 `# Execute false branch`,
                 ...e3,
-                `# End of ternary label`,
-                `L${endOfTernaryLabel}:`,
+                { kind: 'label', name: endOfTernaryLabel, why: 'End of ternary label' },
             ]);
         }
         case 'equality': {
@@ -515,7 +513,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     currentTemporary: subExpressionTemporary,
                 });
 
-                const equalLabel = labelId;
+                const equalLabel = `${labelId}`;
                 labelId++;
                 const endOfConditionLabel = labelId;
                 labelId++;
@@ -527,8 +525,13 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     ...storeLeft,
                     `# Store right side of equality in temporary`,
                     ...storeRight,
-                    `# Goto set 1 if equal`,
-                    mipsBranchIfEqual(leftSideDestination, rightSideDestination, `L${equalLabel}`),
+                    {
+                        kind: 'gotoIfEqual',
+                        lhs: leftSideDestination,
+                        rhs: rightSideDestination,
+                        label: equalLabel,
+                        why: 'Goto set 1 if equal',
+                    },
                     `# Not equal, set 0`,
                     storeLiteralMips(destination as any, '0'),
                     `# And goto exit`,
@@ -697,6 +700,13 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
             if (rtx.rhs.type !== 'register') throw debug();
             if (rtx.destination.type !== 'register') throw debug();
             return `sub ${rtx.destination.destination}, ${rtx.lhs.destination}, ${rtx.rhs.destination}`;
+        case 'label':
+            return `L${rtx.name}: # ${rtx.why}`;
+        case 'goto':
+            return `b L${rtx.label}`;
+        case 'gotoIfEqual':
+            if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug();
+            return `beq ${rtx.lhs.destination}, ${rtx.rhs.destination}, L${rtx.label}`;
         default:
             throw debug();
     }

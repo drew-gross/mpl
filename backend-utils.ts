@@ -7,7 +7,10 @@ import flatten from './util/list/flatten.js';
 type PureRegisterTransferLanguageExpression =
     | { kind: 'move'; from: string; to: string }
     | { kind: 'loadImmediate'; value: number; destination: StorageSpec }
-    | { kind: 'subtract'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec; why: string }
+    | { kind: 'subtract'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec }
+    | { kind: 'label'; name: string }
+    | { kind: 'goto'; label: string }
+    | { kind: 'gotoIfEqual'; lhs: StorageSpec; rhs: StorageSpec; label: string }
     | { kind: 'return'; source: StorageSpec };
 
 // TODO: get rid of string!
