@@ -454,7 +454,6 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 currentTemporary: subExpressionTemporary,
             });
             return compileExpression([boolExpression, ifTrueExpression, ifFalseExpression], ([e1, e2, e3]) => [
-                `# Compute boolean and store in temporary`,
                 ...e1,
                 {
                     kind: 'gotoIfEqual',
@@ -463,11 +462,9 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     label: falseBranchLabel,
                     why: 'Go to false branch if zero',
                 },
-                `# Execute true branch`,
                 ...e2,
                 { kind: 'goto', label: endOfTernaryLabel, why: 'Jump to end of ternary' },
-                `L${falseBranchLabel}:`,
-                `# Execute false branch`,
+                { kind: 'label', name: falseBranchLabel, why: 'False branch begin' },
                 ...e3,
                 { kind: 'label', name: endOfTernaryLabel, why: 'End of ternary label' },
             ]);
