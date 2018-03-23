@@ -81,6 +81,10 @@ export const astToRegisterTransferLanguage = (
             return compileExpression([], ([]) => [
                 { kind: 'loadImmediate', value: ast.value, destination: destination, why: '' },
             ]);
+        case 'booleanLiteral':
+            return compileExpression([], ([]) => [
+                { kind: 'loadImmediate', value: ast.value ? 1 : 0, destination: destination, why: '' },
+            ]);
         case 'returnStatement':
             const subExpression = recurse({
                 ast: ast.expression,

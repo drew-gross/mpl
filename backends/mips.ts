@@ -140,11 +140,10 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
     switch (ast.kind) {
         case 'number':
         case 'returnStatement':
-        case 'ternary':
         case 'subtraction':
-            return astToRegisterTransferLanguage(input, nextTemporary, makeLabel, recurse);
+        case 'ternary':
         case 'booleanLiteral':
-            return compileExpression([], ([]) => [storeLiteralMips(destination as any, ast.value ? '1' : '0')]);
+            return astToRegisterTransferLanguage(input, nextTemporary, makeLabel, recurse);
         case 'product': {
             const leftSideDestination = currentTemporary;
             const rightSideDestination = destination;
