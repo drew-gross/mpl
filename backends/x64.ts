@@ -84,11 +84,8 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'returnStatement':
         case 'subtraction':
         case 'ternary':
-            return astToRegisterTransferLanguage(input, nextTemporary, makeLabel, recurse);
         case 'booleanLiteral':
-            return compileExpression([], ([]) => [
-                { kind: 'loadImmediate', value: ast.value ? 1 : 0, destination: destination, why: '' },
-            ]);
+            return astToRegisterTransferLanguage(input, nextTemporary, makeLabel, recurse);
         case 'product': {
             const leftSideDestination: StorageSpec = currentTemporary;
             const rightSideDestination = destination;
