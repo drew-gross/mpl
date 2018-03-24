@@ -86,6 +86,74 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'ternary':
         case 'booleanLiteral':
             return astToRegisterTransferLanguage(input, nextTemporary, makeLabel, recurse);
+        case 'typedDeclarationAssignment': {
+            const lhs = ast.destination;
+            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
+                const subExpressionTemporary = nextTemporary(currentTemporary);
+                const rhs = recurse({
+                    ast: ast.expression,
+                    destination: currentTemporary,
+                    currentTemporary: subExpressionTemporary,
+                });
+                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
+                if (!declaration) throw debug();
+                if (currentTemporary.type !== 'register') throw debug();
+                switch (declaration.type.name) {
+                    case 'Function':
+                    case 'Integer':
+                        return compileExpression([rhs], ([e1]) => [
+                            `; Put ${declaration.type.name} into temporary`,
+                            ...e1,
+                            {
+                                kind: 'storeGlobal',
+                                from: currentTemporary.destination,
+                                to: lhs,
+                                why: `Put ${declaration.type.name} into global`,
+                            },
+                        ]);
+                    default:
+                        throw debug();
+                }
+            } else if (lhs in registerAssignment) {
+                return recurse({
+                    ast: ast.expression,
+                    // TODO: Allow spilling of variables
+                    destination: {
+                        type: 'register',
+                        destination: `${(registerAssignment[lhs] as any).destination}`,
+                    },
+                });
+            } else {
+                throw debug();
+            }
+        }
+        case 'identifier': {
+            // TODO: Better handle identifiers here. Also just better storage/scope chains?
+            const identifierName = ast.value;
+            if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
+                const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
+                if (!declaration) throw debug();
+                return compileExpression([], ([]) => [
+                    {
+                        kind: 'loadGlobal',
+                        from: identifierName,
+                        to: destination,
+                        why: `Move from global ${identifierName} into destination (${(destination as any).destination ||
+                            (destination as any).spOffset})`,
+                    },
+                ]);
+            }
+            const identifierRegister = (registerAssignment[identifierName] as any).destination;
+            return compileExpression([], ([]) => [
+                {
+                    kind: 'move',
+                    to: (destination as any).destination,
+                    from: identifierRegister,
+                    why: `Move from ${identifierName} (${identifierRegister}) into destination (${(destination as any)
+                        .destination || (destination as any).spOffset})`,
+                },
+            ]);
+        }
         case 'product': {
             const leftSideDestination: StorageSpec = currentTemporary;
             const rightSideDestination = destination;
@@ -175,6 +243,11 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
             return [`jmp ${rtx.label}`];
         case 'label':
             return [`${rtx.name}:`];
+        case 'storeGlobal':
+            return [`mov [rel ${rtx.to}], ${rtx.from}; ${rtx.why}`];
+        case 'loadGlobal':
+            if (rtx.to.type !== 'register') throw debug();
+            return [`mov ${rtx.to.destination}, [rel ${rtx.from}]; ${rtx.why}`];
         default:
             throw debug();
     }
@@ -213,6 +286,8 @@ ${join(flatten(x64Program.map(registerTransferExpressionToX64)), '\n')}
 section .data
 message:
     db "Must have writable segment", 10; newline mandatory. This exists to squelch dyld errors
+section .bss
+${globalDeclarations.map(name => `${name.name}: resd 1`).join('\n')}
 `;
 };
 

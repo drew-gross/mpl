@@ -11,6 +11,8 @@ type PureRegisterTransferLanguageExpression =
     | { kind: 'label'; name: string }
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: StorageSpec; rhs: StorageSpec; label: string }
+    | { kind: 'storeGlobal'; from: string; to: string }
+    | { kind: 'loadGlobal'; from: string; to: StorageSpec }
     | { kind: 'return'; source: StorageSpec };
 
 // TODO: get rid of string!
