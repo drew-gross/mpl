@@ -866,7 +866,7 @@ return myFunc("");`,
     ],
 });
 
-test.only('return local integer', compileAndRun, {
+test('return local integer', compileAndRun, {
     source: 'myVar: Integer = 3 * 3; return myVar',
     expectedExitCode: 9,
 });

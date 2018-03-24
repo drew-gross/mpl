@@ -68,7 +68,6 @@ const loadGlobalMips = ({ type, destination, spOffset }, value) => {
 };
 
 const add = ({ l, r, to }: { l: string; r: string; to: string }) => `add ${to}, ${l}, ${r}`;
-const call = ({ f, why }: { f: string; why: string }) => `jal ${f} # ${why}`;
 
 const multiplyMips = (destination, left, right) => {
     let leftRegister = left.destination;
@@ -143,6 +142,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
         case 'subtraction':
         case 'ternary':
         case 'booleanLiteral':
+        case 'functionLiteral':
             return astToRegisterTransferLanguage(input, nextTemporary, makeLabel, recurse);
         case 'product': {
             const leftSideDestination = currentTemporary;
@@ -199,31 +199,28 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 }),
             ]);
         }
-        case 'functionLiteral': {
-            if (destination.type !== 'register') throw debug(); // TODO: Figure out how to guarantee this doesn't happen
-            return compileExpression([], ([]) => [
-                `# Loading function into register`,
-                `la ${destination.destination}, ${ast.deanonymizedName}`,
-            ]);
-        }
         case 'callExpression': {
             if (currentTemporary.type !== 'register') throw debug(); // TODO: Figure out how to guarantee this doesn't happen
             if (destination.type !== 'register') throw debug();
             const functionName = ast.name;
-            let callInstructions: string[] = [];
+            let callInstructions: (string | RegisterTransferLanguageExpression)[] = [];
             if (builtinFunctions.map(b => b.name).includes(functionName)) {
                 callInstructions = [
                     `la ${currentTemporary.destination}, ${functionName}`,
-                    call({ f: currentTemporary.destination, why: 'Call runtime function' }),
+                    { kind: 'call', function: currentTemporary.destination, why: 'Call runtime function' },
                 ];
             } else if (globalDeclarations.some(declaration => declaration.name === functionName)) {
                 callInstructions = [
                     `lw ${currentTemporary.destination}, ${functionName}`,
-                    call({ f: currentTemporary.destination, why: 'Call global function' }),
+                    { kind: 'call', function: currentTemporary.destination, why: 'Call global function' },
                 ];
             } else if (functionName in registerAssignment) {
                 callInstructions = [
-                    call({ f: (registerAssignment[functionName] as any).destination, why: 'Call register function' }),
+                    {
+                        kind: 'call',
+                        function: (registerAssignment[functionName] as any).destination,
+                        why: 'Call register function',
+                    },
                 ];
             } else {
                 debug();
@@ -294,11 +291,11 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                                 from: currentTemporary.destination,
                                 why: 'Put string pointer into temporary',
                             },
-                            call({ f: 'length', why: 'Get string length' }),
+                            { kind: 'call', function: 'length', why: 'Get string length' },
                             `# add one for null terminator`,
                             `addiu ${functionResult}, ${functionResult}, 1`,
                             { kind: 'move', to: argument1, from: functionResult, why: 'Move length to argument1' },
-                            call({ f: 'my_malloc', why: 'Allocate that much space' }),
+                            { kind: 'call', function: 'my_malloc', why: 'Allocate that much space' },
                             {
                                 kind: 'move',
                                 to: argument1,
@@ -311,7 +308,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                                 from: functionResult,
                                 why: 'Move output pointer to argument 2',
                             },
-                            call({ f: 'string_copy', why: 'Copy string into allocated space ' }),
+                            { kind: 'call', function: 'string_copy', why: 'Copy string into allocated space ' },
                             `# Store into global`,
                             `sw ${functionResult}, ${lhs}`,
                         ]);
@@ -369,7 +366,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                                     to: argument1,
                                     why: 'Move global to argument 1 of free',
                                 },
-                                call({ f: 'my_free', why: 'Free string that is no longer accessible' }),
+                                { kind: 'call', function: 'my_free', why: 'Free string that is no longer accessible' },
                             ] as RegisterTransferLanguageExpression[],
                         };
                         return compileExpression([rhs, prepAndCleanup], ([e1, _]) => [
@@ -380,14 +377,14 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                                 to: argument1,
                                 why: 'Move from temporary to argument 1',
                             },
-                            call({ f: 'length', why: 'Get length of new string' }),
+                            { kind: 'call', function: 'length', why: 'Get length of new string' },
                             {
                                 kind: 'move',
                                 from: functionResult,
                                 to: argument1,
                                 why: 'Move length of new string to argument of malloc',
                             },
-                            call({ f: 'my_malloc', why: 'Allocate space for new string' }),
+                            { kind: 'call', function: 'my_malloc', why: 'Allocate space for new string' },
                             `sw ${functionResult}, ${lhs} # Store location of allocated memory to global`,
                             {
                                 kind: 'move',
@@ -401,7 +398,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                                 to: argument1,
                                 why: 'move destination to argument 1 of string_copy',
                             },
-                            call({ f: 'string_copy', why: 'Copy new string to destination' }),
+                            { kind: 'call', function: 'string_copy', why: 'Copy new string to destination' },
                         ]);
                     default:
                         throw debug();
@@ -460,7 +457,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     ...e1,
                     `# Store right side in s1`,
                     ...e2,
-                    call({ f: 'stringEquality', why: 'Call stringEquality' }),
+                    { kind: 'call', function: 'stringEquality', why: 'Call stringEquality' },
                     `# Return value in ${functionResult}. Move to destination`,
                     moveMipsDeprecated(destination as any, functionResult),
                 ]);
@@ -537,20 +534,18 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
             });
-            const cleanup = {
+            const cleanup: CompiledProgram = {
                 prepare: [],
                 execute: [],
                 cleanup: [
-                    [
-                        {
-                            kind: 'move',
-                            from: mallocResultTemporary.destination,
-                            to: argument1,
-                            why: 'Move pointer to new string to argument1',
-                        },
-                        // TODO: maybe not valid? This destination may have been reused for something else by the time we get to cleanup
-                        call({ f: 'my_free', why: 'Freeing temporary from concat' }),
-                    ].join('\n'),
+                    {
+                        kind: 'move',
+                        from: mallocResultTemporary.destination,
+                        to: argument1,
+                        why: 'Move pointer to new string to argument1',
+                    },
+                    // TODO: maybe not valid? This destination may have been reused for something else by the time we get to cleanup
+                    { kind: 'call', function: 'my_free', why: 'Freeing temporary from concat' },
                 ],
             };
             return compileExpression([storeLeftInstructions, storeRightInstructions, cleanup], ([e1, e2, _]) => [
@@ -561,14 +556,14 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 `# Compute rhs`,
                 ...e2,
                 { kind: 'move', from: leftSideDestination.destination, to: argument1, why: 'Move lhs to argument1' },
-                call({ f: 'length', why: 'Compute the length of lhs and add it to length temporary' }),
+                { kind: 'call', function: 'length', why: 'Compute the length of lhs and add it to length temporary' },
                 add({
                     l: functionResult,
                     r: newStringLengthTemporary.destination,
                     to: newStringLengthTemporary.destination,
                 }),
                 { kind: 'move', from: rightSideDestination.destination, to: argument1, why: 'Move rhs to argument1' },
-                call({ f: 'length', why: 'Compute the length of rhs and add it to length temporary' }),
+                { kind: 'call', function: 'length', why: 'Compute the length of rhs and add it to length temporary' },
                 add({
                     l: functionResult,
                     r: newStringLengthTemporary.destination,
@@ -580,7 +575,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     to: argument1,
                     why: 'Move new string length to argument1',
                 },
-                call({ f: 'my_malloc', why: 'Malloc that much space' }),
+                { kind: 'call', function: 'my_malloc', why: 'Malloc that much space' },
                 {
                     kind: 'move',
                     from: functionResult,
@@ -595,7 +590,11 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     to: argument3,
                     why: 'Move destintion to argument3',
                 },
-                call({ f: 'string_concatenate', why: 'Concatenate the strings and write to malloced space' }),
+                {
+                    kind: 'call',
+                    function: 'string_concatenate',
+                    why: 'Concatenate the strings and write to malloced space',
+                },
                 {
                     kind: 'move',
                     from: mallocResultTemporary.destination,
@@ -673,6 +672,11 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
         case 'gotoIfEqual':
             if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug();
             return `beq ${rtx.lhs.destination}, ${rtx.rhs.destination}, L${rtx.label}`;
+        case 'loadFunctionAddress':
+            if (rtx.to.type !== 'register') throw debug();
+            return `la ${rtx.to.destination}, ${rtx.functionName} # ${rtx.why}`;
+        case 'call':
+            return `jal ${rtx.function} # ${rtx.why}`;
         default:
             throw debug();
     }
@@ -722,7 +726,7 @@ const constructMipsFunction = (f: Function, globalDeclarations, stringLiterals) 
                     if (memoryForVariable.type !== 'register') throw debug();
                     return [
                         { kind: 'move', from: memoryForVariable.destination, to: argument1 },
-                        call({ f: 'my_free', why: 'Free Stack String at end of scope' }),
+                        { kind: 'call', function: 'my_free', why: 'Free Stack String at end of scope' },
                     ];
                 });
 
@@ -1017,7 +1021,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         .filter(declaration => declaration.type.name === 'String')
         .map(declaration => [
             `lw ${argument1}, ${declaration.name}`,
-            call({ f: 'my_free', why: 'Free gloabal string at end of program' }),
+            { kind: 'call', function: 'my_free', why: 'Free gloabal string at end of program' },
         ]);
 
     // Create space for spilled tempraries
@@ -1057,8 +1061,8 @@ main:
 ${makeSpillSpaceCode.join('\n')}
 ${join(mipsProgram.map(registerTransferExpressionToMips), '\n')}
 ${removeSpillSpaceCode.join('\n')}
-${flatten(freeGlobals).join('\n')}
-${call({ f: ' verify_no_leaks', why: 'Check for leaks' })}
+${join(flatten(freeGlobals).map(registerTransferExpressionToMips as any), '\n')}
+${registerTransferExpressionToMips({ kind: 'call', function: ' verify_no_leaks', why: 'Check for leaks' })}
 # print "exit code" and exit
 li $v0, 1
 syscall

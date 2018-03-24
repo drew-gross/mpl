@@ -85,6 +85,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'subtraction':
         case 'ternary':
         case 'booleanLiteral':
+        case 'functionLiteral':
             return astToRegisterTransferLanguage(input, nextTemporary, makeLabel, recurse);
         case 'typedDeclarationAssignment': {
             const lhs = ast.destination;
@@ -248,6 +249,9 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
         case 'loadGlobal':
             if (rtx.to.type !== 'register') throw debug();
             return [`mov ${rtx.to.destination}, [rel ${rtx.from}]; ${rtx.why}`];
+        case 'loadFunctionAddress':
+            if (rtx.to.type !== 'register') throw debug();
+            return [`mov ${rtx.to.destination}, ${rtx.functionName} # ${rtx.why}`];
         default:
             throw debug();
     }

@@ -13,6 +13,8 @@ type PureRegisterTransferLanguageExpression =
     | { kind: 'gotoIfEqual'; lhs: StorageSpec; rhs: StorageSpec; label: string }
     | { kind: 'storeGlobal'; from: string; to: string }
     | { kind: 'loadGlobal'; from: string; to: StorageSpec }
+    | { kind: 'loadFunctionAddress'; to: StorageSpec; functionName: string }
+    | { kind: 'call'; function: string }
     | { kind: 'return'; source: StorageSpec };
 
 // TODO: get rid of string!
@@ -166,6 +168,15 @@ export const astToRegisterTransferLanguage = (
                 { kind: 'label', name: endOfTernaryLabel, why: 'End of ternary label' },
             ]);
         }
+        case 'functionLiteral':
+            return compileExpression([], ([]) => [
+                {
+                    kind: 'loadFunctionAddress',
+                    to: destination,
+                    functionName: ast.deanonymizedName,
+                    why: 'Loading function into register',
+                },
+            ]);
         default:
             throw debug();
     }
