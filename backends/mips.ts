@@ -627,20 +627,22 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
     }
 };
 
-const constructMipsFunction = (
+const constructFunction = (
     f: Function,
     globalDeclarations,
-    stringLiterals
+    stringLiterals,
+    argumentRegisters
 ): RegisterTransferLanguageExpression[] => {
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
     const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
 
     if (f.parameters.length > 3) throw debug(); // Don't want to deal with this yet.
+    if (argumentRegisters.length < 3) throw debug();
     const registerAssignment: any = {};
     f.parameters.forEach((parameter, index) => {
         registerAssignment[parameter.name] = {
             type: 'register',
-            destination: `$s${index}`,
+            destination: argumentRegisters[index],
         };
     });
 
@@ -951,7 +953,9 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
-    let mipsFunctions = functions.map(f => constructMipsFunction(f, globalDeclarations, stringLiterals));
+    let mipsFunctions = functions.map(f =>
+        constructFunction(f, globalDeclarations, stringLiterals, [argument1, argument2, argument3])
+    );
     const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);
     let mipsProgram = flatten(
         program.statements.map(statement => {
