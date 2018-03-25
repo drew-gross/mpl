@@ -92,6 +92,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'ternary':
         case 'booleanLiteral':
         case 'functionLiteral':
+        case 'callExpression':
             return astToRegisterTransferLanguage(
                 input,
                 {
@@ -269,6 +270,8 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
         case 'loadSymbolAddress':
             if (rtx.to.type !== 'register') throw debug();
             return [`mov ${rtx.to.destination}, ${rtx.symbolName}; ${rtx.why}`];
+        case 'call':
+            return [`call ${rtx.function}; ${rtx.why}`];
         default:
             throw debug();
     }

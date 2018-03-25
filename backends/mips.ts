@@ -627,7 +627,11 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
     }
 };
 
-const constructMipsFunction = (f: Function, globalDeclarations, stringLiterals) => {
+const constructMipsFunction = (
+    f: Function,
+    globalDeclarations,
+    stringLiterals
+): RegisterTransferLanguageExpression[] => {
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
     const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
 
@@ -689,7 +693,7 @@ const constructMipsFunction = (f: Function, globalDeclarations, stringLiterals) 
         join(mipsCode.map(registerTransferExpressionToMips), '\n'),
         ...restoreRegistersCode(scratchRegisterCount),
         `jr $ra`,
-    ].join('\n');
+    ];
 };
 
 const lengthRuntimeFunction = () => {
@@ -1015,7 +1019,7 @@ ${myFreeRuntimeFunction()}
 ${stringConcatenateRuntimeFunction()}
 ${verifyNoLeaks()}
 
-${mipsFunctions.join('\n')}
+${join(flatten(mipsFunctions).map(registerTransferExpressionToMips), '\n')}
 main:
 ${makeSpillSpaceCode.join('\n')}
 ${join(mipsProgram.map(registerTransferExpressionToMips), '\n')}
