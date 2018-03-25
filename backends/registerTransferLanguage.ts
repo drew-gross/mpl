@@ -16,7 +16,8 @@ export type PureRegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'loadGlobal'; from: string; to: StorageSpec }
     | { kind: 'loadSymbolAddress'; to: StorageSpec; symbolName: string }
     | { kind: 'call'; function: string }
-    | { kind: 'return'; source: StorageSpec });
+    | { kind: 'returnToCaller' }
+    | { kind: 'returnValue'; source: StorageSpec });
 
 // TODO: get rid of string!
 export type RegisterTransferLanguageExpression = string | PureRegisterTransferLanguageExpression;
@@ -48,7 +49,7 @@ export const astToRegisterTransferLanguage = (
             return compileExpression([subExpression], ([e1]) => [
                 ...e1,
                 {
-                    kind: 'return',
+                    kind: 'returnValue',
                     source: currentTemporary,
                     why: 'Retrun previous expression',
                 },

@@ -599,7 +599,7 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
             return `move ${rtx.to}, ${rtx.from} # ${rtx.why}`;
         case 'loadImmediate':
             return storeLiteralMips(rtx.destination as any, rtx.value);
-        case 'return':
+        case 'returnValue':
             if (rtx.source.type !== 'register') throw debug();
             return `move ${functionResult}, ${rtx.source.destination} # ${rtx.why}`;
         case 'subtract':
@@ -624,6 +624,8 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
             return `lw ${rtx.to.destination}, ${rtx.from}`;
         case 'call':
             return `jal ${rtx.function} # ${rtx.why}`;
+        case 'returnToCaller':
+            return `jr $ra`;
         default:
             throw debug();
     }
@@ -696,7 +698,7 @@ const constructFunction = (
         ...saveRegistersCode(scratchRegisterCount),
         ...mipsCode,
         ...restoreRegistersCode(scratchRegisterCount),
-        `jr $ra`,
+        { kind: 'returnToCaller', why: `End of ${f.name}` },
     ];
 };
 

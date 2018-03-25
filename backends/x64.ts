@@ -244,7 +244,7 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
             return [`mov ${rtx.destination.destination}, ${rtx.value}; ${rtx.why}`];
         case 'move':
             return [`mov ${rtx.to}, ${rtx.from}; ${rtx.why}`];
-        case 'return':
+        case 'returnValue':
             if (rtx.source.type !== 'register') throw debug();
             return [`mov ${functionResult}, ${rtx.source.destination}; ${rtx.why}`];
         case 'subtract':
