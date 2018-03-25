@@ -13,6 +13,7 @@ import {
     RegisterAssignment,
     storageSpecToString,
     RegisterTransferLanguageExpression,
+    PureRegisterTransferLanguageExpression,
 } from '../backend-utils.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
@@ -931,7 +932,12 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         `syscall`,
         `sbrk_exit_check_passed:`,
         `# ${syscallResult} now contains pointer to block. Set up pointer to new block.`,
-        `lw ${scratch}, first_block`,
+        {
+            kind: 'loadGlobal',
+            from: 'first_block',
+            to: { type: 'register', destination: scratch },
+            why: 'Load first block so we can write to it if necessary',
+        },
         `bne ${scratch}, 0, assign_previous`,
         `sw ${syscallResult}, first_block`,
         `b set_up_new_space`,
@@ -1024,12 +1030,21 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         })
     );
 
-    const freeGlobals = globalDeclarations
-        .filter(declaration => declaration.type.name === 'String')
-        .map(declaration => [
-            `lw ${argument1}, ${declaration.name}`,
-            { kind: 'call', function: 'my_free', why: 'Free gloabal string at end of program' },
-        ]);
+    const freeGlobals: PureRegisterTransferLanguageExpression[] = flatten(
+        globalDeclarations.filter(declaration => declaration.type.name === 'String').map(declaration => [
+            {
+                kind: 'loadGlobal',
+                from: declaration.name,
+                to: { type: 'register', destination: argument1 },
+                why: 'Load global string so we can free it',
+            } as PureRegisterTransferLanguageExpression,
+            {
+                kind: 'call',
+                function: 'my_free',
+                why: 'Free gloabal string at end of program',
+            } as PureRegisterTransferLanguageExpression,
+        ])
+    );
 
     // Create space for spilled tempraries
     const numSpilledTemporaries = program.temporaryCount - 10;
@@ -1068,7 +1083,7 @@ main:
 ${makeSpillSpaceCode.join('\n')}
 ${join(mipsProgram.map(registerTransferExpressionToMips), '\n')}
 ${removeSpillSpaceCode.join('\n')}
-${join(flatten(freeGlobals).map(registerTransferExpressionToMips as any), '\n')}
+${join(freeGlobals.map(registerTransferExpressionToMips), '\n')}
 ${registerTransferExpressionToMips({ kind: 'call', function: ' verify_no_leaks', why: 'Check for leaks' })}
 # print "exit code" and exit
 li $v0, 1

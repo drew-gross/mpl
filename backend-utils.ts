@@ -4,7 +4,7 @@ import debug from './util/debug.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from './api.js';
 import flatten from './util/list/flatten.js';
 
-type PureRegisterTransferLanguageExpression =
+export type PureRegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'move'; from: string; to: string }
     | { kind: 'loadImmediate'; value: number; destination: StorageSpec }
     | { kind: 'subtract'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec }
@@ -15,10 +15,10 @@ type PureRegisterTransferLanguageExpression =
     | { kind: 'loadGlobal'; from: string; to: StorageSpec }
     | { kind: 'loadFunctionAddress'; to: StorageSpec; functionName: string }
     | { kind: 'call'; function: string }
-    | { kind: 'return'; source: StorageSpec };
+    | { kind: 'return'; source: StorageSpec });
 
 // TODO: get rid of string!
-export type RegisterTransferLanguageExpression = string | { why: string } & PureRegisterTransferLanguageExpression;
+export type RegisterTransferLanguageExpression = string | PureRegisterTransferLanguageExpression;
 
 export type CompiledExpression = {
     prepare: RegisterTransferLanguageExpression[];
