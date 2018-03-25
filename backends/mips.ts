@@ -633,6 +633,7 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
 
 const constructFunction = (
     f: Function,
+    astTranslator,
     globalDeclarations,
     stringLiterals,
     argumentRegisters,
@@ -661,7 +662,7 @@ const constructFunction = (
 
     const mipsCode = flatten(
         f.statements.map(statement => {
-            const compiledProgram = astToMips({
+            const compiledProgram = astTranslator({
                 ast: statement,
                 registerAssignment,
                 destination: functionResult as any, // TODO: Not sure how this works. Maybe it doesn't.
@@ -955,7 +956,7 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f =>
-        constructFunction(f, globalDeclarations, stringLiterals, [argument1, argument2, argument3], {
+        constructFunction(f, astToMips, globalDeclarations, stringLiterals, [argument1, argument2, argument3], {
             type: 'register',
             destination: '$t1',
         })
