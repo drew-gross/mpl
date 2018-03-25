@@ -14,6 +14,7 @@ import {
 } from '../backend-utils.js';
 import {
     astToRegisterTransferLanguage,
+    constructFunction,
     PureRegisterTransferLanguageExpression,
     RegisterTransferLanguageExpression,
 } from './registerTransferLanguage.js';
@@ -631,75 +632,6 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
     }
 };
 
-const constructFunction = (
-    f: Function,
-    astTranslator,
-    globalDeclarations,
-    stringLiterals,
-    argumentRegisters,
-    firstTemporary: StorageSpec
-): RegisterTransferLanguageExpression[] => {
-    // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
-    const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
-
-    if (f.parameters.length > 3) throw debug(); // Don't want to deal with this yet.
-    if (argumentRegisters.length < 3) throw debug();
-    const registerAssignment: any = {};
-    f.parameters.forEach((parameter, index) => {
-        registerAssignment[parameter.name] = {
-            type: 'register',
-            destination: argumentRegisters[index],
-        };
-    });
-
-    let currentTemporary = firstTemporary;
-    f.statements.forEach(statement => {
-        if (statement.kind === 'typedDeclarationAssignment') {
-            registerAssignment[statement.destination] = currentTemporary;
-            currentTemporary = nextTemporary(currentTemporary);
-        }
-    });
-
-    const mipsCode = flatten(
-        f.statements.map(statement => {
-            const compiledProgram = astTranslator({
-                ast: statement,
-                registerAssignment,
-                destination: functionResult as any, // TODO: Not sure how this works. Maybe it doesn't.
-                currentTemporary,
-                globalDeclarations,
-                stringLiterals,
-            });
-            const freeLocals = f.variables
-                // TODO: Make a better memory model for frees.
-                .filter(s => s.location === 'Stack')
-                .filter(s => s.type.name == 'String')
-                .map(s => {
-                    const memoryForVariable: StorageSpec = registerAssignment[s.name];
-                    if (memoryForVariable.type !== 'register') throw debug();
-                    return [
-                        { kind: 'move', from: memoryForVariable.destination, to: argument1 },
-                        { kind: 'call', function: 'my_free', why: 'Free Stack String at end of scope' },
-                    ];
-                });
-
-            return [
-                ...compiledProgram.prepare,
-                ...compiledProgram.execute,
-                ...compiledProgram.cleanup,
-                // ...flatten(freeLocals), // TODO: Freeing locals should be necessary...
-            ];
-        })
-    );
-    return [
-        { kind: 'functionLabel', name: f.name, why: f.name },
-        ...saveRegistersCode(scratchRegisterCount),
-        ...mipsCode,
-        ...restoreRegistersCode(scratchRegisterCount),
-        { kind: 'returnToCaller', why: `End of ${f.name}` },
-    ];
-};
-
 const lengthRuntimeFunction = () => {
     const currentChar = '$t1';
     return `length:
@@ -956,10 +888,21 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f =>
-        constructFunction(f, astToMips, globalDeclarations, stringLiterals, [argument1, argument2, argument3], {
-            type: 'register',
-            destination: '$t1',
-        })
+        constructFunction(
+            f,
+            astToMips,
+            globalDeclarations,
+            stringLiterals,
+            functionResult,
+            [argument1, argument2, argument3],
+            {
+                type: 'register',
+                destination: '$t1',
+            },
+            nextTemporary,
+            saveRegistersCode,
+            restoreRegistersCode
+        )
     );
     const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);
     let mipsProgram = flatten(

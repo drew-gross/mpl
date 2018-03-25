@@ -3,6 +3,7 @@ import { builtinFunctions } from '../frontend.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
 import { StorageSpec, BackendOptions, CompiledExpression, compileExpression } from '../backend-utils.js';
+import { Function } from '../api.js';
 
 export type PureRegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'move'; from: string; to: string }
@@ -207,4 +208,77 @@ export const astToRegisterTransferLanguage = (
         default:
             throw debug();
     }
+};
+
+export const constructFunction = (
+    f: Function,
+    astTranslator,
+    globalDeclarations,
+    stringLiterals,
+    resultRegister,
+    argumentRegisters,
+    firstTemporary: StorageSpec,
+    nextTemporary,
+    registerSaver,
+    registerRestorer
+): RegisterTransferLanguageExpression[] => {
+    // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
+    const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
+
+    if (f.parameters.length > 3) throw debug(); // Don't want to deal with this yet.
+    if (argumentRegisters.length < 3) throw debug();
+    const registerAssignment: any = {};
+    f.parameters.forEach((parameter, index) => {
+        registerAssignment[parameter.name] = {
+            type: 'register',
+            destination: argumentRegisters[index],
+        };
+    });
+
+    let currentTemporary = firstTemporary;
+    f.statements.forEach(statement => {
+        if (statement.kind === 'typedDeclarationAssignment') {
+            registerAssignment[statement.destination] = currentTemporary;
+            currentTemporary = nextTemporary(currentTemporary);
+        }
+    });
+
+    const functionCode = flatten(
+        f.statements.map(statement => {
+            const compiledProgram = astTranslator({
+                ast: statement,
+                registerAssignment,
+                destination: resultRegister, // TODO: Not sure how this works. Maybe it doesn't.
+                currentTemporary,
+                globalDeclarations,
+                stringLiterals,
+            });
+            const freeLocals = f.variables
+                // TODO: Make a better memory model for frees.
+                .filter(s => s.location === 'Stack')
+                .filter(s => s.type.name == 'String')
+                .map(s => {
+                    const memoryForVariable: StorageSpec = registerAssignment[s.name];
+                    if (memoryForVariable.type !== 'register') throw debug();
+                    return [
+                        { kind: 'move', from: memoryForVariable.destination, to: argumentRegisters[0] },
+                        { kind: 'call', function: 'my_free', why: 'Free Stack String at end of scope' },
+                    ];
+                });
+
+            return [
+                ...compiledProgram.prepare,
+                ...compiledProgram.execute,
+                ...compiledProgram.cleanup,
+                // ...flatten(freeLocals), // TODO: Freeing locals should be necessary...
+            ];
+        })
+    );
+    return [
+        { kind: 'functionLabel', name: f.name, why: f.name },
+        ...registerSaver(scratchRegisterCount),
+        ...functionCode,
+        ...registerRestorer(scratchRegisterCount),
+        { kind: 'returnToCaller', why: `End of ${f.name}` },
+    ];
 };
