@@ -41,15 +41,6 @@ const storeLiteralMips = (destination: StorageSpec, value) => {
     }
 };
 
-const moveMipsDeprecated = ({ type, destination }, source): RegisterTransferLanguageExpression => {
-    switch (type) {
-        case 'register':
-            return { kind: 'move', to: destination, from: source, why: 'deprecated:(:(:(' };
-        default:
-            throw debug();
-    }
-};
-
 const loadAddressOfGlobal = ({ type, destination, spOffset }, value) => {
     switch (type) {
         case 'register':
@@ -259,8 +250,12 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 ...flatten(argumentComputers.map(argumentComputerToMips)),
                 `# call ${functionName}`,
                 ...callInstructions,
-                `# move result from ${functionResult} into destination`,
-                moveMipsDeprecated(destination, functionResult),
+                {
+                    kind: 'move',
+                    to: (destination as any).destination,
+                    from: functionResult,
+                    why: `Move result from ${functionResult} into destination`,
+                },
             ]);
         }
         case 'typedDeclarationAssignment': {
@@ -435,9 +430,14 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
             }
             const identifierRegister = (registerAssignment[identifierName] as any).destination;
             return compileExpression([], ([]) => [
-                `# Move from ${identifierName} (${identifierRegister}) into destination (${(destination as any)
-                    .destination || (destination as any).spOffset})`,
-                moveMipsDeprecated(destination as any, identifierRegister),
+                {
+                    kind: 'move',
+                    from: identifierRegister,
+                    to: (destination as any).destination,
+                    why: `Move from ${identifierName} (${identifierRegister}) into destination (${
+                        (destination as any).destination
+                    }`,
+                },
             ]);
         }
         case 'equality': {
@@ -463,8 +463,12 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     `# Store right side in s1`,
                     ...e2,
                     { kind: 'call', function: 'stringEquality', why: 'Call stringEquality' },
-                    `# Return value in ${functionResult}. Move to destination`,
-                    moveMipsDeprecated(destination as any, functionResult),
+                    {
+                        kind: 'move',
+                        from: functionResult,
+                        to: (destination as any).destination,
+                        why: `Return value in ${functionResult}. Move to destination`,
+                    },
                 ]);
             } else {
                 const leftSideDestination = currentTemporary;
