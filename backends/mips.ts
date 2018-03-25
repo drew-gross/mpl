@@ -41,15 +41,6 @@ const storeLiteralMips = (destination: StorageSpec, value) => {
     }
 };
 
-const loadAddressOfGlobal = ({ type, destination, spOffset }, value) => {
-    switch (type) {
-        case 'register':
-            return `la ${destination}, ${value}`;
-        default:
-            throw debug();
-    }
-};
-
 const add = ({ l, r, to }: { l: string; r: string; to: string }) => `add ${to}, ${l}, ${r}`;
 
 const multiplyMips = (destination, left, right) => {
@@ -190,8 +181,8 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
             if (builtinFunctions.map(b => b.name).includes(functionName)) {
                 callInstructions = [
                     {
-                        kind: 'loadFunctionAddress',
-                        functionName: functionName,
+                        kind: 'loadSymbolAddress',
+                        symbolName: functionName,
                         to: currentTemporary,
                         why: 'Load runtime function',
                     },
@@ -518,8 +509,12 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
             if (!stringLiteralData) throw debug();
             return compileExpression([], ([]) => [
-                `# Load string literal address into register`,
-                loadAddressOfGlobal(destination as any, stringLiteralName(stringLiteralData)),
+                {
+                    kind: 'loadSymbolAddress',
+                    symbolName: stringLiteralName(stringLiteralData),
+                    to: destination,
+                    why: 'Load string literal address into register',
+                },
             ]);
         }
         case 'concatenation': {
@@ -681,9 +676,9 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
         case 'gotoIfEqual':
             if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug();
             return `beq ${rtx.lhs.destination}, ${rtx.rhs.destination}, L${rtx.label}`;
-        case 'loadFunctionAddress':
+        case 'loadSymbolAddress':
             if (rtx.to.type !== 'register') throw debug();
-            return `la ${rtx.to.destination}, ${rtx.functionName} # ${rtx.why}`;
+            return `la ${rtx.to.destination}, ${rtx.symbolName} # ${rtx.why}`;
         case 'loadGlobal':
             if (rtx.to.type !== 'register') throw debug();
             return `lw ${rtx.to.destination}, ${rtx.from}`;

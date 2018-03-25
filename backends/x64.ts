@@ -249,9 +249,9 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
         case 'loadGlobal':
             if (rtx.to.type !== 'register') throw debug();
             return [`mov ${rtx.to.destination}, [rel ${rtx.from}]; ${rtx.why}`];
-        case 'loadFunctionAddress':
+        case 'loadSymbolAddress':
             if (rtx.to.type !== 'register') throw debug();
-            return [`mov ${rtx.to.destination}, ${rtx.functionName} # ${rtx.why}`];
+            return [`mov ${rtx.to.destination}, ${rtx.symbolName}; ${rtx.why}`];
         default:
             throw debug();
     }
