@@ -58,15 +58,6 @@ const loadAddressOfGlobal = ({ type, destination, spOffset }, value) => {
     }
 };
 
-const loadGlobalMips = ({ type, destination, spOffset }, value) => {
-    switch (type) {
-        case 'register':
-            return `lw ${destination}, ${value}`;
-        default:
-            throw debug();
-    }
-};
-
 const add = ({ l, r, to }: { l: string; r: string; to: string }) => `add ${to}, ${l}, ${r}`;
 
 const multiplyMips = (destination, left, right) => {
@@ -216,7 +207,12 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 ];
             } else if (globalDeclarations.some(declaration => declaration.name === functionName)) {
                 callInstructions = [
-                    `lw ${currentTemporary.destination}, ${functionName}`,
+                    {
+                        kind: 'loadGlobal',
+                        from: functionName,
+                        to: currentTemporary,
+                        why: 'Load global function pointer',
+                    },
                     { kind: 'call', function: currentTemporary.destination, why: 'Call global function' },
                 ];
             } else if (functionName in registerAssignment) {
@@ -428,9 +424,12 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
                 if (!declaration) throw debug();
                 return compileExpression([], ([]) => [
-                    `# Move from global ${identifierName} into destination (${(destination as any).destination ||
-                        (destination as any).spOffset})`,
-                    loadGlobalMips(destination as any, identifierName),
+                    {
+                        kind: 'loadGlobal',
+                        to: destination,
+                        from: identifierName,
+                        why: `Load ${identifierName} from global into register`,
+                    },
                 ]);
             }
             const identifierRegister = (registerAssignment[identifierName] as any).destination;
@@ -680,6 +679,9 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
         case 'loadFunctionAddress':
             if (rtx.to.type !== 'register') throw debug();
             return `la ${rtx.to.destination}, ${rtx.functionName} # ${rtx.why}`;
+        case 'loadGlobal':
+            if (rtx.to.type !== 'register') throw debug();
+            return `lw ${rtx.to.destination}, ${rtx.from}`;
         case 'call':
             return `jal ${rtx.function} # ${rtx.why}`;
         default:
