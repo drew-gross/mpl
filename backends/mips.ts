@@ -635,7 +635,8 @@ const constructFunction = (
     f: Function,
     globalDeclarations,
     stringLiterals,
-    argumentRegisters
+    argumentRegisters,
+    firstTemporary: StorageSpec
 ): RegisterTransferLanguageExpression[] => {
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
     const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
@@ -650,11 +651,7 @@ const constructFunction = (
         };
     });
 
-    let currentTemporary: StorageSpec = {
-        type: 'register',
-        destination: '$t1',
-    };
-
+    let currentTemporary = firstTemporary;
     f.statements.forEach(statement => {
         if (statement.kind === 'typedDeclarationAssignment') {
             registerAssignment[statement.destination] = currentTemporary;
@@ -958,7 +955,10 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f =>
-        constructFunction(f, globalDeclarations, stringLiterals, [argument1, argument2, argument3])
+        constructFunction(f, globalDeclarations, stringLiterals, [argument1, argument2, argument3], {
+            type: 'register',
+            destination: '$t1',
+        })
     );
     const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);
     let mipsProgram = flatten(
