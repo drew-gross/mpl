@@ -609,6 +609,8 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
             return `sub ${rtx.destination.destination}, ${rtx.lhs.destination}, ${rtx.rhs.destination}`;
         case 'label':
             return `L${rtx.name}: # ${rtx.why}`;
+        case 'functionLabel':
+            return `${rtx.name}: # ${rtx.why}`;
         case 'goto':
             return `b L${rtx.label}`;
         case 'gotoIfEqual':
@@ -690,7 +692,7 @@ const constructFunction = (
         })
     );
     return [
-        `${f.name}:`,
+        { kind: 'functionLabel', name: f.name, why: f.name },
         ...saveRegistersCode(scratchRegisterCount),
         ...mipsCode,
         ...restoreRegistersCode(scratchRegisterCount),

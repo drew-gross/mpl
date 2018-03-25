@@ -9,6 +9,7 @@ export type PureRegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'loadImmediate'; value: number; destination: StorageSpec }
     | { kind: 'subtract'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec }
     | { kind: 'label'; name: string }
+    | { kind: 'functionLabel'; name: string }
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: StorageSpec; rhs: StorageSpec; label: string }
     | { kind: 'storeGlobal'; from: string; to: string }
