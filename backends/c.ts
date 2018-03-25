@@ -7,13 +7,8 @@ import { exec } from 'child-process-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import {
-    CompiledProgram,
-    CompiledExpression,
-    compileExpression,
-    CompiledAssignment,
-    RegisterTransferLanguageExpression,
-} from '../backend-utils.js';
+import { CompiledProgram, CompiledExpression, compileExpression, CompiledAssignment } from '../backend-utils.js';
+import { RegisterTransferLanguageExpression } from './registerTransferLanguage.js';
 import { errors } from '../runtime-strings.js';
 import { mergeDeclarations } from '../frontend.js';
 

@@ -5,16 +5,18 @@ import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLi
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import {
-    astToRegisterTransferLanguage,
     CompiledProgram,
     BackendOptions,
     compileExpression,
     StorageSpec,
     RegisterAssignment,
     storageSpecToString,
-    RegisterTransferLanguageExpression,
-    PureRegisterTransferLanguageExpression,
 } from '../backend-utils.js';
+import {
+    astToRegisterTransferLanguage,
+    PureRegisterTransferLanguageExpression,
+    RegisterTransferLanguageExpression,
+} from './registerTransferLanguage.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
 import join from '../util/join.js';

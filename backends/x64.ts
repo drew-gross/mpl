@@ -3,8 +3,6 @@ import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
 import * as Ast from '../ast.js';
 import {
-    RegisterTransferLanguageExpression,
-    astToRegisterTransferLanguage,
     BackendOptions,
     CompiledProgram,
     StorageSpec,
@@ -12,6 +10,11 @@ import {
     compileExpression,
     storageSpecToString,
 } from '../backend-utils.js';
+import {
+    astToRegisterTransferLanguage,
+    PureRegisterTransferLanguageExpression,
+    RegisterTransferLanguageExpression,
+} from './registerTransferLanguage.js';
 import flatten from '../util/list/flatten.js';
 import { VariableDeclaration, BackendInputs, StringLiteralData } from '../api.js';
 import { exec } from 'child-process-promise';
