@@ -206,7 +206,12 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
             let callInstructions: (string | RegisterTransferLanguageExpression)[] = [];
             if (builtinFunctions.map(b => b.name).includes(functionName)) {
                 callInstructions = [
-                    `la ${currentTemporary.destination}, ${functionName}`,
+                    {
+                        kind: 'loadFunctionAddress',
+                        functionName: functionName,
+                        to: currentTemporary,
+                        why: 'Load runtime function',
+                    },
                     { kind: 'call', function: currentTemporary.destination, why: 'Call runtime function' },
                 ];
             } else if (globalDeclarations.some(declaration => declaration.name === functionName)) {
