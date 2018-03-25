@@ -690,7 +690,7 @@ const constructMipsFunction = (
     return [
         `${f.name}:`,
         ...saveRegistersCode(scratchRegisterCount),
-        join(mipsCode.map(registerTransferExpressionToMips), '\n'),
+        ...mipsCode,
         ...restoreRegistersCode(scratchRegisterCount),
         `jr $ra`,
     ];
