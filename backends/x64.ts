@@ -42,13 +42,16 @@ start:    mov       rax, 0x02000004         ; system call for write
 message:  db        "Hello, World", 10      ; note the newline at the end
 `;
 
-// TODO: unify with named registers in mips
+// TODO: unify with named registers in mips. Args are r8-r10, general purpose starts at r11.
 const functionResult = 'rax';
+const argument1 = 'r8';
+const argument2 = 'r9';
+const argument3 = 'r10';
 
 // TOOD: Unify with nextTemporary in mips
 const nextTemporary = (storage: StorageSpec): StorageSpec => {
     if (storage.type == 'register') {
-        if (storage.destination == '%r15') {
+        if (storage.destination == 'r15') {
             // Now need to spill
             return {
                 type: 'memory',
@@ -89,7 +92,18 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'ternary':
         case 'booleanLiteral':
         case 'functionLiteral':
-            return astToRegisterTransferLanguage(input, nextTemporary, makeLabel, recurse);
+            return astToRegisterTransferLanguage(
+                input,
+                {
+                    argument1: argument1,
+                    argument2: argument2,
+                    argument3: argument3,
+                    functionResult: functionResult,
+                },
+                nextTemporary,
+                makeLabel,
+                recurse
+            );
         case 'typedDeclarationAssignment': {
             const lhs = ast.destination;
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
@@ -203,7 +217,7 @@ const assignX64Registers = (
     variables: VariableDeclaration[]
 ): { registerAssignment: RegisterAssignment; firstTemporary: StorageSpec } => {
     // TODO: allow spilling of variables
-    let currentRegister = 8;
+    let currentRegister = 11;
     let registerAssignment = {};
     variables.forEach(variable => {
         registerAssignment[variable.name] = {

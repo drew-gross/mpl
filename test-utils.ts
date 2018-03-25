@@ -190,7 +190,7 @@ export const compileAndRun = async (
     });
 
     // Backends
-    const backends: Backend[] = [jsBackend, cBackend, mipsBackend /*x64Backend*/];
+    const backends: Backend[] = [jsBackend, cBackend, mipsBackend, x64Backend];
     for (let i = 0; i < backends.length; i++) {
         const backend = backends[i];
         if (!failing.includes(backend.name)) {

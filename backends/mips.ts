@@ -119,7 +119,19 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
         case 'ternary':
         case 'booleanLiteral':
         case 'functionLiteral':
-            return astToRegisterTransferLanguage(input, nextTemporary, makeLabel, recurse);
+        case 'callExpression':
+            return astToRegisterTransferLanguage(
+                input,
+                {
+                    argument1: argument1,
+                    argument2: argument2,
+                    argument3: argument3,
+                    functionResult: functionResult,
+                },
+                nextTemporary,
+                makeLabel,
+                recurse
+            );
         case 'product': {
             const leftSideDestination = currentTemporary;
             const rightSideDestination = destination;
@@ -173,82 +185,6 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     r: rightSideDestination.destination,
                     to: destination.destination,
                 }),
-            ]);
-        }
-        case 'callExpression': {
-            if (currentTemporary.type !== 'register') throw debug(); // TODO: Figure out how to guarantee this doesn't happen
-            if (destination.type !== 'register') throw debug();
-            const functionName = ast.name;
-            let callInstructions: (string | RegisterTransferLanguageExpression)[] = [];
-            if (builtinFunctions.map(b => b.name).includes(functionName)) {
-                callInstructions = [
-                    {
-                        kind: 'loadSymbolAddress',
-                        symbolName: functionName,
-                        to: currentTemporary,
-                        why: 'Load runtime function',
-                    },
-                    { kind: 'call', function: currentTemporary.destination, why: 'Call runtime function' },
-                ];
-            } else if (globalDeclarations.some(declaration => declaration.name === functionName)) {
-                callInstructions = [
-                    {
-                        kind: 'loadGlobal',
-                        from: functionName,
-                        to: currentTemporary,
-                        why: 'Load global function pointer',
-                    },
-                    { kind: 'call', function: currentTemporary.destination, why: 'Call global function' },
-                ];
-            } else if (functionName in registerAssignment) {
-                callInstructions = [
-                    {
-                        kind: 'call',
-                        function: (registerAssignment[functionName] as any).destination,
-                        why: 'Call register function',
-                    },
-                ];
-            } else {
-                debug();
-            }
-
-            const computeArgumentsMips = ast.arguments.map((argument, index) => {
-                let register;
-                switch (index) {
-                    case 0:
-                        register = argument1;
-                        break;
-                    case 1:
-                        register = argument2;
-                        break;
-                    case 2:
-                        register = argument3;
-                        break;
-                    default:
-                        throw debug();
-                }
-                return recurse({
-                    ast: argument,
-                    destination: { type: 'register', destination: register },
-                    currentTemporary: nextTemporary(currentTemporary),
-                });
-            });
-
-            const argumentComputerToMips = (argumentComputer, index) => [
-                `# Put argument ${index} in register`,
-                ...argumentComputer,
-            ];
-
-            return compileExpression(computeArgumentsMips, argumentComputers => [
-                ...flatten(argumentComputers.map(argumentComputerToMips)),
-                `# call ${functionName}`,
-                ...callInstructions,
-                {
-                    kind: 'move',
-                    to: (destination as any).destination,
-                    from: functionResult,
-                    why: `Move result from ${functionResult} into destination`,
-                },
             ]);
         }
         case 'typedDeclarationAssignment': {

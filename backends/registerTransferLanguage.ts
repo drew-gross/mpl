@@ -1,3 +1,5 @@
+import flatten from '../util/list/flatten.js';
+import { builtinFunctions } from '../frontend.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
 import { StorageSpec, BackendOptions, CompiledExpression, compileExpression } from '../backend-utils.js';
@@ -20,6 +22,7 @@ export type RegisterTransferLanguageExpression = string | PureRegisterTransferLa
 
 export const astToRegisterTransferLanguage = (
     input: BackendOptions,
+    knownRegisters,
     nextTemporary,
     makeLabel,
     recurse
@@ -123,6 +126,82 @@ export const astToRegisterTransferLanguage = (
                     why: 'Loading function into register',
                 },
             ]);
+        case 'callExpression': {
+            if (currentTemporary.type !== 'register') throw debug(); // TODO: Figure out how to guarantee this doesn't happen
+            if (destination.type !== 'register') throw debug();
+            const functionName = ast.name;
+            let callInstructions: (string | RegisterTransferLanguageExpression)[] = [];
+            if (builtinFunctions.map(b => b.name).includes(functionName)) {
+                callInstructions = [
+                    {
+                        kind: 'loadSymbolAddress',
+                        symbolName: functionName,
+                        to: currentTemporary,
+                        why: 'Load runtime function',
+                    },
+                    { kind: 'call', function: currentTemporary.destination, why: 'Call runtime function' },
+                ];
+            } else if (globalDeclarations.some(declaration => declaration.name === functionName)) {
+                callInstructions = [
+                    {
+                        kind: 'loadGlobal',
+                        from: functionName,
+                        to: currentTemporary,
+                        why: 'Load global function pointer',
+                    },
+                    { kind: 'call', function: currentTemporary.destination, why: 'Call global function' },
+                ];
+            } else if (functionName in registerAssignment) {
+                callInstructions = [
+                    {
+                        kind: 'call',
+                        function: (registerAssignment[functionName] as any).destination,
+                        why: 'Call register function',
+                    },
+                ];
+            } else {
+                debug();
+            }
+
+            const computeArgumentsMips = ast.arguments.map((argument, index) => {
+                let register;
+                switch (index) {
+                    case 0:
+                        register = knownRegisters.argument1;
+                        break;
+                    case 1:
+                        register = knownRegisters.argument2;
+                        break;
+                    case 2:
+                        register = knownRegisters.argument3;
+                        break;
+                    default:
+                        throw debug();
+                }
+                return recurse({
+                    ast: argument,
+                    destination: { type: 'register', destination: register },
+                    currentTemporary: nextTemporary(currentTemporary),
+                });
+            });
+
+            const argumentComputerToMips = (argumentComputer, index) => [
+                `# Put argument ${index} in register`,
+                ...argumentComputer,
+            ];
+
+            return compileExpression(computeArgumentsMips, argumentComputers => [
+                ...flatten(argumentComputers.map(argumentComputerToMips)),
+                `# call ${functionName}`,
+                ...callInstructions,
+                {
+                    kind: 'move',
+                    to: (destination as any).destination,
+                    from: knownRegisters.functionResult,
+                    why: `Move result from ${knownRegisters.functionResult} into destination`,
+                },
+            ]);
+        }
         default:
             throw debug();
     }
