@@ -214,8 +214,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                                 why: 'Put string pointer into temporary',
                             },
                             { kind: 'call', function: 'length', why: 'Get string length' },
-                            `# add one for null terminator`,
-                            `addiu ${functionResult}, ${functionResult}, 1`,
+                            { kind: 'increment', register: functionResult, why: 'Add one for null terminator' },
                             { kind: 'move', to: argument1, from: functionResult, why: 'Move length to argument1' },
                             { kind: 'call', function: 'my_malloc', why: 'Allocate that much space' },
                             {
@@ -525,6 +524,8 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
             if (rtx.rhs.type !== 'register') throw debug('todo');
             if (rtx.destination.type !== 'register') throw debug('todo');
             return `sub ${rtx.destination.destination}, ${rtx.lhs.destination}, ${rtx.rhs.destination}`;
+        case 'increment':
+            return `addiu ${rtx.register}, ${rtx.register}, 1`;
         case 'label':
             return `L${rtx.name}:`;
         case 'functionLabel':
@@ -556,26 +557,25 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
     return `${registerTransferExpressionToMipsWithoutComment(rtx)} # ${rtx.why}`;
 };
 
-const lengthRuntimeFunction = () => {
+const lengthRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     const currentChar = '$t1';
-    return `length:
-    ${saveRegistersCode(1).join('\n')}
-
-    # Set length count to 0
-    li ${functionResult}, 0
-    length_loop:
-    # Load char into temporary
-    lb ${currentChar}, (${argument1})
-    # If char is null, end of string. Return count.
-    beq ${currentChar}, 0, length_return
-    # Else bump pointer and count and return to start of loop
-    addiu ${functionResult}, ${functionResult}, 1
-    addiu ${argument1}, ${argument1}, 1
-    b length_loop
-
-    length_return:
-    ${restoreRegistersCode(1).join('\n')}
-    jr $ra`;
+    return [
+        `length:`,
+        saveRegistersCode(1).join('\n'),
+        `# Set length count to 0`,
+        `li ${functionResult}, 0`,
+        `length_loop:`,
+        `# Load char into temporary`,
+        `lb ${currentChar}, (${argument1})`,
+        `# If char is null, end of string. Return count.`,
+        `beq ${currentChar}, 0, length_return`,
+        { kind: 'increment', register: functionResult, why: 'Bump string index' },
+        { kind: 'increment', register: argument1, why: 'Bump length counter' },
+        `b length_loop`,
+        `length_return:`,
+        restoreRegistersCode(1).join('\n'),
+        `jr $ra,`,
+    ];
 };
 
 const printRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
@@ -884,7 +884,7 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${lengthRuntimeFunction()}
+${join(lengthRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
 ${join(printRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
 ${stringEqualityRuntimeFunction()}
 ${stringCopyRuntimeFunction()}
