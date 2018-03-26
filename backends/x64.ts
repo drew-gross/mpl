@@ -12,6 +12,7 @@ import {
 } from '../backend-utils.js';
 import {
     astToRegisterTransferLanguage,
+    constructFunction,
     PureRegisterTransferLanguageExpression,
     RegisterTransferLanguageExpression,
 } from './registerTransferLanguage.js';
@@ -262,6 +263,8 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
             return [`jmp ${rtx.label}`];
         case 'label':
             return [`${rtx.name}:`];
+        case 'functionLabel':
+            return [`${rtx.name}:`];
         case 'storeGlobal':
             return [`mov [rel ${rtx.to}], ${rtx.from}; ${rtx.why}`];
         case 'loadGlobal':
@@ -272,12 +275,49 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
             return [`mov ${rtx.to.destination}, ${rtx.symbolName}; ${rtx.why}`];
         case 'call':
             return [`call ${rtx.function}; ${rtx.why}`];
+        case 'returnToCaller':
+            return [`ret`];
         default:
             throw debug();
     }
 };
 
+const saveRegistersCode = (numRegisters: number): string[] => {
+    let result: string[] = [];
+    while (numRegisters > 0) {
+        result.push(`push r${numRegisters + 7}`);
+        numRegisters--;
+    }
+    return result;
+};
+
+const restoreRegistersCode = (numRegisters: number): string[] => {
+    let result: string[] = [];
+    while (numRegisters > 0) {
+        result.push(`pop r${numRegisters + 7}, ($sp)`);
+        numRegisters--;
+    }
+    return result.reverse();
+};
+
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
+    let x64Functions: RegisterTransferLanguageExpression[][] = functions.map(f =>
+        constructFunction(
+            f,
+            astToX64,
+            globalDeclarations,
+            stringLiterals,
+            functionResult,
+            [argument1, argument2, argument3],
+            {
+                type: 'register',
+                destination: 'r8',
+            },
+            nextTemporary,
+            saveRegistersCode,
+            restoreRegistersCode
+        )
+    );
     const { registerAssignment, firstTemporary } = assignX64Registers(program.variables);
     let x64Program = flatten(
         program.statements.map(statement => {
@@ -301,6 +341,8 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
 global start
 
 section .text
+${join(flatten(flatten(x64Functions).map(registerTransferExpressionToX64)), '\n')}
+
 start:
 ${join(flatten(x64Program.map(registerTransferExpressionToX64)), '\n')}
     mov rdi, rax; Move function call result to syscall arg

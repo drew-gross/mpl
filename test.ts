@@ -1,5 +1,5 @@
 import test from 'ava';
-
+import flatten from './util/list/flatten.js';
 import { lex } from './lex.js';
 import {
     parseMpl,
@@ -19,6 +19,10 @@ import {
     stripSourceLocation,
 } from './parser-combinator.js';
 import { removeBracketsFromAst } from './frontend.js';
+
+test('double flatten', t => {
+    t.deepEqual(flatten(flatten([[[1, 2]], [[3], [4]], [[5]]])), [1, 2, 3, 4, 5]);
+});
 
 test('lexer', t => {
     t.deepEqual(lex(tokenSpecs, '123'), [

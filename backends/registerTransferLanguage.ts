@@ -216,7 +216,7 @@ export const constructFunction = (
     globalDeclarations,
     stringLiterals,
     resultRegister,
-    argumentRegisters,
+    argumentRegisters: string[],
     firstTemporary: StorageSpec,
     nextTemporary,
     registerSaver,
