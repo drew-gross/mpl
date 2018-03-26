@@ -565,7 +565,7 @@ const lengthRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     const currentChar = '$t1';
     return [
         `length:`,
-        saveRegistersCode(1).join('\n'),
+        ...saveRegistersCode(1),
         `# Set length count to 0`,
         `li ${functionResult}, 0`,
         `length_loop:`,
@@ -581,7 +581,7 @@ const lengthRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         { kind: 'increment', register: argument1, why: 'Bump length counter' },
         `b length_loop`,
         { kind: 'label', name: 'length_return', why: 'Done' },
-        restoreRegistersCode(1).join('\n'),
+        ...restoreRegistersCode(1),
         `jr $ra,`,
     ];
 };
@@ -597,87 +597,90 @@ const printRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     ];
 };
 
-const stringEqualityRuntimeFunction = () => {
+const stringEqualityRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     const leftByte = '$t1';
     const rightByte = '$t2';
-    return `stringEquality:
-    ${saveRegistersCode(2).join('\n')}
-
-    # Assume equal. Write 1 to $a0. Overwrite if difference found.
-    li ${functionResult}, 1
-
-    # (string*, string*) -> bool
-    stringEquality_loop:
-    # load current chars into temporaries
-    lb ${leftByte}, (${argument1})
-    lb ${rightByte}, (${argument2})
-    # Inequal: return false
-    bne ${leftByte}, ${rightByte}, stringEquality_return_false
-    # Now we know both sides are equal. If they equal null, string is over.
-    # Return true. We already set ${functionResult} to 1, so just goto end.
-    beq ${leftByte}, 0, stringEquality_return
-    # Otherwise, bump pointers and check next char
-    addiu ${argument1}, 1
-    addiu ${argument2}, 1
-    b stringEquality_loop
-
-    stringEquality_return_false:
-    li ${functionResult}, 0
-    stringEquality_return:
-    ${restoreRegistersCode(2).join('\n')}
-    jr $ra`;
+    return [
+        `stringEquality:`,
+        ...saveRegistersCode(2),
+        `# Assume equal. Write 1 to $a0. Overwrite if difference found.`,
+        `li ${functionResult}, 1`,
+        `# (string*, string*) -> bool`,
+        `stringEquality_loop:`,
+        `# load current chars into temporaries`,
+        `lb ${leftByte}, (${argument1})`,
+        `lb ${rightByte}, (${argument2})`,
+        `# Inequal: return false`,
+        `bne ${leftByte}, ${rightByte}, stringEquality_return_false`,
+        `# Now we know both sides are equal. If they equal null, string is over.`,
+        `# Return true. We already set ${functionResult} to 1, so just goto end.`,
+        `beq ${leftByte}, 0, stringEquality_return`,
+        `# Otherwise, bump pointers and check next char`,
+        `addiu ${argument1}, 1`,
+        `addiu ${argument2}, 1`,
+        `b stringEquality_loop`,
+        `stringEquality_return_false:`,
+        `li ${functionResult}, 0`,
+        `stringEquality_return:`,
+        ...restoreRegistersCode(2),
+        `jr $ra`,
+    ];
 };
 
-const stringCopyRuntimeFunction = () => {
+const stringCopyRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     const currentChar = '$t1';
-    return `string_copy:
-    ${saveRegistersCode(1).join('\n')}
-    # load byte from input
-    string_copy_loop:
-    lb ${currentChar}, (${argument1})
-    # write it to argument 2
-    sb ${currentChar}, (${argument2})
-    # If it was the null terminator, exit
-    beq ${currentChar}, $0, string_copy_return
-    # Else, bump the pointers so we copy the next char, and copy copy the next char
-    addiu ${argument1}, ${argument1}, 1
-    addiu ${argument2}, ${argument2}, 1
-    b string_copy_loop
-    string_copy_return:
-    ${restoreRegistersCode(1).join('\n')}
-    jr $ra`;
+    return [
+        `string_copy:`,
+        ...saveRegistersCode(1),
+        `# load byte from input`,
+        `string_copy_loop:`,
+        `lb ${currentChar}, (${argument1})`,
+        `# write it to argument 2`,
+        `sb ${currentChar}, (${argument2})`,
+        `# If it was the null terminator, exit`,
+        `beq ${currentChar}, $0, string_copy_return`,
+        `# Else, bump the pointers so we copy the next char, and copy copy the next char`,
+        `addiu ${argument1}, ${argument1}, 1`,
+        `addiu ${argument2}, ${argument2}, 1`,
+        `b string_copy_loop`,
+        `string_copy_return:`,
+        ...restoreRegistersCode(1),
+        `jr $ra`,
+    ];
 };
 
-const stringConcatenateRuntimeFunction = () => {
+const stringConcatenateRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     const left = argument1;
     const right = argument2;
     const out = argument3;
     const currentChar = '$t1';
-    return `string_concatenate:
-    ${saveRegistersCode(1).join('\n')}
-    # Load byte from left
-    write_left_loop:
-    lb ${currentChar}, (${left}),
-    # If null, start copying from right
-    beq ${currentChar}, $0, copy_from_right
-    # Else, write to out, bump pointers, and loop
-    sb ${currentChar}, (${out})
-    addiu ${left}, ${left}, 1
-    addiu ${out}, ${out}, 1
-    b write_left_loop
-    copy_from_right:
-    lb ${currentChar}, (${right})
-    # always write (to get null terminator)
-    sb ${currentChar}, (${out})
-    # if we just wrote a null terminator, we are done
-    beq ${currentChar}, $0, concatenate_return
-    # Else bump pointers and loop
-    addiu ${right}, ${right}, 1
-    addiu ${out}, ${out}, 1,
-    b copy_from_right
-    concatenate_return:
-    ${restoreRegistersCode(1).join('\n')}
-    jr $ra`;
+    return [
+        `string_concatenate:`,
+        ...saveRegistersCode(1),
+        `# Load byte from left`,
+        `write_left_loop:`,
+        `lb ${currentChar}, (${left}),`,
+        `# If null, start copying from right`,
+        `beq ${currentChar}, $0, copy_from_right`,
+        `# Else, write to out, bump pointers, and loop`,
+        `sb ${currentChar}, (${out})`,
+        `addiu ${left}, ${left}, 1`,
+        `addiu ${out}, ${out}, 1`,
+        `b write_left_loop`,
+        `copy_from_right:`,
+        `lb ${currentChar}, (${right})`,
+        `# always write (to get null terminator)`,
+        `sb ${currentChar}, (${out})`,
+        `# if we just wrote a null terminator, we are done`,
+        `beq ${currentChar}, $0, concatenate_return`,
+        `# Else bump pointers and loop`,
+        `addiu ${right}, ${right}, 1`,
+        `addiu ${out}, ${out}, 1,`,
+        `b copy_from_right`,
+        `concatenate_return:`,
+        ...restoreRegistersCode(1),
+        `jr $ra`,
+    ];
 };
 
 const bytesInWord = 4;
@@ -688,7 +691,7 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     const scratch = '$t3';
     return [
         `my_malloc:`,
-        saveRegistersCode(3).join('\n'),
+        ...saveRegistersCode(3),
         `bne ${argument1}, 0, my_malloc_zero_size_check_passed`,
         `la $a0, ${errors.allocatedZero.name}`,
         `li $v0, 4`,
@@ -777,53 +780,56 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         `# add 3 words to get actual space`,
         `addiu ${functionResult}, ${3 * bytesInWord}`,
         `my_malloc_return:`,
-        `${restoreRegistersCode(3).join('\n')}`,
+        ...restoreRegistersCode(3),
         `jr $ra`,
     ];
 };
 
-const myFreeRuntimeFunction = () => {
+const myFreeRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     const one = '$t1';
-    return `
-    my_free:
-    ${saveRegistersCode(1).join('\n')}
-    bne ${argument1}, 0, free_null_check_passed
-    la $a0, ${errors.freeNull.name}
-    li $v0, 4
-    syscall
-    li $v0, 10
-    syscall
-    free_null_check_passed:
-    # TODO: merge blocks
-    # TODO: check if already free
-    li ${one}, 1,
-    sw ${one}, ${-1 * bytesInWord}(${argument1}) # free = work before space
-    ${restoreRegistersCode(1).join('\n')}
-    jr $ra`;
+    return [
+        `my_free:`,
+        ...saveRegistersCode(1),
+        `bne ${argument1}, 0, free_null_check_passed`,
+        `la $a0, ${errors.freeNull.name}`,
+        `li $v0, 4`,
+        `syscall`,
+        `li $v0, 10`,
+        `syscall`,
+        `free_null_check_passed:`,
+        `# TODO: merge blocks`,
+        `# TODO: check if already free`,
+        `li ${one}, 1,`,
+        `sw ${one}, ${-1 * bytesInWord}(${argument1}) # free = work before space`,
+        ...restoreRegistersCode(1),
+        `jr $ra`,
+    ];
 };
 
-const verifyNoLeaks = () => {
+const verifyNoLeaks = (): RegisterTransferLanguageExpression[] => {
     const currentBlockPointer = '$t1';
     const currentData = '$t2';
-    return `verify_no_leaks:
-    ${saveRegistersCode(2).join('\n')}
-    la ${currentBlockPointer}, first_block
-    lw ${currentBlockPointer}, (${currentBlockPointer})
-    verify_no_leaks_loop:
-    beq ${currentBlockPointer}, 0, verify_no_leaks_return
-    lw ${currentData}, ${2 * bytesInWord}(${currentBlockPointer})
-    bne ${currentData}, 0, verify_no_leaks_advance_pointers
-    la $a0, ${errors.leaksDetected.name}
-    li $v0, 4
-    syscall
-    li $v0, 10
-    syscall
-    verify_no_leaks_advance_pointers:
-    lw ${currentBlockPointer}, ${1 * bytesInWord}(${currentBlockPointer})
-    b verify_no_leaks_loop
-    verify_no_leaks_return:
-    ${restoreRegistersCode(2).join('\n')}
-    jr $ra`;
+    return [
+        `verify_no_leaks:`,
+        ...saveRegistersCode(2),
+        `la ${currentBlockPointer}, first_block`,
+        `lw ${currentBlockPointer}, (${currentBlockPointer})`,
+        `verify_no_leaks_loop:`,
+        `beq ${currentBlockPointer}, 0, verify_no_leaks_return`,
+        `lw ${currentData}, ${2 * bytesInWord}(${currentBlockPointer})`,
+        `bne ${currentData}, 0, verify_no_leaks_advance_pointers`,
+        `la $a0, ${errors.leaksDetected.name}`,
+        `li $v0, 4`,
+        `syscall`,
+        `li $v0, 10`,
+        `syscall`,
+        `verify_no_leaks_advance_pointers:`,
+        `lw ${currentBlockPointer}, ${1 * bytesInWord}(${currentBlockPointer})`,
+        `b verify_no_leaks_loop`,
+        `verify_no_leaks_return:`,
+        ...restoreRegistersCode(2),
+        `jr $ra`,
+    ];
 };
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
@@ -907,12 +913,12 @@ first_block: .word 0
 .text
 ${join(lengthRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
 ${join(printRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
-${stringEqualityRuntimeFunction()}
-${stringCopyRuntimeFunction()}
+${join(stringEqualityRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
+${join(stringCopyRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
 ${join(myMallocRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
-${myFreeRuntimeFunction()}
-${stringConcatenateRuntimeFunction()}
-${verifyNoLeaks()}
+${join(myFreeRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
+${join(stringConcatenateRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
+${join(verifyNoLeaks().map(registerTransferExpressionToMips), '\n')}
 
 ${join(flatten(mipsFunctions).map(registerTransferExpressionToMips), '\n')}
 main:
