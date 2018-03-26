@@ -9,6 +9,7 @@ import {
     RegisterAssignment,
     compileExpression,
     storageSpecToString,
+    stringLiteralName,
 } from '../backend-utils.js';
 import {
     astToRegisterTransferLanguage,
@@ -95,6 +96,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'functionLiteral':
         case 'callExpression':
         case 'equality':
+        case 'stringLiteral':
             return astToRegisterTransferLanguage(
                 input,
                 {
@@ -133,7 +135,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
                             },
                         ]);
                     default:
-                        throw debug('todo');
+                        throw debug(`${declaration.type.name} unhandled in astToX64.typedDeclarationAssignment`);
                 }
             } else if (lhs in registerAssignment) {
                 return recurse({
@@ -211,7 +213,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
             ]);
         }
         default:
-            throw debug('todo');
+            throw debug(`${ast.kind} unhandled in astToX64`);
     }
 };
 

@@ -2,7 +2,13 @@ import flatten from '../util/list/flatten.js';
 import { builtinFunctions } from '../frontend.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
-import { StorageSpec, BackendOptions, CompiledExpression, compileExpression } from '../backend-utils.js';
+import {
+    StorageSpec,
+    BackendOptions,
+    CompiledExpression,
+    compileExpression,
+    stringLiteralName,
+} from '../backend-utils.js';
 import { Function } from '../api.js';
 
 export type PureRegisterTransferLanguageExpression = { why: string } & (
@@ -42,6 +48,18 @@ export const astToRegisterTransferLanguage = (
             return compileExpression([], ([]) => [
                 { kind: 'loadImmediate', value: ast.value ? 1 : 0, destination: destination, why: '' },
             ]);
+        case 'stringLiteral': {
+            const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
+            if (!stringLiteralData) throw debug('todo');
+            return compileExpression([], ([]) => [
+                {
+                    kind: 'loadSymbolAddress',
+                    symbolName: stringLiteralName(stringLiteralData),
+                    to: destination,
+                    why: 'Load string literal address into register',
+                },
+            ]);
+        }
         case 'returnStatement':
             const subExpression = recurse({
                 ast: ast.expression,

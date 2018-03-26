@@ -55,3 +55,6 @@ export type BackendOptions = {
     globalDeclarations: VariableDeclaration[];
     stringLiterals: StringLiteralData[];
 };
+
+export const stringLiteralName = ({ id, value }: StringLiteralData) =>
+    `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;

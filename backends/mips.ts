@@ -11,6 +11,7 @@ import {
     StorageSpec,
     RegisterAssignment,
     storageSpecToString,
+    stringLiteralName,
 } from '../backend-utils.js';
 import {
     astToRegisterTransferLanguage,
@@ -110,6 +111,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
         case 'functionLiteral':
         case 'callExpression':
         case 'equality':
+        case 'stringLiteral':
             return astToRegisterTransferLanguage(
                 input,
                 {
@@ -193,10 +195,14 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     case 'Function':
                     case 'Integer':
                         return compileExpression([rhs], ([e1]) => [
-                            `# Put ${declaration.type.name} into temporary`,
+                            { kind: 'comment', why: `Put ${declaration.type.name} into temporary` },
                             ...e1,
-                            `# Put ${declaration.type.name} into global`,
-                            `sw ${currentTemporary.destination}, ${lhs}`,
+                            {
+                                kind: 'storeGlobal',
+                                from: currentTemporary.destination,
+                                to: lhs,
+                                why: `Put ${declaration.type.name} into global`,
+                            },
                         ]);
                     case 'String':
                         return compileExpression([rhs], ([e1]) => [
@@ -224,9 +230,8 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                                 from: functionResult,
                                 why: 'Move output pointer to argument 2',
                             },
-                            { kind: 'call', function: 'string_copy', why: 'Copy string into allocated space ' },
-                            `# Store into global`,
-                            `sw ${functionResult}, ${lhs}`,
+                            { kind: 'call', function: 'string_copy', why: 'Copy string into allocated space' },
+                            { kind: 'storeGlobal', from: functionResult, to: lhs, why: 'Store into global' },
                         ]);
                     default:
                         throw debug('todo');
@@ -356,18 +361,6 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     why: `Move from ${identifierName} (${identifierRegister}) into destination (${
                         (destination as any).destination
                     }`,
-                },
-            ]);
-        }
-        case 'stringLiteral': {
-            const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
-            if (!stringLiteralData) throw debug('todo');
-            return compileExpression([], ([]) => [
-                {
-                    kind: 'loadSymbolAddress',
-                    symbolName: stringLiteralName(stringLiteralData),
-                    to: destination,
-                    why: 'Load string literal address into register',
                 },
             ]);
         }
@@ -547,12 +540,14 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
         case 'loadGlobal':
             if (rtx.to.type !== 'register') throw debug('todo');
             return `lw ${rtx.to.destination}, ${rtx.from}`;
+        case 'storeGlobal':
+            return `sw ${rtx.from}, ${rtx.to}`;
         case 'call':
             return `jal ${rtx.function}`;
         case 'returnToCaller':
             return `jr $ra`;
         default:
-            throw debug('todo');
+            throw debug(`${(rtx as any).kind} unhandled in registerTransferExpressionToMipsWithoutComment`);
     }
 };
 
@@ -810,8 +805,6 @@ const verifyNoLeaks = () => {
     jr $ra`;
 };
 
-const stringLiteralName = ({ id, value }: StringLiteralData) =>
-    `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
 

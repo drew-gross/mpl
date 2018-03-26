@@ -659,7 +659,7 @@ test('associativity of subtraction', compileAndRun, {
     expectedExitCode: 2,
 });
 
-test.only('ternary true', compileAndRun, {
+test('ternary true', compileAndRun, {
     source: 'return 1 == 1 ? 5 : 6',
     expectedExitCode: 5,
 });
