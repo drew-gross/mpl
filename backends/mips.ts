@@ -32,18 +32,6 @@ const syscallResult = '$v0';
 const syscallSelect = '$v0';
 const functionResult = '$a0';
 
-const storeLiteralMips = (destination: StorageSpec, value) => {
-    if (destination.type == undefined) debug();
-    switch (destination.type) {
-        case 'register':
-            return `li ${destination.destination}, ${value}`;
-        case 'memory':
-            return [`li $s7, ${value}`, `sw $s7, -${destination.spOffset}($sp)`].join('\n');
-        default:
-            throw debug();
-    }
-};
-
 const add = ({ l, r, to }: { l: string; r: string; to: string }) => `add ${to}, ${l}, ${r}`;
 
 const multiplyMips = (destination, left, right) => {
@@ -121,6 +109,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
         case 'booleanLiteral':
         case 'functionLiteral':
         case 'callExpression':
+        case 'equality':
             return astToRegisterTransferLanguage(
                 input,
                 {
@@ -370,79 +359,6 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 },
             ]);
         }
-        case 'equality': {
-            if (ast.type.name == 'String') {
-                // Put left in s0 and right in s1 for passing to string equality function
-                const storeLeftInstructions = recurse({
-                    ast: ast.lhs,
-                    destination: {
-                        type: 'register',
-                        destination: argument1,
-                    },
-                });
-                const storeRightInstructions = recurse({
-                    ast: ast.rhs,
-                    destination: {
-                        type: 'register',
-                        destination: argument2,
-                    },
-                });
-                return compileExpression([storeLeftInstructions, storeRightInstructions], ([e1, e2]) => [
-                    { kind: 'comment', why: 'Store left side in s0' },
-                    ...e1,
-                    { kind: 'comment', why: 'Store right side in s1' },
-                    ...e2,
-                    { kind: 'call', function: 'stringEquality', why: 'Call stringEquality' },
-                    {
-                        kind: 'move',
-                        from: functionResult,
-                        to: (destination as any).destination,
-                        why: `Return value in ${functionResult}. Move to destination`,
-                    },
-                ]);
-            } else {
-                const leftSideDestination = currentTemporary;
-                const rightSideDestination = destination;
-                const subExpressionTemporary = nextTemporary(currentTemporary);
-                const storeLeftInstructions = recurse({
-                    ast: ast.lhs,
-                    destination: leftSideDestination,
-                    currentTemporary: subExpressionTemporary,
-                });
-                const storeRightInstructions = recurse({
-                    ast: ast.rhs,
-                    destination: rightSideDestination,
-                    currentTemporary: subExpressionTemporary,
-                });
-
-                const equalLabel = `${labelId}`;
-                labelId++;
-                const endOfConditionLabel = `${labelId}`;
-                labelId++;
-
-                let jumpIfEqualInstructions = [];
-
-                return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
-                    { kind: 'comment', why: 'Store left side of equality in temporary' },
-                    ...storeLeft,
-                    { kind: 'comment', why: 'Store right side of equality in temporary' },
-                    ...storeRight,
-                    {
-                        kind: 'gotoIfEqual',
-                        lhs: leftSideDestination,
-                        rhs: rightSideDestination,
-                        label: equalLabel,
-                        why: 'Goto set 1 if equal',
-                    },
-                    { kind: 'comment', why: 'Not equal, set 0' },
-                    storeLiteralMips(destination as any, '0'),
-                    { kind: 'goto', label: endOfConditionLabel, why: 'And goto exit' },
-                    { kind: 'label', name: equalLabel, why: 'Sides are equal' },
-                    storeLiteralMips(destination as any, '1'),
-                    { kind: 'label', name: endOfConditionLabel, why: 'End of condition' },
-                ]);
-            }
-        }
         case 'stringLiteral': {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
             if (!stringLiteralData) throw debug();
@@ -599,7 +515,15 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
         case 'move':
             return `move ${rtx.to}, ${rtx.from}`;
         case 'loadImmediate':
-            return storeLiteralMips(rtx.destination as any, rtx.value);
+            switch (rtx.destination.type) {
+                case 'register':
+                    return `li ${rtx.destination.destination}, ${rtx.value}`;
+                // TODO: use a register allocator
+                case 'memory':
+                    return [`li $s7, ${rtx.value}`, `sw $s7, -${rtx.destination.spOffset}($sp)`].join('\n');
+                default:
+                    throw debug();
+            }
         case 'returnValue':
             if (rtx.source.type !== 'register') throw debug();
             return `move ${functionResult}, ${rtx.source.destination}`;

@@ -206,6 +206,74 @@ export const astToRegisterTransferLanguage = (
                 },
             ]);
         }
+        case 'equality': {
+            if (ast.type.name == 'String') {
+                // Put left in s0 and right in s1 for passing to string equality function
+                const storeLeftInstructions = recurse({
+                    ast: ast.lhs,
+                    destination: {
+                        type: 'register',
+                        destination: knownRegisters.argument1,
+                    },
+                });
+                const storeRightInstructions = recurse({
+                    ast: ast.rhs,
+                    destination: {
+                        type: 'register',
+                        destination: knownRegisters.argument2,
+                    },
+                });
+                return compileExpression([storeLeftInstructions, storeRightInstructions], ([e1, e2]) => [
+                    { kind: 'comment', why: 'Store left side in s0' },
+                    ...e1,
+                    { kind: 'comment', why: 'Store right side in s1' },
+                    ...e2,
+                    { kind: 'call', function: 'stringEquality', why: 'Call stringEquality' },
+                    {
+                        kind: 'move',
+                        from: knownRegisters.functionResult,
+                        to: (destination as any).destination,
+                        why: `Return value in ${knownRegisters.functionResult}. Move to destination`,
+                    },
+                ]);
+            } else {
+                const leftSideDestination = currentTemporary;
+                const rightSideDestination = destination;
+                const subExpressionTemporary = nextTemporary(currentTemporary);
+                const storeLeftInstructions = recurse({
+                    ast: ast.lhs,
+                    destination: leftSideDestination,
+                    currentTemporary: subExpressionTemporary,
+                });
+                const storeRightInstructions = recurse({
+                    ast: ast.rhs,
+                    destination: rightSideDestination,
+                    currentTemporary: subExpressionTemporary,
+                });
+
+                const equalLabel = makeLabel('equal');
+                const endOfConditionLabel = makeLabel('endOfCondition');
+
+                return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
+                    { kind: 'comment', why: 'Store left side of equality in temporary' },
+                    ...storeLeft,
+                    { kind: 'comment', why: 'Store right side of equality in temporary' },
+                    ...storeRight,
+                    {
+                        kind: 'gotoIfEqual',
+                        lhs: leftSideDestination,
+                        rhs: rightSideDestination,
+                        label: equalLabel,
+                        why: 'Goto set 1 if equal',
+                    },
+                    { kind: 'loadImmediate', value: 0, destination: destination, why: 'Not equal, set 0' },
+                    { kind: 'goto', label: endOfConditionLabel, why: 'And goto exit' },
+                    { kind: 'label', name: equalLabel, why: 'Sides are equal' },
+                    { kind: 'loadImmediate', value: 1, destination: destination, why: 'Set 1' },
+                    { kind: 'label', name: endOfConditionLabel, why: 'End of condition' },
+                ]);
+            }
+        }
         default:
             throw debug();
     }
