@@ -21,6 +21,7 @@ export type PureRegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'functionLabel'; name: string }
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: StorageSpec; rhs: StorageSpec; label: string }
+    | { kind: 'gotoIfZero'; register: string; label: string }
     | { kind: 'storeGlobal'; from: string; to: string }
     | { kind: 'loadGlobal'; from: string; to: StorageSpec }
     | { kind: 'loadSymbolAddress'; to: StorageSpec; symbolName: string }

@@ -535,6 +535,8 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
         case 'gotoIfEqual':
             if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug('todo');
             return `beq ${rtx.lhs.destination}, ${rtx.rhs.destination}, L${rtx.label}`;
+        case 'gotoIfZero':
+            return `beq ${rtx.register}, 0, L${rtx.label}`;
         case 'loadSymbolAddress':
             if (rtx.to.type !== 'register') throw debug('todo');
             return `la ${rtx.to.destination}, ${rtx.symbolName}`;
@@ -567,12 +569,16 @@ const lengthRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         `length_loop:`,
         `# Load char into temporary`,
         `lb ${currentChar}, (${argument1})`,
-        `# If char is null, end of string. Return count.`,
-        `beq ${currentChar}, 0, length_return`,
+        {
+            kind: 'gotoIfZero',
+            register: currentChar,
+            label: 'length_return',
+            why: 'If char is null, end of string. Return count.',
+        },
         { kind: 'increment', register: functionResult, why: 'Bump string index' },
         { kind: 'increment', register: argument1, why: 'Bump length counter' },
         `b length_loop`,
-        `length_return:`,
+        { kind: 'label', name: 'length_return', why: 'Done' },
         restoreRegistersCode(1).join('\n'),
         `jr $ra,`,
     ];
@@ -680,7 +686,7 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     const scratch = '$t3';
     return [
         `my_malloc:`,
-        `${saveRegistersCode(3).join('\n')}`,
+        saveRegistersCode(3).join('\n'),
         `bne ${argument1}, 0, my_malloc_zero_size_check_passed`,
         `la $a0, ${errors.allocatedZero.name}`,
         `li $v0, 4`,
@@ -691,16 +697,23 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         `la ${currentBlockPointer}, first_block`,
         `la ${previousBlockPointer}, 0`,
         `find_large_enough_free_block_loop:`,
-        `# no blocks left (will require sbrk)`,
-        `beq ${currentBlockPointer}, 0, find_large_enough_free_block_loop_exit`,
+        {
+            kind: 'gotoIfZero',
+            register: currentBlockPointer,
+            label: 'found_large_enough_block',
+            why: 'No blocks left (will require sbrk)',
+        },
         `# current block not free, try next`,
         `lw ${scratch}, ${2 * bytesInWord}(${currentBlockPointer})`,
         `beq ${scratch}, 0, advance_pointers`,
         `# current block not large enough, try next`,
         `lw ${scratch}, 0(${currentBlockPointer})`,
         `bgt ${scratch}, ${argument1}, advance_pointers`,
-        `# We found a large enough block! Hooray!`,
-        `b find_large_enough_free_block_loop_exit`,
+        {
+            kind: 'goto',
+            label: 'found_large_enough_block',
+            why: 'We found a large enough block! Hooray!',
+        },
         `advance_pointers:`,
         {
             kind: 'move',
@@ -710,7 +723,7 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         },
         `lw ${currentBlockPointer}, ${1 * bytesInWord}(${currentBlockPointer})`,
         `b find_large_enough_free_block_loop`,
-        `find_large_enough_free_block_loop_exit:`,
+        { kind: 'label', name: 'found_large_enough_block', why: 'Found a block' },
         `beq ${currentBlockPointer}, 0, sbrk_more_space`,
         `# Found a reusable block, mark it as not free`,
         `sw $0, ${2 * bytesInWord}(${currentBlockPointer})`,
