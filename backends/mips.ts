@@ -835,6 +835,17 @@ const verifyNoLeaks = (): RegisterTransferLanguageExpression[] => {
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
 
+const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
+    lengthRuntimeFunction(),
+    printRuntimeFunction(),
+    stringEqualityRuntimeFunction(),
+    stringCopyRuntimeFunction(),
+    myMallocRuntimeFunction(),
+    myFreeRuntimeFunction(),
+    stringConcatenateRuntimeFunction(),
+    verifyNoLeaks(),
+];
+
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f =>
         constructFunction(
@@ -911,14 +922,7 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join(lengthRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
-${join(printRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
-${join(stringEqualityRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
-${join(stringCopyRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
-${join(myMallocRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
-${join(myFreeRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
-${join(stringConcatenateRuntimeFunction().map(registerTransferExpressionToMips), '\n')}
-${join(verifyNoLeaks().map(registerTransferExpressionToMips), '\n')}
+${join(flatten(runtimeFunctions).map(registerTransferExpressionToMips), '\n')}
 
 ${join(flatten(mipsFunctions).map(registerTransferExpressionToMips), '\n')}
 main:
