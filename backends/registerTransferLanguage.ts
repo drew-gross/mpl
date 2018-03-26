@@ -6,6 +6,7 @@ import { StorageSpec, BackendOptions, CompiledExpression, compileExpression } fr
 import { Function } from '../api.js';
 
 export type PureRegisterTransferLanguageExpression = { why: string } & (
+    | { kind: 'comment' }
     | { kind: 'move'; from: string; to: string }
     | { kind: 'loadImmediate'; value: number; destination: StorageSpec }
     | { kind: 'subtract'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec }

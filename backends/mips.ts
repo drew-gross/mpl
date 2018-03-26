@@ -388,9 +388,9 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     },
                 });
                 return compileExpression([storeLeftInstructions, storeRightInstructions], ([e1, e2]) => [
-                    `# Store left side in s0`,
+                    { kind: 'comment', why: 'Store left side in s0' },
                     ...e1,
-                    `# Store right side in s1`,
+                    { kind: 'comment', why: 'Store right side in s1' },
                     ...e2,
                     { kind: 'call', function: 'stringEquality', why: 'Call stringEquality' },
                     {
@@ -417,15 +417,15 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
 
                 const equalLabel = `${labelId}`;
                 labelId++;
-                const endOfConditionLabel = labelId;
+                const endOfConditionLabel = `${labelId}`;
                 labelId++;
 
                 let jumpIfEqualInstructions = [];
 
                 return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
-                    `# Store left side of equality in temporary`,
+                    { kind: 'comment', why: 'Store left side of equality in temporary' },
                     ...storeLeft,
-                    `# Store right side of equality in temporary`,
+                    { kind: 'comment', why: 'Store right side of equality in temporary' },
                     ...storeRight,
                     {
                         kind: 'gotoIfEqual',
@@ -434,13 +434,12 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                         label: equalLabel,
                         why: 'Goto set 1 if equal',
                     },
-                    `# Not equal, set 0`,
+                    { kind: 'comment', why: 'Not equal, set 0' },
                     storeLiteralMips(destination as any, '0'),
-                    `# And goto exit`,
-                    `b L${endOfConditionLabel}`,
-                    `L${equalLabel}:`,
+                    { kind: 'goto', label: endOfConditionLabel, why: 'And goto exit' },
+                    { kind: 'label', name: equalLabel, why: 'Sides are equal' },
                     storeLiteralMips(destination as any, '1'),
-                    `L${endOfConditionLabel}:`,
+                    { kind: 'label', name: endOfConditionLabel, why: 'End of condition' },
                 ]);
             }
         }
@@ -593,25 +592,26 @@ const restoreRegistersCode = (numRegisters: number): string[] => {
     return result.reverse();
 };
 
-const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpression): string => {
-    if (typeof rtx == 'string') return rtx;
+const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransferLanguageExpression): string => {
     switch (rtx.kind) {
+        case 'comment':
+            return '';
         case 'move':
-            return `move ${rtx.to}, ${rtx.from} # ${rtx.why}`;
+            return `move ${rtx.to}, ${rtx.from}`;
         case 'loadImmediate':
             return storeLiteralMips(rtx.destination as any, rtx.value);
         case 'returnValue':
             if (rtx.source.type !== 'register') throw debug();
-            return `move ${functionResult}, ${rtx.source.destination} # ${rtx.why}`;
+            return `move ${functionResult}, ${rtx.source.destination}`;
         case 'subtract':
             if (rtx.lhs.type !== 'register') throw debug();
             if (rtx.rhs.type !== 'register') throw debug();
             if (rtx.destination.type !== 'register') throw debug();
             return `sub ${rtx.destination.destination}, ${rtx.lhs.destination}, ${rtx.rhs.destination}`;
         case 'label':
-            return `L${rtx.name}: # ${rtx.why}`;
+            return `L${rtx.name}:`;
         case 'functionLabel':
-            return `${rtx.name}: # ${rtx.why}`;
+            return `${rtx.name}:`;
         case 'goto':
             return `b L${rtx.label}`;
         case 'gotoIfEqual':
@@ -619,17 +619,22 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
             return `beq ${rtx.lhs.destination}, ${rtx.rhs.destination}, L${rtx.label}`;
         case 'loadSymbolAddress':
             if (rtx.to.type !== 'register') throw debug();
-            return `la ${rtx.to.destination}, ${rtx.symbolName} # ${rtx.why}`;
+            return `la ${rtx.to.destination}, ${rtx.symbolName}`;
         case 'loadGlobal':
             if (rtx.to.type !== 'register') throw debug();
             return `lw ${rtx.to.destination}, ${rtx.from}`;
         case 'call':
-            return `jal ${rtx.function} # ${rtx.why}`;
+            return `jal ${rtx.function}`;
         case 'returnToCaller':
             return `jr $ra`;
         default:
             throw debug();
     }
+};
+
+const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpression): string => {
+    if (typeof rtx == 'string') return rtx;
+    return `${registerTransferExpressionToMipsWithoutComment(rtx)} # ${rtx.why}`;
 };
 
 const lengthRuntimeFunction = () => {
