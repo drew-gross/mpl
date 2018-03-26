@@ -537,6 +537,8 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
             return `beq ${rtx.lhs.destination}, ${rtx.rhs.destination}, L${rtx.label}`;
         case 'gotoIfZero':
             return `beq ${rtx.register}, 0, L${rtx.label}`;
+        case 'gotoIfGreater':
+            return `bgt ${rtx.lhs}, ${rtx.rhs}, L${rtx.label}`;
         case 'loadSymbolAddress':
             if (rtx.to.type !== 'register') throw debug('todo');
             return `la ${rtx.to.destination}, ${rtx.symbolName}`;
@@ -705,16 +707,22 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         },
         `# current block not free, try next`,
         `lw ${scratch}, ${2 * bytesInWord}(${currentBlockPointer})`,
-        `beq ${scratch}, 0, advance_pointers`,
+        { kind: 'gotoIfZero', register: scratch, label: 'advance_pointers', why: 'Check next block' },
         `# current block not large enough, try next`,
         `lw ${scratch}, 0(${currentBlockPointer})`,
-        `bgt ${scratch}, ${argument1}, advance_pointers`,
+        {
+            kind: 'gotoIfGreater',
+            lhs: scratch,
+            rhs: argument1,
+            label: 'advance_pointers',
+            why: 'Check next block if current not large enough',
+        },
         {
             kind: 'goto',
             label: 'found_large_enough_block',
             why: 'We found a large enough block! Hooray!',
         },
-        `advance_pointers:`,
+        { kind: 'label', name: 'advance_pointers', why: 'Bump pointers to next block' },
         {
             kind: 'move',
             to: previousBlockPointer,
