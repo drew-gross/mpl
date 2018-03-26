@@ -31,7 +31,7 @@ type CompileAndRunOptions = {
 };
 
 const astToString = (ast: Ast) => {
-    if (!ast) debug();
+    if (!ast) debug('Null ast in astToString');
     switch (ast.kind) {
         case 'returnStatement':
             return `return ${astToString(ast.expression)}`;
@@ -65,7 +65,7 @@ const astToString = (ast: Ast) => {
         case 'reassignment':
             return `${ast.destination} = ${astToString(ast.expression)};`;
         default:
-            throw debug();
+            throw debug(`${(ast as any).kind} unhandled in astToString`);
     }
 };
 
@@ -190,7 +190,7 @@ export const compileAndRun = async (
     });
 
     // Backends
-    const backends: Backend[] = [jsBackend, cBackend, mipsBackend /*x64Backend*/];
+    const backends: Backend[] = [jsBackend, cBackend, mipsBackend, x64Backend];
     for (let i = 0; i < backends.length; i++) {
         const backend = backends[i];
         if (!failing.includes(backend.name)) {

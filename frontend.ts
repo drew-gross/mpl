@@ -24,9 +24,9 @@ let tokensToString = tokens => tokens.map(token => token.string).join('');
 
 const repairAssociativity = (nodeType, ast) => {
     // Let this slide because TokenType overlaps InteriorNodeType right now
-    if (ast.type === nodeType && !ast.children) /*debug()*/ return ast;
+    if (ast.type === nodeType && !ast.children) /*debug('todo')*/ return ast;
     if (ast.type === nodeType) {
-        if (!ast.children[2]) debug();
+        if (!ast.children[2]) debug('todo');
         if (ast.children[2].type === nodeType) {
             return {
                 type: nodeType,
@@ -115,7 +115,7 @@ const extractVariable = (
         case 'returnStatement':
             return undefined;
         default:
-            throw debug();
+            throw debug('todo');
     }
 };
 
@@ -141,7 +141,7 @@ const extractVariables = (
                 }
                 break;
             default:
-                throw debug();
+                throw debug('todo');
         }
     });
     return variables;
@@ -192,7 +192,7 @@ const extractFunctions = (ast: Ast.UninferredAst, variablesInScope: VariableDecl
         case 'booleanLiteral':
             return [];
         default:
-            throw debug();
+            throw debug(`${(ast as any).kind} unhandled in extractVariables`);
     }
 };
 
@@ -228,7 +228,7 @@ const extractStringLiterals = (ast: Ast.UninferredAst): StringLiteralData[] => {
             stringLiteralId++;
             return [{ id: stringLiteralId, value: ast.value }];
         default:
-            throw debug();
+            throw debug(`${(ast as any).kind} unhandled in extractStringLiterals`);
     }
 };
 
@@ -296,7 +296,7 @@ const countTemporariesInExpression = (ast: Ast.UninferredAst) => {
         case 'stringLiteral':
             return 0;
         default:
-            debug();
+            debug(`${ast.kind} unhandled in countTemporariesInExpression`);
     }
 };
 
@@ -546,7 +546,7 @@ export const typeOfExpression = (
         case 'stringLiteral':
             return builtinTypes.String;
         default:
-            throw debug();
+            throw debug(`${ast.kind} unhandled in typeOfExpression`);
     }
 };
 
@@ -559,7 +559,7 @@ const typeCheckStatement = (
     ast: Ast.UninferredAst,
     variablesInScope: VariableDeclaration[]
 ): { errors: TypeError[]; newVariables: VariableDeclaration[] } => {
-    if (!ast.kind) debug();
+    if (!ast.kind) debug('!ast.kind');
     switch (ast.kind) {
         case 'returnStatement': {
             const result = typeOfExpression(ast.expression, variablesInScope);
@@ -656,7 +656,7 @@ const typeCheckStatement = (
             };
         }
         default:
-            throw debug();
+            throw debug(`${ast.kind} unhandled in typeCheckStatement`);
     }
 };
 
@@ -720,7 +720,7 @@ const assignmentToGlobalDeclaration = (
     variablesInScope: VariableDeclaration[]
 ): VariableDeclaration => {
     const result = typeOfExpression(ast.expression, variablesInScope);
-    if (isTypeError(result)) throw debug();
+    if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
     return {
         name: ast.destination,
         type: result,
@@ -808,7 +808,7 @@ const inferOperators = (ast: Ast.UninferredAst, knownIdentifiers: VariableDeclar
         case 'stringLiteral':
             return ast;
         default:
-            throw debug();
+            throw debug(`${ast.kind} unhandled in inferOperators`);
     }
 };
 
@@ -832,7 +832,7 @@ const extractFunctionBodyFromParseTree = node => {
         case 'statement':
             return [astFromParseResult(node.children[0]), ...extractFunctionBodyFromParseTree(node.children[2])];
         default:
-            throw debug();
+            throw debug(`${node.type} unhandled in extractFunctionBodyFromParseTree`);
     }
 };
 
@@ -857,7 +857,7 @@ const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
                 },
             ];
         } else {
-            throw debug();
+            throw debug('wrong children length');
         }
     } else if (ast.type == 'argList') {
         return [...extractParameterList(ast.children[0]), ...extractParameterList(ast.children[2])];
@@ -868,7 +868,7 @@ const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
             return [];
         }
     } else {
-        throw debug();
+        throw debug(`${ast.type} unhandledi extractParameterList`);
     }
 };
 
@@ -894,7 +894,7 @@ const parseType = (ast: MplAst): Type => {
                 arguments: [],
             };
         default:
-            throw debug();
+            throw debug(`${ast.type} unhandled in parseType`);
     }
 };
 
@@ -909,7 +909,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceColumn: ast.sourceColumn,
             };
         case 'number':
-            if (ast.value === undefined) throw debug();
+            if (ast.value === undefined) throw debug('ast.value === undefined');
             return {
                 kind: 'number',
                 value: ast.value as any,
@@ -917,7 +917,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceColumn: ast.sourceColumn,
             };
         case 'identifier':
-            if (!ast.value) throw debug();
+            if (!ast.value) throw debug('!ast.value');
             return {
                 kind: 'identifier',
                 value: ast.value as any,
@@ -925,7 +925,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceColumn: ast.sourceColumn,
             };
         case 'product':
-            if (!('children' in ast)) throw debug();
+            if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
                 kind: 'product',
                 lhs: astFromParseResult(ast.children[0]),
@@ -943,7 +943,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceColumn: ast.sourceColumn,
             };
         case 'equality':
-            if (!('children' in ast)) throw debug();
+            if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
                 kind: 'equality',
                 lhs: astFromParseResult(ast.children[0]),
@@ -952,7 +952,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceColumn: ast.sourceColumn,
             };
         case 'paramList':
-            throw debug(); //Should have been caught in "callExpression"
+            throw debug('paramList in astFromParseResult'); //Should have been caught in "callExpression"
         case 'callExpressionNoArgs':
             return {
                 kind: 'callExpression',
@@ -970,7 +970,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceColumn: ast.sourceColumn,
             };
         case 'subtraction':
-            if (!('children' in ast)) throw debug();
+            if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
                 kind: 'subtraction',
                 lhs: astFromParseResult(ast.children[0]),
@@ -979,7 +979,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceColumn: ast.sourceColumn,
             };
         case 'addition':
-            if (!('children' in ast)) throw debug();
+            if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
                 kind: 'addition',
                 lhs: astFromParseResult(ast.children[0]),
@@ -988,7 +988,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceColumn: ast.sourceColumn,
             };
         case 'reassignment':
-            if (!('children' in ast)) throw debug();
+            if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
                 kind: 'reassignment',
                 destination: (ast.children[0] as any).value as any,
@@ -997,7 +997,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceColumn: ast.sourceColumn,
             };
         case 'declarationAssignment':
-            if (!('children' in ast)) throw debug();
+            if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
                 kind: 'declarationAssignment',
                 destination: (ast.children[0] as any).value as any,
@@ -1006,7 +1006,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceColumn: ast.sourceColumn,
             };
         case 'typedDeclarationAssignment':
-            if (!('children' in ast)) throw debug();
+            if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
                 kind: 'typedDeclarationAssignment',
                 destination: (ast.children[0] as any).value as any,
@@ -1023,7 +1023,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceColumn: ast.sourceColumn,
             };
         case 'concatenation':
-            if (!('children' in ast)) throw debug();
+            if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
                 kind: 'concatenation',
                 lhs: astFromParseResult(ast.children[0]),
@@ -1032,7 +1032,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceColumn: ast.sourceColumn,
             };
         case 'equality':
-            if (!('children' in ast)) throw debug();
+            if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
                 kind: 'equality',
                 lhs: astFromParseResult(ast.children[0]),
@@ -1082,7 +1082,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceColumn: ast.sourceColumn,
             };
         default:
-            throw debug();
+            throw debug(`${ast.type} unhandled in astFromParseResult`);
     }
 };
 
@@ -1095,7 +1095,7 @@ const parseErrorToString = (e: ParseError): string => {
                 e.found
             }`;
         default:
-            throw debug();
+            throw debug('Unhandled error in parseErrorToString');
     }
 };
 

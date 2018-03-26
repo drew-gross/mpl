@@ -56,13 +56,13 @@ const parseResultIsError = <NodeType, LeafType, TokenType>(
         | ParseResultWithIndex<NodeType, TokenType>
         | AstWithIndex<NodeType, LeafType>[]
 ): result is ParseError<TokenType> => {
-    if (!result) throw debug();
+    if (!result) throw debug('!result');
     return 'found' in result && 'expected' in result;
 };
 const parseResultWithIndexIsLeaf = <NodeType, TokenType>(
     r: ParseResultWithIndex<NodeType, TokenType>
 ): r is LeafWithIndex<TokenType> => {
-    if (!r) throw debug();
+    if (!r) throw debug('!r');
     return 'value' in r;
 };
 
@@ -137,7 +137,7 @@ const isSequence = <NodeType, TokenType>(
         | string
 ): val is SequenceParser<NodeType, TokenType> => {
     if (typeof val === 'string') return false;
-    if (!val) throw debug();
+    if (!val) throw debug('!val');
     return 'n' in val;
 };
 
@@ -284,7 +284,7 @@ const parseAlternative = <NodeType, TokenType>(
             // Check if we are done
             if (!parseResultIsError(currentResult) && currentProgressRef.length == sequence.p.length) {
                 const cachedSuccess = last(currentProgressRef);
-                if (cachedSuccess === null) throw debug();
+                if (cachedSuccess === null) throw debug('cachedSuccess == null');
                 const result: AstWithIndex<NodeType, TokenType> = {
                     newIndex: cachedSuccess.newIndex,
                     success: true,
@@ -336,7 +336,7 @@ const parseAlternative = <NodeType, TokenType>(
     progressCache.map((error: ParseError<TokenType> | AstWithIndex<NodeType, TokenType>[]) => {
         if (!parseResultIsError(error)) {
             parseAlternative(grammar, alternatives, tokens, index);
-            throw debug();
+            throw debug('Didnt finish implmenting this maybe?');
         }
         return error.found;
     });
@@ -344,7 +344,7 @@ const parseAlternative = <NodeType, TokenType>(
         found: unique(
             flatten(
                 progressCache.map(error => {
-                    if (!parseResultIsError(error)) throw debug();
+                    if (!parseResultIsError(error)) throw debug('!parseResultIsError in parseAlternative');
                     return error.found;
                 })
             )
@@ -352,7 +352,7 @@ const parseAlternative = <NodeType, TokenType>(
         expected: unique(
             flatten(
                 progressCache.map(error => {
-                    if (!parseResultIsError(error)) throw debug();
+                    if (!parseResultIsError(error)) throw debug('!parseResultIsError in parseAlternative');
                     return error.expected;
                 })
             )
@@ -368,7 +368,7 @@ export const parse = <NodeType, TokenType>(
     index: number
 ): ParseResultWithIndex<NodeType, TokenType> => {
     const childrenParser = grammar[firstRule];
-    if (!childrenParser) throw debug();
+    if (!childrenParser) throw debug('!childrenParser in parse');
     if (typeof childrenParser === 'string') {
         return parse(childrenParser, firstRule, tokens, index);
     } else if (isSequence(childrenParser)) {
@@ -376,7 +376,7 @@ export const parse = <NodeType, TokenType>(
     } else if (Array.isArray(childrenParser)) {
         return parseAlternative(grammar, childrenParser, tokens, index);
     } else {
-        throw debug();
+        throw debug('bad type in parse');
     }
 };
 

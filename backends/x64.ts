@@ -70,7 +70,7 @@ const nextTemporary = (storage: StorageSpec): StorageSpec => {
             spOffset: storage.spOffset + 4,
         };
     } else {
-        return debug();
+        return debug('todo');
     }
 };
 
@@ -78,14 +78,14 @@ let labelId = 0;
 
 const astToX64 = (input: BackendOptions): CompiledProgram => {
     const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
-    if (isEqual(currentTemporary, destination)) throw debug(); // Sanity check to make sure caller remembered to provide a new temporary
+    if (isEqual(currentTemporary, destination)) throw debug('todo'); // Sanity check to make sure caller remembered to provide a new temporary
     const recurse = newInput => astToX64({ ...input, ...newInput });
     const makeLabel = (name: string) => {
         const result = `${name}${labelId}`;
         labelId++;
         return result;
     };
-    if (!ast) debug();
+    if (!ast) debug('todo');
     switch (ast.kind) {
         case 'number':
         case 'returnStatement':
@@ -94,6 +94,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'booleanLiteral':
         case 'functionLiteral':
         case 'callExpression':
+        case 'equality':
             return astToRegisterTransferLanguage(
                 input,
                 {
@@ -116,8 +117,8 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
                     currentTemporary: subExpressionTemporary,
                 });
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
-                if (!declaration) throw debug();
-                if (currentTemporary.type !== 'register') throw debug();
+                if (!declaration) throw debug('todo');
+                if (currentTemporary.type !== 'register') throw debug('todo');
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
@@ -132,7 +133,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
                             },
                         ]);
                     default:
-                        throw debug();
+                        throw debug('todo');
                 }
             } else if (lhs in registerAssignment) {
                 return recurse({
@@ -144,7 +145,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
                     },
                 });
             } else {
-                throw debug();
+                throw debug('todo');
             }
         }
         case 'identifier': {
@@ -152,7 +153,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
             const identifierName = ast.value;
             if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
-                if (!declaration) throw debug();
+                if (!declaration) throw debug('todo');
                 return compileExpression([], ([]) => [
                     {
                         kind: 'loadGlobal',
@@ -210,7 +211,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
             ]);
         }
         default:
-            throw debug();
+            throw debug('todo');
     }
 };
 
@@ -240,24 +241,26 @@ const assignX64Registers = (
 const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression): string[] => {
     if (typeof rtx == 'string') return [rtx];
     switch (rtx.kind) {
+        case 'comment':
+            return [`; ${rtx.why}`];
         case 'loadImmediate':
-            if (rtx.destination.type !== 'register') throw debug();
+            if (rtx.destination.type !== 'register') throw debug('todo');
             return [`mov ${rtx.destination.destination}, ${rtx.value}; ${rtx.why}`];
         case 'move':
             return [`mov ${rtx.to}, ${rtx.from}; ${rtx.why}`];
         case 'returnValue':
-            if (rtx.source.type !== 'register') throw debug();
+            if (rtx.source.type !== 'register') throw debug('todo');
             return [`mov ${functionResult}, ${rtx.source.destination}; ${rtx.why}`];
         case 'subtract':
-            if (rtx.lhs.type !== 'register') throw debug();
-            if (rtx.rhs.type !== 'register') throw debug();
-            if (rtx.destination.type !== 'register') throw debug();
+            if (rtx.lhs.type !== 'register') throw debug('todo');
+            if (rtx.rhs.type !== 'register') throw debug('todo');
+            if (rtx.destination.type !== 'register') throw debug('todo');
             return [
                 `mov ${rtx.destination.destination}, ${rtx.lhs.destination}`,
                 `sub ${rtx.destination.destination}, ${rtx.rhs.destination}`,
             ];
         case 'gotoIfEqual':
-            if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug();
+            if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug('todo');
             return [`cmp ${rtx.lhs.destination}, ${rtx.rhs.destination}`, `je ${rtx.label}`];
         case 'goto':
             return [`jmp ${rtx.label}`];
@@ -268,17 +271,17 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
         case 'storeGlobal':
             return [`mov [rel ${rtx.to}], ${rtx.from}; ${rtx.why}`];
         case 'loadGlobal':
-            if (rtx.to.type !== 'register') throw debug();
+            if (rtx.to.type !== 'register') throw debug('todo');
             return [`mov ${rtx.to.destination}, [rel ${rtx.from}]; ${rtx.why}`];
         case 'loadSymbolAddress':
-            if (rtx.to.type !== 'register') throw debug();
+            if (rtx.to.type !== 'register') throw debug('todo');
             return [`mov ${rtx.to.destination}, ${rtx.symbolName}; ${rtx.why}`];
         case 'call':
             return [`call ${rtx.function}; ${rtx.why}`];
         case 'returnToCaller':
             return [`ret`];
         default:
-            throw debug();
+            throw debug(`${(rtx as any).kind} unhandled in registerTransferExpressionToX64`);
     }
 };
 

@@ -32,7 +32,7 @@ const mplTypeToCType = (type: Type): ((name: string) => string) => {
             const argumentsString = join(argumentTypes, ', ');
             return name => `${returnType} (*${name})(${argumentsString})`;
         default:
-            throw debug();
+            throw debug('todo');
     }
 };
 
@@ -61,7 +61,7 @@ const getTemporaryId = () => {
 //TODO: Don't use register transfer langauge for C
 const registerTransferLangaugeToC = (rtlCode: RegisterTransferLanguageExpression[], joiner: string): string => {
     rtlCode.forEach(line => {
-        if (typeof line !== 'string') debug();
+        if (typeof line !== 'string') debug('todo');
     });
     return join(rtlCode as string[], joiner);
 };
@@ -74,7 +74,7 @@ const astToC = (input: BackendInput): CompiledProgram => {
         const rhs = recurse({ ast: (ast as any).rhs });
         return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, operator, ...e2]);
     };
-    if (!ast) debug();
+    if (!ast) debug('todo');
     switch (ast.kind) {
         case 'returnStatement': {
             const subExpression = recurse({ ast: ast.expression });
@@ -111,7 +111,7 @@ const astToC = (input: BackendInput): CompiledProgram => {
             const lhs = ast.destination;
             const rhs = recurse({ ast: ast.expression });
             const declaration = declarations.find(declaration => declaration.name === lhs);
-            if (!declaration) throw debug();
+            if (!declaration) throw debug('todo');
             switch (declaration.type.name) {
                 case 'Function':
                 case 'Integer':
@@ -121,7 +121,7 @@ const astToC = (input: BackendInput): CompiledProgram => {
                         case 'Global':
                             return compileAssignment(declaration.name, rhs);
                         default:
-                            throw debug();
+                            throw debug('todo');
                     }
                 case 'String':
                     switch (declaration.location) {
@@ -146,19 +146,19 @@ const astToC = (input: BackendInput): CompiledProgram => {
                             return compileAssignment(declaration.name, rhsWillAlloc);
                         case 'Parameter':
                             // Should never reassign to parameters
-                            throw debug();
+                            throw debug('todo');
                         default:
-                            throw debug();
+                            throw debug('todo');
                     }
                 default:
-                    throw debug();
+                    throw debug('todo');
             }
         }
         case 'reassignment': {
             const lhs = ast.destination;
             const rhs = recurse({ ast: ast.expression });
             const declaration = declarations.find(declaration => declaration.name === lhs);
-            if (!declaration) throw debug();
+            if (!declaration) throw debug('todo');
             switch (declaration.type.name) {
                 case 'Function':
                 case 'Integer':
@@ -190,12 +190,12 @@ const astToC = (input: BackendInput): CompiledProgram => {
                             return compileAssignment(`char *${declaration.name}`, expression);
                         case 'Parameter':
                             // Shouldn't be possible, can't reassign parameters
-                            throw debug();
+                            throw debug('todo');
                         default:
-                            throw debug();
+                            throw debug('todo');
                     }
                 default:
-                    throw debug();
+                    throw debug('todo');
             }
         }
         case 'functionLiteral':
@@ -235,12 +235,12 @@ const astToC = (input: BackendInput): CompiledProgram => {
             return compileExpression([], ([]) => [ast.value ? '1' : '0']);
         case 'stringLiteral':
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
-            if (!stringLiteralData) throw debug();
+            if (!stringLiteralData) throw debug('todo');
             return compileExpression([], ([]) => [stringLiteralName(stringLiteralData)]);
         default:
-            debug();
+            debug('todo');
     }
-    return debug();
+    return debug('todo');
 };
 
 const stringLiteralName = ({ id, value }: StringLiteralData) =>
@@ -275,7 +275,7 @@ const makeCfunctionBody = ({
 }: MakeCFunctionBodyInputs) => {
     const nonReturnStatements = statements.slice(0, statements.length - 1);
     const returnStatement = statements[statements.length - 1];
-    if (returnStatement.kind !== 'returnStatement') throw debug();
+    if (returnStatement.kind !== 'returnStatement') throw debug('todo');
     const body = nonReturnStatements.map(statement => {
         const statementLogic = astToC({
             ast: statement,

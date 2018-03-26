@@ -54,7 +54,7 @@ const multiplyMips = (destination, left, right) => {
         destinationRegister = '$s3';
         restoreSpilled.push(`sw $s3, -${destination.spOffset}($sp)`);
     }
-    if (leftRegister == '$tNaN') debug();
+    if (leftRegister == '$tNaN') debug('todo');
 
     return [
         ...loadSpilled,
@@ -85,7 +85,7 @@ const nextTemporary = (storage: StorageSpec): StorageSpec => {
             spOffset: storage.spOffset + 4,
         };
     } else {
-        return debug();
+        return debug('todo');
     }
 };
 
@@ -93,14 +93,14 @@ let labelId = 0;
 
 const astToMips = (input: BackendOptions): CompiledProgram => {
     const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
-    if (isEqual(currentTemporary, destination)) throw debug(); // Sanity check to make sure caller remembered to provide a new temporary
+    if (isEqual(currentTemporary, destination)) throw debug('todo'); // Sanity check to make sure caller remembered to provide a new temporary
     const recurse = newInput => astToMips({ ...input, ...newInput });
     const makeLabel = (name: string) => {
         const result = `${name}${labelId}`;
         labelId++;
         return result;
     };
-    if (!ast) debug();
+    if (!ast) debug('todo');
     switch (ast.kind) {
         case 'number':
         case 'returnStatement':
@@ -147,11 +147,11 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
             ]);
         }
         case 'addition': {
-            if (destination.type !== 'register') throw debug();
+            if (destination.type !== 'register') throw debug('todo');
             const leftSideDestination = currentTemporary;
-            if (leftSideDestination.type !== 'register') throw debug();
+            if (leftSideDestination.type !== 'register') throw debug('todo');
             const rightSideDestination = destination;
-            if (rightSideDestination.type !== 'register') throw debug();
+            if (rightSideDestination.type !== 'register') throw debug('todo');
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
             const storeLeftInstructions = recurse({
@@ -187,8 +187,8 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     currentTemporary: subExpressionTemporary,
                 });
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
-                if (!declaration) throw debug();
-                if (currentTemporary.type !== 'register') throw debug();
+                if (!declaration) throw debug('todo');
+                if (currentTemporary.type !== 'register') throw debug('todo');
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
@@ -229,7 +229,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                             `sw ${functionResult}, ${lhs}`,
                         ]);
                     default:
-                        throw debug();
+                        throw debug('todo');
                 }
             } else if (lhs in registerAssignment) {
                 return recurse({
@@ -241,7 +241,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     },
                 });
             } else {
-                throw debug();
+                throw debug('todo');
             }
         }
         case 'reassignment': {
@@ -255,8 +255,8 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     currentTemporary: nextTemporary(subExpressionTemporary),
                 });
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
-                if (!declaration) throw debug();
-                if (currentTemporary.type !== 'register') throw debug();
+                if (!declaration) throw debug('todo');
+                if (currentTemporary.type !== 'register') throw debug('todo');
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
@@ -267,7 +267,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                             `sw ${currentTemporary.destination}, ${lhs}`,
                         ]);
                     case 'String':
-                        if (!('destination' in savedPointerForFreeing)) throw debug();
+                        if (!('destination' in savedPointerForFreeing)) throw debug('todo');
                         const prepAndCleanup = {
                             prepare: [
                                 `lw ${
@@ -317,7 +317,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                             { kind: 'call', function: 'string_copy', why: 'Copy new string to destination' },
                         ]);
                     default:
-                        throw debug();
+                        throw debug('todo');
                 }
             } else if (lhs in registerAssignment) {
                 return recurse({
@@ -329,7 +329,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     },
                 });
             } else {
-                throw debug();
+                throw debug('todo');
             }
         }
         case 'identifier': {
@@ -337,7 +337,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
             const identifierName = ast.value;
             if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
-                if (!declaration) throw debug();
+                if (!declaration) throw debug('todo');
                 return compileExpression([], ([]) => [
                     {
                         kind: 'loadGlobal',
@@ -361,7 +361,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
         }
         case 'stringLiteral': {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
-            if (!stringLiteralData) throw debug();
+            if (!stringLiteralData) throw debug('todo');
             return compileExpression([], ([]) => [
                 {
                     kind: 'loadSymbolAddress',
@@ -372,14 +372,14 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
             ]);
         }
         case 'concatenation': {
-            if (destination.type !== 'register') throw debug();
+            if (destination.type !== 'register') throw debug('todo');
             const leftSideDestination = currentTemporary;
-            if (leftSideDestination.type !== 'register') throw debug();
+            if (leftSideDestination.type !== 'register') throw debug('todo');
             const rightSideDestination = nextTemporary(leftSideDestination);
-            if (rightSideDestination.type !== 'register') throw debug();
+            if (rightSideDestination.type !== 'register') throw debug('todo');
             const subExpressionTemporary = nextTemporary(rightSideDestination);
             const newStringLengthTemporary = nextTemporary(subExpressionTemporary);
-            if (newStringLengthTemporary.type !== 'register') throw debug();
+            if (newStringLengthTemporary.type !== 'register') throw debug('todo');
             const mallocResultTemporary = newStringLengthTemporary; // Don't need length after malloc is done
 
             const storeLeftInstructions = recurse({
@@ -462,7 +462,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
             ]);
         }
         default:
-            throw debug();
+            throw debug('todo');
     }
 };
 
@@ -522,15 +522,15 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
                 case 'memory':
                     return [`li $s7, ${rtx.value}`, `sw $s7, -${rtx.destination.spOffset}($sp)`].join('\n');
                 default:
-                    throw debug();
+                    throw debug('todo');
             }
         case 'returnValue':
-            if (rtx.source.type !== 'register') throw debug();
+            if (rtx.source.type !== 'register') throw debug('todo');
             return `move ${functionResult}, ${rtx.source.destination}`;
         case 'subtract':
-            if (rtx.lhs.type !== 'register') throw debug();
-            if (rtx.rhs.type !== 'register') throw debug();
-            if (rtx.destination.type !== 'register') throw debug();
+            if (rtx.lhs.type !== 'register') throw debug('todo');
+            if (rtx.rhs.type !== 'register') throw debug('todo');
+            if (rtx.destination.type !== 'register') throw debug('todo');
             return `sub ${rtx.destination.destination}, ${rtx.lhs.destination}, ${rtx.rhs.destination}`;
         case 'label':
             return `L${rtx.name}:`;
@@ -539,20 +539,20 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
         case 'goto':
             return `b L${rtx.label}`;
         case 'gotoIfEqual':
-            if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug();
+            if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug('todo');
             return `beq ${rtx.lhs.destination}, ${rtx.rhs.destination}, L${rtx.label}`;
         case 'loadSymbolAddress':
-            if (rtx.to.type !== 'register') throw debug();
+            if (rtx.to.type !== 'register') throw debug('todo');
             return `la ${rtx.to.destination}, ${rtx.symbolName}`;
         case 'loadGlobal':
-            if (rtx.to.type !== 'register') throw debug();
+            if (rtx.to.type !== 'register') throw debug('todo');
             return `lw ${rtx.to.destination}, ${rtx.from}`;
         case 'call':
             return `jal ${rtx.function}`;
         case 'returnToCaller':
             return `jr $ra`;
         default:
-            throw debug();
+            throw debug('todo');
     }
 };
 

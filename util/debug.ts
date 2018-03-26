@@ -1,4 +1,4 @@
-export default (): never => {
+export default (why: string): never => {
     debugger;
-    throw 'debugger';
+    throw why;
 };

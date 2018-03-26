@@ -32,7 +32,7 @@ export const astToRegisterTransferLanguage = (
     recurse
 ): CompiledExpression => {
     const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
-    if (isEqual(currentTemporary, destination)) throw debug(); // Sanity check to make sure caller remembered to provide a new temporary
+    if (isEqual(currentTemporary, destination)) throw debug('todo'); // Sanity check to make sure caller remembered to provide a new temporary
     switch (ast.kind) {
         case 'number':
             return compileExpression([], ([]) => [
@@ -58,9 +58,9 @@ export const astToRegisterTransferLanguage = (
             ]);
         case 'subtraction': {
             const leftSideDestination = destination;
-            if (leftSideDestination.type !== 'register') throw debug();
+            if (leftSideDestination.type !== 'register') throw debug('todo');
             const rightSideDestination = currentTemporary;
-            if (rightSideDestination.type !== 'register') throw debug();
+            if (rightSideDestination.type !== 'register') throw debug('todo');
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
             const storeLeftInstructions = recurse({
@@ -131,8 +131,8 @@ export const astToRegisterTransferLanguage = (
                 },
             ]);
         case 'callExpression': {
-            if (currentTemporary.type !== 'register') throw debug(); // TODO: Figure out how to guarantee this doesn't happen
-            if (destination.type !== 'register') throw debug();
+            if (currentTemporary.type !== 'register') throw debug('todo'); // TODO: Figure out how to guarantee this doesn't happen
+            if (destination.type !== 'register') throw debug('todo');
             const functionName = ast.name;
             let callInstructions: (string | RegisterTransferLanguageExpression)[] = [];
             if (builtinFunctions.map(b => b.name).includes(functionName)) {
@@ -164,7 +164,7 @@ export const astToRegisterTransferLanguage = (
                     },
                 ];
             } else {
-                debug();
+                debug('todo');
             }
 
             const computeArgumentsMips = ast.arguments.map((argument, index) => {
@@ -180,7 +180,7 @@ export const astToRegisterTransferLanguage = (
                         register = knownRegisters.argument3;
                         break;
                     default:
-                        throw debug();
+                        throw debug('todo');
                 }
                 return recurse({
                     ast: argument,
@@ -275,7 +275,7 @@ export const astToRegisterTransferLanguage = (
             }
         }
         default:
-            throw debug();
+            throw debug('todo');
     }
 };
 
@@ -294,8 +294,8 @@ export const constructFunction = (
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
     const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
 
-    if (f.parameters.length > 3) throw debug(); // Don't want to deal with this yet.
-    if (argumentRegisters.length < 3) throw debug();
+    if (f.parameters.length > 3) throw debug('todo'); // Don't want to deal with this yet.
+    if (argumentRegisters.length < 3) throw debug('todo');
     const registerAssignment: any = {};
     f.parameters.forEach((parameter, index) => {
         registerAssignment[parameter.name] = {
@@ -328,7 +328,7 @@ export const constructFunction = (
                 .filter(s => s.type.name == 'String')
                 .map(s => {
                     const memoryForVariable: StorageSpec = registerAssignment[s.name];
-                    if (memoryForVariable.type !== 'register') throw debug();
+                    if (memoryForVariable.type !== 'register') throw debug('todo');
                     return [
                         { kind: 'move', from: memoryForVariable.destination, to: argumentRegisters[0] },
                         { kind: 'call', function: 'my_free', why: 'Free Stack String at end of scope' },

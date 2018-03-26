@@ -32,7 +32,7 @@ const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string): Toke
 
     // slurp initial whitespace
     const initialWhitespaceMatch = input.match(/^[ \t\n]*/);
-    if (!initialWhitespaceMatch) throw debug();
+    if (!initialWhitespaceMatch) throw debug('Initial whitespace didnt match in lex');
     const initialWhitespace = initialWhitespaceMatch[0];
     updateSourceLocation(initialWhitespace);
 
