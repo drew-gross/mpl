@@ -716,7 +716,7 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         `my_malloc_zero_size_check_passed:`,
         `la ${currentBlockPointer}, first_block`,
         `la ${previousBlockPointer}, 0`,
-        `find_large_enough_free_block_loop:`,
+        { kind: 'label', name: 'find_large_enough_free_block_loop', why: 'Find a block' },
         {
             kind: 'gotoIfZero',
             register: currentBlockPointer,
@@ -748,7 +748,7 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
             why: 'Advance current block pointer to previous.',
         },
         `lw ${currentBlockPointer}, ${1 * bytesInWord}(${currentBlockPointer})`,
-        `b find_large_enough_free_block_loop`,
+        { kind: 'goto', label: 'find_large_enough_free_block_loop', why: "Didn't find a block, try again" },
         { kind: 'label', name: 'found_large_enough_block', why: 'Found a block' },
         {
             kind: 'gotoIfZero',
@@ -761,7 +761,7 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         { kind: 'move', to: functionResult, from: currentBlockPointer, why: 'Return current block pointer' },
         `# add 3 words to get actual space`,
         `addiu ${functionResult}, ${3 * bytesInWord}`,
-        `b my_malloc_return`,
+        { kind: 'goto', label: 'my_malloc_return', why: 'Found good existing block' },
         { kind: 'label', name: 'sbrk_more_space', why: 'Here we sbrk a new block' },
         { kind: 'move', to: syscallArg1, from: argument1, why: 'Move amount of space to allocate to sbrk argument' },
         `# Include space for management block`,
@@ -799,7 +799,7 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         { kind: 'move', to: functionResult, from: syscallResult, why: 'Return result of sbrk' },
         `# add 3 words to get actual space`,
         `addiu ${functionResult}, ${3 * bytesInWord}`,
-        `my_malloc_return:`,
+        { kind: 'label', name: 'my_malloc_return', why: 'Done' },
         ...restoreRegistersCode(3),
         `jr $ra`,
     ];
