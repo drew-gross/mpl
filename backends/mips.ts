@@ -775,7 +775,12 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
             to: { type: 'register', destination: currentBlockPointer },
             why: 'Start checking for a free block starting at the first',
         },
-        `la ${previousBlockPointer}, 0`,
+        {
+            kind: 'loadImmediate',
+            destination: { type: 'register', destination: previousBlockPointer },
+            value: 0,
+            why: 'No previous pointer yet',
+        },
         { kind: 'label', name: 'find_large_enough_free_block_loop', why: 'Find a block' },
         {
             kind: 'gotoIfZero',
