@@ -525,6 +525,8 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
                 default:
                     throw debug('todo');
             }
+        case 'addImmediate':
+            return `addiu ${rtx.register}, ${rtx.amount}`;
         case 'returnValue':
             if (rtx.source.type !== 'register') throw debug('todo');
             return `move ${functionResult}, ${rtx.source.destination}`;
@@ -622,8 +624,7 @@ const stringEqualityRuntimeFunction = (): RegisterTransferLanguageExpression[] =
         ...saveRegistersCode(2),
         `# Assume equal. Write 1 to $a0. Overwrite if difference found.`,
         `li ${functionResult}, 1`,
-        `# (string*, string*) -> bool`,
-        `stringEquality_loop:`,
+        { kind: 'label', name: 'stringEquality_loop', why: 'Check a char, (string*, string*) -> bool' },
         `# load current chars into temporaries`,
         `lb ${leftByte}, (${argument1})`,
         `lb ${rightByte}, (${argument2})`,
@@ -635,10 +636,9 @@ const stringEqualityRuntimeFunction = (): RegisterTransferLanguageExpression[] =
             label: 'stringEquality_return',
             why: 'Both side are equal. If both sides are null, return.',
         },
-        `# Otherwise, bump pointers and check next char`,
-        `addiu ${argument1}, 1`,
-        `addiu ${argument2}, 1`,
-        `b stringEquality_loop`,
+        { kind: 'increment', register: argument1, why: 'Bump lhs to next char' },
+        { kind: 'increment', register: argument2, why: 'Bump rhs to next char' },
+        { kind: 'goto', label: 'stringEquality_loop', why: 'Check next char' },
         `stringEquality_return_false:`,
         `li ${functionResult}, 0`,
         { kind: 'label', name: 'stringEquality_return', why: '' },
@@ -808,13 +808,21 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
             why: 'Found a reusable block, mark it as not free',
         },
         { kind: 'move', to: functionResult, from: currentBlockPointer, why: 'Return current block pointer' },
-        `# add 3 words to get actual space`,
-        `addiu ${functionResult}, ${3 * bytesInWord}`,
+        {
+            kind: 'addImmediate',
+            register: functionResult,
+            amount: 3 * bytesInWord,
+            why: 'Adjust pointer to point to allocated space instead of management struct',
+        },
         { kind: 'goto', label: 'my_malloc_return', why: 'Found good existing block' },
         { kind: 'label', name: 'sbrk_more_space', why: 'Here we sbrk a new block' },
         { kind: 'move', to: syscallArg1, from: argument1, why: 'Move amount of space to allocate to sbrk argument' },
-        `# Include space for management block`,
-        `addiu ${syscallArg1}, ${3 * bytesInWord}`,
+        {
+            kind: 'addImmediate',
+            register: syscallArg1,
+            amount: 3 * bytesInWord,
+            why: 'Include space for management block whye sbrking',
+        },
         `li ${syscallSelect}, 9`,
         `syscall`,
         {
@@ -857,8 +865,12 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         { kind: 'storeMemory', from: '$0', address: syscallResult, offset: 1 * bytesInWord, why: 'new->next = null' },
         { kind: 'storeMemory', from: '$0', address: syscallResult, offset: 2 * bytesInWord, why: 'new->free = false' },
         { kind: 'move', to: functionResult, from: syscallResult, why: 'Return result of sbrk' },
-        `# add 3 words to get actual space`,
-        `addiu ${functionResult}, ${3 * bytesInWord}`,
+        {
+            kind: 'addImmediate',
+            register: functionResult,
+            amount: 3 * bytesInWord,
+            why: 'Adjust result pointer to point to actuall space, not management block',
+        },
         { kind: 'label', name: 'my_malloc_return', why: 'Done' },
         ...restoreRegistersCode(3),
         `jr $ra`,
