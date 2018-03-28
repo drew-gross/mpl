@@ -535,6 +535,8 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
         case 'gotoIfEqual':
             if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug('todo');
             return `beq ${rtx.lhs.destination}, ${rtx.rhs.destination}, L${rtx.label}`;
+        case 'gotoIfNotEqual':
+            return `bne ${rtx.lhs}, ${rtx.rhs}, L${rtx.label}`;
         case 'gotoIfZero':
             return `beq ${rtx.register}, 0, L${rtx.label}`;
         case 'gotoIfGreater':
@@ -690,7 +692,7 @@ const stringConcatenateRuntimeFunction = (): RegisterTransferLanguageExpression[
             kind: 'gotoIfZero',
             register: currentChar,
             label: 'concatenate_return',
-            why: 'Tf we just wrote a null terminator, we are done',
+            why: 'If we just wrote a null terminator, we are done',
         },
         `# Else bump pointers and loop`,
         `addiu ${right}, ${right}, 1`,
@@ -711,13 +713,19 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     return [
         `my_malloc:`,
         ...saveRegistersCode(3),
-        `bne ${argument1}, 0, my_malloc_zero_size_check_passed`,
+        {
+            kind: 'gotoIfNotEqual',
+            lhs: argument1,
+            rhs: '0',
+            label: 'my_malloc_zero_size_check_passed',
+            why: 'Error if no memory requested',
+        },
         `la $a0, ${errors.allocatedZero.name}`,
         `li $v0, 4`,
         `syscall`,
         `li $v0, 10`,
         `syscall`,
-        `my_malloc_zero_size_check_passed:`,
+        { kind: 'label', name: 'my_malloc_zero_size_check_passed', why: 'Done checking for zero size' },
         `la ${currentBlockPointer}, first_block`,
         `la ${previousBlockPointer}, 0`,
         { kind: 'label', name: 'find_large_enough_free_block_loop', why: 'Find a block' },
@@ -788,15 +796,23 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         `addiu ${syscallArg1}, ${3 * bytesInWord}`,
         `li ${syscallSelect}, 9`,
         `syscall`,
-        `# If sbrk failed, exit`,
-        `bne ${syscallResult}, -1, sbrk_exit_check_passed`,
+        {
+            kind: 'gotoIfNotEqual',
+            lhs: syscallResult,
+            rhs: '-1',
+            label: 'sbrk_exit_check_passed',
+            why: 'If sbrk failed, exit',
+        },
         `la $a0, ${errors.allocationFailed.name}`,
         `li $v0, 4`,
         `syscall`,
         `li $v0, 10`,
         `syscall`,
-        `sbrk_exit_check_passed:`,
-        `# ${syscallResult} now contains pointer to block. Set up pointer to new block.`,
+        {
+            kind: 'label',
+            name: 'sbrk_exit_check_passed',
+            why: `${syscallResult} now contains pointer to block. Set up pointer to new block.`,
+        },
         {
             kind: 'loadGlobal',
             from: 'first_block',
