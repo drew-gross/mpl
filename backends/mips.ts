@@ -735,8 +735,13 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
             why: 'Current block not free, load next block',
         },
         { kind: 'gotoIfZero', register: scratch, label: 'advance_pointers', why: 'Check next block' },
-        `# current block not large enough, try next`,
-        `lw ${scratch}, 0(${currentBlockPointer})`,
+        {
+            kind: 'loadMemory',
+            to: { type: 'register', destination: scratch },
+            from: { type: 'register', destination: currentBlockPointer },
+            offset: 0,
+            why: 'Current block not large enough, try next',
+        },
         {
             kind: 'gotoIfGreater',
             lhs: scratch,
@@ -756,7 +761,13 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
             from: currentBlockPointer,
             why: 'Advance current block pointer to previous.',
         },
-        `lw ${currentBlockPointer}, ${1 * bytesInWord}(${currentBlockPointer})`,
+        {
+            kind: 'loadMemory',
+            to: { type: 'register', destination: currentBlockPointer },
+            from: { type: 'register', destination: currentBlockPointer },
+            offset: 1 * bytesInWord,
+            why: 'Advance block->next to current pointer',
+        },
         { kind: 'goto', label: 'find_large_enough_free_block_loop', why: "Didn't find a block, try again" },
         { kind: 'label', name: 'found_large_enough_block', why: 'Found a block' },
         {
