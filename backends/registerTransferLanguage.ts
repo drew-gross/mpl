@@ -13,6 +13,7 @@ import { Function } from '../api.js';
 
 export type PureRegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'comment' }
+    | { kind: 'syscall' }
     | { kind: 'move'; from: string; to: string }
     | { kind: 'loadImmediate'; value: number; destination: StorageSpec }
     | { kind: 'addImmediate'; register: string; amount: number }

@@ -513,6 +513,8 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
     switch (rtx.kind) {
         case 'comment':
             return '';
+        case 'syscall':
+            return 'syscall';
         case 'move':
             return `move ${rtx.to}, ${rtx.from}`;
         case 'loadImmediate':
@@ -585,8 +587,12 @@ const lengthRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     return [
         `length:`,
         ...saveRegistersCode(1),
-        `# Set length count to 0`,
-        `li ${functionResult}, 0`,
+        {
+            kind: 'loadImmediate',
+            destination: { type: 'register', destination: functionResult },
+            value: 0,
+            why: 'Set length count to 0',
+        },
         `length_loop:`,
         `# Load char into temporary`,
         `lb ${currentChar}, (${argument1})`,
@@ -605,14 +611,23 @@ const lengthRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     ];
 };
 
-const printRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
+const syscallNumbers = {
+    print: 4,
+};
+
+const printRuntimeFunction = (): PureRegisterTransferLanguageExpression[] => {
     return [
-        `print:`,
-        `li ${syscallSelect}, 4`,
+        { kind: 'functionLabel', name: 'print', why: 'Print: string->' },
+        {
+            kind: 'loadImmediate',
+            destination: { type: 'register', destination: syscallSelect },
+            value: syscallNumbers.print,
+            why: 'Select print',
+        },
         { kind: 'move', to: syscallArg1, from: argument1, why: 'Move print argument to syscall argument' },
-        `syscall`,
+        { kind: 'syscall', why: 'Print' },
         { kind: 'move', from: syscallResult, to: functionResult, why: 'Move syscall result to function result' },
-        `jr $ra`,
+        { kind: 'returnToCaller', why: 'Return' },
     ];
 };
 
