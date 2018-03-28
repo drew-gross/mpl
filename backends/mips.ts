@@ -613,6 +613,7 @@ const lengthRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
 
 const syscallNumbers = {
     print: 4,
+    exit: 10,
 };
 
 const printRuntimeFunction = (): PureRegisterTransferLanguageExpression[] => {
@@ -750,14 +751,29 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
             kind: 'loadSymbolAddress',
             symbolName: errors.allocatedZero.name,
             to: { type: 'register', destination: syscallArg1 },
-            why: 'String to print',
+            why: 'Error to print',
         },
-        `li $v0, 4`,
-        `syscall`,
-        `li $v0, 10`,
-        `syscall`,
+        {
+            kind: 'loadImmediate',
+            destination: { type: 'register', destination: syscallSelect },
+            value: syscallNumbers.print,
+            why: 'Select print syscall',
+        },
+        { kind: 'syscall', why: 'Print' },
+        {
+            kind: 'loadImmediate',
+            destination: { type: 'register', destination: syscallSelect },
+            value: syscallNumbers.exit,
+            why: 'Select exit syscall',
+        },
+        { kind: 'syscall', why: 'Exit' },
         { kind: 'label', name: 'my_malloc_zero_size_check_passed', why: 'Done checking for zero size' },
-        `la ${currentBlockPointer}, first_block`,
+        {
+            kind: 'loadSymbolAddress',
+            symbolName: 'first_block',
+            to: { type: 'register', destination: currentBlockPointer },
+            why: 'Start checking for a free block starting at the first',
+        },
         `la ${previousBlockPointer}, 0`,
         { kind: 'label', name: 'find_large_enough_free_block_loop', why: 'Find a block' },
         {
