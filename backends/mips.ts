@@ -613,6 +613,7 @@ const lengthRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
 
 const syscallNumbers = {
     print: 4,
+    sbrk: 9,
     exit: 10,
 };
 
@@ -854,8 +855,13 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
             amount: 3 * bytesInWord,
             why: 'Include space for management block whye sbrking',
         },
-        `li ${syscallSelect}, 9`,
-        `syscall`,
+        {
+            kind: 'loadImmediate',
+            destination: { type: 'register', destination: syscallSelect },
+            value: syscallNumbers.sbrk,
+            why: 'Select sbrk syscall',
+        },
+        { kind: 'syscall', why: 'sbrk' },
         {
             kind: 'gotoIfNotEqual',
             lhs: syscallResult,
