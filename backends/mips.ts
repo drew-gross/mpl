@@ -831,7 +831,7 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         { kind: 'goto', label: 'set_up_new_space', why: '' },
         `assign_previous:`,
         { kind: 'gotoIfZero', register: previousBlockPointer, label: 'set_up_new_space', why: '' },
-        `sw ${syscallResult}, (${previousBlockPointer})`,
+        { kind: 'storeMemory', from: syscallResult, to: previousBlockPointer, offset: 0, why: 'prev->next = new' },
         { kind: 'label', name: 'set_up_new_space', why: '' },
         `# Save size to new block`,
         `sw ${argument1}, 0(${syscallResult})`,
