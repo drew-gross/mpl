@@ -553,6 +553,8 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
             if (rtx.to.type !== 'register') throw debug('todo');
             if (rtx.from.type !== 'register') throw debug('todo');
             return `lw ${rtx.to.destination}, ${rtx.offset}(${rtx.from.destination})`;
+        case 'storeMemory':
+            return `sw ${rtx.from}, ${rtx.offset}(${rtx.to})`;
         case 'call':
             return `jal ${rtx.function}`;
         case 'returnToCaller':
@@ -784,8 +786,13 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
             label: 'sbrk_more_space',
             why: 'No good blocks, so make one',
         },
-        `# Found a reusable block, mark it as not free`,
-        `sw $0, ${2 * bytesInWord}(${currentBlockPointer})`,
+        {
+            kind: 'storeMemory',
+            from: '$0',
+            to: currentBlockPointer,
+            offset: 2 * bytesInWord,
+            why: 'Found a reusable block, mark it as not free',
+        },
         { kind: 'move', to: functionResult, from: currentBlockPointer, why: 'Return current block pointer' },
         `# add 3 words to get actual space`,
         `addiu ${functionResult}, ${3 * bytesInWord}`,
@@ -820,7 +827,7 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
             why: 'Load first block so we can write to it if necessary',
         },
         `bne ${scratch}, 0, assign_previous`,
-        `sw ${syscallResult}, first_block`,
+        { kind: 'storeGlobal', from: syscallResult, to: 'first_block', why: 'Setup first block pointer' },
         { kind: 'goto', label: 'set_up_new_space', why: '' },
         `assign_previous:`,
         { kind: 'gotoIfZero', register: previousBlockPointer, label: 'set_up_new_space', why: '' },
