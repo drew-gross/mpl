@@ -267,8 +267,12 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                         return compileExpression([rhs], ([e1]) => [
                             `# Put ${declaration.type.name} into temporary`,
                             ...e1,
-                            `# Store into global`,
-                            `sw ${currentTemporary.destination}, ${lhs}`,
+                            {
+                                kind: 'storeGlobal',
+                                from: currentTemporary.destination,
+                                to: lhs,
+                                why: 'Store into global',
+                            },
                         ]);
                     case 'String':
                         if (!('destination' in savedPointerForFreeing)) throw debug('todo');
@@ -305,7 +309,12 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                                 why: 'Move length of new string to argument of malloc',
                             },
                             { kind: 'call', function: 'my_malloc', why: 'Allocate space for new string' },
-                            `sw ${functionResult}, ${lhs} # Store location of allocated memory to global`,
+                            {
+                                kind: 'storeGlobal',
+                                from: functionResult,
+                                to: lhs,
+                                why: 'Store location of allocated memory to global',
+                            },
                             {
                                 kind: 'move',
                                 from: functionResult,
@@ -554,7 +563,7 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
             if (rtx.from.type !== 'register') throw debug('todo');
             return `lw ${rtx.to.destination}, ${rtx.offset}(${rtx.from.destination})`;
         case 'storeMemory':
-            return `sw ${rtx.from}, ${rtx.offset}(${rtx.to})`;
+            return `sw ${rtx.from}, ${rtx.offset}(${rtx.address})`;
         case 'call':
             return `jal ${rtx.function}`;
         case 'returnToCaller':
@@ -789,7 +798,7 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         {
             kind: 'storeMemory',
             from: '$0',
-            to: currentBlockPointer,
+            address: currentBlockPointer,
             offset: 2 * bytesInWord,
             why: 'Found a reusable block, mark it as not free',
         },
@@ -831,14 +840,11 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         { kind: 'goto', label: 'set_up_new_space', why: '' },
         `assign_previous:`,
         { kind: 'gotoIfZero', register: previousBlockPointer, label: 'set_up_new_space', why: '' },
-        { kind: 'storeMemory', from: syscallResult, to: previousBlockPointer, offset: 0, why: 'prev->next = new' },
+        { kind: 'storeMemory', from: syscallResult, address: previousBlockPointer, offset: 0, why: 'prev->next = new' },
         { kind: 'label', name: 'set_up_new_space', why: '' },
-        `# Save size to new block`,
-        `sw ${argument1}, 0(${syscallResult})`,
-        `# Save next pointer = nullptr`,
-        `sw $0, ${1 * bytesInWord}(${syscallResult})`,
-        `# Not free as we are about to use it`,
-        `sw $0, ${2 * bytesInWord}(${syscallResult})`,
+        { kind: 'storeMemory', from: argument1, address: syscallResult, offset: 0, why: 'new->size = requested_size' },
+        { kind: 'storeMemory', from: '$0', address: syscallResult, offset: 1 * bytesInWord, why: 'new->next = null' },
+        { kind: 'storeMemory', from: '$0', address: syscallResult, offset: 2 * bytesInWord, why: 'new->free = false' },
         { kind: 'move', to: functionResult, from: syscallResult, why: 'Return result of sbrk' },
         `# add 3 words to get actual space`,
         `addiu ${functionResult}, ${3 * bytesInWord}`,
@@ -863,7 +869,7 @@ const myFreeRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         `# TODO: merge blocks`,
         `# TODO: check if already free`,
         `li ${one}, 1,`,
-        `sw ${one}, ${-1 * bytesInWord}(${argument1}) # free = work before space`,
+        { kind: 'storeMemory', from: one, address: argument1, offset: -1 * bytesInWord, why: 'block->free = false' },
         ...restoreRegistersCode(1),
         `jr $ra`,
     ];
