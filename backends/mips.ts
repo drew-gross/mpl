@@ -547,6 +547,10 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
             return `lw ${rtx.to.destination}, ${rtx.from}`;
         case 'storeGlobal':
             return `sw ${rtx.from}, ${rtx.to}`;
+        case 'loadMemory':
+            if (rtx.to.type !== 'register') throw debug('todo');
+            if (rtx.from.type !== 'register') throw debug('todo');
+            return `lw ${rtx.to.destination}, ${rtx.offset}(${rtx.from.destination})`;
         case 'call':
             return `jal ${rtx.function}`;
         case 'returnToCaller':
@@ -723,8 +727,13 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
             label: 'found_large_enough_block',
             why: 'No blocks left (will require sbrk)',
         },
-        `# current block not free, try next`,
-        `lw ${scratch}, ${2 * bytesInWord}(${currentBlockPointer})`,
+        {
+            kind: 'loadMemory',
+            to: { type: 'register', destination: scratch },
+            from: { type: 'register', destination: currentBlockPointer },
+            offset: 2 * bytesInWord,
+            why: 'Current block not free, load next block',
+        },
         { kind: 'gotoIfZero', register: scratch, label: 'advance_pointers', why: 'Check next block' },
         `# current block not large enough, try next`,
         `lw ${scratch}, 0(${currentBlockPointer})`,

@@ -25,6 +25,7 @@ export type PureRegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'gotoIfGreater'; lhs: string; rhs: string; label: string }
     | { kind: 'storeGlobal'; from: string; to: string }
     | { kind: 'loadGlobal'; from: string; to: StorageSpec }
+    | { kind: 'loadMemory'; from: StorageSpec; to: StorageSpec; offset: number }
     | { kind: 'loadSymbolAddress'; to: StorageSpec; symbolName: string }
     | { kind: 'call'; function: string }
     | { kind: 'returnToCaller' }
