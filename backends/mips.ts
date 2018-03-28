@@ -722,7 +722,7 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     const previousBlockPointer = '$t2';
     const scratch = '$t3';
     return [
-        `my_malloc:`,
+        { kind: 'functionLabel', name: 'my_malloc', why: 'my_malloc' },
         ...saveRegistersCode(3),
         {
             kind: 'gotoIfNotEqual',
@@ -731,7 +731,12 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
             label: 'my_malloc_zero_size_check_passed',
             why: 'Error if no memory requested',
         },
-        `la $a0, ${errors.allocatedZero.name}`,
+        {
+            kind: 'loadSymbolAddress',
+            symbolName: errors.allocatedZero.name,
+            to: { type: 'register', destination: syscallArg1 },
+            why: 'String to print',
+        },
         `li $v0, 4`,
         `syscall`,
         `li $v0, 10`,
@@ -835,10 +840,16 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
             to: { type: 'register', destination: scratch },
             why: 'Load first block so we can write to it if necessary',
         },
-        `bne ${scratch}, 0, assign_previous`,
+        {
+            kind: 'gotoIfNotEqual',
+            lhs: scratch,
+            rhs: '0',
+            label: 'assign_previous',
+            why: 'If there is no previous block, set up first block pointer',
+        },
         { kind: 'storeGlobal', from: syscallResult, to: 'first_block', why: 'Setup first block pointer' },
         { kind: 'goto', label: 'set_up_new_space', why: '' },
-        `assign_previous:`,
+        { kind: 'label', name: 'assign_previous', why: 'Set up prevous block pointer' },
         { kind: 'gotoIfZero', register: previousBlockPointer, label: 'set_up_new_space', why: '' },
         { kind: 'storeMemory', from: syscallResult, address: previousBlockPointer, offset: 0, why: 'prev->next = new' },
         { kind: 'label', name: 'set_up_new_space', why: '' },
