@@ -3,14 +3,24 @@ import debug from '../util/debug.js';
 import { StorageSpec } from '../backend-utils.js';
 import { RegisterTransferLanguageExpression } from './registerTransferLanguage.js';
 
-export const malloc = (
+type RuntimeFunctionGenerator = (
+    bytesInWord: number,
+    syscallNumbers: { print: number; sbrk: number; exit: number },
+    registerSaver: (n: number) => string[],
+    registerRestorer: (n: number) => string[],
+    knownRegisters: { [index: string]: string },
+    firstRegister: StorageSpec,
+    nextRegister: ((r: StorageSpec) => StorageSpec)
+) => RegisterTransferLanguageExpression[];
+
+export const malloc: RuntimeFunctionGenerator = (
     bytesInWord,
     syscallNumbers,
     registerSaver,
     registerRestorer,
     knownRegisters,
-    firstRegister: StorageSpec,
-    nextRegister: ((r: StorageSpec) => StorageSpec)
+    firstRegister,
+    nextRegister
 ): RegisterTransferLanguageExpression[] => {
     const currentBlockPointer = firstRegister;
     const previousBlockPointer = nextRegister(currentBlockPointer);
@@ -251,6 +261,48 @@ export const malloc = (
         },
         { kind: 'label', name: 'my_malloc_return', why: 'Done' },
         ...registerRestorer(3),
+        { kind: 'returnToCaller', why: 'Done' },
+    ];
+};
+
+export const length: RuntimeFunctionGenerator = (
+    bytesInWord,
+    syscallNumbers,
+    registerSaver,
+    registerRestorer,
+    knownRegisters,
+    firstRegister,
+    nextRegister
+): RegisterTransferLanguageExpression[] => {
+    const currentChar = firstRegister;
+    if (currentChar.type == 'memory') throw debug('asdfasdfa');
+    return [
+        { kind: 'functionLabel', name: 'length', why: 'Length runtime function' },
+        ...registerSaver(1),
+        {
+            kind: 'loadImmediate',
+            destination: { type: 'register', destination: knownRegisters.functionResult },
+            value: 0,
+            why: 'Set length count to 0',
+        },
+        { kind: 'label', name: 'length_loop', why: 'Count another charachter' },
+        {
+            kind: 'loadMemoryByte',
+            address: { type: 'register', destination: knownRegisters.argument1 },
+            to: currentChar,
+            why: 'Load char into memory',
+        },
+        {
+            kind: 'gotoIfZero',
+            register: currentChar.destination,
+            label: 'length_return',
+            why: 'If char is null, end of string. Return count.',
+        },
+        { kind: 'increment', register: knownRegisters.functionResult, why: 'Bump string index' },
+        { kind: 'increment', register: knownRegisters.argument1, why: 'Bump length counter' },
+        { kind: 'goto', label: 'length_loop', why: 'Go count another char' },
+        { kind: 'label', name: 'length_return', why: 'Done' },
+        ...registerRestorer(1),
         { kind: 'returnToCaller', why: 'Done' },
     ];
 };

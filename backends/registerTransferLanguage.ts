@@ -31,6 +31,7 @@ export type PureRegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'storeMemory'; from: string; address: string; offset: number }
     | { kind: 'storeZeroToMemory'; address: string; offset: number }
     | { kind: 'loadMemory'; from: StorageSpec; to: StorageSpec; offset: number }
+    | { kind: 'loadMemoryByte'; address: StorageSpec; to: StorageSpec }
     | { kind: 'loadSymbolAddress'; to: StorageSpec; symbolName: string }
     | { kind: 'call'; function: string }
     | { kind: 'returnToCaller' }

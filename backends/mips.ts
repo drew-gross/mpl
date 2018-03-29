@@ -19,7 +19,7 @@ import {
     PureRegisterTransferLanguageExpression,
     RegisterTransferLanguageExpression,
 } from './registerTransferLanguage.js';
-import { malloc } from './registerTransferLanguageRuntime.js';
+import { malloc, length } from './registerTransferLanguageRuntime.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
 import join from '../util/join.js';
@@ -499,6 +499,10 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
             if (rtx.to.type !== 'register') throw debug('todo');
             if (rtx.from.type !== 'register') throw debug('todo');
             return `lw ${rtx.to.destination}, ${rtx.offset}(${rtx.from.destination})`;
+        case 'loadMemoryByte':
+            if (rtx.to.type !== 'register') throw debug('todo');
+            if (rtx.address.type !== 'register') throw debug('todo');
+            return `lb ${rtx.to.destination}, (${rtx.address.destination})`;
         case 'storeMemory':
             return `sw ${rtx.from}, ${rtx.offset}(${rtx.address})`;
         case 'storeZeroToMemory':
@@ -515,35 +519,6 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
 const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpression): string => {
     if (typeof rtx == 'string') return rtx;
     return `${registerTransferExpressionToMipsWithoutComment(rtx)} # ${rtx.why}`;
-};
-
-const lengthRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
-    const currentChar = '$t1';
-    return [
-        `length:`,
-        ...saveRegistersCode(1),
-        {
-            kind: 'loadImmediate',
-            destination: { type: 'register', destination: functionResult },
-            value: 0,
-            why: 'Set length count to 0',
-        },
-        `length_loop:`,
-        `# Load char into temporary`,
-        `lb ${currentChar}, (${argument1})`,
-        {
-            kind: 'gotoIfZero',
-            register: currentChar,
-            label: 'length_return',
-            why: 'If char is null, end of string. Return count.',
-        },
-        { kind: 'increment', register: functionResult, why: 'Bump string index' },
-        { kind: 'increment', register: argument1, why: 'Bump length counter' },
-        `b length_loop`,
-        { kind: 'label', name: 'length_return', why: 'Done' },
-        ...restoreRegistersCode(1),
-        `jr $ra,`,
-    ];
 };
 
 const syscallNumbers = {
@@ -720,7 +695,15 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
 
 const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
-    lengthRuntimeFunction(),
+    length(
+        bytesInWord,
+        syscallNumbers,
+        saveRegistersCode,
+        restoreRegistersCode,
+        knownRegisters,
+        firstRegister,
+        nextTemporary
+    ),
     printRuntimeFunction(),
     stringEqualityRuntimeFunction(),
     stringCopyRuntimeFunction(),
