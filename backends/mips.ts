@@ -241,7 +241,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     // TODO: Allow spilling of variables
                     destination: {
                         type: 'register',
-                        destination: `${(registerAssignment[lhs] as any).destination}`,
+                        destination: (registerAssignment[lhs] as any).destination,
                     },
                 });
             } else {
