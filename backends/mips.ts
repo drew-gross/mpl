@@ -66,6 +66,7 @@ const multiplyMips = (destination, left, right) => {
     ].join('\n');
 };
 
+const firstRegister: StorageSpec = { type: 'register', destination: '$t1' };
 const nextTemporary = (storage: StorageSpec): StorageSpec => {
     if (storage.type == 'register') {
         if (storage.destination == '$t9') {
@@ -666,10 +667,16 @@ const stringConcatenateRuntimeFunction = (): RegisterTransferLanguageExpression[
 
 const bytesInWord = 4;
 
-const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
-    const currentBlockPointer = '$t1';
-    const previousBlockPointer = '$t2';
-    const scratch = '$t3';
+const myMallocRuntimeFunction = (
+    firstRegister: StorageSpec,
+    nextRegister: ((r: StorageSpec) => StorageSpec)
+): RegisterTransferLanguageExpression[] => {
+    const currentBlockPointer = firstRegister;
+    const previousBlockPointer = nextRegister(currentBlockPointer);
+    const scratch = nextRegister(previousBlockPointer);
+    if (currentBlockPointer.type == 'memory') throw debug('need a register');
+    if (previousBlockPointer.type == 'memory') throw debug('need a register');
+    if (scratch.type == 'memory') throw debug('need a register');
     return [
         { kind: 'functionLabel', name: 'my_malloc', why: 'my_malloc' },
         ...saveRegistersCode(3),
@@ -704,40 +711,40 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         {
             kind: 'loadSymbolAddress',
             symbolName: 'first_block',
-            to: { type: 'register', destination: currentBlockPointer },
+            to: currentBlockPointer,
             why: 'Start checking for a free block starting at the first',
         },
         {
             kind: 'loadImmediate',
-            destination: { type: 'register', destination: previousBlockPointer },
+            destination: previousBlockPointer,
             value: 0,
             why: 'No previous pointer yet',
         },
         { kind: 'label', name: 'find_large_enough_free_block_loop', why: 'Find a block' },
         {
             kind: 'gotoIfZero',
-            register: currentBlockPointer,
+            register: currentBlockPointer.destination,
             label: 'found_large_enough_block',
             why: 'No blocks left (will require sbrk)',
         },
         {
             kind: 'loadMemory',
-            to: { type: 'register', destination: scratch },
-            from: { type: 'register', destination: currentBlockPointer },
+            to: scratch,
+            from: currentBlockPointer,
             offset: 2 * bytesInWord,
             why: 'Current block not free, load next block',
         },
-        { kind: 'gotoIfZero', register: scratch, label: 'advance_pointers', why: 'Check next block' },
+        { kind: 'gotoIfZero', register: scratch.destination, label: 'advance_pointers', why: 'Check next block' },
         {
             kind: 'loadMemory',
-            to: { type: 'register', destination: scratch },
-            from: { type: 'register', destination: currentBlockPointer },
+            to: scratch,
+            from: currentBlockPointer,
             offset: 0,
             why: 'Current block not large enough, try next',
         },
         {
             kind: 'gotoIfGreater',
-            lhs: scratch,
+            lhs: scratch.destination,
             rhs: argument1,
             label: 'advance_pointers',
             why: 'Check next block if current not large enough',
@@ -750,14 +757,14 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         { kind: 'label', name: 'advance_pointers', why: 'Bump pointers to next block' },
         {
             kind: 'move',
-            to: previousBlockPointer,
-            from: currentBlockPointer,
+            to: previousBlockPointer.destination,
+            from: currentBlockPointer.destination,
             why: 'Advance current block pointer to previous.',
         },
         {
             kind: 'loadMemory',
-            to: { type: 'register', destination: currentBlockPointer },
-            from: { type: 'register', destination: currentBlockPointer },
+            to: currentBlockPointer,
+            from: currentBlockPointer,
             offset: 1 * bytesInWord,
             why: 'Advance block->next to current pointer',
         },
@@ -765,18 +772,23 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         { kind: 'label', name: 'found_large_enough_block', why: 'Found a block' },
         {
             kind: 'gotoIfZero',
-            register: currentBlockPointer,
+            register: currentBlockPointer.destination,
             label: 'sbrk_more_space',
             why: 'No good blocks, so make one',
         },
         {
             kind: 'storeMemory',
             from: '$0',
-            address: currentBlockPointer,
+            address: currentBlockPointer.destination,
             offset: 2 * bytesInWord,
             why: 'Found a reusable block, mark it as not free',
         },
-        { kind: 'move', to: functionResult, from: currentBlockPointer, why: 'Return current block pointer' },
+        {
+            kind: 'move',
+            to: functionResult,
+            from: currentBlockPointer.destination,
+            why: 'Return current block pointer',
+        },
         {
             kind: 'addImmediate',
             register: functionResult,
@@ -834,12 +846,12 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         {
             kind: 'loadGlobal',
             from: 'first_block',
-            to: { type: 'register', destination: scratch },
+            to: scratch,
             why: 'Load first block so we can write to it if necessary',
         },
         {
             kind: 'gotoIfNotEqual',
-            lhs: scratch,
+            lhs: scratch.destination,
             rhs: '0',
             label: 'assign_previous',
             why: 'If there is no previous block, set up first block pointer',
@@ -847,8 +859,14 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         { kind: 'storeGlobal', from: syscallResult, to: 'first_block', why: 'Setup first block pointer' },
         { kind: 'goto', label: 'set_up_new_space', why: '' },
         { kind: 'label', name: 'assign_previous', why: 'Set up prevous block pointer' },
-        { kind: 'gotoIfZero', register: previousBlockPointer, label: 'set_up_new_space', why: '' },
-        { kind: 'storeMemory', from: syscallResult, address: previousBlockPointer, offset: 0, why: 'prev->next = new' },
+        { kind: 'gotoIfZero', register: previousBlockPointer.destination, label: 'set_up_new_space', why: '' },
+        {
+            kind: 'storeMemory',
+            from: syscallResult,
+            address: previousBlockPointer.destination,
+            offset: 0,
+            why: 'prev->next = new',
+        },
         { kind: 'label', name: 'set_up_new_space', why: '' },
         { kind: 'storeMemory', from: argument1, address: syscallResult, offset: 0, why: 'new->size = requested_size' },
         { kind: 'storeMemory', from: '$0', address: syscallResult, offset: 1 * bytesInWord, why: 'new->next = null' },
@@ -921,7 +939,7 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     printRuntimeFunction(),
     stringEqualityRuntimeFunction(),
     stringCopyRuntimeFunction(),
-    myMallocRuntimeFunction(),
+    myMallocRuntimeFunction(firstRegister, nextTemporary),
     myFreeRuntimeFunction(),
     stringConcatenateRuntimeFunction(),
     verifyNoLeaks(),
@@ -936,10 +954,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             stringLiterals,
             functionResult,
             [argument1, argument2, argument3],
-            {
-                type: 'register',
-                destination: '$t1',
-            },
+            firstRegister,
             nextTemporary,
             saveRegistersCode,
             restoreRegistersCode

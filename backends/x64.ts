@@ -96,6 +96,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'functionLiteral':
         case 'callExpression':
         case 'equality':
+        case 'typedDeclarationAssignment':
         case 'stringLiteral':
             return astToRegisterTransferLanguage(
                 input,
@@ -109,47 +110,6 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
                 makeLabel,
                 recurse
             );
-        case 'typedDeclarationAssignment': {
-            const lhs = ast.destination;
-            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
-                const subExpressionTemporary = nextTemporary(currentTemporary);
-                const rhs = recurse({
-                    ast: ast.expression,
-                    destination: currentTemporary,
-                    currentTemporary: subExpressionTemporary,
-                });
-                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
-                if (!declaration) throw debug('todo');
-                if (currentTemporary.type !== 'register') throw debug('todo');
-                switch (declaration.type.name) {
-                    case 'Function':
-                    case 'Integer':
-                        return compileExpression([rhs], ([e1]) => [
-                            `; Put ${declaration.type.name} into temporary`,
-                            ...e1,
-                            {
-                                kind: 'storeGlobal',
-                                from: currentTemporary.destination,
-                                to: lhs,
-                                why: `Put ${declaration.type.name} into global`,
-                            },
-                        ]);
-                    default:
-                        throw debug(`${declaration.type.name} unhandled in astToX64.typedDeclarationAssignment`);
-                }
-            } else if (lhs in registerAssignment) {
-                return recurse({
-                    ast: ast.expression,
-                    // TODO: Allow spilling of variables
-                    destination: {
-                        type: 'register',
-                        destination: (registerAssignment[lhs] as any).destination,
-                    },
-                });
-            } else {
-                throw debug('todo');
-            }
-        }
         case 'identifier': {
             // TODO: Better handle identifiers here. Also just better storage/scope chains?
             const identifierName = ast.value;
@@ -261,6 +221,8 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
                 `mov ${rtx.destination.destination}, ${rtx.lhs.destination}`,
                 `sub ${rtx.destination.destination}, ${rtx.rhs.destination}`,
             ];
+        case 'increment':
+            return [`inc ${rtx.register}`];
         case 'gotoIfEqual':
             if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug('todo');
             return [`cmp ${rtx.lhs.destination}, ${rtx.rhs.destination}`, `je ${rtx.label}`];
