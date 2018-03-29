@@ -874,11 +874,26 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
             label: 'sbrk_exit_check_passed',
             why: 'If sbrk failed, exit',
         },
-        `la $a0, ${errors.allocationFailed.name}`,
-        `li $v0, 4`,
-        `syscall`,
-        `li $v0, 10`,
-        `syscall`,
+        {
+            kind: 'loadSymbolAddress',
+            to: { type: 'register', destination: syscallArg1 },
+            symbolName: errors.allocationFailed.name,
+            why: 'Load string to print',
+        },
+        {
+            kind: 'loadImmediate',
+            destination: { type: 'register', destination: syscallSelect },
+            value: syscallNumbers.print,
+            why: 'Prepare to print',
+        },
+        { kind: 'syscall', why: 'Print' },
+        {
+            kind: 'loadImmediate',
+            destination: { type: 'register', destination: syscallSelect },
+            value: syscallNumbers.exit,
+            why: 'Prepare to exit',
+        },
+        { kind: 'syscall', why: 'Exit' },
         {
             kind: 'label',
             name: 'sbrk_exit_check_passed',
@@ -915,7 +930,7 @@ const myMallocRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         },
         { kind: 'label', name: 'my_malloc_return', why: 'Done' },
         ...restoreRegistersCode(3),
-        `jr $ra`,
+        { kind: 'returnToCaller', why: 'Done' },
     ];
 };
 
