@@ -300,6 +300,89 @@ export const astToRegisterTransferLanguage = (
                 ]);
             }
         }
+        case 'typedDeclarationAssignment': {
+            const lhs = ast.destination;
+            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
+                const subExpressionTemporary = nextTemporary(currentTemporary);
+                const rhs = recurse({
+                    ast: ast.expression,
+                    destination: currentTemporary,
+                    currentTemporary: subExpressionTemporary,
+                });
+                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
+                if (!declaration) throw debug('todo');
+                if (currentTemporary.type !== 'register') throw debug('todo');
+                switch (declaration.type.name) {
+                    case 'Function':
+                    case 'Integer':
+                        return compileExpression([rhs], ([e1]) => [
+                            { kind: 'comment', why: `Put ${declaration.type.name} into temporary` },
+                            ...e1,
+                            {
+                                kind: 'storeGlobal',
+                                from: currentTemporary.destination,
+                                to: lhs,
+                                why: `Put ${declaration.type.name} into global`,
+                            },
+                        ]);
+                    case 'String':
+                        return compileExpression([rhs], ([e1]) => [
+                            ...e1,
+                            {
+                                kind: 'move',
+                                to: knownRegisters.argument1,
+                                from: currentTemporary.destination,
+                                why: 'Put string pointer into temporary',
+                            },
+                            { kind: 'call', function: 'length', why: 'Get string length' },
+                            {
+                                kind: 'increment',
+                                register: knownRegisters.functionResult,
+                                why: 'Add one for null terminator',
+                            },
+                            {
+                                kind: 'move',
+                                to: knownRegisters.argument1,
+                                from: knownRegisters.functionResult,
+                                why: 'Move length to argument1',
+                            },
+                            { kind: 'call', function: 'my_malloc', why: 'Allocate that much space' },
+                            {
+                                kind: 'move',
+                                to: knownRegisters.argument1,
+                                from: currentTemporary.destination,
+                                why: 'Move destination to argument 1',
+                            },
+                            {
+                                kind: 'move',
+                                to: knownRegisters.argument2,
+                                from: knownRegisters.functionResult,
+                                why: 'Move output pointer to argument 2',
+                            },
+                            { kind: 'call', function: 'string_copy', why: 'Copy string into allocated space' },
+                            {
+                                kind: 'storeGlobal',
+                                from: knownRegisters.functionResult,
+                                to: lhs,
+                                why: 'Store into global',
+                            },
+                        ]);
+                    default:
+                        throw debug('todo');
+                }
+            } else if (lhs in registerAssignment) {
+                return recurse({
+                    ast: ast.expression,
+                    // TODO: Allow spilling of variables
+                    destination: {
+                        type: 'register',
+                        destination: (registerAssignment[lhs] as any).destination,
+                    },
+                });
+            } else {
+                throw debug('todo');
+            }
+        }
         default:
             throw debug('todo');
     }
