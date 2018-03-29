@@ -501,6 +501,8 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
             return `lw ${rtx.to.destination}, ${rtx.offset}(${rtx.from.destination})`;
         case 'storeMemory':
             return `sw ${rtx.from}, ${rtx.offset}(${rtx.address})`;
+        case 'storeZeroToMemory':
+            return `sw $0, ${rtx.offset}(${rtx.address})`;
         case 'call':
             return `jal ${rtx.function}`;
         case 'returnToCaller':

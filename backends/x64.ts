@@ -1,3 +1,4 @@
+import { malloc } from './registerTransferLanguageRuntime.js';
 import join from '../util/join.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
@@ -31,12 +32,12 @@ const sample = `
           global    start
 
           section   .text
-start:    mov       rax, 0x02000004         ; system call for write
+start:    mov       ,          ; system call for write
           mov       rdi, 1                  ; file handle 1 is stdout
           mov       rsi, message            ; address of string to output
           mov       rdx, 13                 ; number of bytes
           syscall                           ; invoke operating system to do the write
-          mov       rax, 0x02000001         ; system call for exit
+          mov       rax,          ; system call for exit
           mov       rdi, 3                ; exit code 3
           syscall                           ; invoke operating system to exit
 
@@ -45,10 +46,28 @@ message:  db        "Hello, World", 10      ; note the newline at the end
 `;
 
 // TODO: unify with named registers in mips. Args are r8-r10, general purpose starts at r11.
+const syscallSelect = 'rax';
+const syscallResult = 'rax';
+const syscallArg1 = 'rdi';
 const functionResult = 'rax';
 const argument1 = 'r8';
 const argument2 = 'r9';
 const argument3 = 'r10';
+
+const firstRegister: StorageSpec = {
+    type: 'register',
+    destination: 'r8',
+};
+
+const knownRegisters = {
+    argument1,
+    argument2,
+    argument3,
+    functionResult,
+    syscallArg1,
+    syscallSelect,
+    syscallResult,
+};
 
 // TOOD: Unify with nextTemporary in mips
 const nextTemporary = (storage: StorageSpec): StorageSpec => {
@@ -223,9 +242,17 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
             ];
         case 'increment':
             return [`inc ${rtx.register}`];
+        case 'addImmediate':
+            return [`add ${rtx.register}, ${rtx.amount}`];
         case 'gotoIfEqual':
             if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug('todo');
             return [`cmp ${rtx.lhs.destination}, ${rtx.rhs.destination}`, `je ${rtx.label}`];
+        case 'gotoIfNotEqual':
+            return [`cmp ${rtx.lhs}, ${rtx.rhs}`, `jne ${rtx.label}`];
+        case 'gotoIfZero':
+            return [`cmp ${rtx.register}, 0`, `jz ${rtx.label}`];
+        case 'gotoIfGreater':
+            return [`cmp ${rtx.lhs}, ${rtx.rhs}`, `jg ${rtx.label}`];
         case 'goto':
             return [`jmp ${rtx.label}`];
         case 'label':
@@ -237,6 +264,14 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
         case 'loadGlobal':
             if (rtx.to.type !== 'register') throw debug('todo');
             return [`mov ${rtx.to.destination}, [rel ${rtx.from}]; ${rtx.why}`];
+        case 'loadMemory':
+            if (rtx.to.type !== 'register') throw debug('todo');
+            if (rtx.from.type !== 'register') throw debug('todo');
+            return [`mov ${rtx.to.destination}, [${rtx.from.destination}]`];
+        case 'storeMemory':
+            return [`mov [${rtx.address}], ${rtx.from}`];
+        case 'storeZeroToMemory':
+            return [`mov [${rtx.address}], 0`];
         case 'loadSymbolAddress':
             if (rtx.to.type !== 'register') throw debug('todo');
             return [`mov ${rtx.to.destination}, ${rtx.symbolName}; ${rtx.why}`];
@@ -244,6 +279,8 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
             return [`call ${rtx.function}; ${rtx.why}`];
         case 'returnToCaller':
             return [`ret`];
+        case 'syscall':
+            return [`syscall`];
         default:
             throw debug(`${(rtx as any).kind} unhandled in registerTransferExpressionToX64`);
     }
@@ -261,11 +298,37 @@ const saveRegistersCode = (numRegisters: number): string[] => {
 const restoreRegistersCode = (numRegisters: number): string[] => {
     let result: string[] = [];
     while (numRegisters > 0) {
-        result.push(`pop r${numRegisters + 7}, ($sp)`);
+        result.push(`pop r${numRegisters + 7}`);
         numRegisters--;
     }
     return result.reverse();
 };
+
+const bytesInWord = 8;
+const syscallNumbers = {
+    print: 0x02000004,
+    sbrk: 9,
+    exit: 0x02000001,
+};
+
+const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
+    //lengthRuntimeFunction(),
+    //printRuntimeFunction(),
+    //stringEqualityRuntimeFunction(),
+    //stringCopyRuntimeFunction(),
+    malloc(
+        bytesInWord,
+        syscallNumbers,
+        saveRegistersCode,
+        restoreRegistersCode,
+        knownRegisters,
+        firstRegister,
+        nextTemporary
+    ),
+    //myFreeRuntimeFunction(),
+    //stringConcatenateRuntimeFunction(),
+    //verifyNoLeaks(),
+];
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let x64Functions: RegisterTransferLanguageExpression[][] = functions.map(f =>
@@ -276,10 +339,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             stringLiterals,
             functionResult,
             [argument1, argument2, argument3],
-            {
-                type: 'register',
-                destination: 'r8',
-            },
+            firstRegister,
             nextTemporary,
             saveRegistersCode,
             restoreRegistersCode
@@ -309,6 +369,7 @@ global start
 
 section .text
 ${join(flatten(flatten(x64Functions).map(registerTransferExpressionToX64)), '\n')}
+${join(flatten(flatten(runtimeFunctions).map(registerTransferExpressionToX64)), '\n')}
 
 start:
 ${join(flatten(x64Program.map(registerTransferExpressionToX64)), '\n')}
@@ -317,6 +378,7 @@ ${join(flatten(x64Program.map(registerTransferExpressionToX64)), '\n')}
     syscall
 
 section .data
+first_block: .quad 0
 message:
     db "Must have writable segment", 10; newline mandatory. This exists to squelch dyld errors
 section .bss

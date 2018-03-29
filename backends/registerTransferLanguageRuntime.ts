@@ -118,8 +118,7 @@ export const malloc = (
             why: 'No good blocks, so make one',
         },
         {
-            kind: 'storeMemory',
-            from: '$0',
+            kind: 'storeZeroToMemory',
             address: currentBlockPointer.destination,
             offset: 2 * bytesInWord,
             why: 'Found a reusable block, mark it as not free',
@@ -227,15 +226,13 @@ export const malloc = (
             why: 'new->size = requested_size',
         },
         {
-            kind: 'storeMemory',
-            from: '$0',
+            kind: 'storeZeroToMemory',
             address: knownRegisters.syscallResult,
             offset: 1 * bytesInWord,
             why: 'new->next = null',
         },
         {
-            kind: 'storeMemory',
-            from: '$0',
+            kind: 'storeZeroToMemory',
             address: knownRegisters.syscallResult,
             offset: 2 * bytesInWord,
             why: 'new->free = false',
