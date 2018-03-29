@@ -1,4 +1,5 @@
-import { malloc } from './registerTransferLanguageRuntime.js';
+import { errors } from '../runtime-strings.js';
+import { malloc, length } from './registerTransferLanguageRuntime.js';
 import join from '../util/join.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
@@ -241,7 +242,7 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
                 `sub ${rtx.destination.destination}, ${rtx.rhs.destination}`,
             ];
         case 'increment':
-            return [`inc ${rtx.register}`];
+            return [`inc ${rtx.register};`];
         case 'addImmediate':
             return [`add ${rtx.register}, ${rtx.amount}`];
         case 'gotoIfEqual':
@@ -272,6 +273,10 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
             return [`mov [${rtx.address}], ${rtx.from}`];
         case 'storeZeroToMemory':
             return [`mov [${rtx.address}], 0`];
+        case 'loadMemoryByte':
+            if (rtx.to.type !== 'register') throw debug('todo');
+            if (rtx.address.type !== 'register') throw debug('todo');
+            return [`movsx ${rtx.to.destination}, byte [${rtx.address.destination}]`];
         case 'loadSymbolAddress':
             if (rtx.to.type !== 'register') throw debug('todo');
             return [`mov ${rtx.to.destination}, ${rtx.symbolName}; ${rtx.why}`];
@@ -312,7 +317,15 @@ const syscallNumbers = {
 };
 
 const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
-    //lengthRuntimeFunction(),
+    length(
+        bytesInWord,
+        syscallNumbers,
+        saveRegistersCode,
+        restoreRegistersCode,
+        knownRegisters,
+        firstRegister,
+        nextTemporary
+    ),
     //printRuntimeFunction(),
     //stringEqualityRuntimeFunction(),
     //stringCopyRuntimeFunction(),
@@ -378,11 +391,14 @@ ${join(flatten(x64Program.map(registerTransferExpressionToX64)), '\n')}
     syscall
 
 section .data
-first_block: .quad 0
+first_block: dq 0
 message:
     db "Must have writable segment", 10; newline mandatory. This exists to squelch dyld errors
 section .bss
 ${globalDeclarations.map(name => `${name.name}: resd 1`).join('\n')}
+${Object.keys(errors)
+        .map(key => `${errors[key].name}: resd 1`)
+        .join('\n')}
 `;
 };
 
