@@ -272,7 +272,7 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
         case 'storeMemory':
             return [`mov [${rtx.address}], ${rtx.from}`];
         case 'storeZeroToMemory':
-            return [`mov [${rtx.address}], 0`];
+            return [`mov byte [${rtx.address}], 0`];
         case 'loadMemoryByte':
             if (rtx.to.type !== 'register') throw debug('todo');
             if (rtx.address.type !== 'register') throw debug('todo');
@@ -343,6 +343,9 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     //verifyNoLeaks(),
 ];
 
+const stringLiteralDeclaration = (literal: StringLiteralData) =>
+    `${stringLiteralName(literal)}: db "${literal.value}", 10;`;
+
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let x64Functions: RegisterTransferLanguageExpression[][] = functions.map(f =>
         constructFunction(
@@ -376,7 +379,6 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
         })
     );
-
     return `
 global start
 
@@ -392,8 +394,8 @@ ${join(flatten(x64Program.map(registerTransferExpressionToX64)), '\n')}
 
 section .data
 first_block: dq 0
-message:
-    db "Must have writable segment", 10; newline mandatory. This exists to squelch dyld errors
+message: db "Must have writable segment", 10; newline mandatory. This exists to squelch dyld errors
+${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
 section .bss
 ${globalDeclarations.map(name => `${name.name}: resd 1`).join('\n')}
 ${Object.keys(errors)
