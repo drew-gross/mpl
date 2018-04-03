@@ -275,7 +275,7 @@ export const length: RuntimeFunctionGenerator = (
     nextRegister
 ): RegisterTransferLanguageExpression[] => {
     const currentChar = firstRegister;
-    if (currentChar.type == 'memory') throw debug('asdfasdfa');
+    if (currentChar.type == 'memory') throw debug('Need a register');
     return [
         { kind: 'functionLabel', name: 'length', why: 'Length runtime function' },
         ...registerSaver(1),
@@ -302,6 +302,48 @@ export const length: RuntimeFunctionGenerator = (
         { kind: 'increment', register: knownRegisters.argument1, why: 'Bump length counter' },
         { kind: 'goto', label: 'length_loop', why: 'Go count another char' },
         { kind: 'label', name: 'length_return', why: 'Done' },
+        ...registerRestorer(1),
+        { kind: 'returnToCaller', why: 'Done' },
+    ];
+};
+
+export const stringCopy: RuntimeFunctionGenerator = (
+    bytesInWord,
+    syscallNumbers,
+    registerSaver,
+    registerRestorer,
+    knownRegisters,
+    firstRegister,
+    nextRegister
+): RegisterTransferLanguageExpression[] => {
+    const currentChar = firstRegister;
+    if (currentChar.type == 'memory') throw debug('Need a register');
+    return [
+        { kind: 'functionLabel', name: 'string_copy', why: 'string_copy' },
+        ...registerSaver(1),
+        { kind: 'label', name: 'string_copy_loop', why: 'Copy a byte' },
+        {
+            kind: 'loadMemoryByte',
+            to: currentChar,
+            address: { type: 'register', destination: knownRegisters.argument1 },
+            why: 'Load byte from input',
+        },
+        {
+            kind: 'storeMemoryByte',
+            contents: currentChar,
+            address: { type: 'register', destination: knownRegisters.argument2 },
+            why: 'Write it to output',
+        },
+        {
+            kind: 'gotoIfZero',
+            register: currentChar.destination,
+            label: 'string_copy_return',
+            why: 'If char was the null terminator, return',
+        },
+        { kind: 'increment', register: knownRegisters.argument1, why: 'Bump pointers to next char' },
+        { kind: 'increment', register: knownRegisters.argument2, why: 'Bump pointers to next char' },
+        { kind: 'goto', label: 'string_copy_loop', why: 'Copy next char' },
+        { kind: 'label', name: 'string_copy_return', why: '' },
         ...registerRestorer(1),
         { kind: 'returnToCaller', why: 'Done' },
     ];

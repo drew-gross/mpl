@@ -19,7 +19,7 @@ import {
     PureRegisterTransferLanguageExpression,
     RegisterTransferLanguageExpression,
 } from './registerTransferLanguage.js';
-import { malloc, length } from './registerTransferLanguageRuntime.js';
+import { malloc, length, stringCopy } from './registerTransferLanguageRuntime.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
 import join from '../util/join.js';
@@ -507,6 +507,10 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
             return `sw ${rtx.from}, ${rtx.offset}(${rtx.address})`;
         case 'storeZeroToMemory':
             return `sw $0, ${rtx.offset}(${rtx.address})`;
+        case 'storeMemoryByte':
+            if (rtx.contents.type !== 'register') throw debug('Need a register');
+            if (rtx.address.type !== 'register') throw debug('Need a register');
+            return `sb ${rtx.contents.destination}, (${rtx.address.destination})`;
         case 'call':
             return `jal ${rtx.function}`;
         case 'returnToCaller':
@@ -570,32 +574,6 @@ const stringEqualityRuntimeFunction = (): RegisterTransferLanguageExpression[] =
         `li ${functionResult}, 0`,
         { kind: 'label', name: 'stringEquality_return', why: '' },
         ...restoreRegistersCode(2),
-        `jr $ra`,
-    ];
-};
-
-const stringCopyRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
-    const currentChar = '$t1';
-    return [
-        `string_copy:`,
-        ...saveRegistersCode(1),
-        `# load byte from input`,
-        `string_copy_loop:`,
-        `lb ${currentChar}, (${argument1})`,
-        `# write it to argument 2`,
-        `sb ${currentChar}, (${argument2})`,
-        {
-            kind: 'gotoIfZero',
-            register: currentChar,
-            label: 'string_copy_return',
-            why: 'If char was the null terminator, return',
-        },
-        `# Else, bump the pointers so we copy the next char, and copy copy the next char`,
-        `addiu ${argument1}, ${argument1}, 1`,
-        `addiu ${argument2}, ${argument2}, 1`,
-        `b string_copy_loop`,
-        { kind: 'label', name: 'string_copy_return', why: '' },
-        ...restoreRegistersCode(1),
         `jr $ra`,
     ];
 };
@@ -706,7 +684,15 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     ),
     printRuntimeFunction(),
     stringEqualityRuntimeFunction(),
-    stringCopyRuntimeFunction(),
+    stringCopy(
+        bytesInWord,
+        syscallNumbers,
+        saveRegistersCode,
+        restoreRegistersCode,
+        knownRegisters,
+        firstRegister,
+        nextTemporary
+    ),
     malloc(
         bytesInWord,
         syscallNumbers,
