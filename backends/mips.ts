@@ -19,7 +19,7 @@ import {
     PureRegisterTransferLanguageExpression,
     RegisterTransferLanguageExpression,
 } from './registerTransferLanguage.js';
-import { malloc, length, stringCopy } from './registerTransferLanguageRuntime.js';
+import { mallocWithSbrk, length, stringCopy } from './registerTransferLanguageRuntime.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
 import join from '../util/join.js';
@@ -528,6 +528,7 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
 const syscallNumbers = {
     print: 4,
     sbrk: 9,
+    mmap: 0, // There is no mmap. Should be unused on mips.
     exit: 10,
 };
 
@@ -693,7 +694,7 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
         firstRegister,
         nextTemporary
     ),
-    malloc(
+    mallocWithSbrk(
         bytesInWord,
         syscallNumbers,
         saveRegistersCode,

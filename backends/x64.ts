@@ -1,5 +1,5 @@
 import { errors } from '../runtime-strings.js';
-import { malloc, length } from './registerTransferLanguageRuntime.js';
+import { mallocWithMmap, length, stringCopy } from './registerTransferLanguageRuntime.js';
 import join from '../util/join.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
@@ -273,6 +273,10 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
             return [`mov [${rtx.address}], ${rtx.from}`];
         case 'storeZeroToMemory':
             return [`mov byte [${rtx.address}], 0`];
+        case 'storeMemoryByte':
+            if (rtx.contents.type !== 'register') throw debug('Need a register');
+            if (rtx.address.type !== 'register') throw debug('Need a register');
+            return [`mov byte [${rtx.address.destination}], ${rtx.contents.destination}b`];
         case 'loadMemoryByte':
             if (rtx.to.type !== 'register') throw debug('todo');
             if (rtx.address.type !== 'register') throw debug('todo');
@@ -312,8 +316,9 @@ const restoreRegistersCode = (numRegisters: number): string[] => {
 const bytesInWord = 8;
 const syscallNumbers = {
     print: 0x02000004,
-    sbrk: 9,
+    sbrk: 0x02000045,
     exit: 0x02000001,
+    mmap: 0x020000c5,
 };
 
 const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
@@ -328,8 +333,16 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     ),
     //printRuntimeFunction(),
     //stringEqualityRuntimeFunction(),
-    //stringCopyRuntimeFunction(),
-    malloc(
+    stringCopy(
+        bytesInWord,
+        syscallNumbers,
+        saveRegistersCode,
+        restoreRegistersCode,
+        knownRegisters,
+        firstRegister,
+        nextTemporary
+    ),
+    mallocWithMmap(
         bytesInWord,
         syscallNumbers,
         saveRegistersCode,
