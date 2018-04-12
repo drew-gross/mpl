@@ -1,5 +1,5 @@
 import { errors } from '../runtime-strings.js';
-import { mallocWithMmap, length, stringCopy } from './registerTransferLanguageRuntime.js';
+import { mallocWithMmap, length, stringCopy, KnownRegisters } from './registerTransferLanguageRuntime.js';
 import join from '../util/join.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
@@ -47,27 +47,24 @@ message:  db        "Hello, World", 10      ; note the newline at the end
 `;
 
 // TODO: unify with named registers in mips. Args are r8-r10, general purpose starts at r11.
-const syscallSelect = 'rax';
-const syscallResult = 'rax';
-const syscallArg1 = 'rdi';
-const functionResult = 'rax';
-const argument1 = 'r8';
-const argument2 = 'r9';
-const argument3 = 'r10';
-
 const firstRegister: StorageSpec = {
     type: 'register',
     destination: 'r8',
 };
 
-const knownRegisters = {
-    argument1,
-    argument2,
-    argument3,
-    functionResult,
-    syscallArg1,
-    syscallSelect,
-    syscallResult,
+const knownRegisters: KnownRegisters = {
+    argument1: { type: 'register', destination: 'r8' },
+    argument2: { type: 'register', destination: 'r9' },
+    argument3: { type: 'register', destination: 'r10' },
+    functionResult: { type: 'register', destination: 'rax' },
+    syscallArg1: { type: 'register', destination: 'rdi' },
+    syscallArg2: { type: 'register', destination: 'rsi' },
+    syscallArg3: { type: 'register', destination: 'rdx' },
+    syscallArg4: { type: 'register', destination: 'rcx' },
+    syscallArg5: { type: 'register', destination: 'r8' },
+    syscallArg6: { type: 'register', destination: 'r9' },
+    syscallSelect: { type: 'register', destination: 'rax' },
+    syscallResult: { type: 'register', destination: 'rax' },
 };
 
 // TOOD: Unify with nextTemporary in mips
@@ -121,10 +118,10 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
             return astToRegisterTransferLanguage(
                 input,
                 {
-                    argument1: argument1,
-                    argument2: argument2,
-                    argument3: argument3,
-                    functionResult: functionResult,
+                    argument1: knownRegisters.argument1.destination,
+                    argument2: knownRegisters.argument2.destination,
+                    argument3: knownRegisters.argument3.destination,
+                    functionResult: knownRegisters.functionResult.destination,
                 },
                 nextTemporary,
                 makeLabel,
@@ -179,15 +176,15 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
                 ...storeRight,
                 {
                     kind: 'move',
-                    from: (leftSideDestination as any).destination,
-                    to: 'rax',
+                    from: leftSideDestination,
+                    to: { type: 'register', destination: 'rax' },
                     why: 'Multiply does rax * arg',
                 },
                 `mul ${(rightSideDestination as any).destination}`,
                 {
                     kind: 'move',
-                    from: 'rax',
-                    to: (destination as any).destination,
+                    from: { type: 'register', destination: 'rax' },
+                    to: destination,
                     why: 'Multiply puts result in rax:rdx, move it to final destination',
                 },
             ]);
@@ -232,7 +229,7 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
             return [`mov ${rtx.to}, ${rtx.from}; ${rtx.why}`];
         case 'returnValue':
             if (rtx.source.type !== 'register') throw debug('todo');
-            return [`mov ${functionResult}, ${rtx.source.destination}; ${rtx.why}`];
+            return [`mov ${knownRegisters.functionResult.destination}, ${rtx.source.destination}; ${rtx.why}`];
         case 'subtract':
             if (rtx.lhs.type !== 'register') throw debug('todo');
             if (rtx.rhs.type !== 'register') throw debug('todo');
@@ -366,8 +363,12 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             astToX64,
             globalDeclarations,
             stringLiterals,
-            functionResult,
-            [argument1, argument2, argument3],
+            knownRegisters.functionResult.destination,
+            [
+                knownRegisters.argument1.destination,
+                knownRegisters.argument2.destination,
+                knownRegisters.argument3.destination,
+            ],
             firstRegister,
             nextTemporary,
             saveRegistersCode,

@@ -19,7 +19,7 @@ import {
     PureRegisterTransferLanguageExpression,
     RegisterTransferLanguageExpression,
 } from './registerTransferLanguage.js';
-import { mallocWithSbrk, length, stringCopy } from './registerTransferLanguageRuntime.js';
+import { mallocWithSbrk, length, stringCopy, KnownRegisters } from './registerTransferLanguageRuntime.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
 import join from '../util/join.js';
@@ -34,14 +34,19 @@ const syscallResult = '$v0';
 const syscallSelect = '$v0';
 const functionResult = '$a0';
 
-const knownRegisters = {
-    argument1,
-    argument2,
-    argument3,
-    functionResult,
-    syscallArg1,
-    syscallSelect,
-    syscallResult,
+const knownRegisters: KnownRegisters = {
+    argument1: { type: 'register', destination: argument1 },
+    argument2: { type: 'register', destination: argument2 },
+    argument3: { type: 'register', destination: argument3 },
+    functionResult: { type: 'register', destination: functionResult },
+    syscallArg1: { type: 'register', destination: syscallArg1 },
+    syscallArg2: { type: 'register', destination: syscallArg2 },
+    syscallArg3: { type: 'register', destination: 'unused' },
+    syscallArg4: { type: 'register', destination: 'unused' },
+    syscallArg5: { type: 'register', destination: 'unused' },
+    syscallArg6: { type: 'register', destination: 'unused' },
+    syscallSelect: { type: 'register', destination: syscallSelect },
+    syscallResult: { type: 'register', destination: syscallResult },
 };
 
 const add = ({ l, r, to }: { l: string; r: string; to: string }) => `add ${to}, ${l}, ${r}`;
@@ -202,8 +207,8 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                             ...e1,
                             {
                                 kind: 'storeGlobal',
-                                from: currentTemporary.destination,
-                                to: lhs,
+                                from: currentTemporary,
+                                to: { type: 'register', destination: lhs },
                                 why: 'Store into global',
                             },
                         ]);
@@ -230,34 +235,34 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                             ...e1,
                             {
                                 kind: 'move',
-                                from: currentTemporary.destination,
-                                to: argument1,
+                                from: currentTemporary,
+                                to: { type: 'register', destination: argument1 },
                                 why: 'Move from temporary to argument 1',
                             },
                             { kind: 'call', function: 'length', why: 'Get length of new string' },
                             {
                                 kind: 'move',
-                                from: functionResult,
-                                to: argument1,
+                                from: { type: 'register', destination: functionResult },
+                                to: { type: 'register', destination: argument1 },
                                 why: 'Move length of new string to argument of malloc',
                             },
                             { kind: 'call', function: 'my_malloc', why: 'Allocate space for new string' },
                             {
                                 kind: 'storeGlobal',
-                                from: functionResult,
-                                to: lhs,
+                                from: { type: 'register', destination: functionResult },
+                                to: { type: 'register', destination: lhs },
                                 why: 'Store location of allocated memory to global',
                             },
                             {
                                 kind: 'move',
-                                from: functionResult,
-                                to: argument2,
+                                from: { type: 'register', destination: functionResult },
+                                to: { type: 'register', destination: argument2 },
                                 why: 'Move output pointer to argument 2 of string_copy',
                             },
                             {
                                 kind: 'move',
-                                from: currentTemporary.destination,
-                                to: argument1,
+                                from: currentTemporary,
+                                to: { type: 'register', destination: argument1 },
                                 why: 'move destination to argument 1 of string_copy',
                             },
                             { kind: 'call', function: 'string_copy', why: 'Copy new string to destination' },
@@ -293,13 +298,13 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     },
                 ]);
             }
-            const identifierRegister = (registerAssignment[identifierName] as any).destination;
+            const identifierRegister = registerAssignment[identifierName];
             return compileExpression([], ([]) => [
                 {
                     kind: 'move',
                     from: identifierRegister,
-                    to: (destination as any).destination,
-                    why: `Move from ${identifierName} (${identifierRegister}) into destination (${
+                    to: destination,
+                    why: `Move from ${identifierName} (${(identifierRegister as any).destination}) into destination (${
                         (destination as any).destination
                     }`,
                 },
@@ -332,8 +337,8 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 cleanup: [
                     {
                         kind: 'move',
-                        from: mallocResultTemporary.destination,
-                        to: argument1,
+                        from: mallocResultTemporary,
+                        to: { type: 'register', destination: argument1 },
                         why: 'Move pointer to new string to argument1',
                     },
                     // TODO: maybe not valid? This destination may have been reused for something else by the time we get to cleanup
@@ -347,14 +352,24 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 ...e1,
                 `# Compute rhs`,
                 ...e2,
-                { kind: 'move', from: leftSideDestination.destination, to: argument1, why: 'Move lhs to argument1' },
+                {
+                    kind: 'move',
+                    from: leftSideDestination,
+                    to: { type: 'register', destination: argument1 },
+                    why: 'Move lhs to argument1',
+                },
                 { kind: 'call', function: 'length', why: 'Compute the length of lhs and add it to length temporary' },
                 add({
                     l: functionResult,
                     r: newStringLengthTemporary.destination,
                     to: newStringLengthTemporary.destination,
                 }),
-                { kind: 'move', from: rightSideDestination.destination, to: argument1, why: 'Move rhs to argument1' },
+                {
+                    kind: 'move',
+                    from: rightSideDestination,
+                    to: { type: 'register', destination: argument1 },
+                    why: 'Move rhs to argument1',
+                },
                 { kind: 'call', function: 'length', why: 'Compute the length of rhs and add it to length temporary' },
                 add({
                     l: functionResult,
@@ -363,23 +378,33 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 }),
                 {
                     kind: 'move',
-                    from: newStringLengthTemporary.destination,
-                    to: argument1,
+                    from: newStringLengthTemporary,
+                    to: { type: 'register', destination: argument1 },
                     why: 'Move new string length to argument1',
                 },
                 { kind: 'call', function: 'my_malloc', why: 'Malloc that much space' },
                 {
                     kind: 'move',
-                    from: functionResult,
-                    to: mallocResultTemporary.destination,
+                    from: { type: 'register', destination: functionResult },
+                    to: mallocResultTemporary,
                     why: 'Move malloc result to temporary',
                 },
-                { kind: 'move', from: leftSideDestination.destination, to: argument1, why: 'Move lhs to argument1' },
-                { kind: 'move', from: rightSideDestination.destination, to: argument2, why: 'Move rhs to argument2' },
                 {
                     kind: 'move',
-                    from: mallocResultTemporary.destination,
-                    to: argument3,
+                    from: leftSideDestination,
+                    to: { type: 'register', destination: argument1 },
+                    why: 'Move lhs to argument1',
+                },
+                {
+                    kind: 'move',
+                    from: rightSideDestination,
+                    to: { type: 'register', destination: argument2 },
+                    why: 'Move rhs to argument2',
+                },
+                {
+                    kind: 'move',
+                    from: mallocResultTemporary,
+                    to: { type: 'register', destination: argument3 },
                     why: 'Move destintion to argument3',
                 },
                 {
@@ -389,8 +414,8 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 },
                 {
                     kind: 'move',
-                    from: mallocResultTemporary.destination,
-                    to: destination.destination,
+                    from: mallocResultTemporary,
+                    to: destination,
                     why: 'Move new string pointer to final destination',
                 },
             ]);
@@ -449,7 +474,9 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
         case 'syscall':
             return 'syscall';
         case 'move':
-            return `move ${rtx.to}, ${rtx.from}`;
+            if (rtx.to.type !== 'register') throw debug('todo');
+            if (rtx.from.type !== 'register') throw debug('todo');
+            return `move ${rtx.to.destination}, ${rtx.from.destination}`;
         case 'loadImmediate':
             switch (rtx.destination.type) {
                 case 'register':
@@ -461,7 +488,8 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
                     throw debug('todo');
             }
         case 'addImmediate':
-            return `addiu ${rtx.register}, ${rtx.amount}`;
+            if (rtx.register.type !== 'register') throw debug('need a registe');
+            return `addiu ${rtx.register.destination}, ${rtx.amount}`;
         case 'returnValue':
             if (rtx.source.type !== 'register') throw debug('todo');
             return `move ${functionResult}, ${rtx.source.destination}`;
@@ -471,7 +499,8 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
             if (rtx.destination.type !== 'register') throw debug('todo');
             return `sub ${rtx.destination.destination}, ${rtx.lhs.destination}, ${rtx.rhs.destination}`;
         case 'increment':
-            return `addiu ${rtx.register}, ${rtx.register}, 1`;
+            if (rtx.register.type !== 'register') throw debug('need a registe');
+            return `addiu ${rtx.register.destination}, ${rtx.register.destination}, 1`;
         case 'label':
             return `L${rtx.name}:`;
         case 'functionLabel':
@@ -482,11 +511,16 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
             if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug('todo');
             return `beq ${rtx.lhs.destination}, ${rtx.rhs.destination}, L${rtx.label}`;
         case 'gotoIfNotEqual':
-            return `bne ${rtx.lhs}, ${rtx.rhs}, L${rtx.label}`;
+            if (rtx.lhs.type !== 'register') throw debug('todo');
+            if (rtx.rhs.type !== 'register') throw debug('todo');
+            return `bne ${rtx.lhs.destination}, ${rtx.rhs.destination}, L${rtx.label}`;
         case 'gotoIfZero':
-            return `beq ${rtx.register}, 0, L${rtx.label}`;
+            if (rtx.register.type !== 'register') throw debug('need a registe');
+            return `beq ${rtx.register.destination}, 0, L${rtx.label}`;
         case 'gotoIfGreater':
-            return `bgt ${rtx.lhs}, ${rtx.rhs}, L${rtx.label}`;
+            if (rtx.lhs.type !== 'register') throw debug('todo');
+            if (rtx.rhs.type !== 'register') throw debug('todo');
+            return `bgt ${rtx.lhs.destination}, ${rtx.rhs.destination}, L${rtx.label}`;
         case 'loadSymbolAddress':
             if (rtx.to.type !== 'register') throw debug('todo');
             return `la ${rtx.to.destination}, ${rtx.symbolName}`;
@@ -494,7 +528,9 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
             if (rtx.to.type !== 'register') throw debug('todo');
             return `lw ${rtx.to.destination}, ${rtx.from}`;
         case 'storeGlobal':
-            return `sw ${rtx.from}, ${rtx.to}`;
+            if (rtx.to.type !== 'register') throw debug('todo');
+            if (rtx.from.type !== 'register') throw debug('todo');
+            return `sw ${rtx.from.destination}, ${rtx.to.destination}`;
         case 'loadMemory':
             if (rtx.to.type !== 'register') throw debug('todo');
             if (rtx.from.type !== 'register') throw debug('todo');
@@ -504,9 +540,12 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
             if (rtx.address.type !== 'register') throw debug('todo');
             return `lb ${rtx.to.destination}, (${rtx.address.destination})`;
         case 'storeMemory':
-            return `sw ${rtx.from}, ${rtx.offset}(${rtx.address})`;
+            if (rtx.address.type !== 'register') throw debug('todo');
+            if (rtx.from.type !== 'register') throw debug('todo');
+            return `sw ${rtx.from.destination}, ${rtx.offset}(${rtx.address.destination})`;
         case 'storeZeroToMemory':
-            return `sw $0, ${rtx.offset}(${rtx.address})`;
+            if (rtx.address.type !== 'register') throw debug('todo');
+            return `sw $0, ${rtx.offset}(${rtx.address.destination})`;
         case 'storeMemoryByte':
             if (rtx.contents.type !== 'register') throw debug('Need a register');
             if (rtx.address.type !== 'register') throw debug('Need a register');
@@ -541,9 +580,19 @@ const printRuntimeFunction = (): PureRegisterTransferLanguageExpression[] => {
             value: syscallNumbers.print,
             why: 'Select print',
         },
-        { kind: 'move', to: syscallArg1, from: argument1, why: 'Move print argument to syscall argument' },
+        {
+            kind: 'move',
+            to: { type: 'register', destination: syscallArg1 },
+            from: { type: 'register', destination: argument1 },
+            why: 'Move print argument to syscall argument',
+        },
         { kind: 'syscall', why: 'Print' },
-        { kind: 'move', from: syscallResult, to: functionResult, why: 'Move syscall result to function result' },
+        {
+            kind: 'move',
+            from: { type: 'register', destination: syscallResult },
+            to: { type: 'register', destination: functionResult },
+            why: 'Move syscall result to function result',
+        },
         { kind: 'returnToCaller', why: 'Return' },
     ];
 };
@@ -564,12 +613,12 @@ const stringEqualityRuntimeFunction = (): RegisterTransferLanguageExpression[] =
         `bne ${leftByte}, ${rightByte}, stringEquality_return_false`,
         {
             kind: 'gotoIfZero',
-            register: leftByte,
+            register: { type: 'register', destination: leftByte },
             label: 'stringEquality_return',
             why: 'Both side are equal. If both sides are null, return.',
         },
-        { kind: 'increment', register: argument1, why: 'Bump lhs to next char' },
-        { kind: 'increment', register: argument2, why: 'Bump rhs to next char' },
+        { kind: 'increment', register: { type: 'register', destination: argument1 }, why: 'Bump lhs to next char' },
+        { kind: 'increment', register: { type: 'register', destination: argument2 }, why: 'Bump rhs to next char' },
         { kind: 'goto', label: 'stringEquality_loop', why: 'Check next char' },
         `stringEquality_return_false:`,
         `li ${functionResult}, 0`,
@@ -592,7 +641,7 @@ const stringConcatenateRuntimeFunction = (): RegisterTransferLanguageExpression[
         `lb ${currentChar}, (${left}),`,
         {
             kind: 'gotoIfZero',
-            register: currentChar,
+            register: { type: 'register', destination: currentChar },
             label: 'copy_from_right',
             why: 'If found lefts null terminator, start copying right',
         },
@@ -607,7 +656,7 @@ const stringConcatenateRuntimeFunction = (): RegisterTransferLanguageExpression[
         `sb ${currentChar}, (${out})`,
         {
             kind: 'gotoIfZero',
-            register: currentChar,
+            register: { type: 'register', destination: currentChar },
             label: 'concatenate_return',
             why: 'If we just wrote a null terminator, we are done',
         },
@@ -638,23 +687,29 @@ const myFreeRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         `# TODO: merge blocks`,
         `# TODO: check if already free`,
         `li ${one}, 1,`,
-        { kind: 'storeMemory', from: one, address: argument1, offset: -1 * bytesInWord, why: 'block->free = false' },
+        {
+            kind: 'storeMemory',
+            from: { type: 'register', destination: one },
+            address: { type: 'register', destination: argument1 },
+            offset: -1 * bytesInWord,
+            why: 'block->free = false',
+        },
         ...restoreRegistersCode(1),
         `jr $ra`,
     ];
 };
 
 const verifyNoLeaks = (): RegisterTransferLanguageExpression[] => {
-    const currentBlockPointer = '$t1';
+    const currentBlockPointer = { type: 'register', destination: '$t1' } as StorageSpec;
     const currentData = '$t2';
     return [
         `verify_no_leaks:`,
         ...saveRegistersCode(2),
-        `la ${currentBlockPointer}, first_block`,
-        `lw ${currentBlockPointer}, (${currentBlockPointer})`,
+        `la ${(currentBlockPointer as any).destination}, first_block`,
+        `lw ${(currentBlockPointer as any).destination}, (${(currentBlockPointer as any).destination})`,
         `verify_no_leaks_loop:`,
         { kind: 'gotoIfZero', register: currentBlockPointer, label: 'verify_no_leaks_return', why: '' },
-        `lw ${currentData}, ${2 * bytesInWord}(${currentBlockPointer})`,
+        `lw ${currentData}, ${2 * bytesInWord}(${(currentBlockPointer as any).destination})`,
         `bne ${currentData}, 0, verify_no_leaks_advance_pointers`,
         `la $a0, ${errors.leaksDetected.name}`,
         `li $v0, 4`,
@@ -662,7 +717,9 @@ const verifyNoLeaks = (): RegisterTransferLanguageExpression[] => {
         `li $v0, 10`,
         `syscall`,
         `verify_no_leaks_advance_pointers:`,
-        `lw ${currentBlockPointer}, ${1 * bytesInWord}(${currentBlockPointer})`,
+        `lw ${(currentBlockPointer as any).destination}, ${1 * bytesInWord}(${
+            (currentBlockPointer as any).destination
+        })`,
         `b verify_no_leaks_loop`,
         { kind: 'label', name: 'verify_no_leaks_return', why: '' },
         ...restoreRegistersCode(2),

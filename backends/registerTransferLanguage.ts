@@ -14,23 +14,23 @@ import { Function } from '../api.js';
 export type PureRegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'comment' }
     | { kind: 'syscall' }
-    | { kind: 'move'; from: string; to: string }
+    | { kind: 'move'; from: StorageSpec; to: StorageSpec }
     | { kind: 'loadImmediate'; value: number; destination: StorageSpec }
-    | { kind: 'addImmediate'; register: string; amount: number }
+    | { kind: 'addImmediate'; register: StorageSpec; amount: number }
     | { kind: 'subtract'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec }
-    | { kind: 'increment'; register: string }
+    | { kind: 'increment'; register: StorageSpec }
     | { kind: 'label'; name: string }
     | { kind: 'functionLabel'; name: string }
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: StorageSpec; rhs: StorageSpec; label: string }
-    | { kind: 'gotoIfNotEqual'; lhs: string; rhs: string; label: string }
-    | { kind: 'gotoIfZero'; register: string; label: string }
-    | { kind: 'gotoIfGreater'; lhs: string; rhs: string; label: string }
-    | { kind: 'storeGlobal'; from: string; to: string }
+    | { kind: 'gotoIfNotEqual'; lhs: StorageSpec; rhs: StorageSpec; label: string }
+    | { kind: 'gotoIfZero'; register: StorageSpec; label: string }
+    | { kind: 'gotoIfGreater'; lhs: StorageSpec; rhs: StorageSpec; label: string }
+    | { kind: 'storeGlobal'; from: StorageSpec; to: StorageSpec }
     | { kind: 'loadGlobal'; from: string; to: StorageSpec }
-    | { kind: 'storeMemory'; from: string; address: string; offset: number }
+    | { kind: 'storeMemory'; from: StorageSpec; address: StorageSpec; offset: number }
     | { kind: 'storeMemoryByte'; address: StorageSpec; contents: StorageSpec }
-    | { kind: 'storeZeroToMemory'; address: string; offset: number }
+    | { kind: 'storeZeroToMemory'; address: StorageSpec; offset: number }
     | { kind: 'loadMemory'; from: StorageSpec; to: StorageSpec; offset: number }
     | { kind: 'loadMemoryByte'; address: StorageSpec; to: StorageSpec }
     | { kind: 'loadSymbolAddress'; to: StorageSpec; symbolName: string }
@@ -197,7 +197,7 @@ export const astToRegisterTransferLanguage = (
             }
 
             const computeArgumentsMips = ast.arguments.map((argument, index) => {
-                let register;
+                let register: StorageSpec;
                 switch (index) {
                     case 0:
                         register = knownRegisters.argument1;
@@ -213,7 +213,7 @@ export const astToRegisterTransferLanguage = (
                 }
                 return recurse({
                     ast: argument,
-                    destination: { type: 'register', destination: register },
+                    destination,
                     currentTemporary: nextTemporary(currentTemporary),
                 });
             });
@@ -229,9 +229,9 @@ export const astToRegisterTransferLanguage = (
                 ...callInstructions,
                 {
                     kind: 'move',
-                    to: (destination as any).destination,
+                    to: destination,
                     from: knownRegisters.functionResult,
-                    why: `Move result from ${knownRegisters.functionResult} into destination`,
+                    why: `Move result from ${knownRegisters.functionResult.destination} into destination`,
                 },
             ]);
         }
@@ -323,8 +323,8 @@ export const astToRegisterTransferLanguage = (
                             ...e1,
                             {
                                 kind: 'storeGlobal',
-                                from: currentTemporary.destination,
-                                to: lhs,
+                                from: currentTemporary,
+                                to: { type: 'register', destination: lhs },
                                 why: `Put ${declaration.type.name} into global`,
                             },
                         ]);
@@ -366,7 +366,7 @@ export const astToRegisterTransferLanguage = (
                             {
                                 kind: 'storeGlobal',
                                 from: knownRegisters.functionResult,
-                                to: lhs,
+                                to: { type: 'register', destination: lhs },
                                 why: 'Store into global',
                             },
                         ]);

@@ -3,12 +3,28 @@ import debug from '../util/debug.js';
 import { StorageSpec } from '../backend-utils.js';
 import { RegisterTransferLanguageExpression } from './registerTransferLanguage.js';
 
+export type KnownRegisters = {
+    argument1: { type: 'register'; destination: string };
+    argument2: { type: 'register'; destination: string };
+    argument3: { type: 'register'; destination: string };
+    functionResult: { type: 'register'; destination: string };
+
+    syscallSelect: { type: 'register'; destination: string };
+    syscallArg1: { type: 'register'; destination: string };
+    syscallArg2: { type: 'register'; destination: string };
+    syscallArg3: { type: 'register'; destination: string };
+    syscallArg4: { type: 'register'; destination: string };
+    syscallArg5: { type: 'register'; destination: string };
+    syscallArg6: { type: 'register'; destination: string };
+    syscallResult: { type: 'register'; destination: string };
+};
+
 type RuntimeFunctionGenerator = (
     bytesInWord: number,
     syscallNumbers: { print: number; sbrk: number; exit: number; mmap: number },
     registerSaver: (n: number) => string[],
     registerRestorer: (n: number) => string[],
-    knownRegisters: { [index: string]: string },
+    knownRegisters: KnownRegisters,
     firstRegister: StorageSpec,
     nextRegister: ((r: StorageSpec) => StorageSpec)
 ) => RegisterTransferLanguageExpression[];
@@ -34,26 +50,26 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         {
             kind: 'gotoIfNotEqual',
             lhs: knownRegisters.argument1,
-            rhs: '0',
+            rhs: { type: 'register', destination: '0' },
             label: 'my_malloc_zero_size_check_passed',
             why: 'Error if no memory requested',
         },
         {
             kind: 'loadSymbolAddress',
             symbolName: errors.allocatedZero.name,
-            to: { type: 'register', destination: knownRegisters.syscallArg1 },
+            to: knownRegisters.syscallArg1,
             why: 'Error to print',
         },
         {
             kind: 'loadImmediate',
-            destination: { type: 'register', destination: knownRegisters.syscallSelect },
+            destination: knownRegisters.syscallSelect,
             value: syscallNumbers.print,
             why: 'Select print syscall',
         },
         { kind: 'syscall', why: 'Print' },
         {
             kind: 'loadImmediate',
-            destination: { type: 'register', destination: knownRegisters.syscallSelect },
+            destination: knownRegisters.syscallSelect,
             value: syscallNumbers.exit,
             why: 'Select exit syscall',
         },
@@ -74,7 +90,7 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         { kind: 'label', name: 'find_large_enough_free_block_loop', why: 'Find a block' },
         {
             kind: 'gotoIfZero',
-            register: currentBlockPointer.destination,
+            register: currentBlockPointer,
             label: 'found_large_enough_block',
             why: 'No blocks left (will require sbrk)',
         },
@@ -85,7 +101,7 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
             offset: 2 * bytesInWord,
             why: 'Current block not free, load next block',
         },
-        { kind: 'gotoIfZero', register: scratch.destination, label: 'advance_pointers', why: 'Check next block' },
+        { kind: 'gotoIfZero', register: scratch, label: 'advance_pointers', why: 'Check next block' },
         {
             kind: 'loadMemory',
             to: scratch,
@@ -95,7 +111,7 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         },
         {
             kind: 'gotoIfGreater',
-            lhs: scratch.destination,
+            lhs: scratch,
             rhs: knownRegisters.argument1,
             label: 'advance_pointers',
             why: 'Check next block if current not large enough',
@@ -108,8 +124,8 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         { kind: 'label', name: 'advance_pointers', why: 'Bump pointers to next block' },
         {
             kind: 'move',
-            to: previousBlockPointer.destination,
-            from: currentBlockPointer.destination,
+            to: previousBlockPointer,
+            from: currentBlockPointer,
             why: 'Advance current block pointer to previous.',
         },
         {
@@ -123,20 +139,20 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         { kind: 'label', name: 'found_large_enough_block', why: 'Found a block' },
         {
             kind: 'gotoIfZero',
-            register: currentBlockPointer.destination,
+            register: currentBlockPointer,
             label: 'sbrk_more_space',
             why: 'No good blocks, so make one',
         },
         {
             kind: 'storeZeroToMemory',
-            address: currentBlockPointer.destination,
+            address: currentBlockPointer,
             offset: 2 * bytesInWord,
             why: 'Found a reusable block, mark it as not free',
         },
         {
             kind: 'move',
             to: knownRegisters.functionResult,
-            from: currentBlockPointer.destination,
+            from: currentBlockPointer,
             why: 'Return current block pointer',
         },
         {
@@ -161,7 +177,7 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         },
         {
             kind: 'loadImmediate',
-            destination: { type: 'register', destination: knownRegisters.syscallSelect },
+            destination: knownRegisters.syscallSelect,
             value: syscallNumbers.sbrk,
             why: 'Select sbrk syscall',
         },
@@ -169,26 +185,26 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         {
             kind: 'gotoIfNotEqual',
             lhs: knownRegisters.syscallResult,
-            rhs: '-1',
+            rhs: { type: 'register', destination: '-1' },
             label: 'sbrk_exit_check_passed',
             why: 'If sbrk failed, exit',
         },
         {
             kind: 'loadSymbolAddress',
-            to: { type: 'register', destination: knownRegisters.syscallArg1 },
+            to: knownRegisters.syscallArg1,
             symbolName: errors.allocationFailed.name,
             why: 'Load string to print',
         },
         {
             kind: 'loadImmediate',
-            destination: { type: 'register', destination: knownRegisters.syscallSelect },
+            destination: knownRegisters.syscallSelect,
             value: syscallNumbers.print,
             why: 'Prepare to print',
         },
         { kind: 'syscall', why: 'Print' },
         {
             kind: 'loadImmediate',
-            destination: { type: 'register', destination: knownRegisters.syscallSelect },
+            destination: knownRegisters.syscallSelect,
             value: syscallNumbers.exit,
             why: 'Prepare to exit',
         },
@@ -206,24 +222,24 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         },
         {
             kind: 'gotoIfNotEqual',
-            lhs: scratch.destination,
-            rhs: '0',
+            lhs: scratch,
+            rhs: { type: 'register', destination: '0' },
             label: 'assign_previous',
             why: 'If there is no previous block, set up first block pointer',
         },
         {
             kind: 'storeGlobal',
             from: knownRegisters.syscallResult,
-            to: 'first_block',
+            to: { type: 'register', destination: 'first_block' },
             why: 'Setup first block pointer',
         },
         { kind: 'goto', label: 'set_up_new_space', why: '' },
         { kind: 'label', name: 'assign_previous', why: 'Set up prevous block pointer' },
-        { kind: 'gotoIfZero', register: previousBlockPointer.destination, label: 'set_up_new_space', why: '' },
+        { kind: 'gotoIfZero', register: previousBlockPointer, label: 'set_up_new_space', why: '' },
         {
             kind: 'storeMemory',
             from: knownRegisters.syscallResult,
-            address: previousBlockPointer.destination,
+            address: previousBlockPointer,
             offset: 0,
             why: 'prev->next = new',
         },
@@ -286,26 +302,26 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         {
             kind: 'gotoIfNotEqual',
             lhs: knownRegisters.argument1,
-            rhs: '0',
+            rhs: { type: 'register', destination: '0' },
             label: 'my_malloc_zero_size_check_passed',
             why: 'Error if no memory requested',
         },
         {
             kind: 'loadSymbolAddress',
             symbolName: errors.allocatedZero.name,
-            to: { type: 'register', destination: knownRegisters.syscallArg1 },
+            to: knownRegisters.syscallArg1,
             why: 'Error to print',
         },
         {
             kind: 'loadImmediate',
-            destination: { type: 'register', destination: knownRegisters.syscallSelect },
+            destination: knownRegisters.syscallSelect,
             value: syscallNumbers.print,
             why: 'Select print syscall',
         },
         { kind: 'syscall', why: 'Print' },
         {
             kind: 'loadImmediate',
-            destination: { type: 'register', destination: knownRegisters.syscallSelect },
+            destination: knownRegisters.syscallSelect,
             value: syscallNumbers.exit,
             why: 'Select exit syscall',
         },
@@ -326,7 +342,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         { kind: 'label', name: 'find_large_enough_free_block_loop', why: 'Find a block' },
         {
             kind: 'gotoIfZero',
-            register: currentBlockPointer.destination,
+            register: currentBlockPointer,
             label: 'found_large_enough_block',
             why: 'No blocks left (will require mmap)',
         },
@@ -337,7 +353,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
             offset: 2 * bytesInWord,
             why: 'Current block not free, load next block',
         },
-        { kind: 'gotoIfZero', register: scratch.destination, label: 'advance_pointers', why: 'Check next block' },
+        { kind: 'gotoIfZero', register: scratch, label: 'advance_pointers', why: 'Check next block' },
         {
             kind: 'loadMemory',
             to: scratch,
@@ -347,7 +363,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         },
         {
             kind: 'gotoIfGreater',
-            lhs: scratch.destination,
+            lhs: scratch,
             rhs: knownRegisters.argument1,
             label: 'advance_pointers',
             why: 'Check next block if current not large enough',
@@ -360,8 +376,8 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         { kind: 'label', name: 'advance_pointers', why: 'Bump pointers to next block' },
         {
             kind: 'move',
-            to: previousBlockPointer.destination,
-            from: currentBlockPointer.destination,
+            to: previousBlockPointer,
+            from: currentBlockPointer,
             why: 'Advance current block pointer to previous.',
         },
         {
@@ -375,20 +391,20 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         { kind: 'label', name: 'found_large_enough_block', why: 'Found a block' },
         {
             kind: 'gotoIfZero',
-            register: currentBlockPointer.destination,
+            register: currentBlockPointer,
             label: 'mmap_more_space',
             why: 'No good blocks, so make one',
         },
         {
             kind: 'storeZeroToMemory',
-            address: currentBlockPointer.destination,
+            address: currentBlockPointer,
             offset: 2 * bytesInWord,
             why: 'Found a reusable block, mark it as not free',
         },
         {
             kind: 'move',
             to: knownRegisters.functionResult,
-            from: currentBlockPointer.destination,
+            from: currentBlockPointer,
             why: 'Return current block pointer',
         },
         {
@@ -402,7 +418,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         {
             kind: 'loadImmediate',
             value: 0,
-            destination: { type: 'register', destination: knownRegisters.syscallArg1 },
+            destination: knownRegisters.syscallArg1,
             why: 'addr arg, use null',
         },
         {
@@ -420,57 +436,57 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         {
             kind: 'loadImmediate',
             value: 3,
-            destination: { type: 'register', destination: knownRegisters.syscallArg3 },
+            destination: knownRegisters.syscallArg3,
             why: 'prot arg, 3 = PROT_READ|PROT_WRITE',
         },
         {
             kind: 'loadImmediate',
             value: 2,
-            destination: { type: 'register', destination: knownRegisters.syscallArg4 },
+            destination: knownRegisters.syscallArg4,
             why: 'flags arg, 2 = MAP_ANON | MAP_PRIVATE',
         },
         {
             kind: 'loadImmediate',
             value: 0,
-            destination: { type: 'register', destination: knownRegisters.syscallArg5 },
+            destination: knownRegisters.syscallArg5,
             why: 'fd arg, unused',
         },
         {
             kind: 'loadImmediate',
             value: 0,
-            destination: { type: 'register', destination: knownRegisters.syscallArg6 },
+            destination: knownRegisters.syscallArg6,
             why: 'offset arg, unused',
         },
         {
             kind: 'loadImmediate',
             value: syscallNumbers.mmap,
-            destination: { type: 'register', destination: knownRegisters.syscallSelect },
+            destination: knownRegisters.syscallSelect,
             why: 'Select malloc for calling',
         },
         { kind: 'syscall', why: 'mmap' },
         {
             kind: 'gotoIfNotEqual',
             lhs: knownRegisters.syscallResult,
-            rhs: '-1',
+            rhs: { type: 'register', destination: '-1' }, // TODO: should be immediate
             label: 'mmap_exit_check_passed',
             why: 'If mmap failed, exit',
         },
         {
             kind: 'loadSymbolAddress',
-            to: { type: 'register', destination: knownRegisters.syscallArg1 },
+            to: knownRegisters.syscallArg1,
             symbolName: errors.allocationFailed.name,
             why: 'Load string to print',
         },
         {
             kind: 'loadImmediate',
-            destination: { type: 'register', destination: knownRegisters.syscallSelect },
+            destination: knownRegisters.syscallSelect,
             value: syscallNumbers.print,
             why: 'Prepare to print',
         },
         { kind: 'syscall', why: 'Print' },
         {
             kind: 'loadImmediate',
-            destination: { type: 'register', destination: knownRegisters.syscallSelect },
+            destination: knownRegisters.syscallSelect,
             value: syscallNumbers.exit,
             why: 'Prepare to exit',
         },
@@ -488,24 +504,24 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         },
         {
             kind: 'gotoIfNotEqual',
-            lhs: scratch.destination,
-            rhs: '0',
+            lhs: scratch,
+            rhs: { type: 'register', destination: '0' },
             label: 'assign_previous',
             why: 'If there is no previous block, set up first block pointer',
         },
         {
             kind: 'storeGlobal',
             from: knownRegisters.syscallResult,
-            to: 'first_block',
+            to: { type: 'register', destination: 'first_block' },
             why: 'Setup first block pointer',
         },
         { kind: 'goto', label: 'set_up_new_space', why: '' },
         { kind: 'label', name: 'assign_previous', why: 'Set up prevous block pointer' },
-        { kind: 'gotoIfZero', register: previousBlockPointer.destination, label: 'set_up_new_space', why: '' },
+        { kind: 'gotoIfZero', register: previousBlockPointer, label: 'set_up_new_space', why: '' },
         {
             kind: 'storeMemory',
             from: knownRegisters.syscallResult,
-            address: previousBlockPointer.destination,
+            address: previousBlockPointer,
             offset: 0,
             why: 'prev->next = new',
         },
@@ -563,20 +579,20 @@ export const length: RuntimeFunctionGenerator = (
         ...registerSaver(1),
         {
             kind: 'loadImmediate',
-            destination: { type: 'register', destination: knownRegisters.functionResult },
+            destination: knownRegisters.functionResult,
             value: 0,
             why: 'Set length count to 0',
         },
         { kind: 'label', name: 'length_loop', why: 'Count another charachter' },
         {
             kind: 'loadMemoryByte',
-            address: { type: 'register', destination: knownRegisters.argument1 },
+            address: knownRegisters.argument1,
             to: currentChar,
             why: 'Load char into memory',
         },
         {
             kind: 'gotoIfZero',
-            register: currentChar.destination,
+            register: currentChar,
             label: 'length_return',
             why: 'If char is null, end of string. Return count.',
         },
@@ -607,18 +623,18 @@ export const stringCopy: RuntimeFunctionGenerator = (
         {
             kind: 'loadMemoryByte',
             to: currentChar,
-            address: { type: 'register', destination: knownRegisters.argument1 },
+            address: knownRegisters.argument1,
             why: 'Load byte from input',
         },
         {
             kind: 'storeMemoryByte',
             contents: currentChar,
-            address: { type: 'register', destination: knownRegisters.argument2 },
+            address: knownRegisters.argument2,
             why: 'Write it to output',
         },
         {
             kind: 'gotoIfZero',
-            register: currentChar.destination,
+            register: currentChar,
             label: 'string_copy_return',
             why: 'If char was the null terminator, return',
         },

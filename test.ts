@@ -1040,11 +1040,12 @@ test('addition', compileAndRun, {
     expectedExitCode: 8,
 });
 
-test('two args', compileAndRun, {
+test.only('two args', compileAndRun, {
     source: `
 myAdd := a: Integer, b: Integer => a + b;
 return myAdd(7, 4);`,
     expectedExitCode: 11,
+    printSubsteps: 'mips',
 });
 
 test('two args with expression argument', compileAndRun, {
