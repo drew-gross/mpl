@@ -115,24 +115,14 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'equality':
         case 'typedDeclarationAssignment':
         case 'stringLiteral':
-            return astToRegisterTransferLanguage(
-                input,
-                {
-                    argument1: knownRegisters.argument1.destination,
-                    argument2: knownRegisters.argument2.destination,
-                    argument3: knownRegisters.argument3.destination,
-                    functionResult: knownRegisters.functionResult.destination,
-                },
-                nextTemporary,
-                makeLabel,
-                recurse
-            );
+            return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel, recurse);
         case 'identifier': {
             // TODO: Better handle identifiers here. Also just better storage/scope chains?
             const identifierName = ast.value;
             if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
                 if (!declaration) throw debug('todo');
+                debugger;
                 return compileExpression([], ([]) => [
                     {
                         kind: 'loadGlobal',
@@ -226,7 +216,9 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
             if (rtx.destination.type !== 'register') throw debug('todo');
             return [`mov ${rtx.destination.destination}, ${rtx.value}; ${rtx.why}`];
         case 'move':
-            return [`mov ${rtx.to}, ${rtx.from}; ${rtx.why}`];
+            if (rtx.to.type !== 'register') throw debug('todo');
+            if (rtx.from.type !== 'register') throw debug('todo');
+            return [`mov ${rtx.to.destination}, ${rtx.from.destination}; ${rtx.why}`];
         case 'returnValue':
             if (rtx.source.type !== 'register') throw debug('todo');
             return [`mov ${knownRegisters.functionResult.destination}, ${rtx.source.destination}; ${rtx.why}`];
@@ -246,11 +238,14 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
             if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug('todo');
             return [`cmp ${rtx.lhs.destination}, ${rtx.rhs.destination}`, `je ${rtx.label}`];
         case 'gotoIfNotEqual':
-            return [`cmp ${rtx.lhs}, ${rtx.rhs}`, `jne ${rtx.label}`];
+            if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug('todo');
+            return [`cmp ${rtx.lhs.destination}, ${rtx.rhs.destination}`, `jne ${rtx.label}`];
         case 'gotoIfZero':
-            return [`cmp ${rtx.register}, 0`, `jz ${rtx.label}`];
+            if (rtx.register.type !== 'register') throw debug('todo');
+            return [`cmp ${rtx.register.destination}, 0`, `jz ${rtx.label}`];
         case 'gotoIfGreater':
-            return [`cmp ${rtx.lhs}, ${rtx.rhs}`, `jg ${rtx.label}`];
+            if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug('todo');
+            return [`cmp ${rtx.lhs.destination}, ${rtx.rhs.destination}`, `jg ${rtx.label}`];
         case 'goto':
             return [`jmp ${rtx.label}`];
         case 'label':
@@ -258,7 +253,9 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
         case 'functionLabel':
             return [`${rtx.name}:`];
         case 'storeGlobal':
-            return [`mov [rel ${rtx.to}], ${rtx.from}; ${rtx.why}`];
+            if (rtx.to.type !== 'register') throw debug('todo');
+            if (rtx.from.type !== 'register') throw debug('todo');
+            return [`mov [rel ${rtx.to.destination}], ${rtx.from.destination}; ${rtx.why}`];
         case 'loadGlobal':
             if (rtx.to.type !== 'register') throw debug('todo');
             return [`mov ${rtx.to.destination}, [rel ${rtx.from}]; ${rtx.why}`];
@@ -267,9 +264,12 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
             if (rtx.from.type !== 'register') throw debug('todo');
             return [`mov ${rtx.to.destination}, [${rtx.from.destination}]`];
         case 'storeMemory':
-            return [`mov [${rtx.address}], ${rtx.from}`];
+            if (rtx.address.type !== 'register') throw debug('todo');
+            if (rtx.from.type !== 'register') throw debug('todo');
+            return [`mov [${rtx.address.destination}], ${rtx.from.destination}`];
         case 'storeZeroToMemory':
-            return [`mov byte [${rtx.address}], 0`];
+            if (rtx.address.type !== 'register') throw debug('todo');
+            return [`mov byte [${rtx.address.destination}], 0`];
         case 'storeMemoryByte':
             if (rtx.contents.type !== 'register') throw debug('Need a register');
             if (rtx.address.type !== 'register') throw debug('Need a register');
