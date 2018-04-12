@@ -53,11 +53,16 @@ export const astToRegisterTransferLanguage = (
     switch (ast.kind) {
         case 'number':
             return compileExpression([], ([]) => [
-                { kind: 'loadImmediate', value: ast.value, destination: destination, why: '' },
+                { kind: 'loadImmediate', value: ast.value, destination: destination, why: 'Load number literal' },
             ]);
         case 'booleanLiteral':
             return compileExpression([], ([]) => [
-                { kind: 'loadImmediate', value: ast.value ? 1 : 0, destination: destination, why: '' },
+                {
+                    kind: 'loadImmediate',
+                    value: ast.value ? 1 : 0,
+                    destination,
+                    why: 'Load boolean literal',
+                },
             ]);
         case 'stringLiteral': {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
@@ -213,7 +218,7 @@ export const astToRegisterTransferLanguage = (
                 }
                 return recurse({
                     ast: argument,
-                    destination,
+                    destination: register,
                     currentTemporary: nextTemporary(currentTemporary),
                 });
             });
@@ -240,17 +245,11 @@ export const astToRegisterTransferLanguage = (
                 // Put left in s0 and right in s1 for passing to string equality function
                 const storeLeftInstructions = recurse({
                     ast: ast.lhs,
-                    destination: {
-                        type: 'register',
-                        destination: knownRegisters.argument1,
-                    },
+                    destination: knownRegisters.argument1,
                 });
                 const storeRightInstructions = recurse({
                     ast: ast.rhs,
-                    destination: {
-                        type: 'register',
-                        destination: knownRegisters.argument2,
-                    },
+                    destination: knownRegisters.argument2,
                 });
                 return compileExpression([storeLeftInstructions, storeRightInstructions], ([e1, e2]) => [
                     { kind: 'comment', why: 'Store left side in s0' },
@@ -261,8 +260,8 @@ export const astToRegisterTransferLanguage = (
                     {
                         kind: 'move',
                         from: knownRegisters.functionResult,
-                        to: (destination as any).destination,
-                        why: `Return value in ${knownRegisters.functionResult}. Move to destination`,
+                        to: destination,
+                        why: `Return value in ${knownRegisters.functionResult.destination}. Move to destination`,
                     },
                 ]);
             } else {
@@ -334,7 +333,7 @@ export const astToRegisterTransferLanguage = (
                             {
                                 kind: 'move',
                                 to: knownRegisters.argument1,
-                                from: currentTemporary.destination,
+                                from: currentTemporary,
                                 why: 'Put string pointer into temporary',
                             },
                             { kind: 'call', function: 'length', why: 'Get string length' },
@@ -353,7 +352,7 @@ export const astToRegisterTransferLanguage = (
                             {
                                 kind: 'move',
                                 to: knownRegisters.argument1,
-                                from: currentTemporary.destination,
+                                from: currentTemporary,
                                 why: 'Move destination to argument 1',
                             },
                             {

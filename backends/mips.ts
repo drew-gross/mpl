@@ -213,7 +213,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                             },
                         ]);
                     case 'String':
-                        if (!('destination' in savedPointerForFreeing)) throw debug('todo');
+                        if (savedPointerForFreeing.type !== 'register') throw debug('Need register');
                         const prepAndCleanup = {
                             prepare: [
                                 `lw ${
@@ -224,8 +224,8 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                             cleanup: [
                                 {
                                     kind: 'move',
-                                    from: savedPointerForFreeing.destination,
-                                    to: argument1,
+                                    from: savedPointerForFreeing,
+                                    to: knownRegisters.argument1,
                                     why: 'Move global to argument 1 of free',
                                 },
                                 { kind: 'call', function: 'my_free', why: 'Free string that is no longer accessible' },
@@ -345,6 +345,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     { kind: 'call', function: 'my_free', why: 'Freeing temporary from concat' },
                 ],
             };
+            debugger;
             return compileExpression([storeLeftInstructions, storeRightInstructions, cleanup], ([e1, e2, _]) => [
                 `# Create a temporary to store new string length. Start with 1 for null terminator.`,
                 `li ${newStringLengthTemporary.destination}, 1`,

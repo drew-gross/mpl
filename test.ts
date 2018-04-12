@@ -918,7 +918,6 @@ return quadrupleWithLocal(5);`,
 test('string length', compileAndRun, {
     source: `myStr: String = "test"; return length(myStr);`,
     expectedExitCode: 4,
-    printSubsteps: 'x64',
 });
 
 test('empty string length', compileAndRun, {
@@ -1040,12 +1039,11 @@ test('addition', compileAndRun, {
     expectedExitCode: 8,
 });
 
-test.only('two args', compileAndRun, {
+test('two args', compileAndRun, {
     source: `
 myAdd := a: Integer, b: Integer => a + b;
 return myAdd(7, 4);`,
     expectedExitCode: 11,
-    printSubsteps: 'mips',
 });
 
 test('two args with expression argument', compileAndRun, {
