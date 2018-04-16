@@ -122,7 +122,6 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
             if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
                 if (!declaration) throw debug('todo');
-                debugger;
                 return compileExpression([], ([]) => [
                     {
                         kind: 'loadGlobal',
@@ -133,11 +132,13 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
                     },
                 ]);
             }
-            const identifierRegister = (registerAssignment[identifierName] as any).destination;
+            const identifierRegister = registerAssignment[identifierName];
+            if (destination.type !== 'register') throw debug('need a register dest');
+            if (identifierRegister.type !== 'register') throw debug('need a register dest');
             return compileExpression([], ([]) => [
                 {
                     kind: 'move',
-                    to: (destination as any).destination,
+                    to: destination,
                     from: identifierRegister,
                     why: `Move from ${identifierName} (${identifierRegister}) into destination (${(destination as any)
                         .destination || (destination as any).spOffset})`,
@@ -231,9 +232,11 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
                 `sub ${rtx.destination.destination}, ${rtx.rhs.destination}`,
             ];
         case 'increment':
-            return [`inc ${rtx.register};`];
+            if (rtx.register.type !== 'register') throw debug('todo');
+            return [`inc ${rtx.register.destination};`];
         case 'addImmediate':
-            return [`add ${rtx.register}, ${rtx.amount}`];
+            if (rtx.register.type !== 'register') throw debug('todo');
+            return [`add ${rtx.register.destination}, ${rtx.amount}`];
         case 'gotoIfEqual':
             if (rtx.lhs.type !== 'register' || rtx.rhs.type !== 'register') throw debug('todo');
             return [`cmp ${rtx.lhs.destination}, ${rtx.rhs.destination}`, `je ${rtx.label}`];
