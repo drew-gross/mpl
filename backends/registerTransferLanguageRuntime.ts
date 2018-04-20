@@ -445,12 +445,12 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
             destination: knownRegisters.syscallArg4,
             why: 'flags arg, 2 = MAP_ANON | MAP_PRIVATE',
         },
-        {
+        /*{
             kind: 'loadImmediate',
             value: 0,
             destination: knownRegisters.syscallArg5,
             why: 'fd arg, unused',
-        },
+        },*/
         {
             kind: 'loadImmediate',
             value: 0,

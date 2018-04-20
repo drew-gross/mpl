@@ -915,9 +915,10 @@ return quadrupleWithLocal(5);`,
     expectedExitCode: 20,
 });
 
-test('string length', compileAndRun, {
+test.only('string length', compileAndRun, {
     source: `myStr: String = "test"; return length(myStr);`,
     expectedExitCode: 4,
+    printSubsteps: 'x64',
 });
 
 test('empty string length', compileAndRun, {

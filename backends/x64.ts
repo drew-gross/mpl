@@ -25,31 +25,10 @@ import { exec } from 'child-process-promise';
 import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 
-const sample = `
-; ----------------------------------------------------------------------------------------
-; Writes "Hello, World" to the console using only system calls. Runs on 64-bit macOS only.
-; ----------------------------------------------------------------------------------------
-
-          global    start
-
-          section   .text
-start:    mov       ,          ; system call for write
-          mov       rdi, 1                  ; file handle 1 is stdout
-          mov       rsi, message            ; address of string to output
-          mov       rdx, 13                 ; number of bytes
-          syscall                           ; invoke operating system to do the write
-          mov       rax,          ; system call for exit
-          mov       rdi, 3                ; exit code 3
-          syscall                           ; invoke operating system to exit
-
-          section   .data
-message:  db        "Hello, World", 10      ; note the newline at the end
-`;
-
 // TODO: unify with named registers in mips. Args are r8-r10, general purpose starts at r11.
 const firstRegister: StorageSpec = {
     type: 'register',
-    destination: 'r8',
+    destination: 'r11',
 };
 
 const knownRegisters: KnownRegisters = {
@@ -298,7 +277,7 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
 const saveRegistersCode = (numRegisters: number): string[] => {
     let result: string[] = [];
     while (numRegisters > 0) {
-        result.push(`push r${numRegisters + 7}`);
+        result.push(`push r${numRegisters + 11}`);
         numRegisters--;
     }
     return result;
@@ -307,7 +286,7 @@ const saveRegistersCode = (numRegisters: number): string[] => {
 const restoreRegistersCode = (numRegisters: number): string[] => {
     let result: string[] = [];
     while (numRegisters > 0) {
-        result.push(`pop r${numRegisters + 7}`);
+        result.push(`pop r${numRegisters + 11}`);
         numRegisters--;
     }
     return result.reverse();
