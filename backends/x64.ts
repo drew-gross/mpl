@@ -24,11 +24,12 @@ import { VariableDeclaration, BackendInputs, StringLiteralData } from '../api.js
 import { exec } from 'child-process-promise';
 import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
+import { execSync } from 'child_process';
 
 // TODO: unify with named registers in mips. Args are r8-r10, general purpose starts at r11.
 const firstRegister: StorageSpec = {
     type: 'register',
-    destination: 'r11',
+    destination: 'r12',
 };
 
 const knownRegisters: KnownRegisters = {
@@ -187,21 +188,20 @@ const assignX64Registers = (
     };
 };
 
-const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression): string[] => {
-    if (typeof rtx == 'string') return [rtx];
+const registerTransferExpressionToX64WithoutComment = (rtx: PureRegisterTransferLanguageExpression): string[] => {
     switch (rtx.kind) {
         case 'comment':
             return [`; ${rtx.why}`];
         case 'loadImmediate':
             if (rtx.destination.type !== 'register') throw debug('todo');
-            return [`mov ${rtx.destination.destination}, ${rtx.value}; ${rtx.why}`];
+            return [`mov ${rtx.destination.destination}, ${rtx.value}`];
         case 'move':
             if (rtx.to.type !== 'register') throw debug('todo');
             if (rtx.from.type !== 'register') throw debug('todo');
-            return [`mov ${rtx.to.destination}, ${rtx.from.destination}; ${rtx.why}`];
+            return [`mov ${rtx.to.destination}, ${rtx.from.destination}`];
         case 'returnValue':
             if (rtx.source.type !== 'register') throw debug('todo');
-            return [`mov ${knownRegisters.functionResult.destination}, ${rtx.source.destination}; ${rtx.why}`];
+            return [`mov ${knownRegisters.functionResult.destination}, ${rtx.source.destination}`];
         case 'subtract':
             if (rtx.lhs.type !== 'register') throw debug('todo');
             if (rtx.rhs.type !== 'register') throw debug('todo');
@@ -237,10 +237,10 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
         case 'storeGlobal':
             if (rtx.to.type !== 'register') throw debug('todo');
             if (rtx.from.type !== 'register') throw debug('todo');
-            return [`mov [rel ${rtx.to.destination}], ${rtx.from.destination}; ${rtx.why}`];
+            return [`mov [rel ${rtx.to.destination}], ${rtx.from.destination}`];
         case 'loadGlobal':
             if (rtx.to.type !== 'register') throw debug('todo');
-            return [`mov ${rtx.to.destination}, [rel ${rtx.from}]; ${rtx.why}`];
+            return [`mov ${rtx.to.destination}, [rel ${rtx.from}]`];
         case 'loadMemory':
             if (rtx.to.type !== 'register') throw debug('todo');
             if (rtx.from.type !== 'register') throw debug('todo');
@@ -262,9 +262,9 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
             return [`movsx ${rtx.to.destination}, byte [${rtx.address.destination}]`];
         case 'loadSymbolAddress':
             if (rtx.to.type !== 'register') throw debug('todo');
-            return [`mov ${rtx.to.destination}, ${rtx.symbolName}; ${rtx.why}`];
+            return [`lea ${rtx.to.destination}, [rel ${rtx.symbolName}]`];
         case 'call':
-            return [`call ${rtx.function}; ${rtx.why}`];
+            return [`call ${rtx.function}`];
         case 'returnToCaller':
             return [`ret`];
         case 'syscall':
@@ -272,6 +272,11 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
         default:
             throw debug(`${(rtx as any).kind} unhandled in registerTransferExpressionToX64`);
     }
+};
+
+const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression): string[] => {
+    if (typeof rtx == 'string') return [rtx];
+    return registerTransferExpressionToX64WithoutComment(rtx).map(asm => `${asm}; ${rtx.why}`);
 };
 
 const saveRegistersCode = (numRegisters: number): string[] => {
@@ -400,14 +405,20 @@ ${Object.keys(errors)
 `;
 };
 
+const x64toBinary = async x64Path => {
+    const linkerInputPath = await tmpFile({ postfix: '.o' });
+    const exePath = await tmpFile({ postfix: '.out' });
+    await exec(`nasm -fmacho64 -o ${linkerInputPath.path} ${x64Path}`);
+    await exec(`ld -o ${exePath.path} ${linkerInputPath.path}`);
+    return exePath;
+};
+
 export default {
     name: 'x64',
     toExectuable,
-    execute: async path => {
-        const linkerInputPath = await tmpFile({ postfix: '.o' });
-        const exePath = await tmpFile({ postfix: '.out' });
-        await exec(`nasm -fmacho64 -o ${linkerInputPath.path} ${path}`);
-        await exec(`ld -o ${exePath.path} ${linkerInputPath.path}`);
-        return execAndGetResult(exePath.path);
+    execute: async path => execAndGetResult((await x64toBinary(path)).path),
+    debug: async path => {
+        console.log(`lldb ${(await x64toBinary(path)).path}`);
+        execSync('sleep 10000000');
     },
 };

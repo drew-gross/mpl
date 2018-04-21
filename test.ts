@@ -919,6 +919,7 @@ test.only('string length', compileAndRun, {
     source: `myStr: String = "test"; return length(myStr);`,
     expectedExitCode: 4,
     printSubsteps: 'x64',
+    debugSubsteps: 'x64',
 });
 
 test('empty string length', compileAndRun, {
