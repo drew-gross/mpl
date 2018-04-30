@@ -441,21 +441,21 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         },
         {
             kind: 'loadImmediate',
-            value: 2,
+            value: 0x1002,
             destination: knownRegisters.syscallArg4,
-            why: 'flags arg, 2 = MAP_ANON | MAP_PRIVATE',
+            why: 'flags arg, 0x1002 = MAP_ANON | MAP_PRIVATE (according to dtruss)',
         },
-        /*{
+        {
             kind: 'loadImmediate',
-            value: 0,
+            value: -1,
             destination: knownRegisters.syscallArg5,
-            why: 'fd arg, unused',
-        },*/
+            why: 'fd arg, unused, set to -1 just in case',
+        },
         {
             kind: 'loadImmediate',
             value: 0,
             destination: knownRegisters.syscallArg6,
-            why: 'offset arg, unused',
+            why: 'offset arg, unused, set to 0',
         },
         {
             kind: 'loadImmediate',

@@ -40,7 +40,7 @@ const knownRegisters: KnownRegisters = {
     syscallArg1: { type: 'register', destination: 'rdi' },
     syscallArg2: { type: 'register', destination: 'rsi' },
     syscallArg3: { type: 'register', destination: 'rdx' },
-    syscallArg4: { type: 'register', destination: 'rcx' },
+    syscallArg4: { type: 'register', destination: 'r10' },
     syscallArg5: { type: 'register', destination: 'r8' },
     syscallArg6: { type: 'register', destination: 'r9' },
     syscallSelect: { type: 'register', destination: 'rax' },
@@ -395,7 +395,6 @@ ${join(flatten(x64Program.map(registerTransferExpressionToX64)), '\n')}
 
 section .data
 first_block: dq 0
-message: db "Must have writable segment", 10; newline mandatory. This exists to squelch dyld errors
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
 section .bss
 ${globalDeclarations.map(name => `${name.name}: resd 1`).join('\n')}
