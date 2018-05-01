@@ -341,7 +341,7 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
 ];
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
-    `${stringLiteralName(literal)}: db "${literal.value}", 10;`;
+    `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let x64Functions: RegisterTransferLanguageExpression[][] = functions.map(f =>
@@ -418,6 +418,8 @@ export default {
     execute: async path => execAndGetResult((await x64toBinary(path)).path),
     debug: async path => {
         console.log(`lldb ${(await x64toBinary(path)).path}`);
+        console.log(`break set -n start`);
+        console.log(`run`);
         execSync('sleep 10000000');
     },
 };
