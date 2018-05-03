@@ -109,9 +109,9 @@ export const astToRegisterTransferLanguage = (
                 currentTemporary: subExpressionTemporary,
             });
             return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
-                `# Store left side in temporary (${leftSideDestination.destination})`,
+                { kind: 'comment', why: `# Store left side in temporary (${leftSideDestination.destination})` },
                 ...storeLeft,
-                `# Store right side in destination (${rightSideDestination.destination})`,
+                { kind: 'comment', why: `# Store right side in destination (${rightSideDestination.destination})` },
                 ...storeRight,
                 {
                     kind: 'subtract',
@@ -141,9 +141,9 @@ export const astToRegisterTransferLanguage = (
                 currentTemporary: subExpressionTemporary,
             });
             return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
-                `# Store left side in temporary (${leftSideDestination.destination})`,
+                { kind: 'comment', why: `# Store left side in temporary (${leftSideDestination.destination})` },
                 ...storeLeft,
-                `# Store right side in destination (${rightSideDestination.destination})`,
+                { kind: 'comment', why: `# Store right side in destination (${rightSideDestination.destination})` },
                 ...storeRight,
                 {
                     kind: 'add',
