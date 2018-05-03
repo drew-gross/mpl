@@ -1,5 +1,11 @@
 import { errors } from '../runtime-strings.js';
-import { mallocWithMmap, length, stringCopy, KnownRegisters } from './registerTransferLanguageRuntime.js';
+import {
+    mallocWithMmap,
+    length,
+    stringCopy,
+    KnownRegisters,
+    verifyNoLeaks,
+} from './registerTransferLanguageRuntime.js';
 import join from '../util/join.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
@@ -29,7 +35,7 @@ import { execSync } from 'child_process';
 // TODO: unify with named registers in mips. Args are r8-r10, general purpose starts at r11.
 const firstRegister: StorageSpec = {
     type: 'register',
-    destination: 'r12',
+    destination: 'r11',
 };
 
 const knownRegisters: KnownRegisters = {
@@ -203,9 +209,9 @@ const registerTransferExpressionToX64WithoutComment = (rtx: PureRegisterTransfer
             if (rtx.source.type !== 'register') throw debug('todo');
             return [`mov ${knownRegisters.functionResult.destination}, ${rtx.source.destination}`];
         case 'subtract':
-            if (rtx.lhs.type !== 'register') throw debug('todo');
-            if (rtx.rhs.type !== 'register') throw debug('todo');
-            if (rtx.destination.type !== 'register') throw debug('todo');
+            if (rtx.lhs.type !== 'register') throw debug('Need a register');
+            if (rtx.rhs.type !== 'register') throw debug('Need a register');
+            if (rtx.destination.type !== 'register') throw debug('Need a register');
             return [
                 `mov ${rtx.destination.destination}, ${rtx.lhs.destination}`,
                 `sub ${rtx.destination.destination}, ${rtx.rhs.destination}`,
@@ -337,7 +343,15 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     ),
     //myFreeRuntimeFunction(),
     //stringConcatenateRuntimeFunction(),
-    //verifyNoLeaks(),
+    verifyNoLeaks(
+        bytesInWord,
+        syscallNumbers,
+        saveRegistersCode,
+        restoreRegistersCode,
+        knownRegisters,
+        firstRegister,
+        nextTemporary
+    ),
 ];
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>

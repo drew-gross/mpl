@@ -647,6 +647,7 @@ export const stringCopy: RuntimeFunctionGenerator = (
     ];
 };
 
+// TODO: figure out a way to verify that this is working
 export const verifyNoLeaks: RuntimeFunctionGenerator = (
     bytesInWord,
     syscallNumbers,
