@@ -95,6 +95,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'number':
         case 'returnStatement':
         case 'subtraction':
+        case 'addition':
         case 'ternary':
         case 'booleanLiteral':
         case 'functionLiteral':
@@ -216,6 +217,14 @@ const registerTransferExpressionToX64WithoutComment = (rtx: PureRegisterTransfer
             return [
                 `mov ${rtx.destination.destination}, ${rtx.lhs.destination}`,
                 `sub ${rtx.destination.destination}, ${rtx.rhs.destination}`,
+            ];
+        case 'add':
+            if (rtx.lhs.type !== 'register') throw debug('Need a register');
+            if (rtx.rhs.type !== 'register') throw debug('Need a register');
+            if (rtx.destination.type !== 'register') throw debug('Need a register');
+            return [
+                `mov ${rtx.destination.destination}, ${rtx.lhs.destination}`,
+                `add ${rtx.destination.destination}, ${rtx.rhs.destination}`,
             ];
         case 'increment':
             if (rtx.register.type !== 'register') throw debug('todo');
