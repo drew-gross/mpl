@@ -646,3 +646,81 @@ export const stringCopy: RuntimeFunctionGenerator = (
         { kind: 'returnToCaller', why: 'Done' },
     ];
 };
+
+export const verifyNoLeaks: RuntimeFunctionGenerator = (
+    bytesInWord,
+    syscallNumbers,
+    registerSaver,
+    registerRestorer,
+    knownRegisters,
+    firstRegister,
+    nextRegister
+): RegisterTransferLanguageExpression[] => {
+    const currentBlockPointer = firstRegister;
+    const currentData = nextRegister(currentBlockPointer);
+    return [
+        { kind: 'functionLabel', name: 'verify_no_leaks', why: 'verify_no_leaks' },
+        ...registerSaver(2),
+        {
+            kind: 'loadSymbolAddress',
+            symbolName: 'first_block',
+            to: currentBlockPointer,
+            why: 'Load first block address',
+        },
+        {
+            kind: 'loadMemory',
+            from: currentBlockPointer,
+            to: currentBlockPointer,
+            offset: 0,
+            why: 'Load first block pointer',
+        },
+        { kind: 'label', name: 'verify_no_leaks_loop', why: 'verify_no_leaks_loop' },
+        { kind: 'gotoIfZero', register: currentBlockPointer, label: 'verify_no_leaks_return', why: '' },
+        {
+            kind: 'loadMemory',
+            to: currentData,
+            from: currentBlockPointer,
+            offset: 2 * bytesInWord,
+            why: 'data = block->free',
+        },
+        {
+            kind: 'gotoIfNotEqual',
+            lhs: currentData,
+            rhs: { type: 'register', destination: '0' },
+            label: 'verify_no_leaks_advance_pointers',
+            why: "Don't error if free",
+        },
+        {
+            kind: 'loadSymbolAddress',
+            to: knownRegisters.syscallArg1,
+            symbolName: errors.leaksDetected.name,
+            why: 'Error to print',
+        },
+        {
+            kind: 'loadImmediate',
+            destination: knownRegisters.syscallSelect,
+            value: syscallNumbers.print,
+            why: 'Select Print Syscall',
+        },
+        { kind: 'syscall', why: 'syscall' },
+        {
+            kind: 'loadImmediate',
+            destination: knownRegisters.syscallSelect,
+            value: syscallNumbers.exit,
+            why: 'Select exit Syscall',
+        },
+        { kind: 'syscall', why: 'syscall' },
+        { kind: 'label', name: 'verify_no_leaks_advance_pointers', why: 'verify_no_leaks_advance_pointers' },
+        {
+            kind: 'loadMemory',
+            to: currentBlockPointer,
+            from: currentBlockPointer,
+            offset: 1 * bytesInWord,
+            why: 'block = block->next',
+        },
+        { kind: 'goto', label: 'verify_no_leaks_loop', why: 'Check next block' },
+        { kind: 'label', name: 'verify_no_leaks_return', why: '' },
+        ...registerRestorer(2),
+        { kind: 'returnToCaller', why: 'Done' },
+    ];
+};
