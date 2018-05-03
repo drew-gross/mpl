@@ -701,27 +701,54 @@ const myFreeRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
 };
 
 const verifyNoLeaks = (): RegisterTransferLanguageExpression[] => {
-    const currentBlockPointer = { type: 'register', destination: '$t1' } as StorageSpec;
-    const currentData = '$t2';
+    const currentBlockPointer = firstRegister;
+    const currentData = nextTemporary(currentBlockPointer);
     return [
-        `verify_no_leaks:`,
+        { kind: 'functionLabel', name: 'verify_no_leaks', why: 'verify_no_leaks' },
         ...saveRegistersCode(2),
-        `la ${(currentBlockPointer as any).destination}, first_block`,
-        `lw ${(currentBlockPointer as any).destination}, (${(currentBlockPointer as any).destination})`,
-        `verify_no_leaks_loop:`,
+        {
+            kind: 'loadSymbolAddress',
+            symbolName: 'first_block',
+            to: currentBlockPointer,
+            why: 'Load first block address',
+        },
+        {
+            kind: 'loadMemory',
+            from: currentBlockPointer,
+            to: currentBlockPointer,
+            offset: 0,
+            why: 'Load first block pointer',
+        },
+        { kind: 'label', name: 'verify_no_leaks_loop', why: 'verify_no_leaks_loop' },
         { kind: 'gotoIfZero', register: currentBlockPointer, label: 'verify_no_leaks_return', why: '' },
-        `lw ${currentData}, ${2 * bytesInWord}(${(currentBlockPointer as any).destination})`,
-        `bne ${currentData}, 0, verify_no_leaks_advance_pointers`,
+        {
+            kind: 'loadMemory',
+            to: currentData,
+            from: currentBlockPointer,
+            offset: 2 * bytesInWord,
+            why: 'data = block->free',
+        },
+        {
+            kind: 'gotoIfNotEqual',
+            lhs: currentData,
+            rhs: { type: 'register', destination: '0' },
+            label: 'verify_no_leaks_advance_pointers',
+            why: "Don't error if free",
+        },
         `la $a0, ${errors.leaksDetected.name}`,
         `li $v0, 4`,
         `syscall`,
         `li $v0, 10`,
         `syscall`,
-        `verify_no_leaks_advance_pointers:`,
-        `lw ${(currentBlockPointer as any).destination}, ${1 * bytesInWord}(${
-            (currentBlockPointer as any).destination
-        })`,
-        `b verify_no_leaks_loop`,
+        { kind: 'label', name: 'verify_no_leaks_advance_pointers', why: 'verify_no_leaks_advance_pointers' },
+        {
+            kind: 'loadMemory',
+            to: currentBlockPointer,
+            from: currentBlockPointer,
+            offset: 1 * bytesInWord,
+            why: 'block = block->next',
+        },
+        { kind: 'goto', label: 'verify_no_leaks_loop', why: 'Check next block' },
         { kind: 'label', name: 'verify_no_leaks_return', why: '' },
         ...restoreRegistersCode(2),
         `jr $ra`,
