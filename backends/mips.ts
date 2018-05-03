@@ -25,7 +25,7 @@ import {
     stringCopy,
     KnownRegisters,
     verifyNoLeaks,
-    printRuntimeFunction,
+    printWithPrintRuntimeFunction,
 } from './registerTransferLanguageRuntime.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
@@ -694,7 +694,7 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
         firstRegister,
         nextTemporary
     ),
-    printRuntimeFunction(
+    printWithPrintRuntimeFunction(
         bytesInWord,
         syscallNumbers,
         saveRegistersCode,

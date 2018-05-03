@@ -600,6 +600,13 @@ export const length: RuntimeFunctionGenerator = (
         { kind: 'increment', register: knownRegisters.argument1, why: 'Bump length counter' },
         { kind: 'goto', label: 'length_loop', why: 'Go count another char' },
         { kind: 'label', name: 'length_return', why: 'Done' },
+        {
+            kind: 'subtract',
+            lhs: knownRegisters.argument1,
+            rhs: knownRegisters.functionResult,
+            destination: knownRegisters.argument1,
+            why: 'Repair pointer passed in arg1 so caller can still use it',
+        },
         ...registerRestorer(1),
         { kind: 'returnToCaller', why: 'Done' },
     ];
@@ -647,7 +654,7 @@ export const stringCopy: RuntimeFunctionGenerator = (
     ];
 };
 
-export const printRuntimeFunction: RuntimeFunctionGenerator = (
+export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = (
     bytesInWord,
     syscallNumbers,
     registerSaver,
@@ -669,6 +676,59 @@ export const printRuntimeFunction: RuntimeFunctionGenerator = (
             to: knownRegisters.syscallArg1,
             from: knownRegisters.argument1,
             why: 'Move print argument to syscall argument',
+        },
+        { kind: 'syscall', why: 'Print' },
+        {
+            kind: 'move',
+            from: knownRegisters.syscallResult,
+            to: knownRegisters.functionResult,
+            why: 'Move syscall result to function result',
+        },
+        { kind: 'returnToCaller', why: 'Return' },
+    ];
+};
+
+export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = (
+    bytesInWord,
+    syscallNumbers,
+    registerSaver,
+    registerRestorer,
+    knownRegisters,
+    firstRegister,
+    nextRegister
+): RegisterTransferLanguageExpression[] => {
+    return [
+        { kind: 'functionLabel', name: 'print', why: 'Print: string->' },
+        {
+            kind: 'call',
+            function: 'length',
+            why: 'Call length on argument so we can pass it to write(2). (Arugment is already in argument register)',
+        },
+        {
+            kind: 'loadImmediate',
+            destination: knownRegisters.syscallArg1,
+            value: 1,
+            why: `Load stdout fd into argument 1 of write(2) (stdout fd is 1) syscallArg1: ${
+                knownRegisters.syscallArg1.destination
+            }`,
+        },
+        {
+            kind: 'move',
+            from: knownRegisters.argument1,
+            to: knownRegisters.syscallArg2,
+            why: 'Put string ptr in arg 2 of write(2)',
+        },
+        {
+            kind: 'move',
+            from: knownRegisters.functionResult,
+            to: knownRegisters.syscallArg3,
+            why: '3rd argument to write(2) is length',
+        },
+        {
+            kind: 'loadImmediate',
+            destination: knownRegisters.syscallSelect,
+            value: syscallNumbers.print,
+            why: 'Select print',
         },
         { kind: 'syscall', why: 'Print' },
         {

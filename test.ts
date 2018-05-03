@@ -1113,7 +1113,7 @@ return threeArgs(7, 4, "notAnInteger");`,
     ],
 });
 
-test('print', compileAndRun, {
+test.only('print', compileAndRun, {
     source: `
 dummy := print("sample_string");
 return 1;`,

@@ -5,6 +5,7 @@ import {
     stringCopy,
     KnownRegisters,
     verifyNoLeaks,
+    printWithWriteRuntimeFunction,
 } from './registerTransferLanguageRuntime.js';
 import join from '../util/join.js';
 import { isEqual } from 'lodash';
@@ -321,7 +322,15 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
         firstRegister,
         nextTemporary
     ),
-    //printRuntimeFunction(),
+    printWithWriteRuntimeFunction(
+        bytesInWord,
+        syscallNumbers,
+        saveRegistersCode,
+        restoreRegistersCode,
+        knownRegisters,
+        firstRegister,
+        nextTemporary
+    ),
     //stringEqualityRuntimeFunction(),
     stringCopy(
         bytesInWord,
