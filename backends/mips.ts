@@ -25,6 +25,7 @@ import {
     stringCopy,
     KnownRegisters,
     verifyNoLeaks,
+    printRuntimeFunction,
 } from './registerTransferLanguageRuntime.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
@@ -578,32 +579,6 @@ const syscallNumbers = {
     exit: 10,
 };
 
-const printRuntimeFunction = (): PureRegisterTransferLanguageExpression[] => {
-    return [
-        { kind: 'functionLabel', name: 'print', why: 'Print: string->' },
-        {
-            kind: 'loadImmediate',
-            destination: { type: 'register', destination: syscallSelect },
-            value: syscallNumbers.print,
-            why: 'Select print',
-        },
-        {
-            kind: 'move',
-            to: { type: 'register', destination: syscallArg1 },
-            from: { type: 'register', destination: argument1 },
-            why: 'Move print argument to syscall argument',
-        },
-        { kind: 'syscall', why: 'Print' },
-        {
-            kind: 'move',
-            from: { type: 'register', destination: syscallResult },
-            to: { type: 'register', destination: functionResult },
-            why: 'Move syscall result to function result',
-        },
-        { kind: 'returnToCaller', why: 'Return' },
-    ];
-};
-
 const stringEqualityRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     const leftByte = '$t1';
     const rightByte = '$t2';
@@ -719,7 +694,15 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
         firstRegister,
         nextTemporary
     ),
-    printRuntimeFunction(),
+    printRuntimeFunction(
+        bytesInWord,
+        syscallNumbers,
+        saveRegistersCode,
+        restoreRegistersCode,
+        knownRegisters,
+        firstRegister,
+        nextTemporary
+    ),
     stringEqualityRuntimeFunction(),
     stringCopy(
         bytesInWord,

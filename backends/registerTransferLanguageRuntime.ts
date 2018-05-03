@@ -647,6 +647,40 @@ export const stringCopy: RuntimeFunctionGenerator = (
     ];
 };
 
+export const printRuntimeFunction: RuntimeFunctionGenerator = (
+    bytesInWord,
+    syscallNumbers,
+    registerSaver,
+    registerRestorer,
+    knownRegisters,
+    firstRegister,
+    nextRegister
+): RegisterTransferLanguageExpression[] => {
+    return [
+        { kind: 'functionLabel', name: 'print', why: 'Print: string->' },
+        {
+            kind: 'loadImmediate',
+            destination: knownRegisters.syscallSelect,
+            value: syscallNumbers.print,
+            why: 'Select print',
+        },
+        {
+            kind: 'move',
+            to: knownRegisters.syscallArg1,
+            from: knownRegisters.argument1,
+            why: 'Move print argument to syscall argument',
+        },
+        { kind: 'syscall', why: 'Print' },
+        {
+            kind: 'move',
+            from: knownRegisters.syscallResult,
+            to: knownRegisters.functionResult,
+            why: 'Move syscall result to function result',
+        },
+        { kind: 'returnToCaller', why: 'Return' },
+    ];
+};
+
 // TODO: figure out a way to verify that this is working
 export const verifyNoLeaks: RuntimeFunctionGenerator = (
     bytesInWord,
