@@ -735,11 +735,26 @@ const verifyNoLeaks = (): RegisterTransferLanguageExpression[] => {
             label: 'verify_no_leaks_advance_pointers',
             why: "Don't error if free",
         },
-        `la $a0, ${errors.leaksDetected.name}`,
-        `li $v0, 4`,
-        `syscall`,
-        `li $v0, 10`,
-        `syscall`,
+        {
+            kind: 'loadSymbolAddress',
+            to: knownRegisters.syscallArg1,
+            symbolName: errors.leaksDetected.name,
+            why: 'Error to print',
+        },
+        {
+            kind: 'loadImmediate',
+            destination: knownRegisters.syscallSelect,
+            value: syscallNumbers.print,
+            why: 'Select Print Syscall',
+        },
+        { kind: 'syscall', why: 'syscall' },
+        {
+            kind: 'loadImmediate',
+            destination: knownRegisters.syscallSelect,
+            value: syscallNumbers.exit,
+            why: 'Select exit Syscall',
+        },
+        { kind: 'syscall', why: 'syscall' },
         { kind: 'label', name: 'verify_no_leaks_advance_pointers', why: 'verify_no_leaks_advance_pointers' },
         {
             kind: 'loadMemory',
@@ -751,7 +766,7 @@ const verifyNoLeaks = (): RegisterTransferLanguageExpression[] => {
         { kind: 'goto', label: 'verify_no_leaks_loop', why: 'Check next block' },
         { kind: 'label', name: 'verify_no_leaks_return', why: '' },
         ...restoreRegistersCode(2),
-        `jr $ra`,
+        { kind: 'returnToCaller', why: 'Done' },
     ];
 };
 
