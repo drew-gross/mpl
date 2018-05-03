@@ -337,7 +337,7 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     ),
     //myFreeRuntimeFunction(),
     //stringConcatenateRuntimeFunction(),
-    //verifyNoLeaks(),
+    verifyNoLeaks(),
 ];
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
