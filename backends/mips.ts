@@ -56,8 +56,6 @@ const knownRegisters: KnownRegisters = {
     syscallResult: { type: 'register', destination: syscallResult },
 };
 
-const add = ({ l, r, to }: { l: string; r: string; to: string }) => `add ${to}, ${l}, ${r}`;
-
 const multiplyMips = (destination, left, right) => {
     let leftRegister = left.destination;
     let loadSpilled: any = [];
@@ -130,6 +128,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
         case 'number':
         case 'returnStatement':
         case 'subtraction':
+        case 'addition':
         case 'ternary':
         case 'booleanLiteral':
         case 'functionLiteral':
@@ -160,37 +159,6 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 ...storeRight,
                 `# Evaluate product`,
                 multiplyMips(destination, leftSideDestination, rightSideDestination),
-            ]);
-        }
-        case 'addition': {
-            if (destination.type !== 'register') throw debug('todo');
-            const leftSideDestination = currentTemporary;
-            if (leftSideDestination.type !== 'register') throw debug('todo');
-            const rightSideDestination = destination;
-            if (rightSideDestination.type !== 'register') throw debug('todo');
-            const subExpressionTemporary = nextTemporary(currentTemporary);
-
-            const storeLeftInstructions = recurse({
-                ast: ast.lhs,
-                destination: leftSideDestination,
-                currentTemporary: subExpressionTemporary,
-            });
-            const storeRightInstructions = recurse({
-                ast: ast.rhs,
-                destination: rightSideDestination,
-                currentTemporary: subExpressionTemporary,
-            });
-            return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
-                `# Store left side in temporary (${leftSideDestination.destination})`,
-                ...storeLeft,
-                `# Store right side in destination (${rightSideDestination.destination})`,
-                ...storeRight,
-                `# Evaluate addition`,
-                add({
-                    l: leftSideDestination.destination,
-                    r: rightSideDestination.destination,
-                    to: destination.destination,
-                }),
             ]);
         }
         case 'reassignment': {
@@ -352,7 +320,6 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     { kind: 'call', function: 'my_free', why: 'Freeing temporary from concat' },
                 ],
             };
-            debugger;
             return compileExpression([storeLeftInstructions, storeRightInstructions, cleanup], ([e1, e2, _]) => [
                 `# Create a temporary to store new string length. Start with 1 for null terminator.`,
                 `li ${newStringLengthTemporary.destination}, 1`,
@@ -366,24 +333,28 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     to: { type: 'register', destination: argument1 },
                     why: 'Move lhs to argument1',
                 },
-                { kind: 'call', function: 'length', why: 'Compute the length of lhs and add it to length temporary' },
-                add({
-                    l: functionResult,
-                    r: newStringLengthTemporary.destination,
-                    to: newStringLengthTemporary.destination,
-                }),
+                { kind: 'call', function: 'length', why: 'Compute the length of lhs' },
+                {
+                    kind: 'add',
+                    lhs: knownRegisters.functionResult,
+                    rhs: newStringLengthTemporary,
+                    destination: newStringLengthTemporary,
+                    why: 'add lhs length to length temporary',
+                },
                 {
                     kind: 'move',
                     from: rightSideDestination,
                     to: { type: 'register', destination: argument1 },
                     why: 'Move rhs to argument1',
                 },
-                { kind: 'call', function: 'length', why: 'Compute the length of rhs and add it to length temporary' },
-                add({
-                    l: functionResult,
-                    r: newStringLengthTemporary.destination,
-                    to: newStringLengthTemporary.destination,
-                }),
+                { kind: 'call', function: 'length', why: 'Compute the length of lhs' },
+                {
+                    kind: 'add',
+                    lhs: knownRegisters.functionResult,
+                    rhs: newStringLengthTemporary,
+                    destination: newStringLengthTemporary,
+                    why: 'add rhs length to length temporary',
+                },
                 {
                     kind: 'move',
                     from: newStringLengthTemporary,
@@ -498,6 +469,11 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
         case 'addImmediate':
             if (rtx.register.type !== 'register') throw debug('need a registe');
             return `addiu ${rtx.register.destination}, ${rtx.amount}`;
+        case 'add':
+            if (rtx.lhs.type !== 'register') throw debug('todo');
+            if (rtx.rhs.type !== 'register') throw debug('todo');
+            if (rtx.destination.type !== 'register') throw debug('todo');
+            return `add ${rtx.destination.destination}, ${rtx.lhs.destination}, ${rtx.rhs.destination}`;
         case 'returnValue':
             if (rtx.source.type !== 'register') throw debug('todo');
             return `move ${functionResult}, ${rtx.source.destination}`;

@@ -18,6 +18,7 @@ export type PureRegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'loadImmediate'; value: number; destination: StorageSpec }
     | { kind: 'addImmediate'; register: StorageSpec; amount: number }
     | { kind: 'subtract'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec }
+    | { kind: 'add'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec }
     | { kind: 'increment'; register: StorageSpec }
     | { kind: 'label'; name: string }
     | { kind: 'functionLabel'; name: string }
@@ -118,6 +119,38 @@ export const astToRegisterTransferLanguage = (
                     rhs: rightSideDestination,
                     destination: destination,
                     why: 'Evaluate subtraction',
+                },
+            ]);
+        }
+        case 'addition': {
+            if (destination.type !== 'register') throw debug('todo');
+            const leftSideDestination = currentTemporary;
+            if (leftSideDestination.type !== 'register') throw debug('todo');
+            const rightSideDestination = destination;
+            if (rightSideDestination.type !== 'register') throw debug('todo');
+            const subExpressionTemporary = nextTemporary(currentTemporary);
+
+            const storeLeftInstructions = recurse({
+                ast: ast.lhs,
+                destination: leftSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+            const storeRightInstructions = recurse({
+                ast: ast.rhs,
+                destination: rightSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+            return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
+                `# Store left side in temporary (${leftSideDestination.destination})`,
+                ...storeLeft,
+                `# Store right side in destination (${rightSideDestination.destination})`,
+                ...storeRight,
+                {
+                    kind: 'add',
+                    lhs: leftSideDestination,
+                    rhs: rightSideDestination,
+                    destination: destination,
+                    why: 'Evaluate addition',
                 },
             ]);
         }
