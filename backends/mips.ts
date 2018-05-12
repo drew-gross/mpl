@@ -347,27 +347,36 @@ const syscallNumbers = {
 };
 
 const stringEqualityRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
-    const leftByte = '$t1';
-    const rightByte = '$t2';
+    const leftByte: StorageSpec = { type: 'register', destination: '$t1' };
+    const rightByte: StorageSpec = { type: 'register', destination: '$t2' };
     return [
         `stringEquality:`,
         ...saveRegistersCode(2),
         `# Assume equal. Write 1 to $a0. Overwrite if difference found.`,
         `li ${functionResult}, 1`,
         { kind: 'label', name: 'stringEquality_loop', why: 'Check a char, (string*, string*) -> bool' },
-        `# load current chars into temporaries`,
-        `lb ${leftByte}, (${argument1})`,
-        `lb ${rightByte}, (${argument2})`,
+        {
+            kind: 'loadMemoryByte',
+            to: leftByte,
+            address: knownRegisters.argument1,
+            why: 'Load current left char into temporary',
+        },
+        {
+            kind: 'loadMemoryByte',
+            to: rightByte,
+            address: knownRegisters.argument2,
+            why: 'Load current right char into temporary',
+        },
         `# Inequal: return false`,
-        `bne ${leftByte}, ${rightByte}, stringEquality_return_false`,
+        `bne ${leftByte.destination}, ${rightByte.destination}, stringEquality_return_false`,
         {
             kind: 'gotoIfZero',
-            register: { type: 'register', destination: leftByte },
+            register: leftByte,
             label: 'stringEquality_return',
             why: 'Both side are equal. If both sides are null, return.',
         },
-        { kind: 'increment', register: { type: 'register', destination: argument1 }, why: 'Bump lhs to next char' },
-        { kind: 'increment', register: { type: 'register', destination: argument2 }, why: 'Bump rhs to next char' },
+        { kind: 'increment', register: knownRegisters.argument1, why: 'Bump lhs to next char' },
+        { kind: 'increment', register: knownRegisters.argument2, why: 'Bump rhs to next char' },
         { kind: 'goto', label: 'stringEquality_loop', why: 'Check next char' },
         `stringEquality_return_false:`,
         `li ${functionResult}, 0`,
@@ -378,40 +387,39 @@ const stringEqualityRuntimeFunction = (): RegisterTransferLanguageExpression[] =
 };
 
 const stringConcatenateRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
-    const left = argument1;
-    const right = argument2;
-    const out = argument3;
-    const currentChar = '$t1';
+    const left = knownRegisters.argument1;
+    const right = knownRegisters.argument2;
+    const out = knownRegisters.argument3;
+    const currentChar: StorageSpec = { type: 'register', destination: '$t1' };
     return [
-        `string_concatenate:`,
+        { kind: 'functionLabel', name: 'string_concatenate', why: 'string_concatenate' },
         ...saveRegistersCode(1),
-        `# Load byte from left`,
         `write_left_loop:`,
-        `lb ${currentChar}, (${left}),`,
+        { kind: 'loadMemoryByte', to: currentChar, address: left, why: 'Load byte from left' },
         {
             kind: 'gotoIfZero',
-            register: { type: 'register', destination: currentChar },
+            register: currentChar,
             label: 'copy_from_right',
             why: 'If found lefts null terminator, start copying right',
         },
         `# Else, write to out, bump pointers, and loop`,
-        `sb ${currentChar}, (${out})`,
-        `addiu ${left}, ${left}, 1`,
-        `addiu ${out}, ${out}, 1`,
+        `sb ${currentChar.destination}, (${out.destination})`,
+        `addiu ${left.destination}, ${left.destination}, 1`,
+        `addiu ${out.destination}, ${out.destination}, 1`,
         `b write_left_loop`,
         { kind: 'label', name: 'copy_from_right', why: '' },
-        `lb ${currentChar}, (${right})`,
+        { kind: 'loadMemoryByte', to: currentChar, address: right, why: 'Load byte from left' },
         `# always write (to get null terminator)`,
-        `sb ${currentChar}, (${out})`,
+        `sb ${currentChar.destination}, (${out.destination})`,
         {
             kind: 'gotoIfZero',
-            register: { type: 'register', destination: currentChar },
+            register: currentChar,
             label: 'concatenate_return',
             why: 'If we just wrote a null terminator, we are done',
         },
         `# Else bump pointers and loop`,
-        `addiu ${right}, ${right}, 1`,
-        `addiu ${out}, ${out}, 1,`,
+        `addiu ${right.destination}, ${right.destination}, 1`,
+        `addiu ${out.destination}, ${out.destination}, 1,`,
         { kind: 'goto', label: 'copy_from_right', why: 'Go copy next char' },
         { kind: 'label', name: 'concatenate_return', why: '' },
         ...restoreRegistersCode(1),
