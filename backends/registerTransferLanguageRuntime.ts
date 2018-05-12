@@ -819,3 +819,54 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = (
         { kind: 'returnToCaller', why: 'Done' },
     ];
 };
+
+export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = (
+    bytesInWord,
+    syscallNumbers,
+    registerSaver,
+    registerRestorer,
+    knownRegisters,
+    firstRegister,
+    nextRegister
+): RegisterTransferLanguageExpression[] => {
+    const left = knownRegisters.argument1;
+    const right = knownRegisters.argument2;
+    const out = knownRegisters.argument3;
+    const currentChar = firstRegister;
+    return [
+        { kind: 'functionLabel', name: 'string_concatenate', why: 'string_concatenate' },
+        ...registerSaver(1),
+        { kind: 'label', name: 'write_left_loop', why: 'write_left_loop' },
+        { kind: 'loadMemoryByte', to: currentChar, address: left, why: 'Load byte from left' },
+        {
+            kind: 'gotoIfZero',
+            register: currentChar,
+            label: 'copy_from_right',
+            why: 'If found lefts null terminator, start copying right',
+        },
+        { kind: 'storeMemoryByte', contents: currentChar, address: out, why: 'Write byte to output' },
+        { kind: 'increment', register: left, why: 'Bump left pointer' },
+        { kind: 'increment', register: out, why: 'Bump out pointer' },
+        { kind: 'goto', label: 'write_left_loop', why: 'Loop to next char' },
+        { kind: 'label', name: 'copy_from_right', why: 'copy_from_right' },
+        { kind: 'loadMemoryByte', to: currentChar, address: right, why: 'Load byte from left' },
+        {
+            kind: 'storeMemoryByte',
+            contents: currentChar,
+            address: out,
+            why: 'Write before checking for null terminator because we want to write null terminator',
+        },
+        {
+            kind: 'gotoIfZero',
+            register: currentChar,
+            label: 'concatenate_return',
+            why: 'If we just wrote a null terminator, we are done',
+        },
+        { kind: 'increment', register: right, why: 'Bump right pointer' },
+        { kind: 'increment', register: out, why: 'Bump out pointer' },
+        { kind: 'goto', label: 'copy_from_right', why: 'Go copy next char' },
+        { kind: 'label', name: 'concatenate_return', why: '' },
+        ...registerRestorer(1),
+        { kind: 'returnToCaller', why: 'Return' },
+    ];
+};
