@@ -418,6 +418,106 @@ export const astToRegisterTransferLanguage = (
                 throw debug('todo');
             }
         }
+        case 'reassignment': {
+            const lhs = ast.destination;
+            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
+                const subExpressionTemporary = nextTemporary(currentTemporary);
+                const savedPointerForFreeing = subExpressionTemporary;
+                const rhs: CompiledExpression = recurse({
+                    ast: ast.expression,
+                    destination: currentTemporary,
+                    currentTemporary: nextTemporary(subExpressionTemporary),
+                });
+                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
+                if (!declaration) throw debug('todo');
+                if (currentTemporary.type !== 'register') throw debug('todo');
+                switch (declaration.type.name) {
+                    case 'Function':
+                    case 'Integer':
+                        return compileExpression([rhs], ([e1]) => [
+                            { kind: 'comment', why: `Put ${declaration.type.name} into temporary` },
+                            ...e1,
+                            {
+                                kind: 'storeGlobal',
+                                from: currentTemporary,
+                                to: { type: 'register', destination: lhs },
+                                why: 'Store into global',
+                            },
+                        ]);
+                    case 'String':
+                        if (savedPointerForFreeing.type !== 'register') throw debug('Need register');
+                        const prepAndCleanup = {
+                            prepare: [
+                                {
+                                    kind: 'loadGlobal',
+                                    to: savedPointerForFreeing,
+                                    from: lhs,
+                                    why: 'Save global for freeing after assignment',
+                                } as RegisterTransferLanguageExpression,
+                            ],
+                            execute: [],
+                            cleanup: [
+                                {
+                                    kind: 'move',
+                                    from: savedPointerForFreeing,
+                                    to: knownRegisters.argument1,
+                                    why: 'Move global to argument 1 of free',
+                                },
+                                { kind: 'call', function: 'my_free', why: 'Free string that is no longer accessible' },
+                            ] as RegisterTransferLanguageExpression[],
+                        };
+                        return compileExpression([rhs, prepAndCleanup], ([e1, _]) => [
+                            ...e1,
+                            {
+                                kind: 'move',
+                                from: currentTemporary,
+                                to: knownRegisters.argument1,
+                                why: 'Move from temporary to argument 1',
+                            },
+                            { kind: 'call', function: 'length', why: 'Get length of new string' },
+                            {
+                                kind: 'move',
+                                from: knownRegisters.functionResult,
+                                to: knownRegisters.argument1,
+                                why: 'Move length of new string to argument of malloc',
+                            },
+                            { kind: 'call', function: 'my_malloc', why: 'Allocate space for new string' },
+                            {
+                                kind: 'storeGlobal',
+                                from: knownRegisters.functionResult,
+                                to: { type: 'register', destination: lhs },
+                                why: 'Store location of allocated memory to global',
+                            },
+                            {
+                                kind: 'move',
+                                from: knownRegisters.functionResult,
+                                to: knownRegisters.argument2,
+                                why: 'Move output pointer to argument 2 of string_copy',
+                            },
+                            {
+                                kind: 'move',
+                                from: currentTemporary,
+                                to: knownRegisters.argument1,
+                                why: 'move destination to argument 1 of string_copy',
+                            },
+                            { kind: 'call', function: 'string_copy', why: 'Copy new string to destination' },
+                        ]);
+                    default:
+                        throw debug('todo');
+                }
+            } else if (lhs in registerAssignment) {
+                return recurse({
+                    ast: ast.expression,
+                    // TODO: Allow spilling of variables
+                    destination: {
+                        type: 'register',
+                        destination: `${(registerAssignment[lhs] as any).destination}`,
+                    },
+                });
+            } else {
+                throw debug('todo');
+            }
+        }
         default:
             throw debug('todo');
     }
