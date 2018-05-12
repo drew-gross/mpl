@@ -32,24 +32,19 @@ import { builtinFunctions } from '../frontend.js';
 import join from '../util/join.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
-const syscallArg1 = '$a0';
-const syscallArg2 = '$a1';
-const syscallResult = '$v0';
-const syscallSelect = '$v0';
-const functionResult = '$a0';
 const knownRegisters: KnownRegisters = {
     argument1: { type: 'register', destination: '$s0' },
     argument2: { type: 'register', destination: '$s1' },
     argument3: { type: 'register', destination: '$s2' },
-    functionResult: { type: 'register', destination: functionResult },
-    syscallArg1: { type: 'register', destination: syscallArg1 },
-    syscallArg2: { type: 'register', destination: syscallArg2 },
+    functionResult: { type: 'register', destination: '$a0' },
+    syscallArg1: { type: 'register', destination: '$a0' },
+    syscallArg2: { type: 'register', destination: '$a1' },
     syscallArg3: { type: 'register', destination: 'unused' },
     syscallArg4: { type: 'register', destination: 'unused' },
     syscallArg5: { type: 'register', destination: 'unused' },
     syscallArg6: { type: 'register', destination: 'unused' },
-    syscallSelect: { type: 'register', destination: syscallSelect },
-    syscallResult: { type: 'register', destination: syscallResult },
+    syscallSelect: { type: 'register', destination: '$v0' },
+    syscallResult: { type: 'register', destination: '$v0' },
 };
 
 const multiplyMips = (destination, left, right) => {
@@ -263,7 +258,7 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
             return `add ${rtx.destination.destination}, ${rtx.lhs.destination}, ${rtx.rhs.destination}`;
         case 'returnValue':
             if (rtx.source.type !== 'register') throw debug('todo');
-            return `move ${functionResult}, ${rtx.source.destination}`;
+            return `move ${knownRegisters.functionResult.destination}, ${rtx.source.destination}`;
         case 'subtract':
             if (rtx.lhs.type !== 'register') throw debug('todo');
             if (rtx.rhs.type !== 'register') throw debug('todo');
@@ -349,7 +344,7 @@ const stringEqualityRuntimeFunction = (): RegisterTransferLanguageExpression[] =
         `stringEquality:`,
         ...saveRegistersCode(2),
         `# Assume equal. Write 1 to $a0. Overwrite if difference found.`,
-        `li ${functionResult}, 1`,
+        `li ${knownRegisters.functionResult.destination}, 1`,
         { kind: 'label', name: 'stringEquality_loop', why: 'Check a char, (string*, string*) -> bool' },
         {
             kind: 'loadMemoryByte',
@@ -375,7 +370,7 @@ const stringEqualityRuntimeFunction = (): RegisterTransferLanguageExpression[] =
         { kind: 'increment', register: knownRegisters.argument2, why: 'Bump rhs to next char' },
         { kind: 'goto', label: 'stringEquality_loop', why: 'Check next char' },
         `stringEquality_return_false:`,
-        `li ${functionResult}, 0`,
+        `li ${knownRegisters.functionResult.destination}, 0`,
         { kind: 'label', name: 'stringEquality_return', why: '' },
         ...restoreRegistersCode(2),
         `jr $ra`,
@@ -513,7 +508,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             astToMips,
             globalDeclarations,
             stringLiterals,
-            functionResult,
+            knownRegisters.functionResult.destination,
             [
                 knownRegisters.argument1.destination,
                 knownRegisters.argument2.destination,
