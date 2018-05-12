@@ -191,9 +191,12 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                         if (savedPointerForFreeing.type !== 'register') throw debug('Need register');
                         const prepAndCleanup = {
                             prepare: [
-                                `lw ${
-                                    savedPointerForFreeing.destination
-                                }, ${lhs} # Save global for freeing after assignment`,
+                                {
+                                    kind: 'loadGlobal',
+                                    to: savedPointerForFreeing,
+                                    from: lhs,
+                                    why: 'Save global for freeing after assignment',
+                                } as RegisterTransferLanguageExpression,
                             ],
                             execute: [],
                             cleanup: [
