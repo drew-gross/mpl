@@ -2,3 +2,4 @@ node_modules/
 built/
 npm-debug.log
 mpl.sublime-workspace
+package-lock.json
