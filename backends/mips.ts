@@ -373,7 +373,7 @@ const stringEqualityRuntimeFunction = (): RegisterTransferLanguageExpression[] =
         `li ${knownRegisters.functionResult.destination}, 0`,
         { kind: 'label', name: 'stringEquality_return', why: '' },
         ...restoreRegistersCode(2),
-        `jr $ra`,
+        { kind: 'returnToCaller', why: 'Return' },
     ];
 };
 
@@ -385,7 +385,7 @@ const stringConcatenateRuntimeFunction = (): RegisterTransferLanguageExpression[
     return [
         { kind: 'functionLabel', name: 'string_concatenate', why: 'string_concatenate' },
         ...saveRegistersCode(1),
-        `write_left_loop:`,
+        { kind: 'label', name: 'write_left_loop', why: 'write_left_loop' },
         { kind: 'loadMemoryByte', to: currentChar, address: left, why: 'Load byte from left' },
         {
             kind: 'gotoIfZero',
@@ -397,8 +397,8 @@ const stringConcatenateRuntimeFunction = (): RegisterTransferLanguageExpression[
         `# Else, write to out, bump pointers, and loop`,
         `addiu ${left.destination}, ${left.destination}, 1`,
         `addiu ${out.destination}, ${out.destination}, 1`,
-        `b write_left_loop`,
-        { kind: 'label', name: 'copy_from_right', why: '' },
+        { kind: 'goto', label: 'write_left_loop', why: 'Loop to next char' },
+        { kind: 'label', name: 'copy_from_right', why: 'copy_from_right' },
         { kind: 'loadMemoryByte', to: currentChar, address: right, why: 'Load byte from left' },
         {
             kind: 'storeMemoryByte',
@@ -418,7 +418,7 @@ const stringConcatenateRuntimeFunction = (): RegisterTransferLanguageExpression[
         { kind: 'goto', label: 'copy_from_right', why: 'Go copy next char' },
         { kind: 'label', name: 'concatenate_return', why: '' },
         ...restoreRegistersCode(1),
-        `jr $ra`,
+        { kind: 'returnToCaller', why: 'Return' },
     ];
 };
 
@@ -447,7 +447,7 @@ const myFreeRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
             why: 'block->free = false',
         },
         ...restoreRegistersCode(1),
-        `jr $ra`,
+        { kind: 'returnToCaller', why: 'Return' },
     ];
 };
 
