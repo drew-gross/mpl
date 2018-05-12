@@ -32,19 +32,15 @@ import { builtinFunctions } from '../frontend.js';
 import join from '../util/join.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
-const argument1 = '$s0';
-const argument2 = '$s1';
-const argument3 = '$s2';
 const syscallArg1 = '$a0';
 const syscallArg2 = '$a1';
 const syscallResult = '$v0';
 const syscallSelect = '$v0';
 const functionResult = '$a0';
-
 const knownRegisters: KnownRegisters = {
-    argument1: { type: 'register', destination: argument1 },
-    argument2: { type: 'register', destination: argument2 },
-    argument3: { type: 'register', destination: argument3 },
+    argument1: { type: 'register', destination: '$s0' },
+    argument2: { type: 'register', destination: '$s1' },
+    argument3: { type: 'register', destination: '$s2' },
     functionResult: { type: 'register', destination: functionResult },
     syscallArg1: { type: 'register', destination: syscallArg1 },
     syscallArg2: { type: 'register', destination: syscallArg2 },
@@ -434,7 +430,7 @@ const myFreeRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
     return [
         `my_free:`,
         ...saveRegistersCode(1),
-        `bne ${argument1}, 0, free_null_check_passed`,
+        `bne ${knownRegisters.argument1.destination}, 0, free_null_check_passed`,
         `la $a0, ${errors.freeNull.name}`,
         `li $v0, 4`,
         `syscall`,
@@ -447,7 +443,7 @@ const myFreeRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
         {
             kind: 'storeMemory',
             from: { type: 'register', destination: one },
-            address: { type: 'register', destination: argument1 },
+            address: knownRegisters.argument1,
             offset: -1 * bytesInWord,
             why: 'block->free = false',
         },
@@ -518,7 +514,11 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             globalDeclarations,
             stringLiterals,
             functionResult,
-            [argument1, argument2, argument3],
+            [
+                knownRegisters.argument1.destination,
+                knownRegisters.argument2.destination,
+                knownRegisters.argument3.destination,
+            ],
             firstRegister,
             nextTemporary,
             saveRegistersCode,
@@ -549,7 +549,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             {
                 kind: 'loadGlobal',
                 from: declaration.name,
-                to: { type: 'register', destination: argument1 },
+                to: knownRegisters.argument1,
                 why: 'Load global string so we can free it',
             } as PureRegisterTransferLanguageExpression,
             {
