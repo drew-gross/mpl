@@ -516,6 +516,122 @@ export const astToRegisterTransferLanguage = (
                 throw debug('todo');
             }
         }
+        case 'concatenation': {
+            if (destination.type !== 'register') throw debug('todo');
+            const leftSideDestination = currentTemporary;
+            if (leftSideDestination.type !== 'register') throw debug('todo');
+            const rightSideDestination = nextTemporary(leftSideDestination);
+            if (rightSideDestination.type !== 'register') throw debug('todo');
+            const subExpressionTemporary = nextTemporary(rightSideDestination);
+            const newStringLengthTemporary = nextTemporary(subExpressionTemporary);
+            if (newStringLengthTemporary.type !== 'register') throw debug('todo');
+            const mallocResultTemporary = newStringLengthTemporary; // Don't need length after malloc is done
+
+            const storeLeftInstructions = recurse({
+                ast: ast.lhs,
+                destination: leftSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+            const storeRightInstructions = recurse({
+                ast: ast.rhs,
+                destination: rightSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+            const cleanup: CompiledExpression = {
+                prepare: [],
+                execute: [],
+                cleanup: [
+                    {
+                        kind: 'move',
+                        from: mallocResultTemporary,
+                        to: knownRegisters.argument1,
+                        why: 'Move pointer to new string to argument1',
+                    },
+                    // TODO: maybe not valid? This destination may have been reused for something else by the time we get to cleanup
+                    { kind: 'call', function: 'my_free', why: 'Freeing temporary from concat' },
+                ],
+            };
+            return compileExpression([storeLeftInstructions, storeRightInstructions, cleanup], ([e1, e2, _]) => [
+                {
+                    kind: 'loadImmediate',
+                    value: 1,
+                    destination: newStringLengthTemporary,
+                    why: 'Create a temporary to store new string length. Start with 1 for null terminator.',
+                },
+                ...e1,
+                ...e2,
+                {
+                    kind: 'move',
+                    from: leftSideDestination,
+                    to: knownRegisters.argument1,
+                    why: 'Move lhs to argument1',
+                },
+                { kind: 'call', function: 'length', why: 'Compute the length of lhs' },
+                {
+                    kind: 'add',
+                    lhs: knownRegisters.functionResult,
+                    rhs: newStringLengthTemporary,
+                    destination: newStringLengthTemporary,
+                    why: 'add lhs length to length temporary',
+                },
+                {
+                    kind: 'move',
+                    from: rightSideDestination,
+                    to: knownRegisters.argument1,
+                    why: 'Move rhs to argument1',
+                },
+                { kind: 'call', function: 'length', why: 'Compute the length of lhs' },
+                {
+                    kind: 'add',
+                    lhs: knownRegisters.functionResult,
+                    rhs: newStringLengthTemporary,
+                    destination: newStringLengthTemporary,
+                    why: 'add rhs length to length temporary',
+                },
+                {
+                    kind: 'move',
+                    from: newStringLengthTemporary,
+                    to: knownRegisters.argument1,
+                    why: 'Move new string length to argument1',
+                },
+                { kind: 'call', function: 'my_malloc', why: 'Malloc that much space' },
+                {
+                    kind: 'move',
+                    from: knownRegisters.functionResult,
+                    to: mallocResultTemporary,
+                    why: 'Move malloc result to temporary',
+                },
+                {
+                    kind: 'move',
+                    from: leftSideDestination,
+                    to: knownRegisters.argument1,
+                    why: 'Move lhs to argument1',
+                },
+                {
+                    kind: 'move',
+                    from: rightSideDestination,
+                    to: knownRegisters.argument2,
+                    why: 'Move rhs to argument2',
+                },
+                {
+                    kind: 'move',
+                    from: mallocResultTemporary,
+                    to: knownRegisters.argument3,
+                    why: 'Move destintion to argument3',
+                },
+                {
+                    kind: 'call',
+                    function: 'string_concatenate',
+                    why: 'Concatenate the strings and write to malloced space',
+                },
+                {
+                    kind: 'move',
+                    from: mallocResultTemporary,
+                    to: destination,
+                    why: 'Move new string pointer to final destination',
+                },
+            ]);
+        }
         default:
             throw debug('todo');
     }
