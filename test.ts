@@ -1168,7 +1168,7 @@ return excitmentifier("Hello World");`,
     expectedExitCode: 11,
 });
 
-test.only('reassign integer', compileAndRun, {
+test('reassign integer', compileAndRun, {
     source: `
 a := 1;
 bb := a + 5;

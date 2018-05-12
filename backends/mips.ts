@@ -225,11 +225,13 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 ],
             };
             return compileExpression([storeLeftInstructions, storeRightInstructions, cleanup], ([e1, e2, _]) => [
-                `# Create a temporary to store new string length. Start with 1 for null terminator.`,
-                `li ${newStringLengthTemporary.destination}, 1`,
-                `# Compute lhs`,
+                {
+                    kind: 'loadImmediate',
+                    value: 1,
+                    destination: newStringLengthTemporary,
+                    why: 'Create a temporary to store new string length. Start with 1 for null terminator.',
+                },
                 ...e1,
-                `# Compute rhs`,
                 ...e2,
                 {
                     kind: 'move',
