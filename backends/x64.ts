@@ -102,6 +102,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'callExpression':
         case 'equality':
         case 'typedDeclarationAssignment':
+        case 'reassignment':
         case 'stringLiteral':
             return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel, recurse);
         case 'identifier': {
@@ -199,7 +200,7 @@ const assignX64Registers = (
 const registerTransferExpressionToX64WithoutComment = (rtx: PureRegisterTransferLanguageExpression): string[] => {
     switch (rtx.kind) {
         case 'comment':
-            return [`; ${rtx.why}`];
+            return [''];
         case 'loadImmediate':
             if (rtx.destination.type !== 'register') throw debug('todo');
             return [`mov ${rtx.destination.destination}, ${rtx.value}`];
@@ -222,6 +223,12 @@ const registerTransferExpressionToX64WithoutComment = (rtx: PureRegisterTransfer
             if (rtx.lhs.type !== 'register') throw debug('Need a register');
             if (rtx.rhs.type !== 'register') throw debug('Need a register');
             if (rtx.destination.type !== 'register') throw debug('Need a register');
+            if (rtx.lhs.destination == rtx.destination.destination) {
+                return [`add ${rtx.destination.destination}, ${rtx.rhs.destination}`];
+            }
+            if (rtx.rhs.destination == rtx.destination.destination) {
+                return [`add ${rtx.destination.destination}, ${rtx.lhs.destination}`];
+            }
             return [
                 `mov ${rtx.destination.destination}, ${rtx.lhs.destination}`,
                 `add ${rtx.destination.destination}, ${rtx.rhs.destination}`,
@@ -429,9 +436,11 @@ section .data
 first_block: dq 0
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
 section .bss
-${globalDeclarations.map(name => `${name.name}: resd 1`).join('\n')}
+${globalDeclarations
+        .map(name => `${name.name}: resq 1`) // TODO: actual size of var instead of always resq
+        .join('\n')}
 ${Object.keys(errors)
-        .map(key => `${errors[key].name}: resd 1`)
+        .map(key => `${errors[key].name}: resd 1`) // TODO: Fix this
         .join('\n')}
 `;
 };

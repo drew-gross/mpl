@@ -351,7 +351,6 @@ export const astToRegisterTransferLanguage = (
                     case 'Function':
                     case 'Integer':
                         return compileExpression([rhs], ([e1]) => [
-                            { kind: 'comment', why: `Put ${declaration.type.name} into temporary` },
                             ...e1,
                             {
                                 kind: 'storeGlobal',
@@ -435,7 +434,6 @@ export const astToRegisterTransferLanguage = (
                     case 'Function':
                     case 'Integer':
                         return compileExpression([rhs], ([e1]) => [
-                            { kind: 'comment', why: `Put ${declaration.type.name} into temporary` },
                             ...e1,
                             {
                                 kind: 'storeGlobal',
