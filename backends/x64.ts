@@ -58,6 +58,21 @@ const knownRegisters: KnownRegisters = {
 const nextTemporary = (storage: StorageSpec): StorageSpec => {
     if (storage.type == 'register') {
         if (storage.destination == 'r15') {
+            return {
+                type: 'register',
+                destination: 'rdi',
+            };
+        } else if (storage.destination == 'rdi') {
+            return {
+                type: 'register',
+                destination: 'rsi',
+            };
+        } else if (storage.destination == 'rsi') {
+            return {
+                type: 'register',
+                destination: 'rbx',
+            };
+        } else if (storage.destination == 'rbx') {
             // Now need to spill
             return {
                 type: 'memory',
@@ -104,6 +119,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'typedDeclarationAssignment':
         case 'reassignment':
         case 'stringLiteral':
+        case 'concatenation':
             return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel, recurse);
         case 'identifier': {
             // TODO: Better handle identifiers here. Also just better storage/scope chains?
@@ -170,7 +186,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
             ]);
         }
         default:
-            throw debug(`${ast.kind} unhandled in astToX64`);
+            throw debug(`${(ast as any).kind} unhandled in astToX64`);
     }
 };
 
