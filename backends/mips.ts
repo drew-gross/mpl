@@ -178,7 +178,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                     case 'Function':
                     case 'Integer':
                         return compileExpression([rhs], ([e1]) => [
-                            `# Put ${declaration.type.name} into temporary`,
+                            { kind: 'comment', why: `Put ${declaration.type.name} into temporary` },
                             ...e1,
                             {
                                 kind: 'storeGlobal',
