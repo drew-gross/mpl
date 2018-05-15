@@ -342,23 +342,44 @@ const syscallNumbers = {
 const bytesInWord = 4;
 
 const myFreeRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
-    const one = '$t1';
+    const one: StorageSpec = { type: 'register', destination: '$t1' };
     return [
         { kind: 'functionLabel', name: 'my_free', why: 'my_free' },
         ...saveRegistersCode(1),
-        `bne ${knownRegisters.argument1.destination}, 0, free_null_check_passed`,
-        `la $a0, ${errors.freeNull.name}`,
-        `li $v0, 4`,
-        `syscall`,
-        `li $v0, 10`,
-        `syscall`,
-        `free_null_check_passed:`,
-        `# TODO: merge blocks`,
-        `# TODO: check if already free`,
-        `li ${one}, 1,`,
+        {
+            kind: 'gotoIfNotEqual',
+            lhs: knownRegisters.argument1,
+            rhs: { type: 'register', destination: '0' },
+            label: 'free_null_check_passed',
+            why: 'Not freeing null check passed',
+        },
+        {
+            kind: 'loadSymbolAddress',
+            to: knownRegisters.syscallArg1,
+            symbolName: errors.freeNull.name,
+            why: 'Error to print',
+        },
+        {
+            kind: 'loadImmediate',
+            destination: knownRegisters.syscallSelect,
+            value: syscallNumbers.print,
+            why: 'Select Print Syscal',
+        },
+        { kind: 'syscall', why: 'Print' },
+        {
+            kind: 'loadImmediate',
+            destination: knownRegisters.syscallSelect,
+            value: syscallNumbers.exit,
+            why: 'Select exit syscall',
+        },
+        { kind: 'syscall', why: 'Print' },
+        { kind: 'label', name: 'free_null_check_passed', why: 'free_null_check_passed' },
+        // TODO: merge blocks
+        //TODO: check if already free
+        { kind: 'loadImmediate', destination: one, value: 1, why: 'Need access to a 1' },
         {
             kind: 'storeMemory',
-            from: { type: 'register', destination: one },
+            from: one,
             address: knownRegisters.argument1,
             offset: -1 * bytesInWord,
             why: 'block->free = false',
