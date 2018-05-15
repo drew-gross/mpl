@@ -27,6 +27,7 @@ import {
     verifyNoLeaks,
     printWithPrintRuntimeFunction,
     stringConcatenateRuntimeFunction,
+    stringEqualityRuntimeFunction,
 } from './registerTransferLanguageRuntime.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
@@ -338,57 +339,6 @@ const syscallNumbers = {
     exit: 10,
 };
 
-const stringEqualityRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
-    const leftByte: StorageSpec = { type: 'register', destination: '$t1' };
-    const rightByte: StorageSpec = { type: 'register', destination: '$t2' };
-    return [
-        { kind: 'functionLabel', name: 'stringEquality', why: 'stringEquality' },
-        ...saveRegistersCode(2),
-        {
-            kind: 'loadImmediate',
-            destination: knownRegisters.functionResult,
-            value: 1,
-            why: `Assume equal. Write true to ${
-                knownRegisters.functionResult.destination
-            }. Overwrite if difference found.`,
-        },
-        { kind: 'label', name: 'stringEquality_loop', why: 'Check a char, (string*, string*) -> bool' },
-        {
-            kind: 'loadMemoryByte',
-            to: leftByte,
-            address: knownRegisters.argument1,
-            why: 'Load current left char into temporary',
-        },
-        {
-            kind: 'loadMemoryByte',
-            to: rightByte,
-            address: knownRegisters.argument2,
-            why: 'Load current right char into temporary',
-        },
-        {
-            kind: 'gotoIfNotEqual',
-            lhs: leftByte,
-            rhs: rightByte,
-            label: 'stringEquality_return_false',
-            why: 'Inequal: return false',
-        },
-        {
-            kind: 'gotoIfZero',
-            register: leftByte,
-            label: 'stringEquality_return',
-            why: 'Both side are equal. If both sides are null, return.',
-        },
-        { kind: 'increment', register: knownRegisters.argument1, why: 'Bump lhs to next char' },
-        { kind: 'increment', register: knownRegisters.argument2, why: 'Bump rhs to next char' },
-        { kind: 'goto', label: 'stringEquality_loop', why: 'Check next char' },
-        { kind: 'label', name: 'stringEquality_return_false', why: 'stringEquality_return_false' },
-        { kind: 'loadImmediate', destination: knownRegisters.functionResult, value: 0, why: 'Set result to false' },
-        { kind: 'label', name: 'stringEquality_return', why: '' },
-        ...restoreRegistersCode(2),
-        { kind: 'returnToCaller', why: 'Return' },
-    ];
-};
-
 const bytesInWord = 4;
 
 const myFreeRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
@@ -440,7 +390,15 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
         firstRegister,
         nextTemporary
     ),
-    stringEqualityRuntimeFunction(),
+    stringEqualityRuntimeFunction(
+        bytesInWord,
+        syscallNumbers,
+        saveRegistersCode,
+        restoreRegistersCode,
+        knownRegisters,
+        firstRegister,
+        nextTemporary
+    ),
     stringCopy(
         bytesInWord,
         syscallNumbers,
