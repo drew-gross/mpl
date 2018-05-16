@@ -983,11 +983,13 @@ test('wrong type global', compileAndRun, {
     ],
 });
 
-test('string concatenation', compileAndRun, {
+test.only('string concatenation', compileAndRun, {
     source: `str1: String = "a";
 str2: String = "b";
 return str1 ++ str2 == "ab" ? 5 : 10;`,
     expectedExitCode: 5,
+    printSubsteps: 'x64',
+    debugSubsteps: 'x64',
 });
 
 test('concatenate and get length then subtract', compileAndRun, {

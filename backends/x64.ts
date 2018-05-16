@@ -8,6 +8,7 @@ import {
     printWithWriteRuntimeFunction,
     myFreeRuntimeFunction,
     stringEqualityRuntimeFunction,
+    stringConcatenateRuntimeFunction,
 } from './registerTransferLanguageRuntime.js';
 import join from '../util/join.js';
 import { isEqual } from 'lodash';
@@ -285,14 +286,14 @@ const registerTransferExpressionToX64WithoutComment = (rtx: PureRegisterTransfer
         case 'loadMemory':
             if (rtx.to.type !== 'register') throw debug('todo');
             if (rtx.from.type !== 'register') throw debug('todo');
-            return [`mov ${rtx.to.destination}, [${rtx.from.destination}]`];
+            return [`mov ${rtx.to.destination}, [${rtx.from.destination}+${rtx.offset}]`];
         case 'storeMemory':
             if (rtx.address.type !== 'register') throw debug('todo');
             if (rtx.from.type !== 'register') throw debug('todo');
-            return [`mov [${rtx.address.destination}], ${rtx.from.destination}`];
+            return [`mov [${rtx.address.destination}+${rtx.offset}], ${rtx.from.destination}`];
         case 'storeZeroToMemory':
             if (rtx.address.type !== 'register') throw debug('todo');
-            return [`mov byte [${rtx.address.destination}], 0`];
+            return [`mov byte [${rtx.address.destination}+${rtx.offset}], 0`];
         case 'storeMemoryByte':
             if (rtx.contents.type !== 'register') throw debug('Need a register');
             if (rtx.address.type !== 'register') throw debug('Need a register');
@@ -407,7 +408,15 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
         firstRegister,
         nextTemporary
     ),
-    //stringConcatenateRuntimeFunction(),
+    stringConcatenateRuntimeFunction(
+        bytesInWord,
+        syscallNumbers,
+        saveRegistersCode,
+        restoreRegistersCode,
+        knownRegisters,
+        firstRegister,
+        nextTemporary
+    ),
     verifyNoLeaks(
         bytesInWord,
         syscallNumbers,
