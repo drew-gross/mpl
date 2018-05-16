@@ -929,3 +929,59 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (
         { kind: 'returnToCaller', why: 'Return' },
     ];
 };
+
+export const myFreeRuntimeFunction = (
+    bytesInWord,
+    syscallNumbers,
+    registerSaver,
+    registerRestorer,
+    knownRegisters,
+    firstRegister,
+    nextRegister
+): RegisterTransferLanguageExpression[] => {
+    const one: StorageSpec = { type: 'register', destination: '$t1' };
+    return [
+        { kind: 'functionLabel', name: 'my_free', why: 'my_free' },
+        ...registerSaver(1),
+        {
+            kind: 'gotoIfNotEqual',
+            lhs: knownRegisters.argument1,
+            rhs: { type: 'register', destination: '0' },
+            label: 'free_null_check_passed',
+            why: 'Not freeing null check passed',
+        },
+        {
+            kind: 'loadSymbolAddress',
+            to: knownRegisters.syscallArg1,
+            symbolName: errors.freeNull.name,
+            why: 'Error to print',
+        },
+        {
+            kind: 'loadImmediate',
+            destination: knownRegisters.syscallSelect,
+            value: syscallNumbers.print,
+            why: 'Select Print Syscal',
+        },
+        { kind: 'syscall', why: 'Print' },
+        {
+            kind: 'loadImmediate',
+            destination: knownRegisters.syscallSelect,
+            value: syscallNumbers.exit,
+            why: 'Select exit syscall',
+        },
+        { kind: 'syscall', why: 'Print' },
+        { kind: 'label', name: 'free_null_check_passed', why: 'free_null_check_passed' },
+        // TODO: merge blocks
+        //TODO: check if already free
+        { kind: 'loadImmediate', destination: one, value: 1, why: 'Need access to a 1' },
+        {
+            kind: 'storeMemory',
+            from: one,
+            address: knownRegisters.argument1,
+            offset: -1 * bytesInWord,
+            why: 'block->free = false',
+        },
+        ...registerRestorer(1),
+        { kind: 'returnToCaller', why: 'Return' },
+    ];
+};

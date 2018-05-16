@@ -28,6 +28,7 @@ import {
     printWithPrintRuntimeFunction,
     stringConcatenateRuntimeFunction,
     stringEqualityRuntimeFunction,
+    myFreeRuntimeFunction,
 } from './registerTransferLanguageRuntime.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
@@ -341,54 +342,6 @@ const syscallNumbers = {
 
 const bytesInWord = 4;
 
-const myFreeRuntimeFunction = (): RegisterTransferLanguageExpression[] => {
-    const one: StorageSpec = { type: 'register', destination: '$t1' };
-    return [
-        { kind: 'functionLabel', name: 'my_free', why: 'my_free' },
-        ...saveRegistersCode(1),
-        {
-            kind: 'gotoIfNotEqual',
-            lhs: knownRegisters.argument1,
-            rhs: { type: 'register', destination: '0' },
-            label: 'free_null_check_passed',
-            why: 'Not freeing null check passed',
-        },
-        {
-            kind: 'loadSymbolAddress',
-            to: knownRegisters.syscallArg1,
-            symbolName: errors.freeNull.name,
-            why: 'Error to print',
-        },
-        {
-            kind: 'loadImmediate',
-            destination: knownRegisters.syscallSelect,
-            value: syscallNumbers.print,
-            why: 'Select Print Syscal',
-        },
-        { kind: 'syscall', why: 'Print' },
-        {
-            kind: 'loadImmediate',
-            destination: knownRegisters.syscallSelect,
-            value: syscallNumbers.exit,
-            why: 'Select exit syscall',
-        },
-        { kind: 'syscall', why: 'Print' },
-        { kind: 'label', name: 'free_null_check_passed', why: 'free_null_check_passed' },
-        // TODO: merge blocks
-        //TODO: check if already free
-        { kind: 'loadImmediate', destination: one, value: 1, why: 'Need access to a 1' },
-        {
-            kind: 'storeMemory',
-            from: one,
-            address: knownRegisters.argument1,
-            offset: -1 * bytesInWord,
-            why: 'block->free = false',
-        },
-        ...restoreRegistersCode(1),
-        { kind: 'returnToCaller', why: 'Return' },
-    ];
-};
-
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
 
@@ -438,7 +391,15 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
         firstRegister,
         nextTemporary
     ),
-    myFreeRuntimeFunction(),
+    myFreeRuntimeFunction(
+        bytesInWord,
+        syscallNumbers,
+        saveRegistersCode,
+        restoreRegistersCode,
+        knownRegisters,
+        firstRegister,
+        nextTemporary
+    ),
     stringConcatenateRuntimeFunction(
         bytesInWord,
         syscallNumbers,
