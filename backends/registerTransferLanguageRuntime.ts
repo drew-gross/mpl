@@ -446,6 +446,11 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
             why: 'flags arg, 0x1002 = MAP_ANON | MAP_PRIVATE (according to dtruss)',
         },
         {
+            kind: 'push',
+            register: knownRegisters.syscallArg5,
+            why: `Save size while we use ${knownRegisters.syscallArg5} for syscall`,
+        },
+        {
             kind: 'loadImmediate',
             value: -1,
             destination: knownRegisters.syscallArg5,
@@ -464,6 +469,11 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
             why: 'Select malloc for calling',
         },
         { kind: 'syscall', why: 'mmap' },
+        {
+            kind: 'pop',
+            register: knownRegisters.syscallArg5,
+            why: `Restore size to ${knownRegisters.syscallArg5} after using it for for syscall`,
+        },
         {
             kind: 'gotoIfNotEqual',
             lhs: knownRegisters.syscallResult,
@@ -880,8 +890,8 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (
     firstRegister,
     nextRegister
 ) => {
-    const leftByte: StorageSpec = { type: 'register', destination: '$t1' };
-    const rightByte: StorageSpec = { type: 'register', destination: '$t2' };
+    const leftByte: StorageSpec = firstRegister;
+    const rightByte: StorageSpec = nextRegister(firstRegister);
     return [
         { kind: 'functionLabel', name: 'stringEquality', why: 'stringEquality' },
         ...registerSaver(2),
@@ -939,7 +949,7 @@ export const myFreeRuntimeFunction = (
     firstRegister,
     nextRegister
 ): RegisterTransferLanguageExpression[] => {
-    const one: StorageSpec = { type: 'register', destination: '$t1' };
+    const one: StorageSpec = firstRegister;
     return [
         { kind: 'functionLabel', name: 'my_free', why: 'my_free' },
         ...registerSaver(1),
@@ -972,7 +982,7 @@ export const myFreeRuntimeFunction = (
         { kind: 'syscall', why: 'Print' },
         { kind: 'label', name: 'free_null_check_passed', why: 'free_null_check_passed' },
         // TODO: merge blocks
-        //TODO: check if already free
+        // TODO: check if already free
         { kind: 'loadImmediate', destination: one, value: 1, why: 'Need access to a 1' },
         {
             kind: 'storeMemory',

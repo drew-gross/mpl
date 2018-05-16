@@ -6,6 +6,8 @@ import {
     KnownRegisters,
     verifyNoLeaks,
     printWithWriteRuntimeFunction,
+    myFreeRuntimeFunction,
+    stringEqualityRuntimeFunction,
 } from './registerTransferLanguageRuntime.js';
 import join from '../util/join.js';
 import { isEqual } from 'lodash';
@@ -308,6 +310,12 @@ const registerTransferExpressionToX64WithoutComment = (rtx: PureRegisterTransfer
             return [`ret`];
         case 'syscall':
             return [`syscall`];
+        case 'push':
+            if (rtx.register.type !== 'register') throw debug('todo');
+            return [`push ${rtx.register.destination}`];
+        case 'pop':
+            if (rtx.register.type !== 'register') throw debug('todo');
+            return [`pop ${rtx.register.destination}`];
         default:
             throw debug(`${(rtx as any).kind} unhandled in registerTransferExpressionToX64`);
     }
@@ -363,7 +371,15 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
         firstRegister,
         nextTemporary
     ),
-    //stringEqualityRuntimeFunction(),
+    stringEqualityRuntimeFunction(
+        bytesInWord,
+        syscallNumbers,
+        saveRegistersCode,
+        restoreRegistersCode,
+        knownRegisters,
+        firstRegister,
+        nextTemporary
+    ),
     stringCopy(
         bytesInWord,
         syscallNumbers,
@@ -382,7 +398,15 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
         firstRegister,
         nextTemporary
     ),
-    //myFreeRuntimeFunction(),
+    myFreeRuntimeFunction(
+        bytesInWord,
+        syscallNumbers,
+        saveRegistersCode,
+        restoreRegistersCode,
+        knownRegisters,
+        firstRegister,
+        nextTemporary
+    ),
     //stringConcatenateRuntimeFunction(),
     verifyNoLeaks(
         bytesInWord,

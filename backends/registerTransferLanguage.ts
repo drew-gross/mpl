@@ -37,7 +37,10 @@ export type PureRegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'loadSymbolAddress'; to: StorageSpec; symbolName: string }
     | { kind: 'call'; function: string }
     | { kind: 'returnToCaller' }
-    | { kind: 'returnValue'; source: StorageSpec });
+    | { kind: 'returnValue'; source: StorageSpec }
+    // TODO: Push and pop shouldn't be necessary when with a register allocator. Only for x64.
+    | { kind: 'push'; register: StorageSpec }
+    | { kind: 'pop'; register: StorageSpec });
 
 // TODO: get rid of string!
 export type RegisterTransferLanguageExpression = string | PureRegisterTransferLanguageExpression;
