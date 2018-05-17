@@ -260,13 +260,13 @@ export const astToRegisterTransferLanguage = (
             });
 
             const argumentComputerToMips = (argumentComputer, index) => [
-                `# Put argument ${index} in register`,
+                { kind: 'comment', why: 'Put argument ${index} in register' },
                 ...argumentComputer,
             ];
 
             return compileExpression(computeArgumentsMips, argumentComputers => [
                 ...flatten(argumentComputers.map(argumentComputerToMips)),
-                `# call ${functionName}`,
+                { kind: 'comment', why: 'call ${functionName}' },
                 ...callInstructions,
                 {
                     kind: 'move',

@@ -1076,6 +1076,13 @@ return times11(1);`,
 
 test('two bracketed args', compileAndRun, {
     source: `
+timess := (a: Integer, b: Integer) => a * b;
+return timess(11, 1);`,
+    expectedExitCode: 11,
+});
+
+test.failing('function named times', compileAndRun, {
+    source: `
 times := (a: Integer, b: Integer) => a * b;
 return times(11, 1);`,
     expectedExitCode: 11,

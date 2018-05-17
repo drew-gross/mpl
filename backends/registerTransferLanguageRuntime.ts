@@ -1,7 +1,10 @@
 import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
 import { StorageSpec } from '../backend-utils.js';
-import { RegisterTransferLanguageExpression } from './registerTransferLanguage.js';
+import {
+    RegisterTransferLanguageExpression,
+    PureRegisterTransferLanguageExpression,
+} from './registerTransferLanguage.js';
 
 export type KnownRegisters = {
     argument1: { type: 'register'; destination: string };
@@ -22,8 +25,8 @@ export type KnownRegisters = {
 type RuntimeFunctionGenerator = (
     bytesInWord: number,
     syscallNumbers: { print: number; sbrk: number; exit: number; mmap: number },
-    registerSaver: (n: number) => string[],
-    registerRestorer: (n: number) => string[],
+    registerSaver: (n: number) => (string | PureRegisterTransferLanguageExpression)[],
+    registerRestorer: (n: number) => (string | PureRegisterTransferLanguageExpression)[],
     knownRegisters: KnownRegisters,
     firstRegister: StorageSpec,
     nextRegister: ((r: StorageSpec) => StorageSpec)
