@@ -32,6 +32,34 @@ type RuntimeFunctionGenerator = (
     nextRegister: ((r: StorageSpec) => StorageSpec)
 ) => RegisterTransferLanguageExpression[];
 
+const saveSyscallArgRegisters = knownRegisters =>
+    [
+        knownRegisters.syscallArg1,
+        knownRegisters.syscallArg2,
+        knownRegisters.syscallArg3,
+        knownRegisters.syscallArg4,
+        knownRegisters.syscallArg5,
+        knownRegisters.syscallArg6,
+    ].map((register: StorageSpec) => ({
+        kind: 'push' as 'push',
+        register: register,
+        why: 'Save registers before using them as syscall args',
+    }));
+
+const restoreSyscallArgRegisters = knownRegisters =>
+    [
+        knownRegisters.syscallArg6,
+        knownRegisters.syscallArg5,
+        knownRegisters.syscallArg4,
+        knownRegisters.syscallArg3,
+        knownRegisters.syscallArg2,
+        knownRegisters.syscallArg1,
+    ].map((register: StorageSpec) => ({
+        kind: 'pop' as 'pop',
+        register: register,
+        why: 'Restore registers after using them as syscall args',
+    }));
+
 export const mallocWithSbrk: RuntimeFunctionGenerator = (
     bytesInWord,
     syscallNumbers,
@@ -425,18 +453,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         },
         { kind: 'goto', label: 'my_malloc_return', why: 'Found good existing block' },
         { kind: 'label', name: 'mmap_more_space', why: 'Here we mmap a new block' },
-        ...[
-            knownRegisters.syscallArg1,
-            knownRegisters.syscallArg2,
-            knownRegisters.syscallArg3,
-            knownRegisters.syscallArg4,
-            knownRegisters.syscallArg5,
-            knownRegisters.syscallArg6,
-        ].map((register: StorageSpec) => ({
-            kind: 'push' as 'push',
-            register: register,
-            why: 'Save registers before using them as syscall args',
-        })),
+        ...saveSyscallArgRegisters(knownRegisters),
         {
             kind: 'loadImmediate',
             value: 0,
@@ -486,18 +503,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
             why: 'Select malloc for calling',
         },
         { kind: 'syscall', why: 'mmap' },
-        ...[
-            knownRegisters.syscallArg6,
-            knownRegisters.syscallArg5,
-            knownRegisters.syscallArg4,
-            knownRegisters.syscallArg3,
-            knownRegisters.syscallArg2,
-            knownRegisters.syscallArg1,
-        ].map((register: StorageSpec) => ({
-            kind: 'pop' as 'pop',
-            register: register,
-            why: 'Restore registers after using them as syscall args',
-        })),
+        ...restoreSyscallArgRegisters(knownRegisters),
         {
             kind: 'gotoIfNotEqual',
             lhs: knownRegisters.syscallResult,
@@ -738,6 +744,7 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = (
             function: 'length',
             why: 'Call length on argument so we can pass it to write(2). (Arugment is already in argument register)',
         },
+        ...saveSyscallArgRegisters(knownRegisters),
         {
             kind: 'loadImmediate',
             destination: knownRegisters.syscallArg1,
@@ -765,6 +772,7 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = (
             why: 'Select print',
         },
         { kind: 'syscall', why: 'Print' },
+        ...restoreSyscallArgRegisters(knownRegisters),
         {
             kind: 'move',
             from: knownRegisters.syscallResult,
