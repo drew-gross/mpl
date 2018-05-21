@@ -708,19 +708,23 @@ export const astToRegisterTransferLanguage = (
 
 export const constructFunction = (
     f: Function,
-    astTranslator,
     globalDeclarations,
     stringLiterals,
-    resultRegister,
-    argumentRegisters: string[],
+    knownRegisters,
     firstTemporary: StorageSpec,
     nextTemporary,
     preamble: PureRegisterTransferLanguageExpression[],
-    epilogue: PureRegisterTransferLanguageExpression[]
+    epilogue: PureRegisterTransferLanguageExpression[],
+    makeLabel
 ): RegisterTransferLanguageExpression[] => {
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
     const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
 
+    const argumentRegisters = [
+        knownRegisters.argument1.destination,
+        knownRegisters.argument2.destination,
+        knownRegisters.argument3.destination,
+    ];
     if (f.parameters.length > 3) throw debug('todo'); // Don't want to deal with this yet.
     if (argumentRegisters.length < 3) throw debug('todo');
     const registerAssignment: any = {};
@@ -741,14 +745,19 @@ export const constructFunction = (
 
     const functionCode = flatten(
         f.statements.map(statement => {
-            const compiledProgram = astTranslator({
-                ast: statement,
-                registerAssignment,
-                destination: resultRegister, // TODO: Not sure how this works. Maybe it doesn't.
-                currentTemporary,
-                globalDeclarations,
-                stringLiterals,
-            });
+            const compiledProgram = astToRegisterTransferLanguage(
+                {
+                    ast: statement,
+                    registerAssignment,
+                    destination: knownRegisters.functionResult.destination,
+                    currentTemporary,
+                    globalDeclarations,
+                    stringLiterals,
+                },
+                knownRegisters,
+                nextTemporary,
+                makeLabel
+            );
             const freeLocals = f.variables
                 // TODO: Make a better memory model for frees.
                 .filter(s => s.location === 'Stack')

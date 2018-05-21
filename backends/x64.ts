@@ -277,19 +277,14 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
     let x64Functions: RegisterTransferLanguageExpression[][] = functions.map(f =>
         constructFunction(
             f,
-            astToX64,
             globalDeclarations,
             stringLiterals,
-            knownRegisters.functionResult.destination,
-            [
-                knownRegisters.argument1.destination,
-                knownRegisters.argument2.destination,
-                knownRegisters.argument3.destination,
-            ],
+            knownRegisters,
             firstRegister,
             nextTemporary,
             [],
-            []
+            [],
+            makeLabel
         )
     );
     const { registerAssignment, firstTemporary } = assignX64Registers(program.variables);

@@ -279,19 +279,14 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
     let mipsFunctions = functions.map(f =>
         constructFunction(
             f,
-            astToMips,
             globalDeclarations,
             stringLiterals,
-            knownRegisters.functionResult.destination,
-            [
-                knownRegisters.argument1.destination,
-                knownRegisters.argument2.destination,
-                knownRegisters.argument3.destination,
-            ],
+            knownRegisters,
             firstRegister,
             nextTemporary,
             preamble,
-            eplilogue
+            eplilogue,
+            makeLabel
         )
     );
     const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);
