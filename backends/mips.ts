@@ -82,8 +82,7 @@ const makeLabel = (name: string) => {
 };
 
 const astToMips = (input: BackendOptions): CompiledProgram => {
-    const recurse = newInput => astToMips({ ...input, ...newInput });
-    return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel, recurse);
+    return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel);
 };
 
 const assignMipsRegisters = (

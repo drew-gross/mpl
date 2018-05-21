@@ -105,8 +105,7 @@ const makeLabel = (name: string) => {
 };
 
 const astToX64 = (input: BackendOptions): CompiledProgram => {
-    const recurse = newInput => astToX64({ ...input, ...newInput });
-    return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel, recurse);
+    return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel);
 };
 
 // TODO: unify with assignMipsRegisters

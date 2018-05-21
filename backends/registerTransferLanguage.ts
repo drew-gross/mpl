@@ -52,11 +52,12 @@ export const astToRegisterTransferLanguage = (
     input: BackendOptions,
     knownRegisters,
     nextTemporary,
-    makeLabel,
-    recurse
+    makeLabel
 ): CompiledExpression => {
     const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
     if (isEqual(currentTemporary, destination)) throw debug('todo'); // Sanity check to make sure caller remembered to provide a new temporary
+    const recurse = newInput =>
+        astToRegisterTransferLanguage({ ...input, ...newInput }, knownRegisters, nextTemporary, makeLabel);
     switch (ast.kind) {
         case 'number':
             return compileExpression([], ([]) => [
