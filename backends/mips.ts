@@ -50,37 +50,6 @@ const knownRegisters: KnownRegisters = {
     syscallResult: { type: 'register', destination: '$v0' },
 };
 
-const multiplyMips = (destination, left, right) => {
-    let leftRegister = left.destination;
-    let loadSpilled: any = [];
-    let restoreSpilled: any = [];
-    if (left.type == 'memory') {
-        leftRegister = '$s1';
-        loadSpilled.push(`lw $s1, -${left.spOffset}($sp)`);
-    }
-
-    let rightRegister = right.destination;
-    if (right.type == 'memory') {
-        rightRegister = '$s2';
-        loadSpilled.push(`lw $s2, -${right.spOffset}($sp)`);
-    }
-
-    let destinationRegister = destination.destination;
-    if (destination.type == 'memory') {
-        destinationRegister = '$s3';
-        restoreSpilled.push(`sw $s3, -${destination.spOffset}($sp)`);
-    }
-    if (leftRegister == '$tNaN') debug('todo');
-
-    return [
-        ...loadSpilled,
-        `mult ${leftRegister}, ${rightRegister}`,
-        `# Move result to final destination (assume no overflow)`,
-        `mflo ${destinationRegister}`,
-        ...restoreSpilled,
-    ].join('\n');
-};
-
 const firstRegister: StorageSpec = { type: 'register', destination: '$t1' };
 const nextTemporary = (storage: StorageSpec): StorageSpec => {
     if (storage.type == 'register') {
@@ -150,12 +119,23 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
                 currentTemporary: subExpressionTemporary,
             });
             return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
-                `# Store left side of product in temporary (${storageSpecToString(leftSideDestination)})`,
+                {
+                    kind: 'comment',
+                    why: `Store left side of product in temporary (${storageSpecToString(leftSideDestination)})`,
+                },
                 ...storeLeft,
-                `# Store right side of product in destination (${storageSpecToString(rightSideDestination)})`,
+                {
+                    kind: 'comment',
+                    why: `Store right side of product in destination (${storageSpecToString(rightSideDestination)})`,
+                },
                 ...storeRight,
-                `# Evaluate product`,
-                multiplyMips(destination, leftSideDestination, rightSideDestination),
+                {
+                    kind: 'multiply',
+                    lhs: leftSideDestination,
+                    rhs: rightSideDestination,
+                    destination: destination,
+                    why: 'Evaluate product',
+                },
             ]);
         }
         default:
@@ -205,6 +185,36 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
                 default:
                     throw debug('todo');
             }
+        case 'multiply': {
+            let leftRegister = (rtx.lhs as any).destination;
+            let loadSpilled: any = [];
+            let restoreSpilled: any = [];
+            if (rtx.lhs.type == 'memory') {
+                leftRegister = '$s1';
+                loadSpilled.push(`lw $s1, -${rtx.lhs.spOffset}($sp)`);
+            }
+
+            let rightRegister = (rtx.rhs as any).destination;
+            if (rtx.rhs.type == 'memory') {
+                rightRegister = '$s2';
+                loadSpilled.push(`lw $s2, -${rtx.rhs.spOffset}($sp)`);
+            }
+
+            let destinationRegister = (rtx.destination as any).destination;
+            if (rtx.destination.type == 'memory') {
+                destinationRegister = '$s3';
+                restoreSpilled.push(`sw $s3, -${rtx.destination.spOffset}($sp)`);
+            }
+            if (leftRegister == '$tNaN') debug('todo');
+
+            return [
+                ...loadSpilled,
+                `mult ${leftRegister}, ${rightRegister}`,
+                `# Move result to final destination (assume no overflow)`,
+                `mflo ${destinationRegister}`,
+                ...restoreSpilled,
+            ];
+        }
         case 'addImmediate':
             if (rtx.register.type !== 'register') throw debug('need a registe');
             return [`addiu ${rtx.register.destination}, ${rtx.amount}`];

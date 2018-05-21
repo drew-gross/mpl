@@ -21,6 +21,7 @@ export type PureRegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'addImmediate'; register: StorageSpec; amount: number }
     | { kind: 'subtract'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec }
     | { kind: 'add'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec }
+    | { kind: 'multiply'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec }
     | { kind: 'increment'; register: StorageSpec }
     | { kind: 'label'; name: string }
     | { kind: 'functionLabel'; name: string }
@@ -40,7 +41,6 @@ export type PureRegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'call'; function: string }
     | { kind: 'returnToCaller' }
     | { kind: 'returnValue'; source: StorageSpec }
-    // TODO: Push and pop shouldn't be necessary when with a register allocator. Only for x64.
     | { kind: 'push'; register: StorageSpec }
     | { kind: 'pop'; register: StorageSpec });
 
