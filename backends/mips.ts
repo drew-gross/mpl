@@ -77,8 +77,7 @@ const nextTemporary = (storage: StorageSpec): StorageSpec => {
 let labelId = 0;
 
 const astToMips = (input: BackendOptions): CompiledProgram => {
-    const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
-    if (isEqual(currentTemporary, destination)) throw debug('todo'); // Sanity check to make sure caller remembered to provide a new temporary
+    if (isEqual(input.currentTemporary, input.destination)) throw debug('todo'); // Sanity check to make sure caller remembered to provide a new temporary
     const recurse = newInput => astToMips({ ...input, ...newInput });
     const makeLabel = (name: string) => {
         const result = `${name}${labelId}`;
