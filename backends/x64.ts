@@ -57,7 +57,7 @@ const knownRegisters: KnownRegisters = {
     syscallResult: { type: 'register', destination: 'rax' },
 };
 
-// TOOD: Unify with nextTemporary in mips
+// TOOD: Unify with nextTemporary in mips. Also be able to use special purpose registers like rdx when not multiplying.
 const nextTemporary = (storage: StorageSpec): StorageSpec => {
     if (storage.type == 'register') {
         if (storage.destination == 'r15') {
@@ -124,42 +124,8 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'stringLiteral':
         case 'concatenation':
         case 'identifier':
+        case 'product':
             return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel, recurse);
-        case 'product': {
-            const leftSideDestination: StorageSpec = currentTemporary;
-            const rightSideDestination = destination;
-            const subExpressionTemporary = nextTemporary(currentTemporary);
-
-            const storeLeftInstructions = recurse({
-                ast: ast.lhs,
-                destination: leftSideDestination,
-                currentTemporary: subExpressionTemporary,
-            });
-            const storeRightInstructions = recurse({
-                ast: ast.rhs,
-                destination: rightSideDestination,
-                currentTemporary: subExpressionTemporary,
-            });
-            return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
-                `; Store left side of product in temporary (${storageSpecToString(leftSideDestination)})`,
-                ...storeLeft,
-                `; Store right side of product in destination (${storageSpecToString(rightSideDestination)})`,
-                ...storeRight,
-                {
-                    kind: 'move',
-                    from: leftSideDestination,
-                    to: { type: 'register', destination: 'rax' },
-                    why: 'Multiply does rax * arg',
-                },
-                `mul ${(rightSideDestination as any).destination}`,
-                {
-                    kind: 'move',
-                    from: { type: 'register', destination: 'rax' },
-                    to: destination,
-                    why: 'Multiply puts result in rax:rdx, move it to final destination',
-                },
-            ]);
-        }
         default:
             throw debug(`${(ast as any).kind} unhandled in astToX64`);
     }
@@ -223,6 +189,15 @@ const registerTransferExpressionToX64WithoutComment = (rtx: PureRegisterTransfer
             return [
                 `mov ${rtx.destination.destination}, ${rtx.lhs.destination}`,
                 `add ${rtx.destination.destination}, ${rtx.rhs.destination}`,
+            ];
+        case 'multiply':
+            if (rtx.lhs.type !== 'register') throw debug('Need a register');
+            if (rtx.rhs.type !== 'register') throw debug('Need a register');
+            if (rtx.destination.type !== 'register') throw debug('Need a register');
+            return [
+                `mov rax, ${rtx.lhs.destination}`, // mul does rax * arg
+                `mul ${rtx.rhs.destination}`,
+                `mov ${rtx.destination.destination}, rax`, // mul puts result in rax:rdx
             ];
         case 'increment':
             if (rtx.register.type !== 'register') throw debug('todo');
