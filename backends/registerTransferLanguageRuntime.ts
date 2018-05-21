@@ -79,7 +79,6 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         { kind: 'functionLabel', name: 'my_malloc', why: 'my_malloc' },
         ...preamble,
         ...saveRegistersCode(firstRegister, nextRegister, 3),
-        ...epilogue,
         {
             kind: 'gotoIfNotEqual',
             lhs: knownRegisters.argument1,
@@ -310,6 +309,7 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         },
         { kind: 'label', name: 'my_malloc_return', why: 'Done' },
         ...restoreRegistersCode(firstRegister, nextRegister, 3),
+        ...epilogue,
         { kind: 'returnToCaller', why: 'Done' },
     ];
 };
@@ -333,7 +333,6 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         { kind: 'functionLabel', name: 'my_malloc', why: 'Alloc via mmap' },
         ...preamble,
         ...saveRegistersCode(firstRegister, nextRegister, 3),
-        ...epilogue,
         {
             kind: 'gotoIfNotEqual',
             lhs: knownRegisters.argument1,
@@ -603,6 +602,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         },
         { kind: 'label', name: 'my_malloc_return', why: 'Done' },
         ...restoreRegistersCode(firstRegister, nextRegister, 3),
+        ...epilogue,
         { kind: 'returnToCaller', why: 'Done' },
     ];
 };
@@ -622,7 +622,6 @@ export const length: RuntimeFunctionGenerator = (
         { kind: 'functionLabel', name: 'length', why: 'Length runtime function' },
         ...preamble,
         ...saveRegistersCode(firstRegister, nextRegister, 1),
-        ...epilogue,
         {
             kind: 'loadImmediate',
             destination: knownRegisters.functionResult,
@@ -654,6 +653,7 @@ export const length: RuntimeFunctionGenerator = (
             why: 'Repair pointer passed in arg1 so caller can still use it',
         },
         ...restoreRegistersCode(firstRegister, nextRegister, 1),
+        ...epilogue,
         { kind: 'returnToCaller', why: 'Done' },
     ];
 };
@@ -673,7 +673,6 @@ export const stringCopy: RuntimeFunctionGenerator = (
         { kind: 'functionLabel', name: 'string_copy', why: 'string_copy' },
         ...preamble,
         ...saveRegistersCode(firstRegister, nextRegister, 1),
-        ...epilogue,
         { kind: 'label', name: 'string_copy_loop', why: 'Copy a byte' },
         {
             kind: 'loadMemoryByte',
@@ -698,6 +697,7 @@ export const stringCopy: RuntimeFunctionGenerator = (
         { kind: 'goto', label: 'string_copy_loop', why: 'Copy next char' },
         { kind: 'label', name: 'string_copy_return', why: '' },
         ...restoreRegistersCode(firstRegister, nextRegister, 1),
+        ...epilogue,
         { kind: 'returnToCaller', why: 'Done' },
     ];
 };
@@ -807,7 +807,6 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = (
         { kind: 'functionLabel', name: 'verify_no_leaks', why: 'verify_no_leaks' },
         ...preamble,
         ...saveRegistersCode(firstRegister, nextRegister, 2),
-        ...epilogue,
         {
             kind: 'loadSymbolAddress',
             symbolName: 'first_block',
@@ -868,6 +867,7 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = (
         { kind: 'goto', label: 'verify_no_leaks_loop', why: 'Check next block' },
         { kind: 'label', name: 'verify_no_leaks_return', why: '' },
         ...restoreRegistersCode(firstRegister, nextRegister, 2),
+        ...epilogue,
         { kind: 'returnToCaller', why: 'Done' },
     ];
 };
@@ -889,7 +889,6 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = (
         { kind: 'functionLabel', name: 'string_concatenate', why: 'string_concatenate' },
         ...preamble,
         ...saveRegistersCode(firstRegister, nextRegister, 1),
-        ...epilogue,
         { kind: 'label', name: 'write_left_loop', why: 'write_left_loop' },
         { kind: 'loadMemoryByte', to: currentChar, address: left, why: 'Load byte from left' },
         {
@@ -921,6 +920,7 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = (
         { kind: 'goto', label: 'copy_from_right', why: 'Go copy next char' },
         { kind: 'label', name: 'concatenate_return', why: '' },
         ...restoreRegistersCode(firstRegister, nextRegister, 1),
+        ...epilogue,
         { kind: 'returnToCaller', why: 'Return' },
     ];
 };
@@ -940,7 +940,6 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (
         { kind: 'functionLabel', name: 'stringEquality', why: 'stringEquality' },
         ...preamble,
         ...saveRegistersCode(firstRegister, nextRegister, 2),
-        ...epilogue,
         {
             kind: 'loadImmediate',
             destination: knownRegisters.functionResult,
@@ -982,6 +981,7 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (
         { kind: 'loadImmediate', destination: knownRegisters.functionResult, value: 0, why: 'Set result to false' },
         { kind: 'label', name: 'stringEquality_return', why: '' },
         ...restoreRegistersCode(firstRegister, nextRegister, 2),
+        ...epilogue,
         { kind: 'returnToCaller', why: 'Return' },
     ];
 };
@@ -1000,7 +1000,6 @@ export const myFreeRuntimeFunction = (
         { kind: 'functionLabel', name: 'my_free', why: 'my_free' },
         ...preamble,
         ...saveRegistersCode(firstRegister, nextRegister, 1),
-        ...epilogue,
         {
             kind: 'gotoIfNotEqual',
             lhs: knownRegisters.argument1,
@@ -1040,6 +1039,7 @@ export const myFreeRuntimeFunction = (
             why: 'block->free = false',
         },
         ...restoreRegistersCode(firstRegister, nextRegister, 1),
+        ...epilogue,
         { kind: 'returnToCaller', why: 'Return' },
     ];
 };
