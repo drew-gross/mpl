@@ -14,7 +14,7 @@ import {
 } from '../backend-utils.js';
 import { Function } from '../api.js';
 
-export type PureRegisterTransferLanguageExpression = { why: string } & (
+export type RegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'comment' }
     | { kind: 'syscall' }
     | { kind: 'move'; from: StorageSpec; to: StorageSpec }
@@ -45,26 +45,23 @@ export type PureRegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'push'; register: StorageSpec }
     | { kind: 'pop'; register: StorageSpec });
 
-// TODO: get rid of string!
-export type RegisterTransferLanguageExpression = string | PureRegisterTransferLanguageExpression;
-
 export const astToRegisterTransferLanguage = (
     input: BackendOptions,
     knownRegisters,
     nextTemporary,
     makeLabel
-): CompiledExpression => {
+): CompiledExpression<RegisterTransferLanguageExpression> => {
     const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
     if (isEqual(currentTemporary, destination)) throw debug('todo'); // Sanity check to make sure caller remembered to provide a new temporary
     const recurse = newInput =>
         astToRegisterTransferLanguage({ ...input, ...newInput }, knownRegisters, nextTemporary, makeLabel);
     switch (ast.kind) {
         case 'number':
-            return compileExpression([], ([]) => [
+            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
                 { kind: 'loadImmediate', value: ast.value, destination: destination, why: 'Load number literal' },
             ]);
         case 'booleanLiteral':
-            return compileExpression([], ([]) => [
+            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
                 {
                     kind: 'loadImmediate',
                     value: ast.value ? 1 : 0,
@@ -75,7 +72,7 @@ export const astToRegisterTransferLanguage = (
         case 'stringLiteral': {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
             if (!stringLiteralData) throw debug('todo');
-            return compileExpression([], ([]) => [
+            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
                 {
                     kind: 'loadSymbolAddress',
                     symbolName: stringLiteralName(stringLiteralData),
@@ -90,7 +87,7 @@ export const astToRegisterTransferLanguage = (
                 destination: currentTemporary,
                 currentTemporary: nextTemporary(currentTemporary),
             });
-            return compileExpression([subExpression], ([e1]) => [
+            return compileExpression<RegisterTransferLanguageExpression>([subExpression], ([e1]) => [
                 ...e1,
                 {
                     kind: 'returnValue',
@@ -115,19 +112,22 @@ export const astToRegisterTransferLanguage = (
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
             });
-            return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
-                { kind: 'comment', why: `# Store left side in temporary (${leftSideDestination.destination})` },
-                ...storeLeft,
-                { kind: 'comment', why: `# Store right side in destination (${rightSideDestination.destination})` },
-                ...storeRight,
-                {
-                    kind: 'subtract',
-                    lhs: leftSideDestination,
-                    rhs: rightSideDestination,
-                    destination: destination,
-                    why: 'Evaluate subtraction',
-                },
-            ]);
+            return compileExpression<RegisterTransferLanguageExpression>(
+                [storeLeftInstructions, storeRightInstructions],
+                ([storeLeft, storeRight]) => [
+                    { kind: 'comment', why: `# Store left side in temporary (${leftSideDestination.destination})` },
+                    ...storeLeft,
+                    { kind: 'comment', why: `# Store right side in destination (${rightSideDestination.destination})` },
+                    ...storeRight,
+                    {
+                        kind: 'subtract',
+                        lhs: leftSideDestination,
+                        rhs: rightSideDestination,
+                        destination: destination,
+                        why: 'Evaluate subtraction',
+                    },
+                ]
+            );
         }
         case 'addition': {
             if (destination.type !== 'register') throw debug('todo');
@@ -147,19 +147,22 @@ export const astToRegisterTransferLanguage = (
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
             });
-            return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
-                { kind: 'comment', why: `# Store left side in temporary (${leftSideDestination.destination})` },
-                ...storeLeft,
-                { kind: 'comment', why: `# Store right side in destination (${rightSideDestination.destination})` },
-                ...storeRight,
-                {
-                    kind: 'add',
-                    lhs: leftSideDestination,
-                    rhs: rightSideDestination,
-                    destination: destination,
-                    why: 'Evaluate addition',
-                },
-            ]);
+            return compileExpression<RegisterTransferLanguageExpression>(
+                [storeLeftInstructions, storeRightInstructions],
+                ([storeLeft, storeRight]) => [
+                    { kind: 'comment', why: `# Store left side in temporary (${leftSideDestination.destination})` },
+                    ...storeLeft,
+                    { kind: 'comment', why: `# Store right side in destination (${rightSideDestination.destination})` },
+                    ...storeRight,
+                    {
+                        kind: 'add',
+                        lhs: leftSideDestination,
+                        rhs: rightSideDestination,
+                        destination: destination,
+                        why: 'Evaluate addition',
+                    },
+                ]
+            );
         }
         case 'ternary': {
             const booleanTemporary = currentTemporary;
@@ -179,24 +182,27 @@ export const astToRegisterTransferLanguage = (
                 ast: ast.ifFalse,
                 currentTemporary: subExpressionTemporary,
             });
-            return compileExpression([boolExpression, ifTrueExpression, ifFalseExpression], ([e1, e2, e3]) => [
-                ...e1,
-                {
-                    kind: 'gotoIfEqual',
-                    lhs: booleanTemporary,
-                    rhs: { type: 'register', destination: '$0' },
-                    label: falseBranchLabel,
-                    why: 'Go to false branch if zero',
-                },
-                ...e2,
-                { kind: 'goto', label: endOfTernaryLabel, why: 'Jump to end of ternary' },
-                { kind: 'label', name: falseBranchLabel, why: 'False branch begin' },
-                ...e3,
-                { kind: 'label', name: endOfTernaryLabel, why: 'End of ternary label' },
-            ]);
+            return compileExpression<RegisterTransferLanguageExpression>(
+                [boolExpression, ifTrueExpression, ifFalseExpression],
+                ([e1, e2, e3]) => [
+                    ...e1,
+                    {
+                        kind: 'gotoIfEqual',
+                        lhs: booleanTemporary,
+                        rhs: { type: 'register', destination: '$0' },
+                        label: falseBranchLabel,
+                        why: 'Go to false branch if zero',
+                    },
+                    ...e2,
+                    { kind: 'goto', label: endOfTernaryLabel, why: 'Jump to end of ternary' },
+                    { kind: 'label', name: falseBranchLabel, why: 'False branch begin' },
+                    ...e3,
+                    { kind: 'label', name: endOfTernaryLabel, why: 'End of ternary label' },
+                ]
+            );
         }
         case 'functionLiteral':
-            return compileExpression([], ([]) => [
+            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
                 {
                     kind: 'loadSymbolAddress',
                     to: destination,
@@ -268,7 +274,7 @@ export const astToRegisterTransferLanguage = (
                 ...argumentComputer,
             ];
 
-            return compileExpression(computeArgumentsMips, argumentComputers => [
+            return compileExpression<RegisterTransferLanguageExpression>(computeArgumentsMips, argumentComputers => [
                 ...flatten(argumentComputers.map(argumentComputerToMips)),
                 { kind: 'comment', why: 'call ${functionName}' },
                 ...callInstructions,
@@ -291,19 +297,22 @@ export const astToRegisterTransferLanguage = (
                     ast: ast.rhs,
                     destination: knownRegisters.argument2,
                 });
-                return compileExpression([storeLeftInstructions, storeRightInstructions], ([e1, e2]) => [
-                    { kind: 'comment', why: 'Store left side in s0' },
-                    ...e1,
-                    { kind: 'comment', why: 'Store right side in s1' },
-                    ...e2,
-                    { kind: 'call', function: 'stringEquality', why: 'Call stringEquality' },
-                    {
-                        kind: 'move',
-                        from: knownRegisters.functionResult,
-                        to: destination,
-                        why: `Return value in ${knownRegisters.functionResult.destination}. Move to destination`,
-                    },
-                ]);
+                return compileExpression<RegisterTransferLanguageExpression>(
+                    [storeLeftInstructions, storeRightInstructions],
+                    ([e1, e2]) => [
+                        { kind: 'comment', why: 'Store left side in s0' },
+                        ...e1,
+                        { kind: 'comment', why: 'Store right side in s1' },
+                        ...e2,
+                        { kind: 'call', function: 'stringEquality', why: 'Call stringEquality' },
+                        {
+                            kind: 'move',
+                            from: knownRegisters.functionResult,
+                            to: destination,
+                            why: `Return value in ${knownRegisters.functionResult.destination}. Move to destination`,
+                        },
+                    ]
+                );
             } else {
                 const leftSideDestination = currentTemporary;
                 const rightSideDestination = destination;
@@ -322,24 +331,27 @@ export const astToRegisterTransferLanguage = (
                 const equalLabel = makeLabel('equal');
                 const endOfConditionLabel = makeLabel('endOfCondition');
 
-                return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
-                    { kind: 'comment', why: 'Store left side of equality in temporary' },
-                    ...storeLeft,
-                    { kind: 'comment', why: 'Store right side of equality in temporary' },
-                    ...storeRight,
-                    {
-                        kind: 'gotoIfEqual',
-                        lhs: leftSideDestination,
-                        rhs: rightSideDestination,
-                        label: equalLabel,
-                        why: 'Goto set 1 if equal',
-                    },
-                    { kind: 'loadImmediate', value: 0, destination: destination, why: 'Not equal, set 0' },
-                    { kind: 'goto', label: endOfConditionLabel, why: 'And goto exit' },
-                    { kind: 'label', name: equalLabel, why: 'Sides are equal' },
-                    { kind: 'loadImmediate', value: 1, destination: destination, why: 'Set 1' },
-                    { kind: 'label', name: endOfConditionLabel, why: 'End of condition' },
-                ]);
+                return compileExpression<RegisterTransferLanguageExpression>(
+                    [storeLeftInstructions, storeRightInstructions],
+                    ([storeLeft, storeRight]) => [
+                        { kind: 'comment', why: 'Store left side of equality in temporary' },
+                        ...storeLeft,
+                        { kind: 'comment', why: 'Store right side of equality in temporary' },
+                        ...storeRight,
+                        {
+                            kind: 'gotoIfEqual',
+                            lhs: leftSideDestination,
+                            rhs: rightSideDestination,
+                            label: equalLabel,
+                            why: 'Goto set 1 if equal',
+                        },
+                        { kind: 'loadImmediate', value: 0, destination: destination, why: 'Not equal, set 0' },
+                        { kind: 'goto', label: endOfConditionLabel, why: 'And goto exit' },
+                        { kind: 'label', name: equalLabel, why: 'Sides are equal' },
+                        { kind: 'loadImmediate', value: 1, destination: destination, why: 'Set 1' },
+                        { kind: 'label', name: endOfConditionLabel, why: 'End of condition' },
+                    ]
+                );
             }
         }
         case 'typedDeclarationAssignment': {
@@ -357,7 +369,7 @@ export const astToRegisterTransferLanguage = (
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
-                        return compileExpression([rhs], ([e1]) => [
+                        return compileExpression<RegisterTransferLanguageExpression>([rhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'storeGlobal',
@@ -367,7 +379,7 @@ export const astToRegisterTransferLanguage = (
                             },
                         ]);
                     case 'String':
-                        return compileExpression([rhs], ([e1]) => [
+                        return compileExpression<RegisterTransferLanguageExpression>([rhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'move',
@@ -429,7 +441,7 @@ export const astToRegisterTransferLanguage = (
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const subExpressionTemporary = nextTemporary(currentTemporary);
                 const savedPointerForFreeing = subExpressionTemporary;
-                const rhs: CompiledExpression = recurse({
+                const rhs: CompiledExpression<RegisterTransferLanguageExpression> = recurse({
                     ast: ast.expression,
                     destination: currentTemporary,
                     currentTemporary: nextTemporary(subExpressionTemporary),
@@ -440,7 +452,7 @@ export const astToRegisterTransferLanguage = (
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
-                        return compileExpression([rhs], ([e1]) => [
+                        return compileExpression<RegisterTransferLanguageExpression>([rhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'storeGlobal',
@@ -471,42 +483,45 @@ export const astToRegisterTransferLanguage = (
                                 { kind: 'call', function: 'my_free', why: 'Free string that is no longer accessible' },
                             ] as RegisterTransferLanguageExpression[],
                         };
-                        return compileExpression([rhs, prepAndCleanup], ([e1, _]) => [
-                            ...e1,
-                            {
-                                kind: 'move',
-                                from: currentTemporary,
-                                to: knownRegisters.argument1,
-                                why: 'Move from temporary to argument 1',
-                            },
-                            { kind: 'call', function: 'length', why: 'Get length of new string' },
-                            {
-                                kind: 'move',
-                                from: knownRegisters.functionResult,
-                                to: knownRegisters.argument1,
-                                why: 'Move length of new string to argument of malloc',
-                            },
-                            { kind: 'call', function: 'my_malloc', why: 'Allocate space for new string' },
-                            {
-                                kind: 'storeGlobal',
-                                from: knownRegisters.functionResult,
-                                to: { type: 'register', destination: lhs },
-                                why: 'Store location of allocated memory to global',
-                            },
-                            {
-                                kind: 'move',
-                                from: knownRegisters.functionResult,
-                                to: knownRegisters.argument2,
-                                why: 'Move output pointer to argument 2 of string_copy',
-                            },
-                            {
-                                kind: 'move',
-                                from: currentTemporary,
-                                to: knownRegisters.argument1,
-                                why: 'move destination to argument 1 of string_copy',
-                            },
-                            { kind: 'call', function: 'string_copy', why: 'Copy new string to destination' },
-                        ]);
+                        return compileExpression<RegisterTransferLanguageExpression>(
+                            [rhs, prepAndCleanup],
+                            ([e1, _]) => [
+                                ...e1,
+                                {
+                                    kind: 'move',
+                                    from: currentTemporary,
+                                    to: knownRegisters.argument1,
+                                    why: 'Move from temporary to argument 1',
+                                },
+                                { kind: 'call', function: 'length', why: 'Get length of new string' },
+                                {
+                                    kind: 'move',
+                                    from: knownRegisters.functionResult,
+                                    to: knownRegisters.argument1,
+                                    why: 'Move length of new string to argument of malloc',
+                                },
+                                { kind: 'call', function: 'my_malloc', why: 'Allocate space for new string' },
+                                {
+                                    kind: 'storeGlobal',
+                                    from: knownRegisters.functionResult,
+                                    to: { type: 'register', destination: lhs },
+                                    why: 'Store location of allocated memory to global',
+                                },
+                                {
+                                    kind: 'move',
+                                    from: knownRegisters.functionResult,
+                                    to: knownRegisters.argument2,
+                                    why: 'Move output pointer to argument 2 of string_copy',
+                                },
+                                {
+                                    kind: 'move',
+                                    from: currentTemporary,
+                                    to: knownRegisters.argument1,
+                                    why: 'move destination to argument 1 of string_copy',
+                                },
+                                { kind: 'call', function: 'string_copy', why: 'Copy new string to destination' },
+                            ]
+                        );
                     default:
                         throw debug('todo');
                 }
@@ -544,7 +559,7 @@ export const astToRegisterTransferLanguage = (
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
             });
-            const cleanup: CompiledExpression = {
+            const cleanup: CompiledExpression<RegisterTransferLanguageExpression> = {
                 prepare: [],
                 execute: [],
                 cleanup: [
@@ -558,86 +573,89 @@ export const astToRegisterTransferLanguage = (
                     { kind: 'call', function: 'my_free', why: 'Freeing temporary from concat' },
                 ],
             };
-            return compileExpression([storeLeftInstructions, storeRightInstructions, cleanup], ([e1, e2, _]) => [
-                {
-                    kind: 'loadImmediate',
-                    value: 1,
-                    destination: newStringLengthTemporary,
-                    why: 'Create a temporary to store new string length. Start with 1 for null terminator.',
-                },
-                ...e1,
-                ...e2,
-                {
-                    kind: 'move',
-                    from: leftSideDestination,
-                    to: knownRegisters.argument1,
-                    why: 'Move lhs to argument1',
-                },
-                { kind: 'call', function: 'length', why: 'Compute the length of lhs' },
-                {
-                    kind: 'add',
-                    lhs: knownRegisters.functionResult,
-                    rhs: newStringLengthTemporary,
-                    destination: newStringLengthTemporary,
-                    why: 'add lhs length to length temporary',
-                },
-                {
-                    kind: 'move',
-                    from: rightSideDestination,
-                    to: knownRegisters.argument1,
-                    why: 'Move rhs to argument1',
-                },
-                { kind: 'call', function: 'length', why: 'Compute the length of lhs' },
-                {
-                    kind: 'add',
-                    lhs: knownRegisters.functionResult,
-                    rhs: newStringLengthTemporary,
-                    destination: newStringLengthTemporary,
-                    why: 'add rhs length to length temporary',
-                },
-                {
-                    kind: 'move',
-                    from: newStringLengthTemporary,
-                    to: knownRegisters.argument1,
-                    why: 'Move new string length to argument1',
-                },
-                { kind: 'call', function: 'my_malloc', why: 'Malloc that much space' },
-                {
-                    kind: 'move',
-                    from: knownRegisters.functionResult,
-                    to: mallocResultTemporary,
-                    why: 'Move malloc result to temporary',
-                },
-                {
-                    kind: 'move',
-                    from: leftSideDestination,
-                    to: knownRegisters.argument1,
-                    why: 'Move lhs to argument1',
-                },
-                {
-                    kind: 'move',
-                    from: rightSideDestination,
-                    to: knownRegisters.argument2,
-                    why: 'Move rhs to argument2',
-                },
-                {
-                    kind: 'move',
-                    from: mallocResultTemporary,
-                    to: knownRegisters.argument3,
-                    why: 'Move destintion to argument3',
-                },
-                {
-                    kind: 'call',
-                    function: 'string_concatenate',
-                    why: 'Concatenate the strings and write to malloced space',
-                },
-                {
-                    kind: 'move',
-                    from: mallocResultTemporary,
-                    to: destination,
-                    why: 'Move new string pointer to final destination',
-                },
-            ]);
+            return compileExpression<RegisterTransferLanguageExpression>(
+                [storeLeftInstructions, storeRightInstructions, cleanup],
+                ([e1, e2, _]) => [
+                    {
+                        kind: 'loadImmediate',
+                        value: 1,
+                        destination: newStringLengthTemporary,
+                        why: 'Create a temporary to store new string length. Start with 1 for null terminator.',
+                    },
+                    ...e1,
+                    ...e2,
+                    {
+                        kind: 'move',
+                        from: leftSideDestination,
+                        to: knownRegisters.argument1,
+                        why: 'Move lhs to argument1',
+                    },
+                    { kind: 'call', function: 'length', why: 'Compute the length of lhs' },
+                    {
+                        kind: 'add',
+                        lhs: knownRegisters.functionResult,
+                        rhs: newStringLengthTemporary,
+                        destination: newStringLengthTemporary,
+                        why: 'add lhs length to length temporary',
+                    },
+                    {
+                        kind: 'move',
+                        from: rightSideDestination,
+                        to: knownRegisters.argument1,
+                        why: 'Move rhs to argument1',
+                    },
+                    { kind: 'call', function: 'length', why: 'Compute the length of lhs' },
+                    {
+                        kind: 'add',
+                        lhs: knownRegisters.functionResult,
+                        rhs: newStringLengthTemporary,
+                        destination: newStringLengthTemporary,
+                        why: 'add rhs length to length temporary',
+                    },
+                    {
+                        kind: 'move',
+                        from: newStringLengthTemporary,
+                        to: knownRegisters.argument1,
+                        why: 'Move new string length to argument1',
+                    },
+                    { kind: 'call', function: 'my_malloc', why: 'Malloc that much space' },
+                    {
+                        kind: 'move',
+                        from: knownRegisters.functionResult,
+                        to: mallocResultTemporary,
+                        why: 'Move malloc result to temporary',
+                    },
+                    {
+                        kind: 'move',
+                        from: leftSideDestination,
+                        to: knownRegisters.argument1,
+                        why: 'Move lhs to argument1',
+                    },
+                    {
+                        kind: 'move',
+                        from: rightSideDestination,
+                        to: knownRegisters.argument2,
+                        why: 'Move rhs to argument2',
+                    },
+                    {
+                        kind: 'move',
+                        from: mallocResultTemporary,
+                        to: knownRegisters.argument3,
+                        why: 'Move destintion to argument3',
+                    },
+                    {
+                        kind: 'call',
+                        function: 'string_concatenate',
+                        why: 'Concatenate the strings and write to malloced space',
+                    },
+                    {
+                        kind: 'move',
+                        from: mallocResultTemporary,
+                        to: destination,
+                        why: 'Move new string pointer to final destination',
+                    },
+                ]
+            );
         }
         case 'identifier': {
             // TODO: Better handle identifiers here. Also just better storage/scope chains?
@@ -645,7 +663,7 @@ export const astToRegisterTransferLanguage = (
             if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
                 if (!declaration) throw debug('todo');
-                return compileExpression([], ([]) => [
+                return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
                     {
                         kind: 'loadGlobal',
                         to: destination,
@@ -655,7 +673,7 @@ export const astToRegisterTransferLanguage = (
                 ]);
             }
             const identifierRegister = registerAssignment[identifierName];
-            return compileExpression([], ([]) => [
+            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
                 {
                     kind: 'move',
                     from: identifierRegister,
@@ -681,25 +699,30 @@ export const astToRegisterTransferLanguage = (
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
             });
-            return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
-                {
-                    kind: 'comment',
-                    why: `Store left side of product in temporary (${storageSpecToString(leftSideDestination)})`,
-                },
-                ...storeLeft,
-                {
-                    kind: 'comment',
-                    why: `Store right side of product in destination (${storageSpecToString(rightSideDestination)})`,
-                },
-                ...storeRight,
-                {
-                    kind: 'multiply',
-                    lhs: leftSideDestination,
-                    rhs: rightSideDestination,
-                    destination: destination,
-                    why: 'Evaluate product',
-                },
-            ]);
+            return compileExpression<RegisterTransferLanguageExpression>(
+                [storeLeftInstructions, storeRightInstructions],
+                ([storeLeft, storeRight]) => [
+                    {
+                        kind: 'comment',
+                        why: `Store left side of product in temporary (${storageSpecToString(leftSideDestination)})`,
+                    },
+                    ...storeLeft,
+                    {
+                        kind: 'comment',
+                        why: `Store right side of product in destination (${storageSpecToString(
+                            rightSideDestination
+                        )})`,
+                    },
+                    ...storeRight,
+                    {
+                        kind: 'multiply',
+                        lhs: leftSideDestination,
+                        rhs: rightSideDestination,
+                        destination: destination,
+                        why: 'Evaluate product',
+                    },
+                ]
+            );
         }
         default:
             throw debug('todo');
@@ -713,8 +736,8 @@ export const constructFunction = (
     knownRegisters,
     firstTemporary: StorageSpec,
     nextTemporary,
-    preamble: PureRegisterTransferLanguageExpression[],
-    epilogue: PureRegisterTransferLanguageExpression[],
+    preamble: RegisterTransferLanguageExpression[],
+    epilogue: RegisterTransferLanguageExpression[],
     makeLabel
 ): RegisterTransferLanguageExpression[] => {
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.

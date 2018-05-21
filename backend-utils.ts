@@ -2,34 +2,31 @@ import * as Ast from './ast.js';
 import debug from './util/debug.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from './api.js';
 import flatten from './util/list/flatten.js';
-import {
-    RegisterTransferLanguageExpression,
-    PureRegisterTransferLanguageExpression,
-} from './backends/registerTransferLanguage.js';
+import { RegisterTransferLanguageExpression } from './backends/registerTransferLanguage.js';
 
-export type CompiledExpression = {
-    prepare: RegisterTransferLanguageExpression[];
-    execute: RegisterTransferLanguageExpression[];
-    cleanup: RegisterTransferLanguageExpression[];
+export type CompiledExpression<T> = {
+    prepare: T[];
+    execute: T[];
+    cleanup: T[];
 };
 
-export type CompiledAssignment = {
-    prepare: RegisterTransferLanguageExpression[];
-    execute: RegisterTransferLanguageExpression[];
-    cleanup: RegisterTransferLanguageExpression[];
+export type CompiledAssignment<T> = {
+    prepare: T[];
+    execute: T[];
+    cleanup: T[];
 };
 
-export type CompiledProgram = {
-    prepare: RegisterTransferLanguageExpression[];
-    execute: RegisterTransferLanguageExpression[];
-    cleanup: RegisterTransferLanguageExpression[];
+export type CompiledProgram<T> = {
+    prepare: T[];
+    execute: T[];
+    cleanup: T[];
 };
 
-type ExpressionCompiler = (expressions: RegisterTransferLanguageExpression[][]) => RegisterTransferLanguageExpression[];
-export const compileExpression = (
-    subExpressions: CompiledExpression[],
-    expressionCompiler: ExpressionCompiler
-): CompiledExpression => ({
+type ExpressionCompiler<T> = (expressions: T[][]) => T[];
+export const compileExpression = <T>(
+    subExpressions: CompiledExpression<T>[],
+    expressionCompiler: ExpressionCompiler<T>
+): CompiledExpression<T> => ({
     prepare: flatten(subExpressions.map(input => input.prepare)),
     execute: expressionCompiler(subExpressions.map(input => input.execute)),
     cleanup: flatten(subExpressions.reverse().map(input => input.cleanup)),
@@ -66,8 +63,8 @@ export const saveRegistersCode = (
     firstRegister,
     nextRegister,
     numRegisters: number
-): PureRegisterTransferLanguageExpression[] => {
-    let result: PureRegisterTransferLanguageExpression[] = [];
+): RegisterTransferLanguageExpression[] => {
+    let result: RegisterTransferLanguageExpression[] = [];
     let currentRegister: StorageSpec = firstRegister;
     while (numRegisters > 0) {
         result.push({
@@ -85,8 +82,8 @@ export const restoreRegistersCode = (
     firstRegister,
     nextRegister,
     numRegisters: number
-): (string | PureRegisterTransferLanguageExpression)[] => {
-    let result: PureRegisterTransferLanguageExpression[] = [];
+): RegisterTransferLanguageExpression[] => {
+    let result: RegisterTransferLanguageExpression[] = [];
     let currentRegister: StorageSpec = firstRegister;
     while (numRegisters > 0) {
         result.push({

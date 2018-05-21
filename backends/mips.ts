@@ -15,7 +15,6 @@ import {
 import {
     astToRegisterTransferLanguage,
     constructFunction,
-    PureRegisterTransferLanguageExpression,
     RegisterTransferLanguageExpression,
 } from './registerTransferLanguage.js';
 import {
@@ -103,7 +102,7 @@ const assignMipsRegisters = (
     };
 };
 
-const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransferLanguageExpression): string[] => {
+const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLanguageExpression): string[] => {
     switch (rtx.kind) {
         case 'comment':
             return [''];
@@ -253,10 +252,10 @@ const bytesInWord = 4;
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
 
-const preamble: PureRegisterTransferLanguageExpression[] = [
+const preamble: RegisterTransferLanguageExpression[] = [
     { kind: 'push', register: { type: 'register', destination: '$ra' }, why: 'Always save return address' },
 ];
-const eplilogue: PureRegisterTransferLanguageExpression[] = [
+const eplilogue: RegisterTransferLanguageExpression[] = [
     { kind: 'pop', register: { type: 'register', destination: '$ra' }, why: 'Always restore return address' },
 ];
 
@@ -310,19 +309,19 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         })
     );
 
-    const freeGlobals: PureRegisterTransferLanguageExpression[] = flatten(
+    const freeGlobals: RegisterTransferLanguageExpression[] = flatten(
         globalDeclarations.filter(declaration => declaration.type.name === 'String').map(declaration => [
             {
                 kind: 'loadGlobal',
                 from: declaration.name,
                 to: knownRegisters.argument1,
                 why: 'Load global string so we can free it',
-            } as PureRegisterTransferLanguageExpression,
+            } as RegisterTransferLanguageExpression,
             {
                 kind: 'call',
                 function: 'my_free',
                 why: 'Free gloabal string at end of program',
-            } as PureRegisterTransferLanguageExpression,
+            } as RegisterTransferLanguageExpression,
         ])
     );
 

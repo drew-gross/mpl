@@ -26,7 +26,6 @@ import {
 import {
     astToRegisterTransferLanguage,
     constructFunction,
-    PureRegisterTransferLanguageExpression,
     RegisterTransferLanguageExpression,
 } from './registerTransferLanguage.js';
 import flatten from '../util/list/flatten.js';
@@ -127,7 +126,7 @@ const assignX64Registers = (
     };
 };
 
-const registerTransferExpressionToX64WithoutComment = (rtx: PureRegisterTransferLanguageExpression): string[] => {
+const registerTransferExpressionToX64WithoutComment = (rtx: RegisterTransferLanguageExpression): string[] => {
     switch (rtx.kind) {
         case 'comment':
             return [''];

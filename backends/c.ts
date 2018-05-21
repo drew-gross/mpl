@@ -8,7 +8,6 @@ import execAndGetResult from '../util/execAndGetResult.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
 import { CompiledProgram, CompiledExpression, compileExpression, CompiledAssignment } from '../backend-utils.js';
-import { RegisterTransferLanguageExpression } from './registerTransferLanguage.js';
 import { errors } from '../runtime-strings.js';
 import { mergeDeclarations } from '../frontend.js';
 
@@ -44,7 +43,7 @@ type BackendInput = {
     stringLiterals: StringLiteralData[];
 };
 
-const compileAssignment = (destination: string, rhs: CompiledExpression): CompiledAssignment => {
+const compileAssignment = (destination: string, rhs: CompiledExpression<string>): CompiledAssignment<string> => {
     return {
         prepare: rhs.prepare,
         execute: [`${destination} = `, ...rhs.execute, ';'],
@@ -58,15 +57,14 @@ const getTemporaryId = () => {
     return currentTemporaryId;
 };
 
-//TODO: Don't use register transfer langauge for C
-const registerTransferLangaugeToC = (rtlCode: RegisterTransferLanguageExpression[], joiner: string): string => {
+const registerTransferLangaugeToC = (rtlCode: string[], joiner: string): string => {
     rtlCode.forEach(line => {
         if (typeof line !== 'string') debug('todo');
     });
     return join(rtlCode as string[], joiner);
 };
 
-const astToC = (input: BackendInput): CompiledProgram => {
+const astToC = (input: BackendInput): CompiledProgram<string> => {
     const { ast, stringLiterals, declarations } = input;
     const recurse = newInput => astToC({ ...input, ...newInput });
     const binaryOperator = (operator: string) => {
