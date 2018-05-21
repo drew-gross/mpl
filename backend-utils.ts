@@ -2,7 +2,10 @@ import * as Ast from './ast.js';
 import debug from './util/debug.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from './api.js';
 import flatten from './util/list/flatten.js';
-import { RegisterTransferLanguageExpression } from './backends/registerTransferLanguage.js';
+import {
+    RegisterTransferLanguageExpression,
+    PureRegisterTransferLanguageExpression,
+} from './backends/registerTransferLanguage.js';
 
 export type CompiledExpression = {
     prepare: RegisterTransferLanguageExpression[];
@@ -58,3 +61,41 @@ export type BackendOptions = {
 
 export const stringLiteralName = ({ id, value }: StringLiteralData) =>
     `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
+
+export const saveRegistersCode = (
+    firstRegister,
+    nextRegister,
+    numRegisters: number
+): PureRegisterTransferLanguageExpression[] => {
+    let result: PureRegisterTransferLanguageExpression[] = [];
+    let currentRegister: StorageSpec = firstRegister;
+    while (numRegisters > 0) {
+        result.push({
+            kind: 'push',
+            register: currentRegister,
+            why: 'Save registers we intend to use',
+        });
+        currentRegister = nextRegister(currentRegister);
+        numRegisters--;
+    }
+    return result;
+};
+
+export const restoreRegistersCode = (
+    firstRegister,
+    nextRegister,
+    numRegisters: number
+): (string | PureRegisterTransferLanguageExpression)[] => {
+    let result: PureRegisterTransferLanguageExpression[] = [];
+    let currentRegister: StorageSpec = firstRegister;
+    while (numRegisters > 0) {
+        result.push({
+            kind: 'pop',
+            register: currentRegister,
+            why: 'Restore registers that we used',
+        });
+        currentRegister = nextRegister(currentRegister);
+        numRegisters--;
+    }
+    return result.reverse();
+};

@@ -185,26 +185,6 @@ const assignMipsRegisters = (
     };
 };
 
-const saveRegistersCode = (numRegisters: number): string[] => {
-    let result = [`# Always store return address`, `sw $ra, ($sp)`, `addiu $sp, $sp, -4`];
-    while (numRegisters > 0) {
-        result.push(`sw $t${numRegisters}, ($sp)`);
-        result.push(`addiu $sp, $sp, -4`);
-        numRegisters--;
-    }
-    return result;
-};
-
-const restoreRegistersCode = (numRegisters: number): string[] => {
-    let result = [`lw $ra, ($sp)`, `addiu $sp, $sp, 4`, `# Always restore return address`];
-    while (numRegisters > 0) {
-        result.push(`lw $t${numRegisters}, ($sp)`);
-        result.push(`addiu $sp, $sp, 4`);
-        numRegisters--;
-    }
-    return result.reverse();
-};
-
 const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransferLanguageExpression): string[] => {
     switch (rtx.kind) {
         case 'comment':
@@ -297,6 +277,12 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: PureRegisterTransfe
             return [`jal ${rtx.function}`];
         case 'returnToCaller':
             return [`jr $ra`];
+        case 'push':
+            if (rtx.register.type !== 'register') throw debug('todo');
+            return [`sw ${rtx.register.destination}, ($sp)`, `addiu, $sp, $sp, -4`];
+        case 'pop':
+            if (rtx.register.type !== 'register') throw debug('todo');
+            return [`addiu $sp, $sp, 4`, `lw ${rtx.register.destination}, ($sp)`];
         default:
             throw debug(`${(rtx as any).kind} unhandled in registerTransferExpressionToMipsWithoutComment`);
     }
@@ -319,80 +305,23 @@ const bytesInWord = 4;
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
 
-const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
-    length(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-    printWithPrintRuntimeFunction(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-    stringEqualityRuntimeFunction(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-    stringCopy(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-    mallocWithSbrk(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-    myFreeRuntimeFunction(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-    stringConcatenateRuntimeFunction(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-    verifyNoLeaks(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
+const preamble: PureRegisterTransferLanguageExpression[] = [
+    { kind: 'push', register: { type: 'register', destination: '$ra' }, why: 'Always save return address' },
 ];
+const eplilogue: PureRegisterTransferLanguageExpression[] = [
+    { kind: 'pop', register: { type: 'register', destination: '$ra' }, why: 'Always restore return address' },
+];
+
+const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
+    length,
+    printWithPrintRuntimeFunction,
+    stringEqualityRuntimeFunction,
+    stringCopy,
+    mallocWithSbrk,
+    myFreeRuntimeFunction,
+    stringConcatenateRuntimeFunction,
+    verifyNoLeaks,
+].map(f => f(bytesInWord, syscallNumbers, knownRegisters, firstRegister, nextTemporary, preamble, eplilogue));
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f =>
@@ -409,8 +338,8 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             ],
             firstRegister,
             nextTemporary,
-            saveRegistersCode,
-            restoreRegistersCode
+            preamble,
+            eplilogue
         )
     );
     const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);

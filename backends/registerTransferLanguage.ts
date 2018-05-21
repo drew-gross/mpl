@@ -8,6 +8,8 @@ import {
     CompiledExpression,
     compileExpression,
     stringLiteralName,
+    saveRegistersCode,
+    restoreRegistersCode,
 } from '../backend-utils.js';
 import { Function } from '../api.js';
 
@@ -676,8 +678,8 @@ export const constructFunction = (
     argumentRegisters: string[],
     firstTemporary: StorageSpec,
     nextTemporary,
-    registerSaver,
-    registerRestorer
+    preamble: PureRegisterTransferLanguageExpression[],
+    epilogue: PureRegisterTransferLanguageExpression[]
 ): RegisterTransferLanguageExpression[] => {
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
     const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
@@ -733,9 +735,11 @@ export const constructFunction = (
     );
     return [
         { kind: 'functionLabel', name: f.name, why: f.name },
-        ...registerSaver(scratchRegisterCount),
+        ...preamble,
+        ...saveRegistersCode(firstTemporary, nextTemporary, scratchRegisterCount),
         ...functionCode,
-        ...registerRestorer(scratchRegisterCount),
+        ...restoreRegistersCode(firstTemporary, nextTemporary, scratchRegisterCount),
+        ...epilogue,
         { kind: 'returnToCaller', why: `End of ${f.name}` },
     ];
 };

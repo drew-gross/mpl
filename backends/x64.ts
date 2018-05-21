@@ -299,36 +299,6 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
     return registerTransferExpressionToX64WithoutComment(rtx).map(asm => `${asm}; ${rtx.why}`);
 };
 
-const saveRegistersCode = (numRegisters: number): PureRegisterTransferLanguageExpression[] => {
-    let result: PureRegisterTransferLanguageExpression[] = [];
-    let currentRegister: StorageSpec = firstRegister;
-    while (numRegisters > 0) {
-        result.push({
-            kind: 'push',
-            register: currentRegister,
-            why: 'Save registers we intend to use',
-        });
-        currentRegister = nextTemporary(currentRegister);
-        numRegisters--;
-    }
-    return result;
-};
-
-const restoreRegistersCode = (numRegisters: number): (string | PureRegisterTransferLanguageExpression)[] => {
-    let result: PureRegisterTransferLanguageExpression[] = [];
-    let currentRegister: StorageSpec = firstRegister;
-    while (numRegisters > 0) {
-        result.push({
-            kind: 'pop',
-            register: currentRegister,
-            why: 'Restore registers that we used',
-        });
-        currentRegister = nextTemporary(currentRegister);
-        numRegisters--;
-    }
-    return result.reverse();
-};
-
 const bytesInWord = 8;
 const syscallNumbers = {
     print: 0x02000004,
@@ -338,79 +308,15 @@ const syscallNumbers = {
 };
 
 const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
-    length(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-    printWithWriteRuntimeFunction(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-    stringEqualityRuntimeFunction(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-    stringCopy(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-    mallocWithMmap(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-    myFreeRuntimeFunction(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-    stringConcatenateRuntimeFunction(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-    verifyNoLeaks(
-        bytesInWord,
-        syscallNumbers,
-        saveRegistersCode,
-        restoreRegistersCode,
-        knownRegisters,
-        firstRegister,
-        nextTemporary
-    ),
-];
+    length,
+    printWithWriteRuntimeFunction,
+    stringEqualityRuntimeFunction,
+    stringCopy,
+    mallocWithMmap,
+    myFreeRuntimeFunction,
+    stringConcatenateRuntimeFunction,
+    verifyNoLeaks,
+].map(f => f(bytesInWord, syscallNumbers, knownRegisters, firstRegister, nextTemporary, [], []));
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
@@ -430,8 +336,8 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             ],
             firstRegister,
             nextTemporary,
-            saveRegistersCode,
-            restoreRegistersCode
+            [],
+            []
         )
     );
     const { registerAssignment, firstTemporary } = assignX64Registers(program.variables);

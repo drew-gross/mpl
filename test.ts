@@ -710,11 +710,12 @@ return isFive(11);`,
     expectedExitCode: 7,
 });
 
-test('factorial', compileAndRun, {
+test.only('factorial', compileAndRun, {
     source: `
 factorial := x: Integer => x == 1 ? 1 : x * factorial(x - 1);
 return factorial(5);`,
     expectedExitCode: 120,
+    printSubsteps: 'mips',
 });
 
 test('return bool fail', compileAndRun, {
