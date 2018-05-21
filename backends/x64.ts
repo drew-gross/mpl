@@ -98,15 +98,14 @@ const nextTemporary = (storage: StorageSpec): StorageSpec => {
 };
 
 let labelId = 0;
+const makeLabel = (name: string) => {
+    const result = `${name}${labelId}`;
+    labelId++;
+    return result;
+};
 
 const astToX64 = (input: BackendOptions): CompiledProgram => {
-    if (isEqual(input.currentTemporary, input.destination)) throw debug('todo'); // Sanity check to make sure caller remembered to provide a new temporary
     const recurse = newInput => astToX64({ ...input, ...newInput });
-    const makeLabel = (name: string) => {
-        const result = `${name}${labelId}`;
-        labelId++;
-        return result;
-    };
     return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel, recurse);
 };
 
