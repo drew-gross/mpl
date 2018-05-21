@@ -85,27 +85,7 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
         labelId++;
         return result;
     };
-    if (!ast) debug('todo');
-    switch (ast.kind) {
-        case 'number':
-        case 'returnStatement':
-        case 'subtraction':
-        case 'addition':
-        case 'ternary':
-        case 'booleanLiteral':
-        case 'functionLiteral':
-        case 'callExpression':
-        case 'equality':
-        case 'stringLiteral':
-        case 'concatenation':
-        case 'typedDeclarationAssignment':
-        case 'reassignment':
-        case 'product':
-        case 'identifier':
-            return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel, recurse);
-        default:
-            throw debug('todo');
-    }
+    return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel, recurse);
 };
 
 const assignMipsRegisters = (

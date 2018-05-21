@@ -108,27 +108,7 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         labelId++;
         return result;
     };
-    if (!ast) debug('todo');
-    switch (ast.kind) {
-        case 'number':
-        case 'returnStatement':
-        case 'subtraction':
-        case 'addition':
-        case 'ternary':
-        case 'booleanLiteral':
-        case 'functionLiteral':
-        case 'callExpression':
-        case 'equality':
-        case 'typedDeclarationAssignment':
-        case 'reassignment':
-        case 'stringLiteral':
-        case 'concatenation':
-        case 'identifier':
-        case 'product':
-            return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel, recurse);
-        default:
-            throw debug(`${(ast as any).kind} unhandled in astToX64`);
-    }
+    return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel, recurse);
 };
 
 // TODO: unify with assignMipsRegisters
