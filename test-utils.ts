@@ -1,4 +1,4 @@
-import * as open from 'open';
+import * as open from 'opn';
 import { exec } from 'child-process-promise';
 import { Backend, BackendInputs, TypeError } from './api.js';
 import { Ast } from './ast.js';
@@ -129,7 +129,7 @@ export const compileAndRun = async (
         const svgFile = await tmpFile({ postfix: '.svg' });
         await writeFile(dotFile.fd, dot.write(toDotFile(parseResult)));
         await exec(`dot -Tsvg -o${svgFile.path} ${dotFile.path}`);
-        await open(svgFile.path, 'Google Chrome');
+        await open(svgFile.path, { app: 'Google Chrome' });
     }
 
     // Frontend
