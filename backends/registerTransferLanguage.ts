@@ -635,6 +635,33 @@ export const astToRegisterTransferLanguage = (
                 },
             ]);
         }
+        case 'identifier': {
+            // TODO: Better handle identifiers here. Also just better storage/scope chains?
+            const identifierName = ast.value;
+            if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
+                const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
+                if (!declaration) throw debug('todo');
+                return compileExpression([], ([]) => [
+                    {
+                        kind: 'loadGlobal',
+                        to: destination,
+                        from: identifierName,
+                        why: `Load ${identifierName} from global into register`,
+                    },
+                ]);
+            }
+            const identifierRegister = registerAssignment[identifierName];
+            return compileExpression([], ([]) => [
+                {
+                    kind: 'move',
+                    from: identifierRegister,
+                    to: destination,
+                    why: `Move from ${identifierName} (${(identifierRegister as any).destination}) into destination (${
+                        (destination as any).destination
+                    }`,
+                },
+            ]);
+        }
         default:
             throw debug('todo');
     }

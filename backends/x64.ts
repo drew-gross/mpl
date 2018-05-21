@@ -123,36 +123,8 @@ const astToX64 = (input: BackendOptions): CompiledProgram => {
         case 'reassignment':
         case 'stringLiteral':
         case 'concatenation':
+        case 'identifier':
             return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel, recurse);
-        case 'identifier': {
-            // TODO: Better handle identifiers here. Also just better storage/scope chains?
-            const identifierName = ast.value;
-            if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
-                const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
-                if (!declaration) throw debug('todo');
-                return compileExpression([], ([]) => [
-                    {
-                        kind: 'loadGlobal',
-                        from: identifierName,
-                        to: destination,
-                        why: `Move from global ${identifierName} into destination (${(destination as any).destination ||
-                            (destination as any).spOffset})`,
-                    },
-                ]);
-            }
-            const identifierRegister = registerAssignment[identifierName];
-            if (destination.type !== 'register') throw debug('need a register dest');
-            if (identifierRegister.type !== 'register') throw debug('need a register dest');
-            return compileExpression([], ([]) => [
-                {
-                    kind: 'move',
-                    to: destination,
-                    from: identifierRegister,
-                    why: `Move from ${identifierName} (${identifierRegister}) into destination (${(destination as any)
-                        .destination || (destination as any).spOffset})`,
-                },
-            ]);
-        }
         case 'product': {
             const leftSideDestination: StorageSpec = currentTemporary;
             const rightSideDestination = destination;
