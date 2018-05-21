@@ -104,10 +104,6 @@ const makeLabel = (name: string) => {
     return result;
 };
 
-const astToX64 = (input: BackendOptions): CompiledProgram => {
-    return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel);
-};
-
 // TODO: unify with assignMipsRegisters
 const assignX64Registers = (
     variables: VariableDeclaration[]
@@ -288,19 +284,25 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         )
     );
     const { registerAssignment, firstTemporary } = assignX64Registers(program.variables);
+
     let x64Program = flatten(
         program.statements.map(statement => {
-            const compiledProgram = astToX64({
-                ast: statement,
-                registerAssignment,
-                destination: {
-                    type: 'register',
-                    destination: '$a0',
+            const compiledProgram = astToRegisterTransferLanguage(
+                {
+                    ast: statement,
+                    registerAssignment,
+                    destination: {
+                        type: 'register',
+                        destination: '$a0',
+                    },
+                    currentTemporary: firstTemporary,
+                    globalDeclarations,
+                    stringLiterals,
                 },
-                currentTemporary: firstTemporary,
-                globalDeclarations,
-                stringLiterals,
-            });
+                knownRegisters,
+                nextTemporary,
+                makeLabel
+            );
 
             return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
         })

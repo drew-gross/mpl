@@ -81,10 +81,6 @@ const makeLabel = (name: string) => {
     return result;
 };
 
-const astToMips = (input: BackendOptions): CompiledProgram => {
-    return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel);
-};
-
 const assignMipsRegisters = (
     variables: VariableDeclaration[]
 ): { registerAssignment: RegisterAssignment; firstTemporary: StorageSpec } => {
@@ -289,20 +285,26 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             makeLabel
         )
     );
+
     const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);
     let mipsProgram = flatten(
         program.statements.map(statement => {
-            const compiledProgram = astToMips({
-                ast: statement,
-                registerAssignment,
-                destination: {
-                    type: 'register',
-                    destination: '$a0',
+            const compiledProgram = astToRegisterTransferLanguage(
+                {
+                    ast: statement,
+                    registerAssignment,
+                    destination: {
+                        type: 'register',
+                        destination: '$a0',
+                    },
+                    currentTemporary: firstTemporary,
+                    globalDeclarations,
+                    stringLiterals,
                 },
-                currentTemporary: firstTemporary,
-                globalDeclarations,
-                stringLiterals,
-            });
+                knownRegisters,
+                nextTemporary,
+                makeLabel
+            );
 
             return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
         })
