@@ -6,7 +6,9 @@
     "license": "UNLICENSED",
     "main": "built/index.js",
     "ava": {
-        "files": ["built/test.js"]
+        "files": [
+            "built/test.js"
+        ]
     },
     "scripts": {
         "test": "rimraf built && npm run prettier-check && tsc && ava --verbose",
@@ -14,8 +16,7 @@
         "test-watch": "ava --watch --no-color",
         "tsc-watch": "tsc --watch",
         "test-debug": "tsc && inspect --debug-exception node_modules/ava/profile.js built/test.js",
-        "cloc":
-            "cloc --exclude-dir=node_modules,built --not-match-f='package-lock.json|package.json|tsconfig.json|prettier-config.json|test.ts|test-utils.ts' .",
+        "cloc": "cloc --exclude-dir=node_modules,built --not-match-f='package-lock.json|package.json|tsconfig.json|prettier-config.json|test.ts|test-utils.ts' .",
         "cloc-all": "cloc --exclude-dir=node_modules,built . --not-match-f='package-lock.json'",
         "prettier-check": "prettier --config package.json --list-different '**/*.ts'"
     },
@@ -27,7 +28,7 @@
         "tmp-promise": "1.0.4"
     },
     "devDependencies": {
-        "@types/node": "9.4.6",
+        "@types/node": "10.1.2",
         "ava": "0.25.0",
         "graphlib": "2.1.5",
         "graphlib-dot": "0.6.2",
