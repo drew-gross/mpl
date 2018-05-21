@@ -10,7 +10,6 @@ import {
     compileExpression,
     StorageSpec,
     RegisterAssignment,
-    storageSpecToString,
     stringLiteralName,
 } from '../backend-utils.js';
 import {
@@ -101,43 +100,9 @@ const astToMips = (input: BackendOptions): CompiledProgram => {
         case 'concatenation':
         case 'typedDeclarationAssignment':
         case 'reassignment':
+        case 'product':
         case 'identifier':
             return astToRegisterTransferLanguage(input, knownRegisters, nextTemporary, makeLabel, recurse);
-        case 'product': {
-            const leftSideDestination = currentTemporary;
-            const rightSideDestination = destination;
-            const subExpressionTemporary = nextTemporary(currentTemporary);
-
-            const storeLeftInstructions = recurse({
-                ast: ast.lhs,
-                destination: leftSideDestination,
-                currentTemporary: subExpressionTemporary,
-            });
-            const storeRightInstructions = recurse({
-                ast: ast.rhs,
-                destination: rightSideDestination,
-                currentTemporary: subExpressionTemporary,
-            });
-            return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
-                {
-                    kind: 'comment',
-                    why: `Store left side of product in temporary (${storageSpecToString(leftSideDestination)})`,
-                },
-                ...storeLeft,
-                {
-                    kind: 'comment',
-                    why: `Store right side of product in destination (${storageSpecToString(rightSideDestination)})`,
-                },
-                ...storeRight,
-                {
-                    kind: 'multiply',
-                    lhs: leftSideDestination,
-                    rhs: rightSideDestination,
-                    destination: destination,
-                    why: 'Evaluate product',
-                },
-            ]);
-        }
         default:
             throw debug('todo');
     }

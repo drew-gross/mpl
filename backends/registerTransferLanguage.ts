@@ -10,6 +10,7 @@ import {
     stringLiteralName,
     saveRegistersCode,
     restoreRegistersCode,
+    storageSpecToString,
 } from '../backend-utils.js';
 import { Function } from '../api.js';
 
@@ -661,6 +662,41 @@ export const astToRegisterTransferLanguage = (
                     why: `Move from ${identifierName} (${(identifierRegister as any).destination}) into destination (${
                         (destination as any).destination
                     }`,
+                },
+            ]);
+        }
+        case 'product': {
+            const leftSideDestination = currentTemporary;
+            const rightSideDestination = destination;
+            const subExpressionTemporary = nextTemporary(currentTemporary);
+
+            const storeLeftInstructions = recurse({
+                ast: ast.lhs,
+                destination: leftSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+            const storeRightInstructions = recurse({
+                ast: ast.rhs,
+                destination: rightSideDestination,
+                currentTemporary: subExpressionTemporary,
+            });
+            return compileExpression([storeLeftInstructions, storeRightInstructions], ([storeLeft, storeRight]) => [
+                {
+                    kind: 'comment',
+                    why: `Store left side of product in temporary (${storageSpecToString(leftSideDestination)})`,
+                },
+                ...storeLeft,
+                {
+                    kind: 'comment',
+                    why: `Store right side of product in destination (${storageSpecToString(rightSideDestination)})`,
+                },
+                ...storeRight,
+                {
+                    kind: 'multiply',
+                    lhs: leftSideDestination,
+                    rhs: rightSideDestination,
+                    destination: destination,
+                    why: 'Evaluate product',
                 },
             ]);
         }
