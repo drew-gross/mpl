@@ -11,6 +11,7 @@ import join from './util/join.js';
 import { tokenSpecs, grammar } from './grammar.js';
 import { parse, stripResultIndexes, toDotFile, parseResultIsError, stripSourceLocation } from './parser-combinator.js';
 import * as dot from 'graphlib-dot';
+import showGraphInChrome from './util/graph/showInChrome.js';
 
 import mipsBackend from './backends/mips.js';
 import jsBackend from './backends/js.js';
@@ -125,11 +126,7 @@ export const compileAndRun = async (
             t.fail(`Bad parse result. Found: ${parseResult.found}. Expected: ${parseResult.expected}`);
             return;
         }
-        const dotFile = await tmpFile({ postfix: '.dot' });
-        const svgFile = await tmpFile({ postfix: '.svg' });
-        await writeFile(dotFile.fd, dot.write(toDotFile(parseResult)));
-        await exec(`dot -Tsvg -o${svgFile.path} ${dotFile.path}`);
-        await open(svgFile.path, { app: 'Google Chrome' });
+        showGraphInChrome(dot.write(toDotFile(parseResult)));
     }
 
     // Frontend

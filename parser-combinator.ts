@@ -4,7 +4,6 @@ import flatten from './util/list/flatten.js';
 import last from './util/list/last.js';
 import debug from './util/debug.js';
 import { Graph } from 'graphlib';
-import dot from 'graphlib-dot';
 import { SourceLocation } from './api.js';
 
 interface Node<NodeType, LeafType> {

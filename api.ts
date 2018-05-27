@@ -1,4 +1,5 @@
 import { UninferredStatement, Statement } from './ast.js';
+import { RegisterTransferLanguageExpression } from './backends/registerTransferLanguage.js';
 
 export type SourceLocation = { sourceLine: number; sourceColumn: number };
 
@@ -80,9 +81,11 @@ export type TypeError = SourceLocation &
         | { kind: 'ternaryBranchMismatch'; trueBranchType: Type; falseBranchType: Type }
         | { kind: 'typeMismatchForOperator'; leftType: Type; rightType: Type; operator: string }
         | { kind: 'assignWrongType'; lhsName: string; lhsType: Type; rhsType: Type });
+
 export type Backend = {
     name: string;
     toExectuable: (BackendInputs) => string;
     execute: (string) => Promise<ExecutionResult>; // Exit code or error
     debug?: (string) => Promise<void>;
+    runtimeFunctions?: RegisterTransferLanguageExpression[][];
 };

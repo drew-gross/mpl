@@ -391,4 +391,5 @@ export default {
     toExectuable,
     execute,
     debug: path => exec(`${__dirname}/../../QtSpim.app/Contents/MacOS/QtSpim ${path}`),
+    runtimeFunctions,
 };

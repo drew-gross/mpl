@@ -41,9 +41,13 @@ export type RegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'loadSymbolAddress'; to: StorageSpec; symbolName: string }
     | { kind: 'call'; function: string }
     | { kind: 'returnToCaller' }
-    | { kind: 'returnValue'; source: StorageSpec }
+    | { kind: 'returnValue'; source: StorageSpec } // TODO: replace this with a move to functionResult
     | { kind: 'push'; register: StorageSpec }
     | { kind: 'pop'; register: StorageSpec });
+
+export const toString = (rtx: RegisterTransferLanguageExpression): string => {
+    return JSON.stringify(rtx);
+};
 
 export const astToRegisterTransferLanguage = (
     input: BackendOptions,
