@@ -46,7 +46,103 @@ export type RegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'pop'; register: StorageSpec });
 
 export const toString = (rtx: RegisterTransferLanguageExpression): string => {
-    return JSON.stringify(rtx);
+    let result = '';
+    switch (rtx.kind) {
+        case 'comment':
+            result = ``;
+            break;
+        case 'syscall':
+            result = 'syscall';
+            break;
+        case 'move':
+            result = `${storageSpecToString(rtx.to)} = ${storageSpecToString(rtx.from)}`;
+            break;
+        case 'loadImmediate':
+            result = `${storageSpecToString(rtx.destination)} = ${rtx.value}`;
+            break;
+        case 'addImmediate':
+            result = `${storageSpecToString(rtx.register)} += ${rtx.amount}`;
+            break;
+        case 'subtract':
+            result = `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} - ${storageSpecToString(
+                rtx.rhs
+            )}`;
+            break;
+        case 'add':
+            result = `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} + ${storageSpecToString(
+                rtx.rhs
+            )}`;
+            break;
+        case 'multiply':
+            result = `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} * ${storageSpecToString(
+                rtx.rhs
+            )}`;
+            break;
+        case 'increment':
+            result = `${storageSpecToString(rtx.register)}++`;
+            break;
+        case 'label':
+        case 'functionLabel':
+            result = `${rtx.name}:`;
+            break;
+        case 'goto':
+            result = `goto ${rtx.label}`;
+            break;
+        case 'gotoIfEqual':
+            result = `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} == ${storageSpecToString(rtx.rhs)}`;
+            break;
+        case 'gotoIfNotEqual':
+            result = `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} != ${storageSpecToString(rtx.rhs)}`;
+            break;
+        case 'gotoIfZero':
+            result = `goto ${rtx.label} if ${storageSpecToString(rtx.register)} == 0`;
+            break;
+        case 'gotoIfGreater':
+            result = `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} > ${storageSpecToString(rtx.rhs)}`;
+            break;
+        case 'storeGlobal':
+            result = `*${storageSpecToString(rtx.to)} = ${storageSpecToString(rtx.from)}`;
+            break;
+        case 'loadGlobal':
+            result = `${storageSpecToString(rtx.to)} = &${rtx.from}`;
+            break;
+        case 'storeMemory':
+            result = `*(${storageSpecToString(rtx.address)} + ${rtx.offset}) = ${storageSpecToString(rtx.from)}`;
+            break;
+        case 'storeMemoryByte':
+            result = `*${storageSpecToString(rtx.address)} = ${rtx.contents}`;
+            break;
+        case 'storeZeroToMemory':
+            result = `*${storageSpecToString(rtx.address)} = 0`;
+            break;
+        case 'loadMemory':
+            result = `${storageSpecToString(rtx.to)} = *(${storageSpecToString(rtx.from)} + ${rtx.offset})`;
+            break;
+        case 'loadMemoryByte':
+            result = `${storageSpecToString(rtx.to)} = *${rtx.address}`;
+            break;
+        case 'loadSymbolAddress':
+            result = `${storageSpecToString(rtx.to)} = &${rtx.symbolName}`;
+            break;
+        case 'call':
+            result = `${rtx.function}()`;
+            break;
+        case 'returnToCaller':
+            result = `return`;
+            break;
+        case 'returnValue':
+            result = `ret = ${storageSpecToString(rtx.source)}`;
+            break;
+        case 'push':
+            result = `push ${storageSpecToString(rtx.register)}`;
+            break;
+        case 'pop':
+            result = `pop ${storageSpecToString(rtx.register)}`;
+            break;
+        default:
+            throw debug('Unrecognized RTX kind in toString');
+    }
+    return result;
 };
 
 export const astToRegisterTransferLanguage = (
