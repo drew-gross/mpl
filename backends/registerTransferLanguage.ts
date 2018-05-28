@@ -119,7 +119,7 @@ export const toString = (rtx: RegisterTransferLanguageExpression): string => {
             result = `${storageSpecToString(rtx.to)} = *(${storageSpecToString(rtx.from)} + ${rtx.offset})`;
             break;
         case 'loadMemoryByte':
-            result = `${storageSpecToString(rtx.to)} = *${rtx.address}`;
+            result = `${storageSpecToString(rtx.to)} = *${storageSpecToString(rtx.address)}`;
             break;
         case 'loadSymbolAddress':
             result = `${storageSpecToString(rtx.to)} = &${rtx.symbolName}`;

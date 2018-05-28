@@ -1314,7 +1314,7 @@ return b;`,
     expectedExitCode: 2,
 });
 
-test.only('control flow graph for malloc', async t => {
+test.only('control flow graph for runtime functions', async t => {
     const dots = mipsBackend.runtimeFunctions.map(controlFlowGraph).map(toDotFile);
     for (let dot of dots) {
         await showGraphInChrome(dot);

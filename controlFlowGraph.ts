@@ -14,77 +14,51 @@ export type BasicBlock = {
 
 export type ControlFlowGraph = {
     blocks: BasicBlock[];
+    labelToIndexMap: { [key: string]: number };
     connections: {
-        from: string;
-        to: string;
+        from: number;
+        to: number;
     }[];
-    // TODO: Have entry and exit be symbols, connections->{from, to} = string | entry | exit
-    entry: string;
-    exits: string[];
+    // TODO: Have exit be a symbol, connections->{from, to} = number | exit
+    exits: number[];
 };
 
-const isBlockEnd = (rtx: RTX): boolean => {
+const blockBehaviour = (rtx: RTX): 'endBlock' | 'beginBlock' | 'midBlock' => {
     switch (rtx.kind) {
         case 'comment':
-            return false;
         case 'syscall':
-            return false;
         case 'move':
-            return false;
         case 'loadImmediate':
-            return false;
         case 'addImmediate':
-            return false;
         case 'subtract':
-            return false;
         case 'add':
-            return false;
         case 'multiply':
-            return false;
         case 'increment':
-            return false;
-        case 'label':
-            return true;
-        case 'functionLabel':
-            return false;
-        case 'goto':
-            return true;
-        case 'gotoIfEqual':
-            return true;
-        case 'gotoIfNotEqual':
-            return true;
-        case 'gotoIfZero':
-            return true;
-        case 'gotoIfGreater':
-            return true;
         case 'storeGlobal':
-            return false;
         case 'loadGlobal':
-            return false;
         case 'storeMemory':
-            return false;
         case 'storeMemoryByte':
-            return false;
         case 'storeZeroToMemory':
-            return false;
         case 'loadMemory':
-            return false;
         case 'loadMemoryByte':
-            return false;
         case 'loadSymbolAddress':
-            return false;
         case 'call':
-            return false;
-        case 'returnToCaller':
-            return false;
-        case 'returnValue':
-            return true;
         case 'push':
-            return false;
         case 'pop':
-            return false;
+        case 'returnValue':
+            return 'midBlock';
+        case 'label':
+        case 'functionLabel':
+            return 'beginBlock';
+        case 'returnToCaller':
+        case 'goto':
+        case 'gotoIfEqual':
+        case 'gotoIfNotEqual':
+        case 'gotoIfZero':
+        case 'gotoIfGreater':
+            return 'endBlock';
         default:
-            throw debug('Unrecognized RTX kind in isBlockEnd');
+            throw debug('Unrecognized RTX kind in blockBehaviour');
     }
 };
 
@@ -102,7 +76,7 @@ const blockName = (rtl: RTX[]) => {
         case 'gotoIfGreater':
             return rtx.label;
         default:
-            throw debug('Unrecognized RTX kind in blockName');
+            return '';
     }
 };
 
@@ -149,24 +123,24 @@ const blockExits = (rtl: RTX[]): Exits => {
     }
 };
 
-export const toDotFile = ({ blocks, connections, entry, exits }: ControlFlowGraph): string => {
+export const toDotFile = ({ blocks, connections, labelToIndexMap, exits }: ControlFlowGraph): string => {
     let dotText = 'digraph {\n';
     dotText += `Entry [style="invis"]\n`;
-    dotText += `Entry -> ${entry}\n`;
+    dotText += `Entry -> node_0\n`;
 
-    blocks.forEach(({ name, instructions }) => {
-        const label = join([name, ...instructions.map(rtxToString)], '\\n')
+    blocks.forEach(({ name, instructions }, index) => {
+        const label = join(instructions.map(rtxToString), '\\n')
             .replace(/"/g, '\\"')
             .replace(/:/g, '\\:');
-        dotText += `${name} [shape="box", label="${label}"]`;
+        dotText += `node_${index} [shape="box", label="${label}"]`;
     });
 
     dotText += `Exit [style="invis"]\n`;
     exits.forEach(exit => {
-        dotText += `${exit} -> Exit\n`;
+        dotText += `node_${exit} -> Exit\n`;
     });
     connections.forEach(({ from, to }) => {
-        dotText += `${from} -> ${to}\n`;
+        dotText += `node_${from} -> node_${to}\n`;
     });
     dotText += '}';
     return dotText;
@@ -176,40 +150,60 @@ export const controlFlowGraph = (rtl: RTX[]): ControlFlowGraph => {
     let blocks: BasicBlock[] = [];
     var currentBlock: RTX[] = [];
     rtl.forEach(rtx => {
-        if (isBlockEnd(rtx)) {
+        const change = blockBehaviour(rtx);
+        if (change == 'midBlock') {
+            currentBlock.push(rtx);
+        } else if (change == 'endBlock') {
+            currentBlock.push(rtx);
             blocks.push({
                 instructions: currentBlock,
                 name: blockName(currentBlock),
             });
+            currentBlock = [];
+        } else if (change == 'beginBlock') {
+            if (currentBlock.length > 0) {
+                blocks.push({
+                    instructions: currentBlock,
+                    name: blockName(currentBlock),
+                });
+            }
             currentBlock = [rtx];
-        } else {
-            currentBlock.push(rtx);
         }
     });
-    blocks.push({
-        instructions: currentBlock,
-        name: blockName(currentBlock),
+    if (currentBlock.length > 0) {
+        blocks.push({
+            instructions: currentBlock,
+            name: blockName(currentBlock),
+        });
+    }
+
+    let labelToIndexMap = {};
+    blocks.forEach((block, index) => {
+        const firstRtx = block.instructions[0];
+        if (firstRtx.kind == 'label' || firstRtx.kind == 'functionLabel') {
+            labelToIndexMap[firstRtx.name] = index;
+        }
     });
 
-    let connections: { from: string; to: string }[] = [];
-    let exits: string[] = [];
+    let connections: { from: number; to: number }[] = [];
+    let exits: number[] = [];
     blocks.forEach((block, index) => {
         const { blockName, next, exit } = blockExits(block.instructions);
         if (blockName) {
-            connections.push({ from: block.name, to: blockName });
+            connections.push({ from: index, to: labelToIndexMap[blockName] });
         }
         if (next) {
-            connections.push({ from: block.name, to: blocks[index + 1].name });
+            connections.push({ from: index, to: index + 1 });
         }
         if (exit) {
-            exits.push(block.name);
+            exits.push(index);
         }
     });
 
     return {
         blocks,
         connections,
-        entry: blocks[0].name,
+        labelToIndexMap,
         exits,
     };
 };
