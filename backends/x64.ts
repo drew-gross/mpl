@@ -344,6 +344,7 @@ export default {
     name: 'x64',
     toExectuable,
     execute: async path => execAndGetResult((await x64toBinary(path)).path),
+    runtimeFunctions,
     debug: async path => {
         console.log(`lldb ${(await x64toBinary(path)).path}`);
         console.log(`break set -n start`);

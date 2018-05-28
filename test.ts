@@ -19,9 +19,7 @@ import {
     stripSourceLocation,
 } from './parser-combinator.js';
 import { removeBracketsFromAst } from './frontend.js';
-import mipsBackend from './backends/mips.js';
 import { controlFlowGraph, toDotFile } from './controlFlowGraph.js';
-import showGraphInChrome from './util/graph/showInChrome.js';
 
 test('double flatten', t => {
     t.deepEqual(flatten(flatten([[[1, 2]], [[3], [4]], [[5]]])), [1, 2, 3, 4, 5]);
@@ -1312,11 +1310,4 @@ test.failing('variable named b', compileAndRun, {
 b := 2;
 return b;`,
     expectedExitCode: 2,
-});
-
-test.only('control flow graph for runtime functions', async t => {
-    const dots = mipsBackend.runtimeFunctions.map(controlFlowGraph).map(toDotFile);
-    for (let dot of dots) {
-        await showGraphInChrome(dot);
-    }
 });

@@ -6,18 +6,23 @@
     "license": "UNLICENSED",
     "main": "built/index.js",
     "ava": {
-        "files": ["built/test.js"]
+        "files": [
+            "built/test.js"
+        ]
     },
     "scripts": {
         "test": "rimraf built && npm run prettier-check && tsc && ava --verbose",
         "test-fast": "tsc && ava --verbose",
         "test-watch": "ava --watch --no-color",
         "tsc-watch": "tsc --watch",
+        "build+install": "tsc && npm link",
         "test-debug": "tsc && inspect --debug-exception node_modules/ava/profile.js built/test.js",
-        "cloc":
-            "cloc --exclude-dir=node_modules,built --not-match-f='npm-shrinkwrap.json|package.json|tsconfig.json|prettier-config.json|test.ts|test-utils.ts' .",
+        "cloc": "cloc --exclude-dir=node_modules,built --not-match-f='npm-shrinkwrap.json|package.json|tsconfig.json|prettier-config.json|test.ts|test-utils.ts' .",
         "cloc-all": "cloc --exclude-dir=node_modules,built . --not-match-f='npm-shrinkwrap.json'",
         "prettier-check": "prettier --config package.json --list-different '**/*.ts'"
+    },
+    "bin": {
+        "dump-builtins-to-cfg-svg": "built/bin/dump-builtins-to-cfg-svg.js"
     },
     "author": "Drew Gross",
     "dependencies": {
