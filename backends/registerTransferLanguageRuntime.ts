@@ -509,46 +509,16 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = (
             function: 'length',
             why: 'Call length on argument so we can pass it to write(2). (Arugment is already in argument register)',
         },
-        ...saveSyscallArgRegisters(knownRegisters),
-        {
-            kind: 'loadImmediate',
-            destination: knownRegisters.syscallArg1,
-            value: 1,
-            why: `Load stdout fd into argument 1 of write(2) (stdout fd is 1) syscallArg1: ${
-                knownRegisters.syscallArg1.destination
-            }`,
-        },
-        {
-            kind: 'move',
-            from: knownRegisters.argument1,
-            to: knownRegisters.syscallArg2,
-            why: 'Put string ptr in arg 2 of write(2)',
-        },
-        {
-            kind: 'move',
-            from: knownRegisters.functionResult,
-            to: knownRegisters.syscallArg3,
-            why: '3rd argument to write(2) is length',
-        },
-        {
-            kind: 'loadImmediate',
-            destination: knownRegisters.syscallSelect,
-            value: syscallNumbers.print,
-            why: 'Select print',
-        },
         {
             kind: 'syscall',
             name: 'print',
-            arguments: [knownRegisters.syscallArg1],
+            arguments: [
+                1, // Load stdout fd into argument 1 of write(2) (stdout fd is 1)
+                knownRegisters.argument1, // Put string ptr in arg 2 of write(2)
+                knownRegisters.functionResult, // 3rd argument to write(2) is length
+            ],
             why: 'Print',
-            destination: knownRegisters.syscallResult,
-        },
-        ...restoreSyscallArgRegisters(knownRegisters),
-        {
-            kind: 'move',
-            from: knownRegisters.syscallResult,
-            to: knownRegisters.functionResult,
-            why: 'Move syscall result to function result',
+            destination: knownRegisters.functionResult,
         },
         { kind: 'returnToCaller', why: 'Return' },
     ];
