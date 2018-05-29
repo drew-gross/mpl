@@ -205,16 +205,10 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         { kind: 'goto', label: 'my_malloc_return', why: 'Found good existing block' },
         { kind: 'label', name: 'sbrk_more_space', why: 'Here we sbrk a new block' },
         {
-            kind: 'move',
-            to: knownRegisters.syscallArg1,
-            from: knownRegisters.argument1,
-            why: 'Move amount of space to allocate to sbrk argument',
-        },
-        {
             kind: 'addImmediate',
-            register: knownRegisters.syscallArg1,
+            register: knownRegisters.argument1,
             amount: 3 * bytesInWord,
-            why: 'Include space for management block whye sbrking',
+            why: 'Include space for management block while sbrking',
         },
         {
             kind: 'loadImmediate',
@@ -225,9 +219,15 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         {
             kind: 'syscall',
             name: 'sbrk',
-            arguments: [knownRegisters.syscallSelect],
+            arguments: [knownRegisters.argument1],
             why: 'sbrk',
             destination: knownRegisters.syscallResult,
+        },
+        {
+            kind: 'addImmediate',
+            register: knownRegisters.argument1,
+            amount: -3 * bytesInWord,
+            why: 'Repair arg 1 after adding management block length to it',
         },
         {
             kind: 'gotoIfNotEqual',
