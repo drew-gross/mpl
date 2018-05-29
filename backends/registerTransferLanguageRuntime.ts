@@ -8,15 +8,6 @@ export type KnownRegisters = {
     argument2: { type: 'register'; destination: string };
     argument3: { type: 'register'; destination: string };
     functionResult: { type: 'register'; destination: string };
-
-    syscallSelect: { type: 'register'; destination: string };
-    syscallArg1: { type: 'register'; destination: string };
-    syscallArg2: { type: 'register'; destination: string };
-    syscallArg3: { type: 'register'; destination: string };
-    syscallArg4: { type: 'register'; destination: string };
-    syscallArg5: { type: 'register'; destination: string };
-    syscallArg6: { type: 'register'; destination: string };
-    syscallResult: { type: 'register'; destination: string };
 };
 
 type RuntimeFunctionGenerator = (

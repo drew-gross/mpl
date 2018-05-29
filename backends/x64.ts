@@ -46,14 +46,6 @@ const knownRegisters: KnownRegisters = {
     argument2: { type: 'register', destination: 'r9' },
     argument3: { type: 'register', destination: 'r10' },
     functionResult: { type: 'register', destination: 'rax' },
-    syscallArg1: { type: 'register', destination: 'rdi' },
-    syscallArg2: { type: 'register', destination: 'rsi' },
-    syscallArg3: { type: 'register', destination: 'rdx' },
-    syscallArg4: { type: 'register', destination: 'r10' },
-    syscallArg5: { type: 'register', destination: 'r8' },
-    syscallArg6: { type: 'register', destination: 'r9' },
-    syscallSelect: { type: 'register', destination: 'rax' },
-    syscallResult: { type: 'register', destination: 'rax' },
 };
 
 // TOOD: Unify with nextTemporary in mips. Also be able to use special purpose registers like rdx when not multiplying.

@@ -38,14 +38,6 @@ const knownRegisters: KnownRegisters = {
     argument2: { type: 'register', destination: '$s1' },
     argument3: { type: 'register', destination: '$s2' },
     functionResult: { type: 'register', destination: '$a0' },
-    syscallArg1: { type: 'register', destination: '$a0' },
-    syscallArg2: { type: 'register', destination: '$a1' },
-    syscallArg3: { type: 'register', destination: 'unused' },
-    syscallArg4: { type: 'register', destination: 'unused' },
-    syscallArg5: { type: 'register', destination: 'unused' },
-    syscallArg6: { type: 'register', destination: 'unused' },
-    syscallSelect: { type: 'register', destination: '$v0' },
-    syscallResult: { type: 'register', destination: '$v0' },
 };
 
 const firstRegister: StorageSpec = { type: 'register', destination: '$t1' };
@@ -112,8 +104,8 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
             if (rtx.arguments.length > 2) throw debug('mips only supports 2 syscall args');
             if (rtx.destination && rtx.destination.type !== 'register') throw debug('need a register');
             const syscallArgRegisters = ['$a0', '$a1'];
-            const syscallSelectRegister = '$v0';
-            const registersToSave: string[] = [syscallSelectRegister];
+            const syscallSelectAndResultRegister = '$v0';
+            const registersToSave: string[] = [syscallSelectAndResultRegister];
             rtx.arguments.forEach((_, index) => {
                 const argRegister = syscallArgRegisters[index];
                 if (
@@ -134,10 +126,10 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
                             ? `li ${syscallArgRegisters[index]}, ${arg}`
                             : `move ${syscallArgRegisters[index]}, ${(arg as any).destination}`
                 ),
-                `li ${syscallSelectRegister}, ${syscallNumbers[rtx.name]}`,
+                `li ${syscallSelectAndResultRegister}, ${syscallNumbers[rtx.name]}`,
                 'syscall',
                 ...(rtx.destination && rtx.destination.type == 'register'
-                    ? [`move ${rtx.destination.destination}, ${knownRegisters.syscallResult.destination}`]
+                    ? [`move ${rtx.destination.destination}, ${syscallSelectAndResultRegister}`]
                     : []),
                 ...flatten(registersToSave.reverse().map(r => [`addiu $sp, $sp, 4`, `lw ${r}, ($sp)`])),
             ];
