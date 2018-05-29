@@ -18,7 +18,7 @@ type SyscallName = 'print' | 'sbrk' | 'mmap' | 'exit';
 
 export type RegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'comment' }
-    | { kind: 'syscall'; name: SyscallName; arguments: StorageSpec[]; destination: StorageSpec | undefined }
+    | { kind: 'syscall'; name: SyscallName; arguments: (StorageSpec | number)[]; destination: StorageSpec | undefined }
     | { kind: 'move'; from: StorageSpec; to: StorageSpec }
     | { kind: 'loadImmediate'; value: number; destination: StorageSpec }
     | { kind: 'addImmediate'; register: StorageSpec; amount: number }

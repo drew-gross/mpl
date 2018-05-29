@@ -107,6 +107,7 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
         case 'comment':
             return [''];
         case 'syscall':
+            // TOOD: DRY with syscall impl in mips
             // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
             if (rtx.arguments.length > 2) throw debug('mips only supports 2 syscall args');
             if (rtx.destination && rtx.destination.type !== 'register') throw debug('need a register');

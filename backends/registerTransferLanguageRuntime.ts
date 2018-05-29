@@ -483,73 +483,35 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         },
         { kind: 'goto', label: 'my_malloc_return', why: 'Found good existing block' },
         { kind: 'label', name: 'mmap_more_space', why: 'Here we mmap a new block' },
-        ...saveSyscallArgRegisters(knownRegisters),
-        {
-            kind: 'loadImmediate',
-            value: 0,
-            destination: knownRegisters.syscallArg1,
-            why: 'addr arg, use null',
-        },
-        {
-            kind: 'move',
-            from: knownRegisters.argument1,
-            to: knownRegisters.syscallArg2,
-            why: 'len arg, amound of memory to allocate',
-        },
         {
             kind: 'addImmediate',
             amount: 3 * bytesInWord,
-            register: knownRegisters.syscallArg2,
+            register: knownRegisters.argument1,
             why: 'Add space for management block',
-        },
-        {
-            kind: 'loadImmediate',
-            value: 3,
-            destination: knownRegisters.syscallArg3,
-            why: 'prot arg, 3 = PROT_READ|PROT_WRITE',
-        },
-        {
-            kind: 'loadImmediate',
-            value: 0x1002,
-            destination: knownRegisters.syscallArg4,
-            why: 'flags arg, 0x1002 = MAP_ANON | MAP_PRIVATE (according to dtruss)',
-        },
-        {
-            kind: 'loadImmediate',
-            value: -1,
-            destination: knownRegisters.syscallArg5,
-            why: 'fd arg, unused, set to -1 just in case',
-        },
-        {
-            kind: 'loadImmediate',
-            value: 0,
-            destination: knownRegisters.syscallArg6,
-            why: 'offset arg, unused, set to 0',
-        },
-        {
-            kind: 'loadImmediate',
-            value: syscallNumbers.mmap,
-            destination: knownRegisters.syscallSelect,
-            why: 'Select malloc for calling',
         },
         {
             kind: 'syscall',
             name: 'mmap',
             arguments: [
-                knownRegisters.syscallArg1,
-                knownRegisters.syscallArg2,
-                knownRegisters.syscallArg3,
-                knownRegisters.syscallArg4,
-                knownRegisters.syscallArg5,
-                knownRegisters.syscallArg6,
+                0, // addr, use null
+                knownRegisters.argument1,
+                3, // prot arg, 3 = PROT_READ|PROT_WRITE
+                0x1002, // flags arg, 0x1002 = MAP_ANON | MAP_PRIVATE (according to dtruss)
+                -1, // fd arg, unused, set to -1 just in case
+                0, // offset arg, unused, set to 0
             ],
             why: 'mmap',
-            destination: knownRegisters.syscallResult,
+            destination: knownRegisters.functionResult,
         },
-        ...restoreSyscallArgRegisters(knownRegisters),
+        {
+            kind: 'addImmediate',
+            amount: 3 * bytesInWord,
+            register: knownRegisters.argument1,
+            why: 'Repair argument after adding space for management block',
+        },
         {
             kind: 'gotoIfNotEqual',
-            lhs: knownRegisters.syscallResult,
+            lhs: knownRegisters.functionResult,
             rhs: { type: 'register', destination: '-1' }, // TODO: should be immediate
             label: 'mmap_exit_check_passed',
             why: 'If mmap failed, exit',
@@ -589,7 +551,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         {
             kind: 'label',
             name: 'mmap_exit_check_passed',
-            why: `${knownRegisters.syscallResult} now contains pointer to block. Set up pointer to new block.`,
+            why: `${knownRegisters.functionResult} now contains pointer to block. Set up pointer to new block.`,
         },
         {
             kind: 'loadGlobal',
@@ -606,7 +568,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         },
         {
             kind: 'storeGlobal',
-            from: knownRegisters.syscallResult,
+            from: knownRegisters.functionResult,
             to: { type: 'register', destination: 'first_block' },
             why: 'Setup first block pointer',
         },
@@ -615,7 +577,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         { kind: 'gotoIfZero', register: previousBlockPointer, label: 'set_up_new_space', why: '' },
         {
             kind: 'storeMemory',
-            from: knownRegisters.syscallResult,
+            from: knownRegisters.functionResult,
             address: previousBlockPointer,
             offset: 1 * bytesInWord,
             why: 'prev->next = new',
@@ -624,27 +586,21 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
         {
             kind: 'storeMemory',
             from: knownRegisters.argument1,
-            address: knownRegisters.syscallResult,
+            address: knownRegisters.functionResult,
             offset: 0,
             why: 'new->size = requested_size',
         },
         {
             kind: 'storeZeroToMemory',
-            address: knownRegisters.syscallResult,
+            address: knownRegisters.functionResult,
             offset: 1 * bytesInWord,
             why: 'new->next = null',
         },
         {
             kind: 'storeZeroToMemory',
-            address: knownRegisters.syscallResult,
+            address: knownRegisters.functionResult,
             offset: 2 * bytesInWord,
             why: 'new->free = false',
-        },
-        {
-            kind: 'move',
-            to: knownRegisters.functionResult,
-            from: knownRegisters.syscallResult,
-            why: 'Return result of sbrk',
         },
         {
             kind: 'addImmediate',

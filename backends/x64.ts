@@ -229,7 +229,47 @@ const registerTransferExpressionToX64WithoutComment = (rtx: RegisterTransferLang
         case 'returnToCaller':
             return [`ret`];
         case 'syscall':
-            return [`syscall`];
+            // TOOD: DRY with syscall impl in mips (note: unlike mips, we don't need to save/restore syscall
+            // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
+            if (rtx.arguments.length > 6) throw debug('x64 only supports 2 syscall args');
+            if (rtx.destination && rtx.destination.type !== 'register') throw debug('need a register');
+            const syscallArgRegisters = ['rdi', 'rsi', 'rdx', 'r10', 'r8', 'r9'];
+            const syscallSelectAndResultRegister = 'rax';
+            const registersToSave: string[] = [];
+            if (
+                rtx.destination &&
+                rtx.destination.type == 'register' &&
+                rtx.destination.destination != syscallSelectAndResultRegister
+            ) {
+                registersToSave.push(syscallSelectAndResultRegister);
+            }
+            rtx.arguments.forEach((_, index) => {
+                const argRegister = syscallArgRegisters[index];
+                if (
+                    rtx.destination &&
+                    rtx.destination.type == 'register' &&
+                    rtx.destination.destination == argRegister
+                ) {
+                    return;
+                }
+                registersToSave.push(argRegister);
+            });
+            const result = [
+                ...registersToSave.map(r => `push ${r}`),
+                ...rtx.arguments.map(
+                    (arg, index) =>
+                        typeof arg == 'number'
+                            ? `mov ${syscallArgRegisters[index]}, ${arg}`
+                            : `mov ${syscallArgRegisters[index]}, ${(arg as any).destination}`
+                ),
+                `mov ${syscallSelectAndResultRegister}, ${syscallNumbers[rtx.name]}`,
+                'syscall',
+                ...(rtx.destination && rtx.destination.type == 'register'
+                    ? [`mov ${rtx.destination.destination}, ${syscallSelectAndResultRegister}`]
+                    : []),
+                ...registersToSave.reverse().map(r => `pop ${r}`),
+            ];
+            return result;
         case 'push':
             if (rtx.register.type !== 'register') throw debug('todo');
             return [`push ${rtx.register.destination}`];
