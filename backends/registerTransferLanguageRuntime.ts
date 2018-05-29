@@ -228,33 +228,21 @@ const switchableMallocImpl = (
         },
         {
             kind: 'loadSymbolAddress',
-            to: knownRegisters.syscallArg1,
+            to: scratch,
             symbolName: errors.allocationFailed.name,
             why: 'Load string to print',
         },
         {
-            kind: 'loadImmediate',
-            destination: knownRegisters.syscallSelect,
-            value: syscallNumbers.print,
-            why: 'Prepare to print',
-        },
-        {
             kind: 'syscall',
             name: 'print',
-            arguments: [knownRegisters.syscallArg1],
+            arguments: [scratch],
             why: 'Print',
             destination: undefined,
         },
         {
-            kind: 'loadImmediate',
-            destination: knownRegisters.syscallSelect,
-            value: syscallNumbers.exit,
-            why: 'Prepare to exit',
-        },
-        {
             kind: 'syscall',
             name: 'exit',
-            arguments: [knownRegisters.syscallArg1],
+            arguments: [-1],
             why: 'Exit',
             destination: undefined,
         },
@@ -495,29 +483,11 @@ export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = (
     return [
         { kind: 'functionLabel', name: 'print', why: 'Print: string->' },
         {
-            kind: 'loadImmediate',
-            destination: knownRegisters.syscallSelect,
-            value: syscallNumbers.print,
-            why: 'Select print',
-        },
-        {
-            kind: 'move',
-            to: knownRegisters.syscallArg1,
-            from: knownRegisters.argument1,
-            why: 'Move print argument to syscall argument',
-        },
-        {
             kind: 'syscall',
             name: 'print',
-            arguments: [knownRegisters.syscallArg1],
+            arguments: [knownRegisters.argument1],
             why: 'Print',
-            destination: knownRegisters.syscallResult,
-        },
-        {
-            kind: 'move',
-            from: knownRegisters.syscallResult,
-            to: knownRegisters.functionResult,
-            why: 'Move syscall result to function result',
+            destination: knownRegisters.functionResult,
         },
         { kind: 'returnToCaller', why: 'Return' },
     ];
