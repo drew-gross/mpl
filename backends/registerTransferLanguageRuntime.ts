@@ -29,34 +29,6 @@ type RuntimeFunctionGenerator = (
     epilogue: RegisterTransferLanguageExpression[]
 ) => RegisterTransferLanguageExpression[];
 
-const saveSyscallArgRegisters = knownRegisters =>
-    [
-        knownRegisters.syscallArg1,
-        knownRegisters.syscallArg2,
-        knownRegisters.syscallArg3,
-        knownRegisters.syscallArg4,
-        knownRegisters.syscallArg5,
-        knownRegisters.syscallArg6,
-    ].map((register: StorageSpec) => ({
-        kind: 'push' as 'push',
-        register: register,
-        why: 'Save registers before using them as syscall args',
-    }));
-
-const restoreSyscallArgRegisters = knownRegisters =>
-    [
-        knownRegisters.syscallArg6,
-        knownRegisters.syscallArg5,
-        knownRegisters.syscallArg4,
-        knownRegisters.syscallArg3,
-        knownRegisters.syscallArg2,
-        knownRegisters.syscallArg1,
-    ].map((register: StorageSpec) => ({
-        kind: 'pop' as 'pop',
-        register: register,
-        why: 'Restore registers after using them as syscall args',
-    }));
-
 const switchableMallocImpl = (
     bytesInWord,
     syscallNumbers,
