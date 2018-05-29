@@ -37,14 +37,6 @@ export type Register =
     | 'functionArgument2'
     | 'functionArgument3'
     | 'functionResult'
-    | 'syscallSelect'
-    | 'syscallArg1'
-    | 'syscallArg2'
-    | 'syscallArg3'
-    | 'syscallArg4'
-    | 'syscallArg5'
-    | 'syscallArg5'
-    | 'syscallResult'
     | { name: string };
 
 export const registerToString = (r: Register): string => {

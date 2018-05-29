@@ -184,7 +184,7 @@ const switchableMallocImpl = (
         },
         {
             kind: 'label',
-            name: 'sbrk_exit_check_passed',
+            name: 'alloc_exit_check_passed',
             why: 'functionResult now contains pointer to block. Set up pointer to new block.',
         },
         {
@@ -247,14 +247,7 @@ const switchableMallocImpl = (
     ];
 };
 
-export const mallocWithSbrk: RuntimeFunctionGenerator = (
-    bytesInWord,
-    knownRegisters,
-    firstRegister,
-    nextRegister,
-    preamble,
-    epilogue
-): RegisterTransferLanguageExpression[] => {
+export const mallocWithSbrk: RuntimeFunctionGenerator = (bytesInWord): RegisterTransferLanguageExpression[] => {
     return switchableMallocImpl(bytesInWord, 'dont include curr = *curr', (amount, destination) => ({
         kind: 'syscall',
         name: 'sbrk',
@@ -283,14 +276,13 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (bytesInWord): RegisterT
 
 export const length: RuntimeFunctionGenerator = (
     bytesInWord,
-    knownRegisters,
     firstRegister,
     nextRegister,
     preamble,
     epilogue
 ): RegisterTransferLanguageExpression[] => {
     const currentChar = firstRegister;
-    if (currentChar.type == 'memory') throw debug('Need a register');
+    if (typeof currentChar !== 'string' && currentChar.type == 'memory') throw debug('Need a register');
     return [
         { kind: 'functionLabel', name: 'length', why: 'Length runtime function' },
         ...preamble,
@@ -333,18 +325,16 @@ export const length: RuntimeFunctionGenerator = (
 
 export const stringCopy: RuntimeFunctionGenerator = (
     bytesInWord,
-    knownRegisters,
     firstRegister,
     nextRegister,
     preamble,
     epilogue
 ): RegisterTransferLanguageExpression[] => {
     const currentChar = firstRegister;
-    if (currentChar.type == 'memory') throw debug('Need a register');
+    if (typeof currentChar !== 'string' && currentChar.type == 'memory') throw debug('Need a register');
     return [
         { kind: 'functionLabel', name: 'string_copy', why: 'string_copy' },
         ...preamble,
-        ...saveRegistersCode(firstRegister, nextRegister, 1),
         { kind: 'label', name: 'string_copy_loop', why: 'Copy a byte' },
         {
             kind: 'loadMemoryByte',
@@ -355,7 +345,7 @@ export const stringCopy: RuntimeFunctionGenerator = (
         {
             kind: 'storeMemoryByte',
             contents: currentChar,
-            address: knownRegisters.argument2,
+            address: 'functionArgument2',
             why: 'Write it to output',
         },
         {
@@ -365,10 +355,9 @@ export const stringCopy: RuntimeFunctionGenerator = (
             why: 'If char was the null terminator, return',
         },
         { kind: 'increment', register: 'functionArgument1', why: 'Bump pointers to next char' },
-        { kind: 'increment', register: knownRegisters.argument2, why: 'Bump pointers to next char' },
+        { kind: 'increment', register: 'functionArgument2', why: 'Bump pointers to next char' },
         { kind: 'goto', label: 'string_copy_loop', why: 'Copy next char' },
         { kind: 'label', name: 'string_copy_return', why: '' },
-        ...restoreRegistersCode(firstRegister, nextRegister, 1),
         ...epilogue,
         { kind: 'returnToCaller', why: 'Done' },
     ];
@@ -382,7 +371,7 @@ export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = (
         {
             kind: 'syscall',
             name: 'print',
-            arguments: ['argument1'],
+            arguments: ['functionArgument1'],
             why: 'Print',
             destination: 'functionResult',
         },
@@ -396,7 +385,7 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = (
     return [
         { kind: 'functionLabel', name: 'print', why: 'Print: string->' },
         {
-            kind: 'call',
+            kind: 'callByName',
             function: 'length',
             why: 'Call length on argument so we can pass it to write(2). (Arugment is already in argument register)',
         },
@@ -405,7 +394,7 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = (
             name: 'print',
             arguments: [
                 1, // Load stdout fd into argument 1 of write(2) (stdout fd is 1)
-                'argument1', // Put string ptr in arg 2 of write(2)
+                'functionArgument1', // Put string ptr in arg 2 of write(2)
                 'functionResult', // 3rd argument to write(2) is length
             ],
             why: 'Print',
@@ -418,7 +407,6 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = (
 // TODO: figure out a way to verify that this is working
 export const verifyNoLeaks: RuntimeFunctionGenerator = (
     bytesInWord,
-    knownRegisters,
     firstRegister,
     nextRegister,
     preamble,
@@ -498,15 +486,14 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = (
 
 export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = (
     bytesInWord,
-    knownRegisters,
     firstRegister,
     nextRegister,
     preamble,
     epilogue
 ): RegisterTransferLanguageExpression[] => {
     const left = 'functionArgument1';
-    const right = knownRegisters.argument2;
-    const out = knownRegisters.argument3;
+    const right = 'functionArgument2';
+    const out = 'functionArgument3';
     const currentChar = firstRegister;
     return [
         { kind: 'functionLabel', name: 'string_concatenate', why: 'string_concatenate' },
@@ -550,7 +537,6 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = (
 
 export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (
     bytesInWord,
-    knownRegisters,
     firstRegister,
     nextRegister,
     preamble,
@@ -566,9 +552,7 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (
             kind: 'loadImmediate',
             destination: 'functionResult',
             value: 1,
-            why: `Assume equal. Write true to ${
-                knownRegisters.functionResult.destination
-            }. Overwrite if difference found.`,
+            why: 'Assume equal. Write true to functionResult. Overwrite if difference found.',
         },
         { kind: 'label', name: 'stringEquality_loop', why: 'Check a char, (string*, string*) -> bool' },
         {
@@ -580,7 +564,7 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (
         {
             kind: 'loadMemoryByte',
             to: rightByte,
-            address: knownRegisters.argument2,
+            address: 'functionArgument2',
             why: 'Load current right char into temporary',
         },
         {
@@ -597,7 +581,7 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (
             why: 'Both side are equal. If both sides are null, return.',
         },
         { kind: 'increment', register: 'functionArgument1', why: 'Bump lhs to next char' },
-        { kind: 'increment', register: knownRegisters.argument2, why: 'Bump rhs to next char' },
+        { kind: 'increment', register: 'functionArgument2', why: 'Bump rhs to next char' },
         { kind: 'goto', label: 'stringEquality_loop', why: 'Check next char' },
         { kind: 'label', name: 'stringEquality_return_false', why: 'stringEquality_return_false' },
         { kind: 'loadImmediate', destination: 'functionResult', value: 0, why: 'Set result to false' },
@@ -610,7 +594,6 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (
 
 export const myFreeRuntimeFunction = (
     bytesInWord,
-    knownRegisters,
     firstRegister,
     nextRegister,
     preamble,

@@ -42,7 +42,8 @@ const blockBehaviour = (rtx: RTX): 'endBlock' | 'beginBlock' | 'midBlock' => {
         case 'loadMemory':
         case 'loadMemoryByte':
         case 'loadSymbolAddress':
-        case 'call':
+        case 'callByName':
+        case 'callByRegister':
         case 'push':
         case 'pop':
         case 'returnValue':
@@ -114,7 +115,8 @@ const blockExits = (rtl: RTX[]): Exits => {
         case 'loadMemory':
         case 'loadMemoryByte':
         case 'loadSymbolAddress':
-        case 'call':
+        case 'callByName':
+        case 'callByRegister':
         case 'push':
         case 'pop':
             return { blockName: false, next: true, exit: false };
