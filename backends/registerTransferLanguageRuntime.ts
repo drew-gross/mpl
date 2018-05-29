@@ -9,12 +9,11 @@ const switchableMallocImpl = (
     bytesInWord,
     include: 'include curr = *curr' | 'dont include curr = *curr',
     makeSyscall
-): RegisterTransferLanguageExpression[] => {
+) => {
     const currentBlockPointer = { name: 'currentBlockPointer' };
     const previousBlockPointer = { name: 'previousBlockPointer' };
     const err = { name: 'err' };
     return [
-        { kind: 'functionLabel', name: 'my_malloc', why: 'my_malloc' },
         {
             kind: 'gotoIfNotEqual',
             lhs: 'functionArgument1',
@@ -243,11 +242,10 @@ const switchableMallocImpl = (
             why: 'Adjust result pointer to point to actuall space, not management block',
         },
         { kind: 'label', name: 'my_malloc_return', why: 'Done' },
-        { kind: 'returnToCaller', why: 'Done' },
     ];
 };
 
-export const mallocWithSbrk: RuntimeFunctionGenerator = (bytesInWord): RegisterTransferLanguageExpression[] => {
+export const mallocWithSbrk: RuntimeFunctionGenerator = bytesInWord => {
     return switchableMallocImpl(bytesInWord, 'dont include curr = *curr', (amount, destination) => ({
         kind: 'syscall',
         name: 'sbrk',
@@ -257,7 +255,7 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (bytesInWord): RegisterT
     }));
 };
 
-export const mallocWithMmap: RuntimeFunctionGenerator = (bytesInWord): RegisterTransferLanguageExpression[] => {
+export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord => {
     return switchableMallocImpl(bytesInWord, 'include curr = *curr', (amount, destination) => ({
         kind: 'syscall',
         name: 'mmap',
@@ -274,19 +272,10 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (bytesInWord): RegisterT
     }));
 };
 
-export const length: RuntimeFunctionGenerator = (
-    bytesInWord,
-    firstRegister,
-    nextRegister,
-    preamble,
-    epilogue
-): RegisterTransferLanguageExpression[] => {
+export const length: RuntimeFunctionGenerator = bytesInWord => {
     const currentChar = firstRegister;
     if (typeof currentChar !== 'string' && currentChar.type == 'memory') throw debug('Need a register');
     return [
-        { kind: 'functionLabel', name: 'length', why: 'Length runtime function' },
-        ...preamble,
-        ...saveRegistersCode(firstRegister, nextRegister, 1),
         {
             kind: 'loadImmediate',
             destination: 'functionResult',
@@ -317,24 +306,13 @@ export const length: RuntimeFunctionGenerator = (
             destination: 'functionArgument1',
             why: 'Repair pointer passed in arg1 so caller can still use it',
         },
-        ...restoreRegistersCode(firstRegister, nextRegister, 1),
-        ...epilogue,
-        { kind: 'returnToCaller', why: 'Done' },
     ];
 };
 
-export const stringCopy: RuntimeFunctionGenerator = (
-    bytesInWord,
-    firstRegister,
-    nextRegister,
-    preamble,
-    epilogue
-): RegisterTransferLanguageExpression[] => {
+export const stringCopy: RuntimeFunctionGenerator = bytesInWord => {
     const currentChar = firstRegister;
     if (typeof currentChar !== 'string' && currentChar.type == 'memory') throw debug('Need a register');
     return [
-        { kind: 'functionLabel', name: 'string_copy', why: 'string_copy' },
-        ...preamble,
         { kind: 'label', name: 'string_copy_loop', why: 'Copy a byte' },
         {
             kind: 'loadMemoryByte',
@@ -357,17 +335,11 @@ export const stringCopy: RuntimeFunctionGenerator = (
         { kind: 'increment', register: 'functionArgument1', why: 'Bump pointers to next char' },
         { kind: 'increment', register: 'functionArgument2', why: 'Bump pointers to next char' },
         { kind: 'goto', label: 'string_copy_loop', why: 'Copy next char' },
-        { kind: 'label', name: 'string_copy_return', why: '' },
-        ...epilogue,
-        { kind: 'returnToCaller', why: 'Done' },
     ];
 };
 
-export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = (
-    bytesInWord
-): RegisterTransferLanguageExpression[] => {
+export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     return [
-        { kind: 'functionLabel', name: 'print', why: 'Print: string->' },
         {
             kind: 'syscall',
             name: 'print',
@@ -375,15 +347,11 @@ export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = (
             why: 'Print',
             destination: 'functionResult',
         },
-        { kind: 'returnToCaller', why: 'Return' },
     ];
 };
 
-export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = (
-    bytesInWord
-): RegisterTransferLanguageExpression[] => {
+export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     return [
-        { kind: 'functionLabel', name: 'print', why: 'Print: string->' },
         {
             kind: 'callByName',
             function: 'length',
@@ -400,25 +368,15 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = (
             why: 'Print',
             destination: 'functionResult',
         },
-        { kind: 'returnToCaller', why: 'Return' },
     ];
 };
 
 // TODO: figure out a way to verify that this is working
-export const verifyNoLeaks: RuntimeFunctionGenerator = (
-    bytesInWord,
-    firstRegister,
-    nextRegister,
-    preamble,
-    epilogue
-): RegisterTransferLanguageExpression[] => {
+export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord => {
     const currentBlockPointer = firstRegister;
     const currentData = nextRegister(currentBlockPointer);
     const err = { name: 'err' };
     return [
-        { kind: 'functionLabel', name: 'verify_no_leaks', why: 'verify_no_leaks' },
-        ...preamble,
-        ...saveRegistersCode(firstRegister, nextRegister, 2),
         {
             kind: 'loadSymbolAddress',
             symbolName: 'first_block',
@@ -478,9 +436,6 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = (
         },
         { kind: 'goto', label: 'verify_no_leaks_loop', why: 'Check next block' },
         { kind: 'label', name: 'verify_no_leaks_return', why: '' },
-        ...restoreRegistersCode(firstRegister, nextRegister, 2),
-        ...epilogue,
-        { kind: 'returnToCaller', why: 'Done' },
     ];
 };
 
@@ -490,15 +445,12 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = (
     nextRegister,
     preamble,
     epilogue
-): RegisterTransferLanguageExpression[] => {
+) => {
     const left = 'functionArgument1';
     const right = 'functionArgument2';
     const out = 'functionArgument3';
     const currentChar = firstRegister;
     return [
-        { kind: 'functionLabel', name: 'string_concatenate', why: 'string_concatenate' },
-        ...preamble,
-        ...saveRegistersCode(firstRegister, nextRegister, 1),
         { kind: 'label', name: 'write_left_loop', why: 'write_left_loop' },
         { kind: 'loadMemoryByte', to: currentChar, address: left, why: 'Load byte from left' },
         {
@@ -529,9 +481,6 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = (
         { kind: 'increment', register: out, why: 'Bump out pointer' },
         { kind: 'goto', label: 'copy_from_right', why: 'Go copy next char' },
         { kind: 'label', name: 'concatenate_return', why: '' },
-        ...restoreRegistersCode(firstRegister, nextRegister, 1),
-        ...epilogue,
-        { kind: 'returnToCaller', why: 'Return' },
     ];
 };
 
@@ -545,9 +494,6 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (
     const leftByte: StorageSpec = firstRegister;
     const rightByte: StorageSpec = nextRegister(firstRegister);
     return [
-        { kind: 'functionLabel', name: 'stringEquality', why: 'stringEquality' },
-        ...preamble,
-        ...saveRegistersCode(firstRegister, nextRegister, 2),
         {
             kind: 'loadImmediate',
             destination: 'functionResult',
@@ -586,25 +532,13 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (
         { kind: 'label', name: 'stringEquality_return_false', why: 'stringEquality_return_false' },
         { kind: 'loadImmediate', destination: 'functionResult', value: 0, why: 'Set result to false' },
         { kind: 'label', name: 'stringEquality_return', why: '' },
-        ...restoreRegistersCode(firstRegister, nextRegister, 2),
-        ...epilogue,
-        { kind: 'returnToCaller', why: 'Return' },
     ];
 };
 
-export const myFreeRuntimeFunction = (
-    bytesInWord,
-    firstRegister,
-    nextRegister,
-    preamble,
-    epilogue
-): RegisterTransferLanguageExpression[] => {
+export const myFreeRuntimeFunction = bytesInWord => {
     const one: StorageSpec = firstRegister;
     const err = { name: 'err' };
     return [
-        { kind: 'functionLabel', name: 'my_free', why: 'my_free' },
-        ...preamble,
-        ...saveRegistersCode(firstRegister, nextRegister, 1),
         {
             kind: 'gotoIfNotEqual',
             lhs: 'functionArgument1',
@@ -643,8 +577,5 @@ export const myFreeRuntimeFunction = (
             offset: -1 * bytesInWord,
             why: 'block->free = false',
         },
-        ...restoreRegistersCode(firstRegister, nextRegister, 1),
-        ...epilogue,
-        { kind: 'returnToCaller', why: 'Return' },
     ];
 };
