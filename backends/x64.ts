@@ -280,8 +280,8 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
-    let x64Functions: RegisterTransferLanguageExpression[][] = functions.map(f =>
-        constructFunction(f, globalDeclarations, stringLiterals, firstRegister, nextTemporary, [], [], makeLabel)
+    let x64Functions: RegisterTransferLanguageFunction[] = functions.map(f =>
+        constructFunction(f, globalDeclarations, stringLiterals, firstRegister, nextTemporary, makeLabel)
     );
     const { registerAssignment, firstTemporary } = assignX64Registers(program.variables);
 
@@ -310,8 +310,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
 global start
 
 section .text
-${join(flatten(flatten(x64Functions).map(registerTransferExpressionToX64)), '\n')}
-${join(runtimeFunctions.map(rtlFunctionToX64), '\n')}
+${join([...runtimeFunctions, ...x64Functions].map(rtlFunctionToX64), '\n')}
 
 start:
 ${join(flatten(x64Program.map(registerTransferExpressionToX64)), '\n')}

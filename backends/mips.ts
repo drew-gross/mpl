@@ -306,16 +306,7 @@ const rtlFunctionToMips = ({ name, instructions, numRegistersToSave }: RegisterT
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f =>
-        constructFunction(
-            f,
-            globalDeclarations,
-            stringLiterals,
-            firstRegister,
-            nextTemporary,
-            preamble,
-            epilogue,
-            makeLabel
-        )
+        constructFunction(f, globalDeclarations, stringLiterals, firstRegister, nextTemporary, makeLabel)
     );
 
     const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);
@@ -380,9 +371,7 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join(runtimeFunctions.map(rtlFunctionToMips), '\n')}
-
-${join(flatten(flatten(mipsFunctions).map(registerTransferExpressionToMips)), '\n')}
+${join([...runtimeFunctions, ...mipsFunctions].map(rtlFunctionToMips), '\n')}
 main:
 ${makeSpillSpaceCode.join('\n')}
 ${join(flatten(mipsProgram.map(registerTransferExpressionToMips)), '\n')}
