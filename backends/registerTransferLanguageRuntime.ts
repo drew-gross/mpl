@@ -211,17 +211,11 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
             why: 'Include space for management block while sbrking',
         },
         {
-            kind: 'loadImmediate',
-            destination: knownRegisters.syscallSelect,
-            value: syscallNumbers.sbrk,
-            why: 'Select sbrk syscall',
-        },
-        {
             kind: 'syscall',
             name: 'sbrk',
             arguments: [knownRegisters.argument1],
             why: 'sbrk',
-            destination: knownRegisters.syscallResult,
+            destination: knownRegisters.functionResult,
         },
         {
             kind: 'addImmediate',
@@ -231,7 +225,7 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         },
         {
             kind: 'gotoIfNotEqual',
-            lhs: knownRegisters.syscallResult,
+            lhs: knownRegisters.functionResult,
             rhs: { type: 'register', destination: '-1' },
             label: 'sbrk_exit_check_passed',
             why: 'If sbrk failed, exit',
@@ -271,7 +265,7 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         {
             kind: 'label',
             name: 'sbrk_exit_check_passed',
-            why: `${knownRegisters.syscallResult} now contains pointer to block. Set up pointer to new block.`,
+            why: `${knownRegisters.functionResult} now contains pointer to block. Set up pointer to new block.`,
         },
         {
             kind: 'loadGlobal',
@@ -288,7 +282,7 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         },
         {
             kind: 'storeGlobal',
-            from: knownRegisters.syscallResult,
+            from: knownRegisters.functionResult,
             to: { type: 'register', destination: 'first_block' },
             why: 'Setup first block pointer',
         },
@@ -297,7 +291,7 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         { kind: 'gotoIfZero', register: previousBlockPointer, label: 'set_up_new_space', why: '' },
         {
             kind: 'storeMemory',
-            from: knownRegisters.syscallResult,
+            from: knownRegisters.functionResult,
             address: previousBlockPointer,
             offset: 0,
             why: 'prev->next = new',
@@ -306,27 +300,21 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
         {
             kind: 'storeMemory',
             from: knownRegisters.argument1,
-            address: knownRegisters.syscallResult,
+            address: knownRegisters.functionResult,
             offset: 0,
             why: 'new->size = requested_size',
         },
         {
             kind: 'storeZeroToMemory',
-            address: knownRegisters.syscallResult,
+            address: knownRegisters.functionResult,
             offset: 1 * bytesInWord,
             why: 'new->next = null',
         },
         {
             kind: 'storeZeroToMemory',
-            address: knownRegisters.syscallResult,
+            address: knownRegisters.functionResult,
             offset: 2 * bytesInWord,
             why: 'new->free = false',
-        },
-        {
-            kind: 'move',
-            to: knownRegisters.functionResult,
-            from: knownRegisters.syscallResult,
-            why: 'Return result of sbrk',
         },
         {
             kind: 'addImmediate',

@@ -111,7 +111,8 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
             if (rtx.arguments.length > 2) throw debug('mips only supports 2 syscall args');
             if (rtx.destination && rtx.destination.type !== 'register') throw debug('need a register');
             const syscallArgRegisters = ['$a0', '$a1'];
-            const registersToSave: string[] = [];
+            const syscallSelectRegister = '$v0';
+            const registersToSave: string[] = [syscallSelectRegister];
             rtx.arguments.forEach((_, index) => {
                 const argRegister = syscallArgRegisters[index];
                 if (
@@ -127,12 +128,13 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
             const result = [
                 ...flatten(registersToSave.map(r => [`sw ${r}, ($sp)`, `addiu, $sp, $sp, -4`])),
                 ...rtx.arguments.map((arg, index) => `move ${syscallArgRegisters[index]}, ${(arg as any).destination}`),
+                `li ${syscallSelectRegister}, ${syscallNumbers[rtx.name]}`,
                 'syscall',
+                ...(rtx.destination && rtx.destination.type == 'register'
+                    ? [`move ${rtx.destination.destination}, ${knownRegisters.syscallResult.destination}`]
+                    : []),
                 ...flatten(registersToSave.reverse().map(r => [`addiu $sp, $sp, 4`, `lw ${r}, ($sp)`])),
             ];
-            if (rtx.destination && rtx.destination.type == 'register') {
-                result.push(`move ${rtx.destination.destination}, ${knownRegisters.syscallResult.destination}`);
-            }
             return result;
         case 'move':
             if (rtx.to.type !== 'register') throw debug('todo');
@@ -144,7 +146,7 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
                     return [`li ${rtx.destination.destination}, ${rtx.value}`];
                 // TODO: use a register allocator
                 case 'memory':
-                    return [[`li $s7, ${rtx.value}`, `sw $s7, -${rtx.destination.spOffset}($sp)`].join('\n')];
+                    return [`li $s7, ${rtx.value}`, `sw $s7, -${rtx.destination.spOffset}($sp)`];
                 default:
                     throw debug('todo');
             }
