@@ -35,10 +35,19 @@ export const compileExpression = <T>(
 ///////////// Assembly spcecific utils. TODO: Move these to Register Tranfer Langauge utils //////////
 
 // TODO: Replace with register transfer langauge
-export type StorageSpec = { type: 'register'; destination: string } | { type: 'memory'; spOffset: number };
+export type StorageSpec =
+    | { type: 'register'; destination: string }
+    | { type: 'memory'; spOffset: number }
+    | 'functionArgument1'
+    | 'functionArgument2'
+    | 'functionArgument3'
+    | 'functionResult';
 export type RegisterAssignment = { [index: string]: StorageSpec };
 
 export const storageSpecToString = (spec: StorageSpec): string => {
+    if (typeof spec == 'string') {
+        return spec;
+    }
     switch (spec.type) {
         case 'register':
             return spec.destination;
