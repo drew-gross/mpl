@@ -287,7 +287,7 @@ const mipsRuntime: RuntimeFunctionGenerator[] = [
 ];
 
 const runtimeFunctions: RegisterTransferLanguageFunction[] = mipsRuntime.map(f =>
-    f(bytesInWord, firstRegister, nextTemporary, preamble, epilogue)
+    f(bytesInWord, firstRegister, nextTemporary)
 );
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)

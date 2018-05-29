@@ -262,7 +262,7 @@ const runtimeFunctions: RegisterTransferLanguageFunction[] = [
     myFreeRuntimeFunction,
     stringConcatenateRuntimeFunction,
     verifyNoLeaks,
-].map(f => f(bytesInWord, firstRegister, nextTemporary, [], []));
+].map(f => f(bytesInWord, firstRegister, nextTemporary));
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToX64 = ({ name, instructions, numRegistersToSave }: RegisterTransferLanguageFunction): string => {

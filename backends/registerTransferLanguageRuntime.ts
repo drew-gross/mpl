@@ -10,9 +10,7 @@ import {
 export type RuntimeFunctionGenerator = (
     bytesInWord: number,
     firstRegister: StorageSpec,
-    nextRegister: ((r: StorageSpec) => StorageSpec),
-    preamble: RTL,
-    epilogue: RTL
+    nextRegister: ((r: StorageSpec) => StorageSpec)
 ) => RegisterTransferLanguageFunction;
 
 const switchableMallocImpl = (
@@ -395,13 +393,7 @@ export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = (bytesInW
     };
 };
 
-export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = (
-    bytesInWord,
-    firstRegister,
-    nextRegister,
-    preamble,
-    epilogue
-) => {
+export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = (bytesInWord, firstRegister, nextRegister) => {
     return {
         name: 'print',
         numRegistersToSave: 0,
