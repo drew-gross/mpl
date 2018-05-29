@@ -128,7 +128,12 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
             // TODO: Allow a "replacements" feature, to convert complex/unsupported RTL instructions into supported ones
             const result = [
                 ...flatten(registersToSave.map(r => [`sw ${r}, ($sp)`, `addiu, $sp, $sp, -4`])),
-                ...rtx.arguments.map((arg, index) => `move ${syscallArgRegisters[index]}, ${(arg as any).destination}`),
+                ...rtx.arguments.map(
+                    (arg, index) =>
+                        typeof arg == 'number'
+                            ? `li ${syscallArgRegisters[index]}, ${arg}`
+                            : `move ${syscallArgRegisters[index]}, ${(arg as any).destination}`
+                ),
                 `li ${syscallSelectRegister}, ${syscallNumbers[rtx.name]}`,
                 'syscall',
                 ...(rtx.destination && rtx.destination.type == 'register'
