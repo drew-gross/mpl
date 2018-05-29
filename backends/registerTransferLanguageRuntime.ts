@@ -439,13 +439,7 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord => {
     ];
 };
 
-export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = (
-    bytesInWord,
-    firstRegister,
-    nextRegister,
-    preamble,
-    epilogue
-) => {
+export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     const left = 'functionArgument1';
     const right = 'functionArgument2';
     const out = 'functionArgument3';
@@ -484,13 +478,7 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = (
     ];
 };
 
-export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (
-    bytesInWord,
-    firstRegister,
-    nextRegister,
-    preamble,
-    epilogue
-) => {
+export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     const leftByte: StorageSpec = firstRegister;
     const rightByte: StorageSpec = nextRegister(firstRegister);
     return [
