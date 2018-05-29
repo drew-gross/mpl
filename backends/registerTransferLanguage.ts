@@ -313,7 +313,7 @@ export const astToRegisterTransferLanguage = (
                 },
             ]);
         case 'callExpression': {
-            if (currentTemporary.type !== 'register') throw debug('todo'); // TODO: Figure out how to guarantee this doesn't happen
+            if (typeof currentTemporary !== 'string' && currentTemporary.type !== 'register') throw debug('todo'); // TODO: Figure out how to guarantee this doesn't happen
             if (destination.type !== 'register') throw debug('todo');
             const functionName = ast.name;
             let callInstructions: (string | RegisterTransferLanguageExpression)[] = [];
@@ -467,7 +467,7 @@ export const astToRegisterTransferLanguage = (
                 });
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug('todo');
-                if (currentTemporary.type !== 'register') throw debug('todo');
+                if (typeof currentTemporary !== 'string' && currentTemporary.type !== 'register') throw debug('todo');
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
@@ -550,7 +550,7 @@ export const astToRegisterTransferLanguage = (
                 });
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug('todo');
-                if (currentTemporary.type !== 'register') throw debug('todo');
+                if (typeof currentTemporary !== 'string' && currentTemporary.type !== 'register') throw debug('todo');
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
@@ -641,9 +641,9 @@ export const astToRegisterTransferLanguage = (
             }
         }
         case 'concatenation': {
-            if (destination.type !== 'register') throw debug('todo');
+            if (typeof destination !== 'string' && destination.type !== 'register') throw debug('todo');
             const leftSideDestination = currentTemporary;
-            if (leftSideDestination.type !== 'register') throw debug('todo');
+            if (typeof leftSideDestination !== 'string' && leftSideDestination.type !== 'register') throw debug('todo');
             const rightSideDestination = nextTemporary(leftSideDestination);
             if (rightSideDestination.type !== 'register') throw debug('todo');
             const subExpressionTemporary = nextTemporary(rightSideDestination);
@@ -889,6 +889,7 @@ export const constructFunction = (
                 .filter(s => s.type.name == 'String')
                 .map(s => {
                     const memoryForVariable: StorageSpec = registerAssignment[s.name];
+                    if (typeof memoryForVariable == 'string') throw debug('special register not valid here');
                     if (memoryForVariable.type !== 'register') throw debug('todo');
                     return [
                         { kind: 'move', from: memoryForVariable.destination, to: argumentRegisters[0] },

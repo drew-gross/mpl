@@ -21,7 +21,6 @@ import {
     mallocWithSbrk,
     length,
     stringCopy,
-    KnownRegisters,
     verifyNoLeaks,
     printWithPrintRuntimeFunction,
     stringConcatenateRuntimeFunction,
@@ -33,7 +32,7 @@ import { builtinFunctions } from '../frontend.js';
 import join from '../util/join.js';
 
 // 's' registers are used for the args, starting as 0. Spill recovery shall start at the last (7)
-const knownRegisters: KnownRegisters = {
+const knownRegisters = {
     argument1: { type: 'register', destination: '$s0' },
     argument2: { type: 'register', destination: '$s1' },
     argument3: { type: 'register', destination: '$s2' },
@@ -293,7 +292,7 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     myFreeRuntimeFunction,
     stringConcatenateRuntimeFunction,
     verifyNoLeaks,
-].map(f => f(bytesInWord, knownRegisters, firstRegister, nextTemporary, preamble, eplilogue));
+].map(f => f(bytesInWord, firstRegister, nextTemporary, preamble, eplilogue));
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f =>
