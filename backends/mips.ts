@@ -103,6 +103,12 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
             // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
             if (rtx.arguments.length > 2) throw debug('mips only supports 2 syscall args');
             if (rtx.destination && rtx.destination.type !== 'register') throw debug('need a register');
+            const syscallNumbers = {
+                print: 4,
+                sbrk: 9,
+                mmap: 0, // There is no mmap. Should be unused on mips.
+                exit: 10,
+            };
             const syscallArgRegisters = ['$a0', '$a1'];
             const syscallSelectAndResultRegister = '$v0';
             const registersToSave: string[] = [syscallSelectAndResultRegister];
@@ -266,13 +272,6 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
     return registerTransferExpressionToMipsWithoutComment(rtx).map(asm => `${asm} # ${rtx.why}`);
 };
 
-const syscallNumbers = {
-    print: 4,
-    sbrk: 9,
-    mmap: 0, // There is no mmap. Should be unused on mips.
-    exit: 10,
-};
-
 const bytesInWord = 4;
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
@@ -294,7 +293,7 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     myFreeRuntimeFunction,
     stringConcatenateRuntimeFunction,
     verifyNoLeaks,
-].map(f => f(bytesInWord, syscallNumbers, knownRegisters, firstRegister, nextTemporary, preamble, eplilogue));
+].map(f => f(bytesInWord, knownRegisters, firstRegister, nextTemporary, preamble, eplilogue));
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f =>

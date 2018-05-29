@@ -227,6 +227,12 @@ const registerTransferExpressionToX64WithoutComment = (rtx: RegisterTransferLang
             if (rtx.destination && rtx.destination.type !== 'register') throw debug('need a register');
             const syscallArgRegisters = ['rdi', 'rsi', 'rdx', 'r10', 'r8', 'r9'];
             const syscallSelectAndResultRegister = 'rax';
+            const syscallNumbers = {
+                print: 0x02000004,
+                sbrk: 0x02000045,
+                exit: 0x02000001,
+                mmap: 0x020000c5,
+            };
             const registersToSave: string[] = [];
             if (
                 rtx.destination &&
@@ -279,12 +285,6 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
 };
 
 const bytesInWord = 8;
-const syscallNumbers = {
-    print: 0x02000004,
-    sbrk: 0x02000045,
-    exit: 0x02000001,
-    mmap: 0x020000c5,
-};
 
 const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     length,
@@ -295,7 +295,7 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     myFreeRuntimeFunction,
     stringConcatenateRuntimeFunction,
     verifyNoLeaks,
-].map(f => f(bytesInWord, syscallNumbers, knownRegisters, firstRegister, nextTemporary, [], []));
+].map(f => f(bytesInWord, knownRegisters, firstRegister, nextTemporary, [], []));
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;

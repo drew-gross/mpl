@@ -12,7 +12,6 @@ export type KnownRegisters = {
 
 type RuntimeFunctionGenerator = (
     bytesInWord: number,
-    syscallNumbers: { print: number; sbrk: number; exit: number; mmap: number },
     knownRegisters: KnownRegisters,
     firstRegister: StorageSpec,
     nextRegister: ((r: StorageSpec) => StorageSpec),
@@ -22,7 +21,6 @@ type RuntimeFunctionGenerator = (
 
 const switchableMallocImpl = (
     bytesInWord,
-    syscallNumbers,
     knownRegisters,
     firstRegister,
     nextRegister,
@@ -278,7 +276,6 @@ const switchableMallocImpl = (
 
 export const mallocWithSbrk: RuntimeFunctionGenerator = (
     bytesInWord,
-    syscallNumbers,
     knownRegisters,
     firstRegister,
     nextRegister,
@@ -287,7 +284,6 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
 ): RegisterTransferLanguageExpression[] => {
     return switchableMallocImpl(
         bytesInWord,
-        syscallNumbers,
         knownRegisters,
         firstRegister,
         nextRegister,
@@ -306,7 +302,6 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = (
 
 export const mallocWithMmap: RuntimeFunctionGenerator = (
     bytesInWord,
-    syscallNumbers,
     knownRegisters,
     firstRegister,
     nextRegister,
@@ -315,7 +310,6 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
 ): RegisterTransferLanguageExpression[] => {
     return switchableMallocImpl(
         bytesInWord,
-        syscallNumbers,
         knownRegisters,
         firstRegister,
         nextRegister,
@@ -341,7 +335,6 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (
 
 export const length: RuntimeFunctionGenerator = (
     bytesInWord,
-    syscallNumbers,
     knownRegisters,
     firstRegister,
     nextRegister,
@@ -392,7 +385,6 @@ export const length: RuntimeFunctionGenerator = (
 
 export const stringCopy: RuntimeFunctionGenerator = (
     bytesInWord,
-    syscallNumbers,
     knownRegisters,
     firstRegister,
     nextRegister,
@@ -436,7 +428,6 @@ export const stringCopy: RuntimeFunctionGenerator = (
 
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = (
     bytesInWord,
-    syscallNumbers,
     knownRegisters,
     firstRegister,
     nextRegister,
@@ -458,7 +449,6 @@ export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = (
 
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = (
     bytesInWord,
-    syscallNumbers,
     knownRegisters,
     firstRegister,
     nextRegister,
@@ -490,7 +480,6 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = (
 // TODO: figure out a way to verify that this is working
 export const verifyNoLeaks: RuntimeFunctionGenerator = (
     bytesInWord,
-    syscallNumbers,
     knownRegisters,
     firstRegister,
     nextRegister,
@@ -570,7 +559,6 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = (
 
 export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = (
     bytesInWord,
-    syscallNumbers,
     knownRegisters,
     firstRegister,
     nextRegister,
@@ -623,7 +611,6 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = (
 
 export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (
     bytesInWord,
-    syscallNumbers,
     knownRegisters,
     firstRegister,
     nextRegister,
@@ -684,7 +671,6 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (
 
 export const myFreeRuntimeFunction = (
     bytesInWord,
-    syscallNumbers,
     knownRegisters,
     firstRegister,
     nextRegister,
