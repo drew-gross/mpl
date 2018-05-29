@@ -458,7 +458,7 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = (
     return [
         { kind: 'functionLabel', name: 'print', why: 'Print: string->' },
         {
-            kind: 'call',
+            kind: 'callByName',
             function: 'length',
             why: 'Call length on argument so we can pass it to write(2). (Arugment is already in argument register)',
         },

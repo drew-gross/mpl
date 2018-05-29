@@ -252,7 +252,10 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
             if (rtx.contents.type !== 'register') throw debug('Need a register');
             if (rtx.address.type !== 'register') throw debug('Need a register');
             return [`sb ${rtx.contents.destination}, (${rtx.address.destination})`];
-        case 'call':
+        case 'callByRegister':
+            if (rtx.function.type !== 'register') throw debug('Need a register');
+            return [`jal ${rtx.function.destination}`];
+        case 'callByName':
             return [`jal ${rtx.function}`];
         case 'returnToCaller':
             return [`jr $ra`];
@@ -343,7 +346,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
                 why: 'Load global string so we can free it',
             } as RegisterTransferLanguageExpression,
             {
-                kind: 'call',
+                kind: 'callByName',
                 function: 'my_free',
                 why: 'Free gloabal string at end of program',
             } as RegisterTransferLanguageExpression,
@@ -381,7 +384,10 @@ ${makeSpillSpaceCode.join('\n')}
 ${join(flatten(mipsProgram.map(registerTransferExpressionToMips)), '\n')}
 ${removeSpillSpaceCode.join('\n')}
 ${join(flatten(freeGlobals.map(registerTransferExpressionToMips)), '\n')}
-${join(registerTransferExpressionToMips({ kind: 'call', function: ' verify_no_leaks', why: 'Check for leaks' }), '\n')}
+${join(
+        registerTransferExpressionToMips({ kind: 'callByName', function: ' verify_no_leaks', why: 'Check for leaks' }),
+        '\n'
+    )}
 # print "exit code" and exit
 li $v0, 1
 syscall

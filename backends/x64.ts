@@ -216,7 +216,10 @@ const registerTransferExpressionToX64WithoutComment = (rtx: RegisterTransferLang
         case 'loadSymbolAddress':
             if (rtx.to.type !== 'register') throw debug('todo');
             return [`lea ${rtx.to.destination}, [rel ${rtx.symbolName}]`];
-        case 'call':
+        case 'callByRegister':
+            if (rtx.function.type !== 'register') throw debug('todo');
+            return [`call ${rtx.function.destination}`];
+        case 'callByName':
             return [`call ${rtx.function}`];
         case 'returnToCaller':
             return [`ret`];
