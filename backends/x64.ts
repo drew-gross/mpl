@@ -46,14 +46,6 @@ const knownRegisters: KnownRegisters = {
     argument2: { type: 'register', destination: 'r9' },
     argument3: { type: 'register', destination: 'r10' },
     functionResult: { type: 'register', destination: 'rax' },
-    syscallArg1: { type: 'register', destination: 'rdi' },
-    syscallArg2: { type: 'register', destination: 'rsi' },
-    syscallArg3: { type: 'register', destination: 'rdx' },
-    syscallArg4: { type: 'register', destination: 'r10' },
-    syscallArg5: { type: 'register', destination: 'r8' },
-    syscallArg6: { type: 'register', destination: 'r9' },
-    syscallSelect: { type: 'register', destination: 'rax' },
-    syscallResult: { type: 'register', destination: 'rax' },
 };
 
 // TOOD: Unify with nextTemporary in mips. Also be able to use special purpose registers like rdx when not multiplying.
@@ -229,7 +221,53 @@ const registerTransferExpressionToX64WithoutComment = (rtx: RegisterTransferLang
         case 'returnToCaller':
             return [`ret`];
         case 'syscall':
-            return [`syscall`];
+            // TOOD: DRY with syscall impl in mips (note: unlike mips, we don't need to save/restore syscall
+            // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
+            if (rtx.arguments.length > 6) throw debug('x64 only supports 2 syscall args');
+            if (rtx.destination && rtx.destination.type !== 'register') throw debug('need a register');
+            const syscallArgRegisters = ['rdi', 'rsi', 'rdx', 'r10', 'r8', 'r9'];
+            const syscallSelectAndResultRegister = 'rax';
+            const syscallNumbers = {
+                print: 0x02000004,
+                sbrk: 0x02000045,
+                exit: 0x02000001,
+                mmap: 0x020000c5,
+            };
+            const registersToSave: string[] = [];
+            if (
+                rtx.destination &&
+                rtx.destination.type == 'register' &&
+                rtx.destination.destination != syscallSelectAndResultRegister
+            ) {
+                registersToSave.push(syscallSelectAndResultRegister);
+            }
+            rtx.arguments.forEach((_, index) => {
+                const argRegister = syscallArgRegisters[index];
+                if (
+                    rtx.destination &&
+                    rtx.destination.type == 'register' &&
+                    rtx.destination.destination == argRegister
+                ) {
+                    return;
+                }
+                registersToSave.push(argRegister);
+            });
+            const result = [
+                ...registersToSave.map(r => `push ${r}`),
+                ...rtx.arguments.map(
+                    (arg, index) =>
+                        typeof arg == 'number'
+                            ? `mov ${syscallArgRegisters[index]}, ${arg}`
+                            : `mov ${syscallArgRegisters[index]}, ${(arg as any).destination}`
+                ),
+                `mov ${syscallSelectAndResultRegister}, ${syscallNumbers[rtx.name]}`,
+                'syscall',
+                ...(rtx.destination && rtx.destination.type == 'register'
+                    ? [`mov ${rtx.destination.destination}, ${syscallSelectAndResultRegister}`]
+                    : []),
+                ...registersToSave.reverse().map(r => `pop ${r}`),
+            ];
+            return result;
         case 'push':
             if (rtx.register.type !== 'register') throw debug('todo');
             return [`push ${rtx.register.destination}`];
@@ -247,12 +285,6 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
 };
 
 const bytesInWord = 8;
-const syscallNumbers = {
-    print: 0x02000004,
-    sbrk: 0x02000045,
-    exit: 0x02000001,
-    mmap: 0x020000c5,
-};
 
 const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     length,
@@ -263,7 +295,7 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     myFreeRuntimeFunction,
     stringConcatenateRuntimeFunction,
     verifyNoLeaks,
-].map(f => f(bytesInWord, syscallNumbers, knownRegisters, firstRegister, nextTemporary, [], []));
+].map(f => f(bytesInWord, knownRegisters, firstRegister, nextTemporary, [], []));
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;

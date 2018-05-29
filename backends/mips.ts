@@ -31,14 +31,6 @@ const knownRegisters: KnownRegisters = {
     argument2: { type: 'register', destination: '$s1' },
     argument3: { type: 'register', destination: '$s2' },
     functionResult: { type: 'register', destination: '$a0' },
-    syscallArg1: { type: 'register', destination: '$a0' },
-    syscallArg2: { type: 'register', destination: '$a1' },
-    syscallArg3: { type: 'register', destination: 'unused' },
-    syscallArg4: { type: 'register', destination: 'unused' },
-    syscallArg5: { type: 'register', destination: 'unused' },
-    syscallArg6: { type: 'register', destination: 'unused' },
-    syscallSelect: { type: 'register', destination: '$v0' },
-    syscallResult: { type: 'register', destination: '$v0' },
 };
 
 const generalPurposeRegisters = ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'];
@@ -55,7 +47,47 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
         case 'comment':
             return [''];
         case 'syscall':
-            return ['syscall'];
+            // TOOD: DRY with syscall impl in mips
+            // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
+            if (rtx.arguments.length > 2) throw debug('mips only supports 2 syscall args');
+            if (rtx.destination && rtx.destination.type !== 'register') throw debug('need a register');
+            const syscallNumbers = {
+                print: 4,
+                sbrk: 9,
+                mmap: 0, // There is no mmap. Should be unused on mips.
+                exit: 10,
+            };
+            const syscallArgRegisters = ['$a0', '$a1'];
+            const syscallSelectAndResultRegister = '$v0';
+            const registersToSave: string[] = [syscallSelectAndResultRegister];
+            rtx.arguments.forEach((_, index) => {
+                const argRegister = syscallArgRegisters[index];
+                if (
+                    rtx.destination &&
+                    rtx.destination.type == 'register' &&
+                    rtx.destination.destination == argRegister
+                ) {
+                    return;
+                }
+                registersToSave.push(argRegister);
+            });
+            // TODO: Allow a "replacements" feature, to convert complex/unsupported RTL instructions into supported ones
+            const result = [
+                ...flatten(registersToSave.map(r => [`sw ${r}, ($sp)`, `addiu, $sp, $sp, -4`])),
+                ...rtx.arguments.map(
+                    (arg, index) =>
+                        typeof arg == 'number'
+                            ? `li ${syscallArgRegisters[index]}, ${arg}`
+                            : `move ${syscallArgRegisters[index]}, ${(arg as any).destination}`
+                ),
+                `li ${syscallSelectAndResultRegister}, ${syscallNumbers[rtx.name]}`,
+                'syscall',
+                ...(rtx.destination && rtx.destination.type == 'register'
+                    ? [`move ${rtx.destination.destination}, ${syscallSelectAndResultRegister}`]
+                    : []),
+                ...flatten(registersToSave.reverse().map(r => [`addiu $sp, $sp, 4`, `lw ${r}, ($sp)`])),
+            ];
+            return result;
         case 'move':
             if (rtx.to.type !== 'register') throw debug('todo');
             if (rtx.from.type !== 'register') throw debug('todo');
@@ -66,7 +98,7 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
                     return [`li ${rtx.destination.destination}, ${rtx.value}`];
                 // TODO: use a register allocator
                 case 'memory':
-                    return [[`li $s7, ${rtx.value}`, `sw $s7, -${rtx.destination.spOffset}($sp)`].join('\n')];
+                    return [`li $s7, ${rtx.value}`, `sw $s7, -${rtx.destination.spOffset}($sp)`];
                 default:
                     throw debug('todo');
             }
@@ -188,13 +220,6 @@ const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpressio
     return registerTransferExpressionToMipsWithoutComment(rtx).map(asm => `${asm} # ${rtx.why}`);
 };
 
-const syscallNumbers = {
-    print: 4,
-    sbrk: 9,
-    mmap: 0, // There is no mmap. Should be unused on mips.
-    exit: 10,
-};
-
 const bytesInWord = 4;
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
@@ -216,7 +241,7 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     myFreeRuntimeFunction,
     stringConcatenateRuntimeFunction,
     verifyNoLeaks,
-].map(f => f(bytesInWord, syscallNumbers, knownRegisters, preamble, eplilogue));
+].map(f => f(bytesInWord, knownRegisters, preamble, eplilogue));
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f =>
