@@ -4,14 +4,7 @@ import flatten from '../util/list/flatten.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
-import {
-    CompiledProgram,
-    BackendOptions,
-    compileExpression,
-    StorageSpec,
-    RegisterAssignment,
-    stringLiteralName,
-} from '../backend-utils.js';
+import { CompiledProgram, BackendOptions, compileExpression, Register, stringLiteralName } from '../backend-utils.js';
 import {
     astToRegisterTransferLanguage,
     constructFunction,
@@ -48,58 +41,13 @@ const knownRegisters: KnownRegisters = {
     syscallResult: { type: 'register', destination: '$v0' },
 };
 
-const firstRegister: StorageSpec = { type: 'register', destination: '$t1' };
-const nextTemporary = (storage: StorageSpec): StorageSpec => {
-    if (storage.type == 'register') {
-        if (storage.destination == '$t9') {
-            // Now need to spill
-            return {
-                type: 'memory',
-                spOffset: 0,
-            };
-        } else {
-            return {
-                type: 'register',
-                destination: `$t${parseInt(storage.destination[storage.destination.length - 1]) + 1}`,
-            };
-        }
-    } else if (storage.type == 'memory') {
-        return {
-            type: 'memory',
-            spOffset: storage.spOffset + 4,
-        };
-    } else {
-        return debug('todo');
-    }
-};
+const generalPurposeRegisters = ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'];
 
 let labelId = 0;
 const makeLabel = (name: string) => {
     const result = `${name}${labelId}`;
     labelId++;
     return result;
-};
-
-const assignMipsRegisters = (
-    variables: VariableDeclaration[]
-): { registerAssignment: RegisterAssignment; firstTemporary: StorageSpec } => {
-    // TODO: allow spilling of variables
-    let currentRegister = 0;
-    let registerAssignment = {};
-    variables.forEach(variable => {
-        registerAssignment[variable.name] = {
-            type: 'register',
-            destination: `$t${currentRegister}`,
-        };
-        currentRegister = currentRegister + 1;
-    });
-    return {
-        registerAssignment,
-        firstTemporary: {
-            type: 'register',
-            destination: `$t${currentRegister}`,
-        },
-    };
 };
 
 const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLanguageExpression): string[] => {
@@ -268,7 +216,7 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     myFreeRuntimeFunction,
     stringConcatenateRuntimeFunction,
     verifyNoLeaks,
-].map(f => f(bytesInWord, syscallNumbers, knownRegisters, firstRegister, nextTemporary, preamble, eplilogue));
+].map(f => f(bytesInWord, syscallNumbers, knownRegisters, preamble, eplilogue));
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f =>

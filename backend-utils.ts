@@ -32,26 +32,32 @@ export const compileExpression = <T>(
     cleanup: flatten(subExpressions.reverse().map(input => input.cleanup)),
 });
 
-///////////// Assembly spcecific utils. TODO: Move these to Register Tranfer Langauge utils //////////
+export type Register =
+    | 'functionArgument1'
+    | 'functionArgument2'
+    | 'functionArgument3'
+    | 'functionResult'
+    | 'syscallSelect'
+    | 'syscallArg1'
+    | 'syscallArg2'
+    | 'syscallArg3'
+    | 'syscallArg4'
+    | 'syscallArg5'
+    | 'syscallArg5'
+    | 'syscallResult'
+    | { name: string };
 
-// TODO: Replace with register transfer langauge
-export type StorageSpec = { type: 'register'; destination: string } | { type: 'memory'; spOffset: number };
-export type RegisterAssignment = { [index: string]: StorageSpec };
-
-export const storageSpecToString = (spec: StorageSpec): string => {
-    switch (spec.type) {
-        case 'register':
-            return spec.destination;
-        case 'memory':
-            return `$sp-${spec.spOffset}`;
+export const registerToString = (r: Register): string => {
+    if (typeof r == 'string') {
+        return r;
     }
+    return r.name;
 };
 
 export type BackendOptions = {
     ast: Ast.Ast;
-    registerAssignment: RegisterAssignment;
-    destination: StorageSpec;
-    currentTemporary: StorageSpec;
+    destination: Register;
+    currentTemporary: Register;
     globalDeclarations: VariableDeclaration[];
     stringLiterals: StringLiteralData[];
 };
@@ -65,7 +71,7 @@ export const saveRegistersCode = (
     numRegisters: number
 ): RegisterTransferLanguageExpression[] => {
     let result: RegisterTransferLanguageExpression[] = [];
-    let currentRegister: StorageSpec = firstRegister;
+    let currentRegister: Register = firstRegister;
     while (numRegisters > 0) {
         result.push({
             kind: 'push',
@@ -84,7 +90,7 @@ export const restoreRegistersCode = (
     numRegisters: number
 ): RegisterTransferLanguageExpression[] => {
     let result: RegisterTransferLanguageExpression[] = [];
-    let currentRegister: StorageSpec = firstRegister;
+    let currentRegister: Register = firstRegister;
     while (numRegisters > 0) {
         result.push({
             kind: 'pop',
