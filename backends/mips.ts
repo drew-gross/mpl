@@ -107,7 +107,33 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
         case 'comment':
             return [''];
         case 'syscall':
-            return ['syscall'];
+            // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
+            if (rtx.arguments.length > 2) throw debug('mips only supports 2 syscall args');
+            if (rtx.destination && rtx.destination.type !== 'register') throw debug('need a register');
+            const syscallArgRegisters = ['$a0', '$a1'];
+            const registersToSave: string[] = [];
+            rtx.arguments.forEach((_, index) => {
+                const argRegister = syscallArgRegisters[index];
+                if (
+                    rtx.destination &&
+                    rtx.destination.type == 'register' &&
+                    rtx.destination.destination == argRegister
+                ) {
+                    return;
+                }
+                registersToSave.push(argRegister);
+            });
+            // TODO: Allow a "replacements" feature, to convert complex/unsupported RTL instructions into supported ones
+            const result = [
+                ...flatten(registersToSave.map(r => [`sw ${r}, ($sp)`, `addiu, $sp, $sp, -4`])),
+                ...rtx.arguments.map((arg, index) => `move ${syscallArgRegisters[index]}, ${(arg as any).destination}`),
+                'syscall',
+                ...flatten(registersToSave.reverse().map(r => [`addiu $sp, $sp, 4`, `lw ${r}, ($sp)`])),
+            ];
+            if (rtx.destination && rtx.destination.type == 'register') {
+                result.push(`move ${rtx.destination.destination}, ${knownRegisters.syscallResult.destination}`);
+            }
+            return result;
         case 'move':
             if (rtx.to.type !== 'register') throw debug('todo');
             if (rtx.from.type !== 'register') throw debug('todo');
