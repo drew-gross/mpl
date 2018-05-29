@@ -4,11 +4,20 @@ import flatten from '../util/list/flatten.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
-import { CompiledProgram, BackendOptions, compileExpression, Register, stringLiteralName } from '../backend-utils.js';
+import {
+    CompiledProgram,
+    BackendOptions,
+    compileExpression,
+    Register,
+    stringLiteralName,
+    saveRegistersCode,
+    restoreRegistersCode,
+} from '../backend-utils.js';
 import {
     astToRegisterTransferLanguage,
     constructFunction,
     RegisterTransferLanguageExpression,
+    RegisterTransferLanguageFunction,
 } from './registerTransferLanguage.js';
 import {
     mallocWithSbrk,
@@ -19,6 +28,7 @@ import {
     stringConcatenateRuntimeFunction,
     stringEqualityRuntimeFunction,
     myFreeRuntimeFunction,
+    RuntimeFunctionGenerator,
 } from './registerTransferLanguageRuntime.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
@@ -214,11 +224,11 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 const preamble: RegisterTransferLanguageExpression[] = [
     { kind: 'push', register: { type: 'register', destination: '$ra' }, why: 'Always save return address' },
 ];
-const eplilogue: RegisterTransferLanguageExpression[] = [
+const epilogue: RegisterTransferLanguageExpression[] = [
     { kind: 'pop', register: { type: 'register', destination: '$ra' }, why: 'Always restore return address' },
 ];
 
-const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
+const mipsRuntime: RuntimeFunctionGenerator[] = [
     length,
     printWithPrintRuntimeFunction,
     stringEqualityRuntimeFunction,
@@ -227,20 +237,27 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     myFreeRuntimeFunction,
     stringConcatenateRuntimeFunction,
     verifyNoLeaks,
-].map(f => f(bytesInWord, preamble, eplilogue));
+];
+
+const runtimeFunctions: RegisterTransferLanguageFunction[] = mipsRuntime.map(f => f(bytesInWord));
+
+// TODO: degeneralize this (allowing removal of several RTL instructions)
+const rtlFunctionToMips = ({ name, instructions, numRegistersToSave }: RegisterTransferLanguageFunction): string => {
+    const fullRtl = [
+        { kind: 'functionLabel', name, why: 'Function entry point' },
+        ...preamble,
+        ...saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+        ...instructions,
+        ...restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+        ...epilogue,
+        { kind: 'returnToCaller', why: 'Done' },
+    ];
+    return join(['', '', ...flatten(fullRtl.map(registerTransferExpressionToMips))], '\n');
+};
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f =>
-        constructFunction(
-            f,
-            globalDeclarations,
-            stringLiterals,
-            firstRegister,
-            nextTemporary,
-            preamble,
-            eplilogue,
-            makeLabel
-        )
+        constructFunction(f, globalDeclarations, stringLiterals, firstRegister, nextTemporary, makeLabel)
     );
 
     const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);
@@ -305,9 +322,7 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join(flatten(flatten(runtimeFunctions).map(registerTransferExpressionToMips)), '\n')}
-
-${join(flatten(flatten(mipsFunctions).map(registerTransferExpressionToMips)), '\n')}
+${join([...runtimeFunctions, ...mipsFunctions].map(rtlFunctionToMips), '\n')}
 main:
 ${makeSpillSpaceCode.join('\n')}
 ${join(flatten(mipsProgram.map(registerTransferExpressionToMips)), '\n')}

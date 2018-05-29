@@ -48,6 +48,8 @@ export type RegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'push'; register: StorageSpec }
     | { kind: 'pop'; register: StorageSpec });
 
+export type RegisterTransferLanguage = RegisterTransferLanguageExpression[];
+
 export type RegisterTransferLanguageFunction = {
     instructions: RegisterTransferLanguage;
     numRegistersToSave: number;
@@ -849,10 +851,8 @@ export const constructFunction = (
     stringLiterals,
     firstTemporary: StorageSpec,
     nextTemporary,
-    preamble: RegisterTransferLanguageExpression[],
-    epilogue: RegisterTransferLanguageExpression[],
     makeLabel
-): RegisterTransferLanguageExpression[] => {
+): RegisterTransferLanguageFunction => {
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
     const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
 
@@ -908,13 +908,5 @@ export const constructFunction = (
             ];
         })
     );
-    return [
-        { kind: 'functionLabel', name: f.name, why: f.name },
-        ...preamble,
-        ...saveRegistersCode(firstTemporary, nextTemporary, scratchRegisterCount),
-        ...functionCode,
-        ...restoreRegistersCode(firstTemporary, nextTemporary, scratchRegisterCount),
-        ...epilogue,
-        { kind: 'returnToCaller', why: `End of ${f.name}` },
-    ];
+    return { name: f.name, numRegistersToSave: scratchRegisterCount, instructions: functionCode };
 };

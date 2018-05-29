@@ -1,7 +1,11 @@
 import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
 import { Register } from '../backend-utils.js';
-import { RegisterTransferLanguageExpression, RegisterTransferLanguageFunction } from './registerTransferLanguage.js';
+import {
+    RegisterTransferLanguageExpression as RTX,
+    RegisterTransferLanguage as RTL,
+    RegisterTransferLanguageFunction,
+} from './registerTransferLanguage.js';
 
 type RuntimeFunctionGenerator = (bytesInWord: number) => RegisterTransferLanguageFunction;
 
@@ -14,6 +18,8 @@ const switchableMallocImpl = (
     const previousBlockPointer = { name: 'previousBlockPointer' };
     const err = { name: 'err' };
     return {
+        name: 'my_malloc',
+        numRegistersToSave: 3,
         instructions: [
             {
                 kind: 'gotoIfNotEqual',
@@ -149,6 +155,7 @@ const switchableMallocImpl = (
             { kind: 'goto', label: 'my_malloc_return', why: 'Found good existing block' },
             { kind: 'label', name: 'sbrk_more_space', why: 'Here we sbrk a new block' },
             {
+                kind: 'addImmediate',
                 amount: 3 * bytesInWord,
                 register: 'functionArgument1',
                 why: 'Add space for management block',
@@ -283,6 +290,8 @@ export const length: RuntimeFunctionGenerator = bytesInWord => {
     const currentChar = firstRegister;
     if (typeof currentChar !== 'string' && currentChar.type == 'memory') throw debug('Need a register');
     return {
+        name: 'length',
+        numRegistersToSave: 1,
         instructions: [
             {
                 kind: 'loadImmediate',
@@ -322,6 +331,8 @@ export const stringCopy: RuntimeFunctionGenerator = bytesInWord => {
     const currentChar = firstRegister;
     if (typeof currentChar !== 'string' && currentChar.type == 'memory') throw debug('Need a register');
     return {
+        name: 'string_copy',
+        numRegistersToSave: 1,
         instructions: [
             { kind: 'label', name: 'string_copy_loop', why: 'Copy a byte' },
             {
@@ -345,12 +356,15 @@ export const stringCopy: RuntimeFunctionGenerator = bytesInWord => {
             { kind: 'increment', register: 'functionArgument1', why: 'Bump pointers to next char' },
             { kind: 'increment', register: 'functionArgument2', why: 'Bump pointers to next char' },
             { kind: 'goto', label: 'string_copy_loop', why: 'Copy next char' },
+            { kind: 'label', name: 'string_copy_return', why: '' },
         ],
     };
 };
 
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     return {
+        name: 'print',
+        numRegistersToSave: 0,
         instructions: [
             {
                 kind: 'syscall',
@@ -365,6 +379,8 @@ export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
 
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     return {
+        name: 'print',
+        numRegistersToSave: 0,
         instructions: [
             {
                 kind: 'callByName',
@@ -393,6 +409,8 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord => {
     const currentData = nextRegister(currentBlockPointer);
     const err = { name: 'err' };
     return {
+        name: 'verify_no_leaks',
+        numRegistersToSave: 2,
         instructions: [
             {
                 kind: 'loadSymbolAddress',
@@ -463,6 +481,8 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesI
     const out = 'functionArgument3';
     const currentChar = firstRegister;
     return {
+        name: 'string_concatenate',
+        numRegistersToSave: 1,
         instructions: [
             { kind: 'label', name: 'write_left_loop', why: 'write_left_loop' },
             { kind: 'loadMemoryByte', to: currentChar, address: left, why: 'Load byte from left' },
@@ -502,6 +522,8 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
     const leftByte: StorageSpec = firstRegister;
     const rightByte: StorageSpec = nextRegister(firstRegister);
     return {
+        name: 'stringEquality',
+        numRegistersToSave: 2,
         instructions: [
             {
                 kind: 'loadImmediate',
@@ -549,6 +571,8 @@ export const myFreeRuntimeFunction = bytesInWord => {
     const one: StorageSpec = firstRegister;
     const err = { name: 'err' };
     return {
+        name: 'my_free',
+        numRegistersToSave: 1,
         instructions: [
             {
                 kind: 'gotoIfNotEqual',
