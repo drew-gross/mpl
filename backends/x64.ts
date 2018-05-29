@@ -21,11 +21,14 @@ import {
     compileExpression,
     storageSpecToString,
     stringLiteralName,
+    saveRegistersCode,
+    restoreRegistersCode,
 } from '../backend-utils.js';
 import {
     astToRegisterTransferLanguage,
     constructFunction,
     RegisterTransferLanguageExpression,
+    RegisterTransferLanguageFunction,
 } from './registerTransferLanguage.js';
 import flatten from '../util/list/flatten.js';
 import { VariableDeclaration, BackendInputs, StringLiteralData } from '../api.js';
@@ -250,7 +253,7 @@ const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression
 
 const bytesInWord = 8;
 
-const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
+const runtimeFunctions: RegisterTransferLanguageFunction[] = [
     length,
     printWithWriteRuntimeFunction,
     stringEqualityRuntimeFunction,
@@ -260,6 +263,18 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     stringConcatenateRuntimeFunction,
     verifyNoLeaks,
 ].map(f => f(bytesInWord, firstRegister, nextTemporary, [], []));
+
+// TODO: degeneralize this (allowing removal of several RTL instructions)
+const rtlFunctionToX64 = ({ name, instructions, numRegistersToSave }: RegisterTransferLanguageFunction): string => {
+    const fullRtl = [
+        { kind: 'functionLabel', name, why: 'Function entry point' },
+        ...saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+        ...instructions,
+        ...restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+        { kind: 'returnToCaller', why: 'Done' },
+    ];
+    return join(['', '', ...flatten(fullRtl.map(registerTransferExpressionToX64))], '\n');
+};
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
@@ -296,7 +311,7 @@ global start
 
 section .text
 ${join(flatten(flatten(x64Functions).map(registerTransferExpressionToX64)), '\n')}
-${join(flatten(flatten(runtimeFunctions).map(registerTransferExpressionToX64)), '\n')}
+${join(runtimeFunctions.map(rtlFunctionToX64), '\n')}
 
 start:
 ${join(flatten(x64Program.map(registerTransferExpressionToX64)), '\n')}

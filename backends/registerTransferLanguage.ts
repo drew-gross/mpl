@@ -48,6 +48,14 @@ export type RegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'push'; register: StorageSpec }
     | { kind: 'pop'; register: StorageSpec });
 
+export type RegisterTransferLanguage = RegisterTransferLanguageExpression[];
+
+export type RegisterTransferLanguageFunction = {
+    instructions: RegisterTransferLanguage;
+    numRegistersToSave: number;
+    name: string;
+};
+
 export const toString = (rtx: RegisterTransferLanguageExpression): string => {
     let result = '';
     switch (rtx.kind) {

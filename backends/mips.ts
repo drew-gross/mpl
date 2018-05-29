@@ -11,11 +11,14 @@ import {
     StorageSpec,
     RegisterAssignment,
     stringLiteralName,
+    saveRegistersCode,
+    restoreRegistersCode,
 } from '../backend-utils.js';
 import {
     astToRegisterTransferLanguage,
     constructFunction,
     RegisterTransferLanguageExpression,
+    RegisterTransferLanguageFunction,
 } from './registerTransferLanguage.js';
 import {
     mallocWithSbrk,
@@ -26,6 +29,7 @@ import {
     stringConcatenateRuntimeFunction,
     stringEqualityRuntimeFunction,
     myFreeRuntimeFunction,
+    RuntimeFunctionGenerator,
 } from './registerTransferLanguageRuntime.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
@@ -267,11 +271,11 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 const preamble: RegisterTransferLanguageExpression[] = [
     { kind: 'push', register: { type: 'register', destination: '$ra' }, why: 'Always save return address' },
 ];
-const eplilogue: RegisterTransferLanguageExpression[] = [
+const epilogue: RegisterTransferLanguageExpression[] = [
     { kind: 'pop', register: { type: 'register', destination: '$ra' }, why: 'Always restore return address' },
 ];
 
-const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
+const mipsRuntime: RuntimeFunctionGenerator[] = [
     length,
     printWithPrintRuntimeFunction,
     stringEqualityRuntimeFunction,
@@ -280,7 +284,25 @@ const runtimeFunctions: RegisterTransferLanguageExpression[][] = [
     myFreeRuntimeFunction,
     stringConcatenateRuntimeFunction,
     verifyNoLeaks,
-].map(f => f(bytesInWord, firstRegister, nextTemporary, preamble, eplilogue));
+];
+
+const runtimeFunctions: RegisterTransferLanguageFunction[] = mipsRuntime.map(f =>
+    f(bytesInWord, firstRegister, nextTemporary, preamble, epilogue)
+);
+
+// TODO: degeneralize this (allowing removal of several RTL instructions)
+const rtlFunctionToMips = ({ name, instructions, numRegistersToSave }: RegisterTransferLanguageFunction): string => {
+    const fullRtl = [
+        { kind: 'functionLabel', name, why: 'Function entry point' },
+        ...preamble,
+        ...saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+        ...instructions,
+        ...restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+        ...epilogue,
+        { kind: 'returnToCaller', why: 'Done' },
+    ];
+    return join(['', '', ...flatten(fullRtl.map(registerTransferExpressionToMips))], '\n');
+};
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f =>
@@ -291,7 +313,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             firstRegister,
             nextTemporary,
             preamble,
-            eplilogue,
+            epilogue,
             makeLabel
         )
     );
@@ -358,7 +380,7 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join(flatten(flatten(runtimeFunctions).map(registerTransferExpressionToMips)), '\n')}
+${join(runtimeFunctions.map(rtlFunctionToMips), '\n')}
 
 ${join(flatten(flatten(mipsFunctions).map(registerTransferExpressionToMips)), '\n')}
 main:
