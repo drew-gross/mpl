@@ -313,7 +313,7 @@ const rtlFunctionToMips = ({
         ...instructions,
         ...localEpilogue,
     ];
-    return join(['', '', ...flatten(fullRtl.map(registerTransferExpressionToMips))], '\n');
+    return join(flatten(fullRtl.map(registerTransferExpressionToMips)), '\n');
 };
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
@@ -405,7 +405,7 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join([...runtimeFunctions, ...mipsFunctions, mipsProgram].map(rtlFunctionToMips), '\n')}
+${join([...runtimeFunctions, ...mipsFunctions, mipsProgram].map(rtlFunctionToMips), '\n\n\n')}
 ${join(
         registerTransferExpressionToMips({ kind: 'callByName', function: ' verify_no_leaks', why: 'Check for leaks' }),
         '\n'
