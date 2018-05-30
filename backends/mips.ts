@@ -269,13 +269,6 @@ const bytesInWord = 4;
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
 
-const preamble: RegisterTransferLanguageExpression[] = [
-    { kind: 'push', register: { type: 'register', destination: '$ra' }, why: 'Always save return address' },
-];
-const epilogue: RegisterTransferLanguageExpression[] = [
-    { kind: 'pop', register: { type: 'register', destination: '$ra' }, why: 'Always restore return address' },
-];
-
 const mipsRuntime: RuntimeFunctionGenerator[] = [
     length,
     printWithPrintRuntimeFunction,
@@ -298,21 +291,24 @@ const rtlFunctionToMips = ({
     numRegistersToSave,
     isMain,
 }: RegisterTransferLanguageFunction): string => {
-    const localPreamble = !isMain
-        ? [...preamble, ...saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave)]
+    const preamble = !isMain
+        ? [
+              { kind: 'push', register: { type: 'register', destination: '$ra' }, why: 'Always save return address' },
+              ...saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+          ]
         : [];
-    const localEpilogue = !isMain
+    const epilogue = !isMain
         ? [
               ...restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
-              ...epilogue,
+              { kind: 'pop', register: { type: 'register', destination: '$ra' }, why: 'Always restore return address' },
               { kind: 'returnToCaller', why: 'Done' },
           ]
         : [];
     const fullRtl = [
         { kind: 'functionLabel', name, why: 'Function entry point' },
-        ...localPreamble,
+        ...preamble,
         ...instructions,
-        ...localEpilogue,
+        ...epilogue,
     ];
     return join(flatten(fullRtl.map(registerTransferExpressionToMips)), '\n');
 };
