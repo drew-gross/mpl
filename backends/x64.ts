@@ -274,7 +274,7 @@ const rtlFunctionToX64 = ({ name, instructions, numRegistersToSave }: RegisterTr
         ...restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
         { kind: 'returnToCaller', why: 'Done' },
     ];
-    return join(['', '', ...flatten(fullRtl.map(registerTransferExpressionToX64))], '\n');
+    return join(flatten(fullRtl.map(registerTransferExpressionToX64)), '\n');
 };
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
@@ -311,7 +311,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
 global start
 
 section .text
-${join([...runtimeFunctions, ...x64Functions].map(rtlFunctionToX64), '\n')}
+${join([...runtimeFunctions, ...x64Functions].map(rtlFunctionToX64), '\n\n\n')}
 
 start:
 ${join(flatten(x64Program.map(registerTransferExpressionToX64)), '\n')}
