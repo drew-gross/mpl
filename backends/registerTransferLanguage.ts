@@ -3,7 +3,7 @@ import { builtinFunctions } from '../frontend.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
 import {
-    StorageSpec,
+    Register,
     BackendOptions,
     CompiledExpression,
     compileExpression,
@@ -18,35 +18,35 @@ type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 
 export type RegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'comment' }
-    | { kind: 'syscall'; name: SyscallName; arguments: (StorageSpec | number)[]; destination: StorageSpec | undefined }
-    | { kind: 'move'; from: StorageSpec; to: StorageSpec }
-    | { kind: 'loadImmediate'; value: number; destination: StorageSpec }
-    | { kind: 'addImmediate'; register: StorageSpec; amount: number }
-    | { kind: 'subtract'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec }
-    | { kind: 'add'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec }
-    | { kind: 'multiply'; lhs: StorageSpec; rhs: StorageSpec; destination: StorageSpec }
-    | { kind: 'increment'; register: StorageSpec }
+    | { kind: 'syscall'; name: SyscallName; arguments: (Register | number)[]; destination: Register | undefined }
+    | { kind: 'move'; from: Register; to: Register }
+    | { kind: 'loadImmediate'; value: number; destination: Register }
+    | { kind: 'addImmediate'; register: Register; amount: number }
+    | { kind: 'subtract'; lhs: Register; rhs: Register; destination: Register }
+    | { kind: 'add'; lhs: Register; rhs: Register; destination: Register }
+    | { kind: 'multiply'; lhs: Register; rhs: Register; destination: Register }
+    | { kind: 'increment'; register: Register }
     | { kind: 'label'; name: string }
     | { kind: 'functionLabel'; name: string }
     | { kind: 'goto'; label: string }
-    | { kind: 'gotoIfEqual'; lhs: StorageSpec; rhs: StorageSpec; label: string }
-    | { kind: 'gotoIfNotEqual'; lhs: StorageSpec; rhs: StorageSpec; label: string }
-    | { kind: 'gotoIfZero'; register: StorageSpec; label: string }
-    | { kind: 'gotoIfGreater'; lhs: StorageSpec; rhs: StorageSpec; label: string }
-    | { kind: 'storeGlobal'; from: StorageSpec; to: StorageSpec }
-    | { kind: 'loadGlobal'; from: string; to: StorageSpec }
-    | { kind: 'storeMemory'; from: StorageSpec; address: StorageSpec; offset: number }
-    | { kind: 'storeMemoryByte'; address: StorageSpec; contents: StorageSpec }
-    | { kind: 'storeZeroToMemory'; address: StorageSpec; offset: number }
-    | { kind: 'loadMemory'; from: StorageSpec; to: StorageSpec; offset: number }
-    | { kind: 'loadMemoryByte'; address: StorageSpec; to: StorageSpec }
-    | { kind: 'loadSymbolAddress'; to: StorageSpec; symbolName: string }
+    | { kind: 'gotoIfEqual'; lhs: Register; rhs: Register; label: string }
+    | { kind: 'gotoIfNotEqual'; lhs: Register; rhs: Register; label: string }
+    | { kind: 'gotoIfZero'; register: Register; label: string }
+    | { kind: 'gotoIfGreater'; lhs: Register; rhs: Register; label: string }
+    | { kind: 'storeGlobal'; from: Register; to: Register }
+    | { kind: 'loadGlobal'; from: string; to: Register }
+    | { kind: 'storeMemory'; from: Register; address: Register; offset: number }
+    | { kind: 'storeMemoryByte'; address: Register; contents: Register }
+    | { kind: 'storeZeroToMemory'; address: Register; offset: number }
+    | { kind: 'loadMemory'; from: Register; to: Register; offset: number }
+    | { kind: 'loadMemoryByte'; address: Register; to: Register }
+    | { kind: 'loadSymbolAddress'; to: Register; symbolName: string }
     | { kind: 'callByName'; function: string }
-    | { kind: 'callByRegister'; function: StorageSpec }
+    | { kind: 'callByRegister'; function: Register }
     | { kind: 'returnToCaller' }
-    | { kind: 'returnValue'; source: StorageSpec } // TODO: replace this with a move to functionResult
-    | { kind: 'push'; register: StorageSpec }
-    | { kind: 'pop'; register: StorageSpec });
+    | { kind: 'returnValue'; source: Register } // TODO: replace this with a move to functionResult
+    | { kind: 'push'; register: Register }
+    | { kind: 'pop'; register: Register });
 
 export type RegisterTransferLanguage = RegisterTransferLanguageExpression[];
 
@@ -58,105 +58,75 @@ export type RegisterTransferLanguageFunction = {
 };
 
 export const toString = (rtx: RegisterTransferLanguageExpression): string => {
-    let result = '';
     switch (rtx.kind) {
         case 'comment':
-            result = ``;
-            break;
+            return ``;
         case 'syscall':
-            result = 'syscall';
-            break;
+            return 'syscall';
         case 'move':
-            result = `${storageSpecToString(rtx.to)} = ${storageSpecToString(rtx.from)}`;
-            break;
+            return `${storageSpecToString(rtx.to)} = ${storageSpecToString(rtx.from)}`;
         case 'loadImmediate':
-            result = `${storageSpecToString(rtx.destination)} = ${rtx.value}`;
-            break;
+            return `${storageSpecToString(rtx.destination)} = ${rtx.value}`;
         case 'addImmediate':
-            result = `${storageSpecToString(rtx.register)} += ${rtx.amount}`;
-            break;
+            return `${storageSpecToString(rtx.register)} += ${rtx.amount}`;
         case 'subtract':
-            result = `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} - ${storageSpecToString(
+            return `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} - ${storageSpecToString(
                 rtx.rhs
             )}`;
-            break;
         case 'add':
-            result = `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} + ${storageSpecToString(
+            return `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} + ${storageSpecToString(
                 rtx.rhs
             )}`;
-            break;
         case 'multiply':
-            result = `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} * ${storageSpecToString(
+            return `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} * ${storageSpecToString(
                 rtx.rhs
             )}`;
-            break;
         case 'increment':
-            result = `${storageSpecToString(rtx.register)}++`;
-            break;
+            return `${storageSpecToString(rtx.register)}++`;
         case 'label':
         case 'functionLabel':
-            result = `${rtx.name}:`;
-            break;
+            return `${rtx.name}:`;
         case 'goto':
-            result = `goto ${rtx.label}`;
-            break;
+            return `goto ${rtx.label}`;
         case 'gotoIfEqual':
-            result = `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} == ${storageSpecToString(rtx.rhs)}`;
-            break;
+            return `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} == ${storageSpecToString(rtx.rhs)}`;
         case 'gotoIfNotEqual':
-            result = `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} != ${storageSpecToString(rtx.rhs)}`;
-            break;
+            return `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} != ${storageSpecToString(rtx.rhs)}`;
         case 'gotoIfZero':
-            result = `goto ${rtx.label} if ${storageSpecToString(rtx.register)} == 0`;
-            break;
+            return `goto ${rtx.label} if ${storageSpecToString(rtx.register)} == 0`;
         case 'gotoIfGreater':
-            result = `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} > ${storageSpecToString(rtx.rhs)}`;
-            break;
+            return `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} > ${storageSpecToString(rtx.rhs)}`;
         case 'storeGlobal':
-            result = `*${storageSpecToString(rtx.to)} = ${storageSpecToString(rtx.from)}`;
-            break;
+            return `*${storageSpecToString(rtx.to)} = ${storageSpecToString(rtx.from)}`;
         case 'loadGlobal':
-            result = `${storageSpecToString(rtx.to)} = &${rtx.from}`;
-            break;
+            return `${storageSpecToString(rtx.to)} = &${rtx.from}`;
         case 'storeMemory':
-            result = `*(${storageSpecToString(rtx.address)} + ${rtx.offset}) = ${storageSpecToString(rtx.from)}`;
-            break;
+            return `*(${storageSpecToString(rtx.address)} + ${rtx.offset}) = ${storageSpecToString(rtx.from)}`;
         case 'storeMemoryByte':
-            result = `*${storageSpecToString(rtx.address)} = ${storageSpecToString(rtx.contents)}`;
-            break;
+            return `*${storageSpecToString(rtx.address)} = ${storageSpecToString(rtx.contents)}`;
         case 'storeZeroToMemory':
-            result = `*${storageSpecToString(rtx.address)} = 0`;
-            break;
+            return `*${storageSpecToString(rtx.address)} = 0`;
         case 'loadMemory':
-            result = `${storageSpecToString(rtx.to)} = *(${storageSpecToString(rtx.from)} + ${rtx.offset})`;
-            break;
+            return `${storageSpecToString(rtx.to)} = *(${storageSpecToString(rtx.from)} + ${rtx.offset})`;
         case 'loadMemoryByte':
-            result = `${storageSpecToString(rtx.to)} = *${storageSpecToString(rtx.address)}`;
-            break;
+            return `${storageSpecToString(rtx.to)} = *${storageSpecToString(rtx.address)}`;
         case 'loadSymbolAddress':
-            result = `${storageSpecToString(rtx.to)} = &${rtx.symbolName}`;
-            break;
+            return `${storageSpecToString(rtx.to)} = &${rtx.symbolName}`;
         case 'callByRegister':
-            result = `${storageSpecToString(rtx.function)}()`;
+            return `${storageSpecToString(rtx.function)}()`;
         case 'callByName':
-            result = `${rtx.function}()`;
-            break;
+            return `${rtx.function}()`;
         case 'returnToCaller':
-            result = `return`;
-            break;
+            return `return`;
         case 'returnValue':
-            result = `ret = ${storageSpecToString(rtx.source)}`;
-            break;
+            return `ret = ${storageSpecToString(rtx.source)}`;
         case 'push':
-            result = `push ${storageSpecToString(rtx.register)}`;
-            break;
+            return `push ${storageSpecToString(rtx.register)}`;
         case 'pop':
-            result = `pop ${storageSpecToString(rtx.register)}`;
-            break;
+            return `pop ${storageSpecToString(rtx.register)}`;
         default:
             throw debug('Unrecognized RTX kind in toString');
     }
-    return result;
 };
 
 export const astToRegisterTransferLanguage = (
@@ -352,7 +322,7 @@ export const astToRegisterTransferLanguage = (
             }
 
             const computeArgumentsMips = ast.arguments.map((argument, index) => {
-                let register: StorageSpec;
+                let register: Register;
                 switch (index) {
                     case 0:
                         register = 'functionArgument1';
@@ -529,11 +499,7 @@ export const astToRegisterTransferLanguage = (
             } else if (lhs in registerAssignment) {
                 return recurse({
                     ast: ast.expression,
-                    // TODO: Allow spilling of variables
-                    destination: {
-                        type: 'register',
-                        destination: (registerAssignment[lhs] as any).destination,
-                    },
+                    destination: registerAssignment[lhs],
                 });
             } else {
                 throw debug('todo');
@@ -635,11 +601,7 @@ export const astToRegisterTransferLanguage = (
             } else if (lhs in registerAssignment) {
                 return recurse({
                     ast: ast.expression,
-                    // TODO: Allow spilling of variables
-                    destination: {
-                        type: 'register',
-                        destination: `${(registerAssignment[lhs] as any).destination}`,
-                    },
+                    destination: registerAssignment[lhs],
                 });
             } else {
                 throw debug('todo');
@@ -844,10 +806,10 @@ export const constructFunction = (
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
     const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
 
-    const argumentRegisters: StorageSpec[] = ['functionArgument1', 'functionArgument2', 'functionArgument3'];
+    const argumentRegisters: Register[] = ['functionArgument1', 'functionArgument2', 'functionArgument3'];
     if (f.parameters.length > 3) throw debug('todo'); // Don't want to deal with this yet.
     if (argumentRegisters.length < 3) throw debug('todo');
-    const registerAssignment: { [key: string]: StorageSpec } = {};
+    const registerAssignment: { [key: string]: Register } = {};
     f.parameters.forEach((parameter, index) => {
         registerAssignment[parameter.name] = argumentRegisters[index];
     });
@@ -879,7 +841,7 @@ export const constructFunction = (
                 .filter(s => s.location === 'Stack')
                 .filter(s => s.type.name == 'String')
                 .map(s => {
-                    const memoryForVariable: StorageSpec = registerAssignment[s.name];
+                    const memoryForVariable: Register = registerAssignment[s.name];
                     if (typeof memoryForVariable == 'string') throw debug('special register not valid here');
                     if (memoryForVariable.type !== 'register') throw debug('todo');
                     return [

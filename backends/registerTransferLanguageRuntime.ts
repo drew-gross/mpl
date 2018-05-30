@@ -288,8 +288,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord => {
 };
 
 export const length: RuntimeFunctionGenerator = bytesInWord => {
-    const currentChar = firstRegister;
-    if (typeof currentChar !== 'string' && currentChar.type == 'memory') throw debug('Need a register');
+    const currentChar = { name: 'currentChar' };
     return {
         name: 'length',
         isMain: false,
@@ -410,8 +409,8 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
 
 // TODO: figure out a way to verify that this is working
 export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord => {
-    const currentBlockPointer = firstRegister;
-    const currentData = nextRegister(currentBlockPointer);
+    const currentBlockPointer = { name: 'currentBlockPointer' };
+    const currentData = { name: 'currentData' };
     const err = { name: 'err' };
     return {
         name: 'verify_no_leaks',
@@ -485,7 +484,7 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesI
     const left = 'functionArgument1';
     const right = 'functionArgument2';
     const out = 'functionArgument3';
-    const currentChar = firstRegister;
+    const currentChar = { name: 'currentChar' };
     return {
         name: 'string_concatenate',
         isMain: false,
@@ -526,8 +525,8 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesI
 };
 
 export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
-    const leftByte: StorageSpec = firstRegister;
-    const rightByte: StorageSpec = nextRegister(firstRegister);
+    const leftByte = { name: 'leftByte' };
+    const rightByte = { name: 'rightByte' };
     return {
         name: 'stringEquality',
         isMain: false,
@@ -576,17 +575,19 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
 };
 
 export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
-    const one: StorageSpec = firstRegister;
+    const zero = { name: 'zero' };
+    const one = { name: 'one' };
     const err = { name: 'err' };
     return {
         name: 'my_free',
         isMain: false,
         numRegistersToSave: 1,
         instructions: [
+            { kind: 'loadImmediate', destination: zero, value: 0, why: 'Need access to a 0' },
             {
                 kind: 'gotoIfNotEqual',
                 lhs: 'functionArgument1',
-                rhs: { type: 'register', destination: '0' },
+                rhs: zero,
                 label: 'free_null_check_passed',
                 why: 'Not freeing null check passed',
             },

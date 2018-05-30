@@ -114,51 +114,12 @@ const registerTransferExpressionToMipsWithoutComment = (
         case 'move':
             return [`move ${getReg(rtx.to)}, ${getReg(rtx.from)}`];
         case 'loadImmediate':
-            if (typeof rtx.destination == 'string') {
-                return [`li ${getReg(rtx.destination)}, ${rtx.value}`];
-            }
-            switch (rtx.destination.type) {
-                case 'register':
-                    return [`li ${getReg(rtx.destination)}, ${rtx.value}`];
-                // TODO: use a register allocator
-                case 'memory':
-                    return [`li $s7, ${rtx.value}`, `sw $s7, -${rtx.destination.spOffset}($sp)`];
-                default:
-                    throw debug('todo');
-            }
+            return [`li ${getReg(rtx.destination)}, ${rtx.value}`];
         case 'multiply': {
-            let leftRegister;
-            let loadSpilled: any = [];
-            let restoreSpilled: any = [];
-            if (typeof rtx.lhs != 'string' && rtx.lhs.type == 'memory') {
-                leftRegister = '$s1';
-                loadSpilled.push(`lw $s1, -${rtx.lhs.spOffset}($sp)`);
-            } else {
-                leftRegister = getReg(rtx.lhs);
-            }
-
-            let rightRegister;
-            if (typeof rtx.rhs != 'string' && rtx.rhs.type == 'memory') {
-                rightRegister = '$s2';
-                loadSpilled.push(`lw $s2, -${rtx.rhs.spOffset}($sp)`);
-            } else {
-                rightRegister = getReg(rtx.rhs);
-            }
-
-            let destinationRegister;
-            if (typeof rtx.destination != 'string' && rtx.destination.type == 'memory') {
-                destinationRegister = '$s3';
-                restoreSpilled.push(`sw $s3, -${rtx.destination.spOffset}($sp)`);
-            } else {
-                destinationRegister = getReg(rtx.destination);
-            }
-
             return [
-                ...loadSpilled,
-                `mult ${leftRegister}, ${rightRegister}`,
+                `mult ${getReg(rtx.lhs)}, ${getReg(rtx.rhs)}`,
                 `# Move result to final destination (assume no overflow)`,
-                `mflo ${destinationRegister}`,
-                ...restoreSpilled,
+                `mflo ${getReg(rtx.destination)}`,
             ];
         }
         case 'addImmediate':
@@ -245,15 +206,15 @@ const runtimeFunctions: RegisterTransferLanguageFunction[] = mipsRuntime.map(f =
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToMips = (rtlf: RegisterTransferLanguageFunction): string => {
     const registerAssignment = assignRegisters(rtlf);
-    const preamble = !isMain
+    const preamble = !rtlf.isMain
         ? [
               { kind: 'push', register: { type: 'register', destination: '$ra' }, why: 'Always save return address' },
-              ...saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+              ...saveRegistersCode(registerAssignment),
           ]
         : [];
-    const epilogue = !isMain
+    const epilogue = !rtlf.isMain
         ? [
-              ...restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+              ...restoreRegistersCode(registerAssignment),
               { kind: 'pop', register: { type: 'register', destination: '$ra' }, why: 'Always restore return address' },
               { kind: 'returnToCaller', why: 'Done' },
           ]
@@ -269,8 +230,6 @@ const rtlFunctionToMips = (rtlf: RegisterTransferLanguageFunction): string => {
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f => constructFunction(f, globalDeclarations, stringLiterals, makeLabel));
-
-    const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);
 
     const mainProgramInstructions: RegisterTransferLanguageExpression[] = flatten(
         program.statements.map(statement => {

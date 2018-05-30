@@ -16,10 +16,9 @@ import * as Ast from '../ast.js';
 import {
     BackendOptions,
     CompiledProgram,
-    StorageSpec,
+    Register,
     RegisterAssignment,
     compileExpression,
-    storageSpecToString,
     stringLiteralName,
     saveRegistersCode,
     restoreRegistersCode,
@@ -37,52 +36,7 @@ import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { execSync } from 'child_process';
 
-// TODO: unify with named registers in mips. Args are r8-r10, general purpose starts at r11.
-const firstRegister: StorageSpec = {
-    type: 'register',
-    destination: 'r11',
-};
-
-// TOOD: Unify with nextTemporary in mips. Also be able to use special purpose registers like rdx when not multiplying.
-const nextTemporary = (storage: StorageSpec): StorageSpec => {
-    if (typeof storage == 'string') throw debug('nextTemporary not valid for special registers');
-    if (storage.type == 'register') {
-        if (storage.destination == 'r15') {
-            return {
-                type: 'register',
-                destination: 'rdi',
-            };
-        } else if (storage.destination == 'rdi') {
-            return {
-                type: 'register',
-                destination: 'rsi',
-            };
-        } else if (storage.destination == 'rsi') {
-            return {
-                type: 'register',
-                destination: 'rbx',
-            };
-        } else if (storage.destination == 'rbx') {
-            // Now need to spill
-            return {
-                type: 'memory',
-                spOffset: 0,
-            };
-        } else {
-            return {
-                type: 'register',
-                destination: `r${parseInt(storage.destination.slice(1)) + 1}`,
-            };
-        }
-    } else if (storage.type == 'memory') {
-        return {
-            type: 'memory',
-            spOffset: storage.spOffset + 4,
-        };
-    } else {
-        return debug('todo');
-    }
-};
+const generalPurposeRegisters = ['r11', 'r12', 'r13', 'r14', 'r15', 'rdi', 'rsi', 'rbx'];
 
 let labelId = 0;
 const makeLabel = (name: string) => {
@@ -91,85 +45,69 @@ const makeLabel = (name: string) => {
     return result;
 };
 
-// TODO: unify with assignMipsRegisters
-const assignX64Registers = (
-    variables: VariableDeclaration[]
-): { registerAssignment: RegisterAssignment; firstTemporary: StorageSpec } => {
-    // TODO: allow spilling of variables
-    let currentRegister = 11;
-    let registerAssignment = {};
-    variables.forEach(variable => {
-        registerAssignment[variable.name] = {
-            type: 'register',
-            destination: `r${currentRegister}`,
-        };
-        currentRegister = currentRegister + 1;
-    });
-    return {
-        registerAssignment,
-        firstTemporary: {
-            type: 'register',
-            destination: `r${currentRegister}`,
-        },
-    };
-};
-
 const specialRegisterNames = {
     functionArgument1: 'r8',
     functionArgument2: 'r9',
     functionArgument3: 'r10',
     functionResult: 'rax',
 };
-const getRegisterName = (r: StorageSpec): string => {
-    if (typeof r == 'string') return specialRegisterNames[r];
-    if (r.type == 'memory') throw debug('spilling not supported in x64 yet');
-    return r.destination;
+
+const getRegisterName = (registerAssignment: RegisterAssignment, register: Register): string => {
+    if (typeof register == 'string') {
+        return specialRegisterNames[register];
+    } else {
+        return registerAssignment[register.name];
+    }
 };
 
-const registerTransferExpressionToX64WithoutComment = (rtx: RegisterTransferLanguageExpression): string[] => {
+const registerTransferExpressionToX64WithoutComment = (
+    registerAssignment: RegisterAssignment,
+    rtx: RegisterTransferLanguageExpression
+): string[] => {
+    const getReg = getRegisterName.bind(registerAssignment);
     switch (rtx.kind) {
         case 'comment':
             return [''];
         case 'loadImmediate':
-            return [`mov ${getRegisterName(rtx.destination)}, ${rtx.value}`];
+            return [`mov ${getReg(rtx.destination)}, ${rtx.value}`];
         case 'move':
-            return [`mov ${getRegisterName(rtx.to)}, ${getRegisterName(rtx.from)}`];
+            return [`mov ${getReg(rtx.to)}, ${getReg(rtx.from)}`];
         case 'returnValue':
-            return [`mov ${specialRegisterNames.functionResult}, ${getRegisterName(rtx.source)}`];
+            return [`mov ${specialRegisterNames.functionResult}, ${getReg(rtx.source)}`];
         case 'subtract':
             return [
-                `mov ${getRegisterName(rtx.destination)}, ${getRegisterName(rtx.lhs)}`,
-                `sub ${getRegisterName(rtx.destination)}, ${getRegisterName(rtx.rhs)}`,
+                `mov ${getReg(rtx.destination)}, ${getReg(rtx.lhs)}`,
+                `sub ${getReg(rtx.destination)}, ${getReg(rtx.rhs)}`,
             ];
         case 'add':
-            if (getRegisterName(rtx.lhs) == getRegisterName(rtx.destination)) {
-                return [`add ${getRegisterName(rtx.destination)}, ${getRegisterName(rtx.rhs)}`];
+            if (getReg(rtx.lhs) == getReg(rtx.destination)) {
+                return [`add ${getReg(rtx.destination)}, ${getReg(rtx.rhs)}`];
             }
-            if (getRegisterName(rtx.rhs) == getRegisterName(rtx.destination)) {
-                return [`add ${getRegisterName(rtx.destination)}, ${getRegisterName(rtx.lhs)}`];
+            if (getReg(rtx.rhs) == getReg(rtx.destination)) {
+                return [`add ${getReg(rtx.destination)}, ${getReg(rtx.lhs)}`];
             }
             return [
-                `mov ${getRegisterName(rtx.destination)}, ${getRegisterName(rtx.lhs)}`,
-                `add ${getRegisterName(rtx.destination)}, ${getRegisterName(rtx.rhs)}`,
+                `mov ${getReg(rtx.destination)}, ${getReg(rtx.lhs)}`,
+                `add ${getReg(rtx.destination)}, ${getReg(rtx.rhs)}`,
             ];
         case 'multiply':
             return [
-                `mov rax, ${getRegisterName(rtx.lhs)}`, // mul does rax * arg
-                `mul ${getRegisterName(rtx.rhs)}`,
-                `mov ${getRegisterName(rtx.destination)}, rax`, // mul puts result in rax:rdx
+                `mov rax, ${getReg(rtx.lhs)}`, // mul does rax * arg
+                `mul ${getReg(rtx.rhs)}`,
+                `mov ${getReg(rtx.destination)}, rax`, // mul puts result in rax:rdx
             ];
         case 'increment':
-            return [`inc ${getRegisterName(rtx.register)};`];
+            return [`inc ${getReg(rtx.register)};`];
         case 'addImmediate':
-            return [`add ${getRegisterName(rtx.register)}, ${rtx.amount}`];
+            return [`add ${getReg(rtx.register)}, ${rtx.amount}`];
         case 'gotoIfEqual':
-            return [`cmp ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}`, `je ${rtx.label}`];
+            return [`cmp ${getReg(rtx.lhs)}, ${getReg(rtx.rhs)}`, `je ${rtx.label}`];
         case 'gotoIfNotEqual':
-            return [`cmp ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}`, `jne ${rtx.label}`];
+            return [`cmp ${getReg(rtx.lhs)}, ${getReg(rtx.rhs)}`, `jne ${rtx.label}`];
         case 'gotoIfZero':
-            return [`cmp ${getRegisterName(rtx.register)}, 0`, `jz ${rtx.label}`];
+            return [`cmp ${getReg(rtx.register)}, 0`, `jz ${rtx.label}`];
         case 'gotoIfGreater':
-            return [`cmp ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}`, `jg ${rtx.label}`];
+            return [`cmp ${getReg(rtx.lhs)}, ${getReg(rtx.rhs)}`, `jg ${rtx.label}`];
         case 'goto':
             return [`jmp ${rtx.label}`];
         case 'label':
@@ -177,23 +115,23 @@ const registerTransferExpressionToX64WithoutComment = (rtx: RegisterTransferLang
         case 'functionLabel':
             return [`${rtx.name}:`];
         case 'storeGlobal':
-            return [`mov [rel ${getRegisterName(rtx.to)}], ${getRegisterName(rtx.from)}`];
+            return [`mov [rel ${getReg(rtx.to)}], ${getReg(rtx.from)}`];
         case 'loadGlobal':
-            return [`mov ${getRegisterName(rtx.to)}, [rel ${rtx.from}]`];
+            return [`mov ${getReg(rtx.to)}, [rel ${rtx.from}]`];
         case 'loadMemory':
-            return [`mov ${getRegisterName(rtx.to)}, [${getRegisterName(rtx.from)}+${rtx.offset}]`];
+            return [`mov ${getReg(rtx.to)}, [${getReg(rtx.from)}+${rtx.offset}]`];
         case 'storeMemory':
-            return [`mov [${getRegisterName(rtx.address)}+${rtx.offset}], ${getRegisterName(rtx.from)}`];
+            return [`mov [${getReg(rtx.address)}+${rtx.offset}], ${getReg(rtx.from)}`];
         case 'storeZeroToMemory':
-            return [`mov byte [${getRegisterName(rtx.address)}+${rtx.offset}], 0`];
+            return [`mov byte [${getReg(rtx.address)}+${rtx.offset}], 0`];
         case 'storeMemoryByte':
-            return [`mov byte [${getRegisterName(rtx.address)}], ${getRegisterName(rtx.contents)}b`];
+            return [`mov byte [${getReg(rtx.address)}], ${getReg(rtx.contents)}b`];
         case 'loadMemoryByte':
-            return [`movsx ${getRegisterName(rtx.to)}, byte [${getRegisterName(rtx.address)}]`];
+            return [`movsx ${getReg(rtx.to)}, byte [${getReg(rtx.address)}]`];
         case 'loadSymbolAddress':
-            return [`lea ${getRegisterName(rtx.to)}, [rel ${rtx.symbolName}]`];
+            return [`lea ${getReg(rtx.to)}, [rel ${rtx.symbolName}]`];
         case 'callByRegister':
-            return [`call ${getRegisterName(rtx.function)}`];
+            return [`call ${getReg(rtx.function)}`];
         case 'callByName':
             return [`call ${rtx.function}`];
         case 'returnToCaller':
@@ -212,12 +150,12 @@ const registerTransferExpressionToX64WithoutComment = (rtx: RegisterTransferLang
                 mmap: 0x020000c5,
             };
             const registersToSave: string[] = [];
-            if (rtx.destination && getRegisterName(rtx.destination) != syscallSelectAndResultRegister) {
+            if (rtx.destination && getReg(rtx.destination) != syscallSelectAndResultRegister) {
                 registersToSave.push(syscallSelectAndResultRegister);
             }
             rtx.arguments.forEach((_, index) => {
                 const argRegister = syscallArgRegisters[index];
-                if (rtx.destination && getRegisterName(rtx.destination) == argRegister) {
+                if (rtx.destination && getReg(rtx.destination) == argRegister) {
                     return;
                 }
                 registersToSave.push(argRegister);
@@ -228,28 +166,29 @@ const registerTransferExpressionToX64WithoutComment = (rtx: RegisterTransferLang
                     (arg, index) =>
                         typeof arg == 'number'
                             ? `mov ${syscallArgRegisters[index]}, ${arg}`
-                            : `mov ${syscallArgRegisters[index]}, ${getRegisterName(arg)}`
+                            : `mov ${syscallArgRegisters[index]}, ${getReg(arg)}`
                 ),
                 `mov ${syscallSelectAndResultRegister}, ${syscallNumbers[rtx.name]}`,
                 'syscall',
-                ...(rtx.destination
-                    ? [`mov ${getRegisterName(rtx.destination)}, ${syscallSelectAndResultRegister}`]
-                    : []),
+                ...(rtx.destination ? [`mov ${getReg(rtx.destination)}, ${syscallSelectAndResultRegister}`] : []),
                 ...registersToSave.reverse().map(r => `pop ${r}`),
             ];
             return result;
         case 'push':
-            return [`push ${getRegisterName(rtx.register)}`];
+            return [`push ${getReg(rtx.register)}`];
         case 'pop':
-            return [`pop ${getRegisterName(rtx.register)}`];
+            return [`pop ${getReg(rtx.register)}`];
         default:
             throw debug(`${(rtx as any).kind} unhandled in registerTransferExpressionToX64`);
     }
 };
 
-const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression): string[] => {
+const registerTransferExpressionToX64 = (
+    registerAssignment: RegisterAssignment,
+    rtx: RegisterTransferLanguageExpression
+): string[] => {
     if (typeof rtx == 'string') return [rtx];
-    return registerTransferExpressionToX64WithoutComment(rtx).map(asm => `${asm}; ${rtx.why}`);
+    return registerTransferExpressionToX64WithoutComment(registerAssignment, rtx).map(asm => `${asm}; ${rtx.why}`);
 };
 
 const bytesInWord = 8;
@@ -263,20 +202,16 @@ const runtimeFunctions: RegisterTransferLanguageFunction[] = [
     myFreeRuntimeFunction,
     stringConcatenateRuntimeFunction,
     verifyNoLeaks,
-].map(f => f(bytesInWord, firstRegister, nextTemporary));
+].map(f => f(bytesInWord));
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
-const rtlFunctionToX64 = ({
-    name,
-    instructions,
-    numRegistersToSave,
-    isMain,
-}: RegisterTransferLanguageFunction): string => {
+const rtlFunctionToX64 = (rtlf: RegisterTransferLanguageFunction): string => {
+    const registerAssignment = assignRegisters(rtlf);
     const fullRtl = [
         { kind: 'functionLabel', name, why: 'Function entry point' },
-        ...(isMain ? [] : saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave)),
-        ...instructions,
-        ...(isMain ? [] : restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave)),
+        ...(isMain ? [] : saveRegistersCode(registerAssignment)),
+        ...rtlf.instructions,
+        ...(isMain ? [] : restoreRegistersCode(registerAssignment)),
         ...(isMain ? [] : [{ kind: 'returnToCaller', why: 'Done' }]),
     ];
     return join(flatten(fullRtl.map(registerTransferExpressionToX64)), '\n');
@@ -287,24 +222,18 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let x64Functions: RegisterTransferLanguageFunction[] = functions.map(f =>
-        constructFunction(f, globalDeclarations, stringLiterals, firstRegister, nextTemporary, makeLabel)
+        constructFunction(f, globalDeclarations, stringLiterals, makeLabel)
     );
-    const { registerAssignment, firstTemporary } = assignX64Registers(program.variables);
     const mainProgramInstructions = flatten(
         program.statements.map(statement => {
             const compiledProgram = astToRegisterTransferLanguage(
                 {
                     ast: statement,
-                    registerAssignment,
-                    destination: {
-                        type: 'register',
-                        destination: '$a0',
-                    },
-                    currentTemporary: firstTemporary,
+                    destination: 'functionResult',
+                    currentTemporary: { name: 'tmp1' },
                     globalDeclarations,
                     stringLiterals,
                 },
-                nextTemporary,
                 makeLabel
             );
 
