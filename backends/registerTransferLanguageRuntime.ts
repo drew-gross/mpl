@@ -19,6 +19,7 @@ const switchableMallocImpl = (
     const err = { name: 'err' };
     return {
         name: 'my_malloc',
+        isMain: false,
         numRegistersToSave: 3,
         instructions: [
             {
@@ -291,6 +292,7 @@ export const length: RuntimeFunctionGenerator = bytesInWord => {
     if (typeof currentChar !== 'string' && currentChar.type == 'memory') throw debug('Need a register');
     return {
         name: 'length',
+        isMain: false,
         numRegistersToSave: 1,
         instructions: [
             {
@@ -332,6 +334,7 @@ export const stringCopy: RuntimeFunctionGenerator = bytesInWord => {
     if (typeof currentChar !== 'string' && currentChar.type == 'memory') throw debug('Need a register');
     return {
         name: 'string_copy',
+        isMain: false,
         numRegistersToSave: 1,
         instructions: [
             { kind: 'label', name: 'string_copy_loop', why: 'Copy a byte' },
@@ -364,6 +367,7 @@ export const stringCopy: RuntimeFunctionGenerator = bytesInWord => {
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     return {
         name: 'print',
+        isMain: false,
         numRegistersToSave: 0,
         instructions: [
             {
@@ -380,6 +384,7 @@ export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     return {
         name: 'print',
+        isMain: false,
         numRegistersToSave: 0,
         instructions: [
             {
@@ -410,6 +415,7 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord => {
     const err = { name: 'err' };
     return {
         name: 'verify_no_leaks',
+        isMain: false,
         numRegistersToSave: 2,
         instructions: [
             {
@@ -482,6 +488,7 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesI
     const currentChar = firstRegister;
     return {
         name: 'string_concatenate',
+        isMain: false,
         numRegistersToSave: 1,
         instructions: [
             { kind: 'label', name: 'write_left_loop', why: 'write_left_loop' },
@@ -523,6 +530,7 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
     const rightByte: StorageSpec = nextRegister(firstRegister);
     return {
         name: 'stringEquality',
+        isMain: false,
         numRegistersToSave: 2,
         instructions: [
             {
@@ -572,6 +580,7 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     const err = { name: 'err' };
     return {
         name: 'my_free',
+        isMain: false,
         numRegistersToSave: 1,
         instructions: [
             {

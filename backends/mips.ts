@@ -73,9 +73,10 @@ const registerTransferExpressionToMipsWithoutComment = (
             // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
             if (rtx.arguments.length > 2) throw debug('mips only supports 2 syscall args');
             const syscallNumbers = {
+                printInt: 1,
                 print: 4,
                 sbrk: 9,
-                mmap: 0, // There is no mmap. Should be unused on mips.
+                // mmap: 0, // There is no mmap. Should be unused on mips.
                 exit: 10,
             };
             const syscallArgRegisters = ['$a0', '$a1'];
@@ -228,13 +229,6 @@ const bytesInWord = 4;
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
 
-const preamble: RegisterTransferLanguageExpression[] = [
-    { kind: 'push', register: { type: 'register', destination: '$ra' }, why: 'Always save return address' },
-];
-const epilogue: RegisterTransferLanguageExpression[] = [
-    { kind: 'pop', register: { type: 'register', destination: '$ra' }, why: 'Always restore return address' },
-];
-
 const mipsRuntime: RuntimeFunctionGenerator[] = [
     length,
     printWithPrintRuntimeFunction,
@@ -251,23 +245,34 @@ const runtimeFunctions: RegisterTransferLanguageFunction[] = mipsRuntime.map(f =
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToMips = (rtlf: RegisterTransferLanguageFunction): string => {
     const registerAssignment = assignRegisters(rtlf);
+    const preamble = !isMain
+        ? [
+              { kind: 'push', register: { type: 'register', destination: '$ra' }, why: 'Always save return address' },
+              ...saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+          ]
+        : [];
+    const epilogue = !isMain
+        ? [
+              ...restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+              { kind: 'pop', register: { type: 'register', destination: '$ra' }, why: 'Always restore return address' },
+              { kind: 'returnToCaller', why: 'Done' },
+          ]
+        : [];
     const fullRtl = [
         { kind: 'functionLabel', name, why: 'Function entry point' },
         ...preamble,
-        ...saveRegistersCode(registerAssignment),
         ...rtlf.instructions,
-        ...restoreRegistersCode(registerAssignment),
         ...epilogue,
-        { kind: 'returnToCaller', why: 'Done' },
     ];
-
     return join(flatten(fullRtl.map(registerTransferExpressionToMips.bind(registerAssignment))), '\n');
 };
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     let mipsFunctions = functions.map(f => constructFunction(f, globalDeclarations, stringLiterals, makeLabel));
 
-    let mipsProgram = flatten(
+    const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);
+
+    const mainProgramInstructions: RegisterTransferLanguageExpression[] = flatten(
         program.statements.map(statement => {
             const compiledProgram = astToRegisterTransferLanguage(
                 {
@@ -302,14 +307,55 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
 
     // Create space for spilled tempraries
     const numSpilledTemporaries = program.temporaryCount - 10;
-    const makeSpillSpaceCode =
+    const makeSpillSpaceCode: RegisterTransferLanguageExpression[] =
         numSpilledTemporaries > 0
-            ? [`# Make spill space for main program`, `addiu $sp, $sp, -${numSpilledTemporaries * 4}`]
+            ? [
+                  {
+                      kind: 'addImmediate',
+                      register: { type: 'register', destination: '$sp' },
+                      amount: -4 * numSpilledTemporaries,
+                      why: 'Make spill space for main program',
+                  },
+              ]
             : [];
-    const removeSpillSpaceCode =
+    const removeSpillSpaceCode: RegisterTransferLanguageExpression[] =
         numSpilledTemporaries > 0
-            ? [`# Clean spill space for main program`, `addiu $sp, $sp, ${numSpilledTemporaries * 4}`]
+            ? [
+                  {
+                      kind: 'addImmediate',
+                      register: { type: 'register', destination: '$sp' },
+                      amount: 4 * numSpilledTemporaries,
+                      why: 'Remove spill space for main program',
+                  },
+              ]
             : [];
+
+    let mipsProgram: RegisterTransferLanguageFunction = {
+        name: 'main',
+        numRegistersToSave: 0, // No need to save registers, there is nothing higher in the stack that we could clobber
+        isMain: true,
+        instructions: [
+            ...makeSpillSpaceCode,
+            ...mainProgramInstructions,
+            ...removeSpillSpaceCode,
+            ...freeGlobals,
+            { kind: 'callByName', function: ' verify_no_leaks', why: 'Check for leaks' },
+            {
+                kind: 'syscall',
+                name: 'printInt',
+                arguments: ['functionResult'],
+                destination: undefined,
+                why: 'print "exit code" and exit',
+            },
+            {
+                kind: 'syscall',
+                name: 'exit',
+                arguments: ['functionResult'],
+                destination: undefined,
+                why: 'Whole program is done',
+            },
+        ],
+    };
 
     return `
 .data
@@ -323,21 +369,7 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join([...runtimeFunctions, ...mipsFunctions].map(rtlFunctionToMips), '\n\n\n')}
-main:
-${makeSpillSpaceCode.join('\n')}
-${join(flatten(mipsProgram.map(registerTransferExpressionToMips)), '\n')}
-${removeSpillSpaceCode.join('\n')}
-${join(flatten(freeGlobals.map(registerTransferExpressionToMips)), '\n')}
-${join(
-        registerTransferExpressionToMips({ kind: 'callByName', function: ' verify_no_leaks', why: 'Check for leaks' }),
-        '\n'
-    )}
-# print "exit code" and exit
-li $v0, 1
-syscall
-li $v0, 10
-syscall`;
+${join([...runtimeFunctions, ...mipsFunctions, mipsProgram].map(rtlFunctionToMips), '\n\n\n')}`;
 };
 
 const execute = async (path: string): Promise<ExecutionResult> => {

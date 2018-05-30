@@ -14,7 +14,7 @@ import {
 } from '../backend-utils.js';
 import { Function } from '../api.js';
 
-type SyscallName = 'print' | 'sbrk' | 'mmap' | 'exit';
+type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 
 export type RegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'comment' }
@@ -54,6 +54,7 @@ export type RegisterTransferLanguageFunction = {
     instructions: RegisterTransferLanguage;
     numRegistersToSave: number;
     name: string;
+    isMain: boolean;
 };
 
 export const toString = (rtx: RegisterTransferLanguageExpression): string => {
@@ -895,5 +896,5 @@ export const constructFunction = (
             ];
         })
     );
-    return { name: f.name, numRegistersToSave: scratchRegisterCount, instructions: functionCode };
+    return { name: f.name, numRegistersToSave: scratchRegisterCount, instructions: functionCode, isMain: false };
 };
