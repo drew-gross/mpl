@@ -57,40 +57,24 @@ export type BackendOptions = {
 export const stringLiteralName = ({ id, value }: StringLiteralData) =>
     `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
 
-export const saveRegistersCode = (
-    firstRegister,
-    nextRegister,
-    numRegisters: number
-): RegisterTransferLanguageExpression[] => {
-    let result: RegisterTransferLanguageExpression[] = [];
-    let currentRegister: Register = firstRegister;
-    while (numRegisters > 0) {
-        result.push({
-            kind: 'push',
-            register: currentRegister,
-            why: 'Save registers we intend to use',
-        });
-        currentRegister = nextRegister(currentRegister);
-        numRegisters--;
-    }
-    return result;
+export const assignRegisters = ({ instructions }) => {
+    return {};
 };
 
-export const restoreRegistersCode = (
-    firstRegister,
-    nextRegister,
-    numRegisters: number
-): RegisterTransferLanguageExpression[] => {
-    let result: RegisterTransferLanguageExpression[] = [];
-    let currentRegister: Register = firstRegister;
-    while (numRegisters > 0) {
-        result.push({
-            kind: 'pop',
-            register: currentRegister,
-            why: 'Restore registers that we used',
-        });
-        currentRegister = nextRegister(currentRegister);
-        numRegisters--;
-    }
-    return result.reverse();
-};
+export type RegisterAssignment = { [key: string]: string };
+
+export const saveRegistersCode = (registerAssignment: RegisterAssignment): RegisterTransferLanguageExpression[] =>
+    Object.values(registerAssignment).map(targetRegister => ({
+        kind: 'push' as 'push',
+        register: targetRegister,
+        why: 'Push register to preserve it',
+    }));
+
+export const restoreRegistersCode = (registerAssignment: RegisterAssignment): RegisterTransferLanguageExpression[] =>
+    Object.values(registerAssignment)
+        .map(targetRegister => ({
+            kind: 'pop' as 'pop',
+            register: targetRegister,
+            why: 'Restore preserved registers',
+        }))
+        .reverse();

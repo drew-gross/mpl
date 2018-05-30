@@ -12,6 +12,8 @@ import {
     stringLiteralName,
     saveRegistersCode,
     restoreRegistersCode,
+    assignRegisters,
+    RegisterAssignment,
 } from '../backend-utils.js';
 import {
     astToRegisterTransferLanguage,
@@ -49,19 +51,20 @@ const specialRegisterNames = {
     functionArgument3: '$s2',
     functionResult: '$a0',
 };
-const getRegisterName = (r: StorageSpec): string => {
-    let result = '';
-    if (typeof r == 'string') {
-        result = specialRegisterNames[r];
+
+const getRegisterName = (registerAssignment: RegisterAssignment, register: Register): string => {
+    if (typeof register == 'string') {
+        return specialRegisterNames[register];
     } else {
-        if (r.type == 'memory') throw debug('spilling not supported by this function');
-        result = r.destination;
+        return registerAssignment[register.name];
     }
-    if (result == 'functionArgument1') debugger;
-    return result;
 };
 
-const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLanguageExpression): string[] => {
+const registerTransferExpressionToMipsWithoutComment = (
+    registerAssignment: RegisterAssignment,
+    rtx: RegisterTransferLanguageExpression
+): string[] => {
+    const getReg = getRegisterName.bind(registerAssignment);
     switch (rtx.kind) {
         case 'comment':
             return [''];
@@ -80,7 +83,7 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
             const registersToSave: string[] = [syscallSelectAndResultRegister];
             rtx.arguments.forEach((_, index) => {
                 const argRegister = syscallArgRegisters[index];
-                if (rtx.destination && getRegisterName(rtx.destination) == argRegister) {
+                if (rtx.destination && getReg(rtx.destination) == argRegister) {
                     return;
                 }
                 registersToSave.push(argRegister);
@@ -92,25 +95,30 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
                     (arg, index) =>
                         typeof arg == 'number'
                             ? `li ${syscallArgRegisters[index]}, ${arg}`
-                            : `move ${syscallArgRegisters[index]}, ${getRegisterName(arg)}`
+                            : `move ${syscallArgRegisters[index]}, ${getReg(arg)}`
                 ),
                 `li ${syscallSelectAndResultRegister}, ${syscallNumbers[rtx.name]}`,
                 'syscall',
                 ...(rtx.destination
-                    ? [`move ${getRegisterName(rtx.destination)}, ${syscallSelectAndResultRegister}`]
+                    ? [
+                          `move ${getRegisterName(
+                              registerAssignment,
+                              rtx.destination
+                          )}, ${syscallSelectAndResultRegister}`,
+                      ]
                     : []),
                 ...flatten(registersToSave.reverse().map(r => [`addiu $sp, $sp, 4`, `lw ${r}, ($sp)`])),
             ];
             return result;
         case 'move':
-            return [`move ${getRegisterName(rtx.to)}, ${getRegisterName(rtx.from)}`];
+            return [`move ${getReg(rtx.to)}, ${getReg(rtx.from)}`];
         case 'loadImmediate':
             if (typeof rtx.destination == 'string') {
-                return [`li ${getRegisterName(rtx.destination)}, ${rtx.value}`];
+                return [`li ${getReg(rtx.destination)}, ${rtx.value}`];
             }
             switch (rtx.destination.type) {
                 case 'register':
-                    return [`li ${getRegisterName(rtx.destination)}, ${rtx.value}`];
+                    return [`li ${getReg(rtx.destination)}, ${rtx.value}`];
                 // TODO: use a register allocator
                 case 'memory':
                     return [`li $s7, ${rtx.value}`, `sw $s7, -${rtx.destination.spOffset}($sp)`];
@@ -125,7 +133,7 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
                 leftRegister = '$s1';
                 loadSpilled.push(`lw $s1, -${rtx.lhs.spOffset}($sp)`);
             } else {
-                leftRegister = getRegisterName(rtx.lhs);
+                leftRegister = getReg(rtx.lhs);
             }
 
             let rightRegister;
@@ -133,7 +141,7 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
                 rightRegister = '$s2';
                 loadSpilled.push(`lw $s2, -${rtx.rhs.spOffset}($sp)`);
             } else {
-                rightRegister = getRegisterName(rtx.rhs);
+                rightRegister = getReg(rtx.rhs);
             }
 
             let destinationRegister;
@@ -141,7 +149,7 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
                 destinationRegister = '$s3';
                 restoreSpilled.push(`sw $s3, -${rtx.destination.spOffset}($sp)`);
             } else {
-                destinationRegister = getRegisterName(rtx.destination);
+                destinationRegister = getReg(rtx.destination);
             }
 
             return [
@@ -153,19 +161,15 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
             ];
         }
         case 'addImmediate':
-            return [`addiu ${getRegisterName(rtx.register)}, ${rtx.amount}`];
+            return [`addiu ${getReg(rtx.register)}, ${rtx.amount}`];
         case 'add':
-            return [
-                `add ${getRegisterName(rtx.destination)}, ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}`,
-            ];
+            return [`add ${getReg(rtx.destination)}, ${getReg(rtx.lhs)}, ${getReg(rtx.rhs)}`];
         case 'returnValue':
-            return [`move ${specialRegisterNames.functionResult}, ${getRegisterName(rtx.source)}`];
+            return [`move ${specialRegisterNames.functionResult}, ${getReg(rtx.source)}`];
         case 'subtract':
-            return [
-                `sub ${getRegisterName(rtx.destination)}, ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}`,
-            ];
+            return [`sub ${getReg(rtx.destination)}, ${getReg(rtx.lhs)}, ${getReg(rtx.rhs)}`];
         case 'increment':
-            return [`addiu ${getRegisterName(rtx.register)}, ${getRegisterName(rtx.register)}, 1`];
+            return [`addiu ${getReg(rtx.register)}, ${getReg(rtx.register)}, 1`];
         case 'label':
             return [`L${rtx.name}:`];
         case 'functionLabel':
@@ -173,47 +177,50 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
         case 'goto':
             return [`b L${rtx.label}`];
         case 'gotoIfEqual':
-            return [`beq ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}, L${rtx.label}`];
+            return [`beq ${getReg(rtx.lhs)}, ${getReg(rtx.rhs)}, L${rtx.label}`];
         case 'gotoIfNotEqual':
-            return [`bne ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}, L${rtx.label}`];
+            return [`bne ${getReg(rtx.lhs)}, ${getReg(rtx.rhs)}, L${rtx.label}`];
         case 'gotoIfZero':
-            return [`beq ${getRegisterName(rtx.register)}, 0, L${rtx.label}`];
+            return [`beq ${getReg(rtx.register)}, 0, L${rtx.label}`];
         case 'gotoIfGreater':
-            return [`bgt ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}, L${rtx.label}`];
+            return [`bgt ${getReg(rtx.lhs)}, ${getReg(rtx.rhs)}, L${rtx.label}`];
         case 'loadSymbolAddress':
-            return [`la ${getRegisterName(rtx.to)}, ${rtx.symbolName}`];
+            return [`la ${getReg(rtx.to)}, ${rtx.symbolName}`];
         case 'loadGlobal':
-            return [`lw ${getRegisterName(rtx.to)}, ${rtx.from}`];
+            return [`lw ${getReg(rtx.to)}, ${rtx.from}`];
         case 'storeGlobal':
-            return [`sw ${getRegisterName(rtx.from)}, ${getRegisterName(rtx.to)}`];
+            return [`sw ${getReg(rtx.from)}, ${getReg(rtx.to)}`];
         case 'loadMemory':
-            return [`lw ${getRegisterName(rtx.to)}, ${rtx.offset}(${getRegisterName(rtx.from)})`];
+            return [`lw ${getReg(rtx.to)}, ${rtx.offset}(${getReg(rtx.from)})`];
         case 'loadMemoryByte':
-            return [`lb ${getRegisterName(rtx.to)}, (${getRegisterName(rtx.address)})`];
+            return [`lb ${getReg(rtx.to)}, (${getReg(rtx.address)})`];
         case 'storeMemory':
-            return [`sw ${getRegisterName(rtx.from)}, ${rtx.offset}(${getRegisterName(rtx.address)})`];
+            return [`sw ${getReg(rtx.from)}, ${rtx.offset}(${getReg(rtx.address)})`];
         case 'storeZeroToMemory':
-            return [`sw $0, ${rtx.offset}(${getRegisterName(rtx.address)})`];
+            return [`sw $0, ${rtx.offset}(${getReg(rtx.address)})`];
         case 'storeMemoryByte':
-            return [`sb ${getRegisterName(rtx.contents)}, (${getRegisterName(rtx.address)})`];
+            return [`sb ${getReg(rtx.contents)}, (${getReg(rtx.address)})`];
         case 'callByRegister':
-            return [`jal ${getRegisterName(rtx.function)}`];
+            return [`jal ${getReg(rtx.function)}`];
         case 'callByName':
             return [`jal ${rtx.function}`];
         case 'returnToCaller':
             return [`jr $ra`];
         case 'push':
-            return [`sw ${getRegisterName(rtx.register)}, ($sp)`, `addiu, $sp, $sp, -4`];
+            return [`sw ${getReg(rtx.register)}, ($sp)`, `addiu, $sp, $sp, -4`];
         case 'pop':
-            return [`addiu $sp, $sp, 4`, `lw ${getRegisterName(rtx.register)}, ($sp)`];
+            return [`addiu $sp, $sp, 4`, `lw ${getReg(rtx.register)}, ($sp)`];
         default:
             throw debug(`${(rtx as any).kind} unhandled in registerTransferExpressionToMipsWithoutComment`);
     }
 };
 
-const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpression): string[] => {
+const registerTransferExpressionToMips = (
+    registerAssignment: RegisterAssignment,
+    rtx: RegisterTransferLanguageExpression
+): string[] => {
     if (typeof rtx == 'string') return [rtx];
-    return registerTransferExpressionToMipsWithoutComment(rtx).map(asm => `${asm} # ${rtx.why}`);
+    return registerTransferExpressionToMipsWithoutComment(registerAssignment, rtx).map(asm => `${asm} # ${rtx.why}`);
 };
 
 const bytesInWord = 4;
@@ -242,40 +249,34 @@ const mipsRuntime: RuntimeFunctionGenerator[] = [
 const runtimeFunctions: RegisterTransferLanguageFunction[] = mipsRuntime.map(f => f(bytesInWord));
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
-const rtlFunctionToMips = ({ name, instructions, numRegistersToSave }: RegisterTransferLanguageFunction): string => {
+const rtlFunctionToMips = (rtlf: RegisterTransferLanguageFunction): string => {
+    const registerAssignment = assignRegisters(rtlf);
     const fullRtl = [
         { kind: 'functionLabel', name, why: 'Function entry point' },
         ...preamble,
-        ...saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
-        ...instructions,
-        ...restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+        ...saveRegistersCode(registerAssignment),
+        ...rtlf.instructions,
+        ...restoreRegistersCode(registerAssignment),
         ...epilogue,
         { kind: 'returnToCaller', why: 'Done' },
     ];
-    return join(['', '', ...flatten(fullRtl.map(registerTransferExpressionToMips))], '\n');
+
+    return join(flatten(fullRtl.map(registerTransferExpressionToMips.bind(registerAssignment))), '\n');
 };
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
-    let mipsFunctions = functions.map(f =>
-        constructFunction(f, globalDeclarations, stringLiterals, firstRegister, nextTemporary, makeLabel)
-    );
+    let mipsFunctions = functions.map(f => constructFunction(f, globalDeclarations, stringLiterals, makeLabel));
 
-    const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);
     let mipsProgram = flatten(
         program.statements.map(statement => {
             const compiledProgram = astToRegisterTransferLanguage(
                 {
                     ast: statement,
-                    registerAssignment,
-                    destination: {
-                        type: 'register',
-                        destination: '$a0',
-                    },
-                    currentTemporary: firstTemporary,
+                    destination: 'functionResult',
+                    currentTemporary: { name: 'tmp1' },
                     globalDeclarations,
                     stringLiterals,
                 },
-                nextTemporary,
                 makeLabel
             );
 
@@ -322,7 +323,7 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join([...runtimeFunctions, ...mipsFunctions].map(rtlFunctionToMips), '\n')}
+${join([...runtimeFunctions, ...mipsFunctions].map(rtlFunctionToMips), '\n\n\n')}
 main:
 ${makeSpillSpaceCode.join('\n')}
 ${join(flatten(mipsProgram.map(registerTransferExpressionToMips)), '\n')}

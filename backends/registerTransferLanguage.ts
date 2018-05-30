@@ -160,12 +160,11 @@ export const toString = (rtx: RegisterTransferLanguageExpression): string => {
 
 export const astToRegisterTransferLanguage = (
     input: BackendOptions,
-    nextTemporary,
     makeLabel
 ): CompiledExpression<RegisterTransferLanguageExpression> => {
-    const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
+    const { ast, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
     if (isEqual(currentTemporary, destination)) throw debug('todo'); // Sanity check to make sure caller remembered to provide a new temporary
-    const recurse = newInput => astToRegisterTransferLanguage({ ...input, ...newInput }, nextTemporary, makeLabel);
+    const recurse = newInput => astToRegisterTransferLanguage({ ...input, ...newInput }, makeLabel);
     switch (ast.kind) {
         case 'number':
             return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
@@ -208,10 +207,7 @@ export const astToRegisterTransferLanguage = (
             ]);
         case 'subtraction': {
             const leftSideDestination = destination;
-            if (typeof leftSideDestination !== 'string' && leftSideDestination.type !== 'register') throw debug('todo');
             const rightSideDestination = currentTemporary;
-            if (typeof rightSideDestination !== 'string' && rightSideDestination.type !== 'register')
-                throw debug('todo');
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
             const storeLeftInstructions = recurse({
@@ -242,12 +238,8 @@ export const astToRegisterTransferLanguage = (
             );
         }
         case 'addition': {
-            if (typeof destination !== 'string' && destination.type !== 'register') throw debug('todo');
             const leftSideDestination = currentTemporary;
-            if (typeof leftSideDestination !== 'string' && leftSideDestination.type !== 'register') throw debug('todo');
             const rightSideDestination = destination;
-            if (typeof rightSideDestination !== 'string' && rightSideDestination.type !== 'register')
-                throw debug('todo');
             const subExpressionTemporary = nextTemporary(currentTemporary);
 
             const storeLeftInstructions = recurse({
@@ -324,8 +316,6 @@ export const astToRegisterTransferLanguage = (
                 },
             ]);
         case 'callExpression': {
-            if (typeof currentTemporary !== 'string' && currentTemporary.type !== 'register') throw debug('todo'); // TODO: Figure out how to guarantee this doesn't happen
-            if (typeof destination !== 'string' && destination.type !== 'register') throw debug('todo');
             const functionName = ast.name;
             let callInstructions: (string | RegisterTransferLanguageExpression)[] = [];
             if (builtinFunctions.map(b => b.name).includes(functionName)) {
@@ -478,7 +468,6 @@ export const astToRegisterTransferLanguage = (
                 });
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug('todo');
-                if (typeof currentTemporary !== 'string' && currentTemporary.type !== 'register') throw debug('todo');
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
@@ -849,8 +838,6 @@ export const constructFunction = (
     f: Function,
     globalDeclarations,
     stringLiterals,
-    firstTemporary: StorageSpec,
-    nextTemporary,
     makeLabel
 ): RegisterTransferLanguageFunction => {
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.

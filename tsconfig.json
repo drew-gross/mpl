@@ -2,12 +2,10 @@
     "compilerOptions": {
         "outDir": "./built",
         "allowJs": true,
-        "target": "ES2016",
+        "target": "ES2017",
         "module": "commonjs",
         "noEmitOnError": true,
         "strictNullChecks": true
     },
-    "include": [
-        "./**/*"
-    ]
+    "include": ["./**/*"]
 }

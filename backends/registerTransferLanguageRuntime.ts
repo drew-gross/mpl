@@ -7,7 +7,7 @@ import {
     RegisterTransferLanguageFunction,
 } from './registerTransferLanguage.js';
 
-type RuntimeFunctionGenerator = (bytesInWord: number) => RegisterTransferLanguageFunction;
+export type RuntimeFunctionGenerator = (bytesInWord: number) => RegisterTransferLanguageFunction;
 
 const switchableMallocImpl = (
     bytesInWord,
@@ -567,7 +567,7 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
     };
 };
 
-export const myFreeRuntimeFunction = bytesInWord => {
+export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     const one: StorageSpec = firstRegister;
     const err = { name: 'err' };
     return {
