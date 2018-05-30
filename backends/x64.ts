@@ -266,13 +266,18 @@ const runtimeFunctions: RegisterTransferLanguageFunction[] = [
 ].map(f => f(bytesInWord, firstRegister, nextTemporary));
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
-const rtlFunctionToX64 = ({ name, instructions, numRegistersToSave }: RegisterTransferLanguageFunction): string => {
+const rtlFunctionToX64 = ({
+    name,
+    instructions,
+    numRegistersToSave,
+    isMain,
+}: RegisterTransferLanguageFunction): string => {
     const fullRtl = [
         { kind: 'functionLabel', name, why: 'Function entry point' },
-        ...saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+        ...(isMain ? [] : saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave)),
         ...instructions,
-        ...restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
-        { kind: 'returnToCaller', why: 'Done' },
+        ...(isMain ? [] : restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave)),
+        ...(isMain ? [] : [{ kind: 'returnToCaller', why: 'Done' }]),
     ];
     return join(flatten(fullRtl.map(registerTransferExpressionToX64)), '\n');
 };
@@ -285,8 +290,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         constructFunction(f, globalDeclarations, stringLiterals, firstRegister, nextTemporary, makeLabel)
     );
     const { registerAssignment, firstTemporary } = assignX64Registers(program.variables);
-
-    let x64Program = flatten(
+    const mainProgramInstructions = flatten(
         program.statements.map(statement => {
             const compiledProgram = astToRegisterTransferLanguage(
                 {
@@ -307,18 +311,27 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
         })
     );
+
+    let x64Program: RegisterTransferLanguageFunction = {
+        name: 'start',
+        isMain: true,
+        numRegistersToSave: 0, // No functions higher in the stack to worry about clobbering
+        instructions: [
+            ...mainProgramInstructions,
+            {
+                kind: 'syscall',
+                name: 'exit',
+                arguments: ['functionResult'],
+                destination: undefined,
+                why: 'Whole program is done',
+            },
+        ],
+    };
     return `
 global start
 
 section .text
-${join([...runtimeFunctions, ...x64Functions].map(rtlFunctionToX64), '\n\n\n')}
-
-start:
-${join(flatten(x64Program.map(registerTransferExpressionToX64)), '\n')}
-    mov rdi, rax; Move function call result to syscall arg
-    mov rax, 0x02000001; system call for exit
-    syscall
-
+${join([...runtimeFunctions, ...x64Functions, x64Program].map(rtlFunctionToX64), '\n\n\n')}
 section .data
 first_block: dq 0
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}

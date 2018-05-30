@@ -400,7 +400,13 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
                 destination: undefined,
                 why: 'print "exit code" and exit',
             },
-            { kind: 'syscall', name: 'exit', arguments: [], destination: undefined, why: 'Program is done' },
+            {
+                kind: 'syscall',
+                name: 'exit',
+                arguments: ['functionResult'],
+                destination: undefined,
+                why: 'Whole program is done',
+            },
         ],
     };
 
