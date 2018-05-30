@@ -117,9 +117,10 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
             // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
             if (rtx.arguments.length > 2) throw debug('mips only supports 2 syscall args');
             const syscallNumbers = {
+                printInt: 1,
                 print: 4,
                 sbrk: 9,
-                mmap: 0, // There is no mmap. Should be unused on mips.
+                // mmap: 0, // There is no mmap. Should be unused on mips.
                 exit: 10,
             };
             const syscallArgRegisters = ['$a0', '$a1'];
@@ -390,7 +391,21 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         name: 'main',
         numRegistersToSave: 0, // No need to save registers, there is nothing higher in the stack that we could clobber
         isMain: true,
-        instructions: [...makeSpillSpaceCode, ...mainProgramInstructions, ...removeSpillSpaceCode, ...freeGlobals],
+        instructions: [
+            ...makeSpillSpaceCode,
+            ...mainProgramInstructions,
+            ...removeSpillSpaceCode,
+            ...freeGlobals,
+            { kind: 'callByName', function: ' verify_no_leaks', why: 'Check for leaks' },
+            {
+                kind: 'syscall',
+                name: 'printInt',
+                arguments: ['functionResult'],
+                destination: undefined,
+                why: 'print "exit code" and exit',
+            },
+            { kind: 'syscall', name: 'exit', arguments: [], destination: undefined, why: 'Program is done' },
+        ],
     };
 
     return `
@@ -405,16 +420,7 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join([...runtimeFunctions, ...mipsFunctions, mipsProgram].map(rtlFunctionToMips), '\n\n\n')}
-${join(
-        registerTransferExpressionToMips({ kind: 'callByName', function: ' verify_no_leaks', why: 'Check for leaks' }),
-        '\n'
-    )}
-# print "exit code" and exit
-li $v0, 1
-syscall
-li $v0, 10
-syscall`;
+${join([...runtimeFunctions, ...mipsFunctions, mipsProgram].map(rtlFunctionToMips), '\n\n\n')}`;
 };
 
 const execute = async (path: string): Promise<ExecutionResult> => {

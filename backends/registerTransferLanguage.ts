@@ -14,7 +14,7 @@ import {
 } from '../backend-utils.js';
 import { Function } from '../api.js';
 
-type SyscallName = 'print' | 'sbrk' | 'mmap' | 'exit';
+type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 
 export type RegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'comment' }

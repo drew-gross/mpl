@@ -205,6 +205,7 @@ const registerTransferExpressionToX64WithoutComment = (rtx: RegisterTransferLang
             const syscallArgRegisters = ['rdi', 'rsi', 'rdx', 'r10', 'r8', 'r9'];
             const syscallSelectAndResultRegister = 'rax';
             const syscallNumbers = {
+                // printInt: 0, // Should be unused on x64
                 print: 0x02000004,
                 sbrk: 0x02000045,
                 exit: 0x02000001,
