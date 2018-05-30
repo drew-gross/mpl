@@ -291,15 +291,27 @@ const runtimeFunctions: RegisterTransferLanguageFunction[] = mipsRuntime.map(f =
 );
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
-const rtlFunctionToMips = ({ name, instructions, numRegistersToSave }: RegisterTransferLanguageFunction): string => {
+const rtlFunctionToMips = ({
+    name,
+    instructions,
+    numRegistersToSave,
+    isMain,
+}: RegisterTransferLanguageFunction): string => {
+    const localPreamble = !isMain
+        ? [...preamble, ...saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave)]
+        : [];
+    const localEpilogue = !isMain
+        ? [
+              ...restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+              ...epilogue,
+              { kind: 'returnToCaller', why: 'Done' },
+          ]
+        : [];
     const fullRtl = [
         { kind: 'functionLabel', name, why: 'Function entry point' },
-        ...preamble,
-        ...saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+        ...localPreamble,
         ...instructions,
-        ...restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
-        ...epilogue,
-        { kind: 'returnToCaller', why: 'Done' },
+        ...localEpilogue,
     ];
     return join(['', '', ...flatten(fullRtl.map(registerTransferExpressionToMips))], '\n');
 };
@@ -310,7 +322,8 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
     );
 
     const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);
-    let mipsProgram = flatten(
+
+    const mainProgramInstructions: RegisterTransferLanguageExpression[] = flatten(
         program.statements.map(statement => {
             const compiledProgram = astToRegisterTransferLanguage(
                 {
@@ -350,14 +363,35 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
 
     // Create space for spilled tempraries
     const numSpilledTemporaries = program.temporaryCount - 10;
-    const makeSpillSpaceCode =
+    const makeSpillSpaceCode: RegisterTransferLanguageExpression[] =
         numSpilledTemporaries > 0
-            ? [`# Make spill space for main program`, `addiu $sp, $sp, -${numSpilledTemporaries * 4}`]
+            ? [
+                  {
+                      kind: 'addImmediate',
+                      register: { type: 'register', destination: '$sp' },
+                      amount: -4 * numSpilledTemporaries,
+                      why: 'Make spill space for main program',
+                  },
+              ]
             : [];
-    const removeSpillSpaceCode =
+    const removeSpillSpaceCode: RegisterTransferLanguageExpression[] =
         numSpilledTemporaries > 0
-            ? [`# Clean spill space for main program`, `addiu $sp, $sp, ${numSpilledTemporaries * 4}`]
+            ? [
+                  {
+                      kind: 'addImmediate',
+                      register: { type: 'register', destination: '$sp' },
+                      amount: 4 * numSpilledTemporaries,
+                      why: 'Remove spill space for main program',
+                  },
+              ]
             : [];
+
+    let mipsProgram: RegisterTransferLanguageFunction = {
+        name: 'main',
+        numRegistersToSave: 0, // No need to save registers, there is nothing higher in the stack that we could clobber
+        isMain: true,
+        instructions: [...makeSpillSpaceCode, ...mainProgramInstructions, ...removeSpillSpaceCode, ...freeGlobals],
+    };
 
     return `
 .data
@@ -371,12 +405,7 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join([...runtimeFunctions, ...mipsFunctions].map(rtlFunctionToMips), '\n')}
-main:
-${makeSpillSpaceCode.join('\n')}
-${join(flatten(mipsProgram.map(registerTransferExpressionToMips)), '\n')}
-${removeSpillSpaceCode.join('\n')}
-${join(flatten(freeGlobals.map(registerTransferExpressionToMips)), '\n')}
+${join([...runtimeFunctions, ...mipsFunctions, mipsProgram].map(rtlFunctionToMips), '\n')}
 ${join(
         registerTransferExpressionToMips({ kind: 'callByName', function: ' verify_no_leaks', why: 'Check for leaks' }),
         '\n'

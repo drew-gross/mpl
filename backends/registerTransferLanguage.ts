@@ -54,6 +54,7 @@ export type RegisterTransferLanguageFunction = {
     instructions: RegisterTransferLanguage;
     numRegistersToSave: number;
     name: string;
+    isMain: boolean;
 };
 
 export const toString = (rtx: RegisterTransferLanguageExpression): string => {
@@ -908,5 +909,5 @@ export const constructFunction = (
             ];
         })
     );
-    return { name: f.name, numRegistersToSave: scratchRegisterCount, instructions: functionCode };
+    return { name: f.name, numRegistersToSave: scratchRegisterCount, instructions: functionCode, isMain: false };
 };
