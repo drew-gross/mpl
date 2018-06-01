@@ -52,6 +52,9 @@ export type BackendOptions = {
     currentTemporary: Register;
     globalDeclarations: VariableDeclaration[];
     stringLiterals: StringLiteralData[];
+    variablesInScope: { [key: string]: Register };
+    makeTemporary: (name: string): Register;
+    makeLabel: (name: string): string;
 };
 
 export const stringLiteralName = ({ id, value }: StringLiteralData) =>

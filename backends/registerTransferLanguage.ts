@@ -130,12 +130,10 @@ export const toString = (rtx: RegisterTransferLanguageExpression): string => {
 };
 
 export const astToRegisterTransferLanguage = (
-    input: BackendOptions,
-    makeLabel
+    input: BackendOptions
 ): CompiledExpression<RegisterTransferLanguageExpression> => {
-    const { ast, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
-    if (isEqual(currentTemporary, destination)) throw debug('todo'); // Sanity check to make sure caller remembered to provide a new temporary
-    const recurse = newInput => astToRegisterTransferLanguage({ ...input, ...newInput }, makeLabel);
+    const { ast, destination, globalDeclarations, stringLiterals, variablesInScope, makeLabel, makeTemporary } = input;
+    const recurse = newInput => astToRegisterTransferLanguage({ ...input, ...newInput });
     switch (ast.kind) {
         case 'number':
             return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
@@ -506,18 +504,15 @@ export const astToRegisterTransferLanguage = (
             }
         }
         case 'reassignment': {
-            const lhs = ast.destination;
+            const lhs: Register = ast.destination;
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
-                const subExpressionTemporary = nextTemporary(currentTemporary);
-                const savedPointerForFreeing = subExpressionTemporary;
+                const reassignmentRhs = makeTemporary('reassignment_rhs');
                 const rhs: CompiledExpression<RegisterTransferLanguageExpression> = recurse({
                     ast: ast.expression,
-                    destination: currentTemporary,
-                    currentTemporary: nextTemporary(subExpressionTemporary),
+                    destination: reassignmentRhs,
                 });
                 const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug('todo');
-                if (typeof currentTemporary !== 'string' && currentTemporary.type !== 'register') throw debug('todo');
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
@@ -525,18 +520,18 @@ export const astToRegisterTransferLanguage = (
                             ...e1,
                             {
                                 kind: 'storeGlobal',
-                                from: currentTemporary,
+                                from: reassignmentRhs,
                                 to: { type: 'register', destination: lhs },
                                 why: 'Store into global',
                             },
                         ]);
                     case 'String':
-                        if (savedPointerForFreeing.type !== 'register') throw debug('Need register');
+                        const oldData = makeTemporary('old_data');
                         const prepAndCleanup = {
                             prepare: [
                                 {
                                     kind: 'loadGlobal',
-                                    to: savedPointerForFreeing,
+                                    to: oldData,
                                     from: lhs,
                                     why: 'Save global for freeing after assignment',
                                 } as RegisterTransferLanguageExpression,
@@ -545,7 +540,7 @@ export const astToRegisterTransferLanguage = (
                             cleanup: [
                                 {
                                     kind: 'move',
-                                    from: savedPointerForFreeing,
+                                    from: oldData,
                                     to: 'functionArgument1',
                                     why: 'Move global to argument 1 of free',
                                 },
@@ -562,7 +557,7 @@ export const astToRegisterTransferLanguage = (
                                 ...e1,
                                 {
                                     kind: 'move',
-                                    from: currentTemporary,
+                                    from: reassignmentRhs,
                                     to: 'functionArgument1',
                                     why: 'Move from temporary to argument 1',
                                 },
@@ -588,7 +583,7 @@ export const astToRegisterTransferLanguage = (
                                 },
                                 {
                                     kind: 'move',
-                                    from: currentTemporary,
+                                    from: reassignmentRhs,
                                     to: 'functionArgument1',
                                     why: 'move destination to argument 1 of string_copy',
                                 },
@@ -598,35 +593,28 @@ export const astToRegisterTransferLanguage = (
                     default:
                         throw debug('todo');
                 }
-            } else if (lhs in registerAssignment) {
+            } else if (lhs in variablesInScope) {
                 return recurse({
                     ast: ast.expression,
-                    destination: registerAssignment[lhs],
+                    destination: lhs,
                 });
             } else {
                 throw debug('todo');
             }
         }
         case 'concatenation': {
-            if (typeof destination !== 'string' && destination.type !== 'register') throw debug('todo');
-            const leftSideDestination = currentTemporary;
-            if (typeof leftSideDestination !== 'string' && leftSideDestination.type !== 'register') throw debug('todo');
-            const rightSideDestination = nextTemporary(leftSideDestination);
-            if (rightSideDestination.type !== 'register') throw debug('todo');
-            const subExpressionTemporary = nextTemporary(rightSideDestination);
-            const newStringLengthTemporary = nextTemporary(subExpressionTemporary);
-            if (newStringLengthTemporary.type !== 'register') throw debug('todo');
-            const mallocResultTemporary = newStringLengthTemporary; // Don't need length after malloc is done
+            const leftSideDestination = makeTemporary('concat_lhs');
+            const rightSideDestination = makeTemporary('concat_rhs');
+            const newStringLengthTemporary = makeTemporary('concat_result_length');
+            const mallocResultTemporary = makeTemporary('concat_destination_storage');
 
             const storeLeftInstructions = recurse({
                 ast: ast.lhs,
                 destination: leftSideDestination,
-                currentTemporary: subExpressionTemporary,
             });
             const storeRightInstructions = recurse({
                 ast: ast.rhs,
                 destination: rightSideDestination,
-                currentTemporary: subExpressionTemporary,
             });
             const cleanup: CompiledExpression<RegisterTransferLanguageExpression> = {
                 prepare: [],
@@ -741,8 +729,7 @@ export const astToRegisterTransferLanguage = (
                     },
                 ]);
             }
-            const identifierRegister = registerAssignment[identifierName];
-            debugger;
+            const identifierRegister = variablesInScope[identifierName];
             return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
                 {
                     kind: 'move',
@@ -753,19 +740,16 @@ export const astToRegisterTransferLanguage = (
             ]);
         }
         case 'product': {
-            const leftSideDestination = currentTemporary;
-            const rightSideDestination = destination;
-            const subExpressionTemporary = nextTemporary(currentTemporary);
+            const leftSideDestination = makeTemporary('product_lhs');
+            const rightSideDestination = makeTemporary('product_rhs');
 
             const storeLeftInstructions = recurse({
                 ast: ast.lhs,
                 destination: leftSideDestination,
-                currentTemporary: subExpressionTemporary,
             });
             const storeRightInstructions = recurse({
                 ast: ast.rhs,
                 destination: rightSideDestination,
-                currentTemporary: subExpressionTemporary,
             });
             return compileExpression<RegisterTransferLanguageExpression>(
                 [storeLeftInstructions, storeRightInstructions],
@@ -803,47 +787,44 @@ export const constructFunction = (
     stringLiterals,
     makeLabel
 ): RegisterTransferLanguageFunction => {
-    // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
-    const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
+    let temporaryId = 0;
+    const makeTemporary = (name: string): Register => {
+        temporaryId++;
+        return { name: `${name}_${temporaryId}` };
+    };
 
     const argumentRegisters: Register[] = ['functionArgument1', 'functionArgument2', 'functionArgument3'];
     if (f.parameters.length > 3) throw debug('todo'); // Don't want to deal with this yet.
     if (argumentRegisters.length < 3) throw debug('todo');
-    const registerAssignment: { [key: string]: Register } = {};
+    const variablesInScope: { [key: string]: Register } = {};
     f.parameters.forEach((parameter, index) => {
-        registerAssignment[parameter.name] = argumentRegisters[index];
+        variablesInScope[parameter.name] = argumentRegisters[index];
     });
 
-    let currentTemporary = firstTemporary;
     f.statements.forEach(statement => {
         if (statement.kind === 'typedDeclarationAssignment') {
-            registerAssignment[statement.destination] = currentTemporary;
-            currentTemporary = nextTemporary(currentTemporary);
+            variablesInScope[statement.destination] = makeTemporary(`local_${statement.destination}`);
         }
     });
 
     const functionCode = flatten(
         f.statements.map(statement => {
-            const compiledProgram = astToRegisterTransferLanguage(
-                {
-                    ast: statement,
-                    registerAssignment,
-                    destination: 'functionResult',
-                    currentTemporary,
-                    globalDeclarations,
-                    stringLiterals,
-                },
-                nextTemporary,
-                makeLabel
-            );
+            const compiledProgram = astToRegisterTransferLanguage({
+                ast: statement,
+                variablesInScope,
+                destination: 'functionResult',
+                globalDeclarations,
+                stringLiterals,
+                makeTemporary,
+                makeLabel,
+            });
             const freeLocals = f.variables
                 // TODO: Make a better memory model for frees.
                 .filter(s => s.location === 'Stack')
                 .filter(s => s.type.name == 'String')
                 .map(s => {
-                    const memoryForVariable: Register = registerAssignment[s.name];
+                    const memoryForVariable: Register = variablesInScope[s.name];
                     if (typeof memoryForVariable == 'string') throw debug('special register not valid here');
-                    if (memoryForVariable.type !== 'register') throw debug('todo');
                     return [
                         { kind: 'move', from: memoryForVariable.destination, to: argumentRegisters[0] },
                         { kind: 'callByName', function: 'my_free', why: 'Free Stack String at end of scope' },
