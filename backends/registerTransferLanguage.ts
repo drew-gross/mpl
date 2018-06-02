@@ -58,105 +58,75 @@ export type RegisterTransferLanguageFunction = {
 };
 
 export const toString = (rtx: RegisterTransferLanguageExpression): string => {
-    let result = '';
     switch (rtx.kind) {
         case 'comment':
-            result = ``;
-            break;
+            return ``;
         case 'syscall':
-            result = 'syscall';
-            break;
+            return 'syscall';
         case 'move':
-            result = `${storageSpecToString(rtx.to)} = ${storageSpecToString(rtx.from)}`;
-            break;
+            return `${storageSpecToString(rtx.to)} = ${storageSpecToString(rtx.from)}`;
         case 'loadImmediate':
-            result = `${storageSpecToString(rtx.destination)} = ${rtx.value}`;
-            break;
+            return `${storageSpecToString(rtx.destination)} = ${rtx.value}`;
         case 'addImmediate':
-            result = `${storageSpecToString(rtx.register)} += ${rtx.amount}`;
-            break;
+            return `${storageSpecToString(rtx.register)} += ${rtx.amount}`;
         case 'subtract':
-            result = `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} - ${storageSpecToString(
+            return `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} - ${storageSpecToString(
                 rtx.rhs
             )}`;
-            break;
         case 'add':
-            result = `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} + ${storageSpecToString(
+            return `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} + ${storageSpecToString(
                 rtx.rhs
             )}`;
-            break;
         case 'multiply':
-            result = `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} * ${storageSpecToString(
+            return `${storageSpecToString(rtx.destination)} = ${storageSpecToString(rtx.lhs)} * ${storageSpecToString(
                 rtx.rhs
             )}`;
-            break;
         case 'increment':
-            result = `${storageSpecToString(rtx.register)}++`;
-            break;
+            return `${storageSpecToString(rtx.register)}++`;
         case 'label':
         case 'functionLabel':
-            result = `${rtx.name}:`;
-            break;
+            return `${rtx.name}:`;
         case 'goto':
-            result = `goto ${rtx.label}`;
-            break;
+            return `goto ${rtx.label}`;
         case 'gotoIfEqual':
-            result = `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} == ${storageSpecToString(rtx.rhs)}`;
-            break;
+            return `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} == ${storageSpecToString(rtx.rhs)}`;
         case 'gotoIfNotEqual':
-            result = `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} != ${storageSpecToString(rtx.rhs)}`;
-            break;
+            return `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} != ${storageSpecToString(rtx.rhs)}`;
         case 'gotoIfZero':
-            result = `goto ${rtx.label} if ${storageSpecToString(rtx.register)} == 0`;
-            break;
+            return `goto ${rtx.label} if ${storageSpecToString(rtx.register)} == 0`;
         case 'gotoIfGreater':
-            result = `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} > ${storageSpecToString(rtx.rhs)}`;
-            break;
+            return `goto ${rtx.label} if ${storageSpecToString(rtx.lhs)} > ${storageSpecToString(rtx.rhs)}`;
         case 'storeGlobal':
-            result = `*${storageSpecToString(rtx.to)} = ${storageSpecToString(rtx.from)}`;
-            break;
+            return `*${storageSpecToString(rtx.to)} = ${storageSpecToString(rtx.from)}`;
         case 'loadGlobal':
-            result = `${storageSpecToString(rtx.to)} = &${rtx.from}`;
-            break;
+            return `${storageSpecToString(rtx.to)} = &${rtx.from}`;
         case 'storeMemory':
-            result = `*(${storageSpecToString(rtx.address)} + ${rtx.offset}) = ${storageSpecToString(rtx.from)}`;
-            break;
+            return `*(${storageSpecToString(rtx.address)} + ${rtx.offset}) = ${storageSpecToString(rtx.from)}`;
         case 'storeMemoryByte':
-            result = `*${storageSpecToString(rtx.address)} = ${storageSpecToString(rtx.contents)}`;
-            break;
+            return `*${storageSpecToString(rtx.address)} = ${storageSpecToString(rtx.contents)}`;
         case 'storeZeroToMemory':
-            result = `*${storageSpecToString(rtx.address)} = 0`;
-            break;
+            return `*${storageSpecToString(rtx.address)} = 0`;
         case 'loadMemory':
-            result = `${storageSpecToString(rtx.to)} = *(${storageSpecToString(rtx.from)} + ${rtx.offset})`;
-            break;
+            return `${storageSpecToString(rtx.to)} = *(${storageSpecToString(rtx.from)} + ${rtx.offset})`;
         case 'loadMemoryByte':
-            result = `${storageSpecToString(rtx.to)} = *${storageSpecToString(rtx.address)}`;
-            break;
+            return `${storageSpecToString(rtx.to)} = *${storageSpecToString(rtx.address)}`;
         case 'loadSymbolAddress':
-            result = `${storageSpecToString(rtx.to)} = &${rtx.symbolName}`;
-            break;
+            return `${storageSpecToString(rtx.to)} = &${rtx.symbolName}`;
         case 'callByRegister':
-            result = `${storageSpecToString(rtx.function)}()`;
+            return `${storageSpecToString(rtx.function)}()`;
         case 'callByName':
-            result = `${rtx.function}()`;
-            break;
+            return `${rtx.function}()`;
         case 'returnToCaller':
-            result = `return`;
-            break;
+            return `return`;
         case 'returnValue':
-            result = `ret = ${storageSpecToString(rtx.source)}`;
-            break;
+            return `ret = ${storageSpecToString(rtx.source)}`;
         case 'push':
-            result = `push ${storageSpecToString(rtx.register)}`;
-            break;
+            return `push ${storageSpecToString(rtx.register)}`;
         case 'pop':
-            result = `pop ${storageSpecToString(rtx.register)}`;
-            break;
+            return `pop ${storageSpecToString(rtx.register)}`;
         default:
             throw debug('Unrecognized RTX kind in toString');
     }
-    return result;
 };
 
 export const astToRegisterTransferLanguage = (
