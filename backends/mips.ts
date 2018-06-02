@@ -35,6 +35,7 @@ import {
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
 import join from '../util/join.js';
+import idAppender from '../util/idAppender.js';
 
 const generalPurposeRegisters = ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'];
 
@@ -56,7 +57,7 @@ const getRegisterName = (registerAssignment: RegisterAssignment, register: Regis
     if (typeof register == 'string') {
         return specialRegisterNames[register];
     } else {
-        return registerAssignment[register.name];
+        return (registerAssignment[register.name] as any).name;
     }
 };
 
@@ -229,20 +230,20 @@ const rtlFunctionToMips = (rtlf: RegisterTransferLanguageFunction): string => {
 };
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
+    const temporaryNameMaker = idAppender();
     let mipsFunctions = functions.map(f => constructFunction(f, globalDeclarations, stringLiterals, makeLabel));
 
     const mainProgramInstructions: RegisterTransferLanguageExpression[] = flatten(
         program.statements.map(statement => {
-            const compiledProgram = astToRegisterTransferLanguage(
-                {
-                    ast: statement,
-                    destination: 'functionResult',
-                    currentTemporary: { name: 'tmp1' },
-                    globalDeclarations,
-                    stringLiterals,
-                },
-                makeLabel
-            );
+            const compiledProgram = astToRegisterTransferLanguage({
+                ast: statement,
+                destination: 'functionResult',
+                globalDeclarations,
+                stringLiterals,
+                makeLabel,
+                makeTemporary: name => ({ name: temporaryNameMaker(name) }),
+                variablesInScope: {},
+            });
 
             return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
         })
@@ -271,7 +272,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             ? [
                   {
                       kind: 'addImmediate',
-                      register: { type: 'register', destination: '$sp' },
+                      register: { name: '$sp' },
                       amount: -4 * numSpilledTemporaries,
                       why: 'Make spill space for main program',
                   },
@@ -282,7 +283,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             ? [
                   {
                       kind: 'addImmediate',
-                      register: { type: 'register', destination: '$sp' },
+                      register: { name: '$sp' },
                       amount: 4 * numSpilledTemporaries,
                       why: 'Remove spill space for main program',
                   },
@@ -291,7 +292,6 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
 
     let mipsProgram: RegisterTransferLanguageFunction = {
         name: 'main',
-        numRegistersToSave: 0, // No need to save registers, there is nothing higher in the stack that we could clobber
         isMain: true,
         instructions: [
             ...makeSpillSpaceCode,

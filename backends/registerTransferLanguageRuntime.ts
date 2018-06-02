@@ -20,12 +20,10 @@ const switchableMallocImpl = (
     return {
         name: 'my_malloc',
         isMain: false,
-        numRegistersToSave: 3,
         instructions: [
             {
-                kind: 'gotoIfNotEqual',
-                lhs: 'functionArgument1',
-                rhs: { type: 'register', destination: '0' },
+                kind: 'gotoIfZero',
+                register: 'functionArgument1',
                 label: 'my_malloc_zero_size_check_passed',
                 why: 'Error if no memory requested',
             },
@@ -292,7 +290,6 @@ export const length: RuntimeFunctionGenerator = bytesInWord => {
     return {
         name: 'length',
         isMain: false,
-        numRegistersToSave: 1,
         instructions: [
             {
                 kind: 'loadImmediate',
@@ -329,12 +326,10 @@ export const length: RuntimeFunctionGenerator = bytesInWord => {
 };
 
 export const stringCopy: RuntimeFunctionGenerator = bytesInWord => {
-    const currentChar = firstRegister;
-    if (typeof currentChar !== 'string' && currentChar.type == 'memory') throw debug('Need a register');
+    const currentChar = { name: 'currentChar' };
     return {
         name: 'string_copy',
         isMain: false,
-        numRegistersToSave: 1,
         instructions: [
             { kind: 'label', name: 'string_copy_loop', why: 'Copy a byte' },
             {
@@ -367,7 +362,6 @@ export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
     return {
         name: 'print',
         isMain: false,
-        numRegistersToSave: 0,
         instructions: [
             {
                 kind: 'syscall',
@@ -384,7 +378,6 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
     return {
         name: 'print',
         isMain: false,
-        numRegistersToSave: 0,
         instructions: [
             {
                 kind: 'callByName',
@@ -415,7 +408,6 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord => {
     return {
         name: 'verify_no_leaks',
         isMain: false,
-        numRegistersToSave: 2,
         instructions: [
             {
                 kind: 'loadSymbolAddress',
@@ -440,9 +432,8 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord => {
                 why: 'data = block->free',
             },
             {
-                kind: 'gotoIfNotEqual',
-                lhs: currentData,
-                rhs: { type: 'register', destination: '0' },
+                kind: 'gotoIfZero',
+                register: currentData,
                 label: 'verify_no_leaks_advance_pointers',
                 why: "Don't error if free",
             },
@@ -488,7 +479,6 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesI
     return {
         name: 'string_concatenate',
         isMain: false,
-        numRegistersToSave: 1,
         instructions: [
             { kind: 'label', name: 'write_left_loop', why: 'write_left_loop' },
             { kind: 'loadMemoryByte', to: currentChar, address: left, why: 'Load byte from left' },
@@ -530,7 +520,6 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
     return {
         name: 'stringEquality',
         isMain: false,
-        numRegistersToSave: 2,
         instructions: [
             {
                 kind: 'loadImmediate',
@@ -581,7 +570,6 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     return {
         name: 'my_free',
         isMain: false,
-        numRegistersToSave: 1,
         instructions: [
             { kind: 'loadImmediate', destination: zero, value: 0, why: 'Need access to a 0' },
             {

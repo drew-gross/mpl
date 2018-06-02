@@ -21,6 +21,7 @@ import {
     compileExpression,
     stringLiteralName,
     saveRegistersCode,
+    assignRegisters,
     restoreRegistersCode,
 } from '../backend-utils.js';
 import {
@@ -35,15 +36,9 @@ import { exec } from 'child-process-promise';
 import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { execSync } from 'child_process';
+import idAppender from '../util/idAppender.js';
 
 const generalPurposeRegisters = ['r11', 'r12', 'r13', 'r14', 'r15', 'rdi', 'rsi', 'rbx'];
-
-let labelId = 0;
-const makeLabel = (name: string) => {
-    const result = `${name}${labelId}`;
-    labelId++;
-    return result;
-};
 
 const specialRegisterNames = {
     functionArgument1: 'r8',
@@ -56,7 +51,7 @@ const getRegisterName = (registerAssignment: RegisterAssignment, register: Regis
     if (typeof register == 'string') {
         return specialRegisterNames[register];
     } else {
-        return registerAssignment[register.name];
+        return (registerAssignment[register.name] as any).name;
     }
 };
 
@@ -207,35 +202,36 @@ const runtimeFunctions: RegisterTransferLanguageFunction[] = [
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToX64 = (rtlf: RegisterTransferLanguageFunction): string => {
     const registerAssignment = assignRegisters(rtlf);
-    const fullRtl = [
+    const fullRtl: RegisterTransferLanguageExpression[] = [
         { kind: 'functionLabel', name, why: 'Function entry point' },
-        ...(isMain ? [] : saveRegistersCode(registerAssignment)),
+        ...(rtlf.isMain ? [] : saveRegistersCode(registerAssignment)),
         ...rtlf.instructions,
-        ...(isMain ? [] : restoreRegistersCode(registerAssignment)),
-        ...(isMain ? [] : [{ kind: 'returnToCaller', why: 'Done' }]),
+        ...(rtlf.isMain ? [] : restoreRegistersCode(registerAssignment)),
+        ...(rtlf.isMain ? [] : [{ kind: 'returnToCaller', why: 'Done' } as RegisterTransferLanguageExpression]),
     ];
-    return join(flatten(fullRtl.map(registerTransferExpressionToX64)), '\n');
+    return join(flatten(fullRtl.map(e => registerTransferExpressionToX64(registerAssignment, e))), '\n');
 };
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
+    const temporaryNameMaker = idAppender();
+    const labelMaker = idAppender();
     let x64Functions: RegisterTransferLanguageFunction[] = functions.map(f =>
-        constructFunction(f, globalDeclarations, stringLiterals, makeLabel)
+        constructFunction(f, globalDeclarations, stringLiterals, labelMaker)
     );
     const mainProgramInstructions = flatten(
         program.statements.map(statement => {
-            const compiledProgram = astToRegisterTransferLanguage(
-                {
-                    ast: statement,
-                    destination: 'functionResult',
-                    currentTemporary: { name: 'tmp1' },
-                    globalDeclarations,
-                    stringLiterals,
-                },
-                makeLabel
-            );
+            const compiledProgram = astToRegisterTransferLanguage({
+                ast: statement,
+                destination: 'functionResult',
+                globalDeclarations,
+                stringLiterals,
+                variablesInScope: {},
+                makeLabel: labelMaker,
+                makeTemporary: name => ({ name: temporaryNameMaker(name) }),
+            });
 
             return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
         })
@@ -244,7 +240,6 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
     let x64Program: RegisterTransferLanguageFunction = {
         name: 'start',
         isMain: true,
-        numRegistersToSave: 0, // No functions higher in the stack to worry about clobbering
         instructions: [
             ...mainProgramInstructions,
             {

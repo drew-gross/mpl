@@ -2,7 +2,10 @@ import * as Ast from './ast.js';
 import debug from './util/debug.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from './api.js';
 import flatten from './util/list/flatten.js';
-import { RegisterTransferLanguageExpression } from './backends/registerTransferLanguage.js';
+import {
+    RegisterTransferLanguageExpression,
+    RegisterTransferLanguageFunction as RTLF,
+} from './backends/registerTransferLanguage.js';
 
 export type CompiledExpression<T> = {
     prepare: T[];
@@ -49,22 +52,17 @@ export const registerToString = (r: Register): string => {
 export type BackendOptions = {
     ast: Ast.Ast;
     destination: Register;
-    currentTemporary: Register;
     globalDeclarations: VariableDeclaration[];
     stringLiterals: StringLiteralData[];
     variablesInScope: { [key: string]: Register };
-    makeTemporary: (name: string): Register;
-    makeLabel: (name: string): string;
+    makeTemporary: (name: string) => Register;
+    makeLabel: (name: string) => string;
 };
 
 export const stringLiteralName = ({ id, value }: StringLiteralData) =>
     `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
 
-export const assignRegisters = ({ instructions }) => {
-    return {};
-};
-
-export type RegisterAssignment = { [key: string]: string };
+export type RegisterAssignment = { [key: string]: Register };
 
 export const saveRegistersCode = (registerAssignment: RegisterAssignment): RegisterTransferLanguageExpression[] =>
     Object.values(registerAssignment).map(targetRegister => ({
@@ -81,3 +79,7 @@ export const restoreRegistersCode = (registerAssignment: RegisterAssignment): Re
             why: 'Restore preserved registers',
         }))
         .reverse();
+
+export const assignRegisters = (rtlf: RTLF): RegisterAssignment => {
+    throw debug('TODO: implement assignRegisters');
+};
