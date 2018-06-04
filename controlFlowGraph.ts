@@ -1,5 +1,7 @@
 import debug from './util/debug.js';
 import last from './util/list/last.js';
+import sum from './util/list/sum.js';
+import flatten from './util/list/flatten.js';
 import { set, Set } from './util/set.js';
 import { filter, FilterPredicate } from './util/list/filter.js';
 import join from './util/join.js';
@@ -280,7 +282,7 @@ export const controlFlowGraph = (rtlf: RTLF): ControlFlowGraph => {
     };
 };
 
-export const computeLiveness = (block: BasicBlock) => {
+export const computeBlockLiveness = (block: BasicBlock) => {
     return block.instructions
         .slice()
         .reverse()
@@ -300,8 +302,80 @@ export const computeLiveness = (block: BasicBlock) => {
         );
 };
 
+// Returns whether entry liveness changed
+const propagateBlockLiveness = (block: BasicBlock, liveness: Set<Register>[], liveAtExit: Set<Register>): boolean => {
+    const finalLiveness = last(liveness);
+    if (!finalLiveness) return false;
+
+    const stillPropagating = liveAtExit.copy();
+    stillPropagating.toList().forEach(item => {
+        if (finalLiveness.has(item)) {
+            stillPropagating.remove(item);
+            return;
+        }
+        finalLiveness.add(item);
+        return;
+    });
+
+    for (let i = block.instructions.length - 1; i >= 0; i--) {
+        let madeChanges = false;
+        stillPropagating.toList().forEach(item => {
+            if (liveness[i].has(item)) {
+                stillPropagating.remove(item);
+                return;
+            }
+            livenessUpdate(block.instructions[i]).newlyDead.forEach(dead => {
+                stillPropagating.remove(dead);
+                return;
+            });
+            liveness[i].add(item);
+            madeChanges = true;
+        });
+        if (i == 0) {
+            return madeChanges;
+        }
+    }
+    throw debug('loop that should have never exited exited');
+};
+
+export const computeGraphLiveness = (cfg: ControlFlowGraph): Set<Register>[] => {
+    const blockLiveness = cfg.blocks.map(computeBlockLiveness);
+    const remainingToPropagate: { entryLiveness: Set<Register>; index: number }[] = blockLiveness.map((b, i) => ({
+        entryLiveness: b[0],
+        index: i,
+    }));
+    while (remainingToPropagate.length > 0) {
+        const { entryLiveness, index } = remainingToPropagate.shift() as any;
+        const preceedingNodeIndices = cfg.connections.filter(({ to }) => to == index).map(n => n.from);
+        preceedingNodeIndices.forEach(index => {
+            const changed = propagateBlockLiveness(cfg.blocks[index], blockLiveness[index], entryLiveness);
+            if (changed) {
+                remainingToPropagate.push({ entryLiveness: blockLiveness[index][0], index });
+            }
+        });
+    }
+    const overallLiveness: Set<Register>[] = [];
+    for (let i = 0; i < blockLiveness.length - 2; i++) {
+        const currentBlock = blockLiveness[i];
+        const nextBlock = blockLiveness[i + 1];
+        const lastLiveness = last(currentBlock);
+        if (!lastLiveness) throw debug('empty block');
+        if (!lastLiveness.isEqual(nextBlock[0])) throw debug('non-matching adjacent');
+        overallLiveness.pop(); // Pop empty list is OK
+        overallLiveness.push(...currentBlock);
+    }
+    // add final block completely
+    overallLiveness.push(...(last(blockLiveness) || []));
+    if (sum(cfg.blocks.map(b => b.instructions.length)) + 1 != overallLiveness.length) {
+        throw debug('overallLiveness length mimatch');
+    }
+    return overallLiveness;
+};
+
+export const liveness = (rtlf: RTLF) => computeGraphLiveness(controlFlowGraph(rtlf));
+
 export const assignRegisters = (rtlf: RTLF): RegisterAssignment => {
     const cfg = controlFlowGraph(rtlf);
-    const livenessAfterCodepointsByBlock = cfg.blocks.map(computeLiveness);
-    return {}; //TODO
+    const liveness = computeGraphLiveness(cfg);
+    throw debug('TODO: implement assignRegisters');
 };

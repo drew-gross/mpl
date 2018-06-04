@@ -23,7 +23,14 @@ import {
     stripSourceLocation,
 } from './parser-combinator.js';
 import { removeBracketsFromAst } from './frontend.js';
-import { controlFlowGraph, toDotFile, BasicBlock, computeLiveness } from './controlFlowGraph.js';
+import {
+    controlFlowGraph,
+    toDotFile,
+    BasicBlock,
+    computeBlockLiveness,
+    computeGraphLiveness,
+    liveness,
+} from './controlFlowGraph.js';
 
 test('double flatten', t => {
     t.deepEqual(flatten(flatten([[[1, 2]], [[3], [4]], [[5]]])), [1, 2, 3, 4, 5]);
@@ -1338,7 +1345,7 @@ test('controlFlowGraph basic test', t => {
     t.deepEqual(cfg.exits.length, 1);
 });
 
-test('computeLiveness basic test', t => {
+test('computeBlockLiveness basic test', t => {
     const block: BasicBlock = {
         name: 'test',
         instructions: [
@@ -1370,7 +1377,7 @@ test('computeLiveness basic test', t => {
             },
         ],
     };
-    const liveness = computeLiveness(block);
+    const liveness = computeBlockLiveness(block);
     const expected = [
         [{ name: 'l' }, { name: 'l2' }, { name: 'r' }],
         [{ name: 'l' }, { name: 'l2' }, { name: 'd' }],
@@ -1384,7 +1391,7 @@ test('computeLiveness basic test', t => {
     });
 });
 
-test('computeLiveness read and write in one', t => {
+test('computeBlockLiveness read and write in one', t => {
     const block: BasicBlock = {
         name: 'test',
         instructions: [
@@ -1403,10 +1410,53 @@ test('computeLiveness read and write in one', t => {
             },
         ],
     };
-    const liveness = computeLiveness(block);
+    const liveness = computeBlockLiveness(block);
     const expected = [[{ name: 'r' }, { name: 'd' }], [{ name: 'r' }], []];
     t.deepEqual(liveness.length, expected.length);
     expected.forEach((e, i) => {
         t.deepEqual(e.sort(), liveness[i].toList().sort());
     });
+});
+
+test.only('liveness analysis basic test', t => {
+    const testFunction: RTLF = {
+        name: 'test',
+        isMain: false,
+        instructions: [
+            {
+                kind: 'add',
+                lhs: { name: 'add_l' },
+                rhs: { name: 'add_r' },
+                destination: { name: 'add_d' },
+                why: 'add_d = add_l + add_r',
+            },
+            {
+                kind: 'gotoIfZero',
+                register: { name: 'add_d' },
+                label: 'L',
+                why: 'if add_d == 0 goto L',
+            },
+            {
+                kind: 'subtract',
+                lhs: { name: 'sub_l' },
+                rhs: { name: 'sub_r' },
+                destination: { name: 'sub_d' },
+                why: 'sub_d = sub_l = sub_r',
+            },
+            {
+                kind: 'label',
+                name: 'L',
+                why: 'L',
+            },
+        ],
+    };
+    const testFunctionLiveness = liveness(testFunction).map(s => s.toList());
+    const expectedLiveness = [
+        [{ name: 'add_l' }, { name: 'add_r' }, { name: 'sub_l' }, { name: 'sub_r' }],
+        [{ name: 'add_d' }, { name: 'sub_l' }, { name: 'sub_r' }],
+        [{ name: 'sub_l' }, { name: 'sub_r' }],
+        [],
+        [],
+    ];
+    t.deepEqual(testFunctionLiveness, expectedLiveness);
 });
