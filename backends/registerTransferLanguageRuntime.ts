@@ -1,11 +1,11 @@
 import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
-import { Register } from '../backend-utils.js';
 import {
     RegisterTransferLanguageExpression as RTX,
     RegisterTransferLanguage as RTL,
     RegisterTransferLanguageFunction,
 } from './registerTransferLanguage.js';
+import { Register } from '../register.js';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => RegisterTransferLanguageFunction;
 

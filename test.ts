@@ -1,4 +1,7 @@
-import { RegisterTransferLanguageExpression as RTX } from './backends/registerTransferLanguage.js';
+import {
+    RegisterTransferLanguageFunction as RTLF,
+    RegisterTransferLanguageExpression as RTX,
+} from './backends/registerTransferLanguage.js';
 import test from 'ava';
 import flatten from './util/list/flatten.js';
 import { lex } from './lex.js';
@@ -20,7 +23,7 @@ import {
     stripSourceLocation,
 } from './parser-combinator.js';
 import { removeBracketsFromAst } from './frontend.js';
-import { controlFlowGraph, toDotFile } from './controlFlowGraph.js';
+import { controlFlowGraph, toDotFile, BasicBlock, computeLiveness } from './controlFlowGraph.js';
 
 test('double flatten', t => {
     t.deepEqual(flatten(flatten([[[1, 2]], [[3], [4]], [[5]]])), [1, 2, 3, 4, 5]);
@@ -1314,19 +1317,96 @@ return b;`,
 });
 
 test('controlFlowGraph basic test', t => {
-    const rtl: RTX[] = [
-        {
-            kind: 'functionLabel',
-            name: 'test',
-            why: 'test',
-        },
-        {
-            kind: 'returnToCaller',
-            why: 'test',
-        },
-    ];
-    const cfg = controlFlowGraph(rtl);
+    const rtlf: RTLF = {
+        name: 'test',
+        isMain: false,
+        instructions: [
+            {
+                kind: 'functionLabel',
+                name: 'test',
+                why: 'test',
+            },
+            {
+                kind: 'returnToCaller',
+                why: 'test',
+            },
+        ],
+    };
+    const cfg = controlFlowGraph(rtlf);
     t.deepEqual(cfg.blocks.length, 1);
     t.deepEqual(cfg.connections.length, 0);
     t.deepEqual(cfg.exits.length, 1);
+});
+
+test('computeLiveness basic test', t => {
+    const block: BasicBlock = {
+        name: 'test',
+        instructions: [
+            {
+                kind: 'add',
+                lhs: { name: 'l' },
+                rhs: { name: 'r' },
+                destination: { name: 'd' },
+                why: 'd = l + r',
+            },
+            {
+                kind: 'subtract',
+                lhs: { name: 'l2' },
+                rhs: { name: 'd' },
+                destination: { name: 'r' },
+                why: 'r = l2 - d',
+            },
+            {
+                kind: 'move',
+                from: { name: 'l' },
+                to: { name: 'v' },
+                why: 'v = l (dead)',
+            },
+            {
+                kind: 'move',
+                from: { name: 'r' },
+                to: { name: 'v' },
+                why: 'v = r',
+            },
+        ],
+    };
+    const liveness = computeLiveness(block);
+    const expected = [
+        [{ name: 'l' }, { name: 'l2' }, { name: 'r' }],
+        [{ name: 'l' }, { name: 'l2' }, { name: 'd' }],
+        [{ name: 'r' }, { name: 'l' }],
+        [{ name: 'r' }],
+        [],
+    ];
+    t.deepEqual(liveness.length, expected.length);
+    expected.forEach((e, i) => {
+        t.deepEqual(e.sort(), liveness[i].toList().sort());
+    });
+});
+
+test('computeLiveness read and write in one', t => {
+    const block: BasicBlock = {
+        name: 'test',
+        instructions: [
+            {
+                kind: 'subtract',
+                lhs: { name: 'r' },
+                rhs: { name: 'd' },
+                destination: { name: 'r' },
+                why: 'r = r - d',
+            },
+            {
+                kind: 'move',
+                from: { name: 'r' },
+                to: { name: 'v' },
+                why: 'v = r',
+            },
+        ],
+    };
+    const liveness = computeLiveness(block);
+    const expected = [[{ name: 'r' }, { name: 'd' }], [{ name: 'r' }], []];
+    t.deepEqual(liveness.length, expected.length);
+    expected.forEach((e, i) => {
+        t.deepEqual(e.sort(), liveness[i].toList().sort());
+    });
 });

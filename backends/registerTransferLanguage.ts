@@ -3,15 +3,14 @@ import { builtinFunctions } from '../frontend.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
 import {
-    Register,
     BackendOptions,
     CompiledExpression,
     compileExpression,
     stringLiteralName,
     saveRegistersCode,
     restoreRegistersCode,
-    registerToString,
 } from '../backend-utils.js';
+import { Register, toString as registerToString } from '../register.js';
 import { Function } from '../api.js';
 
 type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
@@ -43,10 +42,10 @@ export type RegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'loadSymbolAddress'; to: Register; symbolName: string }
     | { kind: 'callByName'; function: string }
     | { kind: 'callByRegister'; function: Register }
-    | { kind: 'returnToCaller' }
+    | { kind: 'returnToCaller' } // TODO: replace this with targetRTL
     | { kind: 'returnValue'; source: Register } // TODO: replace this with a move to functionResult
-    | { kind: 'push'; register: Register }
-    | { kind: 'pop'; register: Register });
+    | { kind: 'push'; register: Register } // TODO: replace this with targetRTL
+    | { kind: 'pop'; register: Register }); // TODO: replace this with targetRTL
 
 export type RegisterTransferLanguage = RegisterTransferLanguageExpression[];
 

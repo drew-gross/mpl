@@ -8,13 +8,12 @@ import {
     CompiledProgram,
     BackendOptions,
     compileExpression,
-    Register,
     stringLiteralName,
     saveRegistersCode,
     restoreRegistersCode,
-    assignRegisters,
     RegisterAssignment,
 } from '../backend-utils.js';
+import { Register } from '../register.js';
 import {
     astToRegisterTransferLanguage,
     constructFunction,
@@ -36,6 +35,7 @@ import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
 import join from '../util/join.js';
 import idAppender from '../util/idAppender.js';
+import { assignRegisters } from '../controlFlowGraph.js';
 
 const generalPurposeRegisters = ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'];
 

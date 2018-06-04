@@ -16,14 +16,13 @@ import * as Ast from '../ast.js';
 import {
     BackendOptions,
     CompiledProgram,
-    Register,
     RegisterAssignment,
     compileExpression,
     stringLiteralName,
     saveRegistersCode,
-    assignRegisters,
     restoreRegistersCode,
 } from '../backend-utils.js';
+import { Register } from '../register.js';
 import {
     astToRegisterTransferLanguage,
     constructFunction,
@@ -37,6 +36,7 @@ import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { execSync } from 'child_process';
 import idAppender from '../util/idAppender.js';
+import { assignRegisters } from '../controlFlowGraph.js';
 
 const generalPurposeRegisters = ['r11', 'r12', 'r13', 'r14', 'r15', 'rdi', 'rsi', 'rbx'];
 

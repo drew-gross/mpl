@@ -6,6 +6,8 @@ import {
     RegisterTransferLanguageExpression,
     RegisterTransferLanguageFunction as RTLF,
 } from './backends/registerTransferLanguage.js';
+import { Register } from './register.js';
+import { controlFlowGraph } from './controlFlowGraph.js';
 
 export type CompiledExpression<T> = {
     prepare: T[];
@@ -34,20 +36,6 @@ export const compileExpression = <T>(
     execute: expressionCompiler(subExpressions.map(input => input.execute)),
     cleanup: flatten(subExpressions.reverse().map(input => input.cleanup)),
 });
-
-export type Register =
-    | 'functionArgument1'
-    | 'functionArgument2'
-    | 'functionArgument3'
-    | 'functionResult'
-    | { name: string };
-
-export const registerToString = (r: Register): string => {
-    if (typeof r == 'string') {
-        return r;
-    }
-    return r.name;
-};
 
 export type BackendOptions = {
     ast: Ast.Ast;
@@ -79,7 +67,3 @@ export const restoreRegistersCode = (registerAssignment: RegisterAssignment): Re
             why: 'Restore preserved registers',
         }))
         .reverse();
-
-export const assignRegisters = (rtlf: RTLF): RegisterAssignment => {
-    throw debug('TODO: implement assignRegisters');
-};
