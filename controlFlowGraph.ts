@@ -2,9 +2,10 @@ import debug from './util/debug.js';
 import last from './util/list/last.js';
 import sum from './util/list/sum.js';
 import flatten from './util/list/flatten.js';
-import { set, Set } from './util/set.js';
+import { set, Set, join as setJoin } from './util/set.js';
 import { filter, FilterPredicate } from './util/list/filter.js';
 import join from './util/join.js';
+import grid from './util/grid.js';
 import { RegisterAssignment } from './backend-utils.js';
 import { Register, isEqual as registerIsEqual } from './register.js';
 import {
@@ -29,6 +30,10 @@ export type ControlFlowGraph = {
     }[];
     // TODO: Have exit be a symbol, connections->{from, to} = number | exit
     exits: number[];
+};
+
+export type RegisterInterferenceGraph = {
+    edgeList: Register[][];
 };
 
 const blockBehaviour = (rtx: RTX): 'endBlock' | 'beginBlock' | 'midBlock' => {
@@ -374,8 +379,24 @@ export const computeGraphLiveness = (cfg: ControlFlowGraph): Set<Register>[] => 
 
 export const liveness = (rtlf: RTLF) => computeGraphLiveness(controlFlowGraph(rtlf));
 
+export const registerInterferenceGraph = (liveness: Set<Register>[]): RegisterInterferenceGraph => {
+    const allRegisters = setJoin(registerIsEqual, liveness);
+    const result: RegisterInterferenceGraph = {
+        edgeList: [],
+    };
+    liveness.forEach(registers => {
+        registers.toList().forEach(i => {
+            registers.toList().forEach(j => {
+                result.edgeList.push([i, j]);
+            });
+        });
+    });
+    return result;
+};
+
 export const assignRegisters = (rtlf: RTLF): RegisterAssignment => {
     const cfg = controlFlowGraph(rtlf);
     const liveness = computeGraphLiveness(cfg);
+    const rig = registerInterferenceGraph(liveness);
     throw debug('TODO: implement assignRegisters');
 };

@@ -1418,7 +1418,7 @@ test('computeBlockLiveness read and write in one', t => {
     });
 });
 
-test.only('liveness analysis basic test', t => {
+test('liveness analysis basic test', t => {
     const testFunction: RTLF = {
         name: 'test',
         isMain: false,
