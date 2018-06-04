@@ -32,10 +32,6 @@ export type ControlFlowGraph = {
     exits: number[];
 };
 
-export type RegisterInterferenceGraph = {
-    edgeList: Register[][];
-};
-
 const blockBehaviour = (rtx: RTX): 'endBlock' | 'beginBlock' | 'midBlock' => {
     switch (rtx.kind) {
         case 'comment':
@@ -379,24 +375,111 @@ export const computeGraphLiveness = (cfg: ControlFlowGraph): Set<Register>[] => 
 
 export const liveness = (rtlf: RTLF) => computeGraphLiveness(controlFlowGraph(rtlf));
 
+type RegisterInterference = { r1: Register; r2: Register };
+
+export type RegisterInterferenceGraph = {
+    nonSpecialRegisters: Register[];
+    interferences: Set<RegisterInterference>;
+};
+
+const interferenceIsEqual = (lhs: RegisterInterference, rhs: RegisterInterference): boolean => {
+    if (registerIsEqual(lhs.r1, rhs.r1) && registerIsEqual(lhs.r2, rhs.r2)) {
+        return true;
+    }
+    if (registerIsEqual(lhs.r1, rhs.r2) && registerIsEqual(lhs.r2, rhs.r1)) {
+        return true;
+    }
+    return false;
+};
+
+const interferenceInvolvesRegister = (interference: RegisterInterference, r: Register): boolean =>
+    registerIsEqual(interference.r1, r) || registerIsEqual(interference.r2, r);
+
+const otherRegister = (interference: RegisterInterference, r: Register): Register | undefined => {
+    if (registerIsEqual(interference.r1, r)) {
+        return interference.r2;
+    }
+    if (registerIsEqual(interference.r2, r)) {
+        return interference.r1;
+    }
+    return undefined;
+};
+
 export const registerInterferenceGraph = (liveness: Set<Register>[]): RegisterInterferenceGraph => {
-    const allRegisters = setJoin(registerIsEqual, liveness);
+    const nonSpecialRegisters = setJoin(registerIsEqual, liveness);
+    nonSpecialRegisters.removeWithPredicate(item => typeof item == 'string');
     const result: RegisterInterferenceGraph = {
-        edgeList: [],
+        nonSpecialRegisters: [],
+        interferences: set(interferenceIsEqual),
     };
     liveness.forEach(registers => {
         registers.toList().forEach(i => {
             registers.toList().forEach(j => {
-                result.edgeList.push([i, j]);
+                if (!registerIsEqual(i, j)) {
+                    result.interferences.add({ r1: i, r2: j });
+                }
             });
         });
     });
     return result;
 };
 
-export const assignRegisters = (rtlf: RTLF): RegisterAssignment => {
+export const assignRegisters = (rtlf: RTLF, colors: string[]): RegisterAssignment => {
     const cfg = controlFlowGraph(rtlf);
     const liveness = computeGraphLiveness(cfg);
     const rig = registerInterferenceGraph(liveness);
-    throw debug('TODO: implement assignRegisters');
+    const allRegisters = set(registerIsEqual);
+    rig.nonSpecialRegisters.forEach(r => registersToAssign.add(r));
+    const registersToAssign = allRegisters.copy();
+    const interferences = rig.interferences.copy();
+    const colorableStack: Register[] = [];
+    while (colorableStack.length < rig.nonSpecialRegisters.length) {
+        let stackGrew = false;
+        rig.nonSpecialRegisters.forEach(register => {
+            if (stackGrew) {
+                return;
+            }
+            if (!colorableStack.every(alreadyColored => !registerIsEqual(register, alreadyColored))) {
+                return;
+            }
+            let interferenceCount = 0;
+            interferences.toList().forEach(interference => {
+                if (interferenceInvolvesRegister(interference, register)) {
+                    interferenceCount++;
+                }
+            });
+            if (interferenceCount < colors.length) {
+                colorableStack.push(register);
+                stackGrew = true;
+                interferences.removeWithPredicate(interference => interferenceInvolvesRegister(interference, register));
+                registersToAssign.remove(register);
+            }
+        });
+        if (!stackGrew) {
+            throw debug('would spill - not implemented yet');
+        }
+    }
+
+    const result: RegisterAssignment = {};
+
+    colorableStack.reverse().forEach(register => {
+        // Try each color in order
+        const color = colors.find(color => {
+            // Check we if have a neighbour with this color already
+            return rig.interferences.toList().some(interference => {
+                const other = otherRegister(interference, register);
+                if (!other) {
+                    return true;
+                }
+                if (registerIsEqual(result[(other as { name: string }).name], { name: color })) {
+                    return false;
+                }
+                return true;
+            });
+        });
+        if (!color) throw debug("couldn't find a color to assign");
+        result[(register as { name: string }).name] = { name: color };
+    });
+
+    return result;
 };

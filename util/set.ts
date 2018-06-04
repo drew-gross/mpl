@@ -2,7 +2,9 @@ export type Set<T> = {
     add: (item: T) => void;
     addUnique: (item: T) => void;
     addSet: (other: Set<T>) => void;
+
     remove: (item: T) => void;
+    removeWithPredicate: (predicate: (item: T) => boolean) => void;
 
     size: () => number;
 
@@ -17,7 +19,7 @@ export type Set<T> = {
 type SetComparator<T> = (lhs: T, rhs: T) => boolean;
 
 export const set = <T>(isEqual: SetComparator<T>): Set<T> => {
-    const data: T[] = [];
+    let data: T[] = [];
     const self = {
         // Add an item to the set if it is not equal to any existing items
         add: (item: T) => {
@@ -40,6 +42,9 @@ export const set = <T>(isEqual: SetComparator<T>): Set<T> => {
             if (index != -1) {
                 data.splice(index, 1);
             }
+        },
+        removeWithPredicate: (predicate: (item: T) => boolean): void => {
+            data = data.filter(predicate);
         },
         // Check if an item is in the set
         has: item => data.some(existing => isEqual(existing, item)),

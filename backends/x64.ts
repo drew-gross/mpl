@@ -201,7 +201,7 @@ const runtimeFunctions: RegisterTransferLanguageFunction[] = [
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToX64 = (rtlf: RegisterTransferLanguageFunction): string => {
-    const registerAssignment = assignRegisters(rtlf);
+    const registerAssignment = assignRegisters(rtlf, generalPurposeRegisters);
     const fullRtl: RegisterTransferLanguageExpression[] = [
         { kind: 'functionLabel', name, why: 'Function entry point' },
         ...(rtlf.isMain ? [] : saveRegistersCode(registerAssignment)),

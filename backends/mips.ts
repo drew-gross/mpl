@@ -206,7 +206,7 @@ const runtimeFunctions: RegisterTransferLanguageFunction[] = mipsRuntime.map(f =
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToMips = (rtlf: RegisterTransferLanguageFunction): string => {
-    const registerAssignment = assignRegisters(rtlf);
+    const registerAssignment = assignRegisters(rtlf, generalPurposeRegisters);
     const preamble = !rtlf.isMain
         ? [
               { kind: 'push', register: { type: 'register', destination: '$ra' }, why: 'Always save return address' },
