@@ -3,6 +3,7 @@ import debug from './util/debug.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from './api.js';
 import flatten from './util/list/flatten.js';
 import { RegisterTransferLanguageExpression } from './backends/registerTransferLanguage.js';
+import { Register } from './register.js';
 
 export type CompiledExpression<T> = {
     prepare: T[];
@@ -32,35 +33,11 @@ export const compileExpression = <T>(
     cleanup: flatten(subExpressions.reverse().map(input => input.cleanup)),
 });
 
-///////////// Assembly spcecific utils. TODO: Move these to Register Tranfer Langauge utils //////////
-
-// TODO: Replace with register transfer langauge
-export type StorageSpec =
-    | { type: 'register'; destination: string }
-    | { type: 'memory'; spOffset: number }
-    | 'functionArgument1'
-    | 'functionArgument2'
-    | 'functionArgument3'
-    | 'functionResult';
-export type RegisterAssignment = { [index: string]: StorageSpec };
-
-export const storageSpecToString = (spec: StorageSpec): string => {
-    if (typeof spec == 'string') {
-        return spec;
-    }
-    switch (spec.type) {
-        case 'register':
-            return spec.destination;
-        case 'memory':
-            return `$sp-${spec.spOffset}`;
-    }
-};
-
 export type BackendOptions = {
     ast: Ast.Ast;
     registerAssignment: RegisterAssignment;
-    destination: StorageSpec;
-    currentTemporary: StorageSpec;
+    destination: Register;
+    currentTemporary: Register;
     globalDeclarations: VariableDeclaration[];
     stringLiterals: StringLiteralData[];
 };
@@ -68,13 +45,15 @@ export type BackendOptions = {
 export const stringLiteralName = ({ id, value }: StringLiteralData) =>
     `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
 
+export type RegisterAssignment = { [key: string]: Register };
+
 export const saveRegistersCode = (
     firstRegister,
     nextRegister,
     numRegisters: number
 ): RegisterTransferLanguageExpression[] => {
     let result: RegisterTransferLanguageExpression[] = [];
-    let currentRegister: StorageSpec = firstRegister;
+    let currentRegister: Register = firstRegister;
     while (numRegisters > 0) {
         result.push({
             kind: 'push',
@@ -93,7 +72,7 @@ export const restoreRegistersCode = (
     numRegisters: number
 ): RegisterTransferLanguageExpression[] => {
     let result: RegisterTransferLanguageExpression[] = [];
-    let currentRegister: StorageSpec = firstRegister;
+    let currentRegister: Register = firstRegister;
     while (numRegisters > 0) {
         result.push({
             kind: 'pop',

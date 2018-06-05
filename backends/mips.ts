@@ -8,12 +8,12 @@ import {
     CompiledProgram,
     BackendOptions,
     compileExpression,
-    StorageSpec,
     RegisterAssignment,
     stringLiteralName,
     saveRegistersCode,
     restoreRegistersCode,
 } from '../backend-utils.js';
+import { Register } from '../register.js';
 import {
     astToRegisterTransferLanguage,
     constructFunction,
@@ -35,30 +35,13 @@ import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
 import join from '../util/join.js';
 
-const firstRegister: StorageSpec = { type: 'register', destination: '$t1' };
-const nextTemporary = (storage: StorageSpec): StorageSpec => {
-    if (typeof storage == 'string') throw debug('nextTemporary not valid for special registers');
-    if (storage.type == 'register') {
-        if (storage.destination == '$t9') {
-            // Now need to spill
-            return {
-                type: 'memory',
-                spOffset: 0,
-            };
-        } else {
-            return {
-                type: 'register',
-                destination: `$t${parseInt(storage.destination[storage.destination.length - 1]) + 1}`,
-            };
-        }
-    } else if (storage.type == 'memory') {
-        return {
-            type: 'memory',
-            spOffset: storage.spOffset + 4,
-        };
-    } else {
-        return debug('todo');
+const firstRegister: Register = { name: '$t1' };
+const nextTemporary = (r: Register): Register => {
+    if (typeof r == 'string') throw debug('nextTemporary not valid for special registers');
+    if (r.name == '$t9') {
+        throw debug('spilling removed for now');
     }
+    return { name: `$t${parseInt(r.name[r.name.length - 1]) + 1}` };
 };
 
 let labelId = 0;
@@ -70,7 +53,7 @@ const makeLabel = (name: string) => {
 
 const assignMipsRegisters = (
     variables: VariableDeclaration[]
-): { registerAssignment: RegisterAssignment; firstTemporary: StorageSpec } => {
+): { registerAssignment: RegisterAssignment; firstTemporary: Register } => {
     // TODO: allow spilling of variables
     let currentRegister = 0;
     let registerAssignment = {};
@@ -83,10 +66,7 @@ const assignMipsRegisters = (
     });
     return {
         registerAssignment,
-        firstTemporary: {
-            type: 'register',
-            destination: `$t${currentRegister}`,
-        },
+        firstTemporary: { name: `$t${currentRegister}` },
     };
 };
 
@@ -96,16 +76,11 @@ const specialRegisterNames = {
     functionArgument3: '$s2',
     functionResult: '$a0',
 };
-const getRegisterName = (r: StorageSpec): string => {
-    let result = '';
+const getRegisterName = (r: Register): string => {
     if (typeof r == 'string') {
-        result = specialRegisterNames[r];
-    } else {
-        if (r.type == 'memory') throw debug('spilling not supported by this function');
-        result = r.destination;
+        return specialRegisterNames[r];
     }
-    if (result == 'functionArgument1') debugger;
-    return result;
+    return r.name;
 };
 
 const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLanguageExpression): string[] => {
@@ -153,51 +128,13 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
         case 'move':
             return [`move ${getRegisterName(rtx.to)}, ${getRegisterName(rtx.from)}`];
         case 'loadImmediate':
-            if (typeof rtx.destination == 'string') {
-                return [`li ${getRegisterName(rtx.destination)}, ${rtx.value}`];
-            }
-            switch (rtx.destination.type) {
-                case 'register':
-                    return [`li ${getRegisterName(rtx.destination)}, ${rtx.value}`];
-                // TODO: use a register allocator
-                case 'memory':
-                    return [`li $s7, ${rtx.value}`, `sw $s7, -${rtx.destination.spOffset}($sp)`];
-                default:
-                    throw debug('todo');
-            }
+            if (!getRegisterName(rtx.destination)) throw debug('missint!');
+
+            return [`li ${getRegisterName(rtx.destination)}, ${rtx.value}`];
         case 'multiply': {
-            let leftRegister;
-            let loadSpilled: any = [];
-            let restoreSpilled: any = [];
-            if (typeof rtx.lhs != 'string' && rtx.lhs.type == 'memory') {
-                leftRegister = '$s1';
-                loadSpilled.push(`lw $s1, -${rtx.lhs.spOffset}($sp)`);
-            } else {
-                leftRegister = getRegisterName(rtx.lhs);
-            }
-
-            let rightRegister;
-            if (typeof rtx.rhs != 'string' && rtx.rhs.type == 'memory') {
-                rightRegister = '$s2';
-                loadSpilled.push(`lw $s2, -${rtx.rhs.spOffset}($sp)`);
-            } else {
-                rightRegister = getRegisterName(rtx.rhs);
-            }
-
-            let destinationRegister;
-            if (typeof rtx.destination != 'string' && rtx.destination.type == 'memory') {
-                destinationRegister = '$s3';
-                restoreSpilled.push(`sw $s3, -${rtx.destination.spOffset}($sp)`);
-            } else {
-                destinationRegister = getRegisterName(rtx.destination);
-            }
-
             return [
-                ...loadSpilled,
-                `mult ${leftRegister}, ${rightRegister}`,
-                `# Move result to final destination (assume no overflow)`,
-                `mflo ${destinationRegister}`,
-                ...restoreSpilled,
+                `mult ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}`,
+                `mflo ${getRegisterName(rtx.destination)}`,
             ];
         }
         case 'addImmediate':
@@ -293,14 +230,14 @@ const rtlFunctionToMips = ({
 }: RegisterTransferLanguageFunction): string => {
     const preamble = !isMain
         ? [
-              { kind: 'push', register: { type: 'register', destination: '$ra' }, why: 'Always save return address' },
+              { kind: 'push', register: { name: '$ra' }, why: 'Always save return address' },
               ...saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
           ]
         : [];
     const epilogue = !isMain
         ? [
               ...restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
-              { kind: 'pop', register: { type: 'register', destination: '$ra' }, why: 'Always restore return address' },
+              { kind: 'pop', register: { name: '$ra' }, why: 'Always restore return address' },
               { kind: 'returnToCaller', why: 'Done' },
           ]
         : [];
@@ -326,10 +263,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
                 {
                     ast: statement,
                     registerAssignment,
-                    destination: {
-                        type: 'register',
-                        destination: '$a0',
-                    },
+                    destination: { name: '$a0' },
                     currentTemporary: firstTemporary,
                     globalDeclarations,
                     stringLiterals,
@@ -365,7 +299,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             ? [
                   {
                       kind: 'addImmediate',
-                      register: { type: 'register', destination: '$sp' },
+                      register: { name: '$sp' },
                       amount: -4 * numSpilledTemporaries,
                       why: 'Make spill space for main program',
                   },
@@ -376,7 +310,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             ? [
                   {
                       kind: 'addImmediate',
-                      register: { type: 'register', destination: '$sp' },
+                      register: { name: '$sp' },
                       amount: 4 * numSpilledTemporaries,
                       why: 'Remove spill space for main program',
                   },

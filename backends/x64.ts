@@ -16,14 +16,13 @@ import * as Ast from '../ast.js';
 import {
     BackendOptions,
     CompiledProgram,
-    StorageSpec,
     RegisterAssignment,
     compileExpression,
-    storageSpecToString,
     stringLiteralName,
     saveRegistersCode,
     restoreRegistersCode,
 } from '../backend-utils.js';
+import { Register } from '../register.js';
 import {
     astToRegisterTransferLanguage,
     constructFunction,
@@ -38,49 +37,21 @@ import execAndGetResult from '../util/execAndGetResult.js';
 import { execSync } from 'child_process';
 
 // TODO: unify with named registers in mips. Args are r8-r10, general purpose starts at r11.
-const firstRegister: StorageSpec = {
-    type: 'register',
-    destination: 'r11',
-};
+const firstRegister: Register = { name: 'r11' };
 
 // TOOD: Unify with nextTemporary in mips. Also be able to use special purpose registers like rdx when not multiplying.
-const nextTemporary = (storage: StorageSpec): StorageSpec => {
-    if (typeof storage == 'string') throw debug('nextTemporary not valid for special registers');
-    if (storage.type == 'register') {
-        if (storage.destination == 'r15') {
-            return {
-                type: 'register',
-                destination: 'rdi',
-            };
-        } else if (storage.destination == 'rdi') {
-            return {
-                type: 'register',
-                destination: 'rsi',
-            };
-        } else if (storage.destination == 'rsi') {
-            return {
-                type: 'register',
-                destination: 'rbx',
-            };
-        } else if (storage.destination == 'rbx') {
-            // Now need to spill
-            return {
-                type: 'memory',
-                spOffset: 0,
-            };
-        } else {
-            return {
-                type: 'register',
-                destination: `r${parseInt(storage.destination.slice(1)) + 1}`,
-            };
-        }
-    } else if (storage.type == 'memory') {
-        return {
-            type: 'memory',
-            spOffset: storage.spOffset + 4,
-        };
+const nextTemporary = (r: Register): Register => {
+    if (typeof r == 'string') throw debug('nextTemporary not valid for special registers');
+    if (r.name == 'r15') {
+        return { name: 'rdi' };
+    } else if (r.name == 'rdi') {
+        return { name: 'rsi' };
+    } else if (r.name == 'rsi') {
+        return { name: 'rbx' };
+    } else if (r.name == 'rbx') {
+        throw debug('ran out of GP register');
     } else {
-        return debug('todo');
+        return { name: `r${parseInt(r.name.slice(1)) + 1}` };
     }
 };
 
@@ -94,7 +65,7 @@ const makeLabel = (name: string) => {
 // TODO: unify with assignMipsRegisters
 const assignX64Registers = (
     variables: VariableDeclaration[]
-): { registerAssignment: RegisterAssignment; firstTemporary: StorageSpec } => {
+): { registerAssignment: RegisterAssignment; firstTemporary: Register } => {
     // TODO: allow spilling of variables
     let currentRegister = 11;
     let registerAssignment = {};
@@ -107,10 +78,7 @@ const assignX64Registers = (
     });
     return {
         registerAssignment,
-        firstTemporary: {
-            type: 'register',
-            destination: `r${currentRegister}`,
-        },
+        firstTemporary: { name: `r${currentRegister}` },
     };
 };
 
@@ -120,10 +88,9 @@ const specialRegisterNames = {
     functionArgument3: 'r10',
     functionResult: 'rax',
 };
-const getRegisterName = (r: StorageSpec): string => {
+const getRegisterName = (r: Register): string => {
     if (typeof r == 'string') return specialRegisterNames[r];
-    if (r.type == 'memory') throw debug('spilling not supported in x64 yet');
-    return r.destination;
+    return r.name;
 };
 
 const registerTransferExpressionToX64WithoutComment = (rtx: RegisterTransferLanguageExpression): string[] => {
@@ -296,10 +263,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
                 {
                     ast: statement,
                     registerAssignment,
-                    destination: {
-                        type: 'register',
-                        destination: '$a0',
-                    },
+                    destination: { name: '$a0' },
                     currentTemporary: firstTemporary,
                     globalDeclarations,
                     stringLiterals,

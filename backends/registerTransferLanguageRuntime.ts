@@ -1,6 +1,6 @@
 import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
-import { StorageSpec } from '../backend-utils.js';
+import { Register } from '../register.js';
 import {
     RegisterTransferLanguageExpression as RTX,
     RegisterTransferLanguage as RTL,
@@ -9,8 +9,8 @@ import {
 
 export type RuntimeFunctionGenerator = (
     bytesInWord: number,
-    firstRegister: StorageSpec,
-    nextRegister: ((r: StorageSpec) => StorageSpec)
+    firstRegister: Register,
+    nextRegister: ((r: Register) => Register)
 ) => RegisterTransferLanguageFunction;
 
 const switchableMallocImpl = (
@@ -34,7 +34,7 @@ const switchableMallocImpl = (
             {
                 kind: 'gotoIfNotEqual',
                 lhs: 'functionArgument1',
-                rhs: { type: 'register', destination: '0' },
+                rhs: { name: '0' },
                 label: 'my_malloc_zero_size_check_passed',
                 why: 'Error if no memory requested',
             },
@@ -175,7 +175,7 @@ const switchableMallocImpl = (
             {
                 kind: 'gotoIfNotEqual',
                 lhs: 'functionResult',
-                rhs: { type: 'register', destination: '-1' }, // TODO: should be immediate
+                rhs: { name: '-1' }, // TODO: should be immediate
                 label: 'alloc_exit_check_passed',
                 why: 'If mmap failed, exit',
             },
@@ -213,14 +213,14 @@ const switchableMallocImpl = (
             {
                 kind: 'gotoIfNotEqual',
                 lhs: scratch,
-                rhs: { type: 'register', destination: '0' },
+                rhs: { name: '0' },
                 label: 'assign_previous',
                 why: 'If there is no previous block, set up first block pointer',
             },
             {
                 kind: 'storeGlobal',
                 from: 'functionResult',
-                to: { type: 'register', destination: 'first_block' },
+                to: { name: 'first_block' },
                 why: 'Setup first block pointer',
             },
             { kind: 'goto', label: 'set_up_new_space', why: '' },
@@ -305,7 +305,6 @@ export const mallocWithMmap: RuntimeFunctionGenerator = (bytesInWord, firstRegis
 
 export const length: RuntimeFunctionGenerator = (bytesInWord, firstRegister, nextRegister) => {
     const currentChar = firstRegister;
-    if (typeof currentChar !== 'string' && currentChar.type == 'memory') throw debug('Need a register');
     return {
         name: 'length',
         isMain: false,
@@ -347,7 +346,6 @@ export const length: RuntimeFunctionGenerator = (bytesInWord, firstRegister, nex
 
 export const stringCopy: RuntimeFunctionGenerator = (bytesInWord, firstRegister, nextRegister) => {
     const currentChar = firstRegister;
-    if (typeof currentChar !== 'string' && currentChar.type == 'memory') throw debug('Need a register');
     return {
         name: 'string_copy',
         isMain: false,
@@ -458,7 +456,7 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = (bytesInWord, firstRegist
             {
                 kind: 'gotoIfNotEqual',
                 lhs: currentData,
-                rhs: { type: 'register', destination: '0' },
+                rhs: { name: '0' },
                 label: 'verify_no_leaks_advance_pointers',
                 why: "Don't error if free",
             },
@@ -545,8 +543,8 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = (
 };
 
 export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (bytesInWord, firstRegister, nextRegister) => {
-    const leftByte: StorageSpec = firstRegister;
-    const rightByte: StorageSpec = nextRegister(firstRegister);
+    const leftByte: Register = firstRegister;
+    const rightByte: Register = nextRegister(firstRegister);
     return {
         name: 'stringEquality',
         isMain: false,
@@ -595,7 +593,7 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = (bytesInW
 };
 
 export const myFreeRuntimeFunction: RuntimeFunctionGenerator = (bytesInWord, firstRegister, nextRegister) => {
-    const one: StorageSpec = firstRegister;
+    const one: Register = firstRegister;
     return {
         name: 'my_free',
         isMain: false,
@@ -604,7 +602,7 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = (bytesInWord, fir
             {
                 kind: 'gotoIfNotEqual',
                 lhs: 'functionArgument1',
-                rhs: { type: 'register', destination: '0' },
+                rhs: { name: '0' },
                 label: 'free_null_check_passed',
                 why: 'Not freeing null check passed',
             },
