@@ -23,14 +23,8 @@ import {
     stripSourceLocation,
 } from './parser-combinator.js';
 import { removeBracketsFromAst } from './frontend.js';
-import {
-    controlFlowGraph,
-    toDotFile,
-    BasicBlock,
-    computeBlockLiveness,
-    computeGraphLiveness,
-    liveness,
-} from './controlFlowGraph.js';
+import { controlFlowGraph, toDotFile, BasicBlock, computeBlockLiveness, rtlfLiveness } from './controlFlowGraph.js';
+import debug from './util/debug.js';
 
 test('double flatten', t => {
     t.deepEqual(flatten(flatten([[[1, 2]], [[3], [4]], [[5]]])), [1, 2, 3, 4, 5]);
@@ -1450,7 +1444,7 @@ test('liveness analysis basic test', t => {
             },
         ],
     };
-    const testFunctionLiveness = liveness(testFunction).map(s => s.toList());
+    const testFunctionLiveness = rtlfLiveness(testFunction).map(s => s.toList());
     const expectedLiveness = [
         [{ name: 'add_l' }, { name: 'add_r' }, { name: 'sub_l' }, { name: 'sub_r' }],
         [{ name: 'add_d' }, { name: 'sub_l' }, { name: 'sub_r' }],
@@ -1459,4 +1453,65 @@ test('liveness analysis basic test', t => {
         [],
     ];
     t.deepEqual(testFunctionLiveness, expectedLiveness);
+});
+
+test.only('4 block graph (length)', t => {
+    const lengthRTLF: RTLF = {
+        name: 'length',
+        isMain: false,
+        instructions: [
+            {
+                kind: 'loadImmediate',
+                destination: 'functionResult',
+                value: 0,
+                why: 'functionResult = 0',
+            },
+            { kind: 'label', name: 'length_loop', why: 'Count another charachter' },
+            {
+                kind: 'loadMemoryByte',
+                address: 'functionArgument1',
+                to: { name: 'currentChar' },
+                why: 'currentChar = *functionArgument1',
+            },
+            {
+                kind: 'gotoIfZero',
+                register: { name: 'currentChar' },
+                label: 'length_return',
+                why: 'if currentChar == 0 goto length_return',
+            },
+            { kind: 'increment', register: 'functionResult', why: 'functionResult++' },
+            { kind: 'increment', register: 'functionArgument1', why: 'functionArgument1++' },
+            { kind: 'goto', label: 'length_loop', why: 'goto length_loop' },
+            { kind: 'label', name: 'length_return', why: 'length_return:' },
+            {
+                kind: 'subtract',
+                lhs: 'functionArgument1',
+                rhs: 'functionResult',
+                destination: 'functionArgument1',
+                why: 'functionArgument1 = functionResult - functionArgument1',
+            },
+        ],
+    };
+    const lengthLiveness = rtlfLiveness(lengthRTLF).map(s =>
+        s
+            .toList()
+            .map(r => {
+                if (typeof r == 'string') return r;
+                return r.name;
+            })
+            .sort()
+    );
+    const expectedLiveness = [
+        ['functionArgument1'],
+        ['functionArgument1', 'functionResult'],
+        ['functionArgument1', 'functionResult'],
+        ['currentChar', 'functionArgument1', 'functionResult'],
+        ['functionArgument1', 'functionResult'],
+        ['functionArgument1', 'functionResult'],
+        ['functionArgument1', 'functionResult'],
+        ['functionArgument1', 'functionResult'],
+        ['functionArgument1', 'functionResult'],
+        [],
+    ];
+    t.deepEqual(lengthLiveness, expectedLiveness);
 });

@@ -2,7 +2,7 @@ import debug from './util/debug.js';
 import last from './util/list/last.js';
 import sum from './util/list/sum.js';
 import flatten from './util/list/flatten.js';
-import { set, Set, join as setJoin } from './util/set.js';
+import { set, Set, join as setJoin, fromList as setFromList } from './util/set.js';
 import { filter, FilterPredicate } from './util/list/filter.js';
 import join from './util/join.js';
 import grid from './util/grid.js';
@@ -283,7 +283,7 @@ export const controlFlowGraph = (rtlf: RTLF): ControlFlowGraph => {
     };
 };
 
-export const computeBlockLiveness = (block: BasicBlock) => {
+export const computeBlockLiveness = (block: BasicBlock): Set<Register>[] => {
     return block.instructions
         .slice()
         .reverse()
@@ -305,41 +305,44 @@ export const computeBlockLiveness = (block: BasicBlock) => {
 
 // Returns whether entry liveness changed
 const propagateBlockLiveness = (block: BasicBlock, liveness: Set<Register>[], liveAtExit: Set<Register>): boolean => {
-    const finalLiveness = last(liveness);
-    if (!finalLiveness) return false;
-
-    const stillPropagating = liveAtExit.copy();
-    stillPropagating.toList().forEach(item => {
-        if (finalLiveness.has(item)) {
-            stillPropagating.remove(item);
-            return;
-        }
-        finalLiveness.add(item);
-        return;
-    });
-
-    for (let i = block.instructions.length - 1; i >= 0; i--) {
-        let madeChanges = false;
-        stillPropagating.toList().forEach(item => {
-            if (liveness[i].has(item)) {
-                stillPropagating.remove(item);
-                return;
+    let changeEntry = false;
+    liveAtExit.toList().forEach(item => {
+        for (let i = liveness.length - 1; i >= 0; i--) {
+            if (i < block.instructions.length) {
+                const newlyDead = setFromList(registerIsEqual, livenessUpdate(block.instructions[i]).newlyDead);
+                if (newlyDead.has(item)) {
+                    return;
+                }
             }
-            livenessUpdate(block.instructions[i]).newlyDead.forEach(dead => {
-                stillPropagating.remove(dead);
-                return;
-            });
+            if (i == 0 && !liveness[i].has(item)) {
+                changeEntry = true;
+            }
             liveness[i].add(item);
-            madeChanges = true;
-        });
-        if (i == 0) {
-            return madeChanges;
         }
-    }
-    throw debug('loop that should have never exited exited');
+    });
+    return changeEntry;
 };
 
-export const computeGraphLiveness = (cfg: ControlFlowGraph): Set<Register>[] => {
+const verifyingOverlappingJoin = (blocks: Set<Register>[][]): Set<Register>[] => {
+    const result: Set<Register>[] = [];
+    blocks.forEach((block, index) => {
+        if (index == blocks.length - 1) return;
+        const nextBlock = blocks[index + 1];
+        const lastOfCurrent = last(block);
+        if (!lastOfCurrent) throw debug('empty block');
+        const firstOfNext = nextBlock[0];
+        if (!lastOfCurrent.isEqual(firstOfNext)) throw debug('non-matching adjacent');
+    });
+    blocks.forEach((block, index) => {
+        result.push(...block);
+        if (index == blocks.length - 1) return;
+        result.pop();
+    });
+    return result;
+};
+
+export const rtlfLiveness = (rtlf: RTLF): Set<Register>[] => {
+    const cfg = controlFlowGraph(rtlf);
     const blockLiveness = cfg.blocks.map(computeBlockLiveness);
     const remainingToPropagate: { entryLiveness: Set<Register>; index: number }[] = blockLiveness.map((b, i) => ({
         entryLiveness: b[0],
@@ -355,25 +358,12 @@ export const computeGraphLiveness = (cfg: ControlFlowGraph): Set<Register>[] => 
             }
         });
     }
-    const overallLiveness: Set<Register>[] = [];
-    for (let i = 0; i < blockLiveness.length - 2; i++) {
-        const currentBlock = blockLiveness[i];
-        const nextBlock = blockLiveness[i + 1];
-        const lastLiveness = last(currentBlock);
-        if (!lastLiveness) throw debug('empty block');
-        if (!lastLiveness.isEqual(nextBlock[0])) throw debug('non-matching adjacent');
-        overallLiveness.pop(); // Pop empty list is OK
-        overallLiveness.push(...currentBlock);
-    }
-    // add final block completely
-    overallLiveness.push(...(last(blockLiveness) || []));
-    if (sum(cfg.blocks.map(b => b.instructions.length)) + 1 != overallLiveness.length) {
+    const overallLiveness: Set<Register>[] = verifyingOverlappingJoin(blockLiveness);
+    if (rtlf.instructions.length + 1 != overallLiveness.length) {
         throw debug('overallLiveness length mimatch');
     }
     return overallLiveness;
 };
-
-export const liveness = (rtlf: RTLF) => computeGraphLiveness(controlFlowGraph(rtlf));
 
 type RegisterInterference = { r1: Register; r2: Register };
 
@@ -425,8 +415,7 @@ export const registerInterferenceGraph = (liveness: Set<Register>[]): RegisterIn
 };
 
 export const assignRegisters = (rtlf: RTLF, colors: string[]): RegisterAssignment => {
-    const cfg = controlFlowGraph(rtlf);
-    const liveness = computeGraphLiveness(cfg);
+    const liveness = rtlfLiveness(rtlf);
     const rig = registerInterferenceGraph(liveness);
     const allRegisters = set(registerIsEqual);
     rig.nonSpecialRegisters.forEach(r => registersToAssign.add(r));

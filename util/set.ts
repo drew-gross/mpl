@@ -67,6 +67,12 @@ export const set = <T>(isEqual: SetComparator<T>): Set<T> => {
     return self;
 };
 
+export const fromList = <T>(isEqual: SetComparator<T>, list: T[]): Set<T> => {
+    const result = set(isEqual);
+    list.forEach(item => result.add(item));
+    return result;
+};
+
 export const join = <T>(isEqual: SetComparator<T>, sets: Set<T>[]): Set<T> => {
     const result = set(isEqual);
     sets.forEach(newSet => {
