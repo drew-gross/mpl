@@ -169,7 +169,7 @@ const switchableMallocImpl = (
             {
                 kind: 'gotoIfNotEqual',
                 lhs: 'functionResult',
-                rhs: { type: 'register', destination: '-1' }, // TODO: should be immediate
+                rhs: { name: '-1' }, // TODO: should be immediate
                 label: 'alloc_exit_check_passed',
                 why: 'If mmap failed, exit',
             },
@@ -207,14 +207,14 @@ const switchableMallocImpl = (
             {
                 kind: 'gotoIfNotEqual',
                 lhs: { name: 'first_block_pointer_address' },
-                rhs: { type: 'register', destination: '0' },
+                rhs: { name: '0' },
                 label: 'assign_previous',
                 why: 'If there is no previous block, set up first block pointer',
             },
             {
                 kind: 'storeGlobal',
                 from: 'functionResult',
-                to: { type: 'register', destination: 'first_block' },
+                to: { name: 'first_block' },
                 why: 'Setup first block pointer',
             },
             { kind: 'goto', label: 'set_up_new_space', why: '' },

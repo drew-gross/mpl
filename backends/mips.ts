@@ -53,14 +53,11 @@ const specialRegisterNames = {
     functionResult: '$a0',
 };
 
-// TODO: split RTL register and target register
 const getRegisterName = (registerAssignment: RegisterAssignment, register: Register): string => {
     if (typeof register == 'string') {
         return specialRegisterNames[register];
-    } else if (register.name in registerAssignment) {
-        return (registerAssignment[register.name] as any).name;
     } else {
-        return (register as any).name;
+        return (registerAssignment[register.name] as any).name;
     }
 };
 
@@ -101,14 +98,7 @@ const registerTransferExpressionToMipsWithoutComment = (registerAssignment: Regi
                 ),
                 `li ${syscallSelectAndResultRegister}, ${syscallNumbers[rtx.name]}`,
                 'syscall',
-                ...(rtx.destination
-                    ? [
-                          `move ${getRegisterName(
-                              registerAssignment,
-                              rtx.destination
-                          )}, ${syscallSelectAndResultRegister}`,
-                      ]
-                    : []),
+                ...(rtx.destination ? [`move ${getReg(rtx.destination)}, ${syscallSelectAndResultRegister}`] : []),
                 ...flatten(registersToSave.reverse().map(r => [`addiu $sp, $sp, 4`, `lw ${r}, ($sp)`])),
             ];
             return result;
@@ -117,11 +107,7 @@ const registerTransferExpressionToMipsWithoutComment = (registerAssignment: Regi
         case 'loadImmediate':
             return [`li ${getReg(rtx.destination)}, ${rtx.value}`];
         case 'multiply': {
-            return [
-                `mult ${getReg(rtx.lhs)}, ${getReg(rtx.rhs)}`,
-                `# Move result to final destination (assume no overflow)`,
-                `mflo ${getReg(rtx.destination)}`,
-            ];
+            return [`mult ${getReg(rtx.lhs)}, ${getReg(rtx.rhs)}`, `mflo ${getReg(rtx.destination)}`];
         }
         case 'addImmediate':
             return [`addiu ${getReg(rtx.register)}, ${rtx.amount}`];

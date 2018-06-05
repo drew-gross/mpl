@@ -881,10 +881,10 @@ test('return local integer', compileAndRun, {
     expectedExitCode: 9,
 });
 
-test('many temporaries, spill to ram', compileAndRun, {
+// Need spilling
+test.failing('many temporaries, spill to ram', compileAndRun, {
     source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
     expectedExitCode: 1,
-    failing: 'x64', // Need real register allocator
 });
 
 test('multi statement function with locals', compileAndRun, {
