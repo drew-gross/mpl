@@ -17,7 +17,7 @@ import { Register } from '../register.js';
 import {
     astToRegisterTransferLanguage,
     constructFunction,
-    RegisterTransferLanguageExpression,
+    RegisterTransferLanguageExpression as RTX,
     RegisterTransferLanguageFunction,
 } from './registerTransferLanguage.js';
 import {
@@ -53,18 +53,18 @@ const specialRegisterNames = {
     functionResult: '$a0',
 };
 
+// TODO: split RTL register and target register
 const getRegisterName = (registerAssignment: RegisterAssignment, register: Register): string => {
     if (typeof register == 'string') {
         return specialRegisterNames[register];
-    } else {
+    } else if (register.name in registerAssignment) {
         return (registerAssignment[register.name] as any).name;
+    } else {
+        return (register as any).name;
     }
 };
 
-const registerTransferExpressionToMipsWithoutComment = (
-    registerAssignment: RegisterAssignment,
-    rtx: RegisterTransferLanguageExpression
-): string[] => {
+const registerTransferExpressionToMipsWithoutComment = (registerAssignment: RegisterAssignment, rtx: RTX): string[] => {
     const getReg = getRegisterName.bind(registerAssignment);
     switch (rtx.kind) {
         case 'comment':
@@ -178,13 +178,8 @@ const registerTransferExpressionToMipsWithoutComment = (
     }
 };
 
-const registerTransferExpressionToMips = (
-    registerAssignment: RegisterAssignment,
-    rtx: RegisterTransferLanguageExpression
-): string[] => {
-    if (typeof rtx == 'string') return [rtx];
-    return registerTransferExpressionToMipsWithoutComment(registerAssignment, rtx).map(asm => `${asm} # ${rtx.why}`);
-};
+const registerTransferExpressionToMips = (registerAssignment: RegisterAssignment, rtx: RTX): string[] =>
+    registerTransferExpressionToMipsWithoutComment(registerAssignment, rtx).map(asm => `${asm} # ${rtx.why}`);
 
 const bytesInWord = 4;
 
@@ -207,33 +202,33 @@ const runtimeFunctions: RegisterTransferLanguageFunction[] = mipsRuntime.map(f =
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToMips = (rtlf: RegisterTransferLanguageFunction): string => {
     const registerAssignment = assignRegisters(rtlf, generalPurposeRegisters);
-    const preamble = !rtlf.isMain
+    const preamble: RTX[] = !rtlf.isMain
         ? [
-              { kind: 'push', register: { type: 'register', destination: '$ra' }, why: 'Always save return address' },
+              { kind: 'push', register: { name: '$ra' }, why: 'Always save return address' },
               ...saveRegistersCode(registerAssignment),
           ]
         : [];
-    const epilogue = !rtlf.isMain
+    const epilogue: RTX[] = !rtlf.isMain
         ? [
               ...restoreRegistersCode(registerAssignment),
-              { kind: 'pop', register: { type: 'register', destination: '$ra' }, why: 'Always restore return address' },
+              { kind: 'pop', register: { name: '$ra' }, why: 'Always restore return address' },
               { kind: 'returnToCaller', why: 'Done' },
           ]
         : [];
-    const fullRtl = [
-        { kind: 'functionLabel', name, why: 'Function entry point' },
+    const fullRtl: RTX[] = [
+        { kind: 'functionLabel', name: rtlf.name, why: 'Function entry point' },
         ...preamble,
         ...rtlf.instructions,
         ...epilogue,
     ];
-    return join(flatten(fullRtl.map(registerTransferExpressionToMips.bind(registerAssignment))), '\n');
+    return join(flatten(fullRtl.map(rtlx => registerTransferExpressionToMips(registerAssignment, rtlx))), '\n');
 };
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     const temporaryNameMaker = idAppender();
     let mipsFunctions = functions.map(f => constructFunction(f, globalDeclarations, stringLiterals, makeLabel));
 
-    const mainProgramInstructions: RegisterTransferLanguageExpression[] = flatten(
+    const mainProgramInstructions: RTX[] = flatten(
         program.statements.map(statement => {
             const compiledProgram = astToRegisterTransferLanguage({
                 ast: statement,
@@ -249,25 +244,25 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         })
     );
 
-    const freeGlobals: RegisterTransferLanguageExpression[] = flatten(
+    const freeGlobals: RTX[] = flatten(
         globalDeclarations.filter(declaration => declaration.type.name === 'String').map(declaration => [
             {
                 kind: 'loadGlobal',
                 from: declaration.name,
                 to: 'functionArgument1',
                 why: 'Load global string so we can free it',
-            } as RegisterTransferLanguageExpression,
+            } as RTX,
             {
                 kind: 'callByName',
                 function: 'my_free',
                 why: 'Free gloabal string at end of program',
-            } as RegisterTransferLanguageExpression,
+            } as RTX,
         ])
     );
 
     // Create space for spilled tempraries
     const numSpilledTemporaries = program.temporaryCount - 10;
-    const makeSpillSpaceCode: RegisterTransferLanguageExpression[] =
+    const makeSpillSpaceCode: RTX[] =
         numSpilledTemporaries > 0
             ? [
                   {
@@ -278,7 +273,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
                   },
               ]
             : [];
-    const removeSpillSpaceCode: RegisterTransferLanguageExpression[] =
+    const removeSpillSpaceCode: RTX[] =
         numSpilledTemporaries > 0
             ? [
                   {

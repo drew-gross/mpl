@@ -640,7 +640,7 @@ test('double product with brackets', compileAndRun, {
     },
 });
 
-test('id function', compileAndRun, {
+test.only('id function', compileAndRun, {
     source: 'id := a: Integer => a; return id(5)',
     expectedExitCode: 5,
 });
@@ -1455,7 +1455,7 @@ test('liveness analysis basic test', t => {
     t.deepEqual(testFunctionLiveness, expectedLiveness);
 });
 
-test.only('4 block graph (length)', t => {
+test('4 block graph (length)', t => {
     const lengthRTLF: RTLF = {
         name: 'length',
         isMain: false,
