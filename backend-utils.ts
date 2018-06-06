@@ -2,7 +2,7 @@ import * as Ast from './ast.js';
 import debug from './util/debug.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from './api.js';
 import flatten from './util/list/flatten.js';
-import { ThreeAddressStatement } from './backends/threeAddressCode.js';
+import { ThreeAddressStatement, TargetThreeAddressStatement } from './backends/threeAddressCode.js';
 import { Register } from './register.js';
 
 export type CompiledExpression<T> = {
@@ -47,13 +47,18 @@ export const stringLiteralName = ({ id, value }: StringLiteralData) =>
 
 export type RegisterAssignment = { [key: string]: Register };
 
-export const saveRegistersCode = (firstRegister, nextRegister, numRegisters: number): ThreeAddressStatement[] => {
-    let result: ThreeAddressStatement[] = [];
+export const saveRegistersCode = <TargetRegister>(
+    firstRegister: Register,
+    nextRegister,
+    getTargetRegister,
+    numRegisters: number
+): TargetThreeAddressStatement<TargetRegister>[] => {
+    let result: TargetThreeAddressStatement<TargetRegister>[] = [];
     let currentRegister: Register = firstRegister;
     while (numRegisters > 0) {
         result.push({
             kind: 'push',
-            register: currentRegister,
+            register: getTargetRegister(currentRegister),
             why: 'Save registers we intend to use',
         });
         currentRegister = nextRegister(currentRegister);
@@ -62,17 +67,30 @@ export const saveRegistersCode = (firstRegister, nextRegister, numRegisters: num
     return result;
 };
 
-export const restoreRegistersCode = (firstRegister, nextRegister, numRegisters: number): ThreeAddressStatement[] => {
-    let result: ThreeAddressStatement[] = [];
-    let currentRegister: Register = firstRegister;
+export const restoreRegistersCode = <TargetRegister>(
+    firstRegister,
+    nextRegister,
+    getTargetRegister,
+    numRegisters: number
+): TargetThreeAddressStatement<TargetRegister>[] => {
+    let result: TargetThreeAddressStatement<TargetRegister>[] = [];
+    let currentRegister: TargetRegister = firstRegister;
     while (numRegisters > 0) {
         result.push({
             kind: 'pop',
-            register: currentRegister,
+            register: getTargetRegister(currentRegister),
             why: 'Restore registers that we used',
         });
         currentRegister = nextRegister(currentRegister);
         numRegisters--;
     }
     return result.reverse();
+};
+
+export type RegisterDescription<TargetRegister> = {
+    generalPurpose: TargetRegister[];
+    functionArgument: TargetRegister[];
+    functionResult: TargetRegister;
+    syscallArgument: TargetRegister[];
+    syscallSelectAndResult: TargetRegister;
 };

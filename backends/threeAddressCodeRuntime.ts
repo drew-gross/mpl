@@ -198,7 +198,7 @@ const switchableMallocImpl = (
             {
                 kind: 'label',
                 name: 'alloc_exit_check_passed',
-                why: `${'functionResult'} now contains pointer to block. Set up pointer to new block.`,
+                why: 'functionResult now contains pointer to block. Set up pointer to new block.',
             },
             {
                 kind: 'loadGlobal',

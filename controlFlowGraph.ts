@@ -41,9 +41,6 @@ const blockBehaviour = (rtx: ThreeAddressStatement): 'endBlock' | 'beginBlock' |
         case 'loadSymbolAddress':
         case 'callByName':
         case 'callByRegister':
-        case 'push':
-        case 'pop':
-        case 'returnValue':
             return 'midBlock';
         case 'label':
         case 'functionLabel':
@@ -114,8 +111,6 @@ const blockExits = (rtl: ThreeAddressStatement[]): Exits => {
         case 'loadSymbolAddress':
         case 'callByName':
         case 'callByRegister':
-        case 'push':
-        case 'pop':
             return { blockName: false, next: true, exit: false };
         default:
             throw debug('Unrecognized ThreeAddressStatement kind in blockExits');

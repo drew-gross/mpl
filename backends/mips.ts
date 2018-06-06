@@ -12,13 +12,16 @@ import {
     stringLiteralName,
     saveRegistersCode,
     restoreRegistersCode,
+    RegisterDescription,
 } from '../backend-utils.js';
 import { Register } from '../register.js';
 import {
-    astToRegisterTransferLanguage,
+    astToThreeAddressCode,
     constructFunction,
     ThreeAddressStatement,
     ThreeAddressFunction,
+    TargetThreeAddressStatement,
+    threeAddressCodeToTarget,
 } from './threeAddressCode.js';
 import {
     mallocWithSbrk,
@@ -70,135 +73,136 @@ const assignMipsRegisters = (
     };
 };
 
-const specialRegisterNames = {
-    functionArgument1: '$s0',
-    functionArgument2: '$s1',
-    functionArgument3: '$s2',
+type MipsRegister =
+    // s
+    | '$s0'
+    | '$s1'
+    | '$s2'
+    | '$s3'
+    // a
+    | '$a0'
+    | '$a1'
+    // t
+    | '$t1'
+    | '$t2'
+    | '$t3'
+    | '$t4'
+    | '$t5'
+    | '$t6'
+    | '$t7'
+    | '$t8'
+    | '$t9'
+    // v
+    | '$v0'
+    // ra
+    | '$ra';
+
+const mipsRegisterTypes: RegisterDescription<MipsRegister> = {
+    generalPurpose: ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'],
+    functionArgument: ['$s0', '$s1', '$s2'],
     functionResult: '$a0',
-};
-const getRegisterName = (r: Register): string => {
-    if (typeof r == 'string') {
-        return specialRegisterNames[r];
-    }
-    return r.name;
+    syscallArgument: ['$a0', '$a1'],
+    syscallSelectAndResult: '$v0',
 };
 
-const registerTransferExpressionToMipsWithoutComment = (rtx: ThreeAddressStatement): string[] => {
-    switch (rtx.kind) {
+const getMipsRegister = (r: Register): MipsRegister => {
+    if (typeof r == 'string') {
+        switch (r) {
+            case 'functionArgument1':
+                return mipsRegisterTypes.functionArgument[0];
+            case 'functionArgument2':
+                return mipsRegisterTypes.functionArgument[1];
+            case 'functionArgument3':
+                return mipsRegisterTypes.functionArgument[2];
+            case 'functionResult':
+                return mipsRegisterTypes.functionResult;
+        }
+    } else {
+        return r.name as MipsRegister;
+    }
+    throw debug('should not get here');
+};
+
+const syscallNumbers = {
+    printInt: 1,
+    print: 4,
+    sbrk: 9,
+    // mmap: 0, // There is no mmap. Should be unused on mips.
+    exit: 10,
+};
+
+const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<MipsRegister>): string[] => {
+    switch (tas.kind) {
         case 'comment':
             return [''];
         case 'syscall':
-            // TOOD: DRY with syscall impl in mips
-            // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
-            if (rtx.arguments.length > 2) throw debug('mips only supports 2 syscall args');
-            const syscallNumbers = {
-                printInt: 1,
-                print: 4,
-                sbrk: 9,
-                // mmap: 0, // There is no mmap. Should be unused on mips.
-                exit: 10,
-            };
-            const syscallArgRegisters = ['$a0', '$a1'];
-            const syscallSelectAndResultRegister = '$v0';
-            const registersToSave: string[] = [syscallSelectAndResultRegister];
-            rtx.arguments.forEach((_, index) => {
-                const argRegister = syscallArgRegisters[index];
-                if (rtx.destination && getRegisterName(rtx.destination) == argRegister) {
-                    return;
-                }
-                registersToSave.push(argRegister);
-            });
-            // TODO: Allow a "replacements" feature, to convert complex/unsupported RTL instructions into supported ones
-            const result = [
-                ...flatten(registersToSave.map(r => [`sw ${r}, ($sp)`, `addiu, $sp, $sp, -4`])),
-                ...rtx.arguments.map(
-                    (arg, index) =>
-                        typeof arg == 'number'
-                            ? `li ${syscallArgRegisters[index]}, ${arg}`
-                            : `move ${syscallArgRegisters[index]}, ${getRegisterName(arg)}`
-                ),
-                `li ${syscallSelectAndResultRegister}, ${syscallNumbers[rtx.name]}`,
-                'syscall',
-                ...(rtx.destination
-                    ? [`move ${getRegisterName(rtx.destination)}, ${syscallSelectAndResultRegister}`]
-                    : []),
-                ...flatten(registersToSave.reverse().map(r => [`addiu $sp, $sp, 4`, `lw ${r}, ($sp)`])),
-            ];
-            return result;
+            return ['syscall'];
         case 'move':
-            return [`move ${getRegisterName(rtx.to)}, ${getRegisterName(rtx.from)}`];
+            return [`move ${tas.to}, ${tas.from}`];
         case 'loadImmediate':
-            if (!getRegisterName(rtx.destination)) throw debug('missint!');
+            if (!tas.destination) throw debug('missint!');
 
-            return [`li ${getRegisterName(rtx.destination)}, ${rtx.value}`];
+            return [`li ${tas.destination}, ${tas.value}`];
         case 'multiply': {
-            return [
-                `mult ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}`,
-                `mflo ${getRegisterName(rtx.destination)}`,
-            ];
+            return [`mult ${tas.lhs}, ${tas.rhs}`, `mflo ${tas.destination}`];
         }
         case 'addImmediate':
-            return [`addiu ${getRegisterName(rtx.register)}, ${rtx.amount}`];
+            return [`addiu ${tas.register}, ${tas.amount}`];
         case 'add':
-            return [
-                `add ${getRegisterName(rtx.destination)}, ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}`,
-            ];
-        case 'returnValue':
-            return [`move ${specialRegisterNames.functionResult}, ${getRegisterName(rtx.source)}`];
+            return [`add ${tas.destination}, ${tas.lhs}, ${tas.rhs}`];
         case 'subtract':
-            return [
-                `sub ${getRegisterName(rtx.destination)}, ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}`,
-            ];
+            return [`sub ${tas.destination}, ${tas.lhs}, ${tas.rhs}`];
         case 'increment':
-            return [`addiu ${getRegisterName(rtx.register)}, ${getRegisterName(rtx.register)}, 1`];
+            return [`addiu ${tas.register}, ${tas.register}, 1`];
         case 'label':
-            return [`L${rtx.name}:`];
+            return [`L${tas.name}:`];
         case 'functionLabel':
-            return [`${rtx.name}:`];
+            return [`${tas.name}:`];
         case 'goto':
-            return [`b L${rtx.label}`];
+            return [`b L${tas.label}`];
         case 'gotoIfEqual':
-            return [`beq ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}, L${rtx.label}`];
+            return [`beq ${tas.lhs}, ${tas.rhs}, L${tas.label}`];
         case 'gotoIfNotEqual':
-            return [`bne ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}, L${rtx.label}`];
+            return [`bne ${tas.lhs}, ${tas.rhs}, L${tas.label}`];
         case 'gotoIfZero':
-            return [`beq ${getRegisterName(rtx.register)}, 0, L${rtx.label}`];
+            return [`beq ${tas.register}, 0, L${tas.label}`];
         case 'gotoIfGreater':
-            return [`bgt ${getRegisterName(rtx.lhs)}, ${getRegisterName(rtx.rhs)}, L${rtx.label}`];
+            return [`bgt ${tas.lhs}, ${tas.rhs}, L${tas.label}`];
         case 'loadSymbolAddress':
-            return [`la ${getRegisterName(rtx.to)}, ${rtx.symbolName}`];
+            return [`la ${tas.to}, ${tas.symbolName}`];
         case 'loadGlobal':
-            return [`lw ${getRegisterName(rtx.to)}, ${rtx.from}`];
+            return [`lw ${tas.to}, ${tas.from}`];
         case 'storeGlobal':
-            return [`sw ${getRegisterName(rtx.from)}, ${getRegisterName(rtx.to)}`];
+            return [`sw ${tas.from}, ${tas.to}`];
         case 'loadMemory':
-            return [`lw ${getRegisterName(rtx.to)}, ${rtx.offset}(${getRegisterName(rtx.from)})`];
+            return [`lw ${tas.to}, ${tas.offset}(${tas.from})`];
         case 'loadMemoryByte':
-            return [`lb ${getRegisterName(rtx.to)}, (${getRegisterName(rtx.address)})`];
+            return [`lb ${tas.to}, (${tas.address})`];
         case 'storeMemory':
-            return [`sw ${getRegisterName(rtx.from)}, ${rtx.offset}(${getRegisterName(rtx.address)})`];
+            return [`sw ${tas.from}, ${tas.offset}(${tas.address})`];
         case 'storeZeroToMemory':
-            return [`sw $0, ${rtx.offset}(${getRegisterName(rtx.address)})`];
+            return [`sw $0, ${tas.offset}(${tas.address})`];
         case 'storeMemoryByte':
-            return [`sb ${getRegisterName(rtx.contents)}, (${getRegisterName(rtx.address)})`];
+            return [`sb ${tas.contents}, (${tas.address})`];
         case 'callByRegister':
-            return [`jal ${getRegisterName(rtx.function)}`];
+            return [`jal ${tas.function}`];
         case 'callByName':
-            return [`jal ${rtx.function}`];
+            return [`jal ${tas.function}`];
         case 'returnToCaller':
             return [`jr $ra`];
         case 'push':
-            return [`sw ${getRegisterName(rtx.register)}, ($sp)`, `addiu, $sp, $sp, -4`];
+            return [`sw ${tas.register}, ($sp)`, `addiu, $sp, $sp, -4`];
         case 'pop':
-            return [`addiu $sp, $sp, 4`, `lw ${getRegisterName(rtx.register)}, ($sp)`];
+            return [`addiu $sp, $sp, 4`, `lw ${tas.register}, ($sp)`];
         default:
-            throw debug(`${(rtx as any).kind} unhandled in registerTransferExpressionToMipsWithoutComment`);
+            throw debug(`${(tas as any).kind} unhandled in threeAddressCodeToMipsWithoutComment`);
     }
 };
 
-const registerTransferExpressionToMips = (rtx: ThreeAddressStatement): string[] => {
-    if (typeof rtx == 'string') return [rtx];
-    return registerTransferExpressionToMipsWithoutComment(rtx).map(asm => `${asm} # ${rtx.why}`);
+const threeAddressCodeToMips = (tas: ThreeAddressStatement): string[] => {
+    return threeAddressCodeToTarget(tas, syscallNumbers, mipsRegisterTypes, getMipsRegister)
+        .map(threeAddressCodeToMipsWithoutComment)
+        .map(asm => `${asm} # ${tas.why}`);
 };
 
 const bytesInWord = 4;
@@ -221,26 +225,32 @@ const runtimeFunctions: ThreeAddressFunction[] = mipsRuntime.map(f => f(bytesInW
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToMips = ({ name, instructions, numRegistersToSave, isMain }: ThreeAddressFunction): string => {
-    const preamble = !isMain
+    const statements: TargetThreeAddressStatement<MipsRegister>[] = flatten(
+        instructions.map(instruction =>
+            threeAddressCodeToTarget(instruction, syscallNumbers, mipsRegisterTypes, getMipsRegister)
+        )
+    );
+
+    const preamble: TargetThreeAddressStatement<MipsRegister>[] = !isMain
         ? [
-              { kind: 'push', register: { name: '$ra' }, why: 'Always save return address' },
-              ...saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
+              { kind: 'push', register: '$ra', why: 'Always save return address' },
+              ...saveRegistersCode<MipsRegister>(firstRegister, nextTemporary, getMipsRegister, numRegistersToSave),
           ]
         : [];
-    const epilogue = !isMain
+    const epilogue: TargetThreeAddressStatement<MipsRegister>[] = !isMain
         ? [
-              ...restoreRegistersCode(firstRegister, nextTemporary, numRegistersToSave),
-              { kind: 'pop', register: { name: '$ra' }, why: 'Always restore return address' },
+              ...restoreRegistersCode<MipsRegister>(firstRegister, nextTemporary, getMipsRegister, numRegistersToSave),
+              { kind: 'pop', register: '$ra', why: 'Always restore return address' },
               { kind: 'returnToCaller', why: 'Done' },
           ]
         : [];
-    const fullRtl = [
+    const fullRtl: TargetThreeAddressStatement<MipsRegister>[] = [
         { kind: 'functionLabel', name, why: 'Function entry point' },
         ...preamble,
-        ...instructions,
+        ...statements,
         ...epilogue,
     ];
-    return join(flatten(fullRtl.map(registerTransferExpressionToMips)), '\n');
+    return join(flatten(fullRtl.map(threeAddressCodeToMipsWithoutComment)), '\n');
 };
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
@@ -252,7 +262,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
 
     const mainProgramInstructions: ThreeAddressStatement[] = flatten(
         program.statements.map(statement => {
-            const compiledProgram = astToRegisterTransferLanguage(
+            const compiledProgram = astToThreeAddressCode(
                 {
                     ast: statement,
                     registerAssignment,
