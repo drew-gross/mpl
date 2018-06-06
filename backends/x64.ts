@@ -8,7 +8,7 @@ import {
     myFreeRuntimeFunction,
     stringEqualityRuntimeFunction,
     stringConcatenateRuntimeFunction,
-} from './registerTransferLanguageRuntime.js';
+} from './threeAddressCodeRuntime.js';
 import join from '../util/join.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
@@ -21,14 +21,17 @@ import {
     stringLiteralName,
     saveRegistersCode,
     restoreRegistersCode,
+    RegisterDescription,
 } from '../backend-utils.js';
 import { Register } from '../register.js';
 import {
-    astToRegisterTransferLanguage,
+    astToThreeAddressCode,
     constructFunction,
-    RegisterTransferLanguageExpression,
-    RegisterTransferLanguageFunction,
-} from './registerTransferLanguage.js';
+    ThreeAddressStatement,
+    ThreeAddressFunction,
+    TargetThreeAddressStatement,
+    threeAddressCodeToTarget,
+} from './threeAddressCode.js';
 import flatten from '../util/list/flatten.js';
 import { VariableDeclaration, BackendInputs, StringLiteralData } from '../api.js';
 import { exec } from 'child-process-promise';
@@ -40,155 +43,140 @@ import { assignRegisters } from '../controlFlowGraph.js';
 
 const generalPurposeRegisters = ['r11', 'r12', 'r13', 'r14', 'r15', 'rdi', 'rsi', 'rbx'];
 
-const specialRegisterNames = {
-    functionArgument1: 'r8',
-    functionArgument2: 'r9',
-    functionArgument3: 'r10',
+type X64Register =
+    // function args
+    | 'r8'
+    | 'r9'
+    | 'r10'
+    // function result
+    | 'rax'
+    // general purpose
+    | 'r11'
+    | 'r12'
+    | 'r13'
+    | 'r14'
+    | 'r15'
+    | 'rdi'
+    | 'rsi'
+    | 'rbx'
+    // Syscall arg or other non-general-purpose
+    | 'rdx';
+
+const x64RegisterTypes: RegisterDescription<X64Register> = {
+    generalPurpose: ['r11', 'r12', 'r13', 'r14', 'r15', 'rdi', 'rsi', 'rbx'],
+    functionArgument: ['r8', 'r9', 'r10'],
     functionResult: 'rax',
+    syscallArgument: ['rdi', 'rsi', 'rdx', 'r10', 'r8', 'r9'],
+    syscallSelectAndResult: 'rax',
 };
 
-const getRegisterName = (registerAssignment: RegisterAssignment, register: Register): string => {
-    if (typeof register == 'string') {
-        return specialRegisterNames[register];
+const syscallNumbers = {
+    // printInt: 0, // Should be unused on x64
+    print: 0x02000004,
+    sbrk: 0x02000045,
+    exit: 0x02000001,
+    mmap: 0x020000c5,
+};
+
+const getX64Register = (r: Register): X64Register => {
+    if (typeof r == 'string') {
+        switch (r) {
+            case 'functionArgument1':
+                return x64RegisterTypes.functionArgument[0];
+            case 'functionArgument2':
+                return x64RegisterTypes.functionArgument[1];
+            case 'functionArgument3':
+                return x64RegisterTypes.functionArgument[2];
+            case 'functionResult':
+                return x64RegisterTypes.functionResult;
+        }
     } else {
-        return (registerAssignment[register.name] as any).name;
+        return r.name as X64Register;
     }
+    throw debug('should not get here');
 };
 
-const registerTransferExpressionToX64WithoutComment = (
-    registerAssignment: RegisterAssignment,
-    rtx: RegisterTransferLanguageExpression
-): string[] => {
-    const getReg = getRegisterName.bind(registerAssignment);
-    switch (rtx.kind) {
+const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X64Register>): string[] => {
+    switch (tas.kind) {
         case 'comment':
             return [''];
         case 'loadImmediate':
-            return [`mov ${getReg(rtx.destination)}, ${rtx.value}`];
+            return [`mov ${tas.destination}, ${tas.value}`];
         case 'move':
-            return [`mov ${getReg(rtx.to)}, ${getReg(rtx.from)}`];
-        case 'returnValue':
-            return [`mov ${specialRegisterNames.functionResult}, ${getReg(rtx.source)}`];
+            return [`mov ${tas.to}, ${tas.from}`];
         case 'subtract':
-            return [
-                `mov ${getReg(rtx.destination)}, ${getReg(rtx.lhs)}`,
-                `sub ${getReg(rtx.destination)}, ${getReg(rtx.rhs)}`,
-            ];
+            return [`mov ${tas.destination}, ${tas.lhs}`, `sub ${tas.destination}, ${tas.rhs}`];
         case 'add':
-            if (getReg(rtx.lhs) == getReg(rtx.destination)) {
-                return [`add ${getReg(rtx.destination)}, ${getReg(rtx.rhs)}`];
+            if (tas.lhs == tas.destination) {
+                return [`add ${tas.destination}, ${tas.rhs}`];
             }
-            if (getReg(rtx.rhs) == getReg(rtx.destination)) {
-                return [`add ${getReg(rtx.destination)}, ${getReg(rtx.lhs)}`];
+            if (tas.rhs == tas.destination) {
+                return [`add ${tas.destination}, ${tas.lhs}`];
             }
-            return [
-                `mov ${getReg(rtx.destination)}, ${getReg(rtx.lhs)}`,
-                `add ${getReg(rtx.destination)}, ${getReg(rtx.rhs)}`,
-            ];
+            return [`mov ${tas.destination}, ${tas.lhs}`, `add ${tas.destination}, ${tas.rhs}`];
         case 'multiply':
             return [
-                `mov rax, ${getReg(rtx.lhs)}`, // mul does rax * arg
-                `mul ${getReg(rtx.rhs)}`,
-                `mov ${getReg(rtx.destination)}, rax`, // mul puts result in rax:rdx
+                `mov rax, ${tas.lhs}`, // mul does rax * arg
+                `mul ${tas.rhs}`,
+                `mov ${tas.destination}, rax`, // mul puts result in rax:rdx
             ];
         case 'increment':
-            return [`inc ${getReg(rtx.register)};`];
+            return [`inc ${tas.register};`];
         case 'addImmediate':
-            return [`add ${getReg(rtx.register)}, ${rtx.amount}`];
+            return [`add ${tas.register}, ${tas.amount}`];
         case 'gotoIfEqual':
-            return [`cmp ${getReg(rtx.lhs)}, ${getReg(rtx.rhs)}`, `je ${rtx.label}`];
+            return [`cmp ${tas.lhs}, ${tas.rhs}`, `je ${tas.label}`];
         case 'gotoIfNotEqual':
-            return [`cmp ${getReg(rtx.lhs)}, ${getReg(rtx.rhs)}`, `jne ${rtx.label}`];
+            return [`cmp ${tas.lhs}, ${tas.rhs}`, `jne ${tas.label}`];
         case 'gotoIfZero':
-            return [`cmp ${getReg(rtx.register)}, 0`, `jz ${rtx.label}`];
+            return [`cmp ${tas.register}, 0`, `jz ${tas.label}`];
         case 'gotoIfGreater':
-            return [`cmp ${getReg(rtx.lhs)}, ${getReg(rtx.rhs)}`, `jg ${rtx.label}`];
+            return [`cmp ${tas.lhs}, ${tas.rhs}`, `jg ${tas.label}`];
         case 'goto':
-            return [`jmp ${rtx.label}`];
+            return [`jmp ${tas.label}`];
         case 'label':
-            return [`${rtx.name}:`];
+            return [`${tas.name}:`];
         case 'functionLabel':
-            return [`${rtx.name}:`];
+            return [`${tas.name}:`];
         case 'storeGlobal':
-            return [`mov [rel ${getReg(rtx.to)}], ${getReg(rtx.from)}`];
+            return [`mov [rel ${tas.to}], ${tas.from}`];
         case 'loadGlobal':
-            return [`mov ${getReg(rtx.to)}, [rel ${rtx.from}]`];
+            return [`mov ${tas.to}, [rel ${tas.from}]`];
         case 'loadMemory':
-            return [`mov ${getReg(rtx.to)}, [${getReg(rtx.from)}+${rtx.offset}]`];
+            return [`mov ${tas.to}, [${tas.from}+${tas.offset}]`];
         case 'storeMemory':
-            return [`mov [${getReg(rtx.address)}+${rtx.offset}], ${getReg(rtx.from)}`];
+            return [`mov [${tas.address}+${tas.offset}], ${tas.from}`];
         case 'storeZeroToMemory':
-            return [`mov byte [${getReg(rtx.address)}+${rtx.offset}], 0`];
+            return [`mov byte [${tas.address}+${tas.offset}], 0`];
         case 'storeMemoryByte':
-            return [`mov byte [${getReg(rtx.address)}], ${getReg(rtx.contents)}b`];
+            return [`mov byte [${tas.address}], ${tas.contents}b`];
         case 'loadMemoryByte':
-            return [`movsx ${getReg(rtx.to)}, byte [${getReg(rtx.address)}]`];
+            return [`movsx ${tas.to}, byte [${tas.address}]`];
         case 'loadSymbolAddress':
-            return [`lea ${getReg(rtx.to)}, [rel ${rtx.symbolName}]`];
+            return [`lea ${tas.to}, [rel ${tas.symbolName}]`];
         case 'callByRegister':
-            return [`call ${getReg(rtx.function)}`];
+            return [`call ${tas.function}`];
         case 'callByName':
-            return [`call ${rtx.function}`];
+            return [`call ${tas.function}`];
         case 'returnToCaller':
             return [`ret`];
         case 'syscall':
-            // TOOD: DRY with syscall impl in mips (note: unlike mips, we don't need to save/restore syscall
-            // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
-            if (rtx.arguments.length > 6) throw debug('x64 only supports 2 syscall args');
-            const syscallArgRegisters = ['rdi', 'rsi', 'rdx', 'r10', 'r8', 'r9'];
-            const syscallSelectAndResultRegister = 'rax';
-            const syscallNumbers = {
-                // printInt: 0, // Should be unused on x64
-                print: 0x02000004,
-                sbrk: 0x02000045,
-                exit: 0x02000001,
-                mmap: 0x020000c5,
-            };
-            const registersToSave: string[] = [];
-            if (rtx.destination && getReg(rtx.destination) != syscallSelectAndResultRegister) {
-                registersToSave.push(syscallSelectAndResultRegister);
-            }
-            rtx.arguments.forEach((_, index) => {
-                const argRegister = syscallArgRegisters[index];
-                if (rtx.destination && getReg(rtx.destination) == argRegister) {
-                    return;
-                }
-                registersToSave.push(argRegister);
-            });
-            const result = [
-                ...registersToSave.map(r => `push ${r}`),
-                ...rtx.arguments.map(
-                    (arg, index) =>
-                        typeof arg == 'number'
-                            ? `mov ${syscallArgRegisters[index]}, ${arg}`
-                            : `mov ${syscallArgRegisters[index]}, ${getReg(arg)}`
-                ),
-                `mov ${syscallSelectAndResultRegister}, ${syscallNumbers[rtx.name]}`,
-                'syscall',
-                ...(rtx.destination ? [`mov ${getReg(rtx.destination)}, ${syscallSelectAndResultRegister}`] : []),
-                ...registersToSave.reverse().map(r => `pop ${r}`),
-            ];
-            return result;
+            return ['syscall'];
         case 'push':
-            return [`push ${getReg(rtx.register)}`];
+            return [`push ${tas.register}`];
         case 'pop':
-            return [`pop ${getReg(rtx.register)}`];
+            return [`pop ${tas.register}`];
         default:
-            throw debug(`${(rtx as any).kind} unhandled in registerTransferExpressionToX64`);
+            throw debug(`${(tas as any).kind} unhandled in threeAddressCodeToX64WithoutComment`);
     }
 };
 
-const registerTransferExpressionToX64 = (
-    registerAssignment: RegisterAssignment,
-    rtx: RegisterTransferLanguageExpression
-): string[] => {
-    if (typeof rtx == 'string') return [rtx];
-    return registerTransferExpressionToX64WithoutComment(registerAssignment, rtx).map(asm => `${asm}; ${rtx.why}`);
-};
+const threeAddressCodeToX64 = (tas: TargetThreeAddressStatement<X64Register>): string[] =>
+    threeAddressCodeToX64WithoutComment(tas).map(asm => `${asm}; ${tas.why}`);
 
 const bytesInWord = 8;
 
-const runtimeFunctions: RegisterTransferLanguageFunction[] = [
+const runtimeFunctions: ThreeAddressFunction[] = [
     length,
     printWithWriteRuntimeFunction,
     stringEqualityRuntimeFunction,
@@ -200,16 +188,24 @@ const runtimeFunctions: RegisterTransferLanguageFunction[] = [
 ].map(f => f(bytesInWord));
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
-const rtlFunctionToX64 = (rtlf: RegisterTransferLanguageFunction): string => {
-    const registerAssignment = assignRegisters(rtlf, generalPurposeRegisters);
-    const fullRtl: RegisterTransferLanguageExpression[] = [
+const rtlFunctionToX64 = ({ name, instructions, numRegistersToSave, isMain }: ThreeAddressFunction): string => {
+    const statements: TargetThreeAddressStatement<X64Register>[] = flatten(
+        instructions.map(instruction =>
+            threeAddressCodeToTarget(instruction, syscallNumbers, x64RegisterTypes, getX64Register)
+        )
+    );
+    const fullRtl: TargetThreeAddressStatement<X64Register>[] = [
         { kind: 'functionLabel', name, why: 'Function entry point' },
-        ...(rtlf.isMain ? [] : saveRegistersCode(registerAssignment)),
-        ...rtlf.instructions,
-        ...(rtlf.isMain ? [] : restoreRegistersCode(registerAssignment)),
-        ...(rtlf.isMain ? [] : [{ kind: 'returnToCaller', why: 'Done' } as RegisterTransferLanguageExpression]),
+        ...(isMain
+            ? []
+            : saveRegistersCode<X64Register>(firstRegister, nextTemporary, getX64Register, numRegistersToSave)),
+        ...statements,
+        ...(isMain
+            ? []
+            : restoreRegistersCode<X64Register>(firstRegister, nextTemporary, getX64Register, numRegistersToSave)),
+        ...(isMain ? [] : [{ kind: 'returnToCaller' as 'returnToCaller', why: 'Done' }]),
     ];
-    return join(flatten(fullRtl.map(e => registerTransferExpressionToX64(registerAssignment, e))), '\n');
+    return join(flatten(fullRtl.map(threeAddressCodeToX64)), '\n');
 };
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
@@ -218,12 +214,12 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     const temporaryNameMaker = idAppender();
     const labelMaker = idAppender();
-    let x64Functions: RegisterTransferLanguageFunction[] = functions.map(f =>
+    let x64Functions: ThreeAddressFunction[] = functions.map(f =>
         constructFunction(f, globalDeclarations, stringLiterals, labelMaker)
     );
     const mainProgramInstructions = flatten(
         program.statements.map(statement => {
-            const compiledProgram = astToRegisterTransferLanguage({
+            const compiledProgram = astToThreeAddressCode(
                 ast: statement,
                 destination: 'functionResult',
                 globalDeclarations,
@@ -237,7 +233,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         })
     );
 
-    let x64Program: RegisterTransferLanguageFunction = {
+    let x64Program: ThreeAddressFunction = {
         name: 'start',
         isMain: true,
         instructions: [

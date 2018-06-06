@@ -9,13 +9,14 @@ import {
     stringLiteralName,
     saveRegistersCode,
     restoreRegistersCode,
+    RegisterDescription,
 } from '../backend-utils.js';
 import { Register, toString as registerToString } from '../register.js';
 import { Function } from '../api.js';
 
 type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 
-export type RegisterTransferLanguageExpression = { why: string } & (
+export type ThreeAddressStatement = { why: string } & (
     | { kind: 'comment' }
     | { kind: 'syscall'; name: SyscallName; arguments: (Register | number)[]; destination: Register | undefined }
     | { kind: 'move'; from: Register; to: Register }
@@ -42,20 +43,48 @@ export type RegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'loadSymbolAddress'; to: Register; symbolName: string }
     | { kind: 'callByName'; function: string }
     | { kind: 'callByRegister'; function: Register }
-    | { kind: 'returnToCaller' } // TODO: replace this with targetRTL
-    | { kind: 'returnValue'; source: Register } // TODO: replace this with a move to functionResult
-    | { kind: 'push'; register: Register } // TODO: replace this with targetRTL
-    | { kind: 'pop'; register: Register }); // TODO: replace this with targetRTL
+    | { kind: 'returnToCaller' });
 
-export type RegisterTransferLanguage = RegisterTransferLanguageExpression[];
+export type ThreeAddressCode = ThreeAddressStatement[];
 
-export type RegisterTransferLanguageFunction = {
-    instructions: RegisterTransferLanguage;
+export type ThreeAddressFunction = {
+    instructions: ThreeAddressCode;
     name: string;
     isMain: boolean;
 };
 
-export const toString = (rtx: RegisterTransferLanguageExpression): string => {
+export type TargetThreeAddressStatement<TargetRegister> = { why: string } & (
+    | { kind: 'comment' }
+    | { kind: 'syscall' }
+    | { kind: 'move'; from: TargetRegister; to: TargetRegister }
+    | { kind: 'loadImmediate'; value: number; destination: TargetRegister }
+    | { kind: 'addImmediate'; register: TargetRegister; amount: number }
+    | { kind: 'subtract'; lhs: TargetRegister; rhs: TargetRegister; destination: TargetRegister }
+    | { kind: 'add'; lhs: TargetRegister; rhs: TargetRegister; destination: TargetRegister }
+    | { kind: 'multiply'; lhs: TargetRegister; rhs: TargetRegister; destination: TargetRegister }
+    | { kind: 'increment'; register: TargetRegister }
+    | { kind: 'label'; name: string }
+    | { kind: 'functionLabel'; name: string }
+    | { kind: 'goto'; label: string }
+    | { kind: 'gotoIfEqual'; lhs: TargetRegister; rhs: TargetRegister; label: string }
+    | { kind: 'gotoIfNotEqual'; lhs: TargetRegister; rhs: TargetRegister; label: string }
+    | { kind: 'gotoIfZero'; register: TargetRegister; label: string }
+    | { kind: 'gotoIfGreater'; lhs: TargetRegister; rhs: TargetRegister; label: string }
+    | { kind: 'storeGlobal'; from: TargetRegister; to: TargetRegister }
+    | { kind: 'loadGlobal'; from: string; to: TargetRegister }
+    | { kind: 'storeMemory'; from: TargetRegister; address: TargetRegister; offset: number }
+    | { kind: 'storeMemoryByte'; address: TargetRegister; contents: TargetRegister }
+    | { kind: 'storeZeroToMemory'; address: TargetRegister; offset: number }
+    | { kind: 'loadMemory'; from: TargetRegister; to: TargetRegister; offset: number }
+    | { kind: 'loadMemoryByte'; address: TargetRegister; to: TargetRegister }
+    | { kind: 'loadSymbolAddress'; to: TargetRegister; symbolName: string }
+    | { kind: 'callByName'; function: string }
+    | { kind: 'callByRegister'; function: TargetRegister }
+    | { kind: 'returnToCaller' }
+    | { kind: 'push'; register: TargetRegister }
+    | { kind: 'pop'; register: TargetRegister });
+
+export const toString = (rtx: ThreeAddressStatement): string => {
     switch (rtx.kind) {
         case 'comment':
             return ``;
@@ -110,29 +139,24 @@ export const toString = (rtx: RegisterTransferLanguageExpression): string => {
             return `${rtx.function}()`;
         case 'returnToCaller':
             return `return`;
-        case 'returnValue':
-            return `ret = ${registerToString(rtx.source)}`;
-        case 'push':
-            return `push ${registerToString(rtx.register)}`;
-        case 'pop':
-            return `pop ${registerToString(rtx.register)}`;
         default:
             throw debug('Unrecognized RTX kind in toString');
     }
 };
 
-export const astToRegisterTransferLanguage = (
+export const astToThreeAddressCode = (
     input: BackendOptions
-): CompiledExpression<RegisterTransferLanguageExpression> => {
-    const { ast, destination, globalDeclarations, stringLiterals, variablesInScope, makeLabel, makeTemporary } = input;
-    const recurse = newInput => astToRegisterTransferLanguage({ ...input, ...newInput });
+): CompiledExpression<ThreeAddressStatement> => {
+    const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
+    if (isEqual(currentTemporary, destination)) throw debug('todo'); // Sanity check to make sure caller remembered to provide a new temporary
+    const recurse = newInput => astToThreeAddressCode({ ...input, ...newInput }, nextTemporary, makeLabel);
     switch (ast.kind) {
         case 'number':
-            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
+            return compileExpression<ThreeAddressStatement>([], ([]) => [
                 { kind: 'loadImmediate', value: ast.value, destination: destination, why: 'Load number literal' },
             ]);
         case 'booleanLiteral':
-            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
+            return compileExpression<ThreeAddressStatement>([], ([]) => [
                 {
                     kind: 'loadImmediate',
                     value: ast.value ? 1 : 0,
@@ -143,7 +167,7 @@ export const astToRegisterTransferLanguage = (
         case 'stringLiteral': {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
             if (!stringLiteralData) throw debug('todo');
-            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
+            return compileExpression<ThreeAddressStatement>([], ([]) => [
                 {
                     kind: 'loadSymbolAddress',
                     symbolName: stringLiteralName(stringLiteralData),
@@ -158,12 +182,13 @@ export const astToRegisterTransferLanguage = (
                 ast: ast.expression,
                 destination: result,
             });
-            return compileExpression<RegisterTransferLanguageExpression>([subExpression], ([e1]) => [
+            return compileExpression<ThreeAddressStatement>([subExpression], ([e1]) => [
                 ...e1,
                 {
-                    kind: 'returnValue',
-                    source: result,
-                    why: 'Retrun previous expression',
+                    kind: 'move',
+                    from: currentTemporary,
+                    to: 'functionResult',
+                    why: 'Return previous expression',
                 },
             ]);
         case 'subtraction': {
@@ -172,7 +197,7 @@ export const astToRegisterTransferLanguage = (
             const computeLhs = recurse({ ast: ast.lhs, destination: lhs });
             const computeRhs = recurse({ ast: ast.rhs, destination: rhs });
 
-            return compileExpression<RegisterTransferLanguageExpression>(
+            return compileExpression<ThreeAddressStatement>(
                 [computeLhs, computeRhs],
                 ([storeLeft, storeRight]) => [
                     ...storeLeft,
@@ -193,7 +218,7 @@ export const astToRegisterTransferLanguage = (
             const computeLhs = recurse({ ast: ast.lhs, destination: lhs });
             const computeRhs = recurse({ ast: ast.rhs, destination: rhs });
 
-            return compileExpression<RegisterTransferLanguageExpression>(
+            return compileExpression<ThreeAddressStatement>(
                 [computeLhs, computeRhs],
                 ([storeLeft, storeRight]) => [
                     ...storeLeft,
@@ -215,8 +240,9 @@ export const astToRegisterTransferLanguage = (
             const computeCondition = recurse({ ast: ast.condition, destination: condition });
             const ifTrueExpression = recurse({ ast: ast.ifTrue });
             const ifFalseExpression = recurse({ ast: ast.ifFalse });
-            return compileExpression<RegisterTransferLanguageExpression>(
+            return compileExpression<ThreeAddressStatement>(
                 [computeCondition, ifTrueExpression, ifFalseExpression],
+                [boolExpression, ifTrueExpression, ifFalseExpression],
                 ([e1, e2, e3]) => [
                     ...e1,
                     {
@@ -234,7 +260,7 @@ export const astToRegisterTransferLanguage = (
             );
         }
         case 'functionLiteral':
-            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
+            return compileExpression<ThreeAddressStatement>([], ([]) => [
                 {
                     kind: 'loadSymbolAddress',
                     to: destination,
@@ -244,7 +270,7 @@ export const astToRegisterTransferLanguage = (
             ]);
         case 'callExpression': {
             const functionName = ast.name;
-            let callInstructions: (string | RegisterTransferLanguageExpression)[] = [];
+            let callInstructions: (string | ThreeAddressStatement)[] = [];
             if (builtinFunctions.map(b => b.name).includes(functionName)) {
                 const functionPointer = makeTemporary('function_pointer');
                 callInstructions = [
@@ -305,7 +331,7 @@ export const astToRegisterTransferLanguage = (
                 ...argumentComputer,
             ];
 
-            return compileExpression<RegisterTransferLanguageExpression>(computeArgumentsMips, argumentComputers => [
+            return compileExpression<ThreeAddressStatement>(computeArgumentsMips, argumentComputers => [
                 ...flatten(argumentComputers.map(argumentComputerToMips)),
                 { kind: 'comment', why: 'call ${functionName}' },
                 ...callInstructions,
@@ -328,7 +354,7 @@ export const astToRegisterTransferLanguage = (
                     ast: ast.rhs,
                     destination: 'functionArgument2',
                 });
-                return compileExpression<RegisterTransferLanguageExpression>(
+                return compileExpression<ThreeAddressStatement>(
                     [storeLeftInstructions, storeRightInstructions],
                     ([e1, e2]) => [
                         { kind: 'comment', why: 'Store left side in s0' },
@@ -353,7 +379,7 @@ export const astToRegisterTransferLanguage = (
                 const equalLabel = makeLabel('equal');
                 const endOfConditionLabel = makeLabel('endOfCondition');
 
-                return compileExpression<RegisterTransferLanguageExpression>(
+                return compileExpression<ThreeAddressStatement>(
                     [storeLeftInstructions, storeRightInstructions],
                     ([storeLeft, storeRight]) => [
                         ...storeLeft,
@@ -387,7 +413,7 @@ export const astToRegisterTransferLanguage = (
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
-                        return compileExpression<RegisterTransferLanguageExpression>([computeRhs], ([e1]) => [
+                        return compileExpression<ThreeAddressStatement>([rhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'storeGlobal',
@@ -398,7 +424,7 @@ export const astToRegisterTransferLanguage = (
                         ]);
                     case 'String':
                         const stringPointer = makeTemporary('string_pointer');
-                        return compileExpression<RegisterTransferLanguageExpression>([computeRhs], ([e1]) => [
+                        return compileExpression<ThreeAddressStatement>([rhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'move',
@@ -453,7 +479,7 @@ export const astToRegisterTransferLanguage = (
             const lhs: Register = { name: ast.destination };
             if (globalDeclarations.some(declaration => declaration.name === lhs.name)) {
                 const reassignmentRhs = makeTemporary('reassignment_rhs');
-                const rhs: CompiledExpression<RegisterTransferLanguageExpression> = recurse({
+                const rhs: CompiledExpression<ThreeAddressStatement> = recurse({
                     ast: ast.expression,
                     destination: reassignmentRhs,
                 });
@@ -462,7 +488,7 @@ export const astToRegisterTransferLanguage = (
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
-                        return compileExpression<RegisterTransferLanguageExpression>([rhs], ([e1]) => [
+                        return compileExpression<ThreeAddressStatement>([rhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'storeGlobal',
@@ -480,7 +506,7 @@ export const astToRegisterTransferLanguage = (
                                     to: oldData,
                                     from: lhs.name,
                                     why: 'Save global for freeing after assignment',
-                                } as RegisterTransferLanguageExpression,
+                                } as ThreeAddressStatement,
                             ],
                             execute: [],
                             cleanup: [
@@ -495,11 +521,9 @@ export const astToRegisterTransferLanguage = (
                                     function: 'my_free',
                                     why: 'Free string that is no longer accessible',
                                 },
-                            ] as RegisterTransferLanguageExpression[],
+                            ] as ThreeAddressStatement[],
                         };
-                        return compileExpression<RegisterTransferLanguageExpression>(
-                            [rhs, prepAndCleanup],
-                            ([e1, _]) => [
+                        return compileExpression<ThreeAddressStatement>([rhs, prepAndCleanup], ([e1, _]) => [
                                 ...e1,
                                 {
                                     kind: 'move',
@@ -535,7 +559,7 @@ export const astToRegisterTransferLanguage = (
                                 },
                                 { kind: 'callByName', function: 'string_copy', why: 'Copy new string to destination' },
                             ]
-                        );
+                        ));
                     default:
                         throw debug('todo');
                 }
@@ -562,7 +586,7 @@ export const astToRegisterTransferLanguage = (
                 ast: ast.rhs,
                 destination: rightSideDestination,
             });
-            const cleanup: CompiledExpression<RegisterTransferLanguageExpression> = {
+            const cleanup: CompiledExpression<ThreeAddressStatement> = {
                 prepare: [],
                 execute: [],
                 cleanup: [
@@ -576,7 +600,7 @@ export const astToRegisterTransferLanguage = (
                     { kind: 'callByName', function: 'my_free', why: 'Freeing temporary from concat' },
                 ],
             };
-            return compileExpression<RegisterTransferLanguageExpression>(
+            return compileExpression<ThreeAddressStatement>(
                 [storeLeftInstructions, storeRightInstructions, cleanup],
                 ([e1, e2, _]) => [
                     {
@@ -666,7 +690,7 @@ export const astToRegisterTransferLanguage = (
             if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
                 if (!declaration) throw debug('todo');
-                return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
+                return compileExpression<ThreeAddressStatement>([], ([]) => [
                     {
                         kind: 'loadGlobal',
                         to: destination,
@@ -676,7 +700,7 @@ export const astToRegisterTransferLanguage = (
                 ]);
             }
             const identifierRegister = variablesInScope[identifierName];
-            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
+            return compileExpression<ThreeAddressStatement>([], ([]) => [
                 {
                     kind: 'move',
                     from: identifierRegister,
@@ -697,7 +721,7 @@ export const astToRegisterTransferLanguage = (
                 ast: ast.rhs,
                 destination: rightSideDestination,
             });
-            return compileExpression<RegisterTransferLanguageExpression>(
+            return compileExpression<ThreeAddressStatement>(
                 [storeLeftInstructions, storeRightInstructions],
                 ([storeLeft, storeRight]) => [
                     {
@@ -730,13 +754,7 @@ export const constructFunction = (
     globalDeclarations,
     stringLiterals,
     makeLabel
-): RegisterTransferLanguageFunction => {
-    let temporaryId = 0;
-    const makeTemporary = (name: string): Register => {
-        temporaryId++;
-        return { name: `${name}_${temporaryId}` };
-    };
-
+): ThreeAddressFunction => {
     const argumentRegisters: Register[] = ['functionArgument1', 'functionArgument2', 'functionArgument3'];
     if (f.parameters.length > 3) throw debug('todo'); // Don't want to deal with this yet.
     if (argumentRegisters.length < 3) throw debug('todo');
@@ -753,7 +771,7 @@ export const constructFunction = (
 
     const functionCode = flatten(
         f.statements.map(statement => {
-            const compiledProgram = astToRegisterTransferLanguage({
+            const compiledProgram = astToThreeAddressCode({
                 ast: statement,
                 variablesInScope,
                 destination: 'functionResult',
@@ -783,4 +801,125 @@ export const constructFunction = (
         })
     );
     return { name: f.name, instructions: functionCode, isMain: false };
+};
+
+export const threeAddressCodeToTarget = <TargetRegister>(
+    tas: ThreeAddressStatement,
+    syscallNumbers,
+    registerTypes: RegisterDescription<TargetRegister>,
+    getRegister
+): TargetThreeAddressStatement<TargetRegister>[] => {
+    switch (tas.kind) {
+        case 'comment':
+        case 'functionLabel':
+        case 'returnToCaller':
+        case 'callByName':
+        case 'goto':
+        case 'label':
+            return [tas];
+        case 'syscall':
+            // TOOD: DRY with syscall impl in mips
+            // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
+            if (tas.arguments.length > registerTypes.syscallArgument.length)
+                throw debug(`this backend only supports ${registerTypes.syscallArgument.length} syscall args`);
+            const registersToSave: TargetRegister[] = [];
+
+            if (tas.destination && getRegister(tas.destination) != registerTypes.syscallSelectAndResult) {
+                registersToSave.push(registerTypes.syscallSelectAndResult);
+            }
+            tas.arguments.forEach((_, index) => {
+                const argRegister = registerTypes.syscallArgument[index];
+                if (tas.destination && getRegister(tas.destination) == argRegister) {
+                    return;
+                }
+                registersToSave.push(argRegister);
+            });
+            // TODO: Allow a "replacements" feature, to convert complex/unsupported RTL instructions into supported ones
+            const result: TargetThreeAddressStatement<TargetRegister>[] = [
+                ...registersToSave.map(r => ({
+                    kind: 'push' as 'push',
+                    register: r,
+                    why: 'save registers',
+                })),
+                ...tas.arguments.map(
+                    (arg, index) =>
+                        typeof arg == 'number'
+                            ? {
+                                  kind: 'loadImmediate' as 'loadImmediate',
+                                  value: arg,
+                                  destination: registerTypes.syscallArgument[index],
+                                  why: 'syscallArg = immediate',
+                              }
+                            : {
+                                  kind: 'move' as 'move',
+                                  from: getRegister(arg),
+                                  to: registerTypes.syscallArgument[index],
+                                  why: 'syscallArg = register',
+                              }
+                ),
+                {
+                    kind: 'loadImmediate',
+                    value: syscallNumbers[tas.name],
+                    destination: registerTypes.syscallSelectAndResult,
+                    why: 'syscall select',
+                },
+                { kind: 'syscall', why: 'syscall' },
+                ...(tas.destination
+                    ? ([
+                          {
+                              kind: 'move',
+                              from: registerTypes.syscallSelectAndResult,
+                              to: getRegister(tas.destination),
+                              why: 'destination = syscallResult',
+                          },
+                      ] as TargetThreeAddressStatement<TargetRegister>[])
+                    : []),
+                ...registersToSave
+                    .reverse()
+                    .map(r => ({ kind: 'pop' as 'pop', register: r, why: 'restore registers' })),
+            ];
+            return result;
+        case 'move':
+            return [{ ...tas, to: getRegister(tas.to), from: getRegister(tas.from) }];
+        case 'loadImmediate':
+            return [{ ...tas, destination: getRegister(tas.destination) }];
+        case 'add':
+        case 'subtract':
+        case 'multiply': {
+            return [
+                {
+                    ...tas,
+                    lhs: getRegister(tas.lhs),
+                    rhs: getRegister(tas.rhs),
+                    destination: getRegister(tas.destination),
+                },
+            ];
+        }
+        case 'addImmediate':
+        case 'increment':
+        case 'gotoIfZero':
+            return [{ ...tas, register: getRegister(tas.register) }];
+        case 'gotoIfEqual':
+        case 'gotoIfNotEqual':
+        case 'gotoIfGreater':
+            return [{ ...tas, lhs: getRegister(tas.lhs), rhs: getRegister(tas.rhs) }];
+        case 'loadSymbolAddress':
+        case 'loadGlobal':
+            return [{ ...tas, to: getRegister(tas.to) }];
+        case 'storeGlobal':
+        case 'loadMemory':
+            return [{ ...tas, to: getRegister(tas.to), from: getRegister(tas.from) }];
+        case 'loadMemoryByte':
+            return [{ ...tas, to: getRegister(tas.to), address: getRegister(tas.address) }];
+        case 'storeMemory':
+            return [{ ...tas, from: getRegister(tas.from), address: getRegister(tas.address) }];
+        case 'storeZeroToMemory':
+            return [{ ...tas, address: getRegister(tas.address) }];
+        case 'storeMemoryByte':
+            return [{ ...tas, address: getRegister(tas.address), contents: getRegister(tas.contents) }];
+        case 'callByRegister':
+            return [{ ...tas, function: getRegister(tas.function) }];
+        default:
+            throw debug(`${(tas as any).kind} unhandled in threeAddressCodeToTarget`);
+    }
 };

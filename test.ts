@@ -1,7 +1,4 @@
-import {
-    RegisterTransferLanguageFunction as RTLF,
-    RegisterTransferLanguageExpression as RTX,
-} from './backends/registerTransferLanguage.js';
+import { ThreeAddressStatement } from './backends/threeAddressCode.js';
 import test from 'ava';
 import flatten from './util/list/flatten.js';
 import { lex } from './lex.js';
@@ -1318,22 +1315,18 @@ return b;`,
 });
 
 test('controlFlowGraph basic test', t => {
-    const rtlf: RTLF = {
-        name: 'test',
-        isMain: false,
-        instructions: [
-            {
-                kind: 'functionLabel',
-                name: 'test',
-                why: 'test',
-            },
-            {
-                kind: 'returnToCaller',
-                why: 'test',
-            },
-        ],
-    };
-    const cfg = controlFlowGraph(rtlf);
+    const rtl: ThreeAddressStatement[] = [
+        {
+            kind: 'functionLabel',
+            name: 'test',
+            why: 'test',
+        },
+        {
+            kind: 'returnToCaller',
+            why: 'test',
+        },
+    ];
+    const cfg = controlFlowGraph(rtl);
     t.deepEqual(cfg.blocks.length, 1);
     t.deepEqual(cfg.connections.length, 0);
     t.deepEqual(cfg.exits.length, 1);

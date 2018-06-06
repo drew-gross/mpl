@@ -2,10 +2,7 @@ import * as Ast from './ast.js';
 import debug from './util/debug.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from './api.js';
 import flatten from './util/list/flatten.js';
-import {
-    RegisterTransferLanguageExpression,
-    RegisterTransferLanguageFunction as RTLF,
-} from './backends/registerTransferLanguage.js';
+import { ThreeAddressStatement, TargetThreeAddressStatement } from './backends/threeAddressCode.js';
 import { Register } from './register.js';
 import { controlFlowGraph } from './controlFlowGraph.js';
 
@@ -52,14 +49,18 @@ export const stringLiteralName = ({ id, value }: StringLiteralData) =>
 
 export type RegisterAssignment = { [key: string]: Register };
 
-export const saveRegistersCode = (registerAssignment: RegisterAssignment): RegisterTransferLanguageExpression[] =>
+export const saveRegistersCode = <TargetRegister>(
+    registerAssignment: RegisterAssignment
+): TargetThreeAddressStatement<TargetRegister>[] =>
     Object.values(registerAssignment).map(targetRegister => ({
         kind: 'push' as 'push',
         register: targetRegister,
         why: 'Push register to preserve it',
     }));
 
-export const restoreRegistersCode = (registerAssignment: RegisterAssignment): RegisterTransferLanguageExpression[] =>
+export const restoreRegistersCode = <TargetRegister>(
+    registerAssignment: RegisterAssignment
+): TargetThreeAddressStatement<TargetRegister>[] =>
     Object.values(registerAssignment)
         .map(targetRegister => ({
             kind: 'pop' as 'pop',
@@ -67,3 +68,11 @@ export const restoreRegistersCode = (registerAssignment: RegisterAssignment): Re
             why: 'Restore preserved registers',
         }))
         .reverse();
+
+export type RegisterDescription<TargetRegister> = {
+    generalPurpose: TargetRegister[];
+    functionArgument: TargetRegister[];
+    functionResult: TargetRegister;
+    syscallArgument: TargetRegister[];
+    syscallSelectAndResult: TargetRegister;
+};

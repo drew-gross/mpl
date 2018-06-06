@@ -8,17 +8,12 @@ import join from './util/join.js';
 import grid from './util/grid.js';
 import { RegisterAssignment } from './backend-utils.js';
 import { Register, isEqual as registerIsEqual } from './register.js';
-import {
-    RegisterTransferLanguageExpression as RTX,
-    RegisterTransferLanguage as RTL,
-    RegisterTransferLanguageFunction as RTLF,
-    toString as rtxToString,
-} from './backends/registerTransferLanguage.js';
+import { ThreeAddressStatement, toString as tasToString } from './backends/threeAddressCode.js';
 import { Graph } from 'graphlib';
 
 export type BasicBlock = {
     name: string;
-    instructions: RTL;
+    instructions: ThreeAddressStatement[];
 };
 
 export type ControlFlowGraph = {
@@ -32,7 +27,7 @@ export type ControlFlowGraph = {
     exits: number[];
 };
 
-const blockBehaviour = (rtx: RTX): 'endBlock' | 'beginBlock' | 'midBlock' => {
+const blockBehaviour = (rtx: ThreeAddressStatement): 'endBlock' | 'beginBlock' | 'midBlock' => {
     switch (rtx.kind) {
         case 'comment':
         case 'syscall':
@@ -53,9 +48,6 @@ const blockBehaviour = (rtx: RTX): 'endBlock' | 'beginBlock' | 'midBlock' => {
         case 'loadSymbolAddress':
         case 'callByName':
         case 'callByRegister':
-        case 'push':
-        case 'pop':
-        case 'returnValue':
             return 'midBlock';
         case 'label':
         case 'functionLabel':
@@ -68,7 +60,7 @@ const blockBehaviour = (rtx: RTX): 'endBlock' | 'beginBlock' | 'midBlock' => {
         case 'gotoIfGreater':
             return 'endBlock';
         default:
-            throw debug('Unrecognized RTX kind in blockBehaviour');
+            throw debug('Unrecognized ThreeAddressStatement kind in blockBehaviour');
     }
 };
 
@@ -136,7 +128,7 @@ const livenessUpdate = (rtx: RTX): { newlyLive: Register[]; newlyDead: Register[
     }
 };
 
-const blockName = (rtl: RTL) => {
+const blockName = (rtl: ThreeAddressStatement[]) => {
     if (rtl.length == 0) throw debug('empty rtl in blockName');
     const rtx = rtl[0];
     switch (rtx.kind) {
@@ -156,7 +148,7 @@ const blockName = (rtl: RTL) => {
 
 type Exits = { blockName: string | false; next: boolean; exit: boolean };
 
-const blockExits = (rtl: RTL): Exits => {
+const blockExits = (rtl: ThreeAddressStatement[]): Exits => {
     const rtx = last(rtl);
     if (!rtx) throw debug('empty rtl');
     switch (rtx.kind) {
@@ -190,11 +182,9 @@ const blockExits = (rtl: RTL): Exits => {
         case 'loadSymbolAddress':
         case 'callByName':
         case 'callByRegister':
-        case 'push':
-        case 'pop':
             return { blockName: false, next: true, exit: false };
         default:
-            throw debug('Unrecognized RTX kind in blockExits');
+            throw debug('Unrecognized ThreeAddressStatement kind in blockExits');
     }
 };
 
@@ -204,7 +194,7 @@ export const toDotFile = ({ blocks, connections, labelToIndexMap, exits }: Contr
     dotText += `Entry -> node_0\n`;
 
     blocks.forEach(({ name, instructions }, index) => {
-        const label = join(instructions.map(rtxToString), '\\n')
+        const label = join(instructions.map(tasToString), '\\n')
             .replace(/"/g, '\\"')
             .replace(/:/g, '\\:');
         dotText += `node_${index} [shape="box", label="${label}"]`;
@@ -221,10 +211,10 @@ export const toDotFile = ({ blocks, connections, labelToIndexMap, exits }: Contr
     return dotText;
 };
 
-export const controlFlowGraph = (rtlf: RTLF): ControlFlowGraph => {
+export const controlFlowGraph = (rtl: ThreeAddressStatement[]): ControlFlowGraph => {
     let blocks: BasicBlock[] = [];
-    var currentBlock: RTL = [];
-    rtlf.instructions.forEach(rtx => {
+    var currentBlock: ThreeAddressStatement[] = [];
+    rtl.forEach(rtx => {
         const change = blockBehaviour(rtx);
         if (change == 'midBlock') {
             currentBlock.push(rtx);
