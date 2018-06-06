@@ -15,7 +15,7 @@ import { Function } from '../api.js';
 
 type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 
-export type RegisterTransferLanguageExpression = { why: string } & (
+export type ThreeAddressStatement = { why: string } & (
     | { kind: 'comment' }
     | { kind: 'syscall'; name: SyscallName; arguments: (Register | number)[]; destination: Register | undefined }
     | { kind: 'move'; from: Register; to: Register }
@@ -47,16 +47,16 @@ export type RegisterTransferLanguageExpression = { why: string } & (
     | { kind: 'push'; register: Register }
     | { kind: 'pop'; register: Register });
 
-export type RegisterTransferLanguage = RegisterTransferLanguageExpression[];
+export type ThreeAddressCode = ThreeAddressStatement[];
 
-export type RegisterTransferLanguageFunction = {
-    instructions: RegisterTransferLanguage;
+export type ThreeAddressFunction = {
+    instructions: ThreeAddressCode;
     numRegistersToSave: number;
     name: string;
     isMain: boolean;
 };
 
-export const toString = (rtx: RegisterTransferLanguageExpression): string => {
+export const toString = (rtx: ThreeAddressStatement): string => {
     switch (rtx.kind) {
         case 'comment':
             return ``;
@@ -126,18 +126,18 @@ export const astToRegisterTransferLanguage = (
     input: BackendOptions,
     nextTemporary,
     makeLabel
-): CompiledExpression<RegisterTransferLanguageExpression> => {
+): CompiledExpression<ThreeAddressStatement> => {
     const { ast, registerAssignment, destination, currentTemporary, globalDeclarations, stringLiterals } = input;
     if (!destination) throw debug('didnt get a destination');
     if (isEqual(currentTemporary, destination)) throw debug('todo'); // Sanity check to make sure caller remembered to provide a new temporary
     const recurse = newInput => astToRegisterTransferLanguage({ ...input, ...newInput }, nextTemporary, makeLabel);
     switch (ast.kind) {
         case 'number':
-            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
+            return compileExpression<ThreeAddressStatement>([], ([]) => [
                 { kind: 'loadImmediate', value: ast.value, destination: destination, why: 'Load number literal' },
             ]);
         case 'booleanLiteral':
-            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
+            return compileExpression<ThreeAddressStatement>([], ([]) => [
                 {
                     kind: 'loadImmediate',
                     value: ast.value ? 1 : 0,
@@ -148,7 +148,7 @@ export const astToRegisterTransferLanguage = (
         case 'stringLiteral': {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
             if (!stringLiteralData) throw debug('todo');
-            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
+            return compileExpression<ThreeAddressStatement>([], ([]) => [
                 {
                     kind: 'loadSymbolAddress',
                     symbolName: stringLiteralName(stringLiteralData),
@@ -163,7 +163,7 @@ export const astToRegisterTransferLanguage = (
                 destination: currentTemporary,
                 currentTemporary: nextTemporary(currentTemporary),
             });
-            return compileExpression<RegisterTransferLanguageExpression>([subExpression], ([e1]) => [
+            return compileExpression<ThreeAddressStatement>([subExpression], ([e1]) => [
                 ...e1,
                 {
                     kind: 'returnValue',
@@ -186,7 +186,7 @@ export const astToRegisterTransferLanguage = (
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
             });
-            return compileExpression<RegisterTransferLanguageExpression>(
+            return compileExpression<ThreeAddressStatement>(
                 [storeLeftInstructions, storeRightInstructions],
                 ([storeLeft, storeRight]) => [
                     { kind: 'comment', why: 'Store left side in temporary' },
@@ -218,7 +218,7 @@ export const astToRegisterTransferLanguage = (
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
             });
-            return compileExpression<RegisterTransferLanguageExpression>(
+            return compileExpression<ThreeAddressStatement>(
                 [storeLeftInstructions, storeRightInstructions],
                 ([storeLeft, storeRight]) => [
                     { kind: 'comment', why: 'Store left side in temporary' },
@@ -253,7 +253,7 @@ export const astToRegisterTransferLanguage = (
                 ast: ast.ifFalse,
                 currentTemporary: subExpressionTemporary,
             });
-            return compileExpression<RegisterTransferLanguageExpression>(
+            return compileExpression<ThreeAddressStatement>(
                 [boolExpression, ifTrueExpression, ifFalseExpression],
                 ([e1, e2, e3]) => [
                     ...e1,
@@ -273,7 +273,7 @@ export const astToRegisterTransferLanguage = (
             );
         }
         case 'functionLiteral':
-            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
+            return compileExpression<ThreeAddressStatement>([], ([]) => [
                 {
                     kind: 'loadSymbolAddress',
                     to: destination,
@@ -283,7 +283,7 @@ export const astToRegisterTransferLanguage = (
             ]);
         case 'callExpression': {
             const functionName = ast.name;
-            let callInstructions: (string | RegisterTransferLanguageExpression)[] = [];
+            let callInstructions: (string | ThreeAddressStatement)[] = [];
             if (builtinFunctions.map(b => b.name).includes(functionName)) {
                 callInstructions = [
                     {
@@ -343,7 +343,7 @@ export const astToRegisterTransferLanguage = (
                 ...argumentComputer,
             ];
 
-            return compileExpression<RegisterTransferLanguageExpression>(computeArgumentsMips, argumentComputers => [
+            return compileExpression<ThreeAddressStatement>(computeArgumentsMips, argumentComputers => [
                 ...flatten(argumentComputers.map(argumentComputerToMips)),
                 { kind: 'comment', why: 'call ${functionName}' },
                 ...callInstructions,
@@ -366,7 +366,7 @@ export const astToRegisterTransferLanguage = (
                     ast: ast.rhs,
                     destination: 'functionArgument2',
                 });
-                return compileExpression<RegisterTransferLanguageExpression>(
+                return compileExpression<ThreeAddressStatement>(
                     [storeLeftInstructions, storeRightInstructions],
                     ([e1, e2]) => [
                         { kind: 'comment', why: 'Store left side in s0' },
@@ -400,7 +400,7 @@ export const astToRegisterTransferLanguage = (
                 const equalLabel = makeLabel('equal');
                 const endOfConditionLabel = makeLabel('endOfCondition');
 
-                return compileExpression<RegisterTransferLanguageExpression>(
+                return compileExpression<ThreeAddressStatement>(
                     [storeLeftInstructions, storeRightInstructions],
                     ([storeLeft, storeRight]) => [
                         { kind: 'comment', why: 'Store left side of equality in temporary' },
@@ -437,7 +437,7 @@ export const astToRegisterTransferLanguage = (
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
-                        return compileExpression<RegisterTransferLanguageExpression>([rhs], ([e1]) => [
+                        return compileExpression<ThreeAddressStatement>([rhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'storeGlobal',
@@ -447,7 +447,7 @@ export const astToRegisterTransferLanguage = (
                             },
                         ]);
                     case 'String':
-                        return compileExpression<RegisterTransferLanguageExpression>([rhs], ([e1]) => [
+                        return compileExpression<ThreeAddressStatement>([rhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'move',
@@ -505,7 +505,7 @@ export const astToRegisterTransferLanguage = (
             if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const subExpressionTemporary = nextTemporary(currentTemporary);
                 const savedPointerForFreeing: Register = subExpressionTemporary;
-                const rhs: CompiledExpression<RegisterTransferLanguageExpression> = recurse({
+                const rhs: CompiledExpression<ThreeAddressStatement> = recurse({
                     ast: ast.expression,
                     destination: currentTemporary,
                     currentTemporary: nextTemporary(subExpressionTemporary),
@@ -515,7 +515,7 @@ export const astToRegisterTransferLanguage = (
                 switch (declaration.type.name) {
                     case 'Function':
                     case 'Integer':
-                        return compileExpression<RegisterTransferLanguageExpression>([rhs], ([e1]) => [
+                        return compileExpression<ThreeAddressStatement>([rhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'storeGlobal',
@@ -532,7 +532,7 @@ export const astToRegisterTransferLanguage = (
                                     to: savedPointerForFreeing,
                                     from: lhs,
                                     why: 'Save global for freeing after assignment',
-                                } as RegisterTransferLanguageExpression,
+                                } as ThreeAddressStatement,
                             ],
                             execute: [],
                             cleanup: [
@@ -547,47 +547,44 @@ export const astToRegisterTransferLanguage = (
                                     function: 'my_free',
                                     why: 'Free string that is no longer accessible',
                                 },
-                            ] as RegisterTransferLanguageExpression[],
+                            ] as ThreeAddressStatement[],
                         };
-                        return compileExpression<RegisterTransferLanguageExpression>(
-                            [rhs, prepAndCleanup],
-                            ([e1, _]) => [
-                                ...e1,
-                                {
-                                    kind: 'move',
-                                    from: currentTemporary,
-                                    to: 'functionArgument1',
-                                    why: 'Move from temporary to argument 1',
-                                },
-                                { kind: 'callByName', function: 'length', why: 'Get length of new string' },
-                                {
-                                    kind: 'move',
-                                    from: 'functionResult',
-                                    to: 'functionArgument1',
-                                    why: 'Move length of new string to argument of malloc',
-                                },
-                                { kind: 'callByName', function: 'my_malloc', why: 'Allocate space for new string' },
-                                {
-                                    kind: 'storeGlobal',
-                                    from: 'functionResult',
-                                    to: { name: lhs },
-                                    why: 'Store location of allocated memory to global',
-                                },
-                                {
-                                    kind: 'move',
-                                    from: 'functionResult',
-                                    to: 'functionArgument2',
-                                    why: 'Move output pointer to argument 2 of string_copy',
-                                },
-                                {
-                                    kind: 'move',
-                                    from: currentTemporary,
-                                    to: 'functionArgument1',
-                                    why: 'move destination to argument 1 of string_copy',
-                                },
-                                { kind: 'callByName', function: 'string_copy', why: 'Copy new string to destination' },
-                            ]
-                        );
+                        return compileExpression<ThreeAddressStatement>([rhs, prepAndCleanup], ([e1, _]) => [
+                            ...e1,
+                            {
+                                kind: 'move',
+                                from: currentTemporary,
+                                to: 'functionArgument1',
+                                why: 'Move from temporary to argument 1',
+                            },
+                            { kind: 'callByName', function: 'length', why: 'Get length of new string' },
+                            {
+                                kind: 'move',
+                                from: 'functionResult',
+                                to: 'functionArgument1',
+                                why: 'Move length of new string to argument of malloc',
+                            },
+                            { kind: 'callByName', function: 'my_malloc', why: 'Allocate space for new string' },
+                            {
+                                kind: 'storeGlobal',
+                                from: 'functionResult',
+                                to: { name: lhs },
+                                why: 'Store location of allocated memory to global',
+                            },
+                            {
+                                kind: 'move',
+                                from: 'functionResult',
+                                to: 'functionArgument2',
+                                why: 'Move output pointer to argument 2 of string_copy',
+                            },
+                            {
+                                kind: 'move',
+                                from: currentTemporary,
+                                to: 'functionArgument1',
+                                why: 'move destination to argument 1 of string_copy',
+                            },
+                            { kind: 'callByName', function: 'string_copy', why: 'Copy new string to destination' },
+                        ]);
                     default:
                         throw debug('todo');
                 }
@@ -617,7 +614,7 @@ export const astToRegisterTransferLanguage = (
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
             });
-            const cleanup: CompiledExpression<RegisterTransferLanguageExpression> = {
+            const cleanup: CompiledExpression<ThreeAddressStatement> = {
                 prepare: [],
                 execute: [],
                 cleanup: [
@@ -631,7 +628,7 @@ export const astToRegisterTransferLanguage = (
                     { kind: 'callByName', function: 'my_free', why: 'Freeing temporary from concat' },
                 ],
             };
-            return compileExpression<RegisterTransferLanguageExpression>(
+            return compileExpression<ThreeAddressStatement>(
                 [storeLeftInstructions, storeRightInstructions, cleanup],
                 ([e1, e2, _]) => [
                     {
@@ -721,7 +718,7 @@ export const astToRegisterTransferLanguage = (
             if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
                 const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
                 if (!declaration) throw debug('todo');
-                return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
+                return compileExpression<ThreeAddressStatement>([], ([]) => [
                     {
                         kind: 'loadGlobal',
                         to: destination,
@@ -731,7 +728,7 @@ export const astToRegisterTransferLanguage = (
                 ]);
             }
             const identifierRegister = registerAssignment[identifierName];
-            return compileExpression<RegisterTransferLanguageExpression>([], ([]) => [
+            return compileExpression<ThreeAddressStatement>([], ([]) => [
                 {
                     kind: 'move',
                     from: identifierRegister,
@@ -755,7 +752,7 @@ export const astToRegisterTransferLanguage = (
                 destination: rightSideDestination,
                 currentTemporary: subExpressionTemporary,
             });
-            return compileExpression<RegisterTransferLanguageExpression>(
+            return compileExpression<ThreeAddressStatement>(
                 [storeLeftInstructions, storeRightInstructions],
                 ([storeLeft, storeRight]) => [
                     {
@@ -790,7 +787,7 @@ export const constructFunction = (
     firstTemporary: Register,
     nextTemporary,
     makeLabel
-): RegisterTransferLanguageFunction => {
+): ThreeAddressFunction => {
     // Statments are either assign or return right now, so we need one register for each statement, minus the return statement.
     const scratchRegisterCount = f.temporaryCount + f.statements.length - 1;
 

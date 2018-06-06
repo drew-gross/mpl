@@ -1,4 +1,4 @@
-import { RegisterTransferLanguageExpression as RTX } from './backends/registerTransferLanguage.js';
+import { ThreeAddressStatement } from './backends/threeAddressCode.js';
 import test from 'ava';
 import flatten from './util/list/flatten.js';
 import { lex } from './lex.js';
@@ -1314,7 +1314,7 @@ return b;`,
 });
 
 test('controlFlowGraph basic test', t => {
-    const rtl: RTX[] = [
+    const rtl: ThreeAddressStatement[] = [
         {
             kind: 'functionLabel',
             name: 'test',

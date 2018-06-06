@@ -17,9 +17,9 @@ import { Register } from '../register.js';
 import {
     astToRegisterTransferLanguage,
     constructFunction,
-    RegisterTransferLanguageExpression,
-    RegisterTransferLanguageFunction,
-} from './registerTransferLanguage.js';
+    ThreeAddressStatement,
+    ThreeAddressFunction,
+} from './threeAddressCode.js';
 import {
     mallocWithSbrk,
     length,
@@ -30,7 +30,7 @@ import {
     stringEqualityRuntimeFunction,
     myFreeRuntimeFunction,
     RuntimeFunctionGenerator,
-} from './registerTransferLanguageRuntime.js';
+} from './threeAddressCodeRuntime.js';
 import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
 import join from '../util/join.js';
@@ -83,7 +83,7 @@ const getRegisterName = (r: Register): string => {
     return r.name;
 };
 
-const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLanguageExpression): string[] => {
+const registerTransferExpressionToMipsWithoutComment = (rtx: ThreeAddressStatement): string[] => {
     switch (rtx.kind) {
         case 'comment':
             return [''];
@@ -196,7 +196,7 @@ const registerTransferExpressionToMipsWithoutComment = (rtx: RegisterTransferLan
     }
 };
 
-const registerTransferExpressionToMips = (rtx: RegisterTransferLanguageExpression): string[] => {
+const registerTransferExpressionToMips = (rtx: ThreeAddressStatement): string[] => {
     if (typeof rtx == 'string') return [rtx];
     return registerTransferExpressionToMipsWithoutComment(rtx).map(asm => `${asm} # ${rtx.why}`);
 };
@@ -217,17 +217,10 @@ const mipsRuntime: RuntimeFunctionGenerator[] = [
     verifyNoLeaks,
 ];
 
-const runtimeFunctions: RegisterTransferLanguageFunction[] = mipsRuntime.map(f =>
-    f(bytesInWord, firstRegister, nextTemporary)
-);
+const runtimeFunctions: ThreeAddressFunction[] = mipsRuntime.map(f => f(bytesInWord, firstRegister, nextTemporary));
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
-const rtlFunctionToMips = ({
-    name,
-    instructions,
-    numRegistersToSave,
-    isMain,
-}: RegisterTransferLanguageFunction): string => {
+const rtlFunctionToMips = ({ name, instructions, numRegistersToSave, isMain }: ThreeAddressFunction): string => {
     const preamble = !isMain
         ? [
               { kind: 'push', register: { name: '$ra' }, why: 'Always save return address' },
@@ -257,7 +250,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
 
     const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);
 
-    const mainProgramInstructions: RegisterTransferLanguageExpression[] = flatten(
+    const mainProgramInstructions: ThreeAddressStatement[] = flatten(
         program.statements.map(statement => {
             const compiledProgram = astToRegisterTransferLanguage(
                 {
@@ -276,25 +269,25 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         })
     );
 
-    const freeGlobals: RegisterTransferLanguageExpression[] = flatten(
+    const freeGlobals: ThreeAddressStatement[] = flatten(
         globalDeclarations.filter(declaration => declaration.type.name === 'String').map(declaration => [
             {
                 kind: 'loadGlobal',
                 from: declaration.name,
                 to: 'functionArgument1',
                 why: 'Load global string so we can free it',
-            } as RegisterTransferLanguageExpression,
+            } as ThreeAddressStatement,
             {
                 kind: 'callByName',
                 function: 'my_free',
                 why: 'Free gloabal string at end of program',
-            } as RegisterTransferLanguageExpression,
+            } as ThreeAddressStatement,
         ])
     );
 
     // Create space for spilled tempraries
     const numSpilledTemporaries = program.temporaryCount - 10;
-    const makeSpillSpaceCode: RegisterTransferLanguageExpression[] =
+    const makeSpillSpaceCode: ThreeAddressStatement[] =
         numSpilledTemporaries > 0
             ? [
                   {
@@ -305,7 +298,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
                   },
               ]
             : [];
-    const removeSpillSpaceCode: RegisterTransferLanguageExpression[] =
+    const removeSpillSpaceCode: ThreeAddressStatement[] =
         numSpilledTemporaries > 0
             ? [
                   {
@@ -317,7 +310,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
               ]
             : [];
 
-    let mipsProgram: RegisterTransferLanguageFunction = {
+    let mipsProgram: ThreeAddressFunction = {
         name: 'main',
         numRegistersToSave: 0, // No need to save registers, there is nothing higher in the stack that we could clobber
         isMain: true,

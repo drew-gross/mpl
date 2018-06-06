@@ -8,7 +8,7 @@ import {
     myFreeRuntimeFunction,
     stringEqualityRuntimeFunction,
     stringConcatenateRuntimeFunction,
-} from './registerTransferLanguageRuntime.js';
+} from './threeAddressCodeRuntime.js';
 import join from '../util/join.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
@@ -26,9 +26,9 @@ import { Register } from '../register.js';
 import {
     astToRegisterTransferLanguage,
     constructFunction,
-    RegisterTransferLanguageExpression,
-    RegisterTransferLanguageFunction,
-} from './registerTransferLanguage.js';
+    ThreeAddressStatement,
+    ThreeAddressFunction,
+} from './threeAddressCode.js';
 import flatten from '../util/list/flatten.js';
 import { VariableDeclaration, BackendInputs, StringLiteralData } from '../api.js';
 import { exec } from 'child-process-promise';
@@ -93,7 +93,7 @@ const getRegisterName = (r: Register): string => {
     return r.name;
 };
 
-const registerTransferExpressionToX64WithoutComment = (rtx: RegisterTransferLanguageExpression): string[] => {
+const registerTransferExpressionToX64WithoutComment = (rtx: ThreeAddressStatement): string[] => {
     switch (rtx.kind) {
         case 'comment':
             return [''];
@@ -214,14 +214,14 @@ const registerTransferExpressionToX64WithoutComment = (rtx: RegisterTransferLang
     }
 };
 
-const registerTransferExpressionToX64 = (rtx: RegisterTransferLanguageExpression): string[] => {
+const registerTransferExpressionToX64 = (rtx: ThreeAddressStatement): string[] => {
     if (typeof rtx == 'string') return [rtx];
     return registerTransferExpressionToX64WithoutComment(rtx).map(asm => `${asm}; ${rtx.why}`);
 };
 
 const bytesInWord = 8;
 
-const runtimeFunctions: RegisterTransferLanguageFunction[] = [
+const runtimeFunctions: ThreeAddressFunction[] = [
     length,
     printWithWriteRuntimeFunction,
     stringEqualityRuntimeFunction,
@@ -233,12 +233,7 @@ const runtimeFunctions: RegisterTransferLanguageFunction[] = [
 ].map(f => f(bytesInWord, firstRegister, nextTemporary));
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
-const rtlFunctionToX64 = ({
-    name,
-    instructions,
-    numRegistersToSave,
-    isMain,
-}: RegisterTransferLanguageFunction): string => {
+const rtlFunctionToX64 = ({ name, instructions, numRegistersToSave, isMain }: ThreeAddressFunction): string => {
     const fullRtl = [
         { kind: 'functionLabel', name, why: 'Function entry point' },
         ...(isMain ? [] : saveRegistersCode(firstRegister, nextTemporary, numRegistersToSave)),
@@ -253,7 +248,7 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
-    let x64Functions: RegisterTransferLanguageFunction[] = functions.map(f =>
+    let x64Functions: ThreeAddressFunction[] = functions.map(f =>
         constructFunction(f, globalDeclarations, stringLiterals, firstRegister, nextTemporary, makeLabel)
     );
     const { registerAssignment, firstTemporary } = assignX64Registers(program.variables);
@@ -276,7 +271,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         })
     );
 
-    let x64Program: RegisterTransferLanguageFunction = {
+    let x64Program: ThreeAddressFunction = {
         name: 'start',
         isMain: true,
         numRegistersToSave: 0, // No functions higher in the stack to worry about clobbering

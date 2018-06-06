@@ -1,5 +1,5 @@
 import { UninferredStatement, Statement } from './ast.js';
-import { RegisterTransferLanguageFunction } from './backends/registerTransferLanguage.js';
+import { ThreeAddressFunction } from './backends/threeAddressCode.js';
 
 export type SourceLocation = { sourceLine: number; sourceColumn: number };
 
@@ -87,5 +87,5 @@ export type Backend = {
     toExectuable: (BackendInputs) => string;
     execute: (string) => Promise<ExecutionResult>; // Exit code or error
     debug?: (string) => Promise<void>;
-    runtimeFunctions?: RegisterTransferLanguageFunction[];
+    runtimeFunctions?: ThreeAddressFunction[];
 };

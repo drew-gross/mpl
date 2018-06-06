@@ -1,17 +1,13 @@
 import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
 import { Register } from '../register.js';
-import {
-    RegisterTransferLanguageExpression as RTX,
-    RegisterTransferLanguage as RTL,
-    RegisterTransferLanguageFunction,
-} from './registerTransferLanguage.js';
+import { ThreeAddressFunction } from './threeAddressCode.js';
 
 export type RuntimeFunctionGenerator = (
     bytesInWord: number,
     firstRegister: Register,
     nextRegister: ((r: Register) => Register)
-) => RegisterTransferLanguageFunction;
+) => ThreeAddressFunction;
 
 const switchableMallocImpl = (
     bytesInWord,

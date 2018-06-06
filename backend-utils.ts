@@ -2,7 +2,7 @@ import * as Ast from './ast.js';
 import debug from './util/debug.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from './api.js';
 import flatten from './util/list/flatten.js';
-import { RegisterTransferLanguageExpression } from './backends/registerTransferLanguage.js';
+import { ThreeAddressStatement } from './backends/threeAddressCode.js';
 import { Register } from './register.js';
 
 export type CompiledExpression<T> = {
@@ -47,12 +47,8 @@ export const stringLiteralName = ({ id, value }: StringLiteralData) =>
 
 export type RegisterAssignment = { [key: string]: Register };
 
-export const saveRegistersCode = (
-    firstRegister,
-    nextRegister,
-    numRegisters: number
-): RegisterTransferLanguageExpression[] => {
-    let result: RegisterTransferLanguageExpression[] = [];
+export const saveRegistersCode = (firstRegister, nextRegister, numRegisters: number): ThreeAddressStatement[] => {
+    let result: ThreeAddressStatement[] = [];
     let currentRegister: Register = firstRegister;
     while (numRegisters > 0) {
         result.push({
@@ -66,12 +62,8 @@ export const saveRegistersCode = (
     return result;
 };
 
-export const restoreRegistersCode = (
-    firstRegister,
-    nextRegister,
-    numRegisters: number
-): RegisterTransferLanguageExpression[] => {
-    let result: RegisterTransferLanguageExpression[] = [];
+export const restoreRegistersCode = (firstRegister, nextRegister, numRegisters: number): ThreeAddressStatement[] => {
+    let result: ThreeAddressStatement[] = [];
     let currentRegister: Register = firstRegister;
     while (numRegisters > 0) {
         result.push({

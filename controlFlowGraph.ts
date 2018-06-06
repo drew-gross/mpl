@@ -1,15 +1,12 @@
 import debug from './util/debug.js';
 import last from './util/list/last.js';
 import join from './util/join.js';
-import {
-    RegisterTransferLanguageExpression as RTX,
-    toString as rtxToString,
-} from './backends/registerTransferLanguage.js';
+import { ThreeAddressStatement, toString as tasToString } from './backends/threeAddressCode.js';
 import { Graph } from 'graphlib';
 
 export type BasicBlock = {
     name: string;
-    instructions: RTX[];
+    instructions: ThreeAddressStatement[];
 };
 
 export type ControlFlowGraph = {
@@ -23,7 +20,7 @@ export type ControlFlowGraph = {
     exits: number[];
 };
 
-const blockBehaviour = (rtx: RTX): 'endBlock' | 'beginBlock' | 'midBlock' => {
+const blockBehaviour = (rtx: ThreeAddressStatement): 'endBlock' | 'beginBlock' | 'midBlock' => {
     switch (rtx.kind) {
         case 'comment':
         case 'syscall':
@@ -59,11 +56,11 @@ const blockBehaviour = (rtx: RTX): 'endBlock' | 'beginBlock' | 'midBlock' => {
         case 'gotoIfGreater':
             return 'endBlock';
         default:
-            throw debug('Unrecognized RTX kind in blockBehaviour');
+            throw debug('Unrecognized ThreeAddressStatement kind in blockBehaviour');
     }
 };
 
-const blockName = (rtl: RTX[]) => {
+const blockName = (rtl: ThreeAddressStatement[]) => {
     if (rtl.length == 0) throw debug('empty rtl in blockName');
     const rtx = rtl[0];
     switch (rtx.kind) {
@@ -83,7 +80,7 @@ const blockName = (rtl: RTX[]) => {
 
 type Exits = { blockName: string | false; next: boolean; exit: boolean };
 
-const blockExits = (rtl: RTX[]): Exits => {
+const blockExits = (rtl: ThreeAddressStatement[]): Exits => {
     const rtx = last(rtl);
     if (!rtx) throw debug('empty rtl');
     switch (rtx.kind) {
@@ -121,7 +118,7 @@ const blockExits = (rtl: RTX[]): Exits => {
         case 'pop':
             return { blockName: false, next: true, exit: false };
         default:
-            throw debug('Unrecognized RTX kind in blockExits');
+            throw debug('Unrecognized ThreeAddressStatement kind in blockExits');
     }
 };
 
@@ -131,7 +128,7 @@ export const toDotFile = ({ blocks, connections, labelToIndexMap, exits }: Contr
     dotText += `Entry -> node_0\n`;
 
     blocks.forEach(({ name, instructions }, index) => {
-        const label = join(instructions.map(rtxToString), '\\n')
+        const label = join(instructions.map(tasToString), '\\n')
             .replace(/"/g, '\\"')
             .replace(/:/g, '\\:');
         dotText += `node_${index} [shape="box", label="${label}"]`;
@@ -148,9 +145,9 @@ export const toDotFile = ({ blocks, connections, labelToIndexMap, exits }: Contr
     return dotText;
 };
 
-export const controlFlowGraph = (rtl: RTX[]): ControlFlowGraph => {
+export const controlFlowGraph = (rtl: ThreeAddressStatement[]): ControlFlowGraph => {
     let blocks: BasicBlock[] = [];
-    var currentBlock: RTX[] = [];
+    var currentBlock: ThreeAddressStatement[] = [];
     rtl.forEach(rtx => {
         const change = blockBehaviour(rtx);
         if (change == 'midBlock') {
