@@ -94,6 +94,7 @@ const getMipsRegister = (registerAssignment: RegisterAssignment<MipsRegister>, r
                 return mipsRegisterTypes.functionResult;
         }
     } else {
+        if (!r) debugger;
         return registerAssignment[r.name];
     }
     throw debug('should not get here');
@@ -175,11 +176,8 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
     }
 };
 
-const threeAddressCodeToMips = (tas: ThreeAddressStatement): string[] => {
-    return threeAddressCodeToTarget(tas, syscallNumbers, mipsRegisterTypes, getMipsRegister)
-        .map(threeAddressCodeToMipsWithoutComment)
-        .map(asm => `${asm} # ${tas.why}`);
-};
+const threeAddressCodeToMips = (tas: TargetThreeAddressStatement<MipsRegister>): string[] =>
+    threeAddressCodeToMipsWithoutComment(tas).map(asm => `${asm} # ${tas.why}`);
 
 const bytesInWord = 4;
 
@@ -204,7 +202,9 @@ const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
     const registerAssignment: RegisterAssignment<MipsRegister> = assignRegisters(taf, generalPurposeRegisters);
     const statements: TargetThreeAddressStatement<MipsRegister>[] = flatten(
         taf.instructions.map(instruction =>
-            threeAddressCodeToTarget(instruction, syscallNumbers, mipsRegisterTypes, getMipsRegister)
+            threeAddressCodeToTarget(instruction, syscallNumbers, mipsRegisterTypes, r =>
+                getMipsRegister(registerAssignment, r)
+            )
         )
     );
 

@@ -797,7 +797,7 @@ export const threeAddressCodeToTarget = <TargetRegister>(
     tas: ThreeAddressStatement,
     syscallNumbers,
     registerTypes: RegisterDescription<TargetRegister>,
-    getRegister
+    getRegister: (r: Register) => TargetRegister
 ): TargetThreeAddressStatement<TargetRegister>[] => {
     switch (tas.kind) {
         case 'comment':
