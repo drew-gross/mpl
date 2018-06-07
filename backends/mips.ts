@@ -150,8 +150,8 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
         case 'loadGlobal':
             return [`lw ${tas.to}, ${tas.from}`];
         case 'storeGlobal':
-            if (!tas.from) debugger;
-            return [`sw ${tas.from}, (${tas.to})`];
+            if (typeof tas.to != 'string') debugger;
+            return [`sw ${tas.from}, ${tas.to}`];
         case 'loadMemory':
             return [`lw ${tas.to}, ${tas.offset}(${tas.from})`];
         case 'loadMemoryByte':
@@ -231,7 +231,7 @@ const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
         ...statements,
         ...epilogue,
     ];
-    return join(flatten(fullRtl.map(threeAddressCodeToMipsWithoutComment)), '\n');
+    return join(flatten(fullRtl.map(threeAddressCodeToMips)), '\n');
 };
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {

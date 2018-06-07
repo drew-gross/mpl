@@ -33,7 +33,7 @@ export type ThreeAddressStatement = { why: string } & (
     | { kind: 'gotoIfNotEqual'; lhs: Register; rhs: Register; label: string }
     | { kind: 'gotoIfZero'; register: Register; label: string }
     | { kind: 'gotoIfGreater'; lhs: Register; rhs: Register; label: string }
-    | { kind: 'storeGlobal'; from: Register; to: Register }
+    | { kind: 'storeGlobal'; from: Register; to: string }
     | { kind: 'loadGlobal'; from: string; to: Register }
     | { kind: 'storeMemory'; from: Register; address: Register; offset: number }
     | { kind: 'storeMemoryByte'; address: Register; contents: Register }
@@ -70,7 +70,7 @@ export type TargetThreeAddressStatement<TargetRegister> = { why: string } & (
     | { kind: 'gotoIfNotEqual'; lhs: TargetRegister; rhs: TargetRegister; label: string }
     | { kind: 'gotoIfZero'; register: TargetRegister; label: string }
     | { kind: 'gotoIfGreater'; lhs: TargetRegister; rhs: TargetRegister; label: string }
-    | { kind: 'storeGlobal'; from: TargetRegister; to: TargetRegister }
+    | { kind: 'storeGlobal'; from: TargetRegister; to: string }
     | { kind: 'loadGlobal'; from: string; to: TargetRegister }
     | { kind: 'storeMemory'; from: TargetRegister; address: TargetRegister; offset: number }
     | { kind: 'storeMemoryByte'; address: TargetRegister; contents: TargetRegister }
@@ -118,7 +118,7 @@ export const toString = (rtx: ThreeAddressStatement): string => {
         case 'gotoIfGreater':
             return `goto ${rtx.label} if ${registerToString(rtx.lhs)} > ${registerToString(rtx.rhs)}`;
         case 'storeGlobal':
-            return `*${registerToString(rtx.to)} = ${registerToString(rtx.from)}`;
+            return `*${rtx.to} = ${registerToString(rtx.from)}`;
         case 'loadGlobal':
             return `${registerToString(rtx.to)} = &${rtx.from}`;
         case 'storeMemory':
@@ -391,14 +391,14 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             }
         }
         case 'typedDeclarationAssignment': {
-            const lhs: Register = { name: ast.destination };
-            if (globalDeclarations.some(declaration => declaration.name === lhs.name)) {
+            const lhs: string = ast.destination;
+            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const rhs = makeTemporary('assignment_rhs');
                 const computeRhs = recurse({
                     ast: ast.expression,
                     destination: rhs,
                 });
-                const declaration = globalDeclarations.find(declaration => declaration.name === lhs.name);
+                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug('todo');
                 switch (declaration.type.name) {
                     case 'Function':
@@ -466,14 +466,14 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             }
         }
         case 'reassignment': {
-            const lhs: Register = { name: ast.destination };
-            if (globalDeclarations.some(declaration => declaration.name === lhs.name)) {
+            const lhs: string = ast.destination;
+            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
                 const reassignmentRhs = makeTemporary('reassignment_rhs');
                 const rhs: CompiledExpression<ThreeAddressStatement> = recurse({
                     ast: ast.expression,
                     destination: reassignmentRhs,
                 });
-                const declaration = globalDeclarations.find(declaration => declaration.name === lhs.name);
+                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
                 if (!declaration) throw debug('todo');
                 switch (declaration.type.name) {
                     case 'Function':
@@ -494,7 +494,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 {
                                     kind: 'loadGlobal',
                                     to: oldData,
-                                    from: lhs.name,
+                                    from: lhs,
                                     why: 'Save global for freeing after assignment',
                                 } as ThreeAddressStatement,
                             ],
@@ -552,7 +552,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     default:
                         throw debug('todo');
                 }
-            } else if (lhs.name in variablesInScope) {
+            } else if (lhs in variablesInScope) {
                 return recurse({
                     ast: ast.expression,
                     destination: lhs,
@@ -898,6 +898,7 @@ export const threeAddressCodeToTarget = <TargetRegister>(
         case 'loadGlobal':
             return [{ ...tas, to: getRegister(tas.to) }];
         case 'storeGlobal':
+            return [{ ...tas, from: getRegister(tas.from) }];
         case 'loadMemory':
             return [{ ...tas, to: getRegister(tas.to), from: getRegister(tas.from) }];
         case 'loadMemoryByte':

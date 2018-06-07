@@ -211,7 +211,7 @@ const switchableMallocImpl = (
             {
                 kind: 'storeGlobal',
                 from: 'functionResult',
-                to: { name: 'first_block' },
+                to: 'first_block',
                 why: 'Setup first block pointer',
             },
             { kind: 'goto', label: 'set_up_new_space', why: '' },

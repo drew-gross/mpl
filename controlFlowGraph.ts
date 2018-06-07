@@ -88,7 +88,7 @@ const livenessUpdate = (tas: ThreeAddressStatement): { newlyLive: Register[]; ne
         case 'multiply':
             return { newlyLive: [tas.lhs, tas.rhs], newlyDead: [tas.destination] };
         case 'storeGlobal':
-            return { newlyLive: [tas.from, tas.to], newlyDead: [] };
+            return { newlyLive: [tas.from], newlyDead: [] };
         case 'loadGlobal':
             return { newlyLive: [], newlyDead: [tas.to] };
         case 'storeMemory':
