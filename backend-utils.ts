@@ -47,24 +47,24 @@ export type BackendOptions = {
 export const stringLiteralName = ({ id, value }: StringLiteralData) =>
     `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
 
-export type RegisterAssignment = { [key: string]: Register };
+export type RegisterAssignment<TargetRegister> = { [key: string]: TargetRegister };
 
 export const saveRegistersCode = <TargetRegister>(
-    registerAssignment: RegisterAssignment
+    registerAssignment: RegisterAssignment<TargetRegister>
 ): TargetThreeAddressStatement<TargetRegister>[] =>
     Object.values(registerAssignment).map(targetRegister => ({
         kind: 'push' as 'push',
-        register: targetRegister,
+        register: (targetRegister as any).name,
         why: 'Push register to preserve it',
     }));
 
 export const restoreRegistersCode = <TargetRegister>(
-    registerAssignment: RegisterAssignment
+    registerAssignment: RegisterAssignment<TargetRegister>
 ): TargetThreeAddressStatement<TargetRegister>[] =>
     Object.values(registerAssignment)
         .map(targetRegister => ({
             kind: 'pop' as 'pop',
-            register: targetRegister,
+            register: (targetRegister as any).name,
             why: 'Restore preserved registers',
         }))
         .reverse();

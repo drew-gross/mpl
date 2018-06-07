@@ -41,7 +41,7 @@ import { execSync } from 'child_process';
 import idAppender from '../util/idAppender.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 
-const generalPurposeRegisters = ['r11', 'r12', 'r13', 'r14', 'r15', 'rdi', 'rsi', 'rbx'];
+const generalPurposeRegisters: X64Register[] = ['r11', 'r12', 'r13', 'r14', 'r15', 'rdi', 'rsi', 'rbx'];
 
 type X64Register =
     // function args
@@ -188,22 +188,20 @@ const runtimeFunctions: ThreeAddressFunction[] = [
 ].map(f => f(bytesInWord));
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
-const rtlFunctionToX64 = ({ name, instructions, numRegistersToSave, isMain }: ThreeAddressFunction): string => {
+const rtlFunctionToX64 = (taf: ThreeAddressFunction): string => {
+    const registerAssignment: RegisterAssignment<X64Register> = assignRegisters(taf, generalPurposeRegisters);
+
     const statements: TargetThreeAddressStatement<X64Register>[] = flatten(
-        instructions.map(instruction =>
+        taf.instructions.map(instruction =>
             threeAddressCodeToTarget(instruction, syscallNumbers, x64RegisterTypes, getX64Register)
         )
     );
     const fullRtl: TargetThreeAddressStatement<X64Register>[] = [
         { kind: 'functionLabel', name, why: 'Function entry point' },
-        ...(isMain
-            ? []
-            : saveRegistersCode<X64Register>(firstRegister, nextTemporary, getX64Register, numRegistersToSave)),
+        ...(taf.isMain ? [] : saveRegistersCode<X64Register>(registerAssignment)),
         ...statements,
-        ...(isMain
-            ? []
-            : restoreRegistersCode<X64Register>(firstRegister, nextTemporary, getX64Register, numRegistersToSave)),
-        ...(isMain ? [] : [{ kind: 'returnToCaller' as 'returnToCaller', why: 'Done' }]),
+        ...(taf.isMain ? [] : restoreRegistersCode<X64Register>(registerAssignment)),
+        ...(taf.isMain ? [] : [{ kind: 'returnToCaller' as 'returnToCaller', why: 'Done' }]),
     ];
     return join(flatten(fullRtl.map(threeAddressCodeToX64)), '\n');
 };
@@ -214,19 +212,20 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     const temporaryNameMaker = idAppender();
     const labelMaker = idAppender();
+    const makeTemporary = name => ({ name: temporaryNameMaker(name) });
     let x64Functions: ThreeAddressFunction[] = functions.map(f =>
-        constructFunction(f, globalDeclarations, stringLiterals, labelMaker)
+        constructFunction(f, globalDeclarations, stringLiterals, labelMaker, makeTemporary)
     );
     const mainProgramInstructions = flatten(
         program.statements.map(statement => {
-            const compiledProgram = astToThreeAddressCode(
+            const compiledProgram = astToThreeAddressCode({
                 ast: statement,
                 destination: 'functionResult',
                 globalDeclarations,
                 stringLiterals,
                 variablesInScope: {},
                 makeLabel: labelMaker,
-                makeTemporary: name => ({ name: temporaryNameMaker(name) }),
+                makeTemporary,
             });
 
             return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];

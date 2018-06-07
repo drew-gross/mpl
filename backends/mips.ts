@@ -40,7 +40,7 @@ import join from '../util/join.js';
 import idAppender from '../util/idAppender.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 
-const generalPurposeRegisters = ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'];
+const generalPurposeRegisters: MipsRegister[] = ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'];
 
 let labelId = 0;
 const makeLabel = (name: string) => {
@@ -81,7 +81,7 @@ const mipsRegisterTypes: RegisterDescription<MipsRegister> = {
     syscallSelectAndResult: '$v0',
 };
 
-const getMipsRegister = (registerAssignment: RegisterAssignment, r: Register): MipsRegister => {
+const getMipsRegister = (registerAssignment: RegisterAssignment<MipsRegister>, r: Register): MipsRegister => {
     if (typeof r == 'string') {
         switch (r) {
             case 'functionArgument1':
@@ -200,23 +200,23 @@ const mipsRuntime: RuntimeFunctionGenerator[] = [
 const runtimeFunctions: ThreeAddressFunction[] = mipsRuntime.map(f => f(bytesInWord));
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
-const rtlFunctionToMips = ({ name, instructions, numRegistersToSave, isMain }: ThreeAddressFunction): string => {
-    const registerAssignment = assignRegisters(rtlf, generalPurposeRegisters);
+const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
+    const registerAssignment: RegisterAssignment<MipsRegister> = assignRegisters(taf, generalPurposeRegisters);
     const statements: TargetThreeAddressStatement<MipsRegister>[] = flatten(
-        instructions.map(instruction =>
+        taf.instructions.map(instruction =>
             threeAddressCodeToTarget(instruction, syscallNumbers, mipsRegisterTypes, getMipsRegister)
         )
     );
 
-    const preamble: TargetThreeAddressStatement<MipsRegister>[] = !isMain
+    const preamble: TargetThreeAddressStatement<MipsRegister>[] = !taf.isMain
         ? [
               { kind: 'push', register: '$ra', why: 'Always save return address' },
-              ...saveRegistersCode<MipsRegister>(firstRegister, nextTemporary, getMipsRegister, numRegistersToSave),
+              ...saveRegistersCode<MipsRegister>(registerAssignment),
           ]
         : [];
-    const epilogue: TargetThreeAddressStatement<MipsRegister>[] = !isMain
+    const epilogue: TargetThreeAddressStatement<MipsRegister>[] = !taf.isMain
         ? [
-              ...restoreRegistersCode<MipsRegister>(firstRegister, nextTemporary, getMipsRegister, numRegistersToSave),
+              ...restoreRegistersCode<MipsRegister>(registerAssignment),
               { kind: 'pop', register: '$ra', why: 'Always restore return address' },
               { kind: 'returnToCaller', why: 'Done' },
           ]
@@ -232,24 +232,24 @@ const rtlFunctionToMips = ({ name, instructions, numRegistersToSave, isMain }: T
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
     const temporaryNameMaker = idAppender();
-    let mipsFunctions = functions.map(f => constructFunction(f, globalDeclarations, stringLiterals, makeLabel));
+    const makeTemporary = l => ({ name: temporaryNameMaker(l) });
+    const labelMaker = idAppender();
 
-    const { registerAssignment, firstTemporary } = assignMipsRegisters(program.variables);
+    let mipsFunctions = functions.map(f =>
+        constructFunction(f, globalDeclarations, stringLiterals, labelMaker, makeTemporary)
+    );
 
     const mainProgramInstructions: ThreeAddressStatement[] = flatten(
         program.statements.map(statement => {
-            const compiledProgram = astToThreeAddressCode(
-                {
-                    ast: statement,
-                    registerAssignment,
-                    destination: { name: '$a0' },
-                    currentTemporary: firstTemporary,
-                    globalDeclarations,
-                    stringLiterals,
-                },
-                nextTemporary,
-                makeLabel
-            );
+            const compiledProgram = astToThreeAddressCode({
+                ast: statement,
+                destination: { name: '$a0' },
+                variablesInScope: {},
+                globalDeclarations,
+                stringLiterals,
+                makeTemporary,
+                makeLabel: labelMaker,
+            });
 
             return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
         })

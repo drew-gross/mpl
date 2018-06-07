@@ -1,4 +1,4 @@
-import { ThreeAddressStatement } from './backends/threeAddressCode.js';
+import { ThreeAddressStatement, ThreeAddressFunction } from './backends/threeAddressCode.js';
 import test from 'ava';
 import flatten from './util/list/flatten.js';
 import { lex } from './lex.js';
@@ -1406,7 +1406,7 @@ test('computeBlockLiveness read and write in one', t => {
 });
 
 test('liveness analysis basic test', t => {
-    const testFunction: RTLF = {
+    const testFunction: ThreeAddressFunction = {
         name: 'test',
         isMain: false,
         instructions: [
@@ -1449,7 +1449,7 @@ test('liveness analysis basic test', t => {
 });
 
 test('4 block graph (length)', t => {
-    const lengthRTLF: RTLF = {
+    const lengthRTLF: ThreeAddressFunction = {
         name: 'length',
         isMain: false,
         instructions: [

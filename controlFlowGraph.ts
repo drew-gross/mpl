@@ -8,7 +8,7 @@ import join from './util/join.js';
 import grid from './util/grid.js';
 import { RegisterAssignment } from './backend-utils.js';
 import { Register, isEqual as registerIsEqual } from './register.js';
-import { ThreeAddressStatement, toString as tasToString } from './backends/threeAddressCode.js';
+import { ThreeAddressStatement, ThreeAddressFunction, toString as tasToString } from './backends/threeAddressCode.js';
 import { Graph } from 'graphlib';
 
 export type BasicBlock = {
@@ -64,53 +64,47 @@ const blockBehaviour = (rtx: ThreeAddressStatement): 'endBlock' | 'beginBlock' |
     }
 };
 
-const livenessUpdate = (rtx: RTX): { newlyLive: Register[]; newlyDead: Register[] } => {
-    switch (rtx.kind) {
+const livenessUpdate = (tas: ThreeAddressStatement): { newlyLive: Register[]; newlyDead: Register[] } => {
+    switch (tas.kind) {
         case 'comment':
             return { newlyLive: [], newlyDead: [] };
         case 'syscall':
             const predicate: FilterPredicate<Register | number, Register> = (arg: Register | number): arg is Register =>
                 typeof arg !== 'number';
-            const registerArguments: Register[] = filter<Register | number, Register>(rtx.arguments, predicate);
+            const registerArguments: Register[] = filter<Register | number, Register>(tas.arguments, predicate);
             return {
                 newlyLive: registerArguments,
-                newlyDead: rtx.destination ? [rtx.destination] : [],
+                newlyDead: tas.destination ? [tas.destination] : [],
             };
         case 'move':
-            return { newlyLive: [rtx.from], newlyDead: [rtx.to] };
+            return { newlyLive: [tas.from], newlyDead: [tas.to] };
         case 'loadImmediate':
-            return { newlyLive: [], newlyDead: [rtx.destination] };
+            return { newlyLive: [], newlyDead: [tas.destination] };
         case 'addImmediate':
         case 'increment':
-            return { newlyLive: [rtx.register], newlyDead: [] };
+            return { newlyLive: [tas.register], newlyDead: [] };
         case 'subtract':
         case 'add':
         case 'multiply':
-            return { newlyLive: [rtx.lhs, rtx.rhs], newlyDead: [rtx.destination] };
+            return { newlyLive: [tas.lhs, tas.rhs], newlyDead: [tas.destination] };
         case 'storeGlobal':
-            return { newlyLive: [rtx.from, rtx.to], newlyDead: [] };
+            return { newlyLive: [tas.from, tas.to], newlyDead: [] };
         case 'loadGlobal':
-            return { newlyLive: [], newlyDead: [rtx.to] };
+            return { newlyLive: [], newlyDead: [tas.to] };
         case 'storeMemory':
-            return { newlyLive: [rtx.from, rtx.address], newlyDead: [] };
+            return { newlyLive: [tas.from, tas.address], newlyDead: [] };
         case 'storeMemoryByte':
-            return { newlyLive: [rtx.contents, rtx.address], newlyDead: [] };
+            return { newlyLive: [tas.contents, tas.address], newlyDead: [] };
         case 'storeZeroToMemory':
-            return { newlyLive: [rtx.address], newlyDead: [] };
+            return { newlyLive: [tas.address], newlyDead: [] };
         case 'loadMemory':
-            return { newlyLive: [rtx.from], newlyDead: [rtx.to] };
+            return { newlyLive: [tas.from], newlyDead: [tas.to] };
         case 'loadMemoryByte':
-            return { newlyLive: [rtx.address], newlyDead: [rtx.to] };
+            return { newlyLive: [tas.address], newlyDead: [tas.to] };
         case 'loadSymbolAddress':
-            return { newlyLive: [], newlyDead: [rtx.to] };
+            return { newlyLive: [], newlyDead: [tas.to] };
         case 'callByRegister':
-            return { newlyLive: [rtx.function], newlyDead: [] };
-        case 'push':
-            return { newlyLive: [rtx.register], newlyDead: [] };
-        case 'pop':
-            return { newlyLive: [], newlyDead: [rtx.register] };
-        case 'returnValue':
-            return { newlyLive: [rtx.source], newlyDead: [] };
+            return { newlyLive: [tas.function], newlyDead: [] };
         case 'label':
         case 'callByName':
         case 'functionLabel':
@@ -120,9 +114,9 @@ const livenessUpdate = (rtx: RTX): { newlyLive: Register[]; newlyDead: Register[
         case 'gotoIfEqual':
         case 'gotoIfNotEqual':
         case 'gotoIfGreater':
-            return { newlyLive: [rtx.lhs, rtx.rhs], newlyDead: [] };
+            return { newlyLive: [tas.lhs, tas.rhs], newlyDead: [] };
         case 'gotoIfZero':
-            return { newlyLive: [rtx.register], newlyDead: [] };
+            return { newlyLive: [tas.register], newlyDead: [] };
         default:
             throw debug('Unrecognized RTX kind in blockBehaviour');
     }
@@ -331,8 +325,8 @@ const verifyingOverlappingJoin = (blocks: Set<Register>[][]): Set<Register>[] =>
     return result;
 };
 
-export const rtlfLiveness = (rtlf: RTLF): Set<Register>[] => {
-    const cfg = controlFlowGraph(rtlf);
+export const rtlfLiveness = (taf: ThreeAddressFunction): Set<Register>[] => {
+    const cfg = controlFlowGraph(taf.instructions);
     const blockLiveness = cfg.blocks.map(computeBlockLiveness);
     const remainingToPropagate: { entryLiveness: Set<Register>; index: number }[] = blockLiveness.map((b, i) => ({
         entryLiveness: b[0],
@@ -349,7 +343,7 @@ export const rtlfLiveness = (rtlf: RTLF): Set<Register>[] => {
         });
     }
     const overallLiveness: Set<Register>[] = verifyingOverlappingJoin(blockLiveness);
-    if (rtlf.instructions.length + 1 != overallLiveness.length) {
+    if (taf.instructions.length + 1 != overallLiveness.length) {
         throw debug('overallLiveness length mimatch');
     }
     return overallLiveness;
@@ -404,8 +398,11 @@ export const registerInterferenceGraph = (liveness: Set<Register>[]): RegisterIn
     return result;
 };
 
-export const assignRegisters = (rtlf: RTLF, colors: string[]): RegisterAssignment => {
-    const liveness = rtlfLiveness(rtlf);
+export const assignRegisters = <TargetRegister>(
+    taf: ThreeAddressFunction,
+    colors: TargetRegister[]
+): RegisterAssignment<TargetRegister> => {
+    const liveness = rtlfLiveness(taf);
     const rig = registerInterferenceGraph(liveness);
     const allRegisters = set(registerIsEqual);
     rig.nonSpecialRegisters.forEach(r => registersToAssign.add(r));
@@ -439,7 +436,7 @@ export const assignRegisters = (rtlf: RTLF, colors: string[]): RegisterAssignmen
         }
     }
 
-    const result: RegisterAssignment = {};
+    const result: RegisterAssignment<TargetRegister> = {};
 
     colorableStack.reverse().forEach(register => {
         // Try each color in order
@@ -450,14 +447,14 @@ export const assignRegisters = (rtlf: RTLF, colors: string[]): RegisterAssignmen
                 if (!other) {
                     return true;
                 }
-                if (registerIsEqual(result[(other as { name: string }).name], { name: color })) {
+                if (result[(other as { name: string }).name] == color) {
                     return false;
                 }
                 return true;
             });
         });
         if (!color) throw debug("couldn't find a color to assign");
-        result[(register as { name: string }).name] = { name: color };
+        result[(register as { name: string }).name] = color;
     });
 
     return result;
