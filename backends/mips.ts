@@ -150,12 +150,14 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
         case 'loadGlobal':
             return [`lw ${tas.to}, ${tas.from}`];
         case 'storeGlobal':
-            return [`sw ${tas.from}, ${tas.to}`];
+            if (!tas.from) debugger;
+            return [`sw ${tas.from}, (${tas.to})`];
         case 'loadMemory':
             return [`lw ${tas.to}, ${tas.offset}(${tas.from})`];
         case 'loadMemoryByte':
             return [`lb ${tas.to}, (${tas.address})`];
         case 'storeMemory':
+            if (!tas.from) debugger;
             return [`sw ${tas.from}, ${tas.offset}(${tas.address})`];
         case 'storeZeroToMemory':
             return [`sw $0, ${tas.offset}(${tas.address})`];
@@ -168,6 +170,7 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
         case 'returnToCaller':
             return [`jr $ra`];
         case 'push':
+            if (!tas.register) debugger;
             return [`sw ${tas.register}, ($sp)`, `addiu, $sp, $sp, -4`];
         case 'pop':
             return [`addiu $sp, $sp, 4`, `lw ${tas.register}, ($sp)`];

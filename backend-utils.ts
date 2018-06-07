@@ -54,7 +54,7 @@ export const saveRegistersCode = <TargetRegister>(
 ): TargetThreeAddressStatement<TargetRegister>[] =>
     Object.values(registerAssignment).map(targetRegister => ({
         kind: 'push' as 'push',
-        register: (targetRegister as any).name,
+        register: targetRegister,
         why: 'Push register to preserve it',
     }));
 
@@ -64,7 +64,7 @@ export const restoreRegistersCode = <TargetRegister>(
     Object.values(registerAssignment)
         .map(targetRegister => ({
             kind: 'pop' as 'pop',
-            register: (targetRegister as any).name,
+            register: targetRegister,
             why: 'Restore preserved registers',
         }))
         .reverse();
