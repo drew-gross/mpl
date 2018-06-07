@@ -315,7 +315,6 @@ const verifyingOverlappingJoin = (blocks: Set<Register>[][]): Set<Register>[] =>
         const lastOfCurrent = last(block);
         if (!lastOfCurrent) throw debug('empty block');
         const firstOfNext = nextBlock[0];
-        if (!firstOfNext.isSubsetOf(lastOfCurrent)) throw debug('non-matching adjacent');
     });
     blocks.forEach((block, index) => {
         result.push(...block);
@@ -352,7 +351,7 @@ export const tafLiveness = (taf: ThreeAddressFunction): Set<Register>[] => {
 type RegisterInterference = { r1: Register; r2: Register };
 
 export type RegisterInterferenceGraph = {
-    nonSpecialRegisters: Register[];
+    nonSpecialRegisters: Set<Register>;
     interferences: Set<RegisterInterference>;
 };
 
@@ -383,14 +382,18 @@ export const registerInterferenceGraph = (liveness: Set<Register>[]): RegisterIn
     const nonSpecialRegisters = setJoin(registerIsEqual, liveness);
     nonSpecialRegisters.removeWithPredicate(item => typeof item == 'string');
     const result: RegisterInterferenceGraph = {
-        nonSpecialRegisters: [],
+        nonSpecialRegisters: set(registerIsEqual),
         interferences: set(interferenceIsEqual),
     };
     liveness.forEach(registers => {
         registers.toList().forEach(i => {
             registers.toList().forEach(j => {
-                if (!registerIsEqual(i, j)) {
-                    result.interferences.add({ r1: i, r2: j });
+                if (typeof i != 'string' && typeof j != 'string') {
+                    result.nonSpecialRegisters.add(i);
+                    result.nonSpecialRegisters.add(j);
+                    if (!registerIsEqual(i, j)) {
+                        result.interferences.add({ r1: i, r2: j });
+                    }
                 }
             });
         });
@@ -404,14 +407,12 @@ export const assignRegisters = <TargetRegister>(
 ): RegisterAssignment<TargetRegister> => {
     const liveness = tafLiveness(taf);
     const rig = registerInterferenceGraph(liveness);
-    const allRegisters = set(registerIsEqual);
-    rig.nonSpecialRegisters.forEach(r => registersToAssign.add(r));
-    const registersToAssign = allRegisters.copy();
+    const registersToAssign = rig.nonSpecialRegisters.copy();
     const interferences = rig.interferences.copy();
     const colorableStack: Register[] = [];
-    while (colorableStack.length < rig.nonSpecialRegisters.length) {
+    while (colorableStack.length < rig.nonSpecialRegisters.size()) {
         let stackGrew = false;
-        rig.nonSpecialRegisters.forEach(register => {
+        rig.nonSpecialRegisters.toList().forEach(register => {
             if (stackGrew) {
                 return;
             }
@@ -437,12 +438,11 @@ export const assignRegisters = <TargetRegister>(
     }
 
     const result: RegisterAssignment<TargetRegister> = {};
-
     colorableStack.reverse().forEach(register => {
         // Try each color in order
         const color = colors.find(color => {
             // Check we if have a neighbour with this color already
-            return rig.interferences.toList().some(interference => {
+            return rig.interferences.toList().every(interference => {
                 const other = otherRegister(interference, register);
                 if (!other) {
                     return true;

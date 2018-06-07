@@ -40,8 +40,6 @@ import join from '../util/join.js';
 import idAppender from '../util/idAppender.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 
-const generalPurposeRegisters: MipsRegister[] = ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'];
-
 let labelId = 0;
 const makeLabel = (name: string) => {
     const result = `${name}${labelId}`;
@@ -94,7 +92,9 @@ const getMipsRegister = (registerAssignment: RegisterAssignment<MipsRegister>, r
                 return mipsRegisterTypes.functionResult;
         }
     } else {
-        if (!r) debugger;
+        if (!(r.name in registerAssignment)) {
+            throw debug('couldnt find an assignment for this register');
+        }
         return registerAssignment[r.name];
     }
     throw debug('should not get here');
@@ -199,7 +199,8 @@ const runtimeFunctions: ThreeAddressFunction[] = mipsRuntime.map(f => f(bytesInW
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
-    const registerAssignment: RegisterAssignment<MipsRegister> = assignRegisters(taf, generalPurposeRegisters);
+    const registerAssignment: RegisterAssignment<MipsRegister> = assignRegisters(taf, mipsRegisterTypes.generalPurpose);
+    assignRegisters(taf, mipsRegisterTypes.generalPurpose);
     const statements: TargetThreeAddressStatement<MipsRegister>[] = flatten(
         taf.instructions.map(instruction =>
             threeAddressCodeToTarget(instruction, syscallNumbers, mipsRegisterTypes, r =>

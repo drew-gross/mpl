@@ -872,6 +872,7 @@ export const threeAddressCodeToTarget = <TargetRegister>(
         case 'move':
             return [{ ...tas, to: getRegister(tas.to), from: getRegister(tas.from) }];
         case 'loadImmediate':
+            if (!getRegister(tas.destination)) debugger;
             return [{ ...tas, destination: getRegister(tas.destination) }];
         case 'add':
         case 'subtract':

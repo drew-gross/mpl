@@ -41,8 +41,6 @@ import { execSync } from 'child_process';
 import idAppender from '../util/idAppender.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 
-const generalPurposeRegisters: X64Register[] = ['r11', 'r12', 'r13', 'r14', 'r15', 'rdi', 'rsi', 'rbx'];
-
 type X64Register =
     // function args
     | 'r8'
@@ -91,6 +89,9 @@ const getX64Register = (r: Register): X64Register => {
                 return x64RegisterTypes.functionResult;
         }
     } else {
+        // if (!(r.name in registerAssignment)) {
+        //     throw debug('couldnt find an assignment for this register');
+        // }
         return r.name as X64Register;
     }
     throw debug('should not get here');
@@ -189,7 +190,7 @@ const runtimeFunctions: ThreeAddressFunction[] = [
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToX64 = (taf: ThreeAddressFunction): string => {
-    const registerAssignment: RegisterAssignment<X64Register> = assignRegisters(taf, generalPurposeRegisters);
+    const registerAssignment: RegisterAssignment<X64Register> = assignRegisters(taf, x64RegisterTypes.generalPurpose);
 
     const statements: TargetThreeAddressStatement<X64Register>[] = flatten(
         taf.instructions.map(instruction =>

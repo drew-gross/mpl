@@ -12,6 +12,7 @@ const switchableMallocImpl = (
 ) => {
     const currentBlockPointer = { name: 'currentBlockPointer' };
     const previousBlockPointer = { name: 'previousBlockPointer' };
+    const currentBlockIsFree = { name: 'current_block_is_free' };
     const err = { name: 'err' };
     return {
         name: 'my_malloc',
@@ -77,14 +78,14 @@ const switchableMallocImpl = (
             },
             {
                 kind: 'loadMemory',
-                to: { name: 'current_block_is_free' },
+                to: currentBlockIsFree,
                 from: currentBlockPointer,
                 offset: 2 * bytesInWord,
                 why: 'Current block not free, load next block',
             },
             {
                 kind: 'gotoIfZero',
-                register: 'current_block_is_free',
+                register: currentBlockIsFree,
                 label: 'advance_pointers',
                 why: 'Check next block',
             },
