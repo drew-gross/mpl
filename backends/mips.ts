@@ -8,10 +8,10 @@ import {
     CompiledProgram,
     BackendOptions,
     compileExpression,
+    RegisterAssignment,
     stringLiteralName,
     saveRegistersCode,
     restoreRegistersCode,
-    RegisterAssignment,
     RegisterDescription,
 } from '../backend-utils.js';
 import { Register } from '../register.js';
