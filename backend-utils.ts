@@ -1,4 +1,3 @@
-import * as Ast from './ast.js';
 import debug from './util/debug.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from './api.js';
 import flatten from './util/list/flatten.js';
@@ -33,16 +32,6 @@ export const compileExpression = <T>(
     execute: expressionCompiler(subExpressions.map(input => input.execute)),
     cleanup: flatten(subExpressions.reverse().map(input => input.cleanup)),
 });
-
-export type BackendOptions = {
-    ast: Ast.Ast;
-    destination: Register;
-    globalDeclarations: VariableDeclaration[];
-    stringLiterals: StringLiteralData[];
-    variablesInScope: { [key: string]: Register };
-    makeTemporary: (name: string) => Register;
-    makeLabel: (name: string) => string;
-};
 
 export const stringLiteralName = ({ id, value }: StringLiteralData) =>
     `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;

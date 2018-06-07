@@ -1,9 +1,9 @@
+import * as Ast from '../ast.js';
 import flatten from '../util/list/flatten.js';
 import { builtinFunctions } from '../frontend.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
 import {
-    BackendOptions,
     CompiledExpression,
     compileExpression,
     stringLiteralName,
@@ -12,7 +12,7 @@ import {
     RegisterDescription,
 } from '../backend-utils.js';
 import { Register, toString as registerToString } from '../register.js';
-import { Function } from '../api.js';
+import { Function, VariableDeclaration, StringLiteralData } from '../api.js';
 
 type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 
@@ -142,6 +142,16 @@ export const toString = (rtx: ThreeAddressStatement): string => {
         default:
             throw debug('Unrecognized RTX kind in toString');
     }
+};
+
+export type BackendOptions = {
+    ast: Ast.Ast;
+    destination: Register;
+    globalDeclarations: VariableDeclaration[];
+    stringLiterals: StringLiteralData[];
+    variablesInScope: { [key: string]: Register };
+    makeTemporary: (name: string) => Register;
+    makeLabel: (name: string) => string;
 };
 
 export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression<ThreeAddressStatement> => {

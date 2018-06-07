@@ -15,10 +15,7 @@ import {
     stringConcatenateRuntimeFunction,
 } from './threeAddressCodeRuntime.js';
 import {
-    BackendOptions,
-    CompiledProgram,
     RegisterAssignment,
-    compileExpression,
     stringLiteralName,
     saveRegistersCode,
     restoreRegistersCode,

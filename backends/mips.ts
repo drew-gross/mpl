@@ -7,9 +7,6 @@ import debug from '../util/debug.js';
 import { Register } from '../register.js';
 import join from '../util/join.js';
 import {
-    CompiledProgram,
-    BackendOptions,
-    compileExpression,
     RegisterAssignment,
     stringLiteralName,
     saveRegistersCode,
