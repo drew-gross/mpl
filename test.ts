@@ -1,4 +1,5 @@
 import { ThreeAddressStatement, ThreeAddressFunction } from './backends/threeAddressCode.js';
+import * as threeAddressCodeRuntime from './backends/threeAddressCodeRuntime.js';
 import test from 'ava';
 import flatten from './util/list/flatten.js';
 import { lex } from './lex.js';
@@ -20,7 +21,7 @@ import {
     stripSourceLocation,
 } from './parser-combinator.js';
 import { removeBracketsFromAst } from './frontend.js';
-import { controlFlowGraph, toDotFile, BasicBlock, computeBlockLiveness, rtlfLiveness } from './controlFlowGraph.js';
+import { controlFlowGraph, toDotFile, BasicBlock, computeBlockLiveness, tafLiveness } from './controlFlowGraph.js';
 import debug from './util/debug.js';
 
 test('double flatten', t => {
@@ -637,7 +638,7 @@ test('double product with brackets', compileAndRun, {
     },
 });
 
-test.only('id function', compileAndRun, {
+test('id function', compileAndRun, {
     source: 'id := a: Integer => a; return id(5)',
     expectedExitCode: 5,
 });
@@ -1437,7 +1438,7 @@ test('liveness analysis basic test', t => {
             },
         ],
     };
-    const testFunctionLiveness = rtlfLiveness(testFunction).map(s => s.toList());
+    const testFunctionLiveness = tafLiveness(testFunction).map(s => s.toList());
     const expectedLiveness = [
         [{ name: 'add_l' }, { name: 'add_r' }, { name: 'sub_l' }, { name: 'sub_r' }],
         [{ name: 'add_d' }, { name: 'sub_l' }, { name: 'sub_r' }],
@@ -1485,7 +1486,7 @@ test('4 block graph (length)', t => {
             },
         ],
     };
-    const lengthLiveness = rtlfLiveness(lengthRTLF).map(s =>
+    const lengthLiveness = tafLiveness(lengthRTLF).map(s =>
         s
             .toList()
             .map(r => {
@@ -1507,4 +1508,94 @@ test('4 block graph (length)', t => {
         [],
     ];
     t.deepEqual(lengthLiveness, expectedLiveness);
+});
+
+test('liveness of stringEquality', t => {
+    const complexFunction: ThreeAddressFunction = {
+        name: 'complexFunction',
+        isMain: false,
+        instructions: [
+            {
+                kind: 'loadImmediate',
+                destination: 'functionResult',
+                value: 1,
+                why: '',
+            },
+            {
+                kind: 'label',
+                name: 'loop',
+                why: '',
+            },
+            {
+                kind: 'loadImmediate',
+                destination: 'functionResult',
+                value: 1,
+                why: '',
+            },
+            {
+                kind: 'gotoIfNotEqual',
+                lhs: { name: 'leftByte' },
+                rhs: { name: 'rightByte' },
+                label: 'return_false',
+                why: '',
+            },
+            {
+                kind: 'gotoIfZero',
+                register: { name: 'leftByte' },
+                label: 'return',
+                why: '',
+            },
+            {
+                kind: 'loadImmediate',
+                destination: 'functionResult',
+                value: 1,
+                why: '',
+            },
+            {
+                kind: 'goto',
+                label: 'loop',
+                why: '',
+            },
+            {
+                kind: 'label',
+                name: 'return_false',
+                why: '',
+            },
+            {
+                kind: 'loadImmediate',
+                destination: 'functionResult',
+                value: 1,
+                why: '',
+            },
+            {
+                kind: 'label',
+                name: 'return',
+                why: '',
+            },
+        ],
+    };
+    const liveness = tafLiveness(complexFunction).map(s =>
+        s
+            .toList()
+            .map(r => {
+                if (typeof r == 'string') return r;
+                return r.name;
+            })
+            .sort()
+    );
+
+    const expectedLiveness = [
+        ['leftByte', 'rightByte'],
+        ['leftByte', 'rightByte'],
+        ['leftByte', 'rightByte'],
+        ['leftByte', 'rightByte'],
+        ['leftByte', 'rightByte'],
+        ['leftByte', 'rightByte'],
+        ['leftByte', 'rightByte'],
+        [],
+        [],
+        [],
+        [],
+    ];
+    t.deepEqual(liveness, expectedLiveness);
 });

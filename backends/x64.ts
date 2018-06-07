@@ -197,7 +197,7 @@ const rtlFunctionToX64 = (taf: ThreeAddressFunction): string => {
         )
     );
     const fullRtl: TargetThreeAddressStatement<X64Register>[] = [
-        { kind: 'functionLabel', name, why: 'Function entry point' },
+        { kind: 'functionLabel', name: taf.name, why: 'Function entry point' },
         ...(taf.isMain ? [] : saveRegistersCode<X64Register>(registerAssignment)),
         ...statements,
         ...(taf.isMain ? [] : restoreRegistersCode<X64Register>(registerAssignment)),

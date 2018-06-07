@@ -315,7 +315,7 @@ const verifyingOverlappingJoin = (blocks: Set<Register>[][]): Set<Register>[] =>
         const lastOfCurrent = last(block);
         if (!lastOfCurrent) throw debug('empty block');
         const firstOfNext = nextBlock[0];
-        if (!lastOfCurrent.isEqual(firstOfNext)) throw debug('non-matching adjacent');
+        if (!firstOfNext.isSubsetOf(lastOfCurrent)) throw debug('non-matching adjacent');
     });
     blocks.forEach((block, index) => {
         result.push(...block);
@@ -325,7 +325,7 @@ const verifyingOverlappingJoin = (blocks: Set<Register>[][]): Set<Register>[] =>
     return result;
 };
 
-export const rtlfLiveness = (taf: ThreeAddressFunction): Set<Register>[] => {
+export const tafLiveness = (taf: ThreeAddressFunction): Set<Register>[] => {
     const cfg = controlFlowGraph(taf.instructions);
     const blockLiveness = cfg.blocks.map(computeBlockLiveness);
     const remainingToPropagate: { entryLiveness: Set<Register>; index: number }[] = blockLiveness.map((b, i) => ({
@@ -402,7 +402,7 @@ export const assignRegisters = <TargetRegister>(
     taf: ThreeAddressFunction,
     colors: TargetRegister[]
 ): RegisterAssignment<TargetRegister> => {
-    const liveness = rtlfLiveness(taf);
+    const liveness = tafLiveness(taf);
     const rig = registerInterferenceGraph(liveness);
     const allRegisters = set(registerIsEqual);
     rig.nonSpecialRegisters.forEach(r => registersToAssign.add(r));

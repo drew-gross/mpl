@@ -222,7 +222,7 @@ const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
           ]
         : [];
     const fullRtl: TargetThreeAddressStatement<MipsRegister>[] = [
-        { kind: 'functionLabel', name, why: 'Function entry point' },
+        { kind: 'functionLabel', name: taf.name, why: 'Function entry point' },
         ...preamble,
         ...statements,
         ...epilogue,
