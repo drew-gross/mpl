@@ -76,3 +76,28 @@ export type RegisterDescription<TargetRegister> = {
     syscallArgument: TargetRegister[];
     syscallSelectAndResult: TargetRegister;
 };
+
+export const getRegisterFromAssignment = <TargetRegister>(
+    registerAssignment: RegisterAssignment<TargetRegister>,
+    specialRegisters: RegisterDescription<TargetRegister>,
+    r: Register
+): TargetRegister => {
+    if (typeof r == 'string') {
+        switch (r) {
+            case 'functionArgument1':
+                return specialRegisters.functionArgument[0];
+            case 'functionArgument2':
+                return specialRegisters.functionArgument[1];
+            case 'functionArgument3':
+                return specialRegisters.functionArgument[2];
+            case 'functionResult':
+                return specialRegisters.functionResult;
+        }
+    } else {
+        if (!(r.name in registerAssignment)) {
+            throw debug('couldnt find an assignment for this register');
+        }
+        return registerAssignment[r.name];
+    }
+    throw debug('should not get here');
+};

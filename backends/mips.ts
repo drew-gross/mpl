@@ -1,9 +1,11 @@
 import { exec } from 'child-process-promise';
-import { isEqual } from 'lodash';
+import { errors } from '../runtime-strings.js';
 import flatten from '../util/list/flatten.js';
-import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from '../api.js';
+import { BackendInputs, ExecutionResult, Function, StringLiteralData } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
+import { Register } from '../register.js';
+import join from '../util/join.js';
 import {
     CompiledProgram,
     BackendOptions,
@@ -13,8 +15,8 @@ import {
     saveRegistersCode,
     restoreRegistersCode,
     RegisterDescription,
+    getRegisterFromAssignment,
 } from '../backend-utils.js';
-import { Register } from '../register.js';
 import {
     astToThreeAddressCode,
     constructFunction,
@@ -34,18 +36,9 @@ import {
     myFreeRuntimeFunction,
     RuntimeFunctionGenerator,
 } from './threeAddressCodeRuntime.js';
-import { errors } from '../runtime-strings.js';
 import { builtinFunctions } from '../frontend.js';
-import join from '../util/join.js';
 import idAppender from '../util/idAppender.js';
 import { assignRegisters } from '../controlFlowGraph.js';
-
-let labelId = 0;
-const makeLabel = (name: string) => {
-    const result = `${name}${labelId}`;
-    labelId++;
-    return result;
-};
 
 type MipsRegister =
     // s
@@ -79,27 +72,6 @@ const mipsRegisterTypes: RegisterDescription<MipsRegister> = {
     syscallSelectAndResult: '$v0',
 };
 
-const getMipsRegister = (registerAssignment: RegisterAssignment<MipsRegister>, r: Register): MipsRegister => {
-    if (typeof r == 'string') {
-        switch (r) {
-            case 'functionArgument1':
-                return mipsRegisterTypes.functionArgument[0];
-            case 'functionArgument2':
-                return mipsRegisterTypes.functionArgument[1];
-            case 'functionArgument3':
-                return mipsRegisterTypes.functionArgument[2];
-            case 'functionResult':
-                return mipsRegisterTypes.functionResult;
-        }
-    } else {
-        if (!(r.name in registerAssignment)) {
-            throw debug('couldnt find an assignment for this register');
-        }
-        return registerAssignment[r.name];
-    }
-    throw debug('should not get here');
-};
-
 const syscallNumbers = {
     printInt: 1,
     print: 4,
@@ -117,12 +89,9 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
         case 'move':
             return [`move ${tas.to}, ${tas.from}`];
         case 'loadImmediate':
-            if (!tas.destination) throw debug('missint!');
-
             return [`li ${tas.destination}, ${tas.value}`];
-        case 'multiply': {
+        case 'multiply':
             return [`mult ${tas.lhs}, ${tas.rhs}`, `mflo ${tas.destination}`];
-        }
         case 'addImmediate':
             return [`addiu ${tas.register}, ${tas.amount}`];
         case 'add':
@@ -150,14 +119,12 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
         case 'loadGlobal':
             return [`lw ${tas.to}, ${tas.from}`];
         case 'storeGlobal':
-            if (typeof tas.to != 'string') debugger;
             return [`sw ${tas.from}, ${tas.to}`];
         case 'loadMemory':
             return [`lw ${tas.to}, ${tas.offset}(${tas.from})`];
         case 'loadMemoryByte':
             return [`lb ${tas.to}, (${tas.address})`];
         case 'storeMemory':
-            if (!tas.from) debugger;
             return [`sw ${tas.from}, ${tas.offset}(${tas.address})`];
         case 'storeZeroToMemory':
             return [`sw $0, ${tas.offset}(${tas.address})`];
@@ -170,7 +137,6 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
         case 'returnToCaller':
             return [`jr $ra`];
         case 'push':
-            if (!tas.register) debugger;
             return [`sw ${tas.register}, ($sp)`, `addiu, $sp, $sp, -4`];
         case 'pop':
             return [`addiu $sp, $sp, 4`, `lw ${tas.register}, ($sp)`];
@@ -203,11 +169,10 @@ const runtimeFunctions: ThreeAddressFunction[] = mipsRuntime.map(f => f(bytesInW
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
     const registerAssignment: RegisterAssignment<MipsRegister> = assignRegisters(taf, mipsRegisterTypes.generalPurpose);
-    assignRegisters(taf, mipsRegisterTypes.generalPurpose);
     const statements: TargetThreeAddressStatement<MipsRegister>[] = flatten(
         taf.instructions.map(instruction =>
             threeAddressCodeToTarget(instruction, syscallNumbers, mipsRegisterTypes, r =>
-                getMipsRegister(registerAssignment, r)
+                getRegisterFromAssignment(registerAssignment, mipsRegisterTypes, r)
             )
         )
     );

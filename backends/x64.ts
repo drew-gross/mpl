@@ -1,4 +1,9 @@
+import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
+import flatten from '../util/list/flatten.js';
+import * as Ast from '../ast.js';
+import debug from '../util/debug.js';
+import join from '../util/join.js';
 import {
     mallocWithMmap,
     length,
@@ -9,10 +14,6 @@ import {
     stringEqualityRuntimeFunction,
     stringConcatenateRuntimeFunction,
 } from './threeAddressCodeRuntime.js';
-import join from '../util/join.js';
-import { isEqual } from 'lodash';
-import debug from '../util/debug.js';
-import * as Ast from '../ast.js';
 import {
     BackendOptions,
     CompiledProgram,
@@ -22,6 +23,7 @@ import {
     saveRegistersCode,
     restoreRegistersCode,
     RegisterDescription,
+    getRegisterFromAssignment,
 } from '../backend-utils.js';
 import { Register } from '../register.js';
 import {
@@ -32,9 +34,7 @@ import {
     TargetThreeAddressStatement,
     threeAddressCodeToTarget,
 } from './threeAddressCode.js';
-import flatten from '../util/list/flatten.js';
 import { VariableDeclaration, BackendInputs, StringLiteralData } from '../api.js';
-import { exec } from 'child-process-promise';
 import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { execSync } from 'child_process';
@@ -74,27 +74,6 @@ const syscallNumbers = {
     sbrk: 0x02000045,
     exit: 0x02000001,
     mmap: 0x020000c5,
-};
-
-const getX64Register = (r: Register): X64Register => {
-    if (typeof r == 'string') {
-        switch (r) {
-            case 'functionArgument1':
-                return x64RegisterTypes.functionArgument[0];
-            case 'functionArgument2':
-                return x64RegisterTypes.functionArgument[1];
-            case 'functionArgument3':
-                return x64RegisterTypes.functionArgument[2];
-            case 'functionResult':
-                return x64RegisterTypes.functionResult;
-        }
-    } else {
-        // if (!(r.name in registerAssignment)) {
-        //     throw debug('couldnt find an assignment for this register');
-        // }
-        return r.name as X64Register;
-    }
-    throw debug('should not get here');
 };
 
 const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X64Register>): string[] => {
@@ -194,7 +173,9 @@ const rtlFunctionToX64 = (taf: ThreeAddressFunction): string => {
 
     const statements: TargetThreeAddressStatement<X64Register>[] = flatten(
         taf.instructions.map(instruction =>
-            threeAddressCodeToTarget(instruction, syscallNumbers, x64RegisterTypes, getX64Register)
+            threeAddressCodeToTarget(instruction, syscallNumbers, x64RegisterTypes, r =>
+                getRegisterFromAssignment(registerAssignment, x64RegisterTypes, r)
+            )
         )
     );
     const fullRtl: TargetThreeAddressStatement<X64Register>[] = [
