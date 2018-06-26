@@ -13,14 +13,21 @@ const switchableMallocImpl = (
     const currentBlockPointer = { name: 'currentBlockPointer' };
     const previousBlockPointer = { name: 'previousBlockPointer' };
     const currentBlockIsFree = { name: 'current_block_is_free' };
+    const zero = { name: 'zero' };
     const err = { name: 'err' };
     return {
         name: 'my_malloc',
         isMain: false,
         instructions: [
             {
-                kind: 'gotoIfZero',
-                register: 'functionArgument1',
+                kind: 'loadImmediate',
+                value: 0,
+                destination: zero,
+            },
+            {
+                kind: 'gotoIfGreater',
+                lhs: 'functionArgument1',
+                rhs: zero,
                 label: 'my_malloc_zero_size_check_passed',
                 why: 'Error if no memory requested',
             },
@@ -134,7 +141,7 @@ const switchableMallocImpl = (
                 kind: 'storeZeroToMemory',
                 address: currentBlockPointer,
                 offset: 2 * bytesInWord,
-                why: 'Found a reusable block, mark it as not free',
+                why: 'block->free = false',
             },
             {
                 kind: 'move',
@@ -402,6 +409,7 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord => {
     const currentBlockPointer = { name: 'currentBlockPointer' };
     const currentData = { name: 'currentData' };
     const err = { name: 'err' };
+    const one = { name: 'one' };
     return {
         name: 'verify_no_leaks',
         isMain: false,
@@ -429,8 +437,15 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord => {
                 why: 'data = block->free',
             },
             {
-                kind: 'gotoIfZero',
-                register: currentData,
+                kind: 'loadImmediate',
+                destination: one,
+                value: 1,
+                why: 'Need for comparison',
+            },
+            {
+                kind: 'gotoIfEqual',
+                lhs: currentData,
+                rhs: one,
                 label: 'verify_no_leaks_advance_pointers',
                 why: "Don't error if free",
             },
@@ -564,6 +579,7 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     const zero = { name: 'zero' };
     const one = { name: 'one' };
     const err = { name: 'err' };
+    const managementBlockSize = { name: 'managementBlockSize' };
     return {
         name: 'my_free',
         isMain: false,
@@ -601,11 +617,24 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
             // TODO: check if already free
             { kind: 'loadImmediate', destination: one, value: 1, why: 'Need access to a 1' },
             {
+                kind: 'loadImmediate',
+                destination: managementBlockSize,
+                value: 3 * bytesInWord,
+                why: 'managementBlockSize',
+            },
+            {
+                kind: 'subtract',
+                lhs: 'functionArgument1',
+                rhs: managementBlockSize,
+                destination: 'functionArgument1',
+                why: 'Adjust pointer to point to management struct instead of allocated space',
+            },
+            {
                 kind: 'storeMemory',
                 from: one,
                 address: 'functionArgument1',
-                offset: -1 * bytesInWord,
-                why: 'block->free = false',
+                offset: 2 * bytesInWord,
+                why: 'block->free = true',
             },
         ],
     };

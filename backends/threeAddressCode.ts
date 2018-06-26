@@ -84,7 +84,7 @@ export type TargetThreeAddressStatement<TargetRegister> = { why: string } & (
     | { kind: 'push'; register: TargetRegister }
     | { kind: 'pop'; register: TargetRegister });
 
-export const toString = (rtx: ThreeAddressStatement): string => {
+const toStringWithoutComment = (rtx: ThreeAddressStatement): string => {
     switch (rtx.kind) {
         case 'comment':
             return ``;
@@ -143,6 +143,8 @@ export const toString = (rtx: ThreeAddressStatement): string => {
             throw debug('Unrecognized RTX kind in toString');
     }
 };
+
+export const toString = (rtx: ThreeAddressStatement): string => `${toStringWithoutComment(rtx)} # ${rtx.why}`;
 
 export type BackendOptions = {
     ast: Ast.Ast;
@@ -327,13 +329,13 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             });
 
             const argumentComputerToMips = (argumentComputer, index) => [
-                { kind: 'comment', why: 'Put argument ${index} in register' },
+                { kind: 'comment', why: `Put argument ${index} in register` },
                 ...argumentComputer,
             ];
 
             return compileExpression<ThreeAddressStatement>(computeArgumentsMips, argumentComputers => [
                 ...flatten(argumentComputers.map(argumentComputerToMips)),
-                { kind: 'comment', why: 'call ${functionName}' },
+                { kind: 'comment', why: `call ${functionName}` },
                 ...callInstructions,
                 {
                     kind: 'move',
@@ -423,13 +425,12 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             },
                         ]);
                     case 'String':
-                        const stringPointer = makeTemporary('string_pointer');
                         return compileExpression<ThreeAddressStatement>([computeRhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'move',
                                 to: 'functionArgument1',
-                                from: stringPointer,
+                                from: rhs,
                                 why: 'Put string pointer into temporary',
                             },
                             { kind: 'callByName', function: 'length', why: 'Get string length' },
@@ -448,7 +449,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             {
                                 kind: 'move',
                                 to: 'functionArgument1',
-                                from: stringPointer,
+                                from: rhs,
                                 why: 'Move destination to argument 1',
                             },
                             {
