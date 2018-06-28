@@ -219,7 +219,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         program.statements.map(statement => {
             const compiledProgram = astToThreeAddressCode({
                 ast: statement,
-                destination: { name: '$a0' },
+                destination: 'functionResult',
                 variablesInScope: {},
                 globalNameMap,
                 stringLiterals,
