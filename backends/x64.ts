@@ -82,6 +82,16 @@ const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X6
         case 'move':
             return [`mov ${tas.to}, ${tas.from}`];
         case 'subtract':
+            if (tas.lhs == tas.destination) {
+                return [`sub ${tas.destination}, ${tas.rhs}`];
+            }
+            if (tas.rhs == tas.destination) {
+                return [
+                    `mov rax, ${tas.rhs}`, // Save rhs so we can subtract it later
+                    `mov ${tas.destination}, ${tas.lhs}`,
+                    `sub ${tas.destination}, rax`,
+                ];
+            }
             return [`mov ${tas.destination}, ${tas.lhs}`, `sub ${tas.destination}, ${tas.rhs}`];
         case 'add':
             if (tas.lhs == tas.destination) {
