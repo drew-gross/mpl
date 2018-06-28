@@ -1085,7 +1085,7 @@ return timess(11, 1);`,
     expectedExitCode: 11,
 });
 
-test.failing('function named times', compileAndRun, {
+test('function named times', compileAndRun, {
     source: `
 times := (a: Integer, b: Integer) => a * b;
 return times(11, 1);`,
@@ -1308,7 +1308,7 @@ return foo();
     expectedStdOut: 'HelloWorld!!!!!',
 });
 
-test.failing('variable named b', compileAndRun, {
+test('variable named b', compileAndRun, {
     source: `
 b := 2;
 return b;`,

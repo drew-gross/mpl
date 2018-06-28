@@ -21,6 +21,7 @@ import {
     ThreeAddressFunction,
     TargetThreeAddressStatement,
     threeAddressCodeToTarget,
+    GlobalInfo,
 } from './threeAddressCode.js';
 import {
     mallocWithSbrk,
@@ -200,8 +201,18 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
     const makeTemporary = l => ({ name: temporaryNameMaker(l) });
     const labelMaker = idAppender();
 
+    const globalNameMaker = idAppender();
+
+    const globalNameMap: { [key: string]: GlobalInfo } = {};
+    globalDeclarations.forEach(declaration => {
+        globalNameMap[declaration.name] = {
+            newName: globalNameMaker(declaration.name),
+            originalDeclaration: declaration,
+        };
+    });
+
     let mipsFunctions = functions.map(f =>
-        constructFunction(f, globalDeclarations, stringLiterals, labelMaker, makeTemporary)
+        constructFunction(f, globalNameMap, stringLiterals, labelMaker, makeTemporary)
     );
 
     const mainProgramInstructions: ThreeAddressStatement[] = flatten(
@@ -210,7 +221,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
                 ast: statement,
                 destination: { name: '$a0' },
                 variablesInScope: {},
-                globalDeclarations,
+                globalNameMap,
                 stringLiterals,
                 makeTemporary,
                 makeLabel: labelMaker,
@@ -224,7 +235,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         globalDeclarations.filter(declaration => declaration.type.name === 'String').map(declaration => [
             {
                 kind: 'loadGlobal',
-                from: declaration.name,
+                from: globalNameMap[declaration.name].newName,
                 to: 'functionArgument1',
                 why: 'Load global string so we can free it',
             } as ThreeAddressStatement,
@@ -289,7 +300,9 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
 
     return `
 .data
-${globalDeclarations.map(name => `${name.name}: .word 0`).join('\n')}
+${Object.values(globalNameMap)
+        .map(({ newName }) => `${newName}: .word 0`)
+        .join('\n')}
 ${stringLiterals.map(stringLiteralDeclaration).join('\n')}
 ${Object.keys(errors)
         .map(key => `${errors[key].name}: .asciiz "${errors[key].value}"`)

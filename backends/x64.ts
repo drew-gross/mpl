@@ -30,6 +30,7 @@ import {
     ThreeAddressFunction,
     TargetThreeAddressStatement,
     threeAddressCodeToTarget,
+    GlobalInfo,
 } from './threeAddressCode.js';
 import { VariableDeclaration, BackendInputs, StringLiteralData } from '../api.js';
 import { file as tmpFile } from 'tmp-promise';
@@ -202,15 +203,26 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
     const temporaryNameMaker = idAppender();
     const labelMaker = idAppender();
     const makeTemporary = name => ({ name: temporaryNameMaker(name) });
+
+    const globalNameMaker = idAppender();
+
+    const globalNameMap: { [key: string]: GlobalInfo } = {};
+    globalDeclarations.forEach(declaration => {
+        globalNameMap[declaration.name] = {
+            newName: globalNameMaker(declaration.name),
+            originalDeclaration: declaration,
+        };
+    });
+
     let x64Functions: ThreeAddressFunction[] = functions.map(f =>
-        constructFunction(f, globalDeclarations, stringLiterals, labelMaker, makeTemporary)
+        constructFunction(f, globalNameMap, stringLiterals, labelMaker, makeTemporary)
     );
     const mainProgramInstructions = flatten(
         program.statements.map(statement => {
             const compiledProgram = astToThreeAddressCode({
                 ast: statement,
                 destination: 'functionResult',
-                globalDeclarations,
+                globalNameMap,
                 stringLiterals,
                 variablesInScope: {},
                 makeLabel: labelMaker,
@@ -244,8 +256,8 @@ section .data
 first_block: dq 0
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
 section .bss
-${globalDeclarations
-        .map(name => `${name.name}: resq 1`) // TODO: actual size of var instead of always resq
+${Object.values(globalNameMap)
+        .map(({ newName }) => `${newName}: resq 1`) // TODO: actual size of var instead of always resq
         .join('\n')}
 ${Object.keys(errors)
         .map(key => `${errors[key].name}: resd 1`) // TODO: Fix this

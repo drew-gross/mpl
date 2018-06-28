@@ -146,10 +146,12 @@ const toStringWithoutComment = (rtx: ThreeAddressStatement): string => {
 
 export const toString = (rtx: ThreeAddressStatement): string => `${toStringWithoutComment(rtx)} # ${rtx.why}`;
 
+export type GlobalInfo = { newName: string; originalDeclaration: VariableDeclaration };
+
 export type BackendOptions = {
     ast: Ast.Ast;
     destination: Register;
-    globalDeclarations: VariableDeclaration[];
+    globalNameMap: { [key: string]: GlobalInfo };
     stringLiterals: StringLiteralData[];
     variablesInScope: { [key: string]: Register };
     makeTemporary: (name: string) => Register;
@@ -157,7 +159,7 @@ export type BackendOptions = {
 };
 
 export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression<ThreeAddressStatement> => {
-    const { ast, variablesInScope, destination, globalDeclarations, stringLiterals, makeTemporary, makeLabel } = input;
+    const { ast, variablesInScope, destination, globalNameMap, stringLiterals, makeTemporary, makeLabel } = input;
     const recurse = newInput => astToThreeAddressCode({ ...input, ...newInput });
     switch (ast.kind) {
         case 'number':
@@ -284,12 +286,12 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     },
                     { kind: 'callByRegister', function: functionPointer, why: 'Call runtime function' },
                 ];
-            } else if (globalDeclarations.some(declaration => declaration.name === functionName)) {
+            } else if (functionName in globalNameMap) {
                 const functionPointer = makeTemporary('function_pointer');
                 callInstructions = [
                     {
                         kind: 'loadGlobal',
-                        from: functionName,
+                        from: globalNameMap[functionName].newName,
                         to: functionPointer,
                         why: 'Load global function pointer',
                     },
@@ -404,15 +406,14 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
         }
         case 'typedDeclarationAssignment': {
             const lhs: string = ast.destination;
-            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
+            if (lhs in globalNameMap) {
                 const rhs = makeTemporary('assignment_rhs');
                 const computeRhs = recurse({
                     ast: ast.expression,
                     destination: rhs,
                 });
-                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
-                if (!declaration) throw debug('todo');
-                switch (declaration.type.name) {
+                const lhsInfo = globalNameMap[lhs];
+                switch (lhsInfo.originalDeclaration.type.name) {
                     case 'Function':
                     case 'Integer':
                         return compileExpression<ThreeAddressStatement>([computeRhs], ([e1]) => [
@@ -420,8 +421,8 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             {
                                 kind: 'storeGlobal',
                                 from: rhs,
-                                to: lhs,
-                                why: `Put ${declaration.type.name} into global`,
+                                to: lhsInfo.newName,
+                                why: `Put ${lhsInfo.originalDeclaration.type.name} into global`,
                             },
                         ]);
                     case 'String':
@@ -462,7 +463,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             {
                                 kind: 'storeGlobal',
                                 from: 'functionResult',
-                                to: lhs,
+                                to: lhsInfo.newName,
                                 why: 'Store into global',
                             },
                         ]);
@@ -480,15 +481,14 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
         }
         case 'reassignment': {
             const lhs: string = ast.destination;
-            if (globalDeclarations.some(declaration => declaration.name === lhs)) {
+            if (lhs in globalNameMap) {
                 const reassignmentRhs = makeTemporary('reassignment_rhs');
                 const rhs: CompiledExpression<ThreeAddressStatement> = recurse({
                     ast: ast.expression,
                     destination: reassignmentRhs,
                 });
-                const declaration = globalDeclarations.find(declaration => declaration.name === lhs);
-                if (!declaration) throw debug('todo');
-                switch (declaration.type.name) {
+                const declaration = globalNameMap[lhs];
+                switch (declaration.originalDeclaration.type.name) {
                     case 'Function':
                     case 'Integer':
                         return compileExpression<ThreeAddressStatement>([rhs], ([e1]) => [
@@ -496,7 +496,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             {
                                 kind: 'storeGlobal',
                                 from: reassignmentRhs,
-                                to: lhs,
+                                to: declaration.newName,
                                 why: 'Store into global',
                             },
                         ]);
@@ -507,7 +507,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 {
                                     kind: 'loadGlobal',
                                     to: oldData,
-                                    from: lhs,
+                                    from: declaration.newName,
                                     why: 'Save global for freeing after assignment',
                                 } as ThreeAddressStatement,
                             ],
@@ -545,7 +545,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             {
                                 kind: 'storeGlobal',
                                 from: 'functionResult',
-                                to: lhs,
+                                to: declaration.newName,
                                 why: 'Store location of allocated memory to global',
                             },
                             {
@@ -689,14 +689,12 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
         case 'identifier': {
             // TODO: Better handle identifiers here. Also just better storage/scope chains?
             const identifierName = ast.value;
-            if (globalDeclarations.some(declaration => declaration.name === identifierName)) {
-                const declaration = globalDeclarations.find(declaration => declaration.name === identifierName);
-                if (!declaration) throw debug('todo');
+            if (identifierName in globalNameMap) {
                 return compileExpression<ThreeAddressStatement>([], ([]) => [
                     {
                         kind: 'loadGlobal',
                         to: destination,
-                        from: identifierName,
+                        from: globalNameMap[identifierName].newName,
                         why: `Load ${identifierName} from global into register`,
                     },
                 ]);
@@ -753,7 +751,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
 
 export const constructFunction = (
     f: Function,
-    globalDeclarations,
+    globalNameMap,
     stringLiterals,
     makeLabel,
     makeTemporary
@@ -778,7 +776,7 @@ export const constructFunction = (
                 ast: statement,
                 variablesInScope,
                 destination: 'functionResult',
-                globalDeclarations,
+                globalNameMap,
                 stringLiterals,
                 makeTemporary,
                 makeLabel,
