@@ -1,3 +1,13 @@
+import {
+    length,
+    stringCopy,
+    verifyNoLeaks,
+    stringConcatenateRuntimeFunction,
+    stringEqualityRuntimeFunction,
+    myFreeRuntimeFunction,
+    RuntimeFunctionGenerator,
+} from './threeAddressCodeRuntime.js';
+import idAppender from '../util/idAppender.js';
 import * as Ast from '../ast.js';
 import flatten from '../util/list/flatten.js';
 import { builtinFunctions } from '../frontend.js';
@@ -12,7 +22,7 @@ import {
     RegisterDescription,
 } from '../backend-utils.js';
 import { Register, toString as registerToString } from '../register.js';
-import { Function, VariableDeclaration, StringLiteralData } from '../api.js';
+import { Function, VariableDeclaration, StringLiteralData, BackendInputs } from '../api.js';
 
 type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 
@@ -925,4 +935,84 @@ export const threeAddressCodeToTarget = <TargetRegister>(
         default:
             throw debug(`${(tas as any).kind} unhandled in threeAddressCodeToTarget`);
     }
+};
+
+export const makeAllFunctions = (
+    { functions, program, globalDeclarations, stringLiterals }: BackendInputs,
+    mainName: string,
+    howToExit: ThreeAddressStatement[],
+    mallocImpl: ThreeAddressFunction,
+    printImpl: ThreeAddressFunction,
+    bytesInWord
+): { globalNameMap: { [key: string]: GlobalInfo }; functions: ThreeAddressFunction[] } => {
+    const temporaryNameMaker = idAppender();
+    const makeTemporary = name => ({ name: temporaryNameMaker(name) });
+    const labelMaker = idAppender();
+    const globalNameMaker = idAppender();
+
+    const globalNameMap: { [key: string]: GlobalInfo } = {};
+    globalDeclarations.forEach(declaration => {
+        globalNameMap[declaration.name] = {
+            newName: globalNameMaker(declaration.name),
+            originalDeclaration: declaration,
+        };
+    });
+
+    const userFunctions: ThreeAddressFunction[] = functions.map(f =>
+        constructFunction(f, globalNameMap, stringLiterals, labelMaker, makeTemporary)
+    );
+
+    const mainProgramInstructions: ThreeAddressStatement[] = flatten(
+        program.statements.map(statement => {
+            const compiledProgram = astToThreeAddressCode({
+                ast: statement,
+                destination: 'functionResult',
+                globalNameMap,
+                stringLiterals,
+                variablesInScope: {},
+                makeLabel: labelMaker,
+                makeTemporary,
+            });
+
+            return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
+        })
+    );
+
+    const freeGlobalsInstructions: ThreeAddressStatement[] = flatten(
+        globalDeclarations.filter(declaration => declaration.type.name === 'String').map(declaration => [
+            {
+                kind: 'loadGlobal',
+                from: globalNameMap[declaration.name].newName,
+                to: 'functionArgument1',
+                why: 'Load global string so we can free it',
+            } as ThreeAddressStatement,
+            {
+                kind: 'callByName',
+                function: 'my_free',
+                why: 'Free gloabal string at end of program',
+            } as ThreeAddressStatement,
+        ])
+    );
+
+    let mainProgram: ThreeAddressFunction = {
+        name: mainName,
+        isMain: true,
+        instructions: [
+            ...mainProgramInstructions,
+            ...freeGlobalsInstructions,
+            { kind: 'callByName', function: 'verify_no_leaks', why: 'Check for leaks' },
+            ...howToExit,
+        ],
+    };
+
+    const runtimeFunctions = [
+        length,
+        stringEqualityRuntimeFunction,
+        stringConcatenateRuntimeFunction,
+        stringCopy,
+        myFreeRuntimeFunction,
+        verifyNoLeaks,
+    ].map(f => f(bytesInWord));
+
+    return { globalNameMap, functions: [...runtimeFunctions, mallocImpl, printImpl, ...userFunctions, mainProgram] };
 };

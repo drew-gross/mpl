@@ -4,16 +4,7 @@ import flatten from '../util/list/flatten.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import {
-    mallocWithMmap,
-    length,
-    stringCopy,
-    verifyNoLeaks,
-    printWithWriteRuntimeFunction,
-    myFreeRuntimeFunction,
-    stringEqualityRuntimeFunction,
-    stringConcatenateRuntimeFunction,
-} from './threeAddressCodeRuntime.js';
+import { mallocWithMmap, printWithWriteRuntimeFunction } from './threeAddressCodeRuntime.js';
 import {
     RegisterAssignment,
     stringLiteralName,
@@ -25,18 +16,17 @@ import {
 import { Register } from '../register.js';
 import {
     astToThreeAddressCode,
-    constructFunction,
     ThreeAddressStatement,
     ThreeAddressFunction,
     TargetThreeAddressStatement,
     threeAddressCodeToTarget,
     GlobalInfo,
+    makeAllFunctions,
 } from './threeAddressCode.js';
 import { VariableDeclaration, BackendInputs, StringLiteralData } from '../api.js';
 import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { execSync } from 'child_process';
-import idAppender from '../util/idAppender.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 
 type X64Register =
@@ -164,17 +154,6 @@ const threeAddressCodeToX64 = (tas: TargetThreeAddressStatement<X64Register>): s
 
 const bytesInWord = 8;
 
-const runtimeFunctions: ThreeAddressFunction[] = [
-    length,
-    printWithWriteRuntimeFunction,
-    stringEqualityRuntimeFunction,
-    stringCopy,
-    mallocWithMmap,
-    myFreeRuntimeFunction,
-    stringConcatenateRuntimeFunction,
-    verifyNoLeaks,
-].map(f => f(bytesInWord));
-
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToX64 = (taf: ThreeAddressFunction): string => {
     const registerAssignment: RegisterAssignment<X64Register> = assignRegisters(taf, x64RegisterTypes.generalPurpose);
@@ -199,45 +178,11 @@ const rtlFunctionToX64 = (taf: ThreeAddressFunction): string => {
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
 
-const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
-    const temporaryNameMaker = idAppender();
-    const labelMaker = idAppender();
-    const makeTemporary = name => ({ name: temporaryNameMaker(name) });
-
-    const globalNameMaker = idAppender();
-
-    const globalNameMap: { [key: string]: GlobalInfo } = {};
-    globalDeclarations.forEach(declaration => {
-        globalNameMap[declaration.name] = {
-            newName: globalNameMaker(declaration.name),
-            originalDeclaration: declaration,
-        };
-    });
-
-    let x64Functions: ThreeAddressFunction[] = functions.map(f =>
-        constructFunction(f, globalNameMap, stringLiterals, labelMaker, makeTemporary)
-    );
-    const mainProgramInstructions = flatten(
-        program.statements.map(statement => {
-            const compiledProgram = astToThreeAddressCode({
-                ast: statement,
-                destination: 'functionResult',
-                globalNameMap,
-                stringLiterals,
-                variablesInScope: {},
-                makeLabel: labelMaker,
-                makeTemporary,
-            });
-
-            return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
-        })
-    );
-
-    let x64Program: ThreeAddressFunction = {
-        name: 'start',
-        isMain: true,
-        instructions: [
-            ...mainProgramInstructions,
+const toExectuable = (inputs: BackendInputs) => {
+    const { globalNameMap, functions } = makeAllFunctions(
+        inputs,
+        'start',
+        [
             {
                 kind: 'syscall',
                 name: 'exit',
@@ -246,15 +191,18 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
                 why: 'Whole program is done',
             },
         ],
-    };
+        mallocWithMmap(bytesInWord),
+        printWithWriteRuntimeFunction(bytesInWord),
+        bytesInWord
+    );
     return `
 global start
 
 section .text
-${join([...runtimeFunctions, ...x64Functions, x64Program].map(rtlFunctionToX64), '\n\n\n')}
+${join(functions.map(rtlFunctionToX64), '\n\n\n')}
 section .data
 first_block: dq 0
-${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
+${join(inputs.stringLiterals.map(stringLiteralDeclaration), '\n')}
 section .bss
 ${Object.values(globalNameMap)
         .map(({ newName }) => `${newName}: resq 1`) // TODO: actual size of var instead of always resq
@@ -277,7 +225,6 @@ export default {
     name: 'x64',
     toExectuable,
     execute: async path => execAndGetResult((await x64toBinary(path)).path),
-    runtimeFunctions,
     debug: async path => {
         console.log(`lldb ${(await x64toBinary(path)).path}`);
         console.log(`break set -n start`);

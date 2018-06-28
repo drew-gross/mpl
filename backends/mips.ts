@@ -16,26 +16,15 @@ import {
 } from '../backend-utils.js';
 import {
     astToThreeAddressCode,
-    constructFunction,
     ThreeAddressStatement,
     ThreeAddressFunction,
     TargetThreeAddressStatement,
     threeAddressCodeToTarget,
     GlobalInfo,
+    makeAllFunctions,
 } from './threeAddressCode.js';
-import {
-    mallocWithSbrk,
-    length,
-    stringCopy,
-    verifyNoLeaks,
-    printWithPrintRuntimeFunction,
-    stringConcatenateRuntimeFunction,
-    stringEqualityRuntimeFunction,
-    myFreeRuntimeFunction,
-    RuntimeFunctionGenerator,
-} from './threeAddressCodeRuntime.js';
+import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCodeRuntime.js';
 import { builtinFunctions } from '../frontend.js';
-import idAppender from '../util/idAppender.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 
 type MipsRegister =
@@ -151,19 +140,6 @@ const bytesInWord = 4;
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
 
-const mipsRuntime: RuntimeFunctionGenerator[] = [
-    length,
-    printWithPrintRuntimeFunction,
-    stringEqualityRuntimeFunction,
-    stringCopy,
-    mallocWithSbrk,
-    myFreeRuntimeFunction,
-    stringConcatenateRuntimeFunction,
-    verifyNoLeaks,
-];
-
-const runtimeFunctions: ThreeAddressFunction[] = mipsRuntime.map(f => f(bytesInWord));
-
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
     const registerAssignment: RegisterAssignment<MipsRegister> = assignRegisters(taf, mipsRegisterTypes.generalPurpose);
@@ -196,91 +172,11 @@ const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
     return join(flatten(fullRtl.map(threeAddressCodeToMips)), '\n');
 };
 
-const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
-    const temporaryNameMaker = idAppender();
-    const makeTemporary = l => ({ name: temporaryNameMaker(l) });
-    const labelMaker = idAppender();
-
-    const globalNameMaker = idAppender();
-
-    const globalNameMap: { [key: string]: GlobalInfo } = {};
-    globalDeclarations.forEach(declaration => {
-        globalNameMap[declaration.name] = {
-            newName: globalNameMaker(declaration.name),
-            originalDeclaration: declaration,
-        };
-    });
-
-    let mipsFunctions = functions.map(f =>
-        constructFunction(f, globalNameMap, stringLiterals, labelMaker, makeTemporary)
-    );
-
-    const mainProgramInstructions: ThreeAddressStatement[] = flatten(
-        program.statements.map(statement => {
-            const compiledProgram = astToThreeAddressCode({
-                ast: statement,
-                destination: 'functionResult',
-                variablesInScope: {},
-                globalNameMap,
-                stringLiterals,
-                makeTemporary,
-                makeLabel: labelMaker,
-            });
-
-            return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
-        })
-    );
-
-    const freeGlobals: ThreeAddressStatement[] = flatten(
-        globalDeclarations.filter(declaration => declaration.type.name === 'String').map(declaration => [
-            {
-                kind: 'loadGlobal',
-                from: globalNameMap[declaration.name].newName,
-                to: 'functionArgument1',
-                why: 'Load global string so we can free it',
-            } as ThreeAddressStatement,
-            {
-                kind: 'callByName',
-                function: 'my_free',
-                why: 'Free gloabal string at end of program',
-            } as ThreeAddressStatement,
-        ])
-    );
-
-    // Create space for spilled tempraries
-    const numSpilledTemporaries = program.temporaryCount - 10;
-    const makeSpillSpaceCode: ThreeAddressStatement[] =
-        numSpilledTemporaries > 0
-            ? [
-                  {
-                      kind: 'addImmediate',
-                      register: { name: '$sp' },
-                      amount: -4 * numSpilledTemporaries,
-                      why: 'Make spill space for main program',
-                  },
-              ]
-            : [];
-    const removeSpillSpaceCode: ThreeAddressStatement[] =
-        numSpilledTemporaries > 0
-            ? [
-                  {
-                      kind: 'addImmediate',
-                      register: { name: '$sp' },
-                      amount: 4 * numSpilledTemporaries,
-                      why: 'Remove spill space for main program',
-                  },
-              ]
-            : [];
-
-    let mipsProgram: ThreeAddressFunction = {
-        name: 'main',
-        isMain: true,
-        instructions: [
-            ...makeSpillSpaceCode,
-            ...mainProgramInstructions,
-            ...removeSpillSpaceCode,
-            ...freeGlobals,
-            { kind: 'callByName', function: ' verify_no_leaks', why: 'Check for leaks' },
+const toExectuable = (inputs: BackendInputs) => {
+    const { globalNameMap, functions } = makeAllFunctions(
+        inputs,
+        'main',
+        [
             {
                 kind: 'syscall',
                 name: 'printInt',
@@ -296,14 +192,16 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
                 why: 'Whole program is done',
             },
         ],
-    };
-
+        mallocWithSbrk(bytesInWord),
+        printWithPrintRuntimeFunction(bytesInWord),
+        bytesInWord
+    );
     return `
 .data
 ${Object.values(globalNameMap)
         .map(({ newName }) => `${newName}: .word 0`)
         .join('\n')}
-${stringLiterals.map(stringLiteralDeclaration).join('\n')}
+${inputs.stringLiterals.map(stringLiteralDeclaration).join('\n')}
 ${Object.keys(errors)
         .map(key => `${errors[key].name}: .asciiz "${errors[key].value}"`)
         .join('\n')}
@@ -312,7 +210,7 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join([...runtimeFunctions, ...mipsFunctions, mipsProgram].map(rtlFunctionToMips), '\n\n\n')}`;
+${join(functions.map(rtlFunctionToMips), '\n\n\n')}`;
 };
 
 const execute = async (path: string): Promise<ExecutionResult> => {
@@ -342,5 +240,4 @@ export default {
     toExectuable,
     execute,
     debug: path => exec(`${__dirname}/../../QtSpim.app/Contents/MacOS/QtSpim ${path}`),
-    runtimeFunctions,
 };

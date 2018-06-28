@@ -639,3 +639,16 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
         ],
     };
 };
+
+export const allRuntimeFunctions = [
+    mallocWithMmap,
+    mallocWithSbrk,
+    length,
+    stringCopy,
+    printWithWriteRuntimeFunction,
+    printWithPrintRuntimeFunction,
+    verifyNoLeaks,
+    stringConcatenateRuntimeFunction,
+    stringEqualityRuntimeFunction,
+    myFreeRuntimeFunction,
+];
