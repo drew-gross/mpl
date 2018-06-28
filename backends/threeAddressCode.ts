@@ -469,11 +469,13 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     default:
                         throw debug('todo');
                 }
-            } else {
+            } else if (lhs in variablesInScope) {
                 return recurse({
                     ast: ast.expression,
-                    destination: lhs,
+                    destination: variablesInScope[lhs],
                 });
+            } else {
+                throw debug('Declared variable was neither global nor local');
             }
         }
         case 'reassignment': {
@@ -566,10 +568,10 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             } else if (lhs in variablesInScope) {
                 return recurse({
                     ast: ast.expression,
-                    destination: lhs,
+                    destination: variablesInScope[lhs],
                 });
             } else {
-                throw debug('todo');
+                throw debug('Reassigned variable was neither global nor local');
             }
         }
         case 'concatenation': {

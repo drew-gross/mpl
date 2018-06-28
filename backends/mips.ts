@@ -166,13 +166,12 @@ const runtimeFunctions: ThreeAddressFunction[] = mipsRuntime.map(f => f(bytesInW
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
     const registerAssignment: RegisterAssignment<MipsRegister> = assignRegisters(taf, mipsRegisterTypes.generalPurpose);
-    const statements: TargetThreeAddressStatement<MipsRegister>[] = flatten(
-        taf.instructions.map(instruction =>
-            threeAddressCodeToTarget(instruction, syscallNumbers, mipsRegisterTypes, r =>
-                getRegisterFromAssignment(registerAssignment, mipsRegisterTypes, r)
-            )
-        )
-    );
+    const tafToMips = instruction =>
+        threeAddressCodeToTarget(instruction, syscallNumbers, mipsRegisterTypes, r =>
+            getRegisterFromAssignment(registerAssignment, mipsRegisterTypes, r)
+        );
+
+    const mips: TargetThreeAddressStatement<MipsRegister>[] = flatten(taf.instructions.map(tafToMips));
 
     const preamble: TargetThreeAddressStatement<MipsRegister>[] = !taf.isMain
         ? [
@@ -190,7 +189,7 @@ const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
     const fullRtl: TargetThreeAddressStatement<MipsRegister>[] = [
         { kind: 'functionLabel', name: taf.name, why: 'Function entry point' },
         ...preamble,
-        ...statements,
+        ...mips,
         ...epilogue,
     ];
     return join(flatten(fullRtl.map(threeAddressCodeToMips)), '\n');
