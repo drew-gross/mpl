@@ -1293,7 +1293,7 @@ return foo();`,
     ],
 });
 
-test.failing('reassign string inside function', compileAndRun, {
+test('reassign string inside function', compileAndRun, {
     source: `
 foo := () => {
     a := "Hello";

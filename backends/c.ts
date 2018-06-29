@@ -185,7 +185,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                                 // Can ignore rhs because it is executed during assign.
                                 ([executeRhs, executeAssign]) => executeAssign
                             );
-                            return compileAssignment(`char *${declaration.name}`, expression);
+                            return compileAssignment(declaration.name, expression);
                         case 'Parameter':
                             // Shouldn't be possible, can't reassign parameters
                             throw debug('todo');
