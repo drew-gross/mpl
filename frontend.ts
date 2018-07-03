@@ -168,7 +168,6 @@ const functionObjectFromAst = (
     statements: ast.body,
     variables: [...ast.parameters, ...extractVariables(ast.body, mergeDeclarations(variablesInScope, ast.parameters))],
     parameters: ast.parameters,
-    temporaryCount: Math.max(...ast.body.map(countTemporariesInExpression)),
 });
 
 const extractFunctions = (ast: Ast.UninferredAst, variablesInScope: VariableDeclaration[]): UninferredFunction[] => {
@@ -268,45 +267,6 @@ const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
     ast = removeBracketsFromAst(ast);
 
     return ast;
-};
-
-// TODO: Probably makes more sense to do this after inferring.
-const countTemporariesInExpression = (ast: Ast.UninferredAst) => {
-    switch (ast.kind) {
-        case 'returnStatement':
-            return countTemporariesInExpression(ast.expression);
-        case 'product':
-        case 'addition':
-        case 'subtraction':
-        case 'equality':
-        case 'concatenation':
-            return 1 + Math.max(countTemporariesInExpression(ast.lhs), countTemporariesInExpression(ast.rhs));
-        case 'typedDeclarationAssignment':
-        case 'declarationAssignment':
-            return 1;
-        case 'reassignment':
-            return 1;
-        case 'callExpression':
-            return 1;
-        case 'ternary':
-            return (
-                2 +
-                Math.max(
-                    countTemporariesInExpression(ast.condition),
-                    countTemporariesInExpression(ast.ifTrue),
-                    countTemporariesInExpression(ast.ifFalse)
-                )
-            );
-        case 'program':
-            return Math.max(...ast.statements.map(countTemporariesInExpression));
-        case 'number':
-        case 'identifier':
-        case 'booleanLiteral':
-        case 'stringLiteral':
-            return 0;
-        default:
-            debug(`${ast.kind} unhandled in countTemporariesInExpression`);
-    }
 };
 
 const typesAreEqual = (a: Type, b: Type): boolean => {
@@ -786,7 +746,6 @@ const inferFunction = (f: UninferredFunction, variablesInScope: VariableDeclarat
         statements: f.statements.map(s => infer(s, variablesFound)) as Ast.Statement[],
         variables: f.variables,
         parameters: f.parameters,
-        temporaryCount: f.temporaryCount,
         returnType: returnType,
     };
 };
@@ -1185,7 +1144,6 @@ const compile = (source: string): FrontendOutput => {
         statements: ast.statements,
         variables: extractVariables(ast.statements, variablesInScope),
         parameters: [],
-        temporaryCount: Math.max(...ast.statements.map(countTemporariesInExpression)),
     };
 
     const functions = extractFunctions(ast, builtinFunctions);

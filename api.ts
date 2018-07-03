@@ -19,7 +19,6 @@ export type UninferredFunction = {
     statements: UninferredStatement[];
     variables: VariableDeclaration[];
     parameters: VariableDeclaration[];
-    temporaryCount: number;
 };
 export type Function = {
     name: string;
@@ -27,7 +26,6 @@ export type Function = {
     variables: VariableDeclaration[];
     parameters: VariableDeclaration[];
     returnType: Type;
-    temporaryCount: number;
 };
 export type StringLiteralData = { id: number; value: string };
 export type BackendInputs = {
