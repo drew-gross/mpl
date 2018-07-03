@@ -14,6 +14,8 @@ import { mergeDeclarations } from '../frontend.js';
 // Beginnings of experiment with tracing code from source to target
 const callFree = (target: string, reason: string) => `my_free(${target}); // ${reason}`;
 
+// TODO: this returning a funciton is pretty janky. It looks like this because of the way function
+// pointer declarations work in C: the variable name appears in the middle of the declaration
 const mplTypeToCType = (type: Type): ((name: string) => string) => {
     switch (type.name) {
         case 'Integer':
@@ -317,7 +319,7 @@ const makeCfunctionBody = ({
 };
 
 const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
-    const Cfunctions = functions.map(({ name, parameters, statements, variables }) =>
+    const Cfunctions = functions.map(({ name, parameters, statements, variables, returnType }) =>
         makeCfunctionBody({
             name,
             parameters,
@@ -327,9 +329,10 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
             stringLiterals,
             buildSignature: (name, parameters) => {
                 const parameterDeclarations = parameters.map(p => mplTypeToCDeclaration(p.type, p.name));
-                return `unsigned char ${name}(${join(parameterDeclarations, ', ')})`;
+                const cReturnType = mplTypeToCType(returnType)('');
+                return `${cReturnType} ${name}(${join(parameterDeclarations, ', ')})`;
             },
-            returnType: { name: 'Integer' }, // Can currently only return integer
+            returnType,
         })
     );
     const Cprogram = makeCfunctionBody({

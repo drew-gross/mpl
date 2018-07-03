@@ -148,7 +148,7 @@ export type UninferredFunctionCall = {
 export type UninferredFunctionLiteral = {
     kind: 'functionLiteral';
     deanonymizedName: string;
-    body: any;
+    body: UninferredStatement[];
     parameters: VariableDeclaration[];
 };
 

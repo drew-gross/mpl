@@ -721,6 +721,20 @@ return factorial(5);`,
     expectedExitCode: 120,
 });
 
+test.failing('2 arg recursve', compileAndRun, {
+    source: `
+recursiveAdd := x: Integer, y: Integer => x == 0 ? y : recursiveAdd(x - 1, y + 1);
+return recursiveAdd(4,11);`,
+    expectedExitCode: 15,
+});
+
+test.failing('uninferable recursive', compileAndRun, {
+    source: `
+recursive := x: Integer => recursive(x);
+return recursive(1);`,
+    expectedExitCode: 15,
+});
+
 test('return bool fail', compileAndRun, {
     source: 'return 1 == 2',
     expectedTypeErrors: [
@@ -836,8 +850,7 @@ return myFunc("");`,
     ],
 });
 
-// Need return types
-test.failing('return boolean', compileAndRun, {
+test('return boolean', compileAndRun, {
     source: `
 isFive: Function<Integer, Boolean> = a: Integer => a == 5;
 return isFive(5) ? 1 : 0`,
@@ -892,11 +905,21 @@ return quadrupleWithLocal(5);`,
     expectedExitCode: 20,
 });
 
-test('mutil statement function with type error', compileAndRun, {
+test('multi statement function with type error', compileAndRun, {
     source: `
 boolTimesInt := a: Integer => { b: Boolean = false; return a * b; };
 return boolTimesInt(1);`,
     expectedTypeErrors: [
+        {
+            kind: 'wrongTypeForOperator',
+            operator: 'product',
+            side: 'right',
+            found: builtinTypes.Boolean,
+            expected: 'Integer',
+            sourceLine: 2,
+            sourceColumn: 60,
+        },
+        // TODO: Refactor until I don't get the same error twice
         {
             kind: 'wrongTypeForOperator',
             operator: 'product',

@@ -26,6 +26,7 @@ export type Function = {
     statements: Statement[];
     variables: VariableDeclaration[];
     parameters: VariableDeclaration[];
+    returnType: Type;
     temporaryCount: number;
 };
 export type StringLiteralData = { id: number; value: string };
