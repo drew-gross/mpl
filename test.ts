@@ -857,10 +857,9 @@ return isFive(5) ? 1 : 0`,
     expectedExitCode: 1,
 });
 
-// Need return types
-test.failing('return string', compileAndRun, {
+test('return string', compileAndRun, {
     source: `
-isFive: Function<Integer, Boolean> = a: Integer => a == 5 ? "isFive" : "isNotFive";
+isFive: Function<Integer, String> = a: Integer => a == 5 ? "isFive" : "isNotFive";
 return length(isFive(5))`,
     expectedExitCode: 6,
 });

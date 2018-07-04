@@ -200,7 +200,7 @@ const extractFunctions = (ast: Ast.UninferredAst, variablesInScope: VariableDecl
         case 'booleanLiteral':
             return [];
         default:
-            throw debug(`${(ast as any).kind} unhandled in extractVariables`);
+            throw debug(`${(ast as any).kind} unhandled in extractFunctions`);
     }
 };
 
