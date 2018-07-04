@@ -37,6 +37,7 @@ export type MplToken =
     | 'concatenation'
     | 'lessThan'
     | 'greaterThan'
+    | 'memberAccess'
     | 'invalid';
 
 const plus = terminal<MplAstNode, MplToken>('sum');
@@ -195,6 +196,11 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
         toString: _ => '>',
     },
     {
+        token: '.',
+        type: 'memberAccess',
+        toString: _ => '.',
+    },
+    {
         token: '.*',
         type: 'invalid',
         action: x => x,
@@ -255,6 +261,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     statement: [
         { n: 'typedDeclarationAssignment', p: [identifier, colon, 'type', assignment, 'expression'] },
         { n: 'declarationAssignment', p: [identifier, colon, assignment, 'expression'] },
+        { n: 'typeDeclaration', p: [typeIdentifier, colon, assignment, leftCurlyBrace, rightCurlyBrace] },
         { n: 'reassignment', p: [identifier, assignment, 'expression'] },
     ],
     typeList: [{ n: 'typeList', p: ['type', comma, 'typeList'] }, 'type'],
