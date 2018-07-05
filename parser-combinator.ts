@@ -120,10 +120,7 @@ type AlternativeParser<NodeType, TokenType> = (
     | string
     | BaseParser<NodeType, TokenType>)[];
 
-type Parser<NodeType, TokenType> =
-    | SequenceParser<NodeType, TokenType>
-    | SequenceParser<NodeType, TokenType>[]
-    | AlternativeParser<NodeType, TokenType>;
+type Parser<NodeType, TokenType> = SequenceParser<NodeType, TokenType> | AlternativeParser<NodeType, TokenType>;
 
 export interface Grammar<NodeType, TokenType> {
     // Ideally would have NodeType instead of string here but typescript doesn't allow that.
