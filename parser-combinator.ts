@@ -384,8 +384,7 @@ export const parse = <NodeType extends string, TokenType>(
     const childrenParser: Parser<NodeType, TokenType> = grammar[firstRule];
     if (!childrenParser) throw debug('!childrenParser in parse');
     if (typeof childrenParser === 'string') {
-        throw debug('maybe this is unused');
-        // return parse(childrenParser, firstRule as NodeType, tokens, index);
+        return parse(grammar, childrenParser as NodeType, tokens, index);
     } else if (typeof childrenParser === 'function') {
         throw debug('think this is unused');
     } else if (childrenParser.kind == 'sequence') {

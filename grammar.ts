@@ -265,7 +265,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         Sequence('typeWithArgs', [typeIdentifier, lessThan, 'typeList', greaterThan]),
         Sequence('typeWithoutArgs', [typeIdentifier]),
     ]),
-    expression: OneOf(['ternary']),
+    expression: 'ternary',
     ternary: OneOf([Sequence('ternary', ['addition', ternaryOperator, 'addition', colon, 'addition']), 'addition']),
     addition: OneOf([Sequence('addition', ['subtraction', plus, 'addition']), 'subtraction']),
     subtraction: OneOf([Sequence('subtraction', ['product', minus, 'subtraction']), 'product']),
