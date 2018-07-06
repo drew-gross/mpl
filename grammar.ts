@@ -5,8 +5,8 @@ import {
     Ast,
     Leaf as AstLeaf,
     ParseResult,
-    SequenceParser,
-    BaseParser,
+    Sequence,
+    OneOf,
 } from './parser-combinator.js';
 import { TokenSpec } from './lex.js';
 import debug from './util/debug.js';
@@ -233,54 +233,57 @@ export type MplAst = Ast<MplAstNode, MplToken>;
 export type MplParseResult = ParseResult<MplAstNode, MplToken>;
 
 export const grammar: Grammar<MplAstNode, MplToken> = {
-    program: { n: 'program', p: ['functionBody', endOfInput] },
-    function: [
-        { n: 'function', p: ['argList', fatArrow, 'expression'] },
-        {
-            n: 'functionWithBlock',
-            p: ['argList', fatArrow, leftCurlyBrace, 'functionBody', rightCurlyBrace],
-        },
-    ],
-    bracketedArgList: [
-        { n: 'bracketedArgList', p: [leftBracket, rightBracket] },
-        { n: 'bracketedArgList', p: [leftBracket, 'argList', rightBracket] },
-    ],
-    argList: [{ n: 'argList', p: ['arg', comma, 'argList'] }, 'bracketedArgList', 'arg'],
-    arg: { n: 'arg', p: [identifier, colon, 'type'] },
-    functionBody: [
-        { n: 'statement', p: ['statement', statementSeparator, 'functionBody'] },
-        { n: 'returnStatement', p: [_return, 'expression', statementSeparator] },
-        { n: 'returnStatement', p: [_return, 'expression'] },
-    ],
-    statement: [
-        { n: 'typedDeclarationAssignment', p: [identifier, colon, 'type', assignment, 'expression'] },
-        { n: 'declarationAssignment', p: [identifier, colon, assignment, 'expression'] },
-        { n: 'reassignment', p: [identifier, assignment, 'expression'] },
-    ],
-    typeList: [{ n: 'typeList', p: ['type', comma, 'typeList'] }, 'type'],
-    type: [
-        { n: 'typeWithArgs', p: [typeIdentifier, lessThan, 'typeList', greaterThan] },
-        { n: 'typeWithoutArgs', p: [typeIdentifier] },
-    ],
-    expression: ['ternary'],
-    ternary: [{ n: 'ternary', p: ['addition', ternaryOperator, 'addition', colon, 'addition'] }, 'addition'],
-    addition: [{ n: 'addition', p: ['subtraction', plus, 'addition'] }, 'subtraction'],
-    subtraction: [{ n: 'subtraction', p: ['product', minus, 'subtraction'] }, 'product'],
-    product: [{ n: 'product', p: ['equality', times, 'product'] }, 'equality'],
-    equality: [{ n: 'equality', p: ['concatenation', equality, 'equality'] }, 'concatenation'],
-    concatenation: [
-        { n: 'concatenation', p: ['simpleExpression', concatenation, 'concatenation'] },
+    program: Sequence<MplAstNode, MplToken>('program', ['functionBody', endOfInput]),
+    function: OneOf([
+        Sequence<MplAstNode, MplToken>('function', ['argList', fatArrow, 'expression']),
+        Sequence<MplAstNode, MplToken>('functionWithBlock', [
+            'argList',
+            fatArrow,
+            leftCurlyBrace,
+            'functionBody',
+            rightCurlyBrace,
+        ]),
+    ]),
+    bracketedArgList: OneOf([
+        Sequence('bracketedArgList', [leftBracket, rightBracket]),
+        Sequence('bracketedArgList', [leftBracket, 'argList', rightBracket]),
+    ]),
+    argList: OneOf([Sequence('argList', ['arg', comma, 'argList']), 'bracketedArgList', 'arg']),
+    arg: Sequence('arg', [identifier, colon, 'type']),
+    functionBody: OneOf([
+        Sequence('statement', ['statement', statementSeparator, 'functionBody']),
+        Sequence('returnStatement', [_return, 'expression', statementSeparator]),
+        Sequence('returnStatement', [_return, 'expression']),
+    ]),
+    statement: OneOf([
+        Sequence('typedDeclarationAssignment', [identifier, colon, 'type', assignment, 'expression']),
+        Sequence('declarationAssignment', [identifier, colon, assignment, 'expression']),
+        Sequence('reassignment', [identifier, assignment, 'expression']),
+    ]),
+    typeList: OneOf([Sequence('typeList', ['type', comma, 'typeList']), 'type']),
+    type: OneOf([
+        Sequence('typeWithArgs', [typeIdentifier, lessThan, 'typeList', greaterThan]),
+        Sequence('typeWithoutArgs', [typeIdentifier]),
+    ]),
+    expression: OneOf(['ternary']),
+    ternary: OneOf([Sequence('ternary', ['addition', ternaryOperator, 'addition', colon, 'addition']), 'addition']),
+    addition: OneOf([Sequence('addition', ['subtraction', plus, 'addition']), 'subtraction']),
+    subtraction: OneOf([Sequence('subtraction', ['product', minus, 'subtraction']), 'product']),
+    product: OneOf([Sequence('product', ['equality', times, 'product']), 'equality']),
+    equality: OneOf([Sequence('equality', ['concatenation', equality, 'equality']), 'concatenation']),
+    concatenation: OneOf([
+        Sequence('concatenation', ['simpleExpression', concatenation, 'concatenation']),
         'simpleExpression',
-    ],
-    simpleExpression: [
-        { n: 'bracketedExpression', p: [leftBracket, 'expression', rightBracket] },
-        { n: 'callExpressionNoArgs', p: [identifier, leftBracket, rightBracket] },
-        { n: 'callExpression', p: [identifier, leftBracket, 'paramList', rightBracket] },
+    ]),
+    simpleExpression: OneOf([
+        Sequence('bracketedExpression', [leftBracket, 'expression', rightBracket]),
+        Sequence('callExpressionNoArgs', [identifier, leftBracket, rightBracket]),
+        Sequence('callExpression', [identifier, leftBracket, 'paramList', rightBracket]),
         int,
         boolean,
         stringLiteral,
         'function',
         identifier,
-    ],
-    paramList: [{ n: 'paramList', p: ['expression', comma, 'paramList'] }, 'expression'],
+    ]),
+    paramList: OneOf([Sequence('paramList', ['expression', comma, 'paramList']), 'expression']),
 };

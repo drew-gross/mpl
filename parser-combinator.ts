@@ -107,37 +107,41 @@ const stripSourceLocation = ast => {
     }
 };
 
-export type BaseParser<NodeType, TokenType> = (
+type BaseParser<NodeType, TokenType> = string | Terminal<NodeType, TokenType>;
+
+export type Terminal<NodeType, TokenType> = (
     tokens: Token<TokenType>[],
     index: number
 ) => ParseResultWithIndex<NodeType, TokenType>;
-export type SequenceParser<NodeType, TokenType> = {
-    n: NodeType;
-    p: (string | BaseParser<NodeType, TokenType>)[];
-};
-type AlternativeParser<NodeType, TokenType> = (
-    | SequenceParser<NodeType, TokenType>
-    | string
-    | BaseParser<NodeType, TokenType>)[];
 
-type Parser<NodeType, TokenType> = SequenceParser<NodeType, TokenType> | AlternativeParser<NodeType, TokenType>;
+type Sequence<NodeType, TokenType> = { kind: 'sequence'; name: string; parsers: Parser<NodeType, TokenType>[] };
+type Alternative<NodeType, TokenType> = { kind: 'oneOf'; parsers: Parser<NodeType, TokenType>[] };
+
+type Parser<NodeType, TokenType> =
+    | Alternative<NodeType, TokenType>
+    | Sequence<NodeType, TokenType>
+    | BaseParser<NodeType, TokenType>;
+
+export const Sequence = <NodeType extends string, TokenType>(
+    name: NodeType,
+    parsers: Parser<NodeType, TokenType>[]
+): Sequence<NodeType, TokenType> => ({
+    kind: 'sequence',
+    name,
+    parsers,
+});
+
+export const OneOf = <NodeType, TokenType>(
+    parsers: Parser<NodeType, TokenType>[]
+): Alternative<NodeType, TokenType> => ({
+    kind: 'oneOf',
+    parsers,
+});
 
 export interface Grammar<NodeType, TokenType> {
     // Ideally would have NodeType instead of string here but typescript doesn't allow that.
     [index: string]: Parser<NodeType, TokenType>;
 }
-
-const isSequence = <NodeType, TokenType>(
-    val:
-        | SequenceParser<NodeType, TokenType>
-        | AlternativeParser<NodeType, TokenType>
-        | BaseParser<NodeType, TokenType>
-        | string
-): val is SequenceParser<NodeType, TokenType> => {
-    if (typeof val === 'string') return false;
-    if (!val) throw debug('!val');
-    return 'n' in val;
-};
 
 const getSourceLocation = <TokenType>(tokens: Token<TokenType>[], index: number): SourceLocation => {
     if (index >= tokens.length) {
@@ -152,20 +156,22 @@ const getSourceLocation = <TokenType>(tokens: Token<TokenType>[], index: number)
     }
 };
 
-const parseSequence = <NodeType, TokenType>(
+const parseSequence = <NodeType extends string, TokenType>(
     grammar: Grammar<NodeType, TokenType>,
-    parser: SequenceParser<NodeType, TokenType>,
+    parser: Sequence<NodeType, TokenType>,
     tokens: Token<TokenType>[],
     index: number
 ): ParseResultWithIndex<NodeType, TokenType> => {
     const originalIndex = index;
     const results: AstWithIndex<NodeType, TokenType>[] = [];
-    for (const p of parser.p) {
+    for (const p of parser.parsers) {
         let result: ParseResultWithIndex<NodeType, TokenType>;
         if (typeof p === 'function') {
             result = p(tokens, index);
+        } else if (typeof p === 'string') {
+            result = parse(grammar, p as NodeType, tokens, index);
         } else {
-            result = parse(grammar, p, tokens, index);
+            throw debug("I feel like we shouldn't get here");
         }
 
         if (parseResultIsError(result)) {
@@ -175,27 +181,29 @@ const parseSequence = <NodeType, TokenType>(
         results.push(result);
         index = result.newIndex;
     }
-    const result: AstWithIndex<NodeType, TokenType> = {
+    const result: NodeWithIndex<NodeType, TokenType> = {
         success: true,
         newIndex: index,
-        type: parser.n,
+        type: parser.name as NodeType,
         children: results,
         ...getSourceLocation(tokens, originalIndex),
     };
     return result;
 };
 
-const parseAlternative = <NodeType, TokenType>(
+const parseAlternative = <NodeType extends string, TokenType>(
     grammar: Grammar<NodeType, TokenType>,
-    alternatives: AlternativeParser<NodeType, TokenType>,
+    alternatives: Alternative<NodeType, TokenType>,
     tokens: Token<TokenType>[],
     index: number
 ): ParseResultWithIndex<NodeType, TokenType> => {
     const alternativeIndex: number = 0;
-    const progressCache: (ParseError<TokenType> | AstWithIndex<NodeType, TokenType>[])[] = alternatives.map(_ => []);
-    for (let alternativeIndex = 0; alternativeIndex < alternatives.length; alternativeIndex++) {
+    const progressCache: (ParseError<TokenType> | AstWithIndex<NodeType, TokenType>[])[] = alternatives.parsers.map(
+        _ => []
+    );
+    for (let alternativeIndex = 0; alternativeIndex < alternatives.parsers.length; alternativeIndex++) {
         let alternativeNeedsSubtracting = false;
-        let currentParser = alternatives[alternativeIndex];
+        let currentParser = alternatives.parsers[alternativeIndex];
         const currentProgressRef: ParseError<TokenType> | AstWithIndex<NodeType, TokenType>[] =
             progressCache[alternativeIndex];
         let currentResult: ParseResultWithIndex<NodeType, TokenType>;
@@ -205,6 +213,7 @@ const parseAlternative = <NodeType, TokenType>(
         if (parseResultIsError(currentProgressRef)) {
             continue;
         }
+        if (!currentParser) throw debug('no currentParser');
 
         if (typeof currentParser === 'string') {
             // Reference to another rule.
@@ -213,7 +222,7 @@ const parseAlternative = <NodeType, TokenType>(
                 return currentProgressRef[0];
             } else {
                 // We haven't tried this parser yet. Try it now.
-                currentResult = parse(grammar, currentParser, tokens, index);
+                currentResult = parse(grammar, currentParser as NodeType, tokens, index);
                 currentIndex = 0;
                 if (!parseResultIsError(currentResult)) {
                     return currentResult;
@@ -232,13 +241,13 @@ const parseAlternative = <NodeType, TokenType>(
                     return currentResult;
                 }
             }
-        } else {
+        } else if (currentParser.kind == 'sequence') {
             // Sequence. This is the complex one.
 
             // Next get the parser for the next item in the sequence based on how much progress we have made due
             // to being a prefix of previous rules.
             const sequence = currentParser;
-            currentParser = currentParser.p[currentProgressRef.length];
+            currentParser = currentParser.parsers[currentProgressRef.length];
 
             const currentProgressLastItem = last(currentProgressRef);
             const tokenIndex = currentProgressLastItem !== null ? currentProgressLastItem.newIndex : index;
@@ -246,13 +255,13 @@ const parseAlternative = <NodeType, TokenType>(
             if (
                 currentProgressLastItem !== null &&
                 !parseResultIsError(currentProgressLastItem) &&
-                currentProgressRef.length === sequence.p.length
+                currentProgressRef.length === sequence.parsers.length
             ) {
                 const result: AstWithIndex<NodeType, TokenType> = {
                     newIndex: currentProgressLastItem.newIndex,
                     success: true,
                     children: currentProgressRef,
-                    type: sequence.n,
+                    type: sequence.name as NodeType,
                     ...getSourceLocation(tokens, index),
                 };
                 return result;
@@ -263,7 +272,7 @@ const parseAlternative = <NodeType, TokenType>(
                 currentResult = currentParser(tokens, tokenIndex);
                 currentIndex = currentProgressRef.length;
             } else {
-                currentResult = parse(grammar, currentParser, tokens, tokenIndex);
+                currentResult = parse(grammar, currentParser as NodeType, tokens, tokenIndex);
                 currentIndex = currentProgressRef.length;
             }
 
@@ -280,28 +289,30 @@ const parseAlternative = <NodeType, TokenType>(
             }
 
             // Check if we are done
-            if (!parseResultIsError(currentResult) && currentProgressRef.length == sequence.p.length) {
+            if (!parseResultIsError(currentResult) && currentProgressRef.length == sequence.parsers.length) {
                 const cachedSuccess = last(currentProgressRef);
                 if (cachedSuccess === null) throw debug('cachedSuccess == null');
                 const result: AstWithIndex<NodeType, TokenType> = {
                     newIndex: cachedSuccess.newIndex,
                     success: true,
                     children: currentProgressRef,
-                    type: sequence.n,
+                    type: sequence.name as NodeType,
                     ...getSourceLocation(tokens, index),
                 };
                 return result;
             }
+        } else {
+            throw debug('a parser type was not handled');
         }
 
         // Now we have a parse result and the index it was found at. Push it into the progress cache
         // for each alternative that has parsed up to that index and expects the next item to be of that type.
         for (
             let progressCacheIndex = alternativeIndex;
-            progressCacheIndex < alternatives.length;
+            progressCacheIndex < alternatives.parsers.length;
             progressCacheIndex++
         ) {
-            const parser = alternatives[progressCacheIndex];
+            const parser = alternatives.parsers[progressCacheIndex];
             const progressRef = progressCache[progressCacheIndex];
             if (!parseResultIsError(progressRef) && progressRef.length == currentIndex) {
                 if (typeof parser === 'string' && currentParser == parser) {
@@ -316,7 +327,12 @@ const parseAlternative = <NodeType, TokenType>(
                     } else {
                         progressRef.push(currentResult);
                     }
-                } else if (isSequence(parser) && currentParser === parser.p[currentIndex]) {
+                } else if (
+                    typeof parser != 'string' &&
+                    typeof parser != 'function' &&
+                    parser.kind == 'sequence' &&
+                    currentParser === parser.parsers[currentIndex]
+                ) {
                     if (parseResultIsError(currentResult)) {
                         progressCache[alternativeIndex] = currentResult;
                     } else {
@@ -359,26 +375,29 @@ const parseAlternative = <NodeType, TokenType>(
     };
 };
 
-export const parse = <NodeType, TokenType>(
+export const parse = <NodeType extends string, TokenType>(
     grammar: Grammar<NodeType, TokenType>,
-    firstRule: string,
+    firstRule: NodeType,
     tokens: Token<TokenType>[],
     index: number
 ): ParseResultWithIndex<NodeType, TokenType> => {
-    const childrenParser = grammar[firstRule];
+    const childrenParser: Parser<NodeType, TokenType> = grammar[firstRule];
     if (!childrenParser) throw debug('!childrenParser in parse');
     if (typeof childrenParser === 'string') {
-        return parse(childrenParser, firstRule, tokens, index);
-    } else if (isSequence(childrenParser)) {
+        throw debug('maybe this is unused');
+        // return parse(childrenParser, firstRule as NodeType, tokens, index);
+    } else if (typeof childrenParser === 'function') {
+        throw debug('think this is unused');
+    } else if (childrenParser.kind == 'sequence') {
         return parseSequence(grammar, childrenParser, tokens, index);
-    } else if (Array.isArray(childrenParser)) {
+    } else if (childrenParser.kind == 'oneOf') {
         return parseAlternative(grammar, childrenParser, tokens, index);
     } else {
         throw debug('bad type in parse');
     }
 };
 
-const terminal = <NodeType, TokenType>(terminal: TokenType): BaseParser<NodeType, TokenType> => (
+const terminal = <NodeType, TokenType>(terminal: TokenType): Terminal<NodeType, TokenType> => (
     tokens: Token<TokenType>[],
     index
 ): ParseResultWithIndex<NodeType, TokenType> => {
