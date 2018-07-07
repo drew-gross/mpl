@@ -41,6 +41,7 @@ export type MplToken =
     | 'invalid';
 
 const mplTerminal = token => terminal<MplAstNode, MplToken>(token);
+const mplOptional = parser => Optional<MplAstNode, MplToken>(parser);
 
 const plus = mplTerminal('sum');
 const minus = mplTerminal('subtraction');
@@ -239,9 +240,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         Sequence('function', ['argList', fatArrow, 'expression']),
         Sequence('functionWithBlock', ['argList', fatArrow, leftCurlyBrace, 'functionBody', rightCurlyBrace]),
     ]),
-    bracketedArgList: OneOf([
-        Sequence('bracketedArgList', [leftBracket, Optional<MplAstNode, MplToken>('argList'), rightBracket]),
-    ]),
+    bracketedArgList: OneOf([Sequence('bracketedArgList', [leftBracket, mplOptional('argList'), rightBracket])]),
     argList: OneOf([Sequence('argList', ['arg', comma, 'argList']), 'bracketedArgList', 'arg']),
     arg: Sequence('arg', [identifier, colon, 'type']),
     functionBody: OneOf([
@@ -270,12 +269,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     ]),
     simpleExpression: OneOf([
         Sequence('bracketedExpression', [leftBracket, 'expression', rightBracket]),
-        Sequence('callExpression', [
-            identifier,
-            leftBracket,
-            Optional<MplAstNode, MplToken>('paramList'),
-            rightBracket,
-        ]),
+        Sequence('callExpression', [identifier, leftBracket, mplOptional('paramList'), rightBracket]),
         int,
         boolean,
         stringLiteral,
