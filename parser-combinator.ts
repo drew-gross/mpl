@@ -177,7 +177,7 @@ const parseSequence = <NodeType extends string, TokenType>(
         } else if (typeof p === 'string') {
             result = parse(grammar, p as NodeType, tokens, index);
         } else {
-            throw debug("I feel like we shouldn't get here");
+            throw debug('Sequence of sequences');
         }
 
         if (parseResultIsError(result)) {
