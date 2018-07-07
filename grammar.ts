@@ -40,34 +40,6 @@ export type MplToken =
     | 'greaterThan'
     | 'invalid';
 
-const mplTerminal = token => terminal<MplAstNode, MplToken>(token);
-const mplOptional = parser => Optional<MplAstNode, MplToken>(parser);
-
-const plus = mplTerminal('sum');
-const minus = mplTerminal('subtraction');
-const times = mplTerminal('product');
-const leftBracket = mplTerminal('leftBracket');
-const rightBracket = mplTerminal('rightBracket');
-const int = mplTerminal('number');
-const identifier = mplTerminal('identifier');
-const colon = mplTerminal('colon');
-const ternaryOperator = mplTerminal('ternaryOperator');
-const typeIdentifier = mplTerminal('typeIdentifier');
-const assignment = mplTerminal('assignment');
-const _return = mplTerminal('return');
-const statementSeparator = mplTerminal('statementSeparator');
-const fatArrow = mplTerminal('fatArrow');
-const thinArrow = mplTerminal('thinArrow');
-const leftCurlyBrace = mplTerminal('leftCurlyBrace');
-const rightCurlyBrace = mplTerminal('rightCurlyBrace');
-const comma = mplTerminal('comma');
-const concatenation = mplTerminal('concatenation');
-const equality = mplTerminal('equality');
-const boolean = mplTerminal('booleanLiteral');
-const stringLiteral = mplTerminal('stringLiteral');
-const lessThan = mplTerminal('lessThan');
-const greaterThan = mplTerminal('greaterThan');
-
 export const tokenSpecs: TokenSpec<MplToken>[] = [
     {
         token: '"[^"]*"',
@@ -233,6 +205,34 @@ export type MplAstNode =
 
 export type MplAst = Ast<MplAstNode, MplToken>;
 export type MplParseResult = ParseResult<MplAstNode, MplToken>;
+
+const mplTerminal = token => terminal<MplAstNode, MplToken>(token);
+const mplOptional = parser => Optional<MplAstNode, MplToken>(parser);
+
+const plus = mplTerminal('sum');
+const minus = mplTerminal('subtraction');
+const times = mplTerminal('product');
+const leftBracket = mplTerminal('leftBracket');
+const rightBracket = mplTerminal('rightBracket');
+const int = mplTerminal('number');
+const identifier = mplTerminal('identifier');
+const colon = mplTerminal('colon');
+const ternaryOperator = mplTerminal('ternaryOperator');
+const typeIdentifier = mplTerminal('typeIdentifier');
+const assignment = mplTerminal('assignment');
+const _return = mplTerminal('return');
+const statementSeparator = mplTerminal('statementSeparator');
+const fatArrow = mplTerminal('fatArrow');
+const thinArrow = mplTerminal('thinArrow');
+const leftCurlyBrace = mplTerminal('leftCurlyBrace');
+const rightCurlyBrace = mplTerminal('rightCurlyBrace');
+const comma = mplTerminal('comma');
+const concatenation = mplTerminal('concatenation');
+const equality = mplTerminal('equality');
+const boolean = mplTerminal('booleanLiteral');
+const stringLiteral = mplTerminal('stringLiteral');
+const lessThan = mplTerminal('lessThan');
+const greaterThan = mplTerminal('greaterThan');
 
 export const grammar: Grammar<MplAstNode, MplToken> = {
     program: Sequence<MplAstNode, MplToken>('program', ['functionBody', endOfInput]),
