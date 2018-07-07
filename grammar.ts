@@ -240,8 +240,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         Sequence('functionWithBlock', ['argList', fatArrow, leftCurlyBrace, 'functionBody', rightCurlyBrace]),
     ]),
     bracketedArgList: OneOf([
-        Sequence('bracketedArgList', [leftBracket, rightBracket]),
-        Sequence('bracketedArgList', [leftBracket, 'argList', rightBracket]),
+        Sequence('bracketedArgList', [leftBracket, Optional<MplAstNode, MplToken>('argList'), rightBracket]),
     ]),
     argList: OneOf([Sequence('argList', ['arg', comma, 'argList']), 'bracketedArgList', 'arg']),
     arg: Sequence('arg', [identifier, colon, 'type']),
