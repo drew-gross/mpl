@@ -418,7 +418,6 @@ export const typeOfExpression = (
             const functionName = ast.name;
             const declaration = variablesInScope.find(({ name }) => functionName == name);
             if (!declaration) {
-                debugger;
                 return [
                     {
                         kind: 'unknownIdentifier',
@@ -475,7 +474,6 @@ export const typeOfExpression = (
         case 'identifier': {
             const declaration = variablesInScope.find(({ name }) => ast.value == name);
             if (!declaration) {
-                debugger;
                 return [
                     {
                         kind: 'unknownTypeForIdentifier',
@@ -496,7 +494,6 @@ export const typeOfExpression = (
                 return combinedErrors;
             }
             if (!typesAreEqual(conditionType as Type, builtinTypes.Boolean)) {
-                debugger;
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -594,7 +591,6 @@ const typeCheckStatement = (
                 };
             }
             if (!typesAreEqual(leftType.type, rightType)) {
-                debugger;
                 return {
                     errors: [
                         {
@@ -631,7 +627,6 @@ const typeCheckStatement = (
                 return { errors: expressionType, newVariables: [] };
             }
             if (!typesAreEqual(expressionType, destinationType)) {
-                debugger;
                 return {
                     errors: [
                         {
@@ -975,19 +970,15 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
             };
         case 'paramList':
             throw debug('paramList in astFromParseResult'); //Should have been caught in "callExpression"
-        case 'callExpressionNoArgs':
-            return {
-                kind: 'callExpression',
-                name: (ast.children[0] as any).value as any,
-                arguments: [],
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
-            };
         case 'callExpression':
+            const args =
+                ast.children[2].type == 'rightBracket'
+                    ? []
+                    : extractArgumentList(ast.children[2]).map(astFromParseResult);
             return {
                 kind: 'callExpression',
                 name: (ast.children[0] as any).value as any,
-                arguments: extractArgumentList(ast.children[2]).map(astFromParseResult),
+                arguments: args,
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
             };
