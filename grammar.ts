@@ -204,6 +204,7 @@ export type MplAstNode =
     | 'concatenation'
     | 'bracketedExpression'
     | 'callExpression'
+    | 'typeDeclaration'
     | 'typeWithArgs'
     | 'typeWithoutArgs'
     | 'typeList'
@@ -256,13 +257,17 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     statement: OneOf([
         Sequence('typedDeclarationAssignment', [identifier, colon, 'type', assignment, 'expression']),
         Sequence('declarationAssignment', [identifier, colon, assignment, 'expression']),
-        //Sequence('typeDeclaration', [typeIdentifier, colon, assignment, leftCurlyBrace, rightCurlyBrace]),
+        Sequence('typeDeclaration', [typeIdentifier, colon, assignment, 'type']),
         Sequence('reassignment', [identifier, assignment, 'expression']),
     ]),
     typeList: OneOf([Sequence('typeList', ['type', comma, 'typeList']), 'type']),
     type: OneOf([
         Sequence('typeWithArgs', [typeIdentifier, lessThan, 'typeList', greaterThan]),
         Sequence('typeWithoutArgs', [typeIdentifier]),
+    ]),
+    typeLiteral: Sequence('typeLiteral', [leftCurlyBrace, 'typeLiteralComponent', rightCurlyBrace]),
+    typeLiteralComponent: OneOf([
+        /* TODO */
     ]),
     expression: 'ternary',
     ternary: OneOf([Sequence('ternary', ['addition', ternaryOperator, 'addition', colon, 'addition']), 'addition']),
