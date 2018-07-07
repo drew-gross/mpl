@@ -7,6 +7,7 @@ import {
     ParseResult,
     Sequence,
     OneOf,
+    Optional,
 } from './parser-combinator.js';
 import { TokenSpec } from './lex.js';
 import debug from './util/debug.js';
@@ -235,14 +236,8 @@ export type MplParseResult = ParseResult<MplAstNode, MplToken>;
 export const grammar: Grammar<MplAstNode, MplToken> = {
     program: Sequence<MplAstNode, MplToken>('program', ['functionBody', endOfInput]),
     function: OneOf([
-        Sequence<MplAstNode, MplToken>('function', ['argList', fatArrow, 'expression']),
-        Sequence<MplAstNode, MplToken>('functionWithBlock', [
-            'argList',
-            fatArrow,
-            leftCurlyBrace,
-            'functionBody',
-            rightCurlyBrace,
-        ]),
+        Sequence('function', ['argList', fatArrow, 'expression']),
+        Sequence('functionWithBlock', ['argList', fatArrow, leftCurlyBrace, 'functionBody', rightCurlyBrace]),
     ]),
     bracketedArgList: OneOf([
         Sequence('bracketedArgList', [leftBracket, rightBracket]),
@@ -252,8 +247,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     arg: Sequence('arg', [identifier, colon, 'type']),
     functionBody: OneOf([
         Sequence('statement', ['statement', statementSeparator, 'functionBody']),
-        Sequence('returnStatement', [_return, 'expression', statementSeparator]),
-        Sequence('returnStatement', [_return, 'expression']),
+        Sequence('returnStatement', [_return, 'expression', Optional(statementSeparator)]),
     ]),
     statement: OneOf([
         Sequence('typedDeclarationAssignment', [identifier, colon, 'type', assignment, 'expression']),
