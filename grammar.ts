@@ -224,9 +224,7 @@ export type MplAstNode =
     | 'equality'
     | 'concatenation'
     | 'bracketedExpression'
-    // TOOD: unify these.
     | 'callExpression'
-    | 'callExpressionNoArgs'
     | 'typeWithArgs'
     | 'typeWithoutArgs'
     | 'typeList'
@@ -272,8 +270,12 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     ]),
     simpleExpression: OneOf([
         Sequence('bracketedExpression', [leftBracket, 'expression', rightBracket]),
-        Sequence('callExpressionNoArgs', [identifier, leftBracket, rightBracket]),
-        Sequence('callExpression', [identifier, leftBracket, 'paramList', rightBracket]),
+        Sequence('callExpression', [
+            identifier,
+            leftBracket,
+            Optional<MplAstNode, MplToken>('paramList'),
+            rightBracket,
+        ]),
         int,
         boolean,
         stringLiteral,
