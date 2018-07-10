@@ -115,6 +115,9 @@ export const compileAndRun = async (
         console.log(JSON.stringify(lexResult, null, 2));
     }
 
+    if (debugSubsteps.includes('parse')) {
+        debugger;
+    }
     const parseResult = parseMpl(lexResult);
     if (printSubsteps.includes('ast')) {
         console.log(JSON.stringify(parseResult, null, 2));

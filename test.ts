@@ -1339,14 +1339,15 @@ return b;`,
 
 test.only('bool pair', compileAndRun, {
     source: `
-type BoolPair = {
-    first: Boolean,
-    second: Boolean,
+BoolPair := {
+    first: Boolean;
+    second: Boolean;
 };
 bp: BoolPair = { first: True, second: False };
 return bp.first ? 1 : 2;
 `,
     expectedExitCode: 1,
+    debugSubsteps: 'parse',
 });
 
 test('controlFlowGraph basic test', t => {

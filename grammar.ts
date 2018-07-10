@@ -75,7 +75,7 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
         toString: x => x,
     },
     {
-        token: '[A-Z][a-z]*',
+        token: '[A-Z][A-z]*',
         type: 'typeIdentifier',
         action: x => x,
         toString: x => x,
@@ -207,6 +207,8 @@ export type MplAstNode =
     | 'typeDeclaration'
     | 'typeWithArgs'
     | 'typeWithoutArgs'
+    | 'typeLiteral'
+    | 'typeLiteralComponent'
     | 'typeList'
     | 'paramList';
 
@@ -267,11 +269,10 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     type: OneOf([
         Sequence('typeWithArgs', [typeIdentifier, lessThan, 'typeList', greaterThan]),
         Sequence('typeWithoutArgs', [typeIdentifier]),
+        'typeLiteral',
     ]),
     typeLiteral: Sequence('typeLiteral', [leftCurlyBrace, 'typeLiteralComponent', rightCurlyBrace]),
-    typeLiteralComponent: OneOf([
-        /* TODO */
-    ]),
+    typeLiteralComponent: Sequence('typeLiteralComponent', [identifier, 'type', statementSeparator]),
     expression: 'ternary',
     ternary: OneOf([Sequence('ternary', ['addition', ternaryOperator, 'addition', colon, 'addition']), 'addition']),
     addition: OneOf([Sequence('addition', ['subtraction', plus, 'addition']), 'subtraction']),
