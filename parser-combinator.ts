@@ -455,8 +455,12 @@ export const parse = <NodeType extends string, TokenType>(
 ): ParseResultWithIndex<NodeType, TokenType> => {
     const childrenParser: Parser<NodeType, TokenType> = grammar[firstRule];
     if (!childrenParser) throw debug('!childrenParser in parse');
+    let graphId = 0;
     const activeParsers = [childrenParser];
-    for (let i = index; i < tokens.length; i++) {}
+    for (let i = index; i < tokens.length; i++) {
+        if (debugGraphs) {
+        }
+    }
     return parseAnything(grammar, childrenParser, tokens, index);
 };
 
