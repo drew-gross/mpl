@@ -54,10 +54,9 @@ const parseResultIsError = <NodeType, LeafType, TokenType>(
         | ParseResult<NodeType, TokenType>
         | ParseResultWithIndex<NodeType, TokenType>
         | AstWithIndex<NodeType, LeafType>[]
-): result is ParseError<TokenType> => {
-    if (!result) throw debug('!result');
-    return 'found' in result && 'expected' in result;
-};
+        | 'missingOptional'
+): result is ParseError<TokenType> => result != 'missingOptional' && 'found' in result && 'expected' in result;
+
 const parseResultWithIndexIsLeaf = <NodeType, TokenType>(
     r: ParseResultWithIndex<NodeType, TokenType>
 ): r is LeafWithIndex<TokenType> => {
@@ -301,7 +300,7 @@ const parseAlternative = <NodeType extends string, TokenType>(
             }
 
             // Push the results into the cache for the current parser
-            if (currentResult !== 'missingOptional' && parseResultIsError(currentResult)) {
+            if (parseResultIsError(currentResult)) {
                 progressCache[alternativeIndex] = { kind: 'failed', error: currentResult };
             } else {
                 if (progressCache[alternativeIndex].kind != 'failed') {
@@ -349,15 +348,15 @@ const parseAlternative = <NodeType extends string, TokenType>(
             const progressRef = progressCache[progressCacheIndex];
             if (progressRef.kind != 'failed' && progressRef.subParserIndex == currentIndex) {
                 if (typeof parser === 'string' && currentParser == parser) {
-                    if (currentResult != 'missingOptional' && parseResultIsError(currentResult)) {
-                        progressCache[alternativeIndex] = { kind: 'failed', error: currentResult };
+                    if (parseResultIsError(currentResult)) {
+                        progressCache[progressCacheIndex] = { kind: 'failed', error: currentResult };
                     } else if (currentResult != 'missingOptional') {
                         progressRef.parseResults.push(currentResult);
                         progressRef.subParserIndex++;
                     }
                 } else if (typeof parser === 'function' && currentParser == parser) {
-                    if (currentResult != 'missingOptional' && parseResultIsError(currentResult)) {
-                        progressCache[alternativeIndex] = { kind: 'failed', error: currentResult };
+                    if (parseResultIsError(currentResult)) {
+                        progressCache[progressCacheIndex] = { kind: 'failed', error: currentResult };
                     } else if (currentResult != 'missingOptional') {
                         progressRef.parseResults.push(currentResult);
                         progressRef.subParserIndex++;
@@ -368,8 +367,8 @@ const parseAlternative = <NodeType extends string, TokenType>(
                     parser.kind == 'sequence' &&
                     currentParser === parser.parsers[currentIndex]
                 ) {
-                    if (currentResult != 'missingOptional' && parseResultIsError(currentResult)) {
-                        progressCache[alternativeIndex] = { kind: 'failed', error: currentResult };
+                    if (parseResultIsError(currentResult)) {
+                        progressCache[progressCacheIndex] = { kind: 'failed', error: currentResult };
                     } else if (currentResult != 'missingOptional') {
                         progressRef.parseResults.push(currentResult);
                         progressRef.subParserIndex++;
@@ -381,9 +380,9 @@ const parseAlternative = <NodeType extends string, TokenType>(
                     currentParser == parser.parser
                 ) {
                     if (currentResult != 'missingOptional' && !parseResultIsError(currentResult)) {
-                        (progressCache[alternativeIndex] as any).parseResults.push(currentResult);
+                        (progressCache[progressCacheIndex] as any).parseResults.push(currentResult);
                     }
-                    (progressCache[alternativeIndex] as any).subParserIndex++;
+                    (progressCache[progressCacheIndex] as any).subParserIndex++;
                 }
             }
         }
