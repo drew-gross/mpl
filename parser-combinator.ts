@@ -450,10 +450,13 @@ export const parse = <NodeType extends string, TokenType>(
     grammar: Grammar<NodeType, TokenType>,
     firstRule: NodeType,
     tokens: Token<TokenType>[],
-    index: number
+    index: number,
+    debugGraphs: boolean
 ): ParseResultWithIndex<NodeType, TokenType> => {
     const childrenParser: Parser<NodeType, TokenType> = grammar[firstRule];
     if (!childrenParser) throw debug('!childrenParser in parse');
+    const activeParsers = [childrenParser];
+    for (let i = index; i < tokens.length; i++) {}
     return parseAnything(grammar, childrenParser, tokens, index);
 };
 
