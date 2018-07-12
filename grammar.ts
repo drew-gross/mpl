@@ -208,8 +208,13 @@ export type MplAstNode =
     | 'typeWithArgs'
     | 'typeWithoutArgs'
     | 'typeLiteral'
+    | 'typeLiteralComponents'
     | 'typeLiteralComponent'
     | 'typeList'
+    | 'objectLiteral'
+    | 'objectLiteralComponent'
+    | 'objectLiteralComponents'
+    | 'memberAccess'
     | 'paramList';
 
 export type MplAst = Ast<MplAstNode, MplToken>;
@@ -242,6 +247,7 @@ const boolean = mplTerminal('booleanLiteral');
 const stringLiteral = mplTerminal('stringLiteral');
 const lessThan = mplTerminal('lessThan');
 const greaterThan = mplTerminal('greaterThan');
+const memberAccess = mplTerminal('memberAccess');
 
 export const grammar: Grammar<MplAstNode, MplToken> = {
     program: Sequence<MplAstNode, MplToken>('program', ['functionBody', endOfInput]),
@@ -271,18 +277,31 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         Sequence('typeWithoutArgs', [typeIdentifier]),
         'typeLiteral',
     ]),
-    typeLiteral: Sequence('typeLiteral', [leftCurlyBrace, 'typeLiteralComponent', rightCurlyBrace]),
-    typeLiteralComponent: Sequence('typeLiteralComponent', [identifier, 'type', statementSeparator]),
+    typeLiteral: Sequence('typeLiteral', [leftCurlyBrace, 'typeLiteralComponents', rightCurlyBrace]),
+    typeLiteralComponents: OneOf([
+        Sequence('typeLiteralComponents', ['typeLiteralComponent', 'typeLiteralComponents']),
+        'typeLiteralComponent',
+    ]),
+    typeLiteralComponent: Sequence('typeLiteralComponent', [identifier, colon, 'type', statementSeparator]),
+    objectLiteral: Sequence('objectLiteral', [
+        typeIdentifier,
+        leftCurlyBrace,
+        'objectLiteralComponents',
+        rightCurlyBrace,
+    ]),
+    objectLiteralComponents: OneOf([
+        Sequence('objectLiteralComponents', ['objectLiteralComponent', 'objectLiteralComponents']),
+        'objectLiteralComponent',
+    ]),
+    objectLiteralComponent: Sequence('objectLiteralComponent', [identifier, colon, 'expression', comma]),
     expression: 'ternary',
     ternary: OneOf([Sequence('ternary', ['addition', ternaryOperator, 'addition', colon, 'addition']), 'addition']),
     addition: OneOf([Sequence('addition', ['subtraction', plus, 'addition']), 'subtraction']),
     subtraction: OneOf([Sequence('subtraction', ['product', minus, 'subtraction']), 'product']),
     product: OneOf([Sequence('product', ['equality', times, 'product']), 'equality']),
     equality: OneOf([Sequence('equality', ['concatenation', equality, 'equality']), 'concatenation']),
-    concatenation: OneOf([
-        Sequence('concatenation', ['simpleExpression', concatenation, 'concatenation']),
-        'simpleExpression',
-    ]),
+    concatenation: OneOf([Sequence('concatenation', ['memberAccess', concatenation, 'concatenation']), 'memberAccess']),
+    memberAccess: OneOf([Sequence('memberAccess', ['simpleExpression', memberAccess, identifier]), 'simpleExpression']),
     simpleExpression: OneOf([
         Sequence('bracketedExpression', [leftBracket, 'expression', rightBracket]),
         Sequence('callExpression', [identifier, leftBracket, mplOptional('paramList'), rightBracket]),
@@ -290,6 +309,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         boolean,
         stringLiteral,
         'function',
+        'objectLiteral',
         identifier,
     ]),
     paramList: OneOf([Sequence('paramList', ['expression', comma, 'paramList']), 'expression']),

@@ -1343,11 +1343,10 @@ BoolPair := {
     first: Boolean;
     second: Boolean;
 };
-bp: BoolPair = { first: True, second: False };
+bp: BoolPair = BoolPair { first: true, second: false, };
 return bp.first ? 1 : 2;
 `,
     expectedExitCode: 1,
-    debugSubsteps: 'parse',
 });
 
 test('controlFlowGraph basic test', t => {
