@@ -544,6 +544,10 @@ test('correct inferred type for function', t => {
     const functionSource = 'a: Integer => 11';
     const parseResult: MplParseResult = parse(grammar, 'function', lex(tokenSpecs, functionSource), 0);
     const ast = astFromParseResult(parseResult as MplAst);
+    if (ast == 'WrongShapeAst') {
+        t.deepEqual(true, false);
+        return;
+    }
     t.deepEqual(typeOfExpression(ast, []), {
         name: 'Function',
         arguments: [
@@ -1337,7 +1341,7 @@ return b;`,
     expectedExitCode: 2,
 });
 
-test.failing('bool pair', compileAndRun, {
+test.only('bool pair', compileAndRun, {
     source: `
 BoolPair := {
     first: Boolean;

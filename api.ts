@@ -3,9 +3,15 @@ import { ThreeAddressFunction } from './backends/threeAddressCode.js';
 
 export type SourceLocation = { sourceLine: number; sourceColumn: number };
 
+export type TypeComponent = {
+    name: string;
+    type: Type;
+};
+
 export type Type = {
-    name: 'String' | 'Integer' | 'Boolean' | 'Function';
+    name: 'String' | 'Integer' | 'Boolean' | 'Function' | 'UserDefined';
     arguments: Type[];
+    members?: TypeComponent[];
 };
 export type VariableLocation = 'Global' | 'Parameter' | 'Stack';
 export type VariableDeclaration = {

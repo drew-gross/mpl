@@ -10,6 +10,7 @@ import { tokenSpecs, grammar, MplAst, MplParseResult, MplToken } from './grammar
 import { ParseResult, parseResultIsError, parse, stripResultIndexes, Leaf as AstLeaf } from './parser-combinator.js';
 import {
     Type,
+    TypeComponent,
     VariableDeclaration,
     Function,
     UninferredFunction,
@@ -898,6 +899,14 @@ const extractTypeList = (ast: MplAst): Type[] => {
     }
 };
 
+const parseTypeLiteralComponent = (ast: MplAst): TypeComponent => {
+    if (ast.type != 'typeLiteralComponent') throw debug('wrong as type');
+    return {
+        name: (ast.children[0] as any).value,
+        type: parseType(ast.children[2]),
+    };
+};
+
 const parseType = (ast: MplAst): Type => {
     switch (ast.type) {
         case 'typeWithArgs':
@@ -910,13 +919,19 @@ const parseType = (ast: MplAst): Type => {
                 name: (ast.children[0] as any).value,
                 arguments: [],
             };
+        case 'typeLiteral':
+            return {
+                name: 'UserDefined',
+                arguments: [],
+                members: (ast.children[1] as any).children.map(parseTypeLiteralComponent),
+            };
         default:
             throw debug(`${ast.type} unhandled in parseType`);
     }
 };
 
 let functionId = 0;
-const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
+const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' => {
     switch (ast.type) {
         case 'returnStatement':
             return {
@@ -924,7 +939,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 expression: astFromParseResult(ast.children[1]),
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            };
+            } as Ast.UninferredAst;
         case 'number':
             if (ast.value === undefined) throw debug('ast.value === undefined');
             return {
@@ -949,7 +964,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 rhs: astFromParseResult(ast.children[2]),
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            };
+            } as Ast.UninferredAst;
         case 'ternary':
             return {
                 kind: 'ternary',
@@ -958,7 +973,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 ifFalse: astFromParseResult(ast.children[4]),
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            };
+            } as Ast.UninferredAst;
         case 'equality':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
@@ -967,7 +982,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 rhs: astFromParseResult(ast.children[2]),
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            };
+            } as Ast.UninferredAst;
         case 'paramList':
             throw debug('paramList in astFromParseResult'); //Should have been caught in "callExpression"
         case 'callExpression':
@@ -981,7 +996,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 arguments: args,
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            };
+            } as Ast.UninferredAst;
         case 'subtraction':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
@@ -990,7 +1005,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 rhs: astFromParseResult(ast.children[2]),
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            };
+            } as Ast.UninferredAst;
         case 'addition':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
@@ -999,7 +1014,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 rhs: astFromParseResult(ast.children[2]),
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            };
+            } as Ast.UninferredAst;
         case 'reassignment':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
@@ -1008,7 +1023,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 expression: astFromParseResult(ast.children[2]),
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            };
+            } as Ast.UninferredAst;
         case 'declarationAssignment':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
@@ -1017,7 +1032,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 expression: astFromParseResult(ast.children[3]),
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            };
+            } as Ast.UninferredAst;
         case 'typedDeclarationAssignment':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
@@ -1027,17 +1042,15 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 expression: astFromParseResult(ast.children[4]),
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            };
+            } as Ast.UninferredAst;
         case 'typeDeclaration':
             return {
                 kind: 'typeDeclaration',
                 name: (ast.children[0] as any).value,
-                type: astFromParseResult(ast.children[3]),
+                type: parseType(ast.children[3]),
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            };
-        case 'typeLiteral':
-            throw debug('todo: this');
+            } as Ast.UninferredAst;
         case 'stringLiteral':
             return {
                 kind: 'stringLiteral',
@@ -1045,6 +1058,8 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
             };
+        case 'objectLiteral':
+            throw debug('todo');
         case 'concatenation':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
@@ -1053,7 +1068,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 rhs: astFromParseResult(ast.children[2]),
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            };
+            } as Ast.UninferredAst;
         case 'equality':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
@@ -1062,7 +1077,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 rhs: astFromParseResult(ast.children[2]),
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            };
+            } as Ast.UninferredAst;
         case 'function':
             functionId++;
             const parameters: VariableDeclaration[] = extractParameterList(ast.children[0]);
@@ -1080,7 +1095,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 parameters,
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            };
+            } as Ast.UninferredAst;
         case 'functionWithBlock':
             functionId++;
             const parameters2: VariableDeclaration[] = extractParameterList(ast.children[0]);
@@ -1134,6 +1149,20 @@ const compile = (source: string): FrontendOutput => {
     }
 
     const ast = astFromParseResult(parseResult);
+
+    if (ast == 'WrongShapeAst') {
+        return {
+            parseErrors: [
+                {
+                    kind: 'unexpectedToken',
+                    expected: ['InternalError'],
+                    found: ['InternalError'],
+                    sourceLine: 0,
+                    sourceColumn: 0,
+                },
+            ],
+        };
+    }
 
     if (ast.kind !== 'program') {
         return { parseErrors: [{ kind: 'unexpectedProgram' }] };
