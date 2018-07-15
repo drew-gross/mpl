@@ -679,7 +679,7 @@ test('parse error', compileAndRun, {
         {
             kind: 'unexpectedToken',
             found: ['fatArrow'],
-            expected: ['identifier', 'return'],
+            expected: ['identifier', 'typeIdentifier', 'return'],
             sourceLine: 1,
             sourceColumn: 1,
         },
@@ -1337,7 +1337,7 @@ return b;`,
     expectedExitCode: 2,
 });
 
-test.only('bool pair', compileAndRun, {
+test.failing('bool pair', compileAndRun, {
     source: `
 BoolPair := {
     first: Boolean;

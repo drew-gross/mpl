@@ -157,6 +157,7 @@ export type UninferredStatement = SourceLocation &
         | UninferredTypedDeclarationAssignment
         | UninferredDeclarationAssignment
         | UninferredReassignment
+        | UninferredTypeDeclaration
         | UninferredReturnStatement);
 
 export type UninferredAddition = {
@@ -187,6 +188,12 @@ export type UninferredDeclarationAssignment = {
     kind: 'declarationAssignment';
     destination: string;
     expression: UninferredAst;
+};
+
+export type UninferredTypeDeclaration = {
+    kind: 'typeDeclaration';
+    name: string;
+    type: UninferredAst;
 };
 
 export type UninferredProgram = {

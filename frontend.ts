@@ -1028,6 +1028,16 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst => {
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
             };
+        case 'typeDeclaration':
+            return {
+                kind: 'typeDeclaration',
+                name: (ast.children[0] as any).value,
+                type: astFromParseResult(ast.children[3]),
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
+            };
+        case 'typeLiteral':
+            throw debug('todo: this');
         case 'stringLiteral':
             return {
                 kind: 'stringLiteral',

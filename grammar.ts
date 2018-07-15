@@ -172,7 +172,7 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
         toString: _ => '>',
     },
     {
-        token: '.',
+        token: '\\.',
         type: 'memberAccess',
         toString: _ => '.',
     },
