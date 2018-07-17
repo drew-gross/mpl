@@ -145,6 +145,12 @@ export type UninferredFunctionCall = {
     arguments: UninferredAst[];
 };
 
+export type UninferredMemberAccess = {
+    kind: 'memberAccess';
+    lhs: UninferredAst;
+    rhs: string;
+};
+
 export type UninferredFunctionLiteral = {
     kind: 'functionLiteral';
     deanonymizedName: string;
@@ -196,6 +202,17 @@ export type UninferredTypeDeclaration = {
     type: UninferredAst;
 };
 
+export type UninferredObjectMember = {
+    name: string;
+    expression: UninferredAst;
+};
+
+export type UninferredObjectLiteral = {
+    kind: 'objectLiteral';
+    typeName: string;
+    members: UninferredObjectMember[];
+};
+
 export type UninferredProgram = {
     kind: 'program';
     statements: UninferredStatement[];
@@ -204,6 +221,7 @@ export type UninferredProgram = {
 export type UninferredAst = SourceLocation &
     (
         | Leaf
+        | UninferredObjectLiteral
         | UninferredTernary
         | UninferredEquality
         | UninferredFunctionCall
@@ -213,4 +231,5 @@ export type UninferredAst = SourceLocation &
         | UninferredAddition
         | UninferredProduct
         | UninferredConcatenation
+        | UninferredMemberAccess
         | UninferredProgram);

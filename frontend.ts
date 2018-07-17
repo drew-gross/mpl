@@ -108,7 +108,7 @@ const extractVariable = (
         case 'reassignment':
         case 'declarationAssignment':
         case 'typedDeclarationAssignment':
-            // Recursive functions can refer to the left side on the right side, so to extra
+            // Recursive functions can refer to the left side on the right side, so to extract
             // the left side, we need to know about the right side. Probably, this just shouldn't return
             // a type. TODO: allow more types of recursive functions than just single int...
             const variablesIncludingSelf = mergeDeclarations(variablesInScope, [
@@ -142,6 +142,7 @@ const extractVariables = (
         switch (statement.kind) {
             case 'returnStatement':
             case 'reassignment':
+            case 'typeDeclaration':
                 break;
             case 'declarationAssignment':
             case 'typedDeclarationAssignment':
@@ -930,6 +931,26 @@ const parseType = (ast: MplAst): Type => {
     }
 };
 
+const parseObjectMember = (ast: MplAst): Ast.UninferredObjectMember | 'WrongShapeAst' => {
+    if (ast.type != 'objectLiteralComponent') {
+        {
+            throw debug('wsa');
+            return 'WrongShapeAst';
+        }
+    }
+    const expression = astFromParseResult(ast.children[2]);
+    if (expression == 'WrongShapeAst') {
+        {
+            throw debug('wsa');
+            return 'WrongShapeAst';
+        }
+    }
+    return {
+        name: (ast.children[0] as any).value,
+        expression,
+    };
+};
+
 let functionId = 0;
 const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' => {
     switch (ast.type) {
@@ -1034,12 +1055,14 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 sourceColumn: ast.sourceColumn,
             } as Ast.UninferredAst;
         case 'typedDeclarationAssignment':
-            if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
+            const destinationNode = ast.children[0];
+            if (destinationNode.type != 'identifier') return 'WrongShapeAst';
+            const expression = astFromParseResult(ast.children[4]); // TODO: figure out why this isn't a type error
             return {
                 kind: 'typedDeclarationAssignment',
-                destination: (ast.children[0] as any).value as any,
+                destination: destinationNode.value,
                 type: parseType(ast.children[2]),
-                expression: astFromParseResult(ast.children[4]),
+                expression,
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
             } as Ast.UninferredAst;
@@ -1059,7 +1082,32 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 sourceColumn: ast.sourceColumn,
             };
         case 'objectLiteral':
-            throw debug('todo');
+            const typeNameNode = ast.children[0];
+            if (typeNameNode.type != 'typeIdentifier') return 'WrongShapeAst';
+            const typeName = typeNameNode.value;
+            if (typeof typeName != 'string') return 'WrongShapeAst';
+            const membersNode = ast.children[2];
+            if (membersNode.type != 'objectLiteralComponents') return 'WrongShapeAst';
+            const members = membersNode.children.map(parseObjectMember);
+            if (members.some(m => m == 'WrongShapeAst')) return 'WrongShapeAst';
+            return {
+                kind: 'objectLiteral',
+                typeName,
+                members: members as any,
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
+            };
+        case 'memberAccess':
+            const anyAst = ast as any;
+            const lhsNode = anyAst.children[0];
+            const lhs = astFromParseResult(lhsNode);
+            return {
+                kind: 'memberAccess',
+                lhs,
+                rhs: anyAst.children[2].value,
+                sourceLine: ast.sourceLine,
+                sourceColumn: ast.sourceColumn,
+            } as Ast.UninferredAst;
         case 'concatenation':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
