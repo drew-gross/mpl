@@ -3,7 +3,7 @@ import { exec } from 'child-process-promise';
 import { Backend, BackendInputs, TypeError } from './api.js';
 import { Ast } from './ast.js';
 import { lex } from './lex.js';
-import { parseMpl, compile, parseErrorToString } from './frontend.js';
+import { parseMpl, compile, parseErrorToString, typeToString } from './frontend.js';
 import { file as tmpFile } from 'tmp-promise';
 import { writeFile, outputFile } from 'fs-extra';
 import debug from './util/debug.js';
@@ -174,7 +174,7 @@ export const compileAndRun = async (
     const structure = frontendOutput as BackendInputs;
     printStructure('Functions:');
     structure.functions.forEach(f => {
-        printStructure(`-> ${f.name}(${join(f.parameters.map(p => p.type.name), ', ')})`);
+        printStructure(`-> ${f.name}(${join(f.parameters.map(p => typeToString(p.type)), ', ')})`);
         f.statements.forEach(statement => {
             printStructure(`---> `, astToString(statement));
         });

@@ -8,10 +8,15 @@ export type TypeComponent = {
     type: Type;
 };
 
+export type ProductType = {
+    kind: 'product';
+    name: string;
+    members: TypeComponent[];
+};
+
 export type Type = {
-    name: 'String' | 'Integer' | 'Boolean' | 'Function' | 'UserDefined';
+    name: 'String' | 'Integer' | 'Boolean' | 'Function' | ProductType;
     arguments: Type[];
-    members?: TypeComponent[];
 };
 export type VariableLocation = 'Global' | 'Parameter' | 'Stack';
 export type VariableDeclaration = {

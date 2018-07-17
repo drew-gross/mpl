@@ -10,6 +10,7 @@ import { tokenSpecs, grammar, MplAst, MplParseResult, MplToken } from './grammar
 import { ParseResult, parseResultIsError, parse, stripResultIndexes, Leaf as AstLeaf } from './parser-combinator.js';
 import {
     Type,
+    ProductType,
     TypeComponent,
     VariableDeclaration,
     Function,
@@ -239,6 +240,39 @@ const extractStringLiterals = (ast: Ast.UninferredAst): StringLiteralData[] => {
             return [{ id: stringLiteralId, value: ast.value }];
         default:
             throw debug(`${(ast as any).kind} unhandled in extractStringLiterals`);
+    }
+};
+
+const extractTypes = (ast: Ast.UninferredAst): ProductType[] => {
+    switch (ast.kind) {
+        case 'returnStatement':
+        case 'typedDeclarationAssignment':
+        case 'declarationAssignment':
+        case 'reassignment':
+            return extractTypes(ast.expression);
+        case 'product':
+        case 'addition':
+        case 'subtraction':
+        case 'equality':
+        case 'concatenation':
+            return extractTypes(ast.lhs).concat(extractTypes(ast.rhs));
+        case 'callExpression':
+            return flatten(ast.arguments.map(extractTypes));
+        case 'ternary':
+            return extractTypes(ast.condition)
+                .concat(extractTypes(ast.ifTrue))
+                .concat(extractTypes(ast.ifFalse));
+        case 'program':
+            return flatten(ast.statements.map(extractTypes));
+        case 'functionLiteral':
+            return flatten(ast.body.map(extractTypes));
+        case 'number':
+        case 'identifier':
+        case 'booleanLiteral':
+        case 'stringLiteral':
+            return [];
+        default:
+            throw debug(`${(ast as any).kind} unhandled in extractTypes`);
     }
 };
 
@@ -525,6 +559,17 @@ export const typeOfExpression = (
             return builtinTypes.Boolean;
         case 'stringLiteral':
             return builtinTypes.String;
+        case 'objectLiteral':
+            return {
+                name: {
+                    kind: 'product',
+                    name: ast.typeName,
+                    members: [
+                        /*TODO*/
+                    ],
+                } as ProductType,
+                arguments: [],
+            } as Type;
         case 'returnStatement':
             return typeOfExpression(ast.expression, variablesInScope);
         default:
@@ -532,7 +577,10 @@ export const typeOfExpression = (
     }
 };
 
-const typeToString = (type: Type): string => {
+export const typeToString = (type: Type): string => {
+    if (typeof type.name == 'object' && 'kind' in type.name) {
+        return type.name.name;
+    }
     if (type.arguments.length == 0) return type.name;
     return type.name + '<' + join(type.arguments.map(typeToString), ', ') + '>';
 };
@@ -922,9 +970,12 @@ const parseType = (ast: MplAst): Type => {
             };
         case 'typeLiteral':
             return {
-                name: 'UserDefined',
+                name: {
+                    kind: 'product',
+                    name: 'anonymous',
+                    members: (ast.children[1] as any).children.map(parseTypeLiteralComponent),
+                },
                 arguments: [],
-                members: (ast.children[1] as any).children.map(parseTypeLiteralComponent),
             };
         default:
             throw debug(`${ast.type} unhandled in parseType`);
