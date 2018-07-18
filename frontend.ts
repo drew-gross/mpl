@@ -197,10 +197,15 @@ const extractFunctions = (ast: Ast.UninferredAst, variablesInScope: VariableDecl
             return flatten(ast.statements.map(recurse));
         case 'functionLiteral':
             return [functionObjectFromAst(ast, variablesInScope), ...flatten(ast.body.map(recurse))];
+        case 'objectLiteral':
+            return flatten(ast.members.map(member => recurse(member.expression)));
+        case 'memberAccess':
+            return recurse(ast.lhs);
         case 'number':
         case 'identifier':
         case 'stringLiteral':
         case 'booleanLiteral':
+        case 'typeDeclaration':
             return [];
         default:
             throw debug(`${(ast as any).kind} unhandled in extractFunctions`);
@@ -231,9 +236,14 @@ const extractStringLiterals = (ast: Ast.UninferredAst): StringLiteralData[] => {
             return flatten(ast.statements.map(extractStringLiterals));
         case 'functionLiteral':
             return flatten(ast.body.map(extractStringLiterals));
+        case 'objectLiteral':
+            return flatten(ast.members.map(member => extractStringLiterals(member.expression)));
+        case 'memberAccess':
+            return extractStringLiterals(ast.lhs);
         case 'number':
         case 'identifier':
         case 'booleanLiteral':
+        case 'typeDeclaration':
             return [];
         case 'stringLiteral':
             stringLiteralId++;
