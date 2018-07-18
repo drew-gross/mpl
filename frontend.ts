@@ -19,6 +19,7 @@ import {
     ParseError,
     TypeError,
     StringLiteralData,
+    SourceLocation,
 } from './api.js';
 import * as Ast from './ast.js';
 
@@ -173,44 +174,60 @@ const functionObjectFromAst = (
     parameters: ast.parameters,
 });
 
-const extractFunctions = (ast: Ast.UninferredAst, variablesInScope: VariableDeclaration[]): UninferredFunction[] => {
-    const recurse = ast => extractFunctions(ast, variablesInScope);
+const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
+    ast: Ast.UninferredAst,
+    nodeKinds: string[],
+    extractItem: ((item: NodeType) => ReturnType)
+): ReturnType[] => {
+    const recurse = ast => walkAst(ast, nodeKinds, extractItem);
+    let result: ReturnType[] = [];
+    if (nodeKinds.includes(ast.kind)) {
+        result = [extractItem(ast as NodeType)];
+    }
     switch (ast.kind) {
         case 'returnStatement':
         case 'typedDeclarationAssignment':
         case 'declarationAssignment':
         case 'reassignment':
-            return recurse(ast.expression);
+            return [...result, ...recurse(ast.expression)];
         case 'product':
         case 'addition':
         case 'subtraction':
         case 'equality':
         case 'concatenation':
-            return recurse(ast.lhs).concat(recurse(ast.rhs));
+            return [...result, ...recurse(ast.lhs).concat(recurse(ast.rhs))];
         case 'callExpression':
-            return flatten(ast.arguments.map(recurse));
+            return [...result, ...flatten(ast.arguments.map(recurse))];
         case 'ternary':
-            return recurse(ast.condition)
-                .concat(recurse(ast.ifTrue))
-                .concat(recurse(ast.ifFalse));
+            return [
+                ...result,
+                ...recurse(ast.condition)
+                    .concat(recurse(ast.ifTrue))
+                    .concat(recurse(ast.ifFalse)),
+            ];
         case 'program':
-            return flatten(ast.statements.map(recurse));
+            return [...result, ...flatten(ast.statements.map(recurse))];
         case 'functionLiteral':
-            return [functionObjectFromAst(ast, variablesInScope), ...flatten(ast.body.map(recurse))];
+            return [...result, ...flatten(ast.body.map(recurse))];
         case 'objectLiteral':
-            return flatten(ast.members.map(member => recurse(member.expression)));
+            return [...result, ...flatten(ast.members.map(member => recurse(member.expression)))];
         case 'memberAccess':
-            return recurse(ast.lhs);
+            return [...result, ...recurse(ast.lhs)];
         case 'number':
         case 'identifier':
         case 'stringLiteral':
         case 'booleanLiteral':
         case 'typeDeclaration':
-            return [];
+            return result;
         default:
-            throw debug(`${(ast as any).kind} unhandled in extractFunctions`);
+            throw debug(`${(ast as any).kind} unhandled in walkAst`);
     }
 };
+
+const extractFunctions = (ast: Ast.UninferredAst, variablesInScope: VariableDeclaration[]): UninferredFunction[] =>
+    walkAst<UninferredFunction, Ast.UninferredFunctionLiteral & SourceLocation>(ast, ['functionLiteral'], item =>
+        functionObjectFromAst(item, variablesInScope)
+    );
 
 let stringLiteralId = 0;
 const extractStringLiterals = (ast: Ast.UninferredAst): StringLiteralData[] => {
