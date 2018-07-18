@@ -1,7 +1,8 @@
+import idMaker from './idMaker.js';
+
 export default () => {
-    let id = 0;
+    let makeId = idMaker();
     return (name: string): string => {
-        id++;
-        return `${name}_${id}`;
+        return `${name}_${makeId()}`;
     };
 };

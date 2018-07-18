@@ -3,6 +3,7 @@ import unique from './util/list/unique.js';
 import uniqueBy from './util/list/uniqueBy.js';
 import sum from './util/list/sum.js';
 import join from './util/join.js';
+import idMaker from './util/idMaker.js';
 import last from './util/list/last.js';
 import debug from './util/debug.js';
 import { lex, Token } from './lex.js';
@@ -221,47 +222,6 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
             return result;
         default:
             throw debug(`${(ast as any).kind} unhandled in walkAst`);
-    }
-};
-
-let stringLiteralId = 0;
-const extractStringLiterals = (ast: Ast.UninferredAst): StringLiteralData[] => {
-    switch (ast.kind) {
-        case 'returnStatement':
-        case 'typedDeclarationAssignment':
-        case 'declarationAssignment':
-        case 'reassignment':
-            return extractStringLiterals(ast.expression);
-        case 'product':
-        case 'addition':
-        case 'subtraction':
-        case 'equality':
-        case 'concatenation':
-            return extractStringLiterals(ast.lhs).concat(extractStringLiterals(ast.rhs));
-        case 'callExpression':
-            return flatten(ast.arguments.map(extractStringLiterals));
-        case 'ternary':
-            return extractStringLiterals(ast.condition)
-                .concat(extractStringLiterals(ast.ifTrue))
-                .concat(extractStringLiterals(ast.ifFalse));
-        case 'program':
-            return flatten(ast.statements.map(extractStringLiterals));
-        case 'functionLiteral':
-            return flatten(ast.body.map(extractStringLiterals));
-        case 'objectLiteral':
-            return flatten(ast.members.map(member => extractStringLiterals(member.expression)));
-        case 'memberAccess':
-            return extractStringLiterals(ast.lhs);
-        case 'number':
-        case 'identifier':
-        case 'booleanLiteral':
-        case 'typeDeclaration':
-            return [];
-        case 'stringLiteral':
-            stringLiteralId++;
-            return [{ id: stringLiteralId, value: ast.value }];
-        default:
-            throw debug(`${(ast as any).kind} unhandled in extractStringLiterals`);
     }
 };
 
@@ -1261,7 +1221,6 @@ const parseErrorToString = (e: ParseError): string => {
 };
 
 const compile = (source: string): FrontendOutput => {
-    stringLiteralId = 0; // Hacky, too much global state.
     const tokens = lex<MplToken>(tokenSpecs, source);
     const parseResult = parseMpl(tokens);
 
@@ -1302,7 +1261,15 @@ const compile = (source: string): FrontendOutput => {
         ['functionLiteral'],
         astNode => functionObjectFromAst(astNode, variablesInScope)
     );
-    const stringLiterals: StringLiteralData[] = uniqueBy(s => s.value, extractStringLiterals(ast));
+
+    let stringLiteralIdMaker = idMaker();
+    const nonUniqueStringLiterals = walkAst<StringLiteralData, Ast.StringLiteral & SourceLocation>(
+        ast,
+        ['stringLiteral'],
+        (astNode: Ast.StringLiteral) => ({ id: stringLiteralIdMaker(), value: astNode.value })
+    );
+
+    const stringLiterals: StringLiteralData[] = uniqueBy(s => s.value, nonUniqueStringLiterals);
     variablesInScope = mergeDeclarations(variablesInScope, getFunctionTypeMap(functions));
     const programTypeCheck = typeCheckFunction(program, variablesInScope);
     variablesInScope = mergeDeclarations(variablesInScope, programTypeCheck.identifiers);
