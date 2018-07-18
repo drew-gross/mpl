@@ -224,11 +224,6 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
     }
 };
 
-const extractFunctions = (ast: Ast.UninferredAst, variablesInScope: VariableDeclaration[]): UninferredFunction[] =>
-    walkAst<UninferredFunction, Ast.UninferredFunctionLiteral & SourceLocation>(ast, ['functionLiteral'], item =>
-        functionObjectFromAst(item, variablesInScope)
-    );
-
 let stringLiteralId = 0;
 const extractStringLiterals = (ast: Ast.UninferredAst): StringLiteralData[] => {
     switch (ast.kind) {
@@ -1302,7 +1297,11 @@ const compile = (source: string): FrontendOutput => {
         parameters: [],
     };
 
-    const functions = extractFunctions(ast, builtinFunctions);
+    const functions = walkAst<UninferredFunction, Ast.UninferredFunctionLiteral & SourceLocation>(
+        ast,
+        ['functionLiteral'],
+        astNode => functionObjectFromAst(astNode, variablesInScope)
+    );
     const stringLiterals: StringLiteralData[] = uniqueBy(s => s.value, extractStringLiterals(ast));
     variablesInScope = mergeDeclarations(variablesInScope, getFunctionTypeMap(functions));
     const programTypeCheck = typeCheckFunction(program, variablesInScope);
