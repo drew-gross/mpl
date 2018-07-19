@@ -1341,7 +1341,7 @@ return b;`,
     expectedExitCode: 2,
 });
 
-test.failing('bool pair', compileAndRun, {
+test.only('bool pair', compileAndRun, {
     source: `
 BoolPair := {
     first: Boolean;

@@ -94,6 +94,26 @@ export type Concatenation = {
     rhs: Ast;
 };
 
+export type TypeDeclaration = {
+    kind: 'typeDeclaration';
+};
+
+export type ObjectMember = {
+    name: string;
+    expression: Ast;
+};
+
+export type ObjectLiteral = {
+    kind: 'objectLiteral';
+    members: ObjectMember[];
+};
+
+export type MemberAccess = {
+    kind: 'memberAccess';
+    lhs: Ast;
+    rhs: string;
+};
+
 export type Ast =
     | Leaf
     | Ternary
@@ -104,7 +124,10 @@ export type Ast =
     | Subtraction
     | Addition
     | Product
-    | Concatenation;
+    | Concatenation
+    | TypeDeclaration
+    | ObjectLiteral
+    | MemberAccess;
 
 // Untyped versions (...kinda)
 

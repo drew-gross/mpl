@@ -678,6 +678,11 @@ const typeCheckStatement = (
                 newVariables: [{ name: ast.destination, type: destinationType, location: 'Stack' }],
             };
         }
+        case 'typeDeclaration':
+            return {
+                errors: [],
+                newVariables: [],
+            };
         default:
             throw debug(`${ast.kind} unhandled in typeCheckStatement`);
     }
@@ -850,6 +855,23 @@ const infer = (ast: Ast.UninferredAst, variablesInScope: VariableDeclaration[]):
             return {
                 kind: 'functionLiteral',
                 deanonymizedName: ast.deanonymizedName,
+            };
+        case 'typeDeclaration':
+            // TODO: maybe just strip declarations before inferring.
+            return { kind: 'typeDeclaration' };
+        case 'objectLiteral':
+            return {
+                kind: 'objectLiteral',
+                members: ast.members.map(({ name, expression }) => ({
+                    name,
+                    expression: recurse(expression),
+                })),
+            };
+        case 'memberAccess':
+            return {
+                kind: 'memberAccess',
+                lhs: recurse(ast.lhs),
+                rhs: ast.rhs,
             };
         case 'number':
         case 'identifier':

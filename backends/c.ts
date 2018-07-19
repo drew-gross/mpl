@@ -237,6 +237,8 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
             if (!stringLiteralData) throw debug('todo');
             return compileExpression([], ([]) => [stringLiteralName(stringLiteralData)]);
+        case 'typeDeclaration':
+            return compileExpression([], ([]) => []);
         default:
             debug('todo');
     }
