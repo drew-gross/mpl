@@ -623,6 +623,7 @@ const typeCheckStatement = (
                 };
             }
             if (!typesAreEqual(leftType.type, rightType)) {
+                // debug('todo');
                 return {
                     errors: [
                         {
@@ -659,6 +660,7 @@ const typeCheckStatement = (
                 return { errors: expressionType, newVariables: [] };
             }
             if (!typesAreEqual(expressionType, destinationType)) {
+                // debug('todo');
                 return {
                     errors: [
                         {
