@@ -24,7 +24,7 @@ import {
     makeAllFunctions,
 } from './threeAddressCode.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCodeRuntime.js';
-import { builtinFunctions } from '../frontend.js';
+import { builtinFunctions } from '../types.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 
 type MipsRegister =

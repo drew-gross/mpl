@@ -9,10 +9,8 @@ import debug from './util/debug.js';
 import { lex, Token } from './lex.js';
 import { tokenSpecs, grammar, MplAst, MplParseResult, MplToken } from './grammar.js';
 import { ParseResult, parseResultIsError, parse, stripResultIndexes, Leaf as AstLeaf } from './parser-combinator.js';
+import { Type, Product, ProductComponent, equal as typesAreEqual, builtinTypes, builtinFunctions } from './types.js';
 import {
-    Type,
-    ProductType,
-    TypeComponent,
     VariableDeclaration,
     Function,
     UninferredFunction,
@@ -118,8 +116,8 @@ const extractVariable = (
                 {
                     name: statement.destination,
                     type: {
-                        name: 'Function',
-                        arguments: [{ name: 'Integer', arguments: [] }, { name: 'Integer', arguments: [] }],
+                        kind: 'Function',
+                        arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
                     },
                     location: isGlobal ? 'Global' : 'Stack',
                 },
@@ -225,39 +223,6 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
     }
 };
 
-const extractTypes = (ast: Ast.UninferredAst): ProductType[] => {
-    switch (ast.kind) {
-        case 'returnStatement':
-        case 'typedDeclarationAssignment':
-        case 'declarationAssignment':
-        case 'reassignment':
-            return extractTypes(ast.expression);
-        case 'product':
-        case 'addition':
-        case 'subtraction':
-        case 'equality':
-        case 'concatenation':
-            return extractTypes(ast.lhs).concat(extractTypes(ast.rhs));
-        case 'callExpression':
-            return flatten(ast.arguments.map(extractTypes));
-        case 'ternary':
-            return extractTypes(ast.condition)
-                .concat(extractTypes(ast.ifTrue))
-                .concat(extractTypes(ast.ifFalse));
-        case 'program':
-            return flatten(ast.statements.map(extractTypes));
-        case 'functionLiteral':
-            return flatten(ast.body.map(extractTypes));
-        case 'number':
-        case 'identifier':
-        case 'booleanLiteral':
-        case 'stringLiteral':
-            return [];
-        default:
-            throw debug(`${(ast as any).kind} unhandled in extractTypes`);
-    }
-};
-
 const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[1], ast, true);
 
 const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
@@ -285,17 +250,6 @@ const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
     ast = removeBracketsFromAst(ast);
 
     return ast;
-};
-
-const typesAreEqual = (a: Type, b: Type): boolean => {
-    if (a.name != b.name) return false;
-    if (a.arguments.length != b.arguments.length) return false;
-    for (let i = 0; i < a.arguments.length; i++) {
-        if (!typesAreEqual(a.arguments[i], b.arguments[i])) {
-            return false;
-        }
-    }
-    return true;
 };
 
 const isTypeError = (val: Type | Function | TypeError[]): val is TypeError[] => Array.isArray(val);
@@ -383,7 +337,7 @@ export const typeOfExpression = (
             if (combinedErrors) {
                 return combinedErrors;
             }
-            if ((leftType as Type).name !== 'String') {
+            if ((leftType as Type).kind !== 'String') {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -396,7 +350,7 @@ export const typeOfExpression = (
                     },
                 ];
             }
-            if ((rightType as Type).name !== 'String') {
+            if ((rightType as Type).kind !== 'String') {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -417,7 +371,7 @@ export const typeOfExpression = (
                 return f;
             }
             return {
-                name: 'Function',
+                kind: 'Function',
                 arguments: [...ast.parameters.map(p => p.type), f.returnType],
             };
         case 'callExpression': {
@@ -446,7 +400,7 @@ export const typeOfExpression = (
                 ];
             }
             const functionType = declaration.type;
-            if (functionType.name !== 'Function') {
+            if (functionType.kind !== 'Function') {
                 return [
                     {
                         kind: 'calledNonFunction',
@@ -463,7 +417,7 @@ export const typeOfExpression = (
                         kind: 'wrongNumberOfArguments',
                         targetFunction: functionName,
                         passedArgumentCount: argTypes.length,
-                        expectedArgumentCount: declaration.type.arguments.length - 1,
+                        expectedArgumentCount: functionType.arguments.length - 1,
                         sourceLine: ast.sourceLine,
                         sourceColumn: ast.sourceColumn,
                     },
@@ -483,7 +437,7 @@ export const typeOfExpression = (
                     ];
                 }
             }
-            const maybeReturnType = last(functionType.arguments);
+            const maybeReturnType: Type | null = last(functionType.arguments);
             if (!maybeReturnType) {
                 throw debug('Function had no return type');
             }
@@ -543,28 +497,16 @@ export const typeOfExpression = (
             return builtinTypes.String;
         case 'objectLiteral':
             return {
-                name: {
-                    kind: 'product',
-                    name: ast.typeName,
-                    members: [
-                        /*TODO*/
-                    ],
-                } as ProductType,
-                arguments: [],
-            } as Type;
+                kind: 'Product',
+                members: [
+                    /*TODO*/
+                ] as ProductComponent[],
+            };
         case 'returnStatement':
             return typeOfExpression(ast.expression, variablesInScope);
         default:
             throw debug(`${ast.kind} unhandled in typeOfExpression`);
     }
-};
-
-export const typeToString = (type: Type): string => {
-    if (typeof type.name == 'object' && 'kind' in type.name) {
-        return type.name.name;
-    }
-    if (type.arguments.length == 0) return type.name;
-    return type.name + '<' + join(type.arguments.map(typeToString), ', ') + '>';
 };
 
 const typeCheckStatement = (
@@ -587,8 +529,8 @@ const typeCheckStatement = (
                     {
                         name: ast.destination,
                         type: {
-                            name: 'Function',
-                            arguments: [{ name: 'Integer', arguments: [] }, { name: 'Integer', arguments: [] }],
+                            kind: 'Function',
+                            arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
                         },
                         location: 'Stack',
                     },
@@ -642,20 +584,17 @@ const typeCheckStatement = (
         }
         case 'typedDeclarationAssignment': {
             // Check that type of var being assigned to matches type being assigned
+            const destinationType = ast.type;
             const expressionType = typeOfExpression(
                 ast.expression,
                 mergeDeclarations(variablesInScope, [
                     {
                         name: ast.destination,
-                        type: {
-                            name: 'Function',
-                            arguments: [{ name: 'Integer', arguments: [] }, { name: 'Integer', arguments: [] }],
-                        },
+                        type: destinationType,
                         location: 'Stack',
                     },
                 ])
             );
-            const destinationType = ast.type;
             if (isTypeError(expressionType)) {
                 return { errors: expressionType, newVariables: [] };
             }
@@ -690,31 +629,6 @@ const typeCheckStatement = (
     }
 };
 
-export const builtinTypes: { [index: string]: Type } = {
-    String: { name: 'String', arguments: [] },
-    Integer: { name: 'Integer', arguments: [] },
-    Boolean: { name: 'Boolean', arguments: [] },
-};
-// TODO: Require these to be imported in user code
-export const builtinFunctions: VariableDeclaration[] = [
-    {
-        name: 'length',
-        type: {
-            name: 'Function',
-            arguments: [builtinTypes.String, builtinTypes.Integer],
-        },
-        location: 'Global',
-    },
-    {
-        name: 'print',
-        type: {
-            name: 'Function',
-            arguments: [builtinTypes.String, builtinTypes.Integer],
-        },
-        location: 'Global',
-    },
-];
-
 const mergeDeclarations = (left: VariableDeclaration[], right: VariableDeclaration[]): VariableDeclaration[] => {
     const result = [...right];
     left.forEach(declaration => {
@@ -741,7 +655,7 @@ const typeCheckFunction = (f: UninferredFunction, variablesInScope: VariableDecl
 const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaration[] =>
     functions.map(({ name, parameters }) => ({
         name: name,
-        type: { name: 'Function' as 'Function', arguments: parameters.map(p => p.type) },
+        type: { kind: 'Function' as 'Function', arguments: parameters.map(p => p.type) },
         location: 'Global' as 'Global',
     }));
 
@@ -954,7 +868,7 @@ const extractTypeList = (ast: MplAst): Type[] => {
     }
 };
 
-const parseTypeLiteralComponent = (ast: MplAst): TypeComponent => {
+const parseTypeLiteralComponent = (ast: MplAst): ProductComponent => {
     if (ast.type != 'typeLiteralComponent') throw debug('wrong as type');
     return {
         name: (ast.children[0] as any).value,
@@ -964,24 +878,22 @@ const parseTypeLiteralComponent = (ast: MplAst): TypeComponent => {
 
 const parseType = (ast: MplAst): Type => {
     switch (ast.type) {
-        case 'typeWithArgs':
+        case 'typeWithArgs': {
+            const name = (ast.children[0] as any).value;
+            if (name != 'Function') throw debug('Only functions support args right now');
             return {
-                name: (ast.children[0] as any).value,
+                kind: name,
                 arguments: extractTypeList(ast.children[2]),
             };
-        case 'typeWithoutArgs':
-            return {
-                name: (ast.children[0] as any).value,
-                arguments: [],
-            };
+        }
+        case 'typeWithoutArgs': {
+            const name = (ast.children[0] as any).value;
+            return { kind: name };
+        }
         case 'typeLiteral':
             return {
-                name: {
-                    kind: 'product',
-                    name: 'anonymous',
-                    members: (ast.children[1] as any).children.map(parseTypeLiteralComponent),
-                },
-                arguments: [],
+                kind: 'Product',
+                members: (ast.children[1] as any).children.map(parseTypeLiteralComponent),
             };
         default:
             throw debug(`${ast.type} unhandled in parseType`);
@@ -1124,13 +1036,14 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 sourceColumn: ast.sourceColumn,
             } as Ast.UninferredAst;
         case 'typeDeclaration':
+            const type: Type = parseType(ast.children[3]);
             return {
                 kind: 'typeDeclaration',
                 name: (ast.children[0] as any).value,
-                type: parseType(ast.children[3]),
+                type,
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
-            } as Ast.UninferredAst;
+            } as Ast.UninferredTypeDeclaration & SourceLocation;
         case 'stringLiteral':
             return {
                 kind: 'stringLiteral',

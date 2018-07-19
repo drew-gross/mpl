@@ -1,23 +1,9 @@
 import { UninferredStatement, Statement } from './ast.js';
 import { ThreeAddressFunction } from './backends/threeAddressCode.js';
+import { Type } from './types.js';
 
 export type SourceLocation = { sourceLine: number; sourceColumn: number };
 
-export type TypeComponent = {
-    name: string;
-    type: Type;
-};
-
-export type ProductType = {
-    kind: 'product';
-    name: string;
-    members: TypeComponent[];
-};
-
-export type Type = {
-    name: 'String' | 'Integer' | 'Boolean' | 'Function' | ProductType;
-    arguments: Type[];
-};
 export type VariableLocation = 'Global' | 'Parameter' | 'Stack';
 export type VariableDeclaration = {
     name: string;

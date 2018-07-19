@@ -3,7 +3,8 @@ import { exec } from 'child-process-promise';
 import { Backend, BackendInputs, TypeError } from './api.js';
 import { Ast } from './ast.js';
 import { lex } from './lex.js';
-import { parseMpl, compile, parseErrorToString, typeToString } from './frontend.js';
+import { parseMpl, compile, parseErrorToString } from './frontend.js';
+import { toString as typeToString } from './types.js';
 import { file as tmpFile } from 'tmp-promise';
 import { writeFile, outputFile } from 'fs-extra';
 import debug from './util/debug.js';
@@ -62,7 +63,7 @@ const astToString = (ast: Ast) => {
         case 'concatenation':
             return `${ast.lhs} ++ ${ast.rhs}`;
         case 'typedDeclarationAssignment':
-            return `${ast.destination}: ${ast.type.name} = ${astToString(ast.expression)};`;
+            return `${ast.destination}: ${ast.type.kind} = ${astToString(ast.expression)};`;
         case 'reassignment':
             return `${ast.destination} = ${astToString(ast.expression)};`;
         default:
@@ -164,7 +165,7 @@ export const compileAndRun = async (
     // Run valdations on frontend output (currently just detects values that don't match their type)
     frontendOutput.functions.forEach(f => {
         f.variables.forEach(v => {
-            if (!v.type.name) {
+            if (!v.type.kind) {
                 t.fail(`Invalid frontend output: ${v.name} (in ${f.name}) had a bad type!`);
             }
         });
@@ -182,7 +183,7 @@ export const compileAndRun = async (
     printStructure('Program:');
     printStructure('-> Globals:');
     structure.globalDeclarations.forEach(declaration => {
-        printStructure(`---> ${declaration.type.name} ${declaration.name} (${declaration.location})`);
+        printStructure(`---> ${declaration.type.kind} ${declaration.name} (${declaration.location})`);
     });
     printStructure('-> Statements:');
     structure.program.statements.forEach(statement => {

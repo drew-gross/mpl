@@ -10,7 +10,7 @@ import {
 import idAppender from '../util/idAppender.js';
 import * as Ast from '../ast.js';
 import flatten from '../util/list/flatten.js';
-import { builtinFunctions } from '../frontend.js';
+import { builtinFunctions } from '../types.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
 import {
@@ -358,7 +358,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             ]);
         }
         case 'equality': {
-            if (ast.type.name == 'String') {
+            if (ast.type.kind == 'String') {
                 // Put left in s0 and right in s1 for passing to string equality function
                 const storeLeftInstructions = recurse({
                     ast: ast.lhs,
@@ -423,7 +423,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     destination: rhs,
                 });
                 const lhsInfo = globalNameMap[lhs];
-                switch (lhsInfo.originalDeclaration.type.name) {
+                switch (lhsInfo.originalDeclaration.type.kind) {
                     case 'Function':
                     case 'Integer':
                         return compileExpression<ThreeAddressStatement>([computeRhs], ([e1]) => [
@@ -432,7 +432,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 kind: 'storeGlobal',
                                 from: rhs,
                                 to: lhsInfo.newName,
-                                why: `Put ${lhsInfo.originalDeclaration.type.name} into global`,
+                                why: `Put ${lhsInfo.originalDeclaration.type.kind} into global`,
                             },
                         ]);
                     case 'String':
@@ -498,7 +498,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     destination: reassignmentRhs,
                 });
                 const declaration = globalNameMap[lhs];
-                switch (declaration.originalDeclaration.type.name) {
+                switch (declaration.originalDeclaration.type.kind) {
                     case 'Function':
                     case 'Integer':
                         return compileExpression<ThreeAddressStatement>([rhs], ([e1]) => [
@@ -794,7 +794,7 @@ export const constructFunction = (
             const freeLocals = f.variables
                 // TODO: Make a better memory model for frees.
                 .filter(s => s.location === 'Stack')
-                .filter(s => s.type.name == 'String')
+                .filter(s => s.type.kind == 'String')
                 .map(s => {
                     const variable: Register = variablesInScope[s.name];
                     return [
@@ -979,7 +979,7 @@ export const makeAllFunctions = (
     );
 
     const freeGlobalsInstructions: ThreeAddressStatement[] = flatten(
-        globalDeclarations.filter(declaration => declaration.type.name === 'String').map(declaration => [
+        globalDeclarations.filter(declaration => declaration.type.kind === 'String').map(declaration => [
             {
                 kind: 'loadGlobal',
                 from: globalNameMap[declaration.name].newName,

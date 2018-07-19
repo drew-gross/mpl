@@ -1,6 +1,5 @@
-import { Type, VariableDeclaration, SourceLocation } from './api.js';
-
-// Leaf nodes
+import { VariableDeclaration, SourceLocation } from './api.js';
+import { Type } from './types.js';
 
 type Leaf = Number | Identifier | BooleanLiteral | StringLiteral;
 
@@ -222,7 +221,7 @@ export type UninferredDeclarationAssignment = {
 export type UninferredTypeDeclaration = {
     kind: 'typeDeclaration';
     name: string;
-    type: UninferredAst;
+    type: Type;
 };
 
 export type UninferredObjectMember = {

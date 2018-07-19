@@ -1,16 +1,10 @@
+import { equal as typesAreEqual, builtinTypes } from './types.js';
 import { ThreeAddressStatement, ThreeAddressFunction } from './backends/threeAddressCode.js';
 import * as threeAddressCodeRuntime from './backends/threeAddressCodeRuntime.js';
 import test from 'ava';
 import flatten from './util/list/flatten.js';
 import { lex } from './lex.js';
-import {
-    parseMpl,
-    compile,
-    typeCheckStatement,
-    astFromParseResult,
-    typeOfExpression,
-    builtinTypes,
-} from './frontend.js';
+import { parseMpl, compile, typeCheckStatement, astFromParseResult, typeOfExpression } from './frontend.js';
 import { compileAndRun } from './test-utils.js';
 import { grammar, tokenSpecs, MplParseResult, MplAst } from './grammar.js';
 import {
@@ -549,17 +543,8 @@ test('correct inferred type for function', t => {
         return;
     }
     t.deepEqual(typeOfExpression(ast, []), {
-        name: 'Function',
-        arguments: [
-            {
-                name: 'Integer',
-                arguments: [],
-            },
-            {
-                name: 'Integer',
-                arguments: [],
-            },
-        ],
+        kind: 'Function',
+        arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
     });
 });
 
@@ -813,17 +798,17 @@ return myFunc();`,
 test('assign function to wrong args number', compileAndRun, {
     source: `
 myFunc: Function<Integer, Integer> = () => 111;
-return myFunc();`,
+return 0;`,
     expectedTypeErrors: [
         {
             kind: 'assignWrongType',
             lhsName: 'myFunc',
             lhsType: {
-                name: 'Function',
+                kind: 'Function',
                 arguments: [builtinTypes.Integer, builtinTypes.Integer],
             },
             rhsType: {
-                name: 'Function',
+                kind: 'Function',
                 arguments: [builtinTypes.Integer],
             },
             sourceLine: 2,
@@ -841,11 +826,11 @@ return myFunc("");`,
             kind: 'assignWrongType',
             lhsName: 'myFunc',
             lhsType: {
-                name: 'Function',
+                kind: 'Function',
                 arguments: [builtinTypes.Integer, builtinTypes.Integer],
             },
             rhsType: {
-                name: 'Function',
+                kind: 'Function',
                 arguments: [builtinTypes.String, builtinTypes.Integer],
             },
             sourceLine: 2,
@@ -877,11 +862,11 @@ return myFunc("");`,
             kind: 'assignWrongType',
             lhsName: 'myFunc',
             lhsType: {
-                name: 'Function',
+                kind: 'Function',
                 arguments: [builtinTypes.Integer, builtinTypes.Boolean],
             },
             rhsType: {
-                name: 'Function',
+                kind: 'Function',
                 arguments: [builtinTypes.String, builtinTypes.Integer],
             },
             sourceLine: 2,
@@ -1636,4 +1621,19 @@ test('liveness of stringEquality', t => {
         [],
     ];
     t.deepEqual(liveness, expectedLiveness);
+});
+
+test('type equality', t => {
+    t.false(
+        typesAreEqual(
+            {
+                kind: 'Function',
+                arguments: [{ kind: 'Integer' }],
+            },
+            {
+                kind: 'Function',
+                arguments: [{ kind: 'Integer' }, { kind: 'Integer' }, { kind: 'Integer' }],
+            }
+        )
+    );
 });

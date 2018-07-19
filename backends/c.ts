@@ -1,6 +1,7 @@
 import * as Ast from '../ast.js';
 import { file as tmpFile } from 'tmp-promise';
-import { VariableDeclaration, Type, BackendInputs, Function, ExecutionResult, StringLiteralData } from '../api.js';
+import { VariableDeclaration, BackendInputs, Function, ExecutionResult, StringLiteralData } from '../api.js';
+import { Type, equal as typesAreEqual, builtinTypes } from '../types.js';
 import flatten from '../util/list/flatten.js';
 import last from '../util/list/last.js';
 import { exec } from 'child-process-promise';
@@ -17,7 +18,7 @@ const callFree = (target: string, reason: string) => `my_free(${target}); // ${r
 // TODO: this returning a funciton is pretty janky. It looks like this because of the way function
 // pointer declarations work in C: the variable name appears in the middle of the declaration
 const mplTypeToCType = (type: Type): ((name: string) => string) => {
-    switch (type.name) {
+    switch (type.kind) {
         case 'Integer':
             return name => `uint8_t ${name}`;
         case 'Boolean':
@@ -33,7 +34,7 @@ const mplTypeToCType = (type: Type): ((name: string) => string) => {
             const argumentsString = join(argumentTypes, ', ');
             return name => `${returnType} (*${name})(${argumentsString})`;
         default:
-            throw debug('todo');
+            throw debug('Unhanlded type in mplTypeToCType');
     }
 };
 
@@ -112,7 +113,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             const rhs = recurse({ ast: ast.expression });
             const declaration = declarations.find(declaration => declaration.name === lhs);
             if (!declaration) throw debug('todo');
-            switch (declaration.type.name) {
+            switch (declaration.type.kind) {
                 case 'Function':
                 case 'Integer':
                     switch (declaration.location) {
@@ -159,7 +160,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             const rhs = recurse({ ast: ast.expression });
             const declaration = declarations.find(declaration => declaration.name === lhs);
             if (!declaration) throw debug('todo');
-            switch (declaration.type.name) {
+            switch (declaration.type.kind) {
                 case 'Function':
                 case 'Integer':
                     return compileAssignment(lhs, rhs);
@@ -225,7 +226,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         case 'equality': {
             const lhs = recurse({ ast: ast.lhs });
             const rhs = recurse({ ast: ast.rhs });
-            if (ast.type.name == 'String') {
+            if (ast.type.kind == 'String') {
                 return compileExpression([lhs, rhs], ([e1, e2]) => ['string_compare(', ...e1, ',', ...e2, ')']);
             } else {
                 return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '==', ...e2]);
@@ -260,7 +261,7 @@ type MakeCFunctionBodyInputs = {
     globalDeclarations: any;
     stringLiterals: StringLiteralData[];
     buildSignature: SignatureBuilder;
-    returnType: any;
+    returnType: Type;
     beforeExit?: string[];
 };
 
@@ -296,7 +297,7 @@ const makeCfunctionBody = ({
     const endOfFunctionFrees = variables
         // TODO: Make a better memory model for dynamic/global frees.
         .filter(s => s.location === 'Stack')
-        .filter(s => s.type.name == 'String')
+        .filter(s => typesAreEqual(s.type, builtinTypes.String))
         .map(s => callFree(s.name, 'Freeing Stack String at end of function'));
     const returnCode = astToC({
         ast: returnStatement.expression,
@@ -345,7 +346,7 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         globalDeclarations,
         stringLiterals,
         buildSignature: (_1, _2) => 'int main(int argc, char **argv)',
-        returnType: { name: 'Integer' }, // Main can only ever return integer
+        returnType: { kind: 'Integer' }, // Main can only ever return integer
         beforeExit: ['verify_no_leaks();'],
     });
     const Cdeclarations = globalDeclarations
