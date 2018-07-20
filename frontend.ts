@@ -565,7 +565,7 @@ const typeCheckStatement = (
                 };
             }
             if (!typesAreEqual(leftType.type, rightType)) {
-                // debug('todo');
+                debug('todo');
                 return {
                     errors: [
                         {
@@ -599,7 +599,7 @@ const typeCheckStatement = (
                 return { errors: expressionType, newVariables: [] };
             }
             if (!typesAreEqual(expressionType, destinationType)) {
-                // debug('todo');
+                debug('todo');
                 return {
                     errors: [
                         {
@@ -742,10 +742,12 @@ const infer = (ast: Ast.UninferredAst, variablesInScope: VariableDeclaration[]):
                 destination: ast.destination,
             };
         case 'declarationAssignment':
+            const type = typeOfExpression(ast.expression, variablesInScope);
+            if (isTypeError(type)) throw debug("type error when there shouldn't be");
             return {
                 kind: 'typedDeclarationAssignment',
                 expression: recurse(ast.expression),
-                type: typeOfExpression(ast.expression, variablesInScope) as Type,
+                type,
                 destination: ast.destination,
             };
         case 'reassignment':
@@ -887,8 +889,18 @@ const parseType = (ast: MplAst): Type => {
             };
         }
         case 'typeWithoutArgs': {
-            const name = (ast.children[0] as any).value;
-            return { kind: name };
+            const node = ast.children[0];
+            if (node.type != 'typeIdentifier') throw debug('Failed to parse type');
+            const name = node.value;
+            if (typeof name != 'string') throw debug('Failed to parse type');
+            switch (name) {
+                case 'String':
+                case 'Integer':
+                case 'Boolean':
+                    return { kind: name } as Type;
+                default:
+                    return { kind: 'NameRef', namedType: name };
+            }
         }
         case 'typeLiteral':
             return {
