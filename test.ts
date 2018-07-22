@@ -542,7 +542,7 @@ test('correct inferred type for function', t => {
         t.deepEqual(true, false);
         return;
     }
-    t.deepEqual(typeOfExpression(ast, []), {
+    t.deepEqual(typeOfExpression(ast, [], []), {
         kind: 'Function',
         arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
     });
@@ -1326,7 +1326,7 @@ return b;`,
     expectedExitCode: 2,
 });
 
-test.only('bool pair', compileAndRun, {
+test.failing('bool pair', compileAndRun, {
     source: `
 BoolPair := {
     first: Boolean;
@@ -1633,7 +1633,8 @@ test('type equality', t => {
             {
                 kind: 'Function',
                 arguments: [{ kind: 'Integer' }, { kind: 'Integer' }, { kind: 'Integer' }],
-            }
+            },
+            []
         )
     );
 });

@@ -9,7 +9,15 @@ import debug from './util/debug.js';
 import { lex, Token } from './lex.js';
 import { tokenSpecs, grammar, MplAst, MplParseResult, MplToken } from './grammar.js';
 import { ParseResult, parseResultIsError, parse, stripResultIndexes, Leaf as AstLeaf } from './parser-combinator.js';
-import { Type, Product, ProductComponent, equal as typesAreEqual, builtinTypes, builtinFunctions } from './types.js';
+import {
+    Type,
+    Product,
+    ProductComponent,
+    equal as typesAreEqual,
+    builtinTypes,
+    builtinFunctions,
+    TypeDeclaration,
+} from './types.js';
 import {
     VariableDeclaration,
     Function,
@@ -102,6 +110,7 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
 const extractVariable = (
     statement: Ast.UninferredStatement,
     variablesInScope: VariableDeclaration[],
+    typeDeclarations: TypeDeclaration[],
     isGlobal: boolean
 ): VariableDeclaration | undefined => {
     const result: VariableDeclaration[] = [];
@@ -125,7 +134,7 @@ const extractVariable = (
             return {
                 name: statement.destination,
                 location: isGlobal ? 'Global' : 'Stack',
-                type: typeOfExpression(statement.expression, variablesIncludingSelf) as Type,
+                type: typeOfExpression(statement.expression, variablesIncludingSelf, typeDeclarations) as Type,
             };
         case 'returnStatement':
             return undefined;
@@ -136,7 +145,8 @@ const extractVariable = (
 
 const extractVariables = (
     statements: Ast.UninferredStatement[],
-    variablesInScope: VariableDeclaration[]
+    variablesInScope: VariableDeclaration[],
+    typeDeclarations: TypeDeclaration[]
 ): VariableDeclaration[] => {
     const variables: VariableDeclaration[] = [];
     statements.forEach((statement: Ast.UninferredStatement) => {
@@ -150,6 +160,7 @@ const extractVariables = (
                 const potentialVariable = extractVariable(
                     statement,
                     mergeDeclarations(variablesInScope, variables),
+                    typeDeclarations,
                     false
                 );
                 if (potentialVariable) {
@@ -165,11 +176,15 @@ const extractVariables = (
 
 const functionObjectFromAst = (
     ast: Ast.UninferredFunctionLiteral,
-    variablesInScope: VariableDeclaration[]
+    variablesInScope: VariableDeclaration[],
+    typeDeclarations: TypeDeclaration[]
 ): UninferredFunction => ({
     name: ast.deanonymizedName,
     statements: ast.body,
-    variables: [...ast.parameters, ...extractVariables(ast.body, mergeDeclarations(variablesInScope, ast.parameters))],
+    variables: [
+        ...ast.parameters,
+        ...extractVariables(ast.body, mergeDeclarations(variablesInScope, ast.parameters), typeDeclarations),
+    ],
     parameters: ast.parameters,
 });
 
@@ -267,21 +282,23 @@ const combineErrors = (potentialErrors: (Type | TypeError[])[]): TypeError[] | n
 // TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer()
 export const typeOfExpression = (
     ast: Ast.UninferredAst,
-    variablesInScope: VariableDeclaration[]
+    variablesInScope: VariableDeclaration[],
+    typeDeclarations: TypeDeclaration[]
 ): Type | TypeError[] => {
+    const recurse = ast => typeOfExpression(ast, variablesInScope, typeDeclarations);
     switch (ast.kind) {
         case 'number':
             return builtinTypes.Integer;
         case 'addition':
         case 'product':
         case 'subtraction': {
-            const leftType = typeOfExpression(ast.lhs, variablesInScope);
-            const rightType = typeOfExpression(ast.rhs, variablesInScope);
+            const leftType = recurse(ast.lhs);
+            const rightType = recurse(ast.rhs);
             const combinedErrors = combineErrors([leftType, rightType]);
             if (combinedErrors) {
                 return combinedErrors;
             }
-            if (!typesAreEqual(leftType as Type, builtinTypes.Integer)) {
+            if (!typesAreEqual(leftType as Type, builtinTypes.Integer, typeDeclarations)) {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -294,7 +311,7 @@ export const typeOfExpression = (
                     },
                 ];
             }
-            if (!typesAreEqual(rightType as Type, builtinTypes.Integer)) {
+            if (!typesAreEqual(rightType as Type, builtinTypes.Integer, typeDeclarations)) {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -310,13 +327,13 @@ export const typeOfExpression = (
             return builtinTypes.Integer;
         }
         case 'equality': {
-            const leftType = typeOfExpression(ast.lhs, variablesInScope);
-            const rightType = typeOfExpression(ast.rhs, variablesInScope);
+            const leftType = recurse(ast.lhs);
+            const rightType = recurse(ast.rhs);
             const combinedErrors = combineErrors([leftType, rightType]);
             if (combinedErrors) {
                 return combinedErrors;
             }
-            if (!typesAreEqual(leftType as Type, rightType as Type)) {
+            if (!typesAreEqual(leftType as Type, rightType as Type, typeDeclarations)) {
                 return [
                     {
                         kind: 'typeMismatchForOperator',
@@ -331,8 +348,8 @@ export const typeOfExpression = (
             return builtinTypes.Boolean;
         }
         case 'concatenation': {
-            const leftType = typeOfExpression(ast.lhs, variablesInScope);
-            const rightType = typeOfExpression(ast.rhs, variablesInScope);
+            const leftType = recurse(ast.lhs);
+            const rightType = recurse(ast.rhs);
             const combinedErrors = combineErrors([leftType, rightType]);
             if (combinedErrors) {
                 return combinedErrors;
@@ -366,7 +383,11 @@ export const typeOfExpression = (
             return builtinTypes.String;
         }
         case 'functionLiteral':
-            const f = inferFunction(functionObjectFromAst(ast, variablesInScope), variablesInScope);
+            const f = inferFunction(
+                functionObjectFromAst(ast, variablesInScope, typeDeclarations),
+                variablesInScope,
+                typeDeclarations
+            );
             if (isTypeError(f)) {
                 return f;
             }
@@ -375,9 +396,7 @@ export const typeOfExpression = (
                 arguments: [...ast.parameters.map(p => p.type), f.returnType],
             };
         case 'callExpression': {
-            const argTypes: (Type | TypeError[])[] = ast.arguments.map(argument =>
-                typeOfExpression(argument, variablesInScope)
-            );
+            const argTypes: (Type | TypeError[])[] = ast.arguments.map(argument => recurse(argument));
             const argTypeErrors: TypeError[] = [];
             argTypes.forEach(argType => {
                 if (isTypeError(argType)) {
@@ -424,7 +443,7 @@ export const typeOfExpression = (
                 ];
             }
             for (let i = 0; i < argTypes.length; i++) {
-                if (!typesAreEqual(argTypes[i] as Type, functionType.arguments[i])) {
+                if (!typesAreEqual(argTypes[i] as Type, functionType.arguments[i], typeDeclarations)) {
                     return [
                         {
                             kind: 'wrongArgumentType',
@@ -458,14 +477,18 @@ export const typeOfExpression = (
             return declaration.type;
         }
         case 'ternary': {
-            const conditionType = typeOfExpression(ast.condition, variablesInScope);
-            const trueBranchType = typeOfExpression(ast.ifTrue, variablesInScope);
-            const falseBranchType = typeOfExpression(ast.ifFalse, variablesInScope);
+            const conditionType = recurse(ast.condition);
+            const trueBranchType = recurse(ast.ifTrue);
+            const falseBranchType = recurse(ast.ifFalse);
             const combinedErrors = combineErrors([conditionType, trueBranchType, falseBranchType]);
-            if (combinedErrors) {
-                return combinedErrors;
+            if (combinedErrors || isTypeError(trueBranchType) || isTypeError(falseBranchType)) {
+                if (combinedErrors) {
+                    return combinedErrors;
+                } else {
+                    return [];
+                }
             }
-            if (!typesAreEqual(conditionType as Type, builtinTypes.Boolean)) {
+            if (!typesAreEqual(conditionType as Type, builtinTypes.Boolean, typeDeclarations)) {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -478,7 +501,7 @@ export const typeOfExpression = (
                     },
                 ];
             }
-            if (!typesAreEqual(trueBranchType as Type, falseBranchType as Type)) {
+            if (!typesAreEqual(trueBranchType, falseBranchType, typeDeclarations)) {
                 return [
                     {
                         kind: 'ternaryBranchMismatch',
@@ -503,7 +526,7 @@ export const typeOfExpression = (
                 ] as ProductComponent[],
             };
         case 'returnStatement':
-            return typeOfExpression(ast.expression, variablesInScope);
+            return recurse(ast.expression);
         default:
             throw debug(`${ast.kind} unhandled in typeOfExpression`);
     }
@@ -511,12 +534,13 @@ export const typeOfExpression = (
 
 const typeCheckStatement = (
     ast: Ast.UninferredAst,
-    variablesInScope: VariableDeclaration[]
+    variablesInScope: VariableDeclaration[],
+    typeDeclarations: TypeDeclaration[]
 ): { errors: TypeError[]; newVariables: VariableDeclaration[] } => {
     if (!ast.kind) debug('!ast.kind');
     switch (ast.kind) {
         case 'returnStatement': {
-            const result = typeOfExpression(ast.expression, variablesInScope);
+            const result = typeOfExpression(ast.expression, variablesInScope, typeDeclarations);
             if (isTypeError(result)) {
                 return { errors: result, newVariables: [] };
             }
@@ -534,7 +558,8 @@ const typeCheckStatement = (
                         },
                         location: 'Stack',
                     },
-                ])
+                ]),
+                typeDeclarations
             );
             if (isTypeError(rightType)) {
                 return { errors: rightType, newVariables: [] };
@@ -546,7 +571,7 @@ const typeCheckStatement = (
             };
         }
         case 'reassignment': {
-            const rightType = typeOfExpression(ast.expression, variablesInScope);
+            const rightType = typeOfExpression(ast.expression, variablesInScope, typeDeclarations);
             if (isTypeError(rightType)) {
                 return { errors: rightType, newVariables: [] };
             }
@@ -564,8 +589,8 @@ const typeCheckStatement = (
                     newVariables: [],
                 };
             }
-            if (!typesAreEqual(leftType.type, rightType)) {
-                debug('todo');
+            if (!typesAreEqual(leftType.type, rightType, typeDeclarations)) {
+                // debug('todo');
                 return {
                     errors: [
                         {
@@ -593,13 +618,14 @@ const typeCheckStatement = (
                         type: destinationType,
                         location: 'Stack',
                     },
-                ])
+                ]),
+                typeDeclarations
             );
             if (isTypeError(expressionType)) {
                 return { errors: expressionType, newVariables: [] };
             }
-            if (!typesAreEqual(expressionType, destinationType)) {
-                debug('todo');
+            if (!typesAreEqual(expressionType, destinationType, typeDeclarations)) {
+                // debug('todo');
                 return {
                     errors: [
                         {
@@ -639,12 +665,16 @@ const mergeDeclarations = (left: VariableDeclaration[], right: VariableDeclarati
     return result;
 };
 
-const typeCheckFunction = (f: UninferredFunction, variablesInScope: VariableDeclaration[]) => {
+const typeCheckFunction = (
+    f: UninferredFunction,
+    variablesInScope: VariableDeclaration[],
+    typeDeclarations: TypeDeclaration[]
+) => {
     variablesInScope = mergeDeclarations(variablesInScope, f.parameters);
     const allErrors: any = [];
     f.statements.forEach(statement => {
         if (allErrors.length == 0) {
-            const { errors, newVariables } = typeCheckStatement(statement, variablesInScope);
+            const { errors, newVariables } = typeCheckStatement(statement, variablesInScope, typeDeclarations);
             variablesInScope = mergeDeclarations(variablesInScope, newVariables);
             allErrors.push(...errors);
         }
@@ -661,9 +691,10 @@ const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaratio
 
 const assignmentToGlobalDeclaration = (
     ast: Ast.UninferredDeclarationAssignment,
-    variablesInScope: VariableDeclaration[]
+    variablesInScope: VariableDeclaration[],
+    typeDeclarations: TypeDeclaration[]
 ): VariableDeclaration => {
-    const result = typeOfExpression(ast.expression, variablesInScope);
+    const result = typeOfExpression(ast.expression, variablesInScope, typeDeclarations);
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
     return {
         name: ast.destination,
@@ -672,10 +703,14 @@ const assignmentToGlobalDeclaration = (
     };
 };
 
-const inferFunction = (f: UninferredFunction, variablesInScope: VariableDeclaration[]): Function | TypeError[] => {
+const inferFunction = (
+    f: UninferredFunction,
+    variablesInScope: VariableDeclaration[],
+    typeDeclarations: TypeDeclaration[]
+): Function | TypeError[] => {
     let variablesFound = mergeDeclarations(variablesInScope, f.parameters);
     f.statements.forEach(s => {
-        const maybeNewVariable = extractVariable(s, variablesFound, false);
+        const maybeNewVariable = extractVariable(s, variablesFound, typeDeclarations, false);
         if (maybeNewVariable) {
             variablesFound.push(maybeNewVariable);
         }
@@ -685,21 +720,25 @@ const inferFunction = (f: UninferredFunction, variablesInScope: VariableDeclarat
         throw debug('Missing returnStatement');
     }
     const returnStatement = maybeReturnStatement;
-    const returnType = typeOfExpression(returnStatement, variablesFound);
+    const returnType = typeOfExpression(returnStatement, variablesFound, typeDeclarations);
     if (isTypeError(returnType)) {
         return returnType;
     }
     return {
         name: f.name,
-        statements: f.statements.map(s => infer(s, variablesFound)) as Ast.Statement[],
+        statements: f.statements.map(s => infer(s, variablesFound, typeDeclarations)) as Ast.Statement[],
         variables: f.variables,
         parameters: f.parameters,
         returnType: returnType,
     };
 };
 
-const infer = (ast: Ast.UninferredAst, variablesInScope: VariableDeclaration[]): Ast.Ast => {
-    const recurse = ast => infer(ast, variablesInScope);
+const infer = (
+    ast: Ast.UninferredAst,
+    variablesInScope: VariableDeclaration[],
+    typeDeclarations: TypeDeclaration[]
+): Ast.Ast => {
+    const recurse = ast => infer(ast, variablesInScope, typeDeclarations);
     switch (ast.kind) {
         case 'returnStatement':
             return { kind: 'returnStatement', expression: recurse(ast.expression) };
@@ -708,7 +747,7 @@ const infer = (ast: Ast.UninferredAst, variablesInScope: VariableDeclaration[]):
                 kind: 'equality',
                 lhs: recurse(ast.lhs),
                 rhs: recurse(ast.rhs),
-                type: typeOfExpression(ast.lhs, variablesInScope) as Type,
+                type: typeOfExpression(ast.lhs, variablesInScope, typeDeclarations) as Type,
             };
         case 'product':
             return {
@@ -742,7 +781,7 @@ const infer = (ast: Ast.UninferredAst, variablesInScope: VariableDeclaration[]):
                 destination: ast.destination,
             };
         case 'declarationAssignment':
-            const type = typeOfExpression(ast.expression, variablesInScope);
+            const type = typeOfExpression(ast.expression, variablesInScope, typeDeclarations);
             if (isTypeError(type)) throw debug("type error when there shouldn't be");
             return {
                 kind: 'typedDeclarationAssignment',
@@ -1197,18 +1236,24 @@ const compile = (source: string): FrontendOutput => {
         return { parseErrors: [{ kind: 'unexpectedProgram' }] };
     }
 
+    const typeDeclarations = walkAst<TypeDeclaration, Ast.UninferredTypeDeclaration & SourceLocation>(
+        ast,
+        ['typeDeclaration'],
+        (astNode: Ast.UninferredTypeDeclaration) => ({ name: astNode.name, type: astNode.type })
+    );
+
     let variablesInScope = builtinFunctions;
     const program: UninferredFunction = {
         name: `main_program`,
         statements: ast.statements,
-        variables: extractVariables(ast.statements, variablesInScope),
+        variables: extractVariables(ast.statements, variablesInScope, typeDeclarations),
         parameters: [],
     };
 
     const functions = walkAst<UninferredFunction, Ast.UninferredFunctionLiteral & SourceLocation>(
         ast,
         ['functionLiteral'],
-        astNode => functionObjectFromAst(astNode, variablesInScope)
+        astNode => functionObjectFromAst(astNode, variablesInScope, typeDeclarations)
     );
 
     let stringLiteralIdMaker = idMaker();
@@ -1220,22 +1265,24 @@ const compile = (source: string): FrontendOutput => {
 
     const stringLiterals: StringLiteralData[] = uniqueBy(s => s.value, nonUniqueStringLiterals);
     variablesInScope = mergeDeclarations(variablesInScope, getFunctionTypeMap(functions));
-    const programTypeCheck = typeCheckFunction(program, variablesInScope);
+    const programTypeCheck = typeCheckFunction(program, variablesInScope, typeDeclarations);
     variablesInScope = mergeDeclarations(variablesInScope, programTypeCheck.identifiers);
 
-    let typeErrors: TypeError[][] = functions.map(f => typeCheckFunction(f, variablesInScope).typeErrors);
+    let typeErrors: TypeError[][] = functions.map(
+        f => typeCheckFunction(f, variablesInScope, typeDeclarations).typeErrors
+    );
     typeErrors.push(programTypeCheck.typeErrors);
-
-    const typedProgramStatements = program.statements.map(s => infer(s, variablesInScope));
 
     let flatTypeErrors: TypeError[] = flatten(typeErrors);
     if (flatTypeErrors.length > 0) {
         return { typeErrors: flatTypeErrors };
     }
 
+    const typedProgramStatements = program.statements.map(s => infer(s, variablesInScope, typeDeclarations));
+
     const typedFunctions: Function[] = [];
     functions.forEach(f => {
-        const functionOrTypeError = inferFunction(f, variablesInScope);
+        const functionOrTypeError = inferFunction(f, variablesInScope, typeDeclarations);
         if (isTypeError(functionOrTypeError)) {
             typeErrors.push(functionOrTypeError);
         } else {
@@ -1243,7 +1290,7 @@ const compile = (source: string): FrontendOutput => {
                 ...f,
                 returnType: functionOrTypeError.returnType,
                 statements: f.statements.map(s =>
-                    infer(s, mergeDeclarations(variablesInScope, f.variables))
+                    infer(s, mergeDeclarations(variablesInScope, f.variables), typeDeclarations)
                 ) as Ast.Statement[],
             });
         }
@@ -1256,14 +1303,14 @@ const compile = (source: string): FrontendOutput => {
 
     const globalDeclarations: VariableDeclaration[] = program.statements
         .filter(s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment')
-        .map(assignment => assignmentToGlobalDeclaration(assignment as any, variablesInScope));
+        .map(assignment => assignmentToGlobalDeclaration(assignment as any, variablesInScope, typeDeclarations));
 
-    const inferredProgram = inferFunction(program, variablesInScope);
+    const inferredProgram = inferFunction(program, variablesInScope, typeDeclarations);
     if (isTypeError(inferredProgram)) {
         return { typeErrors: inferredProgram };
     }
 
-    if (!typesAreEqual(inferredProgram.returnType, builtinTypes.Integer)) {
+    if (!typesAreEqual(inferredProgram.returnType, builtinTypes.Integer, typeDeclarations)) {
         return {
             typeErrors: [
                 {

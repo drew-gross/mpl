@@ -297,7 +297,13 @@ const makeCfunctionBody = ({
     const endOfFunctionFrees = variables
         // TODO: Make a better memory model for dynamic/global frees.
         .filter(s => s.location === 'Stack')
-        .filter(s => typesAreEqual(s.type, builtinTypes.String))
+        .filter(s =>
+            typesAreEqual(
+                s.type,
+                builtinTypes.String,
+                [] /* TODO: maybe get actual type list in here? no need for comparing with string */
+            )
+        )
         .map(s => callFree(s.name, 'Freeing Stack String at end of function'));
     const returnCode = astToC({
         ast: returnStatement.expression,

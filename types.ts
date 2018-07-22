@@ -31,13 +31,15 @@ export const toString = (type: Type): string => {
     }
 };
 
-export const equal = (a: Type, b: Type): boolean => {
+export type TypeDeclaration = { name: string; type: Type };
+
+export const equal = (a: Type, b: Type, typeDeclarations: TypeDeclaration[]): boolean => {
     if (a.kind == 'Function' && b.kind == 'Function') {
         if (a.arguments.length != b.arguments.length) {
             return false;
         }
         for (let i = 0; i < a.arguments.length; i++) {
-            if (!equal(a.arguments[i], b.arguments[i])) {
+            if (!equal(a.arguments[i], b.arguments[i], typeDeclarations)) {
                 return false;
             }
         }
@@ -45,10 +47,14 @@ export const equal = (a: Type, b: Type): boolean => {
     }
     if (a.kind == 'Product' && b.kind == 'Product') {
         const allInLeftPresentInRight = a.members.every(memberA =>
-            b.members.some(memberB => memberA.name == memberB.name && equal(memberA.type, memberB.type))
+            b.members.some(
+                memberB => memberA.name == memberB.name && equal(memberA.type, memberB.type, typeDeclarations)
+            )
         );
         const allInRightPresentInLeft = b.members.every(memberB =>
-            a.members.some(memberA => memberA.name == memberB.name && equal(memberA.type, memberB.type))
+            a.members.some(
+                memberA => memberA.name == memberB.name && equal(memberA.type, memberB.type, typeDeclarations)
+            )
         );
         return allInLeftPresentInRight && allInRightPresentInLeft;
     }
@@ -60,6 +66,7 @@ export const builtinTypes: { [index: string]: Type } = {
     Integer: { kind: 'Integer' },
     Boolean: { kind: 'Boolean' },
 };
+
 // TODO: Require these to be imported in user code
 export const builtinFunctions: VariableDeclaration[] = [
     {
