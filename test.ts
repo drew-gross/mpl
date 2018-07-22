@@ -1,4 +1,4 @@
-import { equal as typesAreEqual, builtinTypes } from './types.js';
+import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
 import { ThreeAddressStatement, ThreeAddressFunction } from './backends/threeAddressCode.js';
 import * as threeAddressCodeRuntime from './backends/threeAddressCodeRuntime.js';
 import test from 'ava';
@@ -1675,4 +1675,18 @@ test('type of objectLiteral', t => {
         members: [{ name: 'first', type: { kind: 'Boolean' } }, { name: 'second', type: { kind: 'Boolean' } }],
     };
     t.deepEqual(type, expectedType as any);
+});
+
+test('type equality via name lookup', t => {
+    const leftType: Type = {
+        kind: 'Product',
+        members: [{ name: 'first', type: { kind: 'Boolean' } }, { name: 'second', type: { kind: 'Boolean' } }],
+    };
+    const rightType: Type = {
+        kind: 'NameRef',
+        namedType: 'BoolPair',
+    };
+    const typeDeclarations: TypeDeclaration[] = [{ name: 'BoolPair', type: leftType }];
+    debugger;
+    t.deepEqual(typesAreEqual(leftType, rightType as any, typeDeclarations), true);
 });

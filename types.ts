@@ -34,31 +34,57 @@ export const toString = (type: Type): string => {
 export type TypeDeclaration = { name: string; type: Type };
 
 export const equal = (a: Type, b: Type, typeDeclarations: TypeDeclaration[]): boolean => {
-    if (a.kind == 'Function' && b.kind == 'Function') {
-        if (a.arguments.length != b.arguments.length) {
+    if (a.kind == 'NameRef' && b.kind == 'NameRef') {
+        return a.namedType == b.namedType;
+    }
+    let resolvedA = a;
+    if (resolvedA.kind == 'NameRef') {
+        typeDeclarations.forEach(({ name, type }) => {
+            if ((resolvedA as any).name == name) {
+                resolvedA = type;
+            }
+        });
+        if (resolvedA.kind == 'NameRef') {
             return false;
         }
-        for (let i = 0; i < a.arguments.length; i++) {
-            if (!equal(a.arguments[i], b.arguments[i], typeDeclarations)) {
+    }
+    let resolvedB = b;
+    if (resolvedB.kind == 'NameRef') {
+        typeDeclarations.forEach(({ name, type }) => {
+            if ((resolvedB as any).namedType == name) {
+                resolvedB = type;
+            }
+        });
+        if (resolvedB.kind == 'NameRef') {
+            return false;
+        }
+    }
+
+    if (resolvedA.kind == 'Function' && resolvedB.kind == 'Function') {
+        if (resolvedA.arguments.length != resolvedB.arguments.length) {
+            return false;
+        }
+        for (let i = 0; i < resolvedA.arguments.length; i++) {
+            if (!equal(resolvedA.arguments[i], resolvedB.arguments[i], typeDeclarations)) {
                 return false;
             }
         }
         return true;
     }
-    if (a.kind == 'Product' && b.kind == 'Product') {
-        const allInLeftPresentInRight = a.members.every(memberA =>
-            b.members.some(
+    if (resolvedA.kind == 'Product' && resolvedB.kind == 'Product') {
+        const allInLeftPresentInRight = resolvedA.members.every(memberA =>
+            (resolvedB as any).members.some(
                 memberB => memberA.name == memberB.name && equal(memberA.type, memberB.type, typeDeclarations)
             )
         );
-        const allInRightPresentInLeft = b.members.every(memberB =>
-            a.members.some(
+        const allInRightPresentInLeft = resolvedB.members.every(memberB =>
+            (resolvedA as any).members.some(
                 memberA => memberA.name == memberB.name && equal(memberA.type, memberB.type, typeDeclarations)
             )
         );
         return allInLeftPresentInRight && allInRightPresentInLeft;
     }
-    return a.kind == b.kind;
+    return resolvedA.kind == resolvedB.kind;
 };
 
 export const builtinTypes: { [index: string]: Type } = {
