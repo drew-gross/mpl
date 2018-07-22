@@ -14,6 +14,7 @@ import {
     Product,
     ProductComponent,
     equal as typesAreEqual,
+    resolve as resolveType,
     builtinTypes,
     builtinFunctions,
     TypeDeclaration,
@@ -139,7 +140,7 @@ const extractVariable = (
         case 'returnStatement':
             return undefined;
         default:
-            throw debug('todo');
+            throw debug(`${statement.kind} unhandled in extractVariable`);
     }
 };
 
@@ -279,7 +280,7 @@ const combineErrors = (potentialErrors: (Type | TypeError[])[]): TypeError[] | n
     return result.length > 0 ? result : null;
 };
 
-// TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer()
+// TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer() maybe?
 export const typeOfExpression = (
     ast: Ast.UninferredAst,
     variablesInScope: VariableDeclaration[],
@@ -534,6 +535,49 @@ export const typeOfExpression = (
             };
         case 'returnStatement':
             return recurse(ast.expression);
+        case 'memberAccess':
+            const lhsType = typeOfExpression(ast.lhs, variablesInScope, typeDeclarations);
+            if (isTypeError(lhsType)) {
+                return lhsType;
+            }
+            let resolvedLhs = lhsType;
+            if (resolvedLhs.kind == 'NameRef') {
+                const resolved = resolveType(resolvedLhs, typeDeclarations);
+                if (!resolved) {
+                    return [
+                        {
+                            kind: 'couldNotFindType',
+                            name: resolvedLhs.namedType,
+                            sourceLine: ast.sourceLine,
+                            sourceColumn: ast.sourceColumn,
+                        },
+                    ];
+                }
+                resolvedLhs = resolved;
+            }
+            if (resolvedLhs.kind != 'Product') {
+                return [
+                    {
+                        kind: 'invalidMemberAccess',
+                        found: lhsType,
+                        sourceLine: ast.sourceLine,
+                        sourceColumn: ast.sourceColumn,
+                    },
+                ];
+            }
+            const accessedMember = resolvedLhs.members.find(m => m.name == ast.rhs);
+            if (!accessedMember) {
+                return [
+                    {
+                        kind: 'objectDoesNotHaveMember',
+                        lhsType: lhsType,
+                        member: ast.rhs,
+                        sourceLine: ast.sourceLine,
+                        sourceColumn: ast.sourceColumn,
+                    },
+                ];
+            }
+            return accessedMember.type;
         default:
             throw debug(`${ast.kind} unhandled in typeOfExpression`);
     }

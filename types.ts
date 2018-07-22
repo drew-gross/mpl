@@ -33,31 +33,27 @@ export const toString = (type: Type): string => {
 
 export type TypeDeclaration = { name: string; type: Type };
 
+// TODO: split Type into ResolveType and Type, and have this function accept Type and return ResolvedType
+export const resolve = (t: NameRef, typeDeclarations: TypeDeclaration[]): Type | undefined => {
+    const type = typeDeclarations.find(d => d.name == t.namedType);
+    return type ? type.type : type; // lol
+};
+
 export const equal = (a: Type, b: Type, typeDeclarations: TypeDeclaration[]): boolean => {
     if (a.kind == 'NameRef' && b.kind == 'NameRef') {
         return a.namedType == b.namedType;
     }
     let resolvedA = a;
-    if (resolvedA.kind == 'NameRef') {
-        typeDeclarations.forEach(({ name, type }) => {
-            if ((resolvedA as any).name == name) {
-                resolvedA = type;
-            }
-        });
-        if (resolvedA.kind == 'NameRef') {
-            return false;
-        }
+    if (a.kind == 'NameRef') {
+        const resolved = resolve(a, typeDeclarations);
+        if (!resolved) return false;
+        resolvedA = resolved;
     }
     let resolvedB = b;
-    if (resolvedB.kind == 'NameRef') {
-        typeDeclarations.forEach(({ name, type }) => {
-            if ((resolvedB as any).namedType == name) {
-                resolvedB = type;
-            }
-        });
-        if (resolvedB.kind == 'NameRef') {
-            return false;
-        }
+    if (b.kind == 'NameRef') {
+        const resolved = resolve(b, typeDeclarations);
+        if (!resolved) return false;
+        resolvedB = resolved;
     }
 
     if (resolvedA.kind == 'Function' && resolvedB.kind == 'Function') {

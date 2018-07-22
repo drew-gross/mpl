@@ -76,7 +76,10 @@ export type TypeError = SourceLocation &
         | { kind: 'unknownTypeForIdentifier'; identifierName: string }
         | { kind: 'ternaryBranchMismatch'; trueBranchType: Type; falseBranchType: Type }
         | { kind: 'typeMismatchForOperator'; leftType: Type; rightType: Type; operator: string }
-        | { kind: 'assignWrongType'; lhsName: string; lhsType: Type; rhsType: Type });
+        | { kind: 'assignWrongType'; lhsName: string; lhsType: Type; rhsType: Type }
+        | { kind: 'invalidMemberAccess'; found: Type }
+        | { kind: 'objectDoesNotHaveMember'; lhsType: Type; member: string }
+        | { kind: 'couldNotFindType'; name: string });
 
 export type Backend = {
     name: string;
