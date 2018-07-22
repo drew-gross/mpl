@@ -519,11 +519,18 @@ export const typeOfExpression = (
         case 'stringLiteral':
             return builtinTypes.String;
         case 'objectLiteral':
+            const memberTypes = ast.members.map(({ expression }) =>
+                typeOfExpression(expression, variablesInScope, typeDeclarations)
+            );
+            const typeErrors: TypeError[] = flatten(memberTypes.filter(isTypeError));
+            if (!(typeErrors.length == 0)) return typeErrors;
+
             return {
                 kind: 'Product',
-                members: [
-                    /*TODO*/
-                ] as ProductComponent[],
+                members: ast.members.map(({ name, expression }) => ({
+                    name,
+                    type: typeOfExpression(expression, variablesInScope, typeDeclarations) as Type,
+                })),
             };
         case 'returnStatement':
             return recurse(ast.expression);
@@ -590,7 +597,6 @@ const typeCheckStatement = (
                 };
             }
             if (!typesAreEqual(leftType.type, rightType, typeDeclarations)) {
-                // debug('todo');
                 return {
                     errors: [
                         {
@@ -625,7 +631,6 @@ const typeCheckStatement = (
                 return { errors: expressionType, newVariables: [] };
             }
             if (!typesAreEqual(expressionType, destinationType, typeDeclarations)) {
-                // debug('todo');
                 return {
                     errors: [
                         {

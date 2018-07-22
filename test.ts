@@ -14,6 +14,7 @@ import {
     parseResultIsError,
     stripSourceLocation,
 } from './parser-combinator.js';
+import * as Ast from './ast.js';
 import { removeBracketsFromAst } from './frontend.js';
 import { controlFlowGraph, toDotFile, BasicBlock, computeBlockLiveness, tafLiveness } from './controlFlowGraph.js';
 import debug from './util/debug.js';
@@ -1637,4 +1638,41 @@ test('type equality', t => {
             []
         )
     );
+});
+
+test('type of objectLiteral', t => {
+    const ast: Ast.UninferredAst = {
+        kind: 'objectLiteral',
+        typeName: 'BoolPair',
+        members: [
+            { name: 'first', expression: { kind: 'booleanLiteral', value: true, sourceLine: 6, sourceColumn: 34 } },
+            {
+                name: 'second',
+                expression: { kind: 'booleanLiteral', value: false, sourceLine: 6, sourceColumn: 48 },
+            },
+        ],
+        sourceLine: 6,
+        sourceColumn: 16,
+    };
+    const type = typeOfExpression(
+        ast,
+        [],
+        [
+            {
+                name: 'BoolPair',
+                type: {
+                    kind: 'Product',
+                    members: [
+                        { name: 'first', type: { kind: 'Boolean' } },
+                        { name: 'second', type: { kind: 'Boolean' } },
+                    ],
+                },
+            },
+        ]
+    );
+    const expectedType = {
+        kind: 'Product',
+        members: [{ name: 'first', type: { kind: 'Boolean' } }, { name: 'second', type: { kind: 'Boolean' } }],
+    };
+    t.deepEqual(type, expectedType as any);
 });
