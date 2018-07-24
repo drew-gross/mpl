@@ -52,8 +52,15 @@ const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.Ast; exitInsteadOfRetu
             return [`"${ast.value}"`];
         case 'concatenation':
             return ['(', ...recurse({ ast: ast.lhs }), ').concat(', ...recurse({ ast: ast.rhs }), ')'];
+        case 'typeDeclaration':
+            return [''];
+        case 'objectLiteral':
+            const members = ast.members.map(({ name, expression }) => `${name}: ${recurse({ ast: expression })}`);
+            return ['{', join(members, ','), '}'];
+        case 'memberAccess':
+            return ['(', ...recurse({ ast: ast.lhs }), ').', ast.rhs];
         default:
-            throw debug(`${ast.kind} unhanlded in toJS`);
+            throw debug(`${(ast as any).kind} unhanlded in toJS`);
     }
 };
 
