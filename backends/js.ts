@@ -8,57 +8,51 @@ import join from '../util/join.js';
 
 const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.Ast; exitInsteadOfReturn: boolean }): string[] => {
     if (!ast) debugger;
-    const recurse = newInput => astToJS({ ast, exitInsteadOfReturn, ...newInput });
+    const recurse = newInput => astToJS({ ast: newInput, exitInsteadOfReturn });
     switch (ast.kind) {
         case 'returnStatement': {
             if (exitInsteadOfReturn) {
-                return [`process.exit(${recurse({ ast: ast.expression }).join(' ')})`];
+                return [`process.exit(${recurse(ast.expression).join(' ')})`];
             } else {
-                return [`return `, ...recurse({ ast: ast.expression })];
+                return [`return `, ...recurse(ast.expression)];
             }
         }
         case 'number':
             return [ast.value.toString()];
         case 'product':
-            return [...recurse({ ast: ast.lhs }), '*', ...recurse({ ast: ast.rhs })];
+            return [...recurse(ast.lhs), '*', ...recurse(ast.rhs)];
         case 'subtraction':
-            return [...recurse({ ast: ast.lhs }), '-', ...recurse({ ast: ast.rhs })];
+            return [...recurse(ast.lhs), '-', ...recurse(ast.rhs)];
         case 'addition':
-            return [...recurse({ ast: ast.lhs }), '+', ...recurse({ ast: ast.rhs })];
+            return [...recurse(ast.lhs), '+', ...recurse(ast.rhs)];
         case 'reassignment':
-            return [ast.destination, '=', ...recurse({ ast: ast.expression }), ';'];
+            return [ast.destination, '=', ...recurse(ast.expression), ';'];
         case 'typedDeclarationAssignment':
-            return [`let ${ast.destination} = `, ...recurse({ ast: ast.expression }), ';'];
+            return [`let ${ast.destination} = `, ...recurse(ast.expression), ';'];
         case 'functionLiteral':
             return [ast.deanonymizedName];
         case 'callExpression':
-            const jsArguments: string[][] = ast.arguments.map(argument => recurse({ ast: argument }));
+            const jsArguments: string[][] = ast.arguments.map(argument => recurse(argument));
             return [`${ast.name}(`, join(jsArguments.map(argument => join(argument, ' ')), ', '), `)`];
         case 'identifier':
             return [ast.value];
         case 'ternary':
-            return [
-                ...recurse({ ast: ast.condition }),
-                '?',
-                ...recurse({ ast: ast.ifTrue }),
-                ':',
-                ...recurse({ ast: ast.ifFalse }),
-            ];
+            return [...recurse(ast.condition), '?', ...recurse(ast.ifTrue), ':', ...recurse(ast.ifFalse)];
         case 'equality':
-            return [...recurse({ ast: ast.lhs }), '==', ...recurse({ ast: ast.rhs })];
+            return [...recurse(ast.lhs), '==', ...recurse(ast.rhs)];
         case 'booleanLiteral':
             return [ast.value ? 'true' : 'false'];
         case 'stringLiteral':
             return [`"${ast.value}"`];
         case 'concatenation':
-            return ['(', ...recurse({ ast: ast.lhs }), ').concat(', ...recurse({ ast: ast.rhs }), ')'];
+            return ['(', ...recurse(ast.lhs), ').concat(', ...recurse(ast.rhs), ')'];
         case 'typeDeclaration':
             return [''];
         case 'objectLiteral':
-            const members = ast.members.map(({ name, expression }) => `${name}: ${recurse({ ast: expression })}`);
+            const members = ast.members.map(({ name, expression }) => `${name}: ${recurse(expression)}`);
             return ['{', join(members, ','), '}'];
         case 'memberAccess':
-            return ['(', ...recurse({ ast: ast.lhs }), ').', ast.rhs];
+            return ['(', ...recurse(ast.lhs), ').', ast.rhs];
         default:
             throw debug(`${(ast as any).kind} unhanlded in toJS`);
     }
