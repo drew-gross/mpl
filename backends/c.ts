@@ -11,6 +11,7 @@ import join from '../util/join.js';
 import { CompiledProgram, CompiledExpression, compileExpression, CompiledAssignment } from '../backend-utils.js';
 import { errors } from '../runtime-strings.js';
 import { mergeDeclarations } from '../frontend.js';
+import idAppender from '../util/idAppender.js';
 
 // Beginnings of experiment with tracing code from source to target
 const callFree = (target: string, reason: string) => `my_free(${target}); // ${reason}`;
@@ -44,6 +45,7 @@ type BackendInput = {
     ast: Ast.Ast;
     declarations: VariableDeclaration[];
     stringLiterals: StringLiteralData[];
+    makeTemporary: (string) => string;
 };
 
 const compileAssignment = (destination: string, rhs: CompiledExpression<string>): CompiledAssignment<string> => {
@@ -54,12 +56,6 @@ const compileAssignment = (destination: string, rhs: CompiledExpression<string>)
     };
 };
 
-let currentTemporaryId = 0;
-const getTemporaryId = () => {
-    currentTemporaryId++;
-    return currentTemporaryId;
-};
-
 const registerTransferLangaugeToC = (rtlCode: string[], joiner: string): string => {
     rtlCode.forEach(line => {
         if (typeof line !== 'string') debug('todo');
@@ -68,7 +64,7 @@ const registerTransferLangaugeToC = (rtlCode: string[], joiner: string): string 
 };
 
 const astToC = (input: BackendInput): CompiledProgram<string> => {
-    const { ast, stringLiterals, declarations } = input;
+    const { ast, stringLiterals, declarations, makeTemporary } = input;
     const recurse = newInput => astToC({ ...input, ...newInput });
     const binaryOperator = (operator: string) => {
         const lhs = recurse({ ast: (ast as any).lhs });
@@ -92,9 +88,9 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         case 'concatenation': {
             const lhs = recurse({ ast: ast.lhs });
             const rhs = recurse({ ast: ast.rhs });
-            const temporaryName = `temporary_string_${getTemporaryId()}`;
-            const lhsName = `concat_lhs_${getTemporaryId()}`;
-            const rhsName = `concat_rhs_${getTemporaryId()}`;
+            const temporaryName = makeTemporary('temporary_string');
+            const lhsName = makeTemporary('concat_lhs');
+            const rhsName = makeTemporary('concat_rhs');
             const prepAndCleanup = {
                 prepare: [
                     `char *${lhsName} = ${registerTransferLangaugeToC(lhs.execute, ' ')};`,
@@ -170,8 +166,8 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                         case 'Global':
                             // Free old value, copy new value.
                             const rhs = recurse({ ast: ast.expression });
-                            const savedOldValue = `saved_old_${getTemporaryId()}`;
-                            const temporaryName = `reassign_temporary_${getTemporaryId()}`;
+                            const savedOldValue = makeTemporary('saved_old');
+                            const temporaryName = makeTemporary('reassign_temporary');
                             const assign = {
                                 prepare: [
                                     `char *${savedOldValue} = ${declaration.name};`,
@@ -196,7 +192,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                             throw debug('todo');
                     }
                 default:
-                    throw debug('todo');
+                    throw debug(`${declaration.type.kind} unhandled C reassignment`);
             }
         }
         case 'functionLiteral':
@@ -241,7 +237,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         case 'typeDeclaration':
             return compileExpression([], ([]) => []);
         default:
-            debug('todo');
+            throw debug(`${ast.kind} unhandled in astToC`);
     }
     return debug('todo');
 };
@@ -279,11 +275,13 @@ const makeCfunctionBody = ({
     const nonReturnStatements = statements.slice(0, statements.length - 1);
     const returnStatement = statements[statements.length - 1];
     if (returnStatement.kind !== 'returnStatement') throw debug('todo');
+    const makeTemporary = idAppender();
     const body = nonReturnStatements.map(statement => {
         const statementLogic = astToC({
             ast: statement,
             stringLiterals,
             declarations: mergeDeclarations(variables, globalDeclarations),
+            makeTemporary,
         });
         return join(
             [
@@ -309,6 +307,7 @@ const makeCfunctionBody = ({
         ast: returnStatement.expression,
         stringLiterals,
         declarations: mergeDeclarations(variables, globalDeclarations),
+        makeTemporary,
     });
     return join(
         [
