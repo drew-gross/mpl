@@ -53,7 +53,7 @@ const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.Ast; exitInsteadOfRetu
         case 'concatenation':
             return ['(', ...recurse({ ast: ast.lhs }), ').concat(', ...recurse({ ast: ast.rhs }), ')'];
         default:
-            throw debug('todo');
+            throw debug(`${ast.kind} unhanlded in toJS`);
     }
 };
 

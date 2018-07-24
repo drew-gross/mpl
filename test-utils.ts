@@ -64,8 +64,15 @@ const astToString = (ast: Ast) => {
             return `${ast.lhs} ++ ${ast.rhs}`;
         case 'typedDeclarationAssignment':
             return `${ast.destination}: ${ast.type.kind} = ${astToString(ast.expression)};`;
+        case 'typeDeclaration':
+            return `(${ast.kind})`; // TODO: Figure out what parts of type declaration should go in AST vs uninferred AST.
         case 'reassignment':
             return `${ast.destination} = ${astToString(ast.expression)};`;
+        case 'objectLiteral':
+            const members = ast.members.map(({ name, expression }) => `${name}: ${astToString(expression)}`);
+            return `{ ${join(members, ', ')} }`;
+        case 'memberAccess':
+            return `(${astToString(ast.lhs)}).${ast.rhs}`;
         default:
             throw debug(`${(ast as any).kind} unhandled in astToString`);
     }

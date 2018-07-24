@@ -138,9 +138,10 @@ const extractVariable = (
                 type: typeOfExpression(statement.expression, variablesIncludingSelf, typeDeclarations) as Type,
             };
         case 'returnStatement':
+        case 'typeDeclaration':
             return undefined;
         default:
-            throw debug(`${statement.kind} unhandled in extractVariable`);
+            throw debug(`${(statement as any).kind} unhandled in extractVariable`);
     }
 };
 
