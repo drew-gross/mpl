@@ -97,7 +97,6 @@ export const builtinFunctions: VariableDeclaration[] = [
             kind: 'Function',
             arguments: [builtinTypes.String, builtinTypes.Integer],
         },
-        location: 'Global',
     },
     {
         name: 'print',
@@ -105,6 +104,5 @@ export const builtinFunctions: VariableDeclaration[] = [
             kind: 'Function',
             arguments: [builtinTypes.String, builtinTypes.Integer],
         },
-        location: 'Global',
     },
 ];

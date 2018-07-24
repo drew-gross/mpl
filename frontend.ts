@@ -111,8 +111,7 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
 const extractVariable = (
     statement: Ast.UninferredStatement,
     variablesInScope: VariableDeclaration[],
-    typeDeclarations: TypeDeclaration[],
-    isGlobal: boolean
+    typeDeclarations: TypeDeclaration[]
 ): VariableDeclaration | undefined => {
     const result: VariableDeclaration[] = [];
     switch (statement.kind) {
@@ -129,12 +128,10 @@ const extractVariable = (
                         kind: 'Function',
                         arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
                     },
-                    location: isGlobal ? 'Global' : 'Stack',
                 },
             ]);
             return {
                 name: statement.destination,
-                location: isGlobal ? 'Global' : 'Stack',
                 type: typeOfExpression(statement.expression, variablesIncludingSelf, typeDeclarations) as Type,
             };
         case 'returnStatement':
@@ -162,8 +159,7 @@ const extractVariables = (
                 const potentialVariable = extractVariable(
                     statement,
                     mergeDeclarations(variablesInScope, variables),
-                    typeDeclarations,
-                    false
+                    typeDeclarations
                 );
                 if (potentialVariable) {
                     variables.push(potentialVariable);
@@ -608,7 +604,6 @@ const typeCheckStatement = (
                             kind: 'Function',
                             arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
                         },
-                        location: 'Stack',
                     },
                 ]),
                 typeDeclarations
@@ -617,10 +612,7 @@ const typeCheckStatement = (
                 return { errors: rightType, newVariables: [] };
             }
             // Left type is inferred as right type
-            return {
-                errors: [],
-                newVariables: [{ name: ast.destination, type: rightType, location: 'FAKE' as any }],
-            };
+            return { errors: [], newVariables: [{ name: ast.destination, type: rightType }] };
         }
         case 'reassignment': {
             const rightType = typeOfExpression(ast.expression, variablesInScope, typeDeclarations);
@@ -663,13 +655,7 @@ const typeCheckStatement = (
             const destinationType = ast.type;
             const expressionType = typeOfExpression(
                 ast.expression,
-                mergeDeclarations(variablesInScope, [
-                    {
-                        name: ast.destination,
-                        type: destinationType,
-                        location: 'Stack',
-                    },
-                ]),
+                mergeDeclarations(variablesInScope, [{ name: ast.destination, type: destinationType }]),
                 typeDeclarations
             );
             if (isTypeError(expressionType)) {
@@ -692,7 +678,7 @@ const typeCheckStatement = (
             }
             return {
                 errors: [],
-                newVariables: [{ name: ast.destination, type: destinationType, location: 'Stack' }],
+                newVariables: [{ name: ast.destination, type: destinationType }],
             };
         }
         case 'typeDeclaration':
@@ -746,11 +732,7 @@ const assignmentToGlobalDeclaration = (
 ): VariableDeclaration => {
     const result = typeOfExpression(ast.expression, variablesInScope, typeDeclarations);
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
-    return {
-        name: ast.destination,
-        type: result,
-        location: 'Global',
-    };
+    return { name: ast.destination, type: result };
 };
 
 const inferFunction = (
@@ -760,7 +742,7 @@ const inferFunction = (
 ): Function | TypeError[] => {
     let variablesFound = mergeDeclarations(variablesInScope, f.parameters);
     f.statements.forEach(s => {
-        const maybeNewVariable = extractVariable(s, variablesFound, typeDeclarations, false);
+        const maybeNewVariable = extractVariable(s, variablesFound, typeDeclarations);
         if (maybeNewVariable) {
             variablesFound.push(maybeNewVariable);
         }
@@ -931,7 +913,6 @@ const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
                 {
                     name: (ast.children[0] as AstLeaf<MplToken>).value as string,
                     type: parseType(ast.children[2]),
-                    location: 'Parameter',
                 },
             ];
         } else {

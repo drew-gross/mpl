@@ -46,6 +46,7 @@ type BackendInput = {
     declarations: VariableDeclaration[];
     stringLiterals: StringLiteralData[];
     makeTemporary: (string) => string;
+    predeclaredVariables: string[];
 };
 
 const compileAssignment = (destination: string, rhs: CompiledExpression<string>): CompiledAssignment<string> => {
@@ -64,7 +65,7 @@ const registerTransferLangaugeToC = (rtlCode: string[], joiner: string): string 
 };
 
 const astToC = (input: BackendInput): CompiledProgram<string> => {
-    const { ast, stringLiterals, declarations, makeTemporary } = input;
+    const { ast, stringLiterals, declarations, makeTemporary, predeclaredVariables } = input;
     const recurse = newAst => astToC({ ...input, ast: newAst });
     const binaryOperator = (operator: string) => {
         const lhs = recurse((ast as any).lhs);
@@ -115,40 +116,23 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             switch (declaration.type.kind) {
                 case 'Function':
                 case 'Integer':
-                    switch (declaration.location) {
-                        case 'Stack':
-                            return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
-                        case 'Global':
-                            return compileAssignment(declaration.name, rhs);
-                        default:
-                            throw debug('todo');
+                    if (predeclaredVariables.includes(declaration.name)) {
+                        return compileAssignment(declaration.name, rhs);
+                    } else {
+                        return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
                     }
                 case 'String':
-                    switch (declaration.location) {
-                        case 'Stack': {
-                            const rhsWillAlloc = compileExpression([rhs], ([e1]) => [
-                                'string_copy(',
-                                ...e1,
-                                ', my_malloc(length(',
-                                ...e1,
-                                ') + 1))',
-                            ]);
-                            return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhsWillAlloc);
-                        }
-                        case 'Global':
-                            const rhsWillAlloc = compileExpression([rhs], ([e1]) => [
-                                'string_copy(',
-                                ...e1,
-                                ', my_malloc(length(',
-                                ...e1,
-                                ') + 1))',
-                            ]);
-                            return compileAssignment(declaration.name, rhsWillAlloc);
-                        case 'Parameter':
-                            // Should never reassign to parameters
-                            throw debug('todo');
-                        default:
-                            throw debug('todo');
+                    const rhsWillAlloc = compileExpression([rhs], ([e1]) => [
+                        'string_copy(',
+                        ...e1,
+                        ', my_malloc(length(',
+                        ...e1,
+                        ') + 1))',
+                    ]);
+                    if (predeclaredVariables.includes(declaration.name)) {
+                        return compileAssignment(declaration.name, rhsWillAlloc);
+                    } else {
+                        return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhsWillAlloc);
                     }
                 default:
                     throw debug(`${declaration.type.kind} unhandled in typedDeclarationAssignment`);
@@ -164,36 +148,26 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                 case 'Integer':
                     return compileAssignment(lhs, rhs);
                 case 'String':
-                    switch (declaration.location) {
-                        case 'Stack':
-                        case 'Global':
-                            // Free old value, copy new value.
-                            const rhs = recurse(ast.expression);
-                            const savedOldValue = makeTemporary('saved_old');
-                            const temporaryName = makeTemporary('reassign_temporary');
-                            const assign = {
-                                prepare: [
-                                    `char *${savedOldValue} = ${declaration.name};`,
-                                    `char *${temporaryName} = ${registerTransferLangaugeToC(rhs.execute, ' ')};`,
-                                ],
-                                execute: [`my_malloc(length(${temporaryName}))`],
-                                cleanup: [
-                                    `string_copy(${temporaryName}, ${declaration.name});`,
-                                    callFree(savedOldValue, 'free inaccessible value after reassignment'),
-                                ],
-                            };
-                            const expression = compileExpression(
-                                [rhs, assign],
-                                // Can ignore rhs because it is executed during assign.
-                                ([executeRhs, executeAssign]) => executeAssign
-                            );
-                            return compileAssignment(declaration.name, expression);
-                        case 'Parameter':
-                            // Shouldn't be possible, can't reassign parameters
-                            throw debug('todo');
-                        default:
-                            throw debug('todo');
-                    }
+                    // Free old value, copy new value.
+                    const savedOldValue = makeTemporary('saved_old');
+                    const temporaryName = makeTemporary('reassign_temporary');
+                    const assign = {
+                        prepare: [
+                            `char *${savedOldValue} = ${declaration.name};`,
+                            `char *${temporaryName} = ${registerTransferLangaugeToC(rhs.execute, ' ')};`,
+                        ],
+                        execute: [`my_malloc(length(${temporaryName}))`],
+                        cleanup: [
+                            `string_copy(${temporaryName}, ${declaration.name});`,
+                            callFree(savedOldValue, 'free inaccessible value after reassignment'),
+                        ],
+                    };
+                    const expression = compileExpression(
+                        [rhs, assign],
+                        // Can ignore rhs because it is executed during assign.
+                        ([executeRhs, executeAssign]) => executeAssign
+                    );
+                    return compileAssignment(declaration.name, expression);
                 default:
                     throw debug(`${declaration.type.kind} unhandled C reassignment`);
             }
@@ -256,8 +230,8 @@ type MakeCFunctionBodyInputs = {
     name: any;
     parameters: VariableDeclaration[];
     statements: Ast.Statement[];
-    variables: any;
-    globalDeclarations: any;
+    variables: VariableDeclaration[];
+    globalDeclarations: VariableDeclaration[];
     stringLiterals: StringLiteralData[];
     buildSignature: SignatureBuilder;
     returnType: Type;
@@ -279,12 +253,14 @@ const makeCfunctionBody = ({
     const returnStatement = statements[statements.length - 1];
     if (returnStatement.kind !== 'returnStatement') throw debug('todo');
     const makeTemporary = idAppender();
+    const globalVariableNames = globalDeclarations.map(d => d.name);
     const body = nonReturnStatements.map(statement => {
         const statementLogic = astToC({
             ast: statement,
             stringLiterals,
             declarations: mergeDeclarations(variables, globalDeclarations),
             makeTemporary,
+            predeclaredVariables: globalVariableNames,
         });
         return join(
             [
@@ -296,8 +272,8 @@ const makeCfunctionBody = ({
         );
     });
     const endOfFunctionFrees = variables
-        // TODO: Make a better memory model for dynamic/global frees.
-        .filter(s => s.location === 'Stack')
+        .filter(s => !globalVariableNames.includes(s.name))
+        .filter(s => !parameters.map(d => d.name).includes(s.name))
         .filter(s =>
             typesAreEqual(
                 s.type,
@@ -311,6 +287,7 @@ const makeCfunctionBody = ({
         stringLiterals,
         declarations: mergeDeclarations(variables, globalDeclarations),
         makeTemporary,
+        predeclaredVariables: globalVariableNames,
     });
     return join(
         [
@@ -355,7 +332,12 @@ const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }
         stringLiterals,
         buildSignature: (_1, _2) => 'int main(int argc, char **argv)',
         returnType: { kind: 'Integer' }, // Main can only ever return integer
-        beforeExit: ['verify_no_leaks();'],
+        beforeExit: [
+            ...globalDeclarations
+                .filter(d => d.type.kind == 'String')
+                .map(d => `my_free(${d.name}); // Free global string`),
+            'verify_no_leaks();',
+        ],
     });
     const Cdeclarations = globalDeclarations
         .map(declaration => mplTypeToCDeclaration(declaration.type, declaration.name))

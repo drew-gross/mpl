@@ -793,7 +793,6 @@ export const constructFunction = (
             });
             const freeLocals = f.variables
                 // TODO: Make a better memory model for frees.
-                .filter(s => s.location === 'Stack')
                 .filter(s => s.type.kind == 'String')
                 .map(s => {
                     const variable: Register = variablesInScope[s.name];
