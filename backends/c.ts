@@ -65,16 +65,16 @@ const registerTransferLangaugeToC = (rtlCode: string[], joiner: string): string 
 
 const astToC = (input: BackendInput): CompiledProgram<string> => {
     const { ast, stringLiterals, declarations, makeTemporary } = input;
-    const recurse = newInput => astToC({ ...input, ...newInput });
+    const recurse = newAst => astToC({ ...input, ast: newAst });
     const binaryOperator = (operator: string) => {
-        const lhs = recurse({ ast: (ast as any).lhs });
-        const rhs = recurse({ ast: (ast as any).rhs });
+        const lhs = recurse((ast as any).lhs);
+        const rhs = recurse((ast as any).rhs);
         return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, operator, ...e2]);
     };
     if (!ast) debug('todo');
     switch (ast.kind) {
         case 'returnStatement': {
-            const subExpression = recurse({ ast: ast.expression });
+            const subExpression = recurse(ast.expression);
             return compileExpression([subExpression], ([e1]) => ['return', ...e1, ';']);
         }
         case 'number':
@@ -86,8 +86,8 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         case 'subtraction':
             return binaryOperator('-');
         case 'concatenation': {
-            const lhs = recurse({ ast: ast.lhs });
-            const rhs = recurse({ ast: ast.rhs });
+            const lhs = recurse(ast.lhs);
+            const rhs = recurse(ast.rhs);
             const temporaryName = makeTemporary('temporary_string');
             const lhsName = makeTemporary('concat_lhs');
             const rhsName = makeTemporary('concat_rhs');
@@ -106,7 +106,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         // TODO: Unify these somehow typedDeclarationAssignment and reassignment
         case 'typedDeclarationAssignment': {
             const lhs = ast.destination;
-            const rhs = recurse({ ast: ast.expression });
+            const rhs = recurse(ast.expression);
             const declaration = declarations.find(declaration => declaration.name === lhs);
             if (!declaration) throw debug('todo');
             switch (declaration.type.kind) {
@@ -153,7 +153,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         }
         case 'reassignment': {
             const lhs = ast.destination;
-            const rhs = recurse({ ast: ast.expression });
+            const rhs = recurse(ast.expression);
             const declaration = declarations.find(declaration => declaration.name === lhs);
             if (!declaration) throw debug('todo');
             switch (declaration.type.kind) {
@@ -165,7 +165,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                         case 'Stack':
                         case 'Global':
                             // Free old value, copy new value.
-                            const rhs = recurse({ ast: ast.expression });
+                            const rhs = recurse(ast.expression);
                             const savedOldValue = makeTemporary('saved_old');
                             const temporaryName = makeTemporary('reassign_temporary');
                             const assign = {
@@ -198,7 +198,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         case 'functionLiteral':
             return compileExpression([], ([]) => [`&${ast.deanonymizedName}`]);
         case 'callExpression': {
-            const argumentsC = ast.arguments.map(argument => recurse({ ast: argument }));
+            const argumentsC = ast.arguments.map(argument => recurse(argument));
             return compileExpression(argumentsC, argCode => [
                 `(*${ast.name})(`,
                 join(argCode.map(code => registerTransferLangaugeToC(code, ' ')), ', '),
@@ -208,9 +208,9 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         case 'identifier':
             return compileExpression([], ([]) => [ast.value]);
         case 'ternary': {
-            const comparatorC = recurse({ ast: ast.condition });
-            const ifTrueC = recurse({ ast: ast.ifTrue });
-            const ifFalseC = recurse({ ast: ast.ifFalse });
+            const comparatorC = recurse(ast.condition);
+            const ifTrueC = recurse(ast.ifTrue);
+            const ifFalseC = recurse(ast.ifFalse);
             return compileExpression([comparatorC, ifTrueC, ifFalseC], ([compare, ifTrue, ifFalse]) => [
                 ...compare,
                 '?',
@@ -220,8 +220,8 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             ]);
         }
         case 'equality': {
-            const lhs = recurse({ ast: ast.lhs });
-            const rhs = recurse({ ast: ast.rhs });
+            const lhs = recurse(ast.lhs);
+            const rhs = recurse(ast.rhs);
             if (ast.type.kind == 'String') {
                 return compileExpression([lhs, rhs], ([e1, e2]) => ['string_compare(', ...e1, ',', ...e2, ')']);
             } else {
