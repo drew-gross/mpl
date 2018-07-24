@@ -79,6 +79,9 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         }
         case 'number':
             return compileExpression([], ([]) => [ast.value.toString()]);
+        case 'objectLiteral':
+            const members = ast.members.map(({ name, expression }) => `.${name} = ${recurse(expression)}`);
+            return compileExpression([], ([]) => ['{', join(members, ', '), '}']);
         case 'product':
             return binaryOperator('*');
         case 'addition':
@@ -148,7 +151,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                             throw debug('todo');
                     }
                 default:
-                    throw debug('todo');
+                    throw debug(`${declaration.type.kind} unhandled in typedDeclarationAssignment`);
             }
         }
         case 'reassignment': {

@@ -1688,6 +1688,5 @@ test('type equality via name lookup', t => {
         namedType: 'BoolPair',
     };
     const typeDeclarations: TypeDeclaration[] = [{ name: 'BoolPair', type: leftType }];
-    debugger;
     t.deepEqual(typesAreEqual(leftType, rightType as any, typeDeclarations), true);
 });
