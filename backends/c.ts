@@ -83,6 +83,9 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         case 'objectLiteral':
             const members = ast.members.map(({ name, expression }) => `.${name} = ${recurse(expression)}`);
             return compileExpression([], ([]) => ['{', join(members, ', '), '}']);
+        case 'memberAccess':
+            const lhs = recurse(ast.lhs);
+            return compileExpression([lhs], ([e1]) => ['(', ...e1, ').', ast.rhs]);
         case 'product':
             return binaryOperator('*');
         case 'addition':
@@ -116,6 +119,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             switch (declaration.type.kind) {
                 case 'Function':
                 case 'Integer':
+                case 'Product':
                     if (predeclaredVariables.includes(declaration.name)) {
                         return compileAssignment(declaration.name, rhs);
                     } else {
@@ -214,7 +218,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         case 'typeDeclaration':
             return compileExpression([], ([]) => []);
         default:
-            throw debug(`${ast.kind} unhandled in astToC`);
+            throw debug(`${(ast as any).kind} unhandled in astToC`);
     }
     return debug('todo');
 };
