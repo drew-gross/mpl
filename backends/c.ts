@@ -16,7 +16,7 @@ import idAppender from '../util/idAppender.js';
 // Beginnings of experiment with tracing code from source to target
 const callFree = (target: string, reason: string) => `my_free(${target}); // ${reason}`;
 
-// TODO: this returning a funciton is pretty janky. It looks like this because of the way function
+// TODO: This returns a function, which is pretty janky. It looks like this because of the way function
 // pointer declarations work in C: the variable name appears in the middle of the declaration
 const mplTypeToCType = (type: Type): ((name: string) => string) => {
     switch (type.kind) {
