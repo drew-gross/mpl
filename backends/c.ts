@@ -34,8 +34,10 @@ const mplTypeToCType = (type: Type): ((name: string) => string) => {
                 .map(f => f(''));
             const argumentsString = join(argumentTypes, ', ');
             return name => `${returnType} (*${name})(${argumentsString})`;
+        case 'Product':
+            throw debug('Need a named type here');
         default:
-            throw debug('Unhanlded type in mplTypeToCType');
+            throw debug(`${type.kind} unhandled in mplTypeToCType`);
     }
 };
 
