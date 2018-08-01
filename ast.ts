@@ -104,6 +104,7 @@ export type ObjectMember = {
 
 export type ObjectLiteral = {
     kind: 'objectLiteral';
+    typeName: string;
     members: ObjectMember[];
 };
 

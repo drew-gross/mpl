@@ -525,6 +525,7 @@ export const typeOfExpression = (
 
             return {
                 kind: 'Product',
+                name: ast.typeName,
                 members: ast.members.map(({ name, expression }) => ({
                     name,
                     type: typeOfExpression(expression, variablesInScope, typeDeclarations) as Type,
@@ -851,6 +852,7 @@ const infer = (
         case 'objectLiteral':
             return {
                 kind: 'objectLiteral',
+                typeName: ast.typeName,
                 members: ast.members.map(({ name, expression }) => ({
                     name,
                     expression: recurse(expression),
@@ -975,6 +977,7 @@ const parseType = (ast: MplAst): Type => {
         case 'typeLiteral':
             return {
                 kind: 'Product',
+                name: ast.type,
                 members: (ast.children[1] as any).children.map(parseTypeLiteralComponent),
             };
         default:
@@ -1355,6 +1358,7 @@ const compile = (source: string): FrontendOutput => {
     }
 
     return {
+        types: typeDeclarations,
         functions: typedFunctions,
         program: inferredProgram,
         globalDeclarations,

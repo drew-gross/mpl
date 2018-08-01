@@ -1,6 +1,6 @@
 import { UninferredStatement, Statement } from './ast.js';
 import { ThreeAddressFunction } from './backends/threeAddressCode.js';
-import { Type } from './types.js';
+import { Type, TypeDeclaration } from './types.js';
 
 export type SourceLocation = { sourceLine: number; sourceColumn: number };
 
@@ -25,6 +25,7 @@ export type Function = {
 };
 export type StringLiteralData = { id: number; value: string };
 export type BackendInputs = {
+    types: TypeDeclaration[];
     functions: Function[];
     program: Function;
     globalDeclarations: VariableDeclaration[];

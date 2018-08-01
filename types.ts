@@ -11,7 +11,7 @@ export type String = { kind: 'String' };
 export type Integer = { kind: 'Integer' };
 export type Boolean = { kind: 'Boolean' };
 export type Function = { kind: 'Function'; arguments: Type[] };
-export type Product = { kind: 'Product'; members: ProductComponent[] };
+export type Product = { kind: 'Product'; name: string; members: ProductComponent[] };
 export type NameRef = { kind: 'NameRef'; namedType: string };
 
 export type Type = String | Integer | Boolean | Function | Product | NameRef;

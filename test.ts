@@ -1327,7 +1327,7 @@ return b;`,
     expectedExitCode: 2,
 });
 
-test.only('bool pair', compileAndRun, {
+test('bool pair', compileAndRun, {
     source: `
 BoolPair := {
     first: Boolean;
@@ -1663,6 +1663,7 @@ test('type of objectLiteral', t => {
                 name: 'BoolPair',
                 type: {
                     kind: 'Product',
+                    name: 'BoolPair',
                     members: [
                         { name: 'first', type: { kind: 'Boolean' } },
                         { name: 'second', type: { kind: 'Boolean' } },
@@ -1673,6 +1674,7 @@ test('type of objectLiteral', t => {
     );
     const expectedType = {
         kind: 'Product',
+        name: 'BoolPair',
         members: [{ name: 'first', type: { kind: 'Boolean' } }, { name: 'second', type: { kind: 'Boolean' } }],
     };
     t.deepEqual(type, expectedType as any);
@@ -1681,6 +1683,7 @@ test('type of objectLiteral', t => {
 test('type equality via name lookup', t => {
     const leftType: Type = {
         kind: 'Product',
+        name: 'BoolPair',
         members: [{ name: 'first', type: { kind: 'Boolean' } }, { name: 'second', type: { kind: 'Boolean' } }],
     };
     const rightType: Type = {

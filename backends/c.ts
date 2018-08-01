@@ -35,7 +35,7 @@ const mplTypeToCType = (type: Type): ((name: string) => string) => {
             const argumentsString = join(argumentTypes, ', ');
             return name => `${returnType} (*${name})(${argumentsString})`;
         case 'Product':
-            throw debug('Need a named type here');
+            return name => `struct ${type.name} ${name}`;
         default:
             throw debug(`${type.kind} unhandled in mplTypeToCType`);
     }
@@ -83,8 +83,15 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         case 'number':
             return compileExpression([], ([]) => [ast.value.toString()]);
         case 'objectLiteral':
-            const members = ast.members.map(({ name, expression }) => `.${name} = ${recurse(expression)}`);
-            return compileExpression([], ([]) => ['{', join(members, ', '), '}']);
+            const memberExpressions = ast.members.map(m => recurse(m.expression));
+            return compileExpression(memberExpressions, memberExpressions => [
+                '(struct ',
+                ast.typeName,
+                ')',
+                '{',
+                ...memberExpressions.map((e, i) => `.${ast.members[i].name} = ${e},`),
+                '}',
+            ]);
         case 'memberAccess':
             const lhs = recurse(ast.lhs);
             return compileExpression([lhs], ([e1]) => ['(', ...e1, ').', ast.rhs]);
@@ -312,7 +319,13 @@ const makeCfunctionBody = ({
     );
 };
 
-const toExectuable = ({ functions, program, globalDeclarations, stringLiterals }: BackendInputs) => {
+const productTypeMemberToCStructMember = ({ name, type }) => `${mplTypeToCDeclaration(type, '')} ${name};`;
+
+const toExectuable = ({ functions, program, types, globalDeclarations, stringLiterals }: BackendInputs) => {
+    const CtypeDeclarations = types
+        .filter(t => t.type.kind == 'Product')
+        .map(t => `struct ${t.name} {${join((t.type as any).members.map(productTypeMemberToCStructMember), '\n')}};`);
+
     const Cfunctions = functions.map(({ name, parameters, statements, variables, returnType }) =>
         makeCfunctionBody({
             name,
@@ -494,6 +507,7 @@ char *string_concatenate(char *left, char *right, char *out) {
     return original_out;
 }
 
+${join(CtypeDeclarations, '\n')}
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
 ${join(Cdeclarations, '\n')}
 ${join(Cfunctions, '\n')}
