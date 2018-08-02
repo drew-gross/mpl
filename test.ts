@@ -1327,7 +1327,7 @@ return b;`,
     expectedExitCode: 2,
 });
 
-test.only('bool pair', compileAndRun, {
+test('bool pair', compileAndRun, {
     source: `
 BoolPair := {
     first: Boolean;
@@ -1337,7 +1337,7 @@ bp: BoolPair = BoolPair { first: true, second: false, };
 return bp.first ? 10 : 20;
 `,
     expectedExitCode: 10,
-    failing: ['x64'],
+    failing: ['mips', 'x64'],
 });
 
 test('controlFlowGraph basic test', t => {
