@@ -10,7 +10,7 @@ import {
 import idAppender from '../util/idAppender.js';
 import * as Ast from '../ast.js';
 import flatten from '../util/list/flatten.js';
-import { builtinFunctions } from '../types.js';
+import { builtinFunctions, Type, TypeDeclaration, resolve } from '../types.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
 import {
@@ -28,7 +28,7 @@ type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 
 export type ThreeAddressStatement = { why: string } & (
     | { kind: 'comment' }
-    | { kind: 'syscall'; name: SyscallName; arguments: (Register | number)[]; destination: Register | undefined }
+    // Arithmetics
     | { kind: 'move'; from: Register; to: Register }
     | { kind: 'loadImmediate'; value: number; destination: Register }
     | { kind: 'addImmediate'; register: Register; amount: number }
@@ -36,21 +36,29 @@ export type ThreeAddressStatement = { why: string } & (
     | { kind: 'add'; lhs: Register; rhs: Register; destination: Register }
     | { kind: 'multiply'; lhs: Register; rhs: Register; destination: Register }
     | { kind: 'increment'; register: Register }
+    // Labels
     | { kind: 'label'; name: string }
     | { kind: 'functionLabel'; name: string }
+    // Stack management
+    | { kind: 'stackAllocateAndStorePointer'; bytes: number }
+    // Branches
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: Register; rhs: Register; label: string }
     | { kind: 'gotoIfNotEqual'; lhs: Register; rhs: Register; label: string }
     | { kind: 'gotoIfZero'; register: Register; label: string }
     | { kind: 'gotoIfGreater'; lhs: Register; rhs: Register; label: string }
+    // Memory Writes
     | { kind: 'storeGlobal'; from: Register; to: string }
-    | { kind: 'loadGlobal'; from: string; to: Register }
     | { kind: 'storeMemory'; from: Register; address: Register; offset: number }
     | { kind: 'storeMemoryByte'; address: Register; contents: Register }
     | { kind: 'storeZeroToMemory'; address: Register; offset: number }
+    // Memory reads
+    | { kind: 'loadGlobal'; from: string; to: Register }
     | { kind: 'loadMemory'; from: Register; to: Register; offset: number }
     | { kind: 'loadMemoryByte'; address: Register; to: Register }
     | { kind: 'loadSymbolAddress'; to: Register; symbolName: string }
+    // Function calls
+    | { kind: 'syscall'; name: SyscallName; arguments: (Register | number)[]; destination: Register | undefined }
     | { kind: 'callByName'; function: string }
     | { kind: 'callByRegister'; function: Register }
     | { kind: 'returnToCaller' });
@@ -166,10 +174,35 @@ export type BackendOptions = {
     variablesInScope: { [key: string]: Register };
     makeTemporary: (name: string) => Register;
     makeLabel: (name: string) => string;
+    types: TypeDeclaration[];
+};
+
+const typeSize = (type: Type, typeDeclarations: TypeDeclaration[]) => {
+    switch (type.kind) {
+        case 'Product':
+            return type.members.map(m => typeSize(m.type, typeDeclarations));
+        case 'Boolean':
+            return 1;
+        case 'NameRef':
+            const resolved = resolve(type, typeDeclarations);
+            if (!resolved) throw debug('couldnt resolve');
+            return typeSize(resolved, typeDeclarations);
+        default:
+            throw debug(`${type.kind} unhandled in typeSize`);
+    }
 };
 
 export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression<ThreeAddressStatement> => {
-    const { ast, variablesInScope, destination, globalNameMap, stringLiterals, makeTemporary, makeLabel } = input;
+    const {
+        ast,
+        variablesInScope,
+        destination,
+        globalNameMap,
+        stringLiterals,
+        makeTemporary,
+        makeLabel,
+        types,
+    } = input;
     const recurse = newInput => astToThreeAddressCode({ ...input, ...newInput });
     switch (ast.kind) {
         case 'number':
@@ -423,7 +456,8 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     destination: rhs,
                 });
                 const lhsInfo = globalNameMap[lhs];
-                switch (lhsInfo.originalDeclaration.type.kind) {
+                const lhsType = lhsInfo.originalDeclaration.type;
+                switch (lhsType.kind) {
                     case 'Function':
                     case 'Integer':
                         return compileExpression<ThreeAddressStatement>([computeRhs], ([e1]) => [
@@ -432,7 +466,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 kind: 'storeGlobal',
                                 from: rhs,
                                 to: lhsInfo.newName,
-                                why: `Put ${lhsInfo.originalDeclaration.type.kind} into global`,
+                                why: `Put ${lhsType.kind} into global`,
                             },
                         ]);
                     case 'String':
@@ -477,8 +511,46 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 why: 'Store into global',
                             },
                         ]);
+                    case 'Product':
+                        const stackAddress = makeTemporary('struct_stack_address');
+                        const copyStructInstructions: ThreeAddressStatement[] = flatten(
+                            lhsType.members.map((m, i) => {
+                                const offset = i; // TODO: Should add up sizes of preceeding members
+                                const memberTemporary = makeTemporary('member');
+                                return [
+                                    {
+                                        kind: 'loadMemory' as 'loadMemory',
+                                        from: rhs,
+                                        to: memberTemporary,
+                                        offset,
+                                        why: 'load from rhs',
+                                    },
+                                    {
+                                        kind: 'storeMemory' as 'storeMemory',
+                                        from: memberTemporary,
+                                        address: stackAddress,
+                                        offset,
+                                        why: 'store to lhs',
+                                    },
+                                ];
+                            })
+                        );
+                        return compileExpression<ThreeAddressStatement>([computeRhs], ([e1]) => [
+                            ...e1,
+                            {
+                                kind: 'stackAllocateAndStorePointer',
+                                bytes: typeSize(ast.type, types),
+                                register: stackAddress,
+                                why: 'make stack space for lhs',
+                            },
+                            ...copyStructInstructions,
+                        ]);
                     default:
-                        throw debug('todo');
+                        throw debug(
+                            `${
+                                lhsInfo.originalDeclaration.type.kind
+                            } unhandled in lhsInfo.originalDeclaration.type.kind`
+                        );
                 }
             } else if (lhs in variablesInScope) {
                 return recurse({
@@ -754,8 +826,19 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 ]
             );
         }
+        case 'objectLiteral': {
+            const literalName = makeTemporary('object_literal');
+            const stackAllocateAndStorePointer: ThreeAddressStatement = {
+                kind: 'stackAllocateAndStorePointer',
+                bytes: typeSize(ast.type, types),
+                why: 'Make space for object literal',
+            };
+            return compileExpression([], ([]) => [stackAllocateAndStorePointer]);
+        }
+        case 'typeDeclaration':
+            return compileExpression([], ([]) => []);
         default:
-            throw debug('todo');
+            throw debug(`${ast.kind} unhandled in astToThreeAddressCode`);
     }
 };
 
@@ -764,7 +847,8 @@ export const constructFunction = (
     globalNameMap,
     stringLiterals,
     makeLabel,
-    makeTemporary
+    makeTemporary,
+    types: TypeDeclaration[]
 ): ThreeAddressFunction => {
     const argumentRegisters: Register[] = ['functionArgument1', 'functionArgument2', 'functionArgument3'];
     if (f.parameters.length > 3) throw debug('todo'); // Don't want to deal with this yet.
@@ -790,6 +874,7 @@ export const constructFunction = (
                 stringLiterals,
                 makeTemporary,
                 makeLabel,
+                types,
             });
             const freeLocals = f.variables
                 // TODO: Make a better memory model for frees.
@@ -937,7 +1022,7 @@ export const threeAddressCodeToTarget = <TargetRegister>(
 };
 
 export const makeAllFunctions = (
-    { functions, program, globalDeclarations, stringLiterals }: BackendInputs,
+    { types, functions, program, globalDeclarations, stringLiterals }: BackendInputs,
     mainName: string,
     howToExit: ThreeAddressStatement[],
     mallocImpl: ThreeAddressFunction,
@@ -958,7 +1043,7 @@ export const makeAllFunctions = (
     });
 
     const userFunctions: ThreeAddressFunction[] = functions.map(f =>
-        constructFunction(f, globalNameMap, stringLiterals, labelMaker, makeTemporary)
+        constructFunction(f, globalNameMap, stringLiterals, labelMaker, makeTemporary, types)
     );
 
     const mainProgramInstructions: ThreeAddressStatement[] = flatten(
@@ -971,6 +1056,7 @@ export const makeAllFunctions = (
                 variablesInScope: {},
                 makeLabel: labelMaker,
                 makeTemporary,
+                types,
             });
 
             return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];

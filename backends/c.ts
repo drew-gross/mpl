@@ -84,9 +84,13 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             return compileExpression([], ([]) => [ast.value.toString()]);
         case 'objectLiteral':
             const memberExpressions = ast.members.map(m => recurse(m.expression));
+            const type = ast.type;
+            if (type.kind != 'Product') {
+                throw debug('need a produduct');
+            }
             return compileExpression(memberExpressions, memberExpressions => [
                 '(struct ',
-                ast.typeName,
+                type.name,
                 ')',
                 '{',
                 ...memberExpressions.map((e, i) => `.${ast.members[i].name} = ${e},`),

@@ -766,6 +766,7 @@ const inferFunction = (
     };
 };
 
+// TODO: merge this with typecheck maybe?
 const infer = (
     ast: Ast.UninferredAst,
     variablesInScope: VariableDeclaration[],
@@ -850,9 +851,13 @@ const infer = (
             // TODO: maybe just strip declarations before inferring.
             return { kind: 'typeDeclaration' };
         case 'objectLiteral':
+            const declaredType = typeDeclarations.find(t => t.name == ast.typeName);
+            if (!declaredType) {
+                throw debug('type not found');
+            }
             return {
                 kind: 'objectLiteral',
-                typeName: ast.typeName,
+                type: declaredType.type,
                 members: ast.members.map(({ name, expression }) => ({
                     name,
                     expression: recurse(expression),
@@ -1122,9 +1127,13 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             } as Ast.UninferredAst;
         case 'typeDeclaration':
             const type: Type = parseType(ast.children[3]);
+            const name: string = (ast.children[0] as any).value;
+            if (type.kind == 'Product') {
+                type.name = name;
+            }
             return {
                 kind: 'typeDeclaration',
-                name: (ast.children[0] as any).value,
+                name,
                 type,
                 sourceLine: ast.sourceLine,
                 sourceColumn: ast.sourceColumn,
@@ -1273,7 +1282,9 @@ const compile = (source: string): FrontendOutput => {
     const typeDeclarations = walkAst<TypeDeclaration, Ast.UninferredTypeDeclaration & SourceLocation>(
         ast,
         ['typeDeclaration'],
-        (astNode: Ast.UninferredTypeDeclaration) => ({ name: astNode.name, type: astNode.type })
+        (astNode: Ast.UninferredTypeDeclaration) => {
+            return { name: astNode.name, type: astNode.type };
+        }
     );
 
     let variablesInScope = builtinFunctions;
