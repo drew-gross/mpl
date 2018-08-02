@@ -4422,15 +4422,15 @@
         "tmp": {
             "version": "0.0.33",
             "resolved": "https://registry.npmjs.org/tmp/-/tmp-0.0.33.tgz",
-            "integrity": "sha1-bTQzWIl2jSGyvNoKonfO07G/rfk=",
+            "integrity": "sha512-jRCJlojKnZ3addtTOjdIqoRuPEKBvNXcGYqzO6zWZX8KfKEpnGY5jfggJQ3EjKuu8D4bJRr0y+cYJFmYbImXGw==",
             "requires": {
                 "os-tmpdir": "~1.0.2"
             }
         },
         "tmp-promise": {
-            "version": "1.0.4",
-            "resolved": "https://registry.npmjs.org/tmp-promise/-/tmp-promise-1.0.4.tgz",
-            "integrity": "sha1-z+ITG3g5KZLnVthpKgWdxLSL56w=",
+            "version": "1.0.5",
+            "resolved": "https://registry.npmjs.org/tmp-promise/-/tmp-promise-1.0.5.tgz",
+            "integrity": "sha512-hOabTz9Tp49wCozFwuJe5ISrOqkECm6kzw66XTP23DuzNU7QS/KiZq5LC9Y7QSy8f1rPSLy4bKaViP0OwGI1cA==",
             "requires": {
                 "bluebird": "^3.5.0",
                 "tmp": "0.0.33"

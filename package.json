@@ -6,7 +6,9 @@
     "license": "UNLICENSED",
     "main": "built/index.js",
     "ava": {
-        "files": ["built/test.js"]
+        "files": [
+            "built/test.js"
+        ]
     },
     "scripts": {
         "test": "rimraf built && npm run prettier-check && tsc && ava --verbose",
@@ -15,8 +17,7 @@
         "tsc-watch": "tsc --watch",
         "build+install": "tsc && npm link",
         "test-debug": "tsc && inspect node_modules/ava/profile.js built/test.js",
-        "cloc":
-            "cloc --exclude-dir=node_modules,built --not-match-f='npm-shrinkwrap.json|package.json|tsconfig.json|prettier-config.json|test.ts|test-utils.ts' .",
+        "cloc": "cloc --exclude-dir=node_modules,built --not-match-f='npm-shrinkwrap.json|package.json|tsconfig.json|prettier-config.json|test.ts|test-utils.ts' .",
         "cloc-all": "cloc --exclude-dir=node_modules,built . --not-match-f='npm-shrinkwrap.json'",
         "prettier-check": "prettier --config package.json --list-different '**/*.ts'"
     },
@@ -28,7 +29,7 @@
         "child-process-promise": "2.2.1",
         "fs-extra": "6.0.1",
         "lodash": "4.17.10",
-        "tmp-promise": "1.0.4",
+        "tmp-promise": "1.0.5",
         "@types/node": "10.5.2",
         "ava": "0.25.0",
         "graphlib": "2.1.5",
