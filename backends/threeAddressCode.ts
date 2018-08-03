@@ -40,7 +40,7 @@ export type ThreeAddressStatement = { why: string } & (
     | { kind: 'label'; name: string }
     | { kind: 'functionLabel'; name: string }
     // Stack management
-    | { kind: 'stackAllocateAndStorePointer'; bytes: number }
+    | { kind: 'stackAllocateAndStorePointer'; bytes: number; register: Register }
     // Branches
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: Register; rhs: Register; label: string }
@@ -164,6 +164,7 @@ const toStringWithoutComment = (rtx: ThreeAddressStatement): string => {
 
 export const toString = (rtx: ThreeAddressStatement): string => `${toStringWithoutComment(rtx)} # ${rtx.why}`;
 
+// TODO: This seems really janky
 export type GlobalInfo = { newName: string; originalDeclaration: VariableDeclaration };
 
 export type BackendOptions = {
@@ -190,6 +191,31 @@ const typeSize = (type: Type, typeDeclarations: TypeDeclaration[]) => {
         default:
             throw debug(`${type.kind} unhandled in typeSize`);
     }
+};
+
+// TODO: Figure out how to unify this with normal typeOfExpression
+const TACtypeOfExpression = (
+    ast: Ast.Ast,
+    variablesInScope: { [key: string]: Register },
+    globalNameMap: { [key: string]: GlobalInfo }
+): Type => {
+    switch (ast.kind) {
+        case 'identifier':
+            const local = variablesInScope[ast.value];
+            if (local) throw debug('need local type info here');
+            const global = globalNameMap[ast.value];
+            if (global) return global.originalDeclaration.type;
+            throw debug('couldnt find variable');
+        default:
+            throw debug(`${ast.kind} unhandled in TACtypeOfExpression`);
+    }
+};
+
+const memberOffset = (type: Type, memberName: string): number => {
+    if (type.kind != 'Product') throw debug('need a product here');
+    const result = type.members.findIndex(m => m.name == memberName);
+    if (result < 0) throw debug('coudnt find member');
+    return result;
 };
 
 export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression<ThreeAddressStatement> => {
@@ -831,14 +857,30 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const stackAllocateAndStorePointer: ThreeAddressStatement = {
                 kind: 'stackAllocateAndStorePointer',
                 bytes: typeSize(ast.type, types),
+                register: destination,
                 why: 'Make space for object literal',
             };
             return compileExpression([], ([]) => [stackAllocateAndStorePointer]);
         }
+        case 'memberAccess': {
+            const lhs = makeTemporary('object_to_access');
+            const lhsInstructions = recurse({ ast: ast.lhs, destination: lhs });
+            const objectType = TACtypeOfExpression(ast.lhs, variablesInScope, globalNameMap);
+            return compileExpression<ThreeAddressStatement>([lhsInstructions], ([makeLhs]) => [
+                ...makeLhs,
+                {
+                    kind: 'loadMemory',
+                    from: lhs,
+                    to: destination,
+                    offset: memberOffset(objectType, ast.rhs),
+                    why: 'Read the memory',
+                },
+            ]);
+        }
         case 'typeDeclaration':
             return compileExpression([], ([]) => []);
         default:
-            throw debug(`${ast.kind} unhandled in astToThreeAddressCode`);
+            throw debug(`${(ast as any).kind} unhandled in astToThreeAddressCode`);
     }
 };
 

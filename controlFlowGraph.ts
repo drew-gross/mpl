@@ -27,8 +27,8 @@ export type ControlFlowGraph = {
     exits: number[];
 };
 
-const blockBehaviour = (rtx: ThreeAddressStatement): 'endBlock' | 'beginBlock' | 'midBlock' => {
-    switch (rtx.kind) {
+const blockBehaviour = (tas: ThreeAddressStatement): 'endBlock' | 'beginBlock' | 'midBlock' => {
+    switch (tas.kind) {
         case 'comment':
         case 'syscall':
         case 'move':
@@ -48,6 +48,7 @@ const blockBehaviour = (rtx: ThreeAddressStatement): 'endBlock' | 'beginBlock' |
         case 'loadSymbolAddress':
         case 'callByName':
         case 'callByRegister':
+        case 'stackAllocateAndStorePointer':
             return 'midBlock';
         case 'label':
         case 'functionLabel':
@@ -60,7 +61,7 @@ const blockBehaviour = (rtx: ThreeAddressStatement): 'endBlock' | 'beginBlock' |
         case 'gotoIfGreater':
             return 'endBlock';
         default:
-            throw debug('Unrecognized ThreeAddressStatement kind in blockBehaviour');
+            throw debug(`${(tas as any).kind} unhanldes in blockBehaviour`);
     }
 };
 
@@ -117,8 +118,10 @@ const livenessUpdate = (tas: ThreeAddressStatement): { newlyLive: Register[]; ne
             return { newlyLive: [tas.lhs, tas.rhs], newlyDead: [] };
         case 'gotoIfZero':
             return { newlyLive: [tas.register], newlyDead: [] };
+        case 'stackAllocateAndStorePointer':
+            return { newlyLive: [], newlyDead: [tas.register] };
         default:
-            throw debug('Unrecognized RTX kind in blockBehaviour');
+            throw debug(`${(tas as any).kind} unhanldes in livenessUpdate`);
     }
 };
 
