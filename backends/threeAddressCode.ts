@@ -10,6 +10,7 @@ import {
 import idAppender from '../util/idAppender.js';
 import * as Ast from '../ast.js';
 import flatten from '../util/list/flatten.js';
+import sum from '../util/list/sum.js';
 import { builtinFunctions, Type, TypeDeclaration, resolve } from '../types.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
@@ -186,10 +187,10 @@ export type BackendOptions = {
     types: TypeDeclaration[];
 };
 
-const typeSize = (type: Type, typeDeclarations: TypeDeclaration[]) => {
+const typeSize = (type: Type, typeDeclarations: TypeDeclaration[]): number => {
     switch (type.kind) {
         case 'Product':
-            return type.members.map(m => typeSize(m.type, typeDeclarations));
+            return sum(type.members.map(m => typeSize(m.type, typeDeclarations)));
         case 'Boolean':
             return 1;
         case 'NameRef':
@@ -1028,7 +1029,6 @@ export const threeAddressCodeToTarget = <TargetRegister>(
         case 'move':
             return [{ ...tas, to: getRegister(tas.to), from: getRegister(tas.from) }];
         case 'loadImmediate':
-            if (!getRegister(tas.destination)) debugger;
             return [{ ...tas, destination: getRegister(tas.destination) }];
         case 'add':
         case 'subtract':
