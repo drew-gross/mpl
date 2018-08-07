@@ -156,12 +156,27 @@ const bytesInWord = 8;
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToX64 = (taf: ThreeAddressFunction): string => {
+    const stackOffsetPerInstruction: number[] = [];
+    let totalStackBytes: number = 0;
+    taf.instructions.forEach(i => {
+        if (i.kind == 'stackAllocateAndStorePointer') {
+            totalStackBytes += i.bytes;
+            stackOffsetPerInstruction.push(i.bytes);
+        } else {
+            stackOffsetPerInstruction.push(0);
+        }
+    });
+
     const registerAssignment: RegisterAssignment<X64Register> = assignRegisters(taf, x64RegisterTypes.generalPurpose);
 
     const statements: TargetThreeAddressStatement<X64Register>[] = flatten(
-        taf.instructions.map(instruction =>
-            threeAddressCodeToTarget(instruction, syscallNumbers, x64RegisterTypes, r =>
-                getRegisterFromAssignment(registerAssignment, x64RegisterTypes, r)
+        taf.instructions.map((instruction, index) =>
+            threeAddressCodeToTarget(
+                instruction,
+                stackOffsetPerInstruction[index],
+                syscallNumbers,
+                x64RegisterTypes,
+                r => getRegisterFromAssignment(registerAssignment, x64RegisterTypes, r)
             )
         )
     );

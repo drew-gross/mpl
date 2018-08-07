@@ -73,7 +73,7 @@ export type ThreeAddressFunction = {
 
 export type TargetThreeAddressStatement<TargetRegister> = { why: string } & (
     | { kind: 'comment' }
-    | { kind: 'syscall' }
+    // Arithmetic
     | { kind: 'move'; from: TargetRegister; to: TargetRegister }
     | { kind: 'loadImmediate'; value: number; destination: TargetRegister }
     | { kind: 'addImmediate'; register: TargetRegister; amount: number }
@@ -81,24 +81,32 @@ export type TargetThreeAddressStatement<TargetRegister> = { why: string } & (
     | { kind: 'add'; lhs: TargetRegister; rhs: TargetRegister; destination: TargetRegister }
     | { kind: 'multiply'; lhs: TargetRegister; rhs: TargetRegister; destination: TargetRegister }
     | { kind: 'increment'; register: TargetRegister }
+    // Labels
     | { kind: 'label'; name: string }
     | { kind: 'functionLabel'; name: string }
+    // Branches
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: TargetRegister; rhs: TargetRegister; label: string }
     | { kind: 'gotoIfNotEqual'; lhs: TargetRegister; rhs: TargetRegister; label: string }
     | { kind: 'gotoIfZero'; register: TargetRegister; label: string }
     | { kind: 'gotoIfGreater'; lhs: TargetRegister; rhs: TargetRegister; label: string }
+    // Memory Writes
     | { kind: 'storeGlobal'; from: TargetRegister; to: string }
-    | { kind: 'loadGlobal'; from: string; to: TargetRegister }
     | { kind: 'storeMemory'; from: TargetRegister; address: TargetRegister; offset: number }
     | { kind: 'storeMemoryByte'; address: TargetRegister; contents: TargetRegister }
     | { kind: 'storeZeroToMemory'; address: TargetRegister; offset: number }
+    // Memory Reads
+    | { kind: 'loadGlobal'; from: string; to: TargetRegister }
     | { kind: 'loadMemory'; from: TargetRegister; to: TargetRegister; offset: number }
     | { kind: 'loadMemoryByte'; address: TargetRegister; to: TargetRegister }
     | { kind: 'loadSymbolAddress'; to: TargetRegister; symbolName: string }
+    // Function calls
+    | { kind: 'syscall' }
     | { kind: 'callByName'; function: string }
     | { kind: 'callByRegister'; function: TargetRegister }
     | { kind: 'returnToCaller' }
+    // Stack Management
+    | { kind: 'loadStackOffset'; register: TargetRegister; offset: number }
     | { kind: 'push'; register: TargetRegister }
     | { kind: 'pop'; register: TargetRegister });
 
@@ -942,6 +950,7 @@ export const constructFunction = (
 
 export const threeAddressCodeToTarget = <TargetRegister>(
     tas: ThreeAddressStatement,
+    stackOffset: number,
     syscallNumbers,
     registerTypes: RegisterDescription<TargetRegister>,
     getRegister: (r: Register) => TargetRegister
@@ -1058,6 +1067,15 @@ export const threeAddressCodeToTarget = <TargetRegister>(
             return [{ ...tas, address: getRegister(tas.address), contents: getRegister(tas.contents) }];
         case 'callByRegister':
             return [{ ...tas, function: getRegister(tas.function) }];
+        case 'stackAllocateAndStorePointer':
+            return [
+                {
+                    kind: 'loadStackOffset',
+                    register: getRegister(tas.register),
+                    offset: stackOffset + tas.bytes,
+                    why: tas.why,
+                },
+            ];
         default:
             throw debug(`${(tas as any).kind} unhandled in threeAddressCodeToTarget`);
     }

@@ -142,13 +142,30 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
-    const registerAssignment: RegisterAssignment<MipsRegister> = assignRegisters(taf, mipsRegisterTypes.generalPurpose);
-    const tafToMips = instruction =>
-        threeAddressCodeToTarget(instruction, syscallNumbers, mipsRegisterTypes, r =>
-            getRegisterFromAssignment(registerAssignment, mipsRegisterTypes, r)
-        );
+    const stackOffsetPerInstruction: number[] = [];
+    let totalStackBytes: number = 0;
+    taf.instructions.forEach(i => {
+        if (i.kind == 'stackAllocateAndStorePointer') {
+            totalStackBytes += i.bytes;
+            stackOffsetPerInstruction.push(i.bytes);
+        } else {
+            stackOffsetPerInstruction.push(0);
+        }
+    });
 
-    const mips: TargetThreeAddressStatement<MipsRegister>[] = flatten(taf.instructions.map(tafToMips));
+    const registerAssignment: RegisterAssignment<MipsRegister> = assignRegisters(taf, mipsRegisterTypes.generalPurpose);
+
+    const mips: TargetThreeAddressStatement<MipsRegister>[] = flatten(
+        taf.instructions.map((instruction, index) =>
+            threeAddressCodeToTarget(
+                instruction,
+                stackOffsetPerInstruction[index],
+                syscallNumbers,
+                mipsRegisterTypes,
+                r => getRegisterFromAssignment(registerAssignment, mipsRegisterTypes, r)
+            )
+        )
+    );
 
     const preamble: TargetThreeAddressStatement<MipsRegister>[] = !taf.isMain
         ? [
