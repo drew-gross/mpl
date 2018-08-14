@@ -862,14 +862,32 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             );
         }
         case 'objectLiteral': {
-            const literalName = makeTemporary('object_literal');
             const stackAllocateAndStorePointer: ThreeAddressStatement = {
                 kind: 'stackAllocateAndStorePointer',
                 bytes: typeSize(ast.type, types),
                 register: destination,
                 why: 'Make space for object literal',
             };
-            return compileExpression([], ([]) => [stackAllocateAndStorePointer]);
+            const createObjectMembers: CompiledExpression<ThreeAddressStatement>[] = ast.members.map((m, index) => {
+                const memberTemporary = makeTemporary(`member_${m.name}`);
+                return compileExpression(
+                    [recurse({ ast: m.expression, destination: memberTemporary })],
+                    ([storeMemberInstructions]) => [
+                        ...storeMemberInstructions,
+                        {
+                            kind: 'storeMemory' as 'storeMemory',
+                            from: memberTemporary,
+                            address: destination,
+                            offset: index, // TODO: proper alignment and offsets
+                            why: 'object literal',
+                        },
+                    ]
+                );
+            });
+            return compileExpression<ThreeAddressStatement>(createObjectMembers, createObjectMembers => [
+                stackAllocateAndStorePointer,
+                ...flatten(createObjectMembers),
+            ]);
         }
         case 'memberAccess': {
             const lhs = makeTemporary('object_to_access');

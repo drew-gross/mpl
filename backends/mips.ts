@@ -128,7 +128,7 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
         case 'pop':
             return [`addiu $sp, $sp, 4`, `lw ${tas.register}, ($sp)`];
         case 'loadStackOffset':
-            return [`lw ${tas.register}, ${tas.offset}($sp)`];
+            return [`move ${tas.register}, $sp`, `addiu ${tas.register}, ${tas.offset}`];
         default:
             throw debug(`${(tas as any).kind} unhandled in threeAddressCodeToMipsWithoutComment`);
     }
