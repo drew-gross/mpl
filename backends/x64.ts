@@ -208,7 +208,8 @@ const toExectuable = (inputs: BackendInputs) => {
         ],
         mallocWithMmap(bytesInWord),
         printWithWriteRuntimeFunction(bytesInWord),
-        bytesInWord
+        bytesInWord,
+        { alignment: 4 }
     );
     return `
 global start

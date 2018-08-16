@@ -213,7 +213,8 @@ const toExectuable = (inputs: BackendInputs) => {
         ],
         mallocWithSbrk(bytesInWord),
         printWithPrintRuntimeFunction(bytesInWord),
-        bytesInWord
+        bytesInWord,
+        { alignment: 4 }
     );
     return `
 .data

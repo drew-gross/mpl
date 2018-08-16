@@ -185,18 +185,23 @@ export type BackendOptions = {
     makeTemporary: (name: string) => Register;
     makeLabel: (name: string) => string;
     types: TypeDeclaration[];
+    reqs: TargetRequirements;
 };
 
-const typeSize = (type: Type, typeDeclarations: TypeDeclaration[]): number => {
+export type TargetRequirements = {
+    alignment: number;
+};
+
+const typeSize = (reqs: TargetRequirements, type: Type, typeDeclarations: TypeDeclaration[]): number => {
     switch (type.kind) {
         case 'Product':
-            return sum(type.members.map(m => typeSize(m.type, typeDeclarations)));
+            return sum(type.members.map(m => typeSize(reqs, m.type, typeDeclarations)));
         case 'Boolean':
-            return 1;
+            return reqs.alignment;
         case 'NameRef':
             const resolved = resolve(type, typeDeclarations);
             if (!resolved) throw debug('couldnt resolve');
-            return typeSize(resolved, typeDeclarations);
+            return typeSize(reqs, resolved, typeDeclarations);
         default:
             throw debug(`${type.kind} unhandled in typeSize`);
     }
@@ -237,6 +242,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
         makeTemporary,
         makeLabel,
         types,
+        reqs,
     } = input;
     const recurse = newInput => astToThreeAddressCode({ ...input, ...newInput });
     switch (ast.kind) {
@@ -574,7 +580,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             ...e1,
                             {
                                 kind: 'stackAllocateAndStorePointer',
-                                bytes: typeSize(ast.type, types),
+                                bytes: typeSize(reqs, ast.type, types),
                                 register: stackAddress,
                                 why: 'make stack space for lhs',
                             },
@@ -864,7 +870,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
         case 'objectLiteral': {
             const stackAllocateAndStorePointer: ThreeAddressStatement = {
                 kind: 'stackAllocateAndStorePointer',
-                bytes: typeSize(ast.type, types),
+                bytes: typeSize(reqs, ast.type, types),
                 register: destination,
                 why: 'Make space for object literal',
             };
@@ -917,7 +923,8 @@ export const constructFunction = (
     stringLiterals,
     makeLabel,
     makeTemporary,
-    types: TypeDeclaration[]
+    types: TypeDeclaration[],
+    reqs: TargetRequirements
 ): ThreeAddressFunction => {
     const argumentRegisters: Register[] = ['functionArgument1', 'functionArgument2', 'functionArgument3'];
     if (f.parameters.length > 3) throw debug('todo'); // Don't want to deal with this yet.
@@ -944,6 +951,7 @@ export const constructFunction = (
                 makeTemporary,
                 makeLabel,
                 types,
+                reqs,
             });
             const freeLocals = f.variables
                 // TODO: Make a better memory model for frees.
@@ -1105,7 +1113,8 @@ export const makeAllFunctions = (
     howToExit: ThreeAddressStatement[],
     mallocImpl: ThreeAddressFunction,
     printImpl: ThreeAddressFunction,
-    bytesInWord
+    bytesInWord,
+    reqs: TargetRequirements
 ): { globalNameMap: { [key: string]: GlobalInfo }; functions: ThreeAddressFunction[] } => {
     const temporaryNameMaker = idAppender();
     const makeTemporary = name => ({ name: temporaryNameMaker(name) });
@@ -1121,7 +1130,7 @@ export const makeAllFunctions = (
     });
 
     const userFunctions: ThreeAddressFunction[] = functions.map(f =>
-        constructFunction(f, globalNameMap, stringLiterals, labelMaker, makeTemporary, types)
+        constructFunction(f, globalNameMap, stringLiterals, labelMaker, makeTemporary, types, reqs)
     );
 
     const mainProgramInstructions: ThreeAddressStatement[] = flatten(
@@ -1135,6 +1144,7 @@ export const makeAllFunctions = (
                 makeLabel: labelMaker,
                 makeTemporary,
                 types,
+                reqs,
             });
 
             return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
