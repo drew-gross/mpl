@@ -553,35 +553,43 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             },
                         ]);
                     case 'Product':
-                        const stackAddress = makeTemporary('struct_stack_address');
-                        const copyStructInstructions: ThreeAddressStatement[] = flatten(
-                            lhsType.members.map((m, i) => {
-                                const offset = i * reqs.alignment; // TODO: Should add up sizes of preceeding members
-                                const memberTemporary = makeTemporary('member');
-                                return [
-                                    {
-                                        kind: 'loadMemory' as 'loadMemory',
-                                        from: rhs,
-                                        to: memberTemporary,
-                                        offset,
-                                        why: `load member from rhs ${m.name}`,
-                                    },
-                                    {
-                                        kind: 'storeMemory' as 'storeMemory',
-                                        from: memberTemporary,
-                                        address: stackAddress,
-                                        offset,
-                                        why: `store member to lhs ${m.name}`,
-                                    },
-                                ];
-                            })
-                        );
+                        const lhsAddress = makeTemporary('lhsAddress');
+                        const copyStructInstructions: ThreeAddressStatement[] = [
+                            {
+                                kind: 'loadSymbolAddress',
+                                to: lhsAddress,
+                                symbolName: lhsInfo.newName,
+                                why: 'Get address of global struct so we can write to it',
+                            },
+                            ...flatten(
+                                lhsType.members.map((m, i) => {
+                                    const offset = i * reqs.alignment; // TODO: Should add up sizes of preceeding members
+                                    const memberTemporary = makeTemporary('member');
+                                    return [
+                                        {
+                                            kind: 'loadMemory' as 'loadMemory',
+                                            from: rhs,
+                                            to: memberTemporary,
+                                            offset,
+                                            why: `load member from rhs ${m.name}`,
+                                        },
+                                        {
+                                            kind: 'storeMemory' as 'storeMemory',
+                                            from: memberTemporary,
+                                            address: lhsAddress,
+                                            offset,
+                                            why: `store member to lhs ${m.name}`,
+                                        },
+                                    ];
+                                })
+                            ),
+                        ];
                         return compileExpression<ThreeAddressStatement>([computeRhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'stackAllocateAndStorePointer',
                                 bytes: typeSize(reqs, ast.type, types),
-                                register: stackAddress,
+                                register: destination,
                                 why: 'make stack space for lhs',
                             },
                             ...copyStructInstructions,
