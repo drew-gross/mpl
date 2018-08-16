@@ -192,7 +192,7 @@ export type TargetRequirements = {
     alignment: number;
 };
 
-const typeSize = (reqs: TargetRequirements, type: Type, typeDeclarations: TypeDeclaration[]): number => {
+export const typeSize = (reqs: TargetRequirements, type: Type, typeDeclarations: TypeDeclaration[]): number => {
     switch (type.kind) {
         case 'Product':
             return sum(type.members.map(m => typeSize(reqs, m.type, typeDeclarations)));
@@ -556,7 +556,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         const stackAddress = makeTemporary('struct_stack_address');
                         const copyStructInstructions: ThreeAddressStatement[] = flatten(
                             lhsType.members.map((m, i) => {
-                                const offset = i; // TODO: Should add up sizes of preceeding members
+                                const offset = i * reqs.alignment; // TODO: Should add up sizes of preceeding members
                                 const memberTemporary = makeTemporary('member');
                                 return [
                                     {
@@ -564,14 +564,14 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                         from: rhs,
                                         to: memberTemporary,
                                         offset,
-                                        why: 'load from rhs',
+                                        why: `load member from rhs ${m.name}`,
                                     },
                                     {
                                         kind: 'storeMemory' as 'storeMemory',
                                         from: memberTemporary,
                                         address: stackAddress,
                                         offset,
-                                        why: 'store to lhs',
+                                        why: `store member to lhs ${m.name}`,
                                     },
                                 ];
                             })
@@ -813,14 +813,26 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             // TODO: Better handle identifiers here. Also just better storage/scope chains?
             const identifierName = ast.value;
             if (identifierName in globalNameMap) {
-                return compileExpression<ThreeAddressStatement>([], ([]) => [
-                    {
-                        kind: 'loadGlobal',
-                        to: destination,
-                        from: globalNameMap[identifierName].newName,
-                        why: `Load ${identifierName} from global into register`,
-                    },
-                ]);
+                const info = globalNameMap[identifierName];
+                if (info.originalDeclaration.type.kind == 'Product') {
+                    return compileExpression<ThreeAddressStatement>([], ([]) => [
+                        {
+                            kind: 'loadSymbolAddress',
+                            to: destination,
+                            symbolName: info.newName,
+                            why: `Load address of global non-scalar ${identifierName}`,
+                        },
+                    ]);
+                } else {
+                    return compileExpression<ThreeAddressStatement>([], ([]) => [
+                        {
+                            kind: 'loadGlobal',
+                            to: destination,
+                            from: info.newName,
+                            why: `Load ${identifierName} from global into register`,
+                        },
+                    ]);
+                }
             }
             const identifierRegister = variablesInScope[identifierName];
             return compileExpression<ThreeAddressStatement>([], ([]) => [
@@ -884,8 +896,8 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             kind: 'storeMemory' as 'storeMemory',
                             from: memberTemporary,
                             address: destination,
-                            offset: index, // TODO: proper alignment and offsets
-                            why: 'object literal',
+                            offset: index * reqs.alignment, // TODO: proper alignment and offsets
+                            why: `object literal member ${m.name}`,
                         },
                     ]
                 );

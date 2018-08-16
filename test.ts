@@ -1339,6 +1339,7 @@ return bp.first ? 10 : 20;
     expectedExitCode: 10,
     failing: ['x64'],
     debugSubsteps: 'mips',
+    printSubsteps: 'mips',
 });
 
 test('controlFlowGraph basic test', t => {

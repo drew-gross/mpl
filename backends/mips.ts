@@ -22,9 +22,11 @@ import {
     threeAddressCodeToTarget,
     GlobalInfo,
     makeAllFunctions,
+    TargetRequirements,
+    typeSize,
 } from './threeAddressCode.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCodeRuntime.js';
-import { builtinFunctions } from '../types.js';
+import { builtinFunctions, Type, TypeDeclaration } from '../types.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 
 type MipsRegister =
@@ -191,7 +193,15 @@ const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
     return join(flatten(fullRtl.map(threeAddressCodeToMips)), '\n');
 };
 
+const globalDeclaration = (
+    name: string,
+    type: Type,
+    availableTypes: TypeDeclaration[],
+    reqs: TargetRequirements
+): string => `${name}: .space ${typeSize(reqs, type, availableTypes)}`;
+
 const toExectuable = (inputs: BackendInputs) => {
+    const mipsReqs: TargetRequirements = { alignment: 4 };
     const { globalNameMap, functions } = makeAllFunctions(
         inputs,
         'main',
@@ -214,12 +224,14 @@ const toExectuable = (inputs: BackendInputs) => {
         mallocWithSbrk(bytesInWord),
         printWithPrintRuntimeFunction(bytesInWord),
         bytesInWord,
-        { alignment: 4 }
+        mipsReqs
     );
     return `
 .data
 ${Object.values(globalNameMap)
-        .map(({ newName }) => `${newName}: .word 0`)
+        .map(({ newName, originalDeclaration }) =>
+            globalDeclaration(newName, originalDeclaration.type, inputs.types, mipsReqs)
+        )
         .join('\n')}
 ${inputs.stringLiterals.map(stringLiteralDeclaration).join('\n')}
 ${Object.keys(errors)
