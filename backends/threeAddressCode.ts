@@ -11,7 +11,7 @@ import idAppender from '../util/idAppender.js';
 import * as Ast from '../ast.js';
 import flatten from '../util/list/flatten.js';
 import sum from '../util/list/sum.js';
-import { builtinFunctions, Type, TypeDeclaration, resolve } from '../types.js';
+import { builtinFunctions, Type, TypeDeclaration, resolve, typeSize } from '../types.js';
 import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
 import {
@@ -190,21 +190,6 @@ export type BackendOptions = {
 
 export type TargetRequirements = {
     alignment: number;
-};
-
-export const typeSize = (reqs: TargetRequirements, type: Type, typeDeclarations: TypeDeclaration[]): number => {
-    switch (type.kind) {
-        case 'Product':
-            return sum(type.members.map(m => typeSize(reqs, m.type, typeDeclarations)));
-        case 'Boolean':
-            return reqs.alignment;
-        case 'NameRef':
-            const resolved = resolve(type, typeDeclarations);
-            if (!resolved) throw debug('couldnt resolve');
-            return typeSize(reqs, resolved, typeDeclarations);
-        default:
-            throw debug(`${type.kind} unhandled in typeSize`);
-    }
 };
 
 // TODO: Figure out how to unify this with normal typeOfExpression
@@ -965,7 +950,7 @@ export const constructFunction = (
             const compiledProgram = astToThreeAddressCode({
                 ast: statement,
                 variablesInScope,
-                destination: 'functionResult',
+                destination: 'functionResult', // TOOD: wtf is functionResult doing here?
                 globalNameMap,
                 stringLiterals,
                 makeTemporary,

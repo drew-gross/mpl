@@ -1,7 +1,8 @@
 import debug from './util/debug.js';
 import join from './util/join.js';
+import sum from './util/list/sum.js';
 import { VariableDeclaration } from './api.js';
-
+import { TargetRequirements } from './backends/threeAddressCode.js';
 export type ProductComponent = {
     name: string;
     type: Type;
@@ -106,3 +107,21 @@ export const builtinFunctions: VariableDeclaration[] = [
         },
     },
 ];
+
+export const typeSize = (reqs: TargetRequirements, type: Type, typeDeclarations: TypeDeclaration[]): number => {
+    switch (type.kind) {
+        case 'Product':
+            return sum(type.members.map(m => typeSize(reqs, m.type, typeDeclarations)));
+        case 'Boolean':
+        case 'Function':
+        case 'String':
+        case 'Integer':
+            return reqs.alignment;
+        case 'NameRef':
+            const resolved = resolve(type, typeDeclarations);
+            if (!resolved) throw debug('couldnt resolve');
+            return typeSize(reqs, resolved, typeDeclarations);
+        default:
+            throw debug(`${(type as any).kind} unhandled in typeSize`);
+    }
+};
