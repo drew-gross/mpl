@@ -1327,7 +1327,6 @@ return b;`,
     expectedExitCode: 2,
 });
 
-// TODO: x64
 test('bool pair', compileAndRun, {
     source: `
 BoolPair := {
@@ -1338,7 +1337,6 @@ bp: BoolPair = BoolPair { first: true, second: false, };
 return bp.first ? 10 : 20;
 `,
     expectedExitCode: 10,
-    failing: ['x64'],
 });
 
 test('controlFlowGraph basic test', t => {
