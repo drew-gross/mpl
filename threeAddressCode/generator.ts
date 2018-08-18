@@ -29,7 +29,7 @@ type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 
 export type ThreeAddressStatement = { why: string } & (
     | { kind: 'comment' }
-    // Arithmetics
+    // Arithmetic
     | { kind: 'move'; from: Register; to: Register }
     | { kind: 'loadImmediate'; value: number; destination: Register }
     | { kind: 'addImmediate'; register: Register; amount: number }
