@@ -111,68 +111,6 @@ export type TargetThreeAddressStatement<TargetRegister> = { why: string } & (
     | { kind: 'push'; register: TargetRegister }
     | { kind: 'pop'; register: TargetRegister });
 
-const toStringWithoutComment = (rtx: ThreeAddressStatement): string => {
-    switch (rtx.kind) {
-        case 'comment':
-            return ``;
-        case 'syscall':
-            return 'syscall';
-        case 'move':
-            return `${registerToString(rtx.to)} = ${registerToString(rtx.from)}`;
-        case 'loadImmediate':
-            return `${registerToString(rtx.destination)} = ${rtx.value}`;
-        case 'addImmediate':
-            return `${registerToString(rtx.register)} += ${rtx.amount}`;
-        case 'subtract':
-            return `${registerToString(rtx.destination)} = ${registerToString(rtx.lhs)} - ${registerToString(rtx.rhs)}`;
-        case 'add':
-            return `${registerToString(rtx.destination)} = ${registerToString(rtx.lhs)} + ${registerToString(rtx.rhs)}`;
-        case 'multiply':
-            return `${registerToString(rtx.destination)} = ${registerToString(rtx.lhs)} * ${registerToString(rtx.rhs)}`;
-        case 'increment':
-            return `${registerToString(rtx.register)}++`;
-        case 'label':
-        case 'functionLabel':
-            return `${rtx.name}:`;
-        case 'goto':
-            return `goto ${rtx.label}`;
-        case 'gotoIfEqual':
-            return `goto ${rtx.label} if ${registerToString(rtx.lhs)} == ${registerToString(rtx.rhs)}`;
-        case 'gotoIfNotEqual':
-            return `goto ${rtx.label} if ${registerToString(rtx.lhs)} != ${registerToString(rtx.rhs)}`;
-        case 'gotoIfZero':
-            return `goto ${rtx.label} if ${registerToString(rtx.register)} == 0`;
-        case 'gotoIfGreater':
-            return `goto ${rtx.label} if ${registerToString(rtx.lhs)} > ${registerToString(rtx.rhs)}`;
-        case 'storeGlobal':
-            return `*${rtx.to} = ${registerToString(rtx.from)}`;
-        case 'loadGlobal':
-            return `${registerToString(rtx.to)} = &${rtx.from}`;
-        case 'storeMemory':
-            return `*(${registerToString(rtx.address)} + ${rtx.offset}) = ${registerToString(rtx.from)}`;
-        case 'storeMemoryByte':
-            return `*${registerToString(rtx.address)} = ${registerToString(rtx.contents)}`;
-        case 'storeZeroToMemory':
-            return `*${registerToString(rtx.address)} = 0`;
-        case 'loadMemory':
-            return `${registerToString(rtx.to)} = *(${registerToString(rtx.from)} + ${rtx.offset})`;
-        case 'loadMemoryByte':
-            return `${registerToString(rtx.to)} = *${registerToString(rtx.address)}`;
-        case 'loadSymbolAddress':
-            return `${registerToString(rtx.to)} = &${rtx.symbolName}`;
-        case 'callByRegister':
-            return `${registerToString(rtx.function)}()`;
-        case 'callByName':
-            return `${rtx.function}()`;
-        case 'returnToCaller':
-            return `return`;
-        default:
-            throw debug('Unrecognized RTX kind in toString');
-    }
-};
-
-export const toString = (rtx: ThreeAddressStatement): string => `${toStringWithoutComment(rtx)} # ${rtx.why}`;
-
 // TODO: This seems really janky
 export type GlobalInfo = { newName: string; originalDeclaration: VariableDeclaration };
 
