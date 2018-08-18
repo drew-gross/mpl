@@ -2,7 +2,7 @@ import debug from './util/debug.js';
 import join from './util/join.js';
 import sum from './util/list/sum.js';
 import { VariableDeclaration } from './api.js';
-import { TargetRequirements } from './backends/threeAddressCode.js';
+import { TargetRequirements } from './threeAddressCode/generator.js';
 export type ProductComponent = {
     name: string;
     type: Type;

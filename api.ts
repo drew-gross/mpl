@@ -1,5 +1,5 @@
 import { UninferredStatement, Statement } from './ast.js';
-import { ThreeAddressFunction } from './backends/threeAddressCode.js';
+import { ThreeAddressFunction } from './threeAddressCode/generator.js';
 import { Type, TypeDeclaration } from './types.js';
 
 export type SourceLocation = { sourceLine: number; sourceColumn: number };

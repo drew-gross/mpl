@@ -8,7 +8,7 @@ import join from './util/join.js';
 import grid from './util/grid.js';
 import { RegisterAssignment } from './backend-utils.js';
 import { Register, isEqual as registerIsEqual } from './register.js';
-import { ThreeAddressStatement, ThreeAddressFunction, toString as tasToString } from './backends/threeAddressCode.js';
+import { ThreeAddressStatement, ThreeAddressFunction, toString as tasToString } from './threeAddressCode/generator.js';
 import { Graph } from 'graphlib';
 
 export type BasicBlock = {

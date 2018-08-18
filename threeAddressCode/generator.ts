@@ -6,7 +6,7 @@ import {
     stringEqualityRuntimeFunction,
     myFreeRuntimeFunction,
     RuntimeFunctionGenerator,
-} from './threeAddressCodeRuntime.js';
+} from './runtime.js';
 import idAppender from '../util/idAppender.js';
 import * as Ast from '../ast.js';
 import flatten from '../util/list/flatten.js';

@@ -4,7 +4,6 @@ import flatten from '../util/list/flatten.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { mallocWithMmap, printWithWriteRuntimeFunction } from './threeAddressCodeRuntime.js';
 import {
     RegisterAssignment,
     stringLiteralName,
@@ -22,7 +21,8 @@ import {
     threeAddressCodeToTarget,
     GlobalInfo,
     makeAllFunctions,
-} from './threeAddressCode.js';
+} from '../threeAddressCode/generator.js';
+import { mallocWithMmap, printWithWriteRuntimeFunction } from '../threeAddressCode/runtime.js';
 import { VariableDeclaration, BackendInputs, StringLiteralData } from '../api.js';
 import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';

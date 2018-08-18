@@ -23,8 +23,8 @@ import {
     GlobalInfo,
     makeAllFunctions,
     TargetRequirements,
-} from './threeAddressCode.js';
-import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCodeRuntime.js';
+} from '../threeAddressCode/generator.js';
+import { mallocWithSbrk, printWithPrintRuntimeFunction } from '../threeAddressCode/runtime.js';
 import { builtinFunctions, Type, TypeDeclaration, typeSize } from '../types.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 

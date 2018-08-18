@@ -1,6 +1,6 @@
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
-import { ThreeAddressStatement, ThreeAddressFunction } from './backends/threeAddressCode.js';
-import * as threeAddressCodeRuntime from './backends/threeAddressCodeRuntime.js';
+import { ThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
+import * as threeAddressCodeRuntime from './threeAddressCode/runtime.js';
 import test from 'ava';
 import flatten from './util/list/flatten.js';
 import { lex } from './lex.js';

@@ -1,7 +1,7 @@
 import debug from './util/debug.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from './api.js';
 import flatten from './util/list/flatten.js';
-import { ThreeAddressStatement, TargetThreeAddressStatement } from './backends/threeAddressCode.js';
+import { ThreeAddressStatement, TargetThreeAddressStatement } from './threeAddressCode/generator.js';
 import { Register } from './register.js';
 import { controlFlowGraph } from './controlFlowGraph.js';
 
