@@ -736,6 +736,12 @@ const assignmentToGlobalDeclaration = (
     return { name: ast.destination, type: result };
 };
 
+type UninferredContext = {
+    ast: Ast.UninferredAst;
+    availableTypes: TypeDeclaration[];
+    availableVariables: VariableDeclaration[];
+};
+
 const inferFunction = (
     f: UninferredFunction,
     variablesInScope: VariableDeclaration[],
@@ -759,7 +765,9 @@ const inferFunction = (
     }
     return {
         name: f.name,
-        statements: f.statements.map(s => infer(s, variablesFound, typeDeclarations)) as Ast.Statement[],
+        statements: f.statements.map(s =>
+            infer({ ast: s, availableVariables: variablesFound, availableTypes: typeDeclarations })
+        ) as Ast.Statement[],
         variables: f.variables,
         parameters: f.parameters,
         returnType: returnType,
@@ -767,12 +775,9 @@ const inferFunction = (
 };
 
 // TODO: merge this with typecheck maybe?
-const infer = (
-    ast: Ast.UninferredAst,
-    variablesInScope: VariableDeclaration[],
-    typeDeclarations: TypeDeclaration[]
-): Ast.Ast => {
-    const recurse = ast => infer(ast, variablesInScope, typeDeclarations);
+const infer = (ctx: UninferredContext): Ast.Ast => {
+    const recurse = ast => infer({ ...ctx, ast });
+    const { ast, availableVariables, availableTypes } = ctx;
     switch (ast.kind) {
         case 'returnStatement':
             return { kind: 'returnStatement', expression: recurse(ast.expression) };
@@ -781,7 +786,7 @@ const infer = (
                 kind: 'equality',
                 lhs: recurse(ast.lhs),
                 rhs: recurse(ast.rhs),
-                type: typeOfExpression(ast.lhs, variablesInScope, typeDeclarations) as Type,
+                type: typeOfExpression(ast.lhs, availableVariables, availableVariables) as Type,
             };
         case 'product':
             return {
@@ -815,7 +820,7 @@ const infer = (
                 destination: ast.destination,
             };
         case 'declarationAssignment':
-            const type = typeOfExpression(ast.expression, variablesInScope, typeDeclarations);
+            const type = typeOfExpression(ast.expression, availableVariables, availableTypes);
             if (isTypeError(type)) throw debug("type error when there shouldn't be");
             return {
                 kind: 'typedDeclarationAssignment',
@@ -851,7 +856,7 @@ const infer = (
             // TODO: maybe just strip declarations before inferring.
             return { kind: 'typeDeclaration' };
         case 'objectLiteral':
-            const declaredType = typeDeclarations.find(t => t.name == ast.typeName);
+            const declaredType = availableTypes.find(t => t.name == ast.typeName);
             if (!declaredType) {
                 throw debug('type not found');
             }
@@ -1323,7 +1328,9 @@ const compile = (source: string): FrontendOutput => {
         return { typeErrors: flatTypeErrors };
     }
 
-    const typedProgramStatements = program.statements.map(s => infer(s, variablesInScope, typeDeclarations));
+    const typedProgramStatements = program.statements.map(s =>
+        infer({ ast: s, availableVariables: variablesInScope, availableTypes: typeDeclarations })
+    );
 
     const typedFunctions: Function[] = [];
     functions.forEach(f => {
@@ -1335,7 +1342,11 @@ const compile = (source: string): FrontendOutput => {
                 ...f,
                 returnType: functionOrTypeError.returnType,
                 statements: f.statements.map(s =>
-                    infer(s, mergeDeclarations(variablesInScope, f.variables), typeDeclarations)
+                    infer({
+                        ast: s,
+                        availableVariables: mergeDeclarations(variablesInScope, f.variables),
+                        availableTypes: typeDeclarations,
+                    })
                 ) as Ast.Statement[],
             });
         }
