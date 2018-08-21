@@ -1339,6 +1339,18 @@ return bp.first ? 10 : 20;
     expectedExitCode: 10,
 });
 
+test('int pair', compileAndRun, {
+    source: `
+IntPair := {
+    first: Integer;
+    second: Integer;
+};
+ip: IntPair = IntPair { first: 3, second: 7, };
+return ip.first * ip.second;
+`,
+    expectedExitCode: 21,
+});
+
 test('controlFlowGraph basic test', t => {
     const rtl: ThreeAddressStatement[] = [
         {

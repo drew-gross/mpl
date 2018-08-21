@@ -148,11 +148,11 @@ const TACtypeOfExpression = (
     }
 };
 
-const memberOffset = (type: Type, memberName: string): number => {
+const memberOffset = (type: Type, memberName: string, reqs: TargetRequirements): number => {
     if (type.kind != 'Product') throw debug('need a product here');
     const result = type.members.findIndex(m => m.name == memberName);
     if (result < 0) throw debug('coudnt find member');
-    return result;
+    return result * reqs.alignment;
 };
 
 export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression<ThreeAddressStatement> => {
@@ -848,7 +848,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     kind: 'loadMemory',
                     from: lhs,
                     to: destination,
-                    offset: memberOffset(objectType, ast.rhs),
+                    offset: memberOffset(objectType, ast.rhs, reqs),
                     why: 'Read the memory',
                 },
             ]);
