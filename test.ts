@@ -1351,6 +1351,26 @@ return ip.first * ip.second;
     expectedExitCode: 21,
 });
 
+test.failing('int pair in function', compileAndRun, {
+    source: `
+IntPair := {
+    first: Integer;
+    second: Integer;
+};
+
+foo := () => {
+    ip := IntPair {
+        first: 12,
+        second: 34,
+    };
+
+    return ip.second - ip.first;
+};
+
+return foo();`,
+    expectedExitCode: 34 - 12,
+});
+
 test('controlFlowGraph basic test', t => {
     const rtl: ThreeAddressStatement[] = [
         {
