@@ -49,29 +49,25 @@ const repairAssociativity = (nodeType, ast) => {
                             ast.children[2].children[1],
                             repairAssociativity(nodeType, ast.children[2].children[0]),
                         ],
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     },
                     ast.children[1],
                     repairAssociativity(nodeType, ast.children[2].children[2]),
                 ],
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             };
         } else {
             return {
                 type: ast.type,
                 children: ast.children.map(child => repairAssociativity(nodeType, child)),
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             };
         }
     } else if ('children' in ast) {
         return {
             type: ast.type,
             children: ast.children.map(child => repairAssociativity(nodeType, child)),
-            sourceLine: ast.sourceLine,
-            sourceColumn: ast.sourceColumn,
+            sourceLocation: ast.sourceLocation,
         };
     } else {
         return ast;
@@ -89,8 +85,7 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
                 return {
                     type: newNode.type,
                     children: newNode.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
-                    sourceLine: ast.sourceLine,
-                    sourceColumn: ast.sourceColumn,
+                    sourceLocation: ast.sourceLocation,
                 };
             }
         } else {
@@ -100,8 +95,7 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
         return {
             type: ast.type,
             children: ast.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
-            sourceLine: ast.sourceLine,
-            sourceColumn: ast.sourceColumn,
+            sourceLocation: ast.sourceLocation,
         };
     } else {
         return ast;
@@ -247,8 +241,7 @@ const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
                 kind: 'unexpectedToken',
                 found: parseResult.found,
                 expected: parseResult.expected,
-                sourceLine: parseResult.sourceLine,
-                sourceColumn: parseResult.sourceColumn,
+                sourceLocation: parseResult.sourceLocation,
             },
         ];
     }
@@ -304,8 +297,7 @@ export const typeOfExpression = (
                         expected: 'Integer',
                         found: leftType as Type,
                         side: 'left',
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
@@ -317,8 +309,7 @@ export const typeOfExpression = (
                         expected: 'Integer',
                         found: rightType as Type,
                         side: 'right',
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
@@ -338,8 +329,7 @@ export const typeOfExpression = (
                         leftType: leftType as Type,
                         rightType: rightType as Type,
                         operator: 'equality',
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
@@ -360,8 +350,7 @@ export const typeOfExpression = (
                         expected: 'String',
                         operator: 'concatenation',
                         side: 'left',
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
@@ -373,8 +362,7 @@ export const typeOfExpression = (
                         expected: 'String',
                         operator: 'concatenation',
                         side: 'right',
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
@@ -411,8 +399,7 @@ export const typeOfExpression = (
                     {
                         kind: 'unknownIdentifier',
                         name: functionName,
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
@@ -423,8 +410,7 @@ export const typeOfExpression = (
                         kind: 'calledNonFunction',
                         identifierName: functionName,
                         actualType: functionType,
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
@@ -435,8 +421,7 @@ export const typeOfExpression = (
                         targetFunction: functionName,
                         passedArgumentCount: argTypes.length,
                         expectedArgumentCount: functionType.arguments.length - 1,
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
@@ -448,8 +433,7 @@ export const typeOfExpression = (
                             targetFunction: functionName,
                             passedType: argTypes[i] as Type,
                             expectedType: functionType.arguments[i],
-                            sourceLine: ast.sourceLine,
-                            sourceColumn: ast.sourceColumn,
+                            sourceLocation: ast.sourceLocation,
                         } as TypeError,
                     ];
                 }
@@ -467,8 +451,7 @@ export const typeOfExpression = (
                     {
                         kind: 'unknownTypeForIdentifier',
                         identifierName: ast.value,
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
@@ -494,8 +477,7 @@ export const typeOfExpression = (
                         expected: 'Boolean',
                         operator: 'Ternary',
                         side: 'left',
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
@@ -505,8 +487,7 @@ export const typeOfExpression = (
                         kind: 'ternaryBranchMismatch',
                         trueBranchType: trueBranchType,
                         falseBranchType: falseBranchType,
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     } as TypeError,
                 ];
             }
@@ -546,8 +527,7 @@ export const typeOfExpression = (
                         {
                             kind: 'couldNotFindType',
                             name: resolvedLhs.namedType,
-                            sourceLine: ast.sourceLine,
-                            sourceColumn: ast.sourceColumn,
+                            sourceLocation: ast.sourceLocation,
                         },
                     ];
                 }
@@ -558,8 +538,7 @@ export const typeOfExpression = (
                     {
                         kind: 'invalidMemberAccess',
                         found: lhsType,
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
@@ -570,8 +549,7 @@ export const typeOfExpression = (
                         kind: 'objectDoesNotHaveMember',
                         lhsType: lhsType,
                         member: ast.rhs,
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
@@ -627,8 +605,7 @@ const typeCheckStatement = (
                         {
                             kind: 'assignUndeclaredIdentifer',
                             destinationName: ast.destination,
-                            sourceLine: ast.sourceLine,
-                            sourceColumn: ast.sourceColumn,
+                            sourceLocation: ast.sourceLocation,
                         },
                     ],
                     newVariables: [],
@@ -642,8 +619,7 @@ const typeCheckStatement = (
                             lhsName: ast.destination,
                             lhsType: leftType.type,
                             rhsType: rightType,
-                            sourceLine: ast.sourceLine,
-                            sourceColumn: ast.sourceColumn,
+                            sourceLocation: ast.sourceLocation,
                         },
                     ],
                     newVariables: [],
@@ -670,8 +646,7 @@ const typeCheckStatement = (
                             lhsName: ast.destination,
                             lhsType: destinationType,
                             rhsType: expressionType,
-                            sourceLine: ast.sourceLine,
-                            sourceColumn: ast.sourceColumn,
+                            sourceLocation: ast.sourceLocation,
                         },
                     ],
                     newVariables: [],
@@ -780,10 +755,11 @@ const infer = (ctx: UninferredContext): Ast.Ast => {
     const { ast, availableVariables, availableTypes } = ctx;
     switch (ast.kind) {
         case 'returnStatement':
-            return { kind: 'returnStatement', expression: recurse(ast.expression) };
+            return { kind: 'returnStatement', expression: recurse(ast.expression), sourceLocation: ast.sourceLocation };
         case 'equality':
             return {
                 kind: 'equality',
+                sourceLocation: ast.sourceLocation,
                 lhs: recurse(ast.lhs),
                 rhs: recurse(ast.rhs),
                 type: typeOfExpression(ast.lhs, availableVariables, availableVariables) as Type,
@@ -791,30 +767,35 @@ const infer = (ctx: UninferredContext): Ast.Ast => {
         case 'product':
             return {
                 kind: ast.kind,
+                sourceLocation: ast.sourceLocation,
                 lhs: recurse(ast.lhs),
                 rhs: recurse(ast.rhs),
             };
         case 'addition':
             return {
                 kind: ast.kind,
+                sourceLocation: ast.sourceLocation,
                 lhs: recurse(ast.lhs),
                 rhs: recurse(ast.rhs),
             };
         case 'subtraction':
             return {
                 kind: ast.kind,
+                sourceLocation: ast.sourceLocation,
                 lhs: recurse(ast.lhs),
                 rhs: recurse(ast.rhs),
             };
         case 'concatenation':
             return {
                 kind: ast.kind,
+                sourceLocation: ast.sourceLocation,
                 lhs: recurse(ast.lhs),
                 rhs: recurse(ast.rhs),
             };
         case 'typedDeclarationAssignment':
             return {
                 kind: 'typedDeclarationAssignment',
+                sourceLocation: ast.sourceLocation,
                 expression: recurse(ast.expression),
                 type: ast.type,
                 destination: ast.destination,
@@ -824,6 +805,7 @@ const infer = (ctx: UninferredContext): Ast.Ast => {
             if (isTypeError(type)) throw debug("type error when there shouldn't be");
             return {
                 kind: 'typedDeclarationAssignment',
+                sourceLocation: ast.sourceLocation,
                 expression: recurse(ast.expression),
                 type,
                 destination: ast.destination,
@@ -831,18 +813,21 @@ const infer = (ctx: UninferredContext): Ast.Ast => {
         case 'reassignment':
             return {
                 kind: 'reassignment',
+                sourceLocation: ast.sourceLocation,
                 expression: recurse(ast.expression),
                 destination: ast.destination,
             };
         case 'callExpression':
             return {
                 kind: 'callExpression',
+                sourceLocation: ast.sourceLocation,
                 name: ast.name,
                 arguments: ast.arguments.map(recurse),
             };
         case 'ternary':
             return {
                 kind: 'ternary',
+                sourceLocation: ast.sourceLocation,
                 condition: recurse(ast.condition),
                 ifTrue: recurse(ast.ifTrue),
                 ifFalse: recurse(ast.ifFalse),
@@ -850,11 +835,12 @@ const infer = (ctx: UninferredContext): Ast.Ast => {
         case 'functionLiteral':
             return {
                 kind: 'functionLiteral',
+                sourceLocation: ast.sourceLocation,
                 deanonymizedName: ast.deanonymizedName,
             };
         case 'typeDeclaration':
             // TODO: maybe just strip declarations before inferring.
-            return { kind: 'typeDeclaration' };
+            return { kind: 'typeDeclaration', sourceLocation: ast.sourceLocation };
         case 'objectLiteral':
             const declaredType = availableTypes.find(t => t.name == ast.typeName);
             if (!declaredType) {
@@ -862,6 +848,7 @@ const infer = (ctx: UninferredContext): Ast.Ast => {
             }
             return {
                 kind: 'objectLiteral',
+                sourceLocation: ast.sourceLocation,
                 type: declaredType.type,
                 members: ast.members.map(({ name, expression }) => ({
                     name,
@@ -871,6 +858,7 @@ const infer = (ctx: UninferredContext): Ast.Ast => {
         case 'memberAccess':
             return {
                 kind: 'memberAccess',
+                sourceLocation: ast.sourceLocation,
                 lhs: recurse(ast.lhs),
                 rhs: ast.rhs,
             };
@@ -1022,24 +1010,21 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             return {
                 kind: 'returnStatement',
                 expression: astFromParseResult(ast.children[1]),
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'number':
             if (ast.value === undefined) throw debug('ast.value === undefined');
             return {
                 kind: 'number',
                 value: ast.value as any,
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             };
         case 'identifier':
             if (!ast.value) throw debug('!ast.value');
             return {
                 kind: 'identifier',
                 value: ast.value as any,
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             };
         case 'product':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
@@ -1047,8 +1032,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 kind: 'product',
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'ternary':
             return {
@@ -1056,8 +1040,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 condition: astFromParseResult(ast.children[0]),
                 ifTrue: astFromParseResult(ast.children[2]),
                 ifFalse: astFromParseResult(ast.children[4]),
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'equality':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
@@ -1065,8 +1048,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 kind: 'equality',
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'paramList':
             throw debug('paramList in astFromParseResult'); //Should have been caught in "callExpression"
@@ -1079,8 +1061,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 kind: 'callExpression',
                 name: (ast.children[0] as any).value as any,
                 arguments: args,
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'subtraction':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
@@ -1088,8 +1069,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 kind: 'subtraction',
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'addition':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
@@ -1097,8 +1077,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 kind: 'addition',
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'reassignment':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
@@ -1106,8 +1085,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 kind: 'reassignment',
                 destination: (ast.children[0] as any).value as any,
                 expression: astFromParseResult(ast.children[2]),
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'declarationAssignment':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
@@ -1115,8 +1093,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 kind: 'declarationAssignment',
                 destination: (ast.children[0] as any).value as any,
                 expression: astFromParseResult(ast.children[3]),
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'typedDeclarationAssignment':
             const destinationNode = ast.children[0];
@@ -1127,8 +1104,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 destination: destinationNode.value,
                 type: parseType(ast.children[2]),
                 expression,
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'typeDeclaration':
             const type: Type = parseType(ast.children[3]);
@@ -1140,15 +1116,13 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 kind: 'typeDeclaration',
                 name,
                 type,
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredTypeDeclaration & SourceLocation;
         case 'stringLiteral':
             return {
                 kind: 'stringLiteral',
                 value: ast.value as any,
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             };
         case 'objectLiteral':
             const typeNameNode = ast.children[0];
@@ -1163,8 +1137,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 kind: 'objectLiteral',
                 typeName,
                 members: members as any,
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             };
         case 'memberAccess':
             const anyAst = ast as any;
@@ -1174,8 +1147,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 kind: 'memberAccess',
                 lhs,
                 rhs: anyAst.children[2].value,
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'concatenation':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
@@ -1183,8 +1155,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 kind: 'concatenation',
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'equality':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
@@ -1192,8 +1163,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 kind: 'equality',
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'function':
             functionId++;
@@ -1205,13 +1175,11 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                     {
                         kind: 'returnStatement',
                         expression: astFromParseResult(ast.children[2]),
-                        sourceLine: ast.sourceLine,
-                        sourceColumn: ast.sourceColumn,
+                        sourceLocation: ast.sourceLocation,
                     },
                 ],
                 parameters,
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'functionWithBlock':
             functionId++;
@@ -1221,22 +1189,19 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 deanonymizedName: `anonymous_${functionId}`,
                 body: extractFunctionBodyFromParseTree(ast.children[3]),
                 parameters: parameters2,
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             };
         case 'booleanLiteral':
             return {
                 kind: 'booleanLiteral',
                 value: ast.value == 'true',
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             };
         case 'program':
             return {
                 kind: 'program',
                 statements: makeProgramAstNodeFromStatmentParseResult(ast.children[0]),
-                sourceLine: ast.sourceLine,
-                sourceColumn: ast.sourceColumn,
+                sourceLocation: ast.sourceLocation,
             };
         default:
             throw debug(`${ast.type} unhandled in astFromParseResult`);
@@ -1248,9 +1213,9 @@ const parseErrorToString = (e: ParseError): string => {
         case 'unexpectedProgram':
             return 'Failed to parse. Top Level of AST was not a program.';
         case 'unexpectedToken':
-            return `Expected ${e.expected.join(' or ')}, on line ${e.sourceLine} column ${e.sourceColumn}, found ${
-                e.found
-            }`;
+            return `Expected ${e.expected.join(' or ')}, on line ${e.sourceLocation.line} column ${
+                e.sourceLocation.column
+            }, found ${e.found}`;
         default:
             throw debug('Unhandled error in parseErrorToString');
     }
@@ -1268,15 +1233,7 @@ const compile = (source: string): FrontendOutput => {
 
     if (ast == 'WrongShapeAst') {
         return {
-            parseErrors: [
-                {
-                    kind: 'unexpectedToken',
-                    expected: ['InternalError'],
-                    found: ['InternalError'],
-                    sourceLine: 0,
-                    sourceColumn: 0,
-                },
-            ],
+            parseErrors: [{ kind: 'internalError' }],
         };
     }
 
@@ -1372,8 +1329,10 @@ const compile = (source: string): FrontendOutput => {
                 {
                     kind: 'wrongTypeReturn',
                     expressionType: inferredProgram.returnType,
-                    sourceLine: 1,
-                    sourceColumn: 1,
+                    sourceLocation: {
+                        line: 1,
+                        column: 1,
+                    },
                 },
             ],
         };

@@ -1,4 +1,5 @@
 import debug from './util/debug.js';
+import { SourceLocation } from './api.js';
 
 type TokenSpec<TokenType> = {
     token: string;
@@ -11,8 +12,7 @@ type Token<TokenType> = {
     type: TokenType;
     string: string;
     value?: string | number | null;
-    sourceLine: number;
-    sourceColumn: number;
+    sourceLocation: SourceLocation;
 };
 
 const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string): Token<TokenType>[] => {
@@ -51,8 +51,10 @@ const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string): Toke
                 type: tokenSpec.type,
                 value,
                 string: tokenSpec.toString(value),
-                sourceLine: currentSourceLine,
-                sourceColumn: currentSourceColumn,
+                sourceLocation: {
+                    line: currentSourceLine,
+                    column: currentSourceColumn,
+                },
             });
             updateSourceLocation(match[0]);
             break;

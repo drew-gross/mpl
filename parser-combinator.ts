@@ -9,22 +9,23 @@ import { SourceLocation } from './api.js';
 interface Node<NodeType, LeafType> {
     type: NodeType;
     children: Ast<NodeType, LeafType>[];
+    sourceLocation: SourceLocation;
 }
 
 type Leaf<TokenType> = {
     type: TokenType | 'endOfFile';
     value: string | number | null | undefined;
+    sourceLocation: SourceLocation;
 };
 
-type Ast<NodeType, LeafType> = (Node<NodeType, LeafType> | Leaf<LeafType>) & SourceLocation;
+type Ast<NodeType, LeafType> = Node<NodeType, LeafType> | Leaf<LeafType>;
 
 interface LeafWithIndex<TokenType> {
     success: true;
     newIndex: number;
     type: TokenType | 'endOfFile';
     value: string | number | null | undefined;
-    sourceLine: number;
-    sourceColumn: number;
+    sourceLocation: SourceLocation;
 }
 
 interface NodeWithIndex<NodeType, LeafType> {
@@ -32,18 +33,15 @@ interface NodeWithIndex<NodeType, LeafType> {
     newIndex: number;
     type: NodeType;
     children: AstWithIndex<NodeType, LeafType>[];
-    sourceLine: number;
-    sourceColumn: number;
+    sourceLocation: SourceLocation;
 }
 
-type AstWithIndex<NodeType, TokenType> = (NodeWithIndex<NodeType, TokenType> | LeafWithIndex<TokenType>) &
-    SourceLocation;
+type AstWithIndex<NodeType, TokenType> = NodeWithIndex<NodeType, TokenType> | LeafWithIndex<TokenType>;
 
 interface ParseError<TokenType> {
     found: (TokenType | 'endOfFile')[];
     expected: (TokenType | 'endOfFile')[];
-    sourceLine: number;
-    sourceColumn: number;
+    sourceLocation: SourceLocation;
 }
 
 type ParseResultWithIndex<NodeType, TokenType> = ParseError<TokenType> | AstWithIndex<NodeType, TokenType>;
@@ -71,15 +69,13 @@ const stripNodeIndexes = <NodeType, AstLeafNodeType>(
         return {
             value: r.value,
             type: r.type,
-            sourceLine: r.sourceLine,
-            sourceColumn: r.sourceColumn,
+            sourceLocation: r.sourceLocation,
         };
     }
     return {
         type: r.type,
         children: r.children.map(stripNodeIndexes),
-        sourceLine: r.sourceLine,
-        sourceColumn: r.sourceColumn,
+        sourceLocation: r.sourceLocation,
     };
 };
 
@@ -152,12 +148,11 @@ const getSourceLocation = <TokenType>(tokens: Token<TokenType>[], index: number)
     if (index >= tokens.length) {
         const lastToken: Token<TokenType> = last(tokens) as Token<TokenType>;
         return {
-            sourceLine: lastToken.sourceLine,
-            sourceColumn: lastToken.sourceColumn + lastToken.string.length,
+            line: lastToken.sourceLocation.line,
+            column: lastToken.sourceLocation.column + lastToken.string.length,
         };
     } else {
-        const token: Token<TokenType> = tokens[index];
-        return { sourceLine: token.sourceLine, sourceColumn: token.sourceColumn };
+        return tokens[index].sourceLocation;
     }
 };
 
@@ -191,7 +186,7 @@ const parseSequence = <NodeType extends string, TokenType>(
         newIndex: index,
         type: parser.name as NodeType,
         children: results,
-        ...getSourceLocation(tokens, originalIndex),
+        sourceLocation: getSourceLocation(tokens, originalIndex),
     };
     return result;
 };
@@ -276,7 +271,7 @@ const parseAlternative = <NodeType extends string, TokenType>(
                     success: true,
                     children: currentProgress.parseResults,
                     type: sequenceParser.name as NodeType,
-                    ...getSourceLocation(tokens, index),
+                    sourceLocation: getSourceLocation(tokens, index),
                 };
             }
 
@@ -330,7 +325,7 @@ const parseAlternative = <NodeType extends string, TokenType>(
                     success: true,
                     children: refreshedCurrentProgress.parseResults,
                     type: sequenceParser.name as NodeType,
-                    ...getSourceLocation(tokens, index),
+                    sourceLocation: getSourceLocation(tokens, index),
                 };
             }
         } else {
@@ -409,7 +404,7 @@ const parseAlternative = <NodeType extends string, TokenType>(
                 })
             )
         ),
-        ...getSourceLocation(tokens, index),
+        sourceLocation: getSourceLocation(tokens, index),
     };
 };
 
@@ -464,7 +459,7 @@ const terminal = <NodeType, TokenType>(terminal: TokenType): Terminal<NodeType, 
         const result: ParseError<TokenType> = {
             found: ['endOfFile'],
             expected: [terminal],
-            ...getSourceLocation(tokens, index),
+            sourceLocation: getSourceLocation(tokens, index),
         };
         return result;
     }
@@ -474,14 +469,14 @@ const terminal = <NodeType, TokenType>(terminal: TokenType): Terminal<NodeType, 
             newIndex: index + 1,
             value: tokens[index].value,
             type: tokens[index].type,
-            ...getSourceLocation(tokens, index),
+            sourceLocation: getSourceLocation(tokens, index),
         };
     }
 
     return {
         expected: [terminal],
         found: [tokens[index].type],
-        ...getSourceLocation(tokens, index),
+        sourceLocation: getSourceLocation(tokens, index),
     };
 };
 
@@ -495,13 +490,13 @@ const endOfInput = <NodeType, TokenType>(
             newIndex: index + 1,
             value: 'endOfFile',
             type: 'endOfFile',
-            ...getSourceLocation(tokens, index),
+            sourceLocation: getSourceLocation(tokens, index),
         };
     } else {
         return {
             expected: ['endOfFile'],
             found: [tokens[index].type],
-            ...getSourceLocation(tokens, index),
+            sourceLocation: getSourceLocation(tokens, index),
         };
     }
 };

@@ -5,32 +5,38 @@ type Leaf = Number | Identifier | BooleanLiteral | StringLiteral;
 
 export type Number = {
     kind: 'number';
+    sourceLocation: SourceLocation;
     value: number;
 };
 
 export type Identifier = {
     kind: 'identifier';
+    sourceLocation: SourceLocation;
     value: string;
 };
 
 export type BooleanLiteral = {
     kind: 'booleanLiteral';
+    sourceLocation: SourceLocation;
     value: boolean;
 };
 
 export type StringLiteral = {
     kind: 'stringLiteral';
+    sourceLocation: SourceLocation;
     value: string;
 };
 
 // Typed versions of things (...kinda)
 export type ReturnStatement = {
     kind: 'returnStatement';
+    sourceLocation: SourceLocation;
     expression: Ast;
 };
 
 export type Ternary = {
     kind: 'ternary';
+    sourceLocation: SourceLocation;
     condition: Ast;
     ifTrue: Ast;
     ifFalse: Ast;
@@ -38,6 +44,7 @@ export type Ternary = {
 
 export type Equality = {
     kind: 'equality';
+    sourceLocation: SourceLocation;
     lhs: Ast;
     rhs: Ast;
     type: Type;
@@ -45,6 +52,7 @@ export type Equality = {
 
 export type TypedDeclarationAssignment = {
     kind: 'typedDeclarationAssignment';
+    sourceLocation: SourceLocation;
     type: Type;
     destination: string;
     expression: Ast;
@@ -52,18 +60,21 @@ export type TypedDeclarationAssignment = {
 
 export type Reassignment = {
     kind: 'reassignment';
+    sourceLocation: SourceLocation;
     destination: string;
     expression: Ast;
 };
 
 export type FunctionCall = {
     kind: 'callExpression';
+    sourceLocation: SourceLocation;
     name: string;
     arguments: Ast[];
 };
 
 export type FunctionLiteral = {
     kind: 'functionLiteral';
+    sourceLocation: SourceLocation;
     deanonymizedName: string;
 };
 
@@ -71,30 +82,35 @@ export type Statement = TypedDeclarationAssignment | Reassignment | ReturnStatem
 
 export type Addition = {
     kind: 'addition';
+    sourceLocation: SourceLocation;
     lhs: Ast;
     rhs: Ast;
 };
 
 export type Subtraction = {
     kind: 'subtraction';
+    sourceLocation: SourceLocation;
     lhs: Ast;
     rhs: Ast;
 };
 
 export type Product = {
     kind: 'product';
+    sourceLocation: SourceLocation;
     lhs: Ast;
     rhs: Ast;
 };
 
 export type Concatenation = {
     kind: 'concatenation';
+    sourceLocation: SourceLocation;
     lhs: Ast;
     rhs: Ast;
 };
 
 export type TypeDeclaration = {
     kind: 'typeDeclaration';
+    sourceLocation: SourceLocation;
 };
 
 export type ObjectMember = {
@@ -104,12 +120,14 @@ export type ObjectMember = {
 
 export type ObjectLiteral = {
     kind: 'objectLiteral';
+    sourceLocation: SourceLocation;
     type: Type;
     members: ObjectMember[];
 };
 
 export type MemberAccess = {
     kind: 'memberAccess';
+    sourceLocation: SourceLocation;
     lhs: Ast;
     rhs: string;
 };
@@ -133,11 +151,13 @@ export type Ast =
 
 export type UninferredReturnStatement = {
     kind: 'returnStatement';
+    sourceLocation: SourceLocation;
     expression: UninferredAst;
 };
 
 export type UninferredTernary = {
     kind: 'ternary';
+    sourceLocation: SourceLocation;
     condition: UninferredAst;
     ifTrue: UninferredAst;
     ifFalse: UninferredAst;
@@ -145,12 +165,14 @@ export type UninferredTernary = {
 
 export type UninferredEquality = {
     kind: 'equality';
+    sourceLocation: SourceLocation;
     lhs: UninferredAst;
     rhs: UninferredAst;
 };
 
 export type UninferredTypedDeclarationAssignment = {
     kind: 'typedDeclarationAssignment';
+    sourceLocation: SourceLocation;
     destination: string;
     type: Type;
     expression: UninferredAst;
@@ -158,69 +180,71 @@ export type UninferredTypedDeclarationAssignment = {
 
 export type UninferredReassignment = {
     kind: 'reassignment';
+    sourceLocation: SourceLocation;
     destination: string;
     expression: UninferredAst;
 };
 
 export type UninferredFunctionCall = {
     kind: 'callExpression';
+    sourceLocation: SourceLocation;
     name: string;
     arguments: UninferredAst[];
 };
 
 export type UninferredMemberAccess = {
     kind: 'memberAccess';
+    sourceLocation: SourceLocation;
     lhs: UninferredAst;
     rhs: string;
 };
 
 export type UninferredFunctionLiteral = {
     kind: 'functionLiteral';
+    sourceLocation: SourceLocation;
     deanonymizedName: string;
     body: UninferredStatement[];
     parameters: VariableDeclaration[];
 };
 
-export type UninferredStatement = SourceLocation &
-    (
-        | UninferredTypedDeclarationAssignment
-        | UninferredDeclarationAssignment
-        | UninferredReassignment
-        | UninferredTypeDeclaration
-        | UninferredReturnStatement);
-
 export type UninferredAddition = {
     kind: 'addition';
+    sourceLocation: SourceLocation;
     lhs: UninferredAst;
     rhs: UninferredAst;
 };
 
 export type UninferredSubtraction = {
     kind: 'subtraction';
+    sourceLocation: SourceLocation;
     lhs: UninferredAst;
     rhs: UninferredAst;
 };
 
 export type UninferredProduct = {
     kind: 'product';
+    sourceLocation: SourceLocation;
     lhs: UninferredAst;
     rhs: UninferredAst;
 };
 
 export type UninferredConcatenation = {
     kind: 'concatenation';
+    sourceLocation: SourceLocation;
     lhs: UninferredAst;
     rhs: UninferredAst;
 };
 
 export type UninferredDeclarationAssignment = {
     kind: 'declarationAssignment';
+    sourceLocation: SourceLocation;
     destination: string;
     expression: UninferredAst;
 };
 
 export type UninferredTypeDeclaration = {
     kind: 'typeDeclaration';
+    sourceLocation: SourceLocation;
     name: string;
     type: Type;
 };
@@ -232,27 +256,35 @@ export type UninferredObjectMember = {
 
 export type UninferredObjectLiteral = {
     kind: 'objectLiteral';
+    sourceLocation: SourceLocation;
     typeName: string;
     members: UninferredObjectMember[];
 };
 
 export type UninferredProgram = {
     kind: 'program';
+    sourceLocation: SourceLocation;
     statements: UninferredStatement[];
 };
 
-export type UninferredAst = SourceLocation &
-    (
-        | Leaf
-        | UninferredObjectLiteral
-        | UninferredTernary
-        | UninferredEquality
-        | UninferredFunctionCall
-        | UninferredFunctionLiteral
-        | UninferredStatement
-        | UninferredSubtraction
-        | UninferredAddition
-        | UninferredProduct
-        | UninferredConcatenation
-        | UninferredMemberAccess
-        | UninferredProgram);
+export type UninferredStatement =
+    | UninferredTypedDeclarationAssignment
+    | UninferredDeclarationAssignment
+    | UninferredReassignment
+    | UninferredTypeDeclaration
+    | UninferredReturnStatement;
+
+export type UninferredAst =
+    | Leaf
+    | UninferredObjectLiteral
+    | UninferredTernary
+    | UninferredEquality
+    | UninferredFunctionCall
+    | UninferredFunctionLiteral
+    | UninferredStatement
+    | UninferredSubtraction
+    | UninferredAddition
+    | UninferredProduct
+    | UninferredConcatenation
+    | UninferredMemberAccess
+    | UninferredProgram;
