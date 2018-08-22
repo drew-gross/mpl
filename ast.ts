@@ -274,17 +274,17 @@ export type UninferredStatement =
     | UninferredTypeDeclaration
     | UninferredReturnStatement;
 
-export type UninferredAst =
+export type UninferredExpression =
     | Leaf
     | UninferredObjectLiteral
     | UninferredTernary
     | UninferredEquality
     | UninferredFunctionCall
     | UninferredFunctionLiteral
-    | UninferredStatement
     | UninferredSubtraction
     | UninferredAddition
     | UninferredProduct
     | UninferredConcatenation
-    | UninferredMemberAccess
-    | UninferredProgram;
+    | UninferredMemberAccess;
+
+export type UninferredAst = UninferredStatement | UninferredProgram | UninferredExpression;
