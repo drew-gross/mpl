@@ -25,33 +25,33 @@ test('double flatten', t => {
 
 test('lexer', t => {
     t.deepEqual(lex(tokenSpecs, '123'), [
-        { type: 'number', value: 123, string: '123', sourceLine: 1, sourceColumn: 1 },
+        { type: 'number', value: 123, string: '123', sourceLocation: { line: 1, column: 1 } },
     ]);
     t.deepEqual(lex(tokenSpecs, '123 456'), [
-        { type: 'number', value: 123, string: '123', sourceLine: 1, sourceColumn: 1 },
-        { type: 'number', value: 456, string: '456', sourceLine: 1, sourceColumn: 5 },
+        { type: 'number', value: 123, string: '123', sourceLocation: { line: 1, column: 1 } },
+        { type: 'number', value: 456, string: '456', sourceLocation: { line: 1, column: 5 } },
     ]);
     t.deepEqual(lex(tokenSpecs, '&&&&&'), [
-        { type: 'invalid', value: '&&&&&', string: '&&&&&', sourceLine: 1, sourceColumn: 1 },
+        { type: 'invalid', value: '&&&&&', string: '&&&&&', sourceLocation: { line: 1, column: 1 } },
     ]);
     t.deepEqual(lex(tokenSpecs, '(1)'), [
-        { type: 'leftBracket', value: null, string: '(', sourceLine: 1, sourceColumn: 1 },
-        { type: 'number', value: 1, string: '1', sourceLine: 1, sourceColumn: 2 },
-        { type: 'rightBracket', value: null, string: ')', sourceLine: 1, sourceColumn: 3 },
+        { type: 'leftBracket', value: null, string: '(', sourceLocation: { line: 1, column: 1 } },
+        { type: 'number', value: 1, string: '1', sourceLocation: { line: 1, column: 2 } },
+        { type: 'rightBracket', value: null, string: ')', sourceLocation: { line: 1, column: 3 } },
     ]);
     t.deepEqual(lex(tokenSpecs, 'return 100'), [
-        { type: 'return', value: null, string: 'return', sourceLine: 1, sourceColumn: 1 },
-        { type: 'number', value: 100, string: '100', sourceLine: 1, sourceColumn: 8 },
+        { type: 'return', value: null, string: 'return', sourceLocation: { line: 1, column: 1 } },
+        { type: 'number', value: 100, string: '100', sourceLocation: { line: 1, column: 8 } },
     ]);
     t.deepEqual(lex(tokenSpecs, 'return "test string"'), [
-        { type: 'return', value: null, string: 'return', sourceLine: 1, sourceColumn: 1 },
-        { type: 'stringLiteral', value: 'test string', string: 'test string', sourceLine: 1, sourceColumn: 8 },
+        { type: 'return', value: null, string: 'return', sourceLocation: { line: 1, column: 1 } },
+        { type: 'stringLiteral', value: 'test string', string: 'test string', sourceLocation: { line: 1, column: 8 } },
     ]);
 });
 
 test('lex with initial whitespace', t => {
     t.deepEqual(lex(tokenSpecs, ' 123'), [
-        { type: 'number', value: 123, string: '123', sourceLine: 1, sourceColumn: 2 },
+        { type: 'number', value: 123, string: '123', sourceLocation: { line: 1, column: 2 } },
     ]);
 });
 
@@ -67,38 +67,38 @@ test('ast for single number', t => {
         children: [
             {
                 type: 'returnStatement',
-                sourceLine: 1,
-                sourceColumn: 1,
+                line: 1,
+                column: 1,
                 children: [
                     {
                         type: 'return',
                         value: null,
-                        sourceLine: 1,
-                        sourceColumn: 1,
+                        line: 1,
+                        column: 1,
                     },
                     {
                         type: 'number',
                         value: 7,
-                        sourceLine: 1,
-                        sourceColumn: 8,
+                        line: 1,
+                        column: 8,
                     },
                     {
                         type: 'statementSeparator',
                         value: null,
-                        sourceLine: 1,
-                        sourceColumn: 9,
+                        line: 1,
+                        column: 9,
                     },
                 ],
             },
             {
                 type: 'endOfFile',
                 value: 'endOfFile',
-                sourceLine: 1,
-                sourceColumn: 10,
+                line: 1,
+                column: 10,
             },
         ],
-        sourceLine: 1,
-        sourceColumn: 1,
+        line: 1,
+        column: 1,
     } as MplAst;
     t.deepEqual(expectedResult, parseResult);
 });
@@ -538,15 +538,14 @@ test('assign function and return', compileAndRun, {
 test('correct inferred type for function', t => {
     const functionSource = 'a: Integer => 11';
     const parseResult: MplParseResult = parse(grammar, 'function', lex(tokenSpecs, functionSource), 0);
-    const ast = astFromParseResult(parseResult as MplAst);
-    if (ast == 'WrongShapeAst') {
-        t.deepEqual(true, false);
-        return;
-    }
-    t.deepEqual(typeOfExpression(ast, [], []), {
-        kind: 'Function',
-        arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
-    });
+    const ast: Ast.UninferredExpression = astFromParseResult(parseResult as MplAst) as Ast.UninferredExpression;
+    t.deepEqual(
+        typeOfExpression({ ast, availableVariables: [], availableTypes: [], sourceLocation: { line: 1, column: 1 } }),
+        {
+            kind: 'Function',
+            arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
+        }
+    );
 });
 
 test('assign function and call it', compileAndRun, {
@@ -628,7 +627,7 @@ test('double product with brackets', compileAndRun, {
     },
 });
 
-test('id function', compileAndRun, {
+test.only('id function', compileAndRun, {
     source: 'id := a: Integer => a; return id(5)',
     expectedExitCode: 5,
 });
@@ -1673,23 +1672,21 @@ test('type equality', t => {
 });
 
 test('type of objectLiteral', t => {
-    const ast: Ast.UninferredAst = {
+    const ast: Ast.UninferredExpression = {
         kind: 'objectLiteral',
         typeName: 'BoolPair',
         members: [
-            { name: 'first', expression: { kind: 'booleanLiteral', value: true, sourceLine: 6, sourceColumn: 34 } },
+            { name: 'first', expression: { kind: 'booleanLiteral', value: true, line: 6, column: 34 } },
             {
                 name: 'second',
-                expression: { kind: 'booleanLiteral', value: false, sourceLine: 6, sourceColumn: 48 },
+                expression: { kind: 'booleanLiteral', value: false, line: 6, column: 48 },
             },
         ],
-        sourceLine: 6,
-        sourceColumn: 16,
     };
-    const type = typeOfExpression(
+    const type = typeOfExpression({
         ast,
-        [],
-        [
+        availableVariables: [],
+        availableTypes: [
             {
                 name: 'BoolPair',
                 type: {
@@ -1701,8 +1698,9 @@ test('type of objectLiteral', t => {
                     ],
                 },
             },
-        ]
-    );
+        ],
+        sourceLocation: { line: 1, column: 1 },
+    });
     const expectedType = {
         kind: 'Product',
         name: 'BoolPair',

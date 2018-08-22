@@ -181,14 +181,6 @@ export type UninferredFunctionLiteral = {
     parameters: VariableDeclaration[];
 };
 
-export type UninferredStatement = SourceLocation &
-    (
-        | UninferredTypedDeclarationAssignment
-        | UninferredDeclarationAssignment
-        | UninferredReassignment
-        | UninferredTypeDeclaration
-        | UninferredReturnStatement);
-
 export type UninferredAddition = {
     kind: 'addition';
     lhs: UninferredAst;
@@ -241,18 +233,24 @@ export type UninferredProgram = {
     statements: UninferredStatement[];
 };
 
-export type UninferredAst = SourceLocation &
-    (
-        | Leaf
-        | UninferredObjectLiteral
-        | UninferredTernary
-        | UninferredEquality
-        | UninferredFunctionCall
-        | UninferredFunctionLiteral
-        | UninferredStatement
-        | UninferredSubtraction
-        | UninferredAddition
-        | UninferredProduct
-        | UninferredConcatenation
-        | UninferredMemberAccess
-        | UninferredProgram);
+export type UninferredStatement =
+    | UninferredTypedDeclarationAssignment
+    | UninferredDeclarationAssignment
+    | UninferredReassignment
+    | UninferredTypeDeclaration
+    | UninferredReturnStatement;
+
+export type UninferredExpression =
+    | Leaf
+    | UninferredObjectLiteral
+    | UninferredTernary
+    | UninferredEquality
+    | UninferredFunctionCall
+    | UninferredFunctionLiteral
+    | UninferredSubtraction
+    | UninferredAddition
+    | UninferredProduct
+    | UninferredConcatenation
+    | UninferredMemberAccess;
+
+export type UninferredAst = UninferredStatement | UninferredProgram | UninferredExpression;
