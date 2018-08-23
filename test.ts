@@ -67,38 +67,32 @@ test('ast for single number', t => {
         children: [
             {
                 type: 'returnStatement',
-                line: 1,
-                column: 1,
+                sourceLocation: { line: 1, column: 1 },
                 children: [
                     {
                         type: 'return',
                         value: null,
-                        line: 1,
-                        column: 1,
+                        sourceLocation: { line: 1, column: 1 },
                     },
                     {
                         type: 'number',
                         value: 7,
-                        line: 1,
-                        column: 8,
+                        sourceLocation: { line: 1, column: 8 },
                     },
                     {
                         type: 'statementSeparator',
                         value: null,
-                        line: 1,
-                        column: 9,
+                        sourceLocation: { line: 1, column: 9 },
                     },
                 ],
             },
             {
                 type: 'endOfFile',
                 value: 'endOfFile',
-                line: 1,
-                column: 10,
+                sourceLocation: { line: 1, column: 10 },
             },
         ],
-        line: 1,
-        column: 1,
+        sourceLocation: { line: 1, column: 1 },
     } as MplAst;
     t.deepEqual(expectedResult, parseResult);
 });
@@ -108,39 +102,33 @@ test('ast for number in brackets', t => {
         removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, ' return (5);'), 0))),
         {
             type: 'program',
-            sourceLine: 1,
-            sourceColumn: 2,
+            sourceLocation: { line: 1, column: 2 },
             children: [
                 {
                     type: 'returnStatement',
-                    sourceLine: 1,
-                    sourceColumn: 2,
+                    sourceLocation: { line: 1, column: 2 },
                     children: [
                         {
                             type: 'return',
                             value: null,
-                            sourceLine: 1,
-                            sourceColumn: 2,
+                            sourceLocation: { line: 1, column: 2 },
                         },
                         {
                             type: 'number',
                             value: 5,
-                            sourceLine: 1,
-                            sourceColumn: 10,
+                            sourceLocation: { line: 1, column: 10 },
                         },
                         {
                             type: 'statementSeparator',
                             value: null,
-                            sourceLine: 1,
-                            sourceColumn: 12,
+                            sourceLocation: { line: 1, column: 12 },
                         },
                     ],
                 },
                 {
                     type: 'endOfFile',
                     value: 'endOfFile',
-                    sourceLine: 1,
-                    sourceColumn: 13,
+                    sourceLocation: { line: 1, column: 13 },
                 },
             ],
         }
@@ -152,39 +140,33 @@ test('ast for number in double brackets', t => {
         removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'return ((20));'), 0))),
         {
             type: 'program',
-            sourceLine: 1,
-            sourceColumn: 1,
+            sourceLocation: { line: 1, column: 1 },
             children: [
                 {
                     type: 'returnStatement',
-                    sourceLine: 1,
-                    sourceColumn: 1,
+                    sourceLocation: { line: 1, column: 1 },
                     children: [
                         {
                             type: 'return',
                             value: null,
-                            sourceLine: 1,
-                            sourceColumn: 1,
+                            sourceLocation: { line: 1, column: 1 },
                         },
                         {
                             type: 'number',
                             value: 20,
-                            sourceLine: 1,
-                            sourceColumn: 10,
+                            sourceLocation: { line: 1, column: 10 },
                         },
                         {
                             type: 'statementSeparator',
                             value: null,
-                            sourceLine: 1,
-                            sourceColumn: 14,
+                            sourceLocation: { line: 1, column: 14 },
                         },
                     ],
                 },
                 {
                     type: 'endOfFile',
                     value: 'endOfFile',
-                    sourceLine: 1,
-                    sourceColumn: 15,
+                    sourceLocation: { line: 1, column: 15 },
                 },
             ],
         }
@@ -196,59 +178,49 @@ test('ast for product with brackets', t => {
         removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'return 3 * (4 * 5);'), 0))),
         {
             type: 'program',
-            sourceLine: 1,
-            sourceColumn: 1,
+            sourceLocation: { line: 1, column: 1 },
             children: [
                 {
                     type: 'returnStatement',
-                    sourceLine: 1,
-                    sourceColumn: 1,
+                    sourceLocation: { line: 1, column: 1 },
                     children: [
                         {
                             type: 'return',
-                            sourceLine: 1,
-                            sourceColumn: 1,
+                            sourceLocation: { line: 1, column: 1 },
                             value: null,
                         },
                         {
                             type: 'product',
-                            sourceLine: 1,
-                            sourceColumn: 8,
+                            sourceLocation: { line: 1, column: 8 },
                             children: [
                                 {
                                     type: 'number',
                                     value: 3,
-                                    sourceLine: 1,
-                                    sourceColumn: 8,
+                                    sourceLocation: { line: 1, column: 8 },
                                 },
                                 {
                                     type: 'product',
                                     value: null,
-                                    sourceLine: 1,
-                                    sourceColumn: 10,
+                                    sourceLocation: { line: 1, column: 10 },
                                 },
                                 {
                                     type: 'product',
-                                    sourceLine: 1,
-                                    sourceColumn: 13,
+                                    sourceLocation: { line: 1, column: 13 },
                                     children: [
                                         {
                                             type: 'number',
                                             value: 4,
-                                            sourceLine: 1,
-                                            sourceColumn: 13,
+                                            sourceLocation: { line: 1, column: 13 },
                                         },
                                         {
                                             type: 'product',
                                             value: null,
-                                            sourceLine: 1,
-                                            sourceColumn: 15,
+                                            sourceLocation: { line: 1, column: 15 },
                                         },
                                         {
                                             type: 'number',
                                             value: 5,
-                                            sourceLine: 1,
-                                            sourceColumn: 17,
+                                            sourceLocation: { line: 1, column: 17 },
                                         },
                                     ],
                                 },
@@ -257,16 +229,14 @@ test('ast for product with brackets', t => {
                         {
                             type: 'statementSeparator',
                             value: null,
-                            sourceLine: 1,
-                            sourceColumn: 19,
+                            sourceLocation: { line: 1, column: 19 },
                         },
                     ],
                 },
                 {
                     type: 'endOfFile',
                     value: 'endOfFile',
-                    sourceLine: 1,
-                    sourceColumn: 20,
+                    sourceLocation: { line: 1, column: 20 },
                 },
             ],
         }
@@ -539,13 +509,10 @@ test('correct inferred type for function', t => {
     const functionSource = 'a: Integer => 11';
     const parseResult: MplParseResult = parse(grammar, 'function', lex(tokenSpecs, functionSource), 0);
     const ast: Ast.UninferredExpression = astFromParseResult(parseResult as MplAst) as Ast.UninferredExpression;
-    t.deepEqual(
-        typeOfExpression({ ast, availableVariables: [], availableTypes: [], sourceLocation: { line: 1, column: 1 } }),
-        {
-            kind: 'Function',
-            arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
-        }
-    );
+    t.deepEqual(typeOfExpression({ ast, availableVariables: [], availableTypes: [] }), {
+        kind: 'Function',
+        arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
+    });
 });
 
 test('assign function and call it', compileAndRun, {
@@ -627,7 +594,7 @@ test('double product with brackets', compileAndRun, {
     },
 });
 
-test.only('id function', compileAndRun, {
+test('id function', compileAndRun, {
     source: 'id := a: Integer => a; return id(5)',
     expectedExitCode: 5,
 });
@@ -669,8 +636,7 @@ test('parse error', compileAndRun, {
             kind: 'unexpectedToken',
             found: ['fatArrow'],
             expected: ['identifier', 'typeIdentifier', 'return'],
-            sourceLine: 1,
-            sourceColumn: 1,
+            sourceLocation: { line: 1, column: 1 },
         },
     ],
 });
@@ -730,8 +696,7 @@ test('return bool fail', compileAndRun, {
         {
             kind: 'wrongTypeReturn',
             expressionType: builtinTypes.Boolean,
-            sourceLine: 1,
-            sourceColumn: 1,
+            sourceLocation: { line: 1, column: 1 },
         },
     ],
 });
@@ -756,8 +721,7 @@ return boolFunc(7);`,
             targetFunction: 'boolFunc',
             passedType: builtinTypes.Integer,
             expectedType: builtinTypes.Boolean,
-            sourceLine: 3,
-            sourceColumn: 8,
+            sourceLocation: { line: 3, column: 8 },
         },
     ],
 });
@@ -770,8 +734,7 @@ test('assign wrong type', compileAndRun, {
             lhsName: 'myInt',
             lhsType: builtinTypes.Integer,
             rhsType: builtinTypes.Boolean,
-            sourceLine: 1,
-            sourceColumn: 1,
+            sourceLocation: { line: 1, column: 1 },
         },
     ],
 });
@@ -811,8 +774,7 @@ return 0;`,
                 kind: 'Function',
                 arguments: [builtinTypes.Integer],
             },
-            sourceLine: 2,
-            sourceColumn: 1,
+            sourceLocation: { line: 2, column: 1 },
         },
     ],
 });
@@ -833,8 +795,7 @@ return myFunc("");`,
                 kind: 'Function',
                 arguments: [builtinTypes.String, builtinTypes.Integer],
             },
-            sourceLine: 2,
-            sourceColumn: 1,
+            sourceLocation: { line: 2, column: 1 },
         },
     ],
 });
@@ -869,8 +830,7 @@ return myFunc("");`,
                 kind: 'Function',
                 arguments: [builtinTypes.String, builtinTypes.Integer],
             },
-            sourceLine: 2,
-            sourceColumn: 1,
+            sourceLocation: { line: 2, column: 1 },
         },
     ],
 });
@@ -904,8 +864,7 @@ return boolTimesInt(1);`,
             side: 'right',
             found: builtinTypes.Boolean,
             expected: 'Integer',
-            sourceLine: 2,
-            sourceColumn: 60,
+            sourceLocation: { line: 2, column: 60 },
         },
         // TODO: Refactor until I don't get the same error twice
         {
@@ -914,8 +873,7 @@ return boolTimesInt(1);`,
             side: 'right',
             found: builtinTypes.Boolean,
             expected: 'Integer',
-            sourceLine: 2,
-            sourceColumn: 60,
+            sourceLocation: { line: 2, column: 60 },
         },
     ],
 });
@@ -951,8 +909,10 @@ test('structure is equal for inferred string type', t => {
     const suppliedStructure = compile('myStr: String = "test"; return length(myStr);');
     // TODO:  remove this awful hack. Need to either strip source location from structure,
     // or not have it there in the first place.
-    (inferredStructure as any).program.statements[0].expression.sourceColumn = 17;
-    (inferredStructure as any).program.statements[1].expression.arguments[0].sourceColumn = 39;
+    (inferredStructure as any).program.statements[0].expression.sourceLocation.column = 17;
+    (inferredStructure as any).program.statements[1].expression.arguments[0].sourceLocation.column = 39;
+    (inferredStructure as any).program.statements[1].expression.sourceLocation.column = 32;
+    (inferredStructure as any).program.statements[1].sourceLocation.column = 25;
     t.deepEqual(inferredStructure, suppliedStructure);
 });
 
@@ -993,8 +953,7 @@ test('wrong type global', compileAndRun, {
             lhsName: 'str',
             lhsType: builtinTypes.String,
             rhsType: builtinTypes.Integer,
-            sourceLine: 1,
-            sourceColumn: 1,
+            sourceLocation: { line: 1, column: 1 },
         },
     ],
 });
@@ -1043,8 +1002,7 @@ test('parsing fails for extra invalid tokens', compileAndRun, {
             kind: 'unexpectedToken',
             found: ['leftBracket'],
             expected: ['endOfFile'],
-            sourceLine: 1,
-            sourceColumn: 10,
+            sourceLocation: { line: 1, column: 10 },
         },
     ],
 });
@@ -1113,8 +1071,7 @@ return threeArgs(7, 4);`,
             targetFunction: 'threeArgs',
             passedArgumentCount: 2,
             expectedArgumentCount: 3,
-            sourceLine: 3,
-            sourceColumn: 8,
+            sourceLocation: { line: 3, column: 8 },
         },
     ],
 });
@@ -1129,8 +1086,7 @@ return threeArgs(7, 4, "notAnInteger");`,
             targetFunction: 'threeArgs',
             expectedType: builtinTypes.Integer,
             passedType: builtinTypes.String,
-            sourceColumn: 8,
-            sourceLine: 3,
+            sourceLocation: { line: 3, column: 8 },
         },
     ],
 });
@@ -1205,7 +1161,9 @@ test('reassign to undeclared identifier', compileAndRun, {
 a := 1;
 b = 2;
 return a + b;`,
-    expectedTypeErrors: [{ kind: 'assignUndeclaredIdentifer', destinationName: 'b', sourceLine: 3, sourceColumn: 1 }],
+    expectedTypeErrors: [
+        { kind: 'assignUndeclaredIdentifer', destinationName: 'b', sourceLocation: { line: 3, column: 1 } },
+    ],
 });
 
 test('reassigning wrong type', compileAndRun, {
@@ -1219,8 +1177,7 @@ return a;`,
             lhsName: 'a',
             lhsType: builtinTypes.Integer,
             rhsType: builtinTypes.Boolean,
-            sourceLine: 3,
-            sourceColumn: 1,
+            sourceLocation: { line: 3, column: 1 },
         },
     ],
 });
@@ -1278,8 +1235,7 @@ return foo()`,
         {
             kind: 'assignUndeclaredIdentifer',
             destinationName: 'b',
-            sourceLine: 4,
-            sourceColumn: 5,
+            sourceLocation: { line: 4, column: 5 },
         },
     ],
 });
@@ -1298,8 +1254,7 @@ return foo();`,
             lhsName: 'a',
             lhsType: builtinTypes.Integer,
             rhsType: builtinTypes.Boolean,
-            sourceLine: 4,
-            sourceColumn: 5,
+            sourceLocation: { line: 4, column: 5 },
         },
     ],
 });
@@ -1676,12 +1631,16 @@ test('type of objectLiteral', t => {
         kind: 'objectLiteral',
         typeName: 'BoolPair',
         members: [
-            { name: 'first', expression: { kind: 'booleanLiteral', value: true, line: 6, column: 34 } },
+            {
+                name: 'first',
+                expression: { kind: 'booleanLiteral', value: true, sourceLocation: { line: 6, column: 34 } },
+            },
             {
                 name: 'second',
-                expression: { kind: 'booleanLiteral', value: false, line: 6, column: 48 },
+                expression: { kind: 'booleanLiteral', value: false, sourceLocation: { line: 6, column: 48 } },
             },
         ],
+        sourceLocation: { line: 6, column: 16 },
     };
     const type = typeOfExpression({
         ast,
@@ -1699,7 +1658,6 @@ test('type of objectLiteral', t => {
                 },
             },
         ],
-        sourceLocation: { line: 1, column: 1 },
     });
     const expectedType = {
         kind: 'Product',

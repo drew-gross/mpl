@@ -44,42 +44,59 @@ export type ParseError =
           kind: 'unexpectedToken';
           expected: string[];
           found: string[];
-          sourceLine: number;
-          sourceColumn: number;
+          sourceLocation: SourceLocation;
       }
     | {
           kind: 'unexpectedProgram';
+      }
+    | {
+          kind: 'internalError';
       };
-export type TypeError = SourceLocation &
-    (
-        | {
-              kind: 'unknownIdentifier';
-              name: string;
-          }
-        | {
-              kind: 'wrongTypeForOperator';
-              found: Type;
-              expected: string;
-              operator: string;
-              side: 'left' | 'right';
-          }
-        | { kind: 'assignUndeclaredIdentifer'; destinationName: string }
-        | { kind: 'wrongTypeReturn'; expressionType: Type }
-        | { kind: 'wrongArgumentType'; targetFunction: string; passedType: Type; expectedType: Type }
-        | { kind: 'calledNonFunction'; identifierName: string; actualType: Type }
-        | {
-              kind: 'wrongNumberOfArguments';
-              targetFunction: string;
-              passedArgumentCount: number;
-              expectedArgumentCount: number;
-          }
-        | { kind: 'unknownTypeForIdentifier'; identifierName: string }
-        | { kind: 'ternaryBranchMismatch'; trueBranchType: Type; falseBranchType: Type }
-        | { kind: 'typeMismatchForOperator'; leftType: Type; rightType: Type; operator: string }
-        | { kind: 'assignWrongType'; lhsName: string; lhsType: Type; rhsType: Type }
-        | { kind: 'invalidMemberAccess'; found: Type }
-        | { kind: 'objectDoesNotHaveMember'; lhsType: Type; member: string }
-        | { kind: 'couldNotFindType'; name: string });
+
+export type TypeError =
+    | {
+          kind: 'unknownIdentifier';
+          name: string;
+          sourceLocation: SourceLocation;
+      }
+    | {
+          kind: 'wrongTypeForOperator';
+          found: Type;
+          expected: string;
+          operator: string;
+          side: 'left' | 'right';
+          sourceLocation: SourceLocation;
+      }
+    | { kind: 'assignUndeclaredIdentifer'; destinationName: string; sourceLocation: SourceLocation }
+    | { kind: 'wrongTypeReturn'; expressionType: Type; sourceLocation: SourceLocation }
+    | {
+          kind: 'wrongArgumentType';
+          targetFunction: string;
+          passedType: Type;
+          expectedType: Type;
+          sourceLocation: SourceLocation;
+      }
+    | { kind: 'calledNonFunction'; identifierName: string; actualType: Type; sourceLocation: SourceLocation }
+    | {
+          kind: 'wrongNumberOfArguments';
+          targetFunction: string;
+          passedArgumentCount: number;
+          expectedArgumentCount: number;
+          sourceLocation: SourceLocation;
+      }
+    | { kind: 'unknownTypeForIdentifier'; identifierName: string; sourceLocation: SourceLocation }
+    | { kind: 'ternaryBranchMismatch'; trueBranchType: Type; falseBranchType: Type; sourceLocation: SourceLocation }
+    | {
+          kind: 'typeMismatchForOperator';
+          leftType: Type;
+          rightType: Type;
+          operator: string;
+          sourceLocation: SourceLocation;
+      }
+    | { kind: 'assignWrongType'; lhsName: string; lhsType: Type; rhsType: Type; sourceLocation: SourceLocation }
+    | { kind: 'invalidMemberAccess'; found: Type; sourceLocation: SourceLocation }
+    | { kind: 'objectDoesNotHaveMember'; lhsType: Type; member: string; sourceLocation: SourceLocation }
+    | { kind: 'couldNotFindType'; name: string; sourceLocation: SourceLocation };
 
 export type Backend = {
     name: string;
