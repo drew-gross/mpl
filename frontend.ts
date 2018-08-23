@@ -371,11 +371,7 @@ export const typeOfExpression = (ctx: UninferredContext<Ast.UninferredExpression
         }
         case 'functionLiteral':
             const f = inferFunction(
-                functionObjectFromAst({
-                    ast,
-                    availableVariables: ctx.availableVariables,
-                    availableTypes: ctx.availableTypes,
-                }),
+                functionObjectFromAst({ ast, availableVariables, availableTypes }),
                 availableVariables,
                 availableTypes
             );
