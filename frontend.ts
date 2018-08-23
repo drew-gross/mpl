@@ -170,18 +170,18 @@ const extractVariables = (
     return variables;
 };
 
-const functionObjectFromAst = (
-    ast: Ast.UninferredFunctionLiteral,
-    variablesInScope: VariableDeclaration[],
-    typeDeclarations: TypeDeclaration[]
-): UninferredFunction => ({
-    name: ast.deanonymizedName,
-    statements: ast.body,
+const functionObjectFromAst = (ctx: UninferredContext<Ast.UninferredFunctionLiteral>): UninferredFunction => ({
+    name: ctx.ast.deanonymizedName,
+    statements: ctx.ast.body,
     variables: [
-        ...ast.parameters,
-        ...extractVariables(ast.body, mergeDeclarations(variablesInScope, ast.parameters), typeDeclarations),
+        ...ctx.ast.parameters,
+        ...extractVariables(
+            ctx.ast.body,
+            mergeDeclarations(ctx.availableVariables, ctx.ast.parameters),
+            ctx.availableTypes
+        ),
     ],
-    parameters: ast.parameters,
+    parameters: ctx.ast.parameters,
 });
 
 const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
@@ -371,7 +371,11 @@ export const typeOfExpression = (ctx: UninferredContext<Ast.UninferredExpression
         }
         case 'functionLiteral':
             const f = inferFunction(
-                functionObjectFromAst(ast, availableVariables, availableTypes),
+                functionObjectFromAst({
+                    ast,
+                    availableVariables: ctx.availableVariables,
+                    availableTypes: ctx.availableTypes,
+                }),
                 availableVariables,
                 availableTypes
             );
@@ -862,7 +866,7 @@ const infer = (ctx: UninferredContext<Ast.UninferredAst>): Ast.Ast => {
         case 'objectLiteral':
             const declaredType = availableTypes.find(t => t.name == ast.typeName);
             if (!declaredType) {
-                throw debug('type not found');
+                throw debug(`type ${ast.typeName} not found`);
             }
             return {
                 kind: 'objectLiteral',
@@ -1260,7 +1264,7 @@ const compile = (source: string): FrontendOutput => {
         return { parseErrors: [{ kind: 'unexpectedProgram' }] };
     }
 
-    const typeDeclarations = walkAst<TypeDeclaration, Ast.UninferredTypeDeclaration & SourceLocation>(
+    const typeDeclarations = walkAst<TypeDeclaration, Ast.UninferredTypeDeclaration>(
         ast,
         ['typeDeclaration'],
         (astNode: Ast.UninferredTypeDeclaration) => {
@@ -1276,14 +1280,16 @@ const compile = (source: string): FrontendOutput => {
         parameters: [],
     };
 
-    const functions = walkAst<UninferredFunction, Ast.UninferredFunctionLiteral & SourceLocation>(
-        ast,
-        ['functionLiteral'],
-        astNode => functionObjectFromAst(astNode, variablesInScope, typeDeclarations)
+    const functions = walkAst<UninferredFunction, Ast.UninferredFunctionLiteral>(ast, ['functionLiteral'], astNode =>
+        functionObjectFromAst({
+            ast: astNode,
+            availableVariables: variablesInScope,
+            availableTypes: typeDeclarations,
+        })
     );
 
     let stringLiteralIdMaker = idMaker();
-    const nonUniqueStringLiterals = walkAst<StringLiteralData, Ast.StringLiteral & SourceLocation>(
+    const nonUniqueStringLiterals = walkAst<StringLiteralData, Ast.StringLiteral>(
         ast,
         ['stringLiteral'],
         (astNode: Ast.StringLiteral) => ({ id: stringLiteralIdMaker(), value: astNode.value })
