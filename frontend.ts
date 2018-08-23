@@ -1264,13 +1264,7 @@ const compile = (source: string): FrontendOutput => {
         return { parseErrors: [{ kind: 'unexpectedProgram' }] };
     }
 
-    const typeDeclarations = walkAst<TypeDeclaration, Ast.UninferredTypeDeclaration>(
-        ast,
-        ['typeDeclaration'],
-        (astNode: Ast.UninferredTypeDeclaration) => {
-            return { name: astNode.name, type: astNode.type };
-        }
-    );
+    const typeDeclarations = walkAst<TypeDeclaration, Ast.UninferredTypeDeclaration>(ast, ['typeDeclaration'], n => n);
 
     let variablesInScope = builtinFunctions;
     const program: UninferredFunction = {
