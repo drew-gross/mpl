@@ -102,22 +102,18 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
     }
 };
 
-const extractVariable = (
-    statement: Ast.UninferredStatement,
-    variablesInScope: VariableDeclaration[],
-    typeDeclarations: TypeDeclaration[]
-): VariableDeclaration | undefined => {
+const extractVariable = (ctx: WithContext<Ast.UninferredStatement>): VariableDeclaration | undefined => {
     const result: VariableDeclaration[] = [];
-    switch (statement.kind) {
+    switch (ctx.w.kind) {
         case 'reassignment':
         case 'declarationAssignment':
         case 'typedDeclarationAssignment':
             // Recursive functions can refer to the left side on the right side, so to extract
             // the left side, we need to know about the right side. Probably, this just shouldn't return
             // a type. TODO: allow more types of recursive functions than just single int...
-            const variablesIncludingSelf = mergeDeclarations(variablesInScope, [
+            const variablesIncludingSelf = mergeDeclarations(ctx.availableVariables, [
                 {
-                    name: statement.destination,
+                    name: ctx.w.destination,
                     type: {
                         kind: 'Function',
                         arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
@@ -125,28 +121,20 @@ const extractVariable = (
                 },
             ]);
             return {
-                name: statement.destination,
-                type: typeOfExpression({
-                    ast: statement.expression,
-                    availableVariables: variablesIncludingSelf,
-                    availableTypes: [],
-                }) as Type,
+                name: ctx.w.destination,
+                type: typeOfExpression({ ...ctx, w: ctx.w.expression }) as Type,
             };
         case 'returnStatement':
         case 'typeDeclaration':
             return undefined;
         default:
-            throw debug(`${(statement as any).kind} unhandled in extractVariable`);
+            throw debug(`${(ctx.w as any).kind} unhandled in extractVariable`);
     }
 };
 
-const extractVariables = (
-    statements: Ast.UninferredStatement[],
-    variablesInScope: VariableDeclaration[],
-    typeDeclarations: TypeDeclaration[]
-): VariableDeclaration[] => {
+const extractVariables = (ctx: WithContext<Ast.UninferredStatement[]>): VariableDeclaration[] => {
     const variables: VariableDeclaration[] = [];
-    statements.forEach((statement: Ast.UninferredStatement) => {
+    ctx.w.forEach((statement: Ast.UninferredStatement) => {
         switch (statement.kind) {
             case 'returnStatement':
             case 'reassignment':
@@ -154,11 +142,11 @@ const extractVariables = (
                 break;
             case 'declarationAssignment':
             case 'typedDeclarationAssignment':
-                const potentialVariable = extractVariable(
-                    statement,
-                    mergeDeclarations(variablesInScope, variables),
-                    typeDeclarations
-                );
+                const potentialVariable = extractVariable({
+                    w: statement,
+                    availableVariables: mergeDeclarations(ctx.availableVariables, variables),
+                    availableTypes: ctx.availableTypes,
+                });
                 if (potentialVariable) {
                     variables.push(potentialVariable);
                 }
@@ -170,18 +158,18 @@ const extractVariables = (
     return variables;
 };
 
-const functionObjectFromAst = (ctx: UninferredContext<Ast.UninferredFunctionLiteral>): UninferredFunction => ({
-    name: ctx.ast.deanonymizedName,
-    statements: ctx.ast.body,
+const functionObjectFromAst = (ctx: WithContext<Ast.UninferredFunctionLiteral>): UninferredFunction => ({
+    name: ctx.w.deanonymizedName,
+    statements: ctx.w.body,
     variables: [
-        ...ctx.ast.parameters,
-        ...extractVariables(
-            ctx.ast.body,
-            mergeDeclarations(ctx.availableVariables, ctx.ast.parameters),
-            ctx.availableTypes
-        ),
+        ...ctx.w.parameters,
+        ...extractVariables({
+            w: ctx.w.body,
+            availableVariables: mergeDeclarations(ctx.availableVariables, ctx.w.parameters),
+            availableTypes: ctx.availableTypes,
+        }),
     ],
-    parameters: ctx.ast.parameters,
+    parameters: ctx.w.parameters,
 });
 
 const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
@@ -275,9 +263,10 @@ const combineErrors = (potentialErrors: (Type | TypeError[])[]): TypeError[] | n
 };
 
 // TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer() maybe?
-export const typeOfExpression = (ctx: UninferredContext<Ast.UninferredExpression>): Type | TypeError[] => {
-    const recurse = ast => typeOfExpression({ ...ctx, ast });
-    const { ast, availableVariables, availableTypes } = ctx;
+export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Type | TypeError[] => {
+    const recurse = ast => typeOfExpression({ ...ctx, w: ast });
+    const { w, availableVariables, availableTypes } = ctx;
+    const ast = w;
     switch (ast.kind) {
         case 'number':
             return builtinTypes.Integer;
@@ -370,11 +359,12 @@ export const typeOfExpression = (ctx: UninferredContext<Ast.UninferredExpression
             return builtinTypes.String;
         }
         case 'functionLiteral':
-            const f = inferFunction(
-                functionObjectFromAst({ ast, availableVariables, availableTypes }),
-                availableVariables,
-                availableTypes
-            );
+            const functionObject = functionObjectFromAst({ ...ctx, w: ast });
+            const f = inferFunction({
+                w: functionObject,
+                availableVariables: mergeDeclarations(ctx.availableVariables, functionObject.variables),
+                availableTypes: ctx.availableTypes,
+            });
             if (isTypeError(f)) {
                 return f;
             }
@@ -448,6 +438,7 @@ export const typeOfExpression = (ctx: UninferredContext<Ast.UninferredExpression
         case 'identifier': {
             const declaration = availableVariables.find(({ name }) => ast.value == name);
             if (!declaration) {
+                debugger;
                 return [
                     {
                         kind: 'unknownTypeForIdentifier',
@@ -557,13 +548,14 @@ export const typeOfExpression = (ctx: UninferredContext<Ast.UninferredExpression
 };
 
 const typeCheckStatement = (
-    ctx: UninferredContext<Ast.UninferredStatement>
+    ctx: WithContext<Ast.UninferredStatement>
 ): { errors: TypeError[]; newVariables: VariableDeclaration[] } => {
-    const { ast, availableTypes, availableVariables } = ctx;
+    const { w, availableTypes, availableVariables } = ctx;
+    const ast = w;
     if (!ast.kind) debug('!ast.kind');
     switch (ast.kind) {
         case 'returnStatement': {
-            const result = typeOfExpression({ ...ctx, ast: ast.expression });
+            const result = typeOfExpression({ ...ctx, w: ast.expression });
             if (isTypeError(result)) {
                 return { errors: result, newVariables: [] };
             }
@@ -571,7 +563,7 @@ const typeCheckStatement = (
         }
         case 'declarationAssignment': {
             const rightType = typeOfExpression({
-                ast: ast.expression,
+                w: ast.expression,
                 availableTypes,
                 availableVariables: mergeDeclarations(availableVariables, [
                     {
@@ -590,7 +582,7 @@ const typeCheckStatement = (
             return { errors: [], newVariables: [{ name: ast.destination, type: rightType }] };
         }
         case 'reassignment': {
-            const rightType = typeOfExpression({ ...ctx, ast: ast.expression });
+            const rightType = typeOfExpression({ ...ctx, w: ast.expression });
             if (isTypeError(rightType)) {
                 return { errors: rightType, newVariables: [] };
             }
@@ -628,7 +620,7 @@ const typeCheckStatement = (
             const destinationType = ast.type;
             const expressionType = typeOfExpression({
                 ...ctx,
-                ast: ast.expression,
+                w: ast.expression,
                 availableVariables: mergeDeclarations(availableVariables, [
                     { name: ast.destination, type: destinationType },
                 ]),
@@ -675,25 +667,17 @@ const mergeDeclarations = (left: VariableDeclaration[], right: VariableDeclarati
     return result;
 };
 
-const typeCheckFunction = (
-    f: UninferredFunction,
-    variablesInScope: VariableDeclaration[],
-    typeDeclarations: TypeDeclaration[]
-) => {
-    variablesInScope = mergeDeclarations(variablesInScope, f.parameters);
+const typeCheckFunction = (ctx: WithContext<UninferredFunction>) => {
+    let availableVariables = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
     const allErrors: any = [];
-    f.statements.forEach(statement => {
+    ctx.w.statements.forEach(statement => {
         if (allErrors.length == 0) {
-            const { errors, newVariables } = typeCheckStatement({
-                ast: statement,
-                availableVariables: variablesInScope,
-                availableTypes: typeDeclarations,
-            });
-            variablesInScope = mergeDeclarations(variablesInScope, newVariables);
+            const { errors, newVariables } = typeCheckStatement({ ...ctx, w: statement, availableVariables });
+            availableVariables = mergeDeclarations(availableVariables, newVariables);
             allErrors.push(...errors);
         }
     });
-    return { typeErrors: allErrors, identifiers: variablesInScope };
+    return { typeErrors: allErrors, identifiers: availableVariables };
 };
 
 const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaration[] =>
@@ -703,66 +687,56 @@ const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaratio
         location: 'Global' as 'Global',
     }));
 
-const assignmentToGlobalDeclaration = (
-    ast: Ast.UninferredDeclarationAssignment,
-    variablesInScope: VariableDeclaration[],
-    typeDeclarations: TypeDeclaration[]
-): VariableDeclaration => {
-    const result = typeOfExpression({
-        ast: ast.expression,
-        availableVariables: variablesInScope,
-        availableTypes: typeDeclarations,
-    });
+const assignmentToGlobalDeclaration = (ctx: WithContext<Ast.UninferredDeclarationAssignment>): VariableDeclaration => {
+    const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
-    return { name: ast.destination, type: result };
+    return { name: ctx.w.destination, type: result };
 };
 
-type UninferredContext<T extends Ast.UninferredAst> = {
-    ast: T;
-    availableTypes: TypeDeclaration[];
-    availableVariables: VariableDeclaration[];
-};
+type WithContext<T> = { w: T; availableTypes: TypeDeclaration[]; availableVariables: VariableDeclaration[] };
 
-const inferFunction = (
-    f: UninferredFunction,
-    variablesInScope: VariableDeclaration[],
-    typeDeclarations: TypeDeclaration[]
-): Function | TypeError[] => {
-    let variablesFound = mergeDeclarations(variablesInScope, f.parameters);
-    f.statements.forEach(s => {
-        const maybeNewVariable = extractVariable(s, variablesFound, typeDeclarations);
+const inferFunction = (ctx: WithContext<UninferredFunction>): Function | TypeError[] => {
+    let variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
+    let statements: Ast.Statement[] = [];
+    ctx.w.statements.forEach(statement => {
+        const statementContext: WithContext<Ast.UninferredStatement> = {
+            w: statement,
+            availableVariables: variablesFound,
+            availableTypes: ctx.availableTypes,
+        };
+        const maybeNewVariable = extractVariable(statementContext);
         if (maybeNewVariable) {
             variablesFound.push(maybeNewVariable);
         }
+        statements.push(infer(statementContext) as Ast.Statement);
     });
-    const maybeReturnStatement = last(f.statements);
+    const maybeReturnStatement = last(ctx.w.statements);
     if (!maybeReturnStatement || maybeReturnStatement.kind != 'returnStatement') {
         throw debug('Missing returnStatement');
     }
     const returnStatement = maybeReturnStatement;
     const returnType = typeOfExpression({
-        ast: returnStatement.expression,
+        ...ctx,
         availableVariables: variablesFound,
-        availableTypes: typeDeclarations,
+        w: returnStatement.expression,
     });
     if (isTypeError(returnType)) {
         return returnType;
     }
     return {
-        name: f.name,
-        statements: f.statements.map(s =>
-            infer({ ast: s, availableVariables: variablesFound, availableTypes: typeDeclarations })
-        ) as Ast.Statement[],
-        variables: f.variables,
-        parameters: f.parameters,
+        name: ctx.w.name,
+        statements,
+        variables: ctx.w.variables,
+        parameters: ctx.w.parameters,
         returnType: returnType,
     };
 };
 
 // TODO: merge this with typecheck maybe?
-const infer = (ctx: UninferredContext<Ast.UninferredAst>): Ast.Ast => {
-    const recurse = ast => infer({ ...ctx, ast });
-    const { ast, availableVariables, availableTypes } = ctx;
+const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
+    const recurse = ast => infer({ ...ctx, w: ast });
+    const { w, availableVariables, availableTypes } = ctx;
+    const ast = w;
     switch (ast.kind) {
         case 'returnStatement':
             return { kind: 'returnStatement', expression: recurse(ast.expression), sourceLocation: ast.sourceLocation };
@@ -772,11 +746,7 @@ const infer = (ctx: UninferredContext<Ast.UninferredAst>): Ast.Ast => {
                 sourceLocation: ast.sourceLocation,
                 lhs: recurse(ast.lhs),
                 rhs: recurse(ast.rhs),
-                type: typeOfExpression({
-                    ast: ast.lhs,
-                    availableVariables: availableVariables,
-                    availableTypes: availableVariables,
-                }) as Type,
+                type: typeOfExpression({ ...ctx, w: ast.lhs }) as Type,
             };
         case 'product':
             return {
@@ -815,11 +785,7 @@ const infer = (ctx: UninferredContext<Ast.UninferredAst>): Ast.Ast => {
                 destination: ast.destination,
             };
         case 'declarationAssignment':
-            const type = typeOfExpression({
-                ast: ast.expression,
-                availableVariables: availableVariables,
-                availableTypes: availableTypes,
-            });
+            const type = typeOfExpression({ ...ctx, w: ast.expression });
             if (isTypeError(type)) throw debug("type error when there shouldn't be");
             return {
                 kind: 'typedDeclarationAssignment',
@@ -1260,22 +1226,18 @@ const compile = (source: string): FrontendOutput => {
         return { parseErrors: [{ kind: 'unexpectedProgram' }] };
     }
 
-    const typeDeclarations = walkAst<TypeDeclaration, Ast.UninferredTypeDeclaration>(ast, ['typeDeclaration'], n => n);
+    const availableTypes = walkAst<TypeDeclaration, Ast.UninferredTypeDeclaration>(ast, ['typeDeclaration'], n => n);
 
-    let variablesInScope = builtinFunctions;
+    let availableVariables = builtinFunctions;
     const program: UninferredFunction = {
         name: `main_program`,
         statements: ast.statements,
-        variables: extractVariables(ast.statements, variablesInScope, typeDeclarations),
+        variables: extractVariables({ w: ast.statements, availableVariables, availableTypes }),
         parameters: [],
     };
 
     const functions = walkAst<UninferredFunction, Ast.UninferredFunctionLiteral>(ast, ['functionLiteral'], astNode =>
-        functionObjectFromAst({
-            ast: astNode,
-            availableVariables: variablesInScope,
-            availableTypes: typeDeclarations,
-        })
+        functionObjectFromAst({ w: astNode, availableVariables, availableTypes })
     );
 
     let stringLiteralIdMaker = idMaker();
@@ -1286,12 +1248,12 @@ const compile = (source: string): FrontendOutput => {
     );
 
     const stringLiterals: StringLiteralData[] = uniqueBy(s => s.value, nonUniqueStringLiterals);
-    variablesInScope = mergeDeclarations(variablesInScope, getFunctionTypeMap(functions));
-    const programTypeCheck = typeCheckFunction(program, variablesInScope, typeDeclarations);
-    variablesInScope = mergeDeclarations(variablesInScope, programTypeCheck.identifiers);
+    availableVariables = mergeDeclarations(availableVariables, getFunctionTypeMap(functions));
+    const programTypeCheck = typeCheckFunction({ w: program, availableVariables, availableTypes });
+    availableVariables = mergeDeclarations(availableVariables, programTypeCheck.identifiers);
 
     let typeErrors: TypeError[][] = functions.map(
-        f => typeCheckFunction(f, variablesInScope, typeDeclarations).typeErrors
+        f => typeCheckFunction({ w: f, availableVariables, availableTypes }).typeErrors
     );
     typeErrors.push(programTypeCheck.typeErrors);
 
@@ -1300,13 +1262,11 @@ const compile = (source: string): FrontendOutput => {
         return { typeErrors: flatTypeErrors };
     }
 
-    const typedProgramStatements = program.statements.map(s =>
-        infer({ ast: s, availableVariables: variablesInScope, availableTypes: typeDeclarations })
-    );
+    const typedProgramStatements = program.statements.map(s => infer({ w: s, availableVariables, availableTypes }));
 
     const typedFunctions: Function[] = [];
     functions.forEach(f => {
-        const functionOrTypeError = inferFunction(f, variablesInScope, typeDeclarations);
+        const functionOrTypeError = inferFunction({ w: f, availableVariables, availableTypes });
         if (isTypeError(functionOrTypeError)) {
             typeErrors.push(functionOrTypeError);
         } else {
@@ -1315,9 +1275,9 @@ const compile = (source: string): FrontendOutput => {
                 returnType: functionOrTypeError.returnType,
                 statements: f.statements.map(s =>
                     infer({
-                        ast: s,
-                        availableVariables: mergeDeclarations(variablesInScope, f.variables),
-                        availableTypes: typeDeclarations,
+                        w: s,
+                        availableVariables: mergeDeclarations(availableVariables, f.variables),
+                        availableTypes,
                     })
                 ) as Ast.Statement[],
             });
@@ -1331,14 +1291,14 @@ const compile = (source: string): FrontendOutput => {
 
     const globalDeclarations: VariableDeclaration[] = program.statements
         .filter(s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment')
-        .map(assignment => assignmentToGlobalDeclaration(assignment as any, variablesInScope, typeDeclarations));
+        .map(assignment => assignmentToGlobalDeclaration({ w: assignment as any, availableVariables, availableTypes }));
 
-    const inferredProgram = inferFunction(program, variablesInScope, typeDeclarations);
+    const inferredProgram = inferFunction({ w: program, availableVariables, availableTypes });
     if (isTypeError(inferredProgram)) {
         return { typeErrors: inferredProgram };
     }
 
-    if (!typesAreEqual(inferredProgram.returnType, builtinTypes.Integer, typeDeclarations)) {
+    if (!typesAreEqual(inferredProgram.returnType, builtinTypes.Integer, availableTypes)) {
         return {
             typeErrors: [
                 {
@@ -1351,7 +1311,7 @@ const compile = (source: string): FrontendOutput => {
     }
 
     return {
-        types: typeDeclarations,
+        types: availableTypes,
         functions: typedFunctions,
         program: inferredProgram,
         globalDeclarations,

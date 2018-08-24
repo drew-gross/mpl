@@ -509,7 +509,7 @@ test('correct inferred type for function', t => {
     const functionSource = 'a: Integer => 11';
     const parseResult: MplParseResult = parse(grammar, 'function', lex(tokenSpecs, functionSource), 0);
     const ast: Ast.UninferredExpression = astFromParseResult(parseResult as MplAst) as Ast.UninferredExpression;
-    t.deepEqual(typeOfExpression({ ast, availableVariables: [], availableTypes: [] }), {
+    t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
         kind: 'Function',
         arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
     });
@@ -1643,7 +1643,7 @@ test('type of objectLiteral', t => {
         sourceLocation: { line: 6, column: 16 },
     };
     const type = typeOfExpression({
-        ast,
+        w: ast,
         availableVariables: [],
         availableTypes: [
             {
