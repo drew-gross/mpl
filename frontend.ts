@@ -1248,7 +1248,6 @@ const compile = (source: string): FrontendOutput => {
     );
 
     const stringLiterals: StringLiteralData[] = uniqueBy(s => s.value, nonUniqueStringLiterals);
-    availableVariables = mergeDeclarations(availableVariables, getFunctionTypeMap(functions));
     const programTypeCheck = typeCheckFunction({ w: program, availableVariables, availableTypes });
     availableVariables = mergeDeclarations(availableVariables, programTypeCheck.identifiers);
 
