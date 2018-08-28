@@ -510,8 +510,51 @@ test('correct inferred type for function', t => {
     const parseResult: MplParseResult = parse(grammar, 'function', lex(tokenSpecs, functionSource), 0);
     const ast: Ast.UninferredExpression = astFromParseResult(parseResult as MplAst) as Ast.UninferredExpression;
     t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
-        kind: 'Function',
-        arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
+        type: {
+            kind: 'Function',
+            arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
+        },
+        extractedFunctions: [
+            {
+                name: 'anonymous_2',
+                parameters: [
+                    {
+                        name: 'a',
+                        type: {
+                            kind: 'Integer',
+                        },
+                    },
+                ],
+                returnType: {
+                    kind: 'Integer',
+                },
+                statements: [
+                    {
+                        expression: {
+                            kind: 'number',
+                            sourceLocation: {
+                                column: 15,
+                                line: 1,
+                            },
+                            value: 11,
+                        },
+                        kind: 'returnStatement',
+                        sourceLocation: {
+                            column: 1,
+                            line: 1,
+                        },
+                    },
+                ],
+                variables: [
+                    {
+                        name: 'a',
+                        type: {
+                            kind: 'Integer',
+                        },
+                    },
+                ],
+            },
+        ],
     });
 });
 
@@ -1660,9 +1703,12 @@ test('type of objectLiteral', t => {
         ],
     });
     const expectedType = {
-        kind: 'Product',
-        name: 'BoolPair',
-        members: [{ name: 'first', type: { kind: 'Boolean' } }, { name: 'second', type: { kind: 'Boolean' } }],
+        type: {
+            kind: 'Product',
+            name: 'BoolPair',
+            members: [{ name: 'first', type: { kind: 'Boolean' } }, { name: 'second', type: { kind: 'Boolean' } }],
+        },
+        extractedFunctions: [],
     };
     t.deepEqual(type, expectedType as any);
 });

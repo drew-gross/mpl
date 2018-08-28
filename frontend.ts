@@ -122,7 +122,7 @@ const extractVariable = (ctx: WithContext<Ast.UninferredStatement>): VariableDec
             ]);
             return {
                 name: ctx.w.destination,
-                type: typeOfExpression({ ...ctx, w: ctx.w.expression }) as Type,
+                type: (typeOfExpression({ ...ctx, w: ctx.w.expression }) as TOEResult).type,
             };
         case 'returnStatement':
         case 'typeDeclaration':
@@ -250,9 +250,9 @@ const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
     return ast;
 };
 
-const isTypeError = (val: Type | Function | TypeError[]): val is TypeError[] => Array.isArray(val);
+const isTypeError = <T>(val: T | TypeError[]): val is TypeError[] => Array.isArray(val);
 
-const combineErrors = (potentialErrors: (Type | TypeError[])[]): TypeError[] | null => {
+const combineErrors = <Success>(potentialErrors: (Success | TypeError[])[]): TypeError[] | null => {
     const result: TypeError[] = [];
     potentialErrors.forEach(e => {
         if (isTypeError(e)) {
@@ -262,14 +262,16 @@ const combineErrors = (potentialErrors: (Type | TypeError[])[]): TypeError[] | n
     return result.length > 0 ? result : null;
 };
 
+type TOEResult = { type: Type; extractedFunctions: Function[] };
+
 // TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer() maybe?
-export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Type | TypeError[] => {
+export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): TOEResult | TypeError[] => {
     const recurse = ast => typeOfExpression({ ...ctx, w: ast });
     const { w, availableVariables, availableTypes } = ctx;
     const ast = w;
     switch (ast.kind) {
         case 'number':
-            return builtinTypes.Integer;
+            return { type: builtinTypes.Integer, extractedFunctions: [] };
         case 'addition':
         case 'product':
         case 'subtraction': {
@@ -279,31 +281,36 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Ty
             if (combinedErrors) {
                 return combinedErrors;
             }
-            if (!typesAreEqual(leftType as Type, builtinTypes.Integer, availableTypes)) {
+            const lt = leftType as TOEResult;
+            const rt = rightType as TOEResult;
+            if (!typesAreEqual(lt.type, builtinTypes.Integer, availableTypes)) {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
                         operator: ast.kind,
                         expected: 'Integer',
-                        found: leftType as Type,
+                        found: lt.type,
                         side: 'left',
                         sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
-            if (!typesAreEqual(rightType as Type, builtinTypes.Integer, availableTypes)) {
+            if (!typesAreEqual(rt.type, builtinTypes.Integer, availableTypes)) {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
                         operator: ast.kind,
                         expected: 'Integer',
-                        found: rightType as Type,
+                        found: rt.type,
                         side: 'right',
                         sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
-            return builtinTypes.Integer;
+            return {
+                type: builtinTypes.Integer,
+                extractedFunctions: [...lt.extractedFunctions, ...rt.extractedFunctions],
+            };
         }
         case 'equality': {
             const leftType = recurse(ast.lhs);
@@ -312,18 +319,20 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Ty
             if (combinedErrors) {
                 return combinedErrors;
             }
-            if (!typesAreEqual(leftType as Type, rightType as Type, availableTypes)) {
+            const lt = leftType as TOEResult;
+            const rt = rightType as TOEResult;
+            if (!typesAreEqual(lt.type, rt.type, availableTypes)) {
                 return [
                     {
                         kind: 'typeMismatchForOperator',
-                        leftType: leftType as Type,
-                        rightType: rightType as Type,
+                        leftType: lt.type,
+                        rightType: rt.type,
                         operator: 'equality',
                         sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
-            return builtinTypes.Boolean;
+            return { type: builtinTypes.Boolean, extractedFunctions: [] };
         }
         case 'concatenation': {
             const leftType = recurse(ast.lhs);
@@ -332,11 +341,13 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Ty
             if (combinedErrors) {
                 return combinedErrors;
             }
-            if ((leftType as Type).kind !== 'String') {
+            const lt = leftType as TOEResult;
+            const rt = rightType as TOEResult;
+            if (lt.type.kind !== 'String') {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
-                        found: leftType as Type,
+                        found: lt.type,
                         expected: 'String',
                         operator: 'concatenation',
                         side: 'left',
@@ -344,11 +355,11 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Ty
                     },
                 ];
             }
-            if ((rightType as Type).kind !== 'String') {
+            if (rt.type.kind !== 'String') {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
-                        found: rightType as Type,
+                        found: rt.type,
                         expected: 'String',
                         operator: 'concatenation',
                         side: 'right',
@@ -356,7 +367,10 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Ty
                     },
                 ];
             }
-            return builtinTypes.String;
+            return {
+                type: builtinTypes.String,
+                extractedFunctions: [...lt.extractedFunctions, ...rt.extractedFunctions],
+            };
         }
         case 'functionLiteral':
             const functionObject = functionObjectFromAst({ ...ctx, w: ast });
@@ -369,11 +383,14 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Ty
                 return f;
             }
             return {
-                kind: 'Function',
-                arguments: [...ast.parameters.map(p => p.type), f.returnType],
+                type: {
+                    kind: 'Function',
+                    arguments: [...ast.parameters.map(p => p.type), f.returnType],
+                },
+                extractedFunctions: [f], // TODO: Add functions extracted within the function itself
             };
         case 'callExpression': {
-            const argTypes: (Type | TypeError[])[] = ast.arguments.map(argument => recurse(argument));
+            const argTypes: (TOEResult | TypeError[])[] = ast.arguments.map(argument => recurse(argument));
             const argTypeErrors: TypeError[] = [];
             argTypes.forEach(argType => {
                 if (isTypeError(argType)) {
@@ -417,12 +434,12 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Ty
                 ];
             }
             for (let i = 0; i < argTypes.length; i++) {
-                if (!typesAreEqual(argTypes[i] as Type, functionType.arguments[i], availableTypes)) {
+                if (!typesAreEqual((argTypes[i] as TOEResult).type, functionType.arguments[i], availableTypes)) {
                     return [
                         {
                             kind: 'wrongArgumentType',
                             targetFunction: functionName,
-                            passedType: argTypes[i] as Type,
+                            passedType: (argTypes[i] as TOEResult).type,
                             expectedType: functionType.arguments[i],
                             sourceLocation: ast.sourceLocation,
                         } as TypeError,
@@ -433,12 +450,11 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Ty
             if (!maybeReturnType) {
                 throw debug('Function had no return type');
             }
-            return maybeReturnType;
+            return { type: maybeReturnType, extractedFunctions: [] };
         }
         case 'identifier': {
             const declaration = availableVariables.find(({ name }) => ast.value == name);
             if (!declaration) {
-                debugger;
                 return [
                     {
                         kind: 'unknownTypeForIdentifier',
@@ -447,25 +463,30 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Ty
                     },
                 ];
             }
-            return declaration.type;
+            return { type: declaration.type, extractedFunctions: [] };
         }
         case 'ternary': {
             const conditionType = recurse(ast.condition);
             const trueBranchType = recurse(ast.ifTrue);
             const falseBranchType = recurse(ast.ifFalse);
             const combinedErrors = combineErrors([conditionType, trueBranchType, falseBranchType]);
-            if (combinedErrors || isTypeError(trueBranchType) || isTypeError(falseBranchType)) {
+            if (
+                combinedErrors ||
+                isTypeError(trueBranchType) ||
+                isTypeError(falseBranchType) ||
+                isTypeError(conditionType)
+            ) {
                 if (combinedErrors) {
                     return combinedErrors;
                 } else {
                     return [];
                 }
             }
-            if (!typesAreEqual(conditionType as Type, builtinTypes.Boolean, availableTypes)) {
+            if (!typesAreEqual(conditionType.type, builtinTypes.Boolean, availableTypes)) {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
-                        found: (conditionType as any).name,
+                        found: conditionType.type,
                         expected: 'Boolean',
                         operator: 'Ternary',
                         side: 'left',
@@ -473,12 +494,12 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Ty
                     },
                 ];
             }
-            if (!typesAreEqual(trueBranchType, falseBranchType, availableTypes)) {
+            if (!typesAreEqual(trueBranchType.type, falseBranchType.type, availableTypes)) {
                 return [
                     {
                         kind: 'ternaryBranchMismatch',
-                        trueBranchType: trueBranchType,
-                        falseBranchType: falseBranchType,
+                        trueBranchType: trueBranchType.type,
+                        falseBranchType: falseBranchType.type,
                         sourceLocation: ast.sourceLocation,
                     } as TypeError,
                 ];
@@ -486,28 +507,30 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Ty
             return trueBranchType;
         }
         case 'booleanLiteral':
-            return builtinTypes.Boolean;
+            return { type: builtinTypes.Boolean, extractedFunctions: [] };
         case 'stringLiteral':
-            return builtinTypes.String;
+            return { type: builtinTypes.String, extractedFunctions: [] };
         case 'objectLiteral':
             const memberTypes = ast.members.map(({ expression }) => recurse(expression));
             const typeErrors: TypeError[] = flatten(memberTypes.filter(isTypeError));
             if (!(typeErrors.length == 0)) return typeErrors;
-
             return {
-                kind: 'Product',
-                name: ast.typeName,
-                members: ast.members.map(({ name, expression }) => ({
-                    name,
-                    type: recurse(expression) as Type,
-                })),
+                type: {
+                    kind: 'Product',
+                    name: ast.typeName,
+                    members: ast.members.map(({ name, expression }) => ({
+                        name,
+                        type: (recurse(expression) as TOEResult).type,
+                    })),
+                },
+                extractedFunctions: [], // TODO: propagate these
             };
         case 'memberAccess':
             const lhsType = recurse(ast.lhs);
             if (isTypeError(lhsType)) {
                 return lhsType;
             }
-            let resolvedLhs = lhsType;
+            let resolvedLhs = lhsType.type;
             if (resolvedLhs.kind == 'NameRef') {
                 const resolved = resolveType(resolvedLhs, availableTypes);
                 if (!resolved) {
@@ -525,7 +548,7 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Ty
                 return [
                     {
                         kind: 'invalidMemberAccess',
-                        found: lhsType,
+                        found: lhsType.type,
                         sourceLocation: ast.sourceLocation,
                     },
                 ];
@@ -535,13 +558,13 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): Ty
                 return [
                     {
                         kind: 'objectDoesNotHaveMember',
-                        lhsType: lhsType,
+                        lhsType: lhsType.type,
                         member: ast.rhs,
                         sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
-            return accessedMember.type;
+            return { type: accessedMember.type, extractedFunctions: [] };
         default:
             throw debug(`${(ast as any).kind} unhandled in typeOfExpression`);
     }
@@ -579,7 +602,7 @@ const typeCheckStatement = (
                 return { errors: rightType, newVariables: [] };
             }
             // Left type is inferred as right type
-            return { errors: [], newVariables: [{ name: ast.destination, type: rightType }] };
+            return { errors: [], newVariables: [{ name: ast.destination, type: rightType.type }] };
         }
         case 'reassignment': {
             const rightType = typeOfExpression({ ...ctx, w: ast.expression });
@@ -599,14 +622,14 @@ const typeCheckStatement = (
                     newVariables: [],
                 };
             }
-            if (!typesAreEqual(leftType.type, rightType, availableTypes)) {
+            if (!typesAreEqual(leftType.type, rightType.type, availableTypes)) {
                 return {
                     errors: [
                         {
                             kind: 'assignWrongType',
                             lhsName: ast.destination,
                             lhsType: leftType.type,
-                            rhsType: rightType,
+                            rhsType: rightType.type,
                             sourceLocation: ast.sourceLocation,
                         },
                     ],
@@ -628,14 +651,14 @@ const typeCheckStatement = (
             if (isTypeError(expressionType)) {
                 return { errors: expressionType, newVariables: [] };
             }
-            if (!typesAreEqual(expressionType, destinationType, availableTypes)) {
+            if (!typesAreEqual(expressionType.type, destinationType, availableTypes)) {
                 return {
                     errors: [
                         {
                             kind: 'assignWrongType',
                             lhsName: ast.destination,
                             lhsType: destinationType,
-                            rhsType: expressionType,
+                            rhsType: expressionType.type,
                             sourceLocation: ast.sourceLocation,
                         },
                     ],
@@ -690,7 +713,7 @@ const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaratio
 const assignmentToGlobalDeclaration = (ctx: WithContext<Ast.UninferredDeclarationAssignment>): VariableDeclaration => {
     const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
-    return { name: ctx.w.destination, type: result };
+    return { name: ctx.w.destination, type: result.type };
 };
 
 type WithContext<T> = { w: T; availableTypes: TypeDeclaration[]; availableVariables: VariableDeclaration[] };
@@ -728,7 +751,7 @@ const inferFunction = (ctx: WithContext<UninferredFunction>): Function | TypeErr
         statements,
         variables: ctx.w.variables,
         parameters: ctx.w.parameters,
-        returnType: returnType,
+        returnType: returnType.type,
     };
 };
 
@@ -741,12 +764,15 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
         case 'returnStatement':
             return { kind: 'returnStatement', expression: recurse(ast.expression), sourceLocation: ast.sourceLocation };
         case 'equality':
+            const equalityType = typeOfExpression({ ...ctx, w: ast.lhs });
+            if (isTypeError(equalityType)) throw debug('couldNotFindType');
+
             return {
                 kind: 'equality',
                 sourceLocation: ast.sourceLocation,
                 lhs: recurse(ast.lhs),
                 rhs: recurse(ast.rhs),
-                type: typeOfExpression({ ...ctx, w: ast.lhs }) as Type,
+                type: equalityType.type,
             };
         case 'product':
             return {
@@ -791,7 +817,7 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
                 kind: 'typedDeclarationAssignment',
                 sourceLocation: ast.sourceLocation,
                 expression: recurse(ast.expression),
-                type,
+                type: type.type,
                 destination: ast.destination,
             };
         case 'reassignment':
