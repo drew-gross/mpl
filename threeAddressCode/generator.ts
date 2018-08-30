@@ -130,24 +130,6 @@ export type TargetRequirements = {
     alignment: number;
 };
 
-// TODO: Figure out how to unify this with normal typeOfExpression
-const TACtypeOfExpression = (
-    ast: Ast.Ast,
-    variablesInScope: { [key: string]: Register },
-    globalNameMap: { [key: string]: GlobalInfo }
-): Type => {
-    switch (ast.kind) {
-        case 'identifier':
-            const local = variablesInScope[ast.value];
-            if (local) throw debug('need local type info here');
-            const global = globalNameMap[ast.value];
-            if (global) return global.originalDeclaration.type;
-            throw debug('couldnt find variable');
-        default:
-            throw debug(`${ast.kind} unhandled in TACtypeOfExpression`);
-    }
-};
-
 const memberOffset = (type: Type, memberName: string, reqs: TargetRequirements): number => {
     if (type.kind != 'Product') throw debug('need a product here');
     const result = type.members.findIndex(m => m.name == memberName);
@@ -841,14 +823,22 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
         case 'memberAccess': {
             const lhs = makeTemporary('object_to_access');
             const lhsInstructions = recurse({ ast: ast.lhs, destination: lhs });
-            const objectType = TACtypeOfExpression(ast.lhs, variablesInScope, globalNameMap);
+            let type = ast.lhsType;
+            if (type.kind == 'NameRef') {
+                const resolvedType = resolve(type, types);
+                if (resolvedType) {
+                    type = resolvedType;
+                } else {
+                    throw debug('invalid nameref');
+                }
+            }
             return compileExpression<ThreeAddressStatement>([lhsInstructions], ([makeLhs]) => [
                 ...makeLhs,
                 {
                     kind: 'loadMemory',
                     from: lhs,
                     to: destination,
-                    offset: memberOffset(objectType, ast.rhs, reqs),
+                    offset: memberOffset(type, ast.rhs, reqs),
                     why: 'Read the memory',
                 },
             ]);

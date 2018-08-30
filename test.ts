@@ -1348,7 +1348,7 @@ return ip.first * ip.second;
     expectedExitCode: 21,
 });
 
-test.failing('int pair in function', compileAndRun, {
+test('int pair in function', compileAndRun, {
     source: `
 IntPair := {
     first: Integer;

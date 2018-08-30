@@ -866,11 +866,17 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
                 })),
             };
         case 'memberAccess':
+            const accessedObject = recurse(ast.lhs);
+            const accessedType = typeOfExpression({ w: ast.lhs, availableVariables, availableTypes });
+            if (isTypeError(accessedType)) {
+                throw debug("shouldn't be a type error here");
+            }
             return {
                 kind: 'memberAccess',
                 sourceLocation: ast.sourceLocation,
-                lhs: recurse(ast.lhs),
+                lhs: accessedObject,
                 rhs: ast.rhs,
+                lhsType: accessedType.type,
             };
         case 'number':
         case 'identifier':

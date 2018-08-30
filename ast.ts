@@ -129,6 +129,7 @@ export type MemberAccess = {
     kind: 'memberAccess';
     sourceLocation: SourceLocation;
     lhs: Ast;
+    lhsType: Type;
     rhs: string;
 };
 
