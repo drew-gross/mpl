@@ -12,8 +12,12 @@ import join from './util/join.js';
 import { tokenSpecs, grammar } from './grammar.js';
 import { parse, stripResultIndexes, toDotFile, parseResultIsError, stripSourceLocation } from './parser-combinator.js';
 import * as dot from 'graphlib-dot';
-import showGraphInChrome from './util/graph/showInChrome.js';
+import { makeAllFunctions } from './threeAddressCode/generator.js';
+import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCode/runtime.js';
+import tacToString from './threeAddressCode/toString.js';
+import parseTac from './threeAddressCode/parser.js';
 
+import showGraphInChrome from './util/graph/showInChrome.js';
 import mipsBackend from './backends/mips.js';
 import jsBackend from './backends/js.js';
 import cBackend from './backends/c.js';
@@ -178,6 +182,7 @@ export const compileAndRun = async (
         });
     });
 
+    // Print the structure if requested, make sure this doesn't crash if not requested
     const printStructure = printSubsteps.includes('structure') ? console.log.bind(console) : () => {};
     const structure = frontendOutput as BackendInputs;
     printStructure('Functions:');
@@ -196,6 +201,16 @@ export const compileAndRun = async (
     structure.program.statements.forEach(statement => {
         printStructure(`---> `, astToString(statement));
     });
+
+    // Do a roundtrip on three address code to string and back to check the parser for that
+    const tac = makeAllFunctions(frontendOutput, 'main', [], mallocWithSbrk(7), printWithPrintRuntimeFunction(11), 13, {
+        alignment: 17,
+    });
+
+    const stringForm = tacToString(tac);
+
+    const roundtripResult = parseTac(stringForm);
+    t.deepEqual(tac, roundtripResult);
 
     // Backends
     const backends: Backend[] = [jsBackend, cBackend, mipsBackend, x64Backend];
