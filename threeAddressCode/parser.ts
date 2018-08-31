@@ -1,3 +1,5 @@
-export default (input: string): never[] => {
-    return [];
+import { ThreeAddressProgram } from './generator.js';
+
+export default (input: string): ThreeAddressProgram => {
+    return { globalNameMap: {}, functions: [] };
 };
