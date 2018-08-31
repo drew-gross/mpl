@@ -1040,6 +1040,8 @@ export const threeAddressCodeToTarget = <TargetRegister>(
     }
 };
 
+export type ThreeAddressProgram = { globalNameMap: { [key: string]: GlobalInfo }; functions: ThreeAddressFunction[] };
+
 export const makeAllFunctions = (
     { types, functions, program, globalDeclarations, stringLiterals }: BackendInputs,
     mainName: string,
@@ -1048,7 +1050,7 @@ export const makeAllFunctions = (
     printImpl: ThreeAddressFunction,
     bytesInWord,
     reqs: TargetRequirements
-): { globalNameMap: { [key: string]: GlobalInfo }; functions: ThreeAddressFunction[] } => {
+): ThreeAddressProgram => {
     const temporaryNameMaker = idAppender();
     const makeTemporary = name => ({ name: temporaryNameMaker(name) });
     const labelMaker = idAppender();

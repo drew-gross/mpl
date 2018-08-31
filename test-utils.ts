@@ -14,7 +14,7 @@ import { parse, stripResultIndexes, toDotFile, parseResultIsError, stripSourceLo
 import * as dot from 'graphlib-dot';
 import { makeAllFunctions } from './threeAddressCode/generator.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCode/runtime.js';
-import tacToString from './threeAddressCode/toString.js';
+import tacToString from './threeAddressCode/programToString.js';
 import parseTac from './threeAddressCode/parser.js';
 
 import showGraphInChrome from './util/graph/showInChrome.js';

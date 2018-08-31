@@ -9,7 +9,7 @@ import grid from './util/grid.js';
 import { RegisterAssignment } from './backend-utils.js';
 import { Register, isEqual as registerIsEqual } from './register.js';
 import { ThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
-import tasToString from './threeAddressCode/toString.js';
+import tasToString from './threeAddressCode/statementToString.js';
 import { Graph } from 'graphlib';
 
 export type BasicBlock = {
