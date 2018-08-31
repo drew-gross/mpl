@@ -209,9 +209,13 @@ export const compileAndRun = async (
 
     const stringForm = tacToString(tac);
 
-    const roundtripResult = parseTac(stringForm);
-    t.deepEqual(tac, roundtripResult);
+    if (printSubsteps.includes('threeAddressCode')) {
+        console.log(stringForm);
+    }
 
+    const roundtripResult = parseTac(stringForm);
+    //t.deepEqual(tac, roundtripResult);
+    t.deepEqual(1, 0);
     // Backends
     const backends: Backend[] = [jsBackend, cBackend, mipsBackend, x64Backend];
     for (let i = 0; i < backends.length; i++) {
