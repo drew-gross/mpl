@@ -637,7 +637,7 @@ test('double product with brackets', compileAndRun, {
     },
 });
 
-test('id function', compileAndRun, {
+test.only('id function', compileAndRun, {
     source: 'id := a: Integer => a; return id(5)',
     expectedExitCode: 5,
     printSubsteps: 'threeAddressCode',

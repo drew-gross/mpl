@@ -12,7 +12,7 @@ import {
     AstWithIndex,
 } from '../parser-combinator.js';
 
-type TacToken = 'globals' | 'colon' | 'identifier' | 'invalid';
+type TacToken = 'globals' | 'colon' | 'number' | 'identifier' | 'invalid';
 
 const tokenSpecs: TokenSpec<TacToken>[] = [
     {
@@ -24,6 +24,12 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         token: '\\:',
         type: 'colon',
         toString: _ => ':',
+    },
+    {
+        token: '\\d+',
+        type: 'number',
+        action: parseInt,
+        toString: x => x.toString(),
     },
     {
         token: '[a-z]\\w*',
@@ -45,13 +51,14 @@ const tacTerminal = token => terminal<TacAstNode, TacToken>(token);
 const tacOptional = parser => Optional<TacAstNode, TacToken>(parser);
 
 const identifier = tacTerminal('identifier');
+const number = tacTerminal('number');
 const colon = tacTerminal('colon');
 const globals = tacTerminal('globals');
 
 const grammar: Grammar<TacAstNode, TacToken> = {
     program: Sequence('program', [globals, colon, 'globalList']),
     globalList: OneOf([Sequence('globalList', ['global', 'globalList']), 'global']),
-    global: identifier,
+    global: Sequence('global', [identifier, colon, identifier, number]),
 };
 
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {
@@ -68,7 +75,6 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
         default:
             throw debug(`${ast.type} unhandled in tacFromParseResult`);
     }
-    return { globals: {}, functions: [] };
 };
 
 type ParseError = string;
