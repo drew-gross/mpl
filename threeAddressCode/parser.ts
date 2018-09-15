@@ -1,6 +1,16 @@
+import debug from '../util/debug.js';
 import { TokenSpec, lex } from '../lex.js';
 import { ThreeAddressProgram } from './generator.js';
-import { Grammar, Sequence, OneOf, terminal, Optional, parse } from '../parser-combinator.js';
+import {
+    Grammar,
+    Sequence,
+    OneOf,
+    terminal,
+    Optional,
+    parse,
+    parseResultIsError,
+    AstWithIndex,
+} from '../parser-combinator.js';
 
 type TacToken = 'globals' | 'colon' | 'identifier' | 'invalid';
 
@@ -36,18 +46,41 @@ const tacOptional = parser => Optional<TacAstNode, TacToken>(parser);
 
 const identifier = tacTerminal('identifier');
 const colon = tacTerminal('colon');
-const globalKw = tacTerminal('globals');
+const globals = tacTerminal('globals');
 
 const grammar: Grammar<TacAstNode, TacToken> = {
-    program: Sequence('program', [globalKw, colon, 'globalList']),
+    program: Sequence('program', [globals, colon, 'globalList']),
     globalList: OneOf([Sequence('globalList', ['global', 'globalList']), 'global']),
     global: identifier,
 };
 
-export default (input: string): ThreeAddressProgram => {
-    const tokens = lex(tokenSpecs, input);
-    console.log(tokens);
-    const parsed = parse(grammar, 'program', tokens, 0);
-    console.log(parsed);
+const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {
+    switch (ast.type) {
+        case 'program':
+            if (ast.children[0].type != 'globals') return ['WrongShapeAst'];
+            if (ast.children[1].type != 'colon') return ['WrongShapeAst'];
+            return tacFromParseResult(ast.children[2]);
+        case 'identifier':
+            return {
+                globalNameMap: { [ast.value as string]: { newName: 'wat', originalDeclaration: {} as any } },
+                functions: [],
+            };
+        default:
+            throw debug(`${ast.type} unhandled in tacFromParseResult`);
+    }
     return { globalNameMap: {}, functions: [] };
+};
+
+type ParseError = string;
+
+export default (input: string): ThreeAddressProgram | ParseError[] => {
+    const tokens = lex(tokenSpecs, input);
+    if (tokens.some(t => t.type == 'invalid')) {
+        return ['found an invalid token'];
+    }
+    const parseResult = parse(grammar, 'program', tokens, 0);
+    if (parseResultIsError(parseResult)) {
+        return ['unable to parse'];
+    }
+    return tacFromParseResult(parseResult);
 };
