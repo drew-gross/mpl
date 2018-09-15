@@ -111,7 +111,6 @@ export type TargetThreeAddressStatement<TargetRegister> = { why: string } & (
     | { kind: 'push'; register: TargetRegister }
     | { kind: 'pop'; register: TargetRegister });
 
-// TODO: This seems really janky
 export type GlobalInfo = { newName: string; originalDeclaration: VariableDeclaration };
 
 export type BackendOptions = {
@@ -1040,7 +1039,10 @@ export const threeAddressCodeToTarget = <TargetRegister>(
     }
 };
 
-export type ThreeAddressProgram = { globalNameMap: { [key: string]: GlobalInfo }; functions: ThreeAddressFunction[] };
+export type ThreeAddressProgram = {
+    globals: { [key: string]: { mangledName: string; bytes: number } };
+    functions: ThreeAddressFunction[];
+};
 
 export const makeAllFunctions = (
     { types, functions, program, globalDeclarations, stringLiterals }: BackendInputs,
@@ -1057,11 +1059,14 @@ export const makeAllFunctions = (
     const globalNameMaker = idAppender();
 
     const globalNameMap: { [key: string]: GlobalInfo } = {};
+    const globals = {};
     globalDeclarations.forEach(declaration => {
+        const mangledName = globalNameMaker(declaration.name);
         globalNameMap[declaration.name] = {
-            newName: globalNameMaker(declaration.name),
+            newName: mangledName,
             originalDeclaration: declaration,
         };
+        globals[declaration.name] = { mangledName, bytes: typeSize(reqs, declaration.type, types) };
     });
 
     const userFunctions: ThreeAddressFunction[] = functions.map(f =>
@@ -1122,5 +1127,5 @@ export const makeAllFunctions = (
         verifyNoLeaks,
     ].map(f => f(bytesInWord));
 
-    return { globalNameMap, functions: [...runtimeFunctions, mallocImpl, printImpl, ...userFunctions, mainProgram] };
+    return { globals, functions: [...runtimeFunctions, mallocImpl, printImpl, ...userFunctions, mainProgram] };
 };

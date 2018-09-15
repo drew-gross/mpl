@@ -1,10 +1,12 @@
 import { ThreeAddressProgram } from './generator.js';
 import join from '../util/join.js';
 
-export default ({ globalNameMap, functions }: ThreeAddressProgram): string => {
-    const globals = Object.keys(globalNameMap);
+export default ({ globals, functions }: ThreeAddressProgram): string => {
+    const globalStrings = Object.keys(globals).map(
+        originalName => `${originalName}: ${globals[originalName].mangledName} ${globals[originalName].bytes}`
+    );
     return `
 globals:
-${join(globals, '\n')}
+${join(globalStrings, '\n')}
 `;
 };

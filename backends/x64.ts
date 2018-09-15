@@ -196,7 +196,7 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
 
 const toExectuable = (inputs: BackendInputs) => {
-    const { globalNameMap, functions } = makeAllFunctions(
+    const { globals, functions } = makeAllFunctions(
         inputs,
         'start',
         [
@@ -222,8 +222,8 @@ section .data
 first_block: dq 0
 ${join(inputs.stringLiterals.map(stringLiteralDeclaration), '\n')}
 section .bss
-${Object.values(globalNameMap)
-        .map(({ newName }) => `${newName}: resq 1`) // TODO: actual size of var instead of always resq
+${Object.values(globals)
+        .map(({ mangledName }) => `${mangledName}: resq 1`) // TODO: actual size of var instead of always resq
         .join('\n')}
 ${Object.keys(errors)
         .map(key => `${errors[key].name}: resd 1`) // TODO: Fix this

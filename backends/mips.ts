@@ -192,16 +192,11 @@ const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
     return join(flatten(fullRtl.map(threeAddressCodeToMips)), '\n');
 };
 
-const globalDeclaration = (
-    name: string,
-    type: Type,
-    availableTypes: TypeDeclaration[],
-    reqs: TargetRequirements
-): string => `${name}: .space ${typeSize(reqs, type, availableTypes)}`;
+const globalDeclaration = (name: string, bytes: number): string => `${name}: .space ${bytes}`;
 
 const toExectuable = (inputs: BackendInputs) => {
     const mipsReqs: TargetRequirements = { alignment: 4 };
-    const { globalNameMap, functions } = makeAllFunctions(
+    const { globals, functions } = makeAllFunctions(
         inputs,
         'main',
         [
@@ -227,10 +222,8 @@ const toExectuable = (inputs: BackendInputs) => {
     );
     return `
 .data
-${Object.values(globalNameMap)
-        .map(({ newName, originalDeclaration }) =>
-            globalDeclaration(newName, originalDeclaration.type, inputs.types, mipsReqs)
-        )
+${Object.values(globals)
+        .map(({ mangledName, bytes }) => globalDeclaration(mangledName, bytes))
         .join('\n')}
 ${inputs.stringLiterals.map(stringLiteralDeclaration).join('\n')}
 ${Object.keys(errors)

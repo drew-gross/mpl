@@ -62,13 +62,13 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
             return tacFromParseResult(ast.children[2]);
         case 'identifier':
             return {
-                globalNameMap: { [ast.value as string]: { newName: 'wat', originalDeclaration: {} as any } },
+                globals: { [ast.value as string]: { mangledName: 'wat', bytes: 8 } },
                 functions: [],
             };
         default:
             throw debug(`${ast.type} unhandled in tacFromParseResult`);
     }
-    return { globalNameMap: {}, functions: [] };
+    return { globals: {}, functions: [] };
 };
 
 type ParseError = string;
