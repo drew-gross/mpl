@@ -1,12 +1,16 @@
+import statementToString from './statementToString.js';
 import { ThreeAddressProgram } from './generator.js';
 import join from '../util/join.js';
 
 export default ({ globals, functions }: ThreeAddressProgram): string => {
     const globalStrings = Object.keys(globals).map(
-        originalName => `${originalName}: ${globals[originalName].mangledName} ${globals[originalName].bytes}`
+        originalName => `(global) ${originalName}: ${globals[originalName].mangledName} ${globals[originalName].bytes}`
     );
+    const functionStrings = functions.map(({ name, isMain, instructions }) => {
+        return join([`(${isMain ? 'main' : 'function'}) ${name}:`, ...instructions.map(statementToString)], '\n');
+    });
     return `
-globals:
 ${join(globalStrings, '\n')}
+${join(functionStrings, '\n')}
 `;
 };
