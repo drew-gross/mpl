@@ -57,8 +57,9 @@ const toStringWithoutComment = (tas: ThreeAddressStatement): string => {
             return `${tas.function}()`;
         case 'returnToCaller':
             return `return`;
-        default:
-            throw debug('Unrecognized RTX kind in toString');
+        case 'stackAllocateAndStorePointer':
+            return `${tas.register} = alloca(${tas.bytes})`;
+        // Should be completely covered
     }
 };
 
