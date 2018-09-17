@@ -5,7 +5,7 @@ import {
     Grammar,
     Sequence,
     OneOf,
-    terminal,
+    Terminal,
     endOfInput,
     Optional,
     parse,
@@ -140,7 +140,7 @@ type TacAstNode =
     | 'instruction'
     | 'comment';
 
-const tacTerminal = token => terminal<TacAstNode, TacToken>(token);
+const tacTerminal = token => Terminal<TacAstNode, TacToken>(token);
 const tacOptional = parser => Optional<TacAstNode, TacToken>(parser);
 
 const identifier = tacTerminal('identifier');

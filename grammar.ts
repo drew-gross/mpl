@@ -1,5 +1,5 @@
 import {
-    terminal,
+    Terminal,
     endOfInput,
     Grammar,
     Ast,
@@ -220,7 +220,7 @@ export type MplAstNode =
 export type MplAst = Ast<MplAstNode, MplToken>;
 export type MplParseResult = ParseResult<MplAstNode, MplToken>;
 
-const mplTerminal = token => terminal<MplAstNode, MplToken>(token);
+const mplTerminal = token => Terminal<MplAstNode, MplToken>(token);
 const mplOptional = parser => Optional<MplAstNode, MplToken>(parser);
 
 const plus = mplTerminal('sum');

@@ -102,11 +102,8 @@ const stripSourceLocation = ast => {
     }
 };
 
-export type Terminal<NodeType, TokenType> = (
-    tokens: Token<TokenType>[],
-    index: number
-) => ParseResultWithIndex<NodeType, TokenType>;
-
+type EndOfInput = { kind: 'endOfInput' };
+type Terminal<NodeType, TokenType> = { kind: 'terminal'; tokenType: TokenType } | EndOfInput;
 type BaseParser<NodeType, TokenType> = string | Terminal<NodeType, TokenType>;
 type Sequence<NodeType, TokenType> = { kind: 'sequence'; name: string; parsers: Parser<NodeType, TokenType>[] };
 type Alternative<NodeType, TokenType> = { kind: 'oneOf'; parsers: Parser<NodeType, TokenType>[] };
@@ -156,6 +153,9 @@ const getSourceLocation = <TokenType>(tokens: Token<TokenType>[], index: number)
     }
 };
 
+const isTerminalParser = <NodeType, TokenType>(p: Parser<NodeType, TokenType>): p is Terminal<NodeType, TokenType> =>
+    typeof p == 'object' && 'kind' in p && (p.kind === 'terminal' || p.kind == 'endOfInput');
+
 const parseSequence = <NodeType extends string, TokenType>(
     grammar: Grammar<NodeType, TokenType>,
     parser: Sequence<NodeType, TokenType>,
@@ -166,8 +166,8 @@ const parseSequence = <NodeType extends string, TokenType>(
     const results: AstWithIndex<NodeType, TokenType>[] = [];
     for (const p of parser.parsers) {
         let result: ParseResultWithIndex<NodeType, TokenType>;
-        if (typeof p === 'function') {
-            result = p(tokens, index);
+        if (isTerminalParser(p)) {
+            result = parseTerminal(p, tokens, index);
         } else if (typeof p === 'string') {
             result = parse(grammar, p as NodeType, tokens, index);
         } else {
@@ -239,14 +239,14 @@ const parseAlternative = <NodeType extends string, TokenType>(
                     progressCache[alternativeIndex] = { kind: 'failed', error: currentResult };
                 }
             }
-        } else if (typeof currentParser === 'function') {
+        } else if (isTerminalParser(currentParser)) {
             // Terminal.
             if (currentProgress.subParserIndex == 1) {
                 // We already finished this one earlier. It must be a prefix of an earlier rule.
                 return currentProgress.parseResults[0];
             } else {
                 // We haven't tried this parser yet. Try it now.
-                currentResult = currentParser(tokens, index);
+                currentResult = parseTerminal(currentParser, tokens, index);
                 currentIndex = 0;
                 if (!parseResultIsError(currentResult)) {
                     return currentResult;
@@ -276,8 +276,8 @@ const parseAlternative = <NodeType extends string, TokenType>(
             }
 
             // We still need to do work on this parser
-            if (typeof currentParser === 'function') {
-                currentResult = currentParser(tokens, tokenIndex);
+            if (isTerminalParser(currentParser)) {
+                currentResult = parseTerminal(currentParser, tokens, tokenIndex);
                 currentIndex = currentProgress.subParserIndex;
             } else if (typeof currentParser == 'string') {
                 currentResult = parse(grammar, currentParser as NodeType, tokens, tokenIndex);
@@ -416,8 +416,8 @@ const parseAnything = <NodeType extends string, TokenType>(
 ): ParseResultWithIndex<NodeType, TokenType> => {
     if (typeof parser === 'string') {
         return parse(grammar, parser as NodeType, tokens, index);
-    } else if (typeof parser === 'function') {
-        return parser(tokens, index);
+    } else if (isTerminalParser(parser)) {
+        return parseTerminal(parser, tokens, index);
     } else if (parser.kind == 'sequence') {
         return parseSequence(grammar, parser, tokens, index);
     } else if (parser.kind == 'oneOf') {
@@ -451,19 +451,37 @@ export const parse = <NodeType extends string, TokenType>(
     return parseAnything(grammar, childrenParser, tokens, index);
 };
 
-const terminal = <NodeType, TokenType>(terminal: TokenType): Terminal<NodeType, TokenType> => (
+const parseTerminal = <NodeType, TokenType>(
+    terminal: Terminal<NodeType, TokenType>,
     tokens: Token<TokenType>[],
     index
 ): ParseResultWithIndex<NodeType, TokenType> => {
+    if (terminal.kind == 'endOfInput') {
+        if (index == tokens.length) {
+            return {
+                success: true,
+                newIndex: index + 1,
+                value: 'endOfFile',
+                type: 'endOfFile',
+                sourceLocation: getSourceLocation(tokens, index),
+            };
+        } else {
+            return {
+                expected: ['endOfFile'],
+                found: [tokens[index].type],
+                sourceLocation: getSourceLocation(tokens, index),
+            };
+        }
+    }
     if (index >= tokens.length) {
         const result: ParseError<TokenType> = {
             found: ['endOfFile'],
-            expected: [terminal],
+            expected: [terminal.tokenType],
             sourceLocation: getSourceLocation(tokens, index),
         };
         return result;
     }
-    if (tokens[index].type == terminal) {
+    if (tokens[index].type == terminal.tokenType) {
         return {
             success: true,
             newIndex: index + 1,
@@ -474,32 +492,18 @@ const terminal = <NodeType, TokenType>(terminal: TokenType): Terminal<NodeType, 
     }
 
     return {
-        expected: [terminal],
+        expected: [terminal.tokenType],
         found: [tokens[index].type],
         sourceLocation: getSourceLocation(tokens, index),
     };
 };
 
-const endOfInput = <NodeType, TokenType>(
-    tokens: Token<TokenType>[],
-    index: number
-): ParseResultWithIndex<NodeType, TokenType> => {
-    if (index == tokens.length) {
-        return {
-            success: true,
-            newIndex: index + 1,
-            value: 'endOfFile',
-            type: 'endOfFile',
-            sourceLocation: getSourceLocation(tokens, index),
-        };
-    } else {
-        return {
-            expected: ['endOfFile'],
-            found: [tokens[index].type],
-            sourceLocation: getSourceLocation(tokens, index),
-        };
-    }
-};
+const Terminal = <NodeType, TokenType>(token: TokenType): Terminal<NodeType, TokenType> => ({
+    kind: 'terminal',
+    tokenType: token,
+});
+
+const endOfInput: EndOfInput = { kind: 'endOfInput' };
 
 const toDotFile = <NodeType, TokenType>(ast: Ast<NodeType, TokenType>) => {
     const digraph = new Graph();
@@ -522,7 +526,7 @@ const toDotFile = <NodeType, TokenType>(ast: Ast<NodeType, TokenType>) => {
 };
 
 export {
-    terminal,
+    Terminal,
     endOfInput,
     ParseResultWithIndex,
     ParseResult,
