@@ -6,6 +6,7 @@ import {
     Sequence,
     OneOf,
     terminal,
+    endOfInput,
     Optional,
     parse,
     parseResultIsError,
@@ -14,6 +15,7 @@ import {
 
 type TacToken =
     | 'global'
+    | 'function'
     | 'colon'
     | 'number'
     | 'leftBracket'
@@ -39,7 +41,7 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
     },
     {
         token: '\\(function\\)',
-        type: 'global',
+        type: 'function',
         toString: x => x,
     },
     {
@@ -128,7 +130,15 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
     },
 ];
 
-type TacAstNode = 'program' | 'global' | 'globalList';
+type TacAstNode =
+    | 'program'
+    | 'global'
+    | 'globals'
+    | 'function'
+    | 'functions'
+    | 'instructions'
+    | 'instruction'
+    | 'comment';
 
 const tacTerminal = token => terminal<TacAstNode, TacToken>(token);
 const tacOptional = parser => Optional<TacAstNode, TacToken>(parser);
@@ -136,12 +146,18 @@ const tacOptional = parser => Optional<TacAstNode, TacToken>(parser);
 const identifier = tacTerminal('identifier');
 const number = tacTerminal('number');
 const colon = tacTerminal('colon');
-const globals = tacTerminal('globals');
+const global_ = tacTerminal('global');
+const function_ = tacTerminal('function');
+const comment = tacTerminal('comment');
 
 const grammar: Grammar<TacAstNode, TacToken> = {
-    program: Sequence('program', [globals, colon, 'globalList']),
-    globalList: OneOf([Sequence('globalList', ['global', 'globalList']), 'global']),
-    global: Sequence('global', [identifier, colon, identifier, number]),
+    program: OneOf<TacAstNode, TacToken>(['globals', 'functions', endOfInput]),
+    globals: Sequence('globals', ['global', 'program']),
+    global: Sequence('global', [global_, identifier, colon, identifier, number]),
+    functions: Sequence('functions', ['function', 'program']),
+    function: Sequence('function', [function_, identifier, colon, 'instructions']),
+    instructions: Sequence('instructions', ['instruction', 'instructions']),
+    instruction: OneOf([Sequence('comment', [comment])]),
 };
 
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {
@@ -153,7 +169,7 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
         case 'global':
             const a = ast as any;
             return {
-                globals: { [a.children[0].value]: { mangledName: a.children[2].value, bytes: a.children[3].value } },
+                globals: { [a.children[1].value]: { mangledName: a.children[3].value, bytes: a.children[4].value } },
                 functions: [],
             };
         default:
@@ -170,9 +186,10 @@ export default (input: string): ThreeAddressProgram | ParseError[] => {
         if (t) return [`found an invalid token: ${t.string}`];
         return ['unknown invalid token'];
     }
+    debugger;
     const parseResult = parse(grammar, 'program', tokens, 0);
     if (parseResultIsError(parseResult)) {
-        return ['unable to parse'];
+        return [`unabled to parse: ${JSON.stringify(parseResult)}`];
     }
     return tacFromParseResult(parseResult);
 };
