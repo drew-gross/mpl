@@ -640,7 +640,6 @@ test('double product with brackets', compileAndRun, {
 test('id function', compileAndRun, {
     source: 'id := a: Integer => a; return id(5)',
     expectedExitCode: 5,
-    printSubsteps: 'threeAddressCode',
 });
 
 test('double function', compileAndRun, {
@@ -678,9 +677,48 @@ test('parse error', compileAndRun, {
     expectedParseErrors: [
         {
             kind: 'unexpectedToken',
-            found: ['fatArrow'],
-            expected: ['identifier', 'typeIdentifier', 'return'],
-            sourceLocation: { line: 1, column: 1 },
+            errors: [
+                {
+                    expected: 'identifier',
+                    found: 'fatArrow',
+                    sourceLocation: {
+                        column: 1,
+                        line: 1,
+                    },
+                },
+                {
+                    expected: 'identifier',
+                    found: 'fatArrow',
+                    sourceLocation: {
+                        column: 1,
+                        line: 1,
+                    },
+                },
+                {
+                    expected: 'typeIdentifier',
+                    found: 'fatArrow',
+                    sourceLocation: {
+                        column: 1,
+                        line: 1,
+                    },
+                },
+                {
+                    expected: 'identifier',
+                    found: 'fatArrow',
+                    sourceLocation: {
+                        column: 1,
+                        line: 1,
+                    },
+                },
+                {
+                    expected: 'return',
+                    found: 'fatArrow',
+                    sourceLocation: {
+                        column: 1,
+                        line: 1,
+                    },
+                },
+            ],
         },
     ],
 });
@@ -1043,10 +1081,14 @@ test('parsing fails for extra invalid tokens', compileAndRun, {
     source: `return 5 (`,
     expectedParseErrors: [
         {
+            errors: [
+                {
+                    found: 'leftBracket',
+                    expected: 'endOfFile',
+                    sourceLocation: { line: 1, column: 10 },
+                },
+            ],
             kind: 'unexpectedToken',
-            found: ['leftBracket'],
-            expected: ['endOfFile'],
-            sourceLocation: { line: 1, column: 10 },
         },
     ],
 });

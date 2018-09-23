@@ -138,7 +138,7 @@ export const compileAndRun = async (
     if (vizAst) {
         const parseResult = stripResultIndexes(parse(grammar, 'program', lexResult, 0));
         if (parseResultIsError(parseResult)) {
-            t.fail(`Bad parse result. Found: ${parseResult.found}. Expected: ${parseResult.expected}`);
+            t.fail(`Bad parse result: ${parseErrorToString({ kind: 'unexpectedToken', errors: parseResult.errors })}`);
             return;
         }
         showGraphInChrome(dot.write(toDotFile(parseResult)));

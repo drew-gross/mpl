@@ -38,11 +38,13 @@ interface NodeWithIndex<NodeType, LeafType> {
 
 type AstWithIndex<NodeType, TokenType> = NodeWithIndex<NodeType, TokenType> | LeafWithIndex<TokenType>;
 
-interface ParseError<TokenType> {
-    found: (TokenType | 'endOfFile')[];
-    expected: (TokenType | 'endOfFile')[];
+interface ParseFailureInfo<TokenType> {
+    found: TokenType | 'endOfFile';
+    expected: TokenType | 'endOfFile';
     sourceLocation: SourceLocation;
 }
+
+type ParseError<TokenType> = { kind: 'parseError'; errors: ParseFailureInfo<TokenType>[] };
 
 type ParseResultWithIndex<NodeType, TokenType> = ParseError<TokenType> | AstWithIndex<NodeType, TokenType>;
 type ParseResult<NodeType, TokenType> = ParseError<TokenType> | Ast<NodeType, TokenType>;
@@ -53,7 +55,7 @@ const parseResultIsError = <NodeType, LeafType, TokenType>(
         | ParseResultWithIndex<NodeType, TokenType>
         | AstWithIndex<NodeType, LeafType>[]
         | 'missingOptional'
-): result is ParseError<TokenType> => result != 'missingOptional' && 'found' in result && 'expected' in result;
+): result is ParseError<TokenType> => result != 'missingOptional' && 'kind' in result && result.kind == 'parseError';
 
 const parseResultWithIndexIsLeaf = <NodeType, TokenType>(
     r: ParseResultWithIndex<NodeType, TokenType>
@@ -387,25 +389,15 @@ const parseAlternative = <NodeType extends string, TokenType>(
         }
     }
 
-    return {
-        found: unique(
-            flatten(
-                progressCache.map(error => {
-                    if (error.kind != 'failed') throw debug('!parseResultIsError in parseAlternative');
-                    return error.error.found;
-                })
-            )
-        ),
-        expected: unique(
-            flatten(
-                progressCache.map(error => {
-                    if (error.kind != 'failed') throw debug('!parseResultIsError in parseAlternative');
-                    return error.error.expected;
-                })
-            )
-        ),
-        sourceLocation: getSourceLocation(tokens, index),
-    };
+    const errors: ParseError<TokenType> = { kind: 'parseError', errors: [] };
+    progressCache.forEach(progress => {
+        if (progress.kind == 'failed') {
+            errors.errors.push(...progress.error.errors);
+        } else {
+            throw debug('everything should have failed by now');
+        }
+    });
+    return errors;
 };
 
 const parseAnything = <NodeType extends string, TokenType>(
@@ -467,19 +459,28 @@ const parseTerminal = <NodeType, TokenType>(
             };
         } else {
             return {
-                expected: ['endOfFile'],
-                found: [tokens[index].type],
-                sourceLocation: getSourceLocation(tokens, index),
+                kind: 'parseError',
+                errors: [
+                    {
+                        found: tokens[index].type,
+                        expected: 'endOfFile',
+                        sourceLocation: getSourceLocation(tokens, index),
+                    },
+                ],
             };
         }
     }
     if (index >= tokens.length) {
-        const result: ParseError<TokenType> = {
-            found: ['endOfFile'],
-            expected: [terminal.tokenType],
-            sourceLocation: getSourceLocation(tokens, index),
+        return {
+            kind: 'parseError',
+            errors: [
+                {
+                    found: 'endOfFile',
+                    expected: terminal.tokenType,
+                    sourceLocation: getSourceLocation(tokens, index),
+                },
+            ],
         };
-        return result;
     }
     if (tokens[index].type == terminal.tokenType) {
         return {
@@ -492,9 +493,14 @@ const parseTerminal = <NodeType, TokenType>(
     }
 
     return {
-        expected: [terminal.tokenType],
-        found: [tokens[index].type],
-        sourceLocation: getSourceLocation(tokens, index),
+        kind: 'parseError',
+        errors: [
+            {
+                expected: terminal.tokenType,
+                found: tokens[index].type,
+                sourceLocation: getSourceLocation(tokens, index),
+            },
+        ],
     };
 };
 

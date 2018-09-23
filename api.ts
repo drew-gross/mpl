@@ -42,9 +42,11 @@ export type ExecutionResult =
 export type ParseError =
     | {
           kind: 'unexpectedToken';
-          expected: string[];
-          found: string[];
-          sourceLocation: SourceLocation;
+          errors: {
+              expected: string;
+              found: string;
+              sourceLocation: SourceLocation;
+          }[];
       }
     | {
           kind: 'unexpectedProgram';

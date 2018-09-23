@@ -228,14 +228,7 @@ const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
     const parseResult: MplParseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
 
     if (parseResultIsError(parseResult)) {
-        return [
-            {
-                kind: 'unexpectedToken',
-                found: parseResult.found,
-                expected: parseResult.expected,
-                sourceLocation: parseResult.sourceLocation,
-            },
-        ];
+        return [{ kind: 'unexpectedToken', errors: parseResult.errors }];
     }
     let ast = parseResult;
 
@@ -1225,14 +1218,18 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
     }
 };
 
-const parseErrorToString = (e: ParseError): string => {
-    switch (e.kind) {
+const parseErrorToString = (compilerError: ParseError): string => {
+    switch (compilerError.kind) {
         case 'unexpectedProgram':
             return 'Failed to parse. Top Level of AST was not a program.';
         case 'unexpectedToken':
-            return `Expected ${e.expected.join(' or ')}, on line ${e.sourceLocation.line} column ${
-                e.sourceLocation.column
-            }, found ${e.found}`;
+            const errorStrings: string[] = compilerError.errors.map(
+                parserError =>
+                    `Expected ${parserError.expected} but found ${parserError.found} at ${
+                        parserError.sourceLocation.line
+                    }:${parserError.sourceLocation.column}`
+            );
+            return `Errors: \n${join(errorStrings, '\n')}`;
         default:
             throw debug('Unhandled error in parseErrorToString');
     }
