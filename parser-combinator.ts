@@ -41,6 +41,7 @@ type AstWithIndex<NodeType, TokenType> = NodeWithIndex<NodeType, TokenType> | Le
 interface ParseFailureInfo<TokenType> {
     found: TokenType | 'endOfFile';
     expected: TokenType | 'endOfFile';
+    whileParsing: string[];
     sourceLocation: SourceLocation;
 }
 
@@ -177,6 +178,9 @@ const parseSequence = <NodeType extends string, TokenType>(
         }
 
         if (parseResultIsError(result)) {
+            result.errors.forEach(e => {
+                e.whileParsing.unshift(parser.name);
+            });
             return result;
         }
 
@@ -464,6 +468,7 @@ const parseTerminal = <NodeType, TokenType>(
                     {
                         found: tokens[index].type,
                         expected: 'endOfFile',
+                        whileParsing: [],
                         sourceLocation: getSourceLocation(tokens, index),
                     },
                 ],
@@ -477,6 +482,7 @@ const parseTerminal = <NodeType, TokenType>(
                 {
                     found: 'endOfFile',
                     expected: terminal.tokenType,
+                    whileParsing: [],
                     sourceLocation: getSourceLocation(tokens, index),
                 },
             ],
@@ -498,6 +504,7 @@ const parseTerminal = <NodeType, TokenType>(
             {
                 expected: terminal.tokenType,
                 found: tokens[index].type,
+                whileParsing: [],
                 sourceLocation: getSourceLocation(tokens, index),
             },
         ],

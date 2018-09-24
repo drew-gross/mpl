@@ -149,6 +149,8 @@ const colon = tacTerminal('colon');
 const global_ = tacTerminal('global');
 const function_ = tacTerminal('function');
 const comment = tacTerminal('comment');
+const assignment = tacTerminal('assignment');
+const star = tacTerminal('star');
 
 const grammar: Grammar<TacAstNode, TacToken> = {
     program: OneOf<TacAstNode, TacToken>(['globals', 'functions', endOfInput]),
@@ -157,7 +159,12 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     functions: Sequence('functions', ['function', 'program']),
     function: Sequence('function', [function_, identifier, colon, 'instructions']),
     instructions: Sequence('instructions', ['instruction', 'instructions']),
-    instruction: OneOf([Sequence('comment', [comment])]),
+    instruction: OneOf([
+        Sequence('comment', [comment]),
+        Sequence('constAssign', [identifier, assignment, number, comment]),
+        Sequence('label', [identifier, colon, comment]),
+        Sequence('derefAssiign', [identifier, assignment, star, number, comment]),
+    ]),
 };
 
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {
@@ -189,7 +196,7 @@ export default (input: string): ThreeAddressProgram | ParseError[] => {
     debugger;
     const parseResult = parse(grammar, 'program', tokens, 0);
     if (parseResultIsError(parseResult)) {
-        return [`unabled to parse: ${JSON.stringify(parseResult)}`];
+        return [`unabled to parse: ${JSON.stringify(parseResult, null, 4)}`];
     }
     return tacFromParseResult(parseResult);
 };
