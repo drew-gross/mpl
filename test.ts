@@ -1,3 +1,4 @@
+import prettyParseError from './parser-lib/pretty-parse-error.js';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
 import { ThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
 import * as threeAddressCodeRuntime from './threeAddressCode/runtime.js';
@@ -1762,4 +1763,31 @@ test('type equality via name lookup', t => {
     };
     const typeDeclarations: TypeDeclaration[] = [{ name: 'BoolPair', type: leftType }];
     t.deepEqual(typesAreEqual(leftType, rightType as any, typeDeclarations), true);
+});
+
+test.only('pretty-parse-error', t => {
+    // nominal test
+    t.deepEqual(
+        prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 4 }),
+        'contextBefore\n123456789\n   ^\ncontextAfter'
+    );
+
+    // line out of range too low
+    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 0, column: 4 }), null);
+    // line out of range too high
+    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 4, column: 4 }), null);
+    // column out of range too low
+    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 0 }), null);
+    // column out of range too high
+    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 10 }), null);
+
+    // First line
+    t.deepEqual(prettyParseError('123456789\ncontextAfter', { line: 1, column: 1 }), '123456789\n^\ncontextAfter');
+    // Last line
+    t.deepEqual(
+        prettyParseError('contextBefore\n123456789', { line: 2, column: 9 }),
+        'contextBefore\n123456789\n        ^'
+    );
+    // Only line
+    t.deepEqual(prettyParseError('123456789', { line: 1, column: 1 }), '123456789\n^');
 });
