@@ -6,9 +6,7 @@
     "license": "UNLICENSED",
     "main": "built/index.js",
     "ava": {
-        "files": [
-            "built/test.js"
-        ]
+        "files": ["built/test.js"]
     },
     "scripts": {
         "test": "rimraf built && npm run prettier-check && tsc && ava --verbose",
@@ -26,18 +24,19 @@
     },
     "author": "Drew Gross",
     "dependencies": {
-        "child-process-promise": "2.2.1",
-        "fs-extra": "7.0.0",
-        "lodash": "4.17.11",
-        "tmp-promise": "1.0.5",
         "@types/node": "10.9.4",
         "ava": "0.25.0",
+        "child-process-promise": "2.2.1",
+        "fs-extra": "7.0.0",
         "graphlib": "2.1.5",
         "graphlib-dot": "0.6.2",
         "inspect-process": "0.5.0",
+        "lodash": "4.17.11",
+        "omit-deep": "0.3.0",
         "opn": "5.3.0",
         "prettier": "1.14.2",
         "rimraf": "2.6.2",
+        "tmp-promise": "1.0.5",
         "typescript": "3.0.3"
     },
     "prettier": {
