@@ -16,6 +16,9 @@ import {
 type TacToken =
     | 'global'
     | 'function'
+    | 'goto'
+    | 'if'
+    | 'doubleEqual'
     | 'colon'
     | 'number'
     | 'leftBracket'
@@ -45,6 +48,16 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         toString: x => x,
     },
     {
+        token: 'goto',
+        type: 'goto',
+        toString: x => x,
+    },
+    {
+        token: 'if',
+        type: 'if',
+        toString: x => x,
+    },
+    {
         token: '\\:',
         type: 'colon',
         toString: _ => ':',
@@ -59,6 +72,11 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         token: '!=',
         type: 'notequal',
         toString: _ => '!=',
+    },
+    {
+        token: '==',
+        type: 'doubleEqual',
+        toString: _ => '==',
     },
     {
         token: '\\+\\+',
@@ -151,6 +169,11 @@ const function_ = tacTerminal('function');
 const comment = tacTerminal('comment');
 const assignment = tacTerminal('assignment');
 const star = tacTerminal('star');
+const goto = tacTerminal('goto');
+const if_ = tacTerminal('if');
+const doubleEqual = tacTerminal('doubleEqual');
+const plusplus = tacTerminal('plusplus');
+const minus = tacTerminal('minus');
 
 const grammar: Grammar<TacAstNode, TacToken> = {
     program: OneOf<TacAstNode, TacToken>(['globals', 'functions', endOfInput]),
@@ -161,9 +184,13 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     instructions: Sequence('instructions', ['instruction', 'instructions']),
     instruction: OneOf([
         Sequence('comment', [comment]),
-        Sequence('constAssign', [identifier, assignment, number, comment]),
         Sequence('label', [identifier, colon, comment]),
-        Sequence('derefAssiign', [identifier, assignment, star, number, comment]),
+        Sequence('constAssign', [identifier, assignment, number, comment]),
+        Sequence('derefAssign', [identifier, assignment, star, identifier, comment]),
+        Sequence('differenceAssign', [identifier, assignment, identifier, minus, identifier, comment]),
+        Sequence('gotoIfEqual', [goto, identifier, if_, identifier, doubleEqual, number, comment]),
+        Sequence('goto', [goto, identifier, comment]),
+        Sequence('increment', [identifier, plusplus, comment]),
     ]),
 };
 
