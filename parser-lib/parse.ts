@@ -12,13 +12,13 @@ interface Node<NodeType, LeafType> {
     sourceLocation: SourceLocation;
 }
 
-type Leaf<TokenType> = {
+export type Leaf<TokenType> = {
     type: TokenType | 'endOfFile';
     value: string | number | null | undefined;
     sourceLocation: SourceLocation;
 };
 
-type Ast<NodeType, LeafType> = Node<NodeType, LeafType> | Leaf<LeafType>;
+export type Ast<NodeType, LeafType> = Node<NodeType, LeafType> | Leaf<LeafType>;
 
 interface LeafWithIndex<TokenType> {
     success: true;
@@ -36,9 +36,9 @@ interface NodeWithIndex<NodeType, LeafType> {
     sourceLocation: SourceLocation;
 }
 
-type AstWithIndex<NodeType, TokenType> = NodeWithIndex<NodeType, TokenType> | LeafWithIndex<TokenType>;
+export type AstWithIndex<NodeType, TokenType> = NodeWithIndex<NodeType, TokenType> | LeafWithIndex<TokenType>;
 
-interface ParseFailureInfo<TokenType> {
+export interface ParseFailureInfo<TokenType> {
     found: TokenType | 'endOfFile';
     foundTokenText: string;
     expected: TokenType | 'endOfFile';
@@ -46,12 +46,12 @@ interface ParseFailureInfo<TokenType> {
     sourceLocation: SourceLocation;
 }
 
-type ParseError<TokenType> = { kind: 'parseError'; errors: ParseFailureInfo<TokenType>[] };
+export type ParseError<TokenType> = { kind: 'parseError'; errors: ParseFailureInfo<TokenType>[] };
 
-type ParseResultWithIndex<NodeType, TokenType> = ParseError<TokenType> | AstWithIndex<NodeType, TokenType>;
-type ParseResult<NodeType, TokenType> = ParseError<TokenType> | Ast<NodeType, TokenType>;
+export type ParseResultWithIndex<NodeType, TokenType> = ParseError<TokenType> | AstWithIndex<NodeType, TokenType>;
+export type ParseResult<NodeType, TokenType> = ParseError<TokenType> | Ast<NodeType, TokenType>;
 
-const parseResultIsError = <NodeType, LeafType, TokenType>(
+export const parseResultIsError = <NodeType, LeafType, TokenType>(
     result:
         | ParseResult<NodeType, TokenType>
         | ParseResultWithIndex<NodeType, TokenType>
@@ -83,7 +83,7 @@ const stripNodeIndexes = <NodeType, AstLeafNodeType>(
     };
 };
 
-const stripResultIndexes = <NodeType, TokenType>(
+export const stripResultIndexes = <NodeType, TokenType>(
     r: ParseResultWithIndex<NodeType, TokenType>
 ): ParseResult<NodeType, TokenType> => {
     if (parseResultIsError(r)) {
@@ -92,7 +92,7 @@ const stripResultIndexes = <NodeType, TokenType>(
     return stripNodeIndexes(r);
 };
 
-const stripSourceLocation = ast => {
+export const stripSourceLocation = ast => {
     if ('children' in ast) {
         return {
             type: ast.type,
@@ -521,14 +521,14 @@ const parseTerminal = <NodeType, TokenType>(
     };
 };
 
-const Terminal = <NodeType, TokenType>(token: TokenType): Terminal<NodeType, TokenType> => ({
+export const Terminal = <NodeType, TokenType>(token: TokenType): Terminal<NodeType, TokenType> => ({
     kind: 'terminal',
     tokenType: token,
 });
 
-const endOfInput: EndOfInput = { kind: 'endOfInput' };
+export const endOfInput: EndOfInput = { kind: 'endOfInput' };
 
-const toDotFile = <NodeType, TokenType>(ast: Ast<NodeType, TokenType>) => {
+export const toDotFile = <NodeType, TokenType>(ast: Ast<NodeType, TokenType>) => {
     const digraph = new Graph();
     let id = 0;
     const traverse = (ast: Ast<NodeType, TokenType>): number => {
@@ -546,20 +546,4 @@ const toDotFile = <NodeType, TokenType>(ast: Ast<NodeType, TokenType>) => {
     };
     traverse(ast);
     return digraph;
-};
-
-export {
-    Terminal,
-    endOfInput,
-    ParseResultWithIndex,
-    ParseResult,
-    ParseError,
-    Ast,
-    AstWithIndex,
-    Leaf,
-    parseResultIsError,
-    stripResultIndexes,
-    stripSourceLocation,
-    toDotFile,
-    ParseFailureInfo,
 };
