@@ -1,4 +1,5 @@
-import { VariableDeclaration, SourceLocation } from './api.js';
+import { VariableDeclaration } from './api.js';
+import SourceLocation from './parser-lib/sourceLocation.js';
 import { Type } from './types.js';
 
 type Leaf = Number | Identifier | BooleanLiteral | StringLiteral;

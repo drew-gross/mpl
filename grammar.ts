@@ -8,8 +8,8 @@ import {
     Sequence,
     OneOf,
     Optional,
-} from './parser-combinator.js';
-import { TokenSpec } from './lex.js';
+} from './parser-lib/parse.js';
+import { TokenSpec } from './parser-lib/lex.js';
 import debug from './util/debug.js';
 
 export type MplToken =

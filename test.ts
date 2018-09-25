@@ -3,17 +3,11 @@ import { ThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/
 import * as threeAddressCodeRuntime from './threeAddressCode/runtime.js';
 import test from 'ava';
 import flatten from './util/list/flatten.js';
-import { lex } from './lex.js';
+import { lex } from './parser-lib/lex.js';
 import { parseMpl, compile, typeCheckStatement, astFromParseResult, typeOfExpression } from './frontend.js';
 import { compileAndRun } from './test-utils.js';
 import { grammar, tokenSpecs, MplParseResult, MplAst } from './grammar.js';
-import {
-    stripResultIndexes,
-    ParseResult,
-    parse,
-    parseResultIsError,
-    stripSourceLocation,
-} from './parser-combinator.js';
+import { stripResultIndexes, ParseResult, parse, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
 import * as Ast from './ast.js';
 import { removeBracketsFromAst } from './frontend.js';
 import { controlFlowGraph, toDotFile, BasicBlock, computeBlockLiveness, tafLiveness } from './controlFlowGraph.js';

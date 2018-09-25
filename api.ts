@@ -1,8 +1,7 @@
 import { UninferredStatement, Statement } from './ast.js';
 import { ThreeAddressFunction } from './threeAddressCode/generator.js';
 import { Type, TypeDeclaration } from './types.js';
-
-export type SourceLocation = { line: number; column: number };
+import SourceLocation from './parser-lib/sourceLocation.js';
 
 export type VariableLocation = 'Global' | 'Parameter' | 'Stack';
 export type VariableDeclaration = {

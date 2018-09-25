@@ -1,5 +1,5 @@
 import debug from '../util/debug.js';
-import { TokenSpec, lex } from '../lex.js';
+import { TokenSpec, lex } from '../parser-lib/lex.js';
 import { ThreeAddressProgram } from './generator.js';
 import {
     Grammar,
@@ -12,7 +12,7 @@ import {
     parseResultIsError,
     AstWithIndex,
     ParseFailureInfo,
-} from '../parser-combinator.js';
+} from '../parser-lib/parse.js';
 
 type TacToken =
     | 'global'

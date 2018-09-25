@@ -1,10 +1,10 @@
 import { Token } from './lex.js';
-import unique from './util/list/unique.js';
-import flatten from './util/list/flatten.js';
-import last from './util/list/last.js';
-import debug from './util/debug.js';
+import unique from '../util/list/unique.js';
+import flatten from '../util/list/flatten.js';
+import last from '../util/list/last.js';
+import debug from '../util/debug.js';
 import { Graph } from 'graphlib';
-import { SourceLocation } from './api.js';
+import SourceLocation from './sourceLocation.js';
 
 interface Node<NodeType, LeafType> {
     type: NodeType;
