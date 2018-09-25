@@ -561,4 +561,5 @@ export {
     stripResultIndexes,
     stripSourceLocation,
     toDotFile,
+    ParseFailureInfo,
 };

@@ -11,6 +11,7 @@ import {
     parse,
     parseResultIsError,
     AstWithIndex,
+    ParseFailureInfo,
 } from '../parser-combinator.js';
 
 type TacToken =
@@ -211,7 +212,7 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
     }
 };
 
-type ParseError = string;
+type ParseError = string | ParseFailureInfo<TacToken>;
 
 export default (input: string): ThreeAddressProgram | ParseError[] => {
     const tokens = lex(tokenSpecs, input);
@@ -220,10 +221,9 @@ export default (input: string): ThreeAddressProgram | ParseError[] => {
         if (t) return [`found an invalid token: ${t.string}`];
         return ['unknown invalid token'];
     }
-    debugger;
     const parseResult = parse(grammar, 'program', tokens, 0);
     if (parseResultIsError(parseResult)) {
-        return [`unabled to parse: ${JSON.stringify(parseResult, null, 4)}`];
+        return parseResult.errors;
     }
     return tacFromParseResult(parseResult);
 };
