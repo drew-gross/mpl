@@ -240,7 +240,7 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('increment', [identifier, plusplus, comment]),
         Sequence('call', [identifier, leftBracket, rightBracket]),
     ]),
-    idOrNumber: OneOf([identifier, number, Sequence('number', [minus, number])]),
+    idOrNumber: OneOf([identifier, Sequence('number', [tacOptional(minus), number])]),
 };
 
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {
