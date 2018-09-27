@@ -1,3 +1,4 @@
+import prettyParseError from './parser-lib/pretty-parse-error.js';
 import * as open from 'opn';
 import * as omitDeep from 'omit-deep';
 import { exec } from 'child-process-promise';
@@ -218,6 +219,27 @@ export const compileAndRun = async (
     }
 
     const roundtripResult = parseTac(stringForm);
+    if (Array.isArray(roundtripResult)) {
+        console.log(stringForm);
+        t.fail(
+            join(
+                roundtripResult.map(e => {
+                    if (typeof e === 'string') {
+                        return e;
+                    } else {
+                        return (
+                            prettyParseError(
+                                stringForm,
+                                e.sourceLocation,
+                                `found ${e.found}, expected ${e.expected}`
+                            ) || ''
+                        );
+                    }
+                }),
+                '\n\n'
+            )
+        );
+    }
 
     // TOOD: t.deepEqual(tac, roundtripResult);
     // Backends

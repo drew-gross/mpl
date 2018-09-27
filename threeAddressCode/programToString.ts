@@ -7,7 +7,7 @@ export default ({ globals, functions }: ThreeAddressProgram): string => {
         originalName => `(global) ${originalName}: ${globals[originalName].mangledName} ${globals[originalName].bytes}`
     );
     const functionStrings = functions.map(({ name, isMain, instructions }) => {
-        return join([`(${isMain ? 'main' : 'function'}) ${name}:`, ...instructions.map(statementToString)], '\n');
+        return join([`(function) ${isMain ? 'main' : name}:`, ...instructions.map(statementToString)], '\n');
     });
     return `
 ${join(globalStrings, '\n')}

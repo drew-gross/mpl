@@ -1,9 +1,11 @@
+import parseTac from './threeAddressCode/parser.js';
 import prettyParseError from './parser-lib/pretty-parse-error.js';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
 import { ThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
 import * as threeAddressCodeRuntime from './threeAddressCode/runtime.js';
 import test from 'ava';
 import flatten from './util/list/flatten.js';
+import join from './util/join.js';
 import { lex } from './parser-lib/lex.js';
 import { parseMpl, compile, typeCheckStatement, astFromParseResult, typeOfExpression } from './frontend.js';
 import { compileAndRun } from './test-utils.js';
@@ -632,7 +634,7 @@ test('double product with brackets', compileAndRun, {
     },
 });
 
-test('id function', compileAndRun, {
+test.only('id function', compileAndRun, {
     source: 'id := a: Integer => a; return id(5)',
     expectedExitCode: 5,
 });
@@ -1768,26 +1770,55 @@ test('type equality via name lookup', t => {
 test('pretty-parse-error', t => {
     // nominal test
     t.deepEqual(
-        prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 4 }),
-        'contextBefore\n123456789\n   ^\ncontextAfter'
+        prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 4 }, 'message'),
+        'contextBefore\n123456789\n   ^ message\ncontextAfter'
     );
 
     // line out of range too low
-    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 0, column: 4 }), null);
+    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 0, column: 4 }, ''), null);
     // line out of range too high
-    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 4, column: 4 }), null);
+    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 4, column: 4 }, ''), null);
     // column out of range too low
-    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 0 }), null);
+    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 0 }, ''), null);
     // column out of range too high
-    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 10 }), null);
+    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 10 }, ''), null);
 
     // First line
-    t.deepEqual(prettyParseError('123456789\ncontextAfter', { line: 1, column: 1 }), '123456789\n^\ncontextAfter');
+    t.deepEqual(prettyParseError('123456789\ncontextAfter', { line: 1, column: 1 }, ''), '123456789\n^ \ncontextAfter');
     // Last line
     t.deepEqual(
-        prettyParseError('contextBefore\n123456789', { line: 2, column: 9 }),
-        'contextBefore\n123456789\n        ^'
+        prettyParseError('contextBefore\n123456789', { line: 2, column: 9 }, ''),
+        'contextBefore\n123456789\n        ^ '
     );
     // Only line
-    t.deepEqual(prettyParseError('123456789', { line: 1, column: 1 }), '123456789\n^');
+    t.deepEqual(prettyParseError('123456789', { line: 1, column: 1 }, ''), '123456789\n^ ');
+});
+
+test('tac parser regression', t => {
+    const source = `(global) id: id_1 17
+(global) id: id_1 17
+(function) length:
+functionResult = 0 # Set length count to 0
+(function) stringEquality:
+functionResult = 1 # Assume equal. Write true to functionResult. Overwrite if difference found.
+`;
+
+    const result = parseTac(source);
+    if (Array.isArray(result)) {
+        t.fail(
+            join(
+                result.map(e => {
+                    if (typeof e === 'string') {
+                        return e;
+                    } else {
+                        return (
+                            prettyParseError(source, e.sourceLocation, `found ${e.found}, expected ${e.expected}`) || ''
+                        );
+                    }
+                }),
+                '\n\n'
+            )
+        );
+    }
+    t.deepEqual(Array.isArray(result), false);
 });

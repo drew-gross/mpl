@@ -33,7 +33,9 @@ type TacToken =
     | 'plus'
     | 'and'
     | 'minus'
-    | 'notequal'
+    | 'syscall'
+    | 'notEqual'
+    | 'plusEqual'
     | 'comment'
     | 'invalid';
 
@@ -54,6 +56,11 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         toString: x => x,
     },
     {
+        token: 'syscall',
+        type: 'syscall',
+        toString: x => x,
+    },
+    {
         token: 'if',
         type: 'if',
         toString: x => x,
@@ -71,8 +78,13 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
     },
     {
         token: '!=',
-        type: 'notequal',
+        type: 'notEqual',
         toString: _ => '!=',
+    },
+    {
+        token: '\\+=',
+        type: 'plusEqual',
+        toString: _ => '+=',
     },
     {
         token: '==',
@@ -163,6 +175,8 @@ const tacTerminal = token => Terminal<TacAstNode, TacToken>(token);
 const tacOptional = parser => Optional<TacAstNode, TacToken>(parser);
 
 const identifier = tacTerminal('identifier');
+const leftBracket = tacTerminal('leftBracket');
+const rightBracket = tacTerminal('rightBracket');
 const number = tacTerminal('number');
 const colon = tacTerminal('colon');
 const global_ = tacTerminal('global');
@@ -173,26 +187,60 @@ const star = tacTerminal('star');
 const goto = tacTerminal('goto');
 const if_ = tacTerminal('if');
 const doubleEqual = tacTerminal('doubleEqual');
+const plusEqual = tacTerminal('plusEqual');
+const notEqual = tacTerminal('notEqual');
 const plusplus = tacTerminal('plusplus');
 const minus = tacTerminal('minus');
+const plus = tacTerminal('plus');
+const and = tacTerminal('and');
+const syscall = tacTerminal('syscall');
+const greaterThan = tacTerminal('greaterThan');
 
 const grammar: Grammar<TacAstNode, TacToken> = {
-    program: OneOf<TacAstNode, TacToken>(['globals', 'functions', endOfInput]),
-    globals: Sequence('globals', ['global', 'program']),
-    global: Sequence('global', [global_, identifier, colon, identifier, number]),
-    functions: Sequence('functions', ['function', 'program']),
-    function: Sequence('function', [function_, identifier, colon, 'instructions']),
-    instructions: Sequence('instructions', ['instruction', 'instructions']),
+    program: OneOf<TacAstNode, TacToken>(['global', 'function', endOfInput]),
+    global: Sequence('global', [global_, identifier, colon, identifier, number, 'program']),
+    function: Sequence('function', [function_, identifier, colon, 'instructions', 'program']),
+    instructions: OneOf([Sequence('instructions', ['instruction', 'instructions']), 'instruction']),
     instruction: OneOf([
         Sequence('comment', [comment]),
         Sequence('label', [identifier, colon, comment]),
-        Sequence('constAssign', [identifier, assignment, number, comment]),
-        Sequence('derefAssign', [identifier, assignment, star, identifier, comment]),
-        Sequence('differenceAssign', [identifier, assignment, identifier, minus, identifier, comment]),
-        Sequence('gotoIfEqual', [goto, identifier, if_, identifier, doubleEqual, number, comment]),
+        Sequence('syscall', [syscall, comment]),
+        Sequence('assign', [identifier, assignment, 'idOrNumber', comment]),
+        Sequence('load', [identifier, assignment, star, identifier, comment]),
+        Sequence('store', [star, identifier, assignment, 'idOrNumber', comment]),
+        Sequence('offsetStore', [
+            star,
+            leftBracket,
+            identifier,
+            plus,
+            number,
+            rightBracket,
+            assignment,
+            identifier,
+            comment,
+        ]),
+        Sequence('offsetLoad', [
+            identifier,
+            assignment,
+            star,
+            leftBracket,
+            identifier,
+            plus,
+            number,
+            rightBracket,
+            comment,
+        ]),
+        Sequence('difference', [identifier, assignment, identifier, minus, identifier, comment]),
+        Sequence('addressOf', [identifier, assignment, and, identifier, comment]),
+        Sequence('gotoIfEqual', [goto, identifier, if_, identifier, doubleEqual, 'idOrNumber', comment]),
+        Sequence('gotoIfNotEqual', [goto, identifier, if_, identifier, notEqual, 'idOrNumber', comment]),
+        Sequence('gotoIfGreater', [goto, identifier, if_, identifier, greaterThan, identifier, comment]),
+        Sequence('plusEqual', [identifier, plusEqual, 'idOrNumber', comment]),
         Sequence('goto', [goto, identifier, comment]),
         Sequence('increment', [identifier, plusplus, comment]),
+        Sequence('call', [identifier, leftBracket, rightBracket]),
     ]),
+    idOrNumber: OneOf([identifier, number, Sequence('number', [minus, number])]),
 };
 
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {
@@ -216,11 +264,13 @@ type ParseError = string | ParseFailureInfo<TacToken>;
 
 export default (input: string): ThreeAddressProgram | ParseError[] => {
     const tokens = lex(tokenSpecs, input);
+    1;
     if (tokens.some(t => t.type == 'invalid')) {
         const t = tokens.find(t => t.type == 'invalid');
         if (t) return [`found an invalid token: ${t.string}`];
         return ['unknown invalid token'];
     }
+    debugger;
     const parseResult = parse(grammar, 'program', tokens, 0);
     if (parseResultIsError(parseResult)) {
         return parseResult.errors;
