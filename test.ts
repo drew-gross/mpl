@@ -1765,7 +1765,7 @@ test('type equality via name lookup', t => {
     t.deepEqual(typesAreEqual(leftType, rightType as any, typeDeclarations), true);
 });
 
-test.only('pretty-parse-error', t => {
+test('pretty-parse-error', t => {
     // nominal test
     t.deepEqual(
         prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 4 }),
