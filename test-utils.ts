@@ -220,7 +220,6 @@ export const compileAndRun = async (
 
     const roundtripResult = parseTac(stringForm);
     if (Array.isArray(roundtripResult)) {
-        console.log(stringForm);
         t.fail(
             join(
                 roundtripResult.map(e => {
@@ -241,7 +240,7 @@ export const compileAndRun = async (
         );
     }
 
-    // TOOD: t.deepEqual(tac, roundtripResult);
+    t.deepEqual(tac, roundtripResult);
     // Backends
     const backends: Backend[] = [jsBackend, cBackend, mipsBackend, x64Backend];
     for (let i = 0; i < backends.length; i++) {

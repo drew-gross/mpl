@@ -231,6 +231,8 @@ const grammar: Grammar<TacAstNode, TacToken> = {
             comment,
         ]),
         Sequence('difference', [identifier, assignment, identifier, minus, identifier, comment]),
+        Sequence('product', [identifier, assignment, identifier, star, identifier, comment]),
+        Sequence('sum', [identifier, assignment, identifier, plus, identifier, comment]),
         Sequence('addressOf', [identifier, assignment, and, identifier, comment]),
         Sequence('gotoIfEqual', [goto, identifier, if_, identifier, doubleEqual, 'idOrNumber', comment]),
         Sequence('gotoIfNotEqual', [goto, identifier, if_, identifier, notEqual, 'idOrNumber', comment]),
@@ -238,7 +240,7 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('plusEqual', [identifier, plusEqual, 'idOrNumber', comment]),
         Sequence('goto', [goto, identifier, comment]),
         Sequence('increment', [identifier, plusplus, comment]),
-        Sequence('call', [identifier, leftBracket, rightBracket]),
+        Sequence('call', [identifier, leftBracket, rightBracket, comment]),
     ]),
     idOrNumber: OneOf([identifier, Sequence('number', [tacOptional(minus), number])]),
 };
@@ -249,12 +251,20 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
             if (ast.children[0].type != 'global') return ['WrongShapeAst'];
             if (ast.children[1].type != 'colon') return ['WrongShapeAst'];
             return tacFromParseResult(ast.children[2]);
-        case 'global':
+        case 'global': {
             const a = ast as any;
             return {
                 globals: { [a.children[1].value]: { mangledName: a.children[3].value, bytes: a.children[4].value } },
                 functions: [],
             };
+        }
+        case 'function': {
+            const a = ast as any;
+            return {
+                globals: {},
+                functions: [],
+            };
+        }
         default:
             throw debug(`${ast.type} unhandled in tacFromParseResult`);
     }

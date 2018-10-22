@@ -634,7 +634,7 @@ test('double product with brackets', compileAndRun, {
     },
 });
 
-test.only('id function', compileAndRun, {
+test('id function', compileAndRun, {
     source: 'id := a: Integer => a; return id(5)',
     expectedExitCode: 5,
 });
@@ -1218,7 +1218,7 @@ return lengthOfFoo(1);`,
     expectedExitCode: 3,
 });
 
-test('string args', compileAndRun, {
+test.only('string args', compileAndRun, {
     source: `
 excitmentifier := (boring: String) => {
     dummy := print(boring ++ "!");
