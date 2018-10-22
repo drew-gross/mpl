@@ -245,6 +245,11 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     idOrNumber: OneOf([identifier, Sequence('number', [tacOptional(minus), number])]),
 };
 
+const mergeParseReuslts = (lhs, rhs) => ({
+    globals: { ...lhs.globals, ...rhs.globals },
+    functions: [...lhs.functions, ...rhs.functions],
+});
+
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {
     switch (ast.type) {
         case 'program':
@@ -253,17 +258,32 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
             return tacFromParseResult(ast.children[2]);
         case 'global': {
             const a = ast as any;
-            return {
-                globals: { [a.children[1].value]: { mangledName: a.children[3].value, bytes: a.children[4].value } },
-                functions: [],
-            };
+            return mergeParseReuslts(
+                {
+                    globals: {
+                        [a.children[1].value]: { mangledName: a.children[3].value, bytes: a.children[4].value },
+                    },
+                    functions: [],
+                },
+                tacFromParseResult(a.children[5])
+            );
         }
         case 'function': {
-            const a = ast as any;
-            return {
-                globals: {},
-                functions: [],
-            };
+            if (!('children' in ast)) return ['WrongShapeAst'];
+            if (ast.children[0].type != 'function') return ['WrongShapeAst'];
+            if (ast.children[1].type != 'identifier') return ['WrongShapeAst'];
+            const name = (ast.children[1] as any).value;
+            if (ast.children[2].type != 'colon') return ['WrongShapeAst'];
+            if (ast.children[3].type != 'instructions') return ['WrongShapeAst'];
+            const instructions = tacFromParseResult(ast.children[3]);
+            const remainder = tacFromParseResult(ast.children[4]);
+            return mergeParseReuslts(
+                {
+                    globals: {},
+                    functions: [{ isMain: false, name, instructions }],
+                },
+                remainder
+            );
         }
         default:
             throw debug(`${ast.type} unhandled in tacFromParseResult`);
@@ -280,7 +300,6 @@ export default (input: string): ThreeAddressProgram | ParseError[] => {
         if (t) return [`found an invalid token: ${t.string}`];
         return ['unknown invalid token'];
     }
-    debugger;
     const parseResult = parse(grammar, 'program', tokens, 0);
     if (parseResultIsError(parseResult)) {
         return parseResult.errors;
