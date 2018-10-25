@@ -1,6 +1,6 @@
 import debug from '../util/debug.js';
 import { TokenSpec, lex } from '../parser-lib/lex.js';
-import { ThreeAddressProgram } from './generator.js';
+import { ThreeAddressProgram, ThreeAddressCode, ThreeAddressStatement } from './generator.js';
 import {
     Grammar,
     Sequence,
@@ -25,7 +25,7 @@ type TacToken =
     | 'leftBracket'
     | 'rightBracket'
     | 'identifier'
-    | 'assignment'
+    | 'assign'
     | 'star'
     | 'plusplus'
     | 'lessThan'
@@ -113,7 +113,7 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
     },
     {
         token: '=',
-        type: 'assignment',
+        type: 'assign',
         toString: () => '=',
     },
     {
@@ -165,10 +165,14 @@ type TacAstNode =
     | 'program'
     | 'global'
     | 'globals'
+    | 'label'
     | 'function'
     | 'functions'
     | 'instructions'
+    | 'gotoIfEqual'
     | 'instruction'
+    | 'load'
+    | 'increment'
     | 'comment';
 
 const tacTerminal = token => Terminal<TacAstNode, TacToken>(token);
@@ -182,7 +186,7 @@ const colon = tacTerminal('colon');
 const global_ = tacTerminal('global');
 const function_ = tacTerminal('function');
 const comment = tacTerminal('comment');
-const assignment = tacTerminal('assignment');
+const assign = tacTerminal('assign');
 const star = tacTerminal('star');
 const goto = tacTerminal('goto');
 const if_ = tacTerminal('if');
@@ -205,9 +209,9 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('comment', [comment]),
         Sequence('label', [identifier, colon, comment]),
         Sequence('syscall', [syscall, comment]),
-        Sequence('assign', [identifier, assignment, 'idOrNumber', comment]),
-        Sequence('load', [identifier, assignment, star, identifier, comment]),
-        Sequence('store', [star, identifier, assignment, 'idOrNumber', comment]),
+        Sequence('assign', [identifier, assign, 'idOrNumber', comment]),
+        Sequence('load', [identifier, assign, star, identifier, comment]),
+        Sequence('store', [star, identifier, assign, 'idOrNumber', comment]),
         Sequence('offsetStore', [
             star,
             leftBracket,
@@ -215,13 +219,13 @@ const grammar: Grammar<TacAstNode, TacToken> = {
             plus,
             number,
             rightBracket,
-            assignment,
+            assign,
             identifier,
             comment,
         ]),
         Sequence('offsetLoad', [
             identifier,
-            assignment,
+            assign,
             star,
             leftBracket,
             identifier,
@@ -230,10 +234,10 @@ const grammar: Grammar<TacAstNode, TacToken> = {
             rightBracket,
             comment,
         ]),
-        Sequence('difference', [identifier, assignment, identifier, minus, identifier, comment]),
-        Sequence('product', [identifier, assignment, identifier, star, identifier, comment]),
-        Sequence('sum', [identifier, assignment, identifier, plus, identifier, comment]),
-        Sequence('addressOf', [identifier, assignment, and, identifier, comment]),
+        Sequence('difference', [identifier, assign, identifier, minus, identifier, comment]),
+        Sequence('product', [identifier, assign, identifier, star, identifier, comment]),
+        Sequence('sum', [identifier, assign, identifier, plus, identifier, comment]),
+        Sequence('addressOf', [identifier, assign, and, identifier, comment]),
         Sequence('gotoIfEqual', [goto, identifier, if_, identifier, doubleEqual, 'idOrNumber', comment]),
         Sequence('gotoIfNotEqual', [goto, identifier, if_, identifier, notEqual, 'idOrNumber', comment]),
         Sequence('gotoIfGreater', [goto, identifier, if_, identifier, greaterThan, identifier, comment]),
@@ -245,20 +249,89 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     idOrNumber: OneOf([identifier, Sequence('number', [tacOptional(minus), number])]),
 };
 
-const mergeParseReuslts = (lhs, rhs) => ({
-    globals: { ...lhs.globals, ...rhs.globals },
-    functions: [...lhs.functions, ...rhs.functions],
-});
+const mergeParseResults = (
+    lhs: ThreeAddressProgram | ParseError[],
+    rhs: ThreeAddressProgram | ParseError[]
+): ThreeAddressProgram | ParseError[] => {
+    let errors: ParseError[] = [];
+    if (Array.isArray(lhs)) {
+        errors = errors.concat(lhs);
+    }
+    if (Array.isArray(rhs)) {
+        errors = errors.concat(rhs);
+    }
+    if (errors.length > 0) {
+        return errors;
+    }
+
+    return {
+        globals: { ...(lhs as any).globals, ...(rhs as any).globals },
+        functions: [...(lhs as any).functions, ...(rhs as any).functions],
+    };
+};
+
+const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressStatement => {
+    switch (ast.type) {
+        case 'assign':
+            return {
+                kind: 'assign',
+            } as any;
+        case 'label':
+            return {
+                kind: 'label',
+            } as any;
+        case 'load':
+            return {
+                kind: 'load',
+            } as any;
+        case 'gotoIfEqual':
+            return {
+                kind: 'gotoIfEqual',
+            } as any;
+        case 'goto':
+            return {
+                kind: 'goto',
+            } as any;
+        case 'increment':
+            return {
+                kind: 'increment',
+            } as any;
+        case 'identifier':
+            return {
+                kind: 'identifier',
+            } as any;
+        default:
+            return {
+                kind: ast.type,
+            } as any;
+    }
+};
+
+const parseInstructions = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressCode => {
+    if (ast.type == 'instructions') {
+        const a = ast as any;
+        return [parseInstruction(a.children[0]), ...parseInstructions(a.children[1])];
+    } else {
+        const a = ast as any;
+        return a.children.map(parseInstruction);
+    }
+};
 
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {
     switch (ast.type) {
         case 'program':
-            if (ast.children[0].type != 'global') return ['WrongShapeAst'];
-            if (ast.children[1].type != 'colon') return ['WrongShapeAst'];
+            if (ast.children[0].type != 'global') {
+                debug('wrong shape ast');
+                return ['WrongShapeAst'];
+            }
+            if (ast.children[1].type != 'colon') {
+                debug('wrong shape ast');
+                return ['WrongShapeAst'];
+            }
             return tacFromParseResult(ast.children[2]);
         case 'global': {
             const a = ast as any;
-            return mergeParseReuslts(
+            return mergeParseResults(
                 {
                     globals: {
                         [a.children[1].value]: { mangledName: a.children[3].value, bytes: a.children[4].value },
@@ -269,21 +342,40 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
             );
         }
         case 'function': {
-            if (!('children' in ast)) return ['WrongShapeAst'];
-            if (ast.children[0].type != 'function') return ['WrongShapeAst'];
-            if (ast.children[1].type != 'identifier') return ['WrongShapeAst'];
+            if (!('children' in ast)) {
+                debug('wrong shape ast');
+                return ['WrongShapeAst'];
+            }
+            if (ast.children[0].type != 'function') {
+                debug('wrong shape ast');
+                return ['WrongShapeAst'];
+            }
+            if (ast.children[1].type != 'identifier') {
+                debug('wrong shape ast');
+                return ['WrongShapeAst'];
+            }
             const name = (ast.children[1] as any).value;
-            if (ast.children[2].type != 'colon') return ['WrongShapeAst'];
-            if (ast.children[3].type != 'instructions') return ['WrongShapeAst'];
-            const instructions = tacFromParseResult(ast.children[3]);
+            if (ast.children[2].type != 'colon') {
+                debug('wrong shape ast');
+                return ['WrongShapeAst'];
+            }
+            let instructions: ThreeAddressCode = [];
+            if (ast.children[3].type == 'instructions') {
+                instructions = parseInstructions(ast.children[3]);
+            } else if (ast.children[3].type == 'syscall') {
+                instructions = [parseInstruction(ast.children[3])];
+            }
             const remainder = tacFromParseResult(ast.children[4]);
-            return mergeParseReuslts(
+            return mergeParseResults(
                 {
                     globals: {},
                     functions: [{ isMain: false, name, instructions }],
                 },
                 remainder
             );
+        }
+        case 'endOfFile': {
+            return { globals: {}, functions: [] };
         }
         default:
             throw debug(`${ast.type} unhandled in tacFromParseResult`);
