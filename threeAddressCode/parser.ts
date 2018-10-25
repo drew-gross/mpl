@@ -279,14 +279,17 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
     switch (ast.type) {
         case 'assign':
             return {
-                kind: 'assign',
-            } as any;
+                kind: 'loadImmediate',
+                destination: a.children[0].value,
+                value: a.children[2].value,
+                why: stripComment(a.children[3].value),
+            };
         case 'label':
             return {
                 kind: 'label',
                 name: a.children[0].value,
                 why: stripComment(a.children[2].value),
-            } as any;
+            };
         case 'load':
             return {
                 kind: 'load',
@@ -320,7 +323,7 @@ const parseInstructions = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddres
         return [parseInstruction(a.children[0]), ...parseInstructions(a.children[1])];
     } else {
         const a = ast as any;
-        return a.children.map(parseInstruction);
+        return [parseInstruction(a)];
     }
 };
 
