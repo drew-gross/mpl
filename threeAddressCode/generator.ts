@@ -45,7 +45,7 @@ export type ThreeAddressStatement = { why: string } & (
     // Branches
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: Register; rhs: Register; label: string }
-    | { kind: 'gotoIfNotEqual'; lhs: Register; rhs: Register; label: string }
+    | { kind: 'gotoIfNotEqual'; lhs: Register; rhs: Register | number; label: string }
     | { kind: 'gotoIfZero'; register: Register; label: string }
     | { kind: 'gotoIfGreater'; lhs: Register; rhs: Register; label: string }
     // Memory Writes
@@ -88,7 +88,7 @@ export type TargetThreeAddressStatement<TargetRegister> = { why: string } & (
     // Branches
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: TargetRegister; rhs: TargetRegister; label: string }
-    | { kind: 'gotoIfNotEqual'; lhs: TargetRegister; rhs: TargetRegister; label: string }
+    | { kind: 'gotoIfNotEqual'; lhs: TargetRegister; rhs: TargetRegister | number; label: string }
     | { kind: 'gotoIfZero'; register: TargetRegister; label: string }
     | { kind: 'gotoIfGreater'; lhs: TargetRegister; rhs: TargetRegister; label: string }
     // Memory Writes
@@ -1004,8 +1004,12 @@ export const threeAddressCodeToTarget = <TargetRegister>(
         case 'increment':
         case 'gotoIfZero':
             return [{ ...tas, register: getRegister(tas.register) }];
-        case 'gotoIfEqual':
         case 'gotoIfNotEqual':
+            if (typeof tas.rhs == 'number') {
+                return [{ ...tas, lhs: getRegister(tas.lhs), rhs: tas.rhs }];
+            }
+            return [{ ...tas, lhs: getRegister(tas.lhs), rhs: getRegister(tas.rhs) }];
+        case 'gotoIfEqual':
         case 'gotoIfGreater':
             return [{ ...tas, lhs: getRegister(tas.lhs), rhs: getRegister(tas.rhs) }];
         case 'loadSymbolAddress':

@@ -116,7 +116,11 @@ const livenessUpdate = (tas: ThreeAddressStatement): { newlyLive: Register[]; ne
         case 'gotoIfEqual':
         case 'gotoIfNotEqual':
         case 'gotoIfGreater':
-            return { newlyLive: [tas.lhs, tas.rhs], newlyDead: [] };
+            const live = [tas.lhs];
+            if (typeof tas.rhs != 'number') {
+                live.push(tas.rhs);
+            }
+            return { newlyLive: live, newlyDead: [] };
         case 'gotoIfZero':
             return { newlyLive: [tas.register], newlyDead: [] };
         case 'stackAllocateAndStorePointer':

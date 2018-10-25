@@ -1,7 +1,7 @@
 import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
 import { Register } from '../register.js';
-import { ThreeAddressFunction } from './generator.js';
+import { ThreeAddressFunction, ThreeAddressStatement } from './generator.js';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => ThreeAddressFunction;
 
@@ -173,10 +173,10 @@ const switchableMallocImpl = (
             {
                 kind: 'gotoIfNotEqual',
                 lhs: 'functionResult',
-                rhs: { name: '-1' }, // TODO: should be immediate
+                rhs: -1,
                 label: 'alloc_exit_check_passed',
                 why: 'If mmap failed, exit',
-            },
+            } as ThreeAddressStatement,
             {
                 kind: 'loadSymbolAddress',
                 to: err,

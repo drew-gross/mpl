@@ -30,6 +30,9 @@ const toStringWithoutComment = (tas: ThreeAddressStatement): string => {
         case 'gotoIfEqual':
             return `goto ${tas.label} if ${registerToString(tas.lhs)} == ${registerToString(tas.rhs)}`;
         case 'gotoIfNotEqual':
+            if (typeof tas.rhs == 'number') {
+                return `goto ${tas.label} if ${registerToString(tas.lhs)} != ${tas.rhs}`;
+            }
             return `goto ${tas.label} if ${registerToString(tas.lhs)} != ${registerToString(tas.rhs)}`;
         case 'gotoIfZero':
             return `goto ${tas.label} if ${registerToString(tas.register)} == 0`;
