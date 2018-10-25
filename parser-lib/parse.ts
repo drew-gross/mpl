@@ -298,7 +298,7 @@ const parseAlternative = <NodeType extends string, TokenType>(
                 }
                 currentIndex = currentProgress.subParserIndex;
             } else {
-                throw debug('unhandled kind of parser');
+                throw debug(`unhandled kind of parser: ${currentParser.kind}`);
             }
 
             // Push the results into the cache for the current parser

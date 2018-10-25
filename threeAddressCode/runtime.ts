@@ -211,7 +211,7 @@ const switchableMallocImpl = (
             {
                 kind: 'gotoIfNotEqual',
                 lhs: { name: 'first_block_pointer_address' },
-                rhs: { name: '0' },
+                rhs: 0,
                 label: 'assign_previous',
                 why: 'If there is no previous block, set up first block pointer',
             },

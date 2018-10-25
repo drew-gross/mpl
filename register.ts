@@ -1,4 +1,4 @@
-export const specialRegisterNames = ['functionArgument1', 'functionArgument2', 'functionArgument3'];
+export const specialRegisterNames = ['functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'];
 
 export type Register =
     | 'functionArgument1'

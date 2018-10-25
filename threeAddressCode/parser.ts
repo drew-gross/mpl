@@ -1,6 +1,6 @@
 import debug from '../util/debug.js';
 import { TokenSpec, lex } from '../parser-lib/lex.js';
-import { specialRegisterNames } from '../register.js';
+import { specialRegisterNames, Register } from '../register.js';
 import { ThreeAddressProgram, ThreeAddressCode, ThreeAddressStatement } from './generator.js';
 import {
     Grammar,
@@ -61,6 +61,7 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         token: 'r:[a-z]\\w*',
         type: 'register',
         toString: x => x,
+        action: x => x,
     },
     {
         token: 'syscall',
@@ -78,7 +79,7 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         toString: _ => ':',
     },
     {
-        token: '\\d+',
+        token: '-?\\d+',
         type: 'number',
         action: parseInt,
         toString: x => x.toString(),
@@ -171,6 +172,7 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
 type TacAstNode =
     | 'program'
     | 'global'
+    | 'loadImmediate'
     | 'globals'
     | 'label'
     | 'function'
@@ -178,7 +180,8 @@ type TacAstNode =
     | 'instructions'
     | 'gotoIfEqual'
     | 'instruction'
-    | 'call'
+    | 'callByName'
+    | 'callByRegister'
     | 'load'
     | 'increment'
     | 'comment';
@@ -218,9 +221,10 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('comment', [comment]),
         Sequence('label', [identifier, colon, comment]),
         Sequence('syscall', [syscall, comment]),
+        Sequence('loadImmediate', [register, assign, number, comment]),
         Sequence('assign', [register, assign, 'data', comment]),
         Sequence('load', [register, assign, star, 'data', comment]),
-        Sequence('store', [star, register, assign, 'data', comment]),
+        Sequence('store', [star, 'data', assign, 'data', comment]),
         Sequence('offsetStore', [star, leftBracket, register, plus, number, rightBracket, assign, 'data', comment]),
         Sequence('offsetLoad', [register, assign, star, leftBracket, register, plus, number, rightBracket, comment]),
         Sequence('difference', [register, assign, 'data', minus, 'data', comment]),
@@ -233,9 +237,10 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('plusEqual', [register, plusEqual, 'data', comment]),
         Sequence('goto', [goto, identifier, comment]),
         Sequence('increment', [register, plusplus, comment]),
-        Sequence('call', [register, leftBracket, rightBracket, comment]),
+        Sequence('callByRegister', [register, leftBracket, rightBracket, comment]),
+        Sequence('callByName', [identifier, leftBracket, rightBracket, comment]),
     ]),
-    data: OneOf([identifier, register, Sequence('number', [tacOptional(minus), number])]),
+    data: OneOf([identifier, register, number]),
 };
 
 const mergeParseResults = (
@@ -263,26 +268,25 @@ const stripComment = (str: string): string => {
     return str.substring(2, str.length - 1);
 };
 
+const parseRegister = (data: string): Register => {
+    if (!data) debug('no data');
+    const sliced = data.substring(2, data.length);
+    if (specialRegisterNames.includes(sliced)) {
+        return sliced as Register;
+    }
+    return { name: sliced };
+};
+
 const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressStatement => {
     const a = ast as any;
     switch (ast.type) {
         case 'assign':
-            if (a.children[2].kind == 'number') {
-                return {
-                    kind: 'loadImmediate',
-                    destination: a.children[0].value,
-                    value: a.children[2].value,
-                    why: stripComment(a.children[3].value),
-                };
-            } else {
-                if (a.children[0].value == 'result_13') debugger;
-                return {
-                    kind: 'move',
-                    to: a.children[0].value,
-                    from: { name: a.children[2].value },
-                    why: stripComment(a.children[3].value),
-                };
-            }
+            return {
+                kind: 'move',
+                to: a.children[0].value,
+                from: parseRegister(a.children[2].value) as any,
+                why: stripComment(a.children[3].value),
+            };
         case 'label':
             return {
                 kind: 'label',
@@ -291,39 +295,65 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
             };
         case 'load':
             return {
-                kind: 'load',
-            } as any;
-        case 'gotoIfEqual':
-            return {
-                kind: 'gotoIfEqual',
-            } as any;
+                kind: 'loadMemoryByte',
+                address: parseRegister(a.children[3].value),
+                to: parseRegister(a.children[0].value),
+                why: stripComment(a.children[4].value),
+            };
         case 'goto':
+            if (a.children.length == 3) {
+                return {
+                    kind: 'goto',
+                    label: a.children[1].value,
+                    why: stripComment(a.children[2].value),
+                };
+            }
             return {
                 kind: 'goto',
             } as any;
+        case 'gotoIfEqual': {
+            if (a.children[5].value == 0) {
+                return {
+                    kind: 'gotoIfZero',
+                    label: a.children[1].value,
+                    register: parseRegister(a.children[3].value),
+                    why: stripComment(a.children[6].value),
+                };
+            }
+            return {
+                kind: 'gotoIfEqual',
+            } as any;
+        }
         case 'increment':
             return {
                 kind: 'increment',
-            } as any;
+                register: parseRegister(a.children[0].value),
+                why: stripComment(a.children[2].value),
+            };
         case 'identifier':
             return {
                 kind: 'identifier',
             } as any;
-        case 'call': {
-            const lhs: string = a.children[0].value;
-            if (specialRegisterNames.includes(lhs)) {
-                return {
-                    kind: 'callByRegister',
-                    function: { name: a.children[0].value },
-                    why: stripComment(a.children[3].value),
-                };
-            } else {
-                return {
-                    kind: 'callByName',
-                    function: a.children[0].value,
-                    why: stripComment(a.children[3].value),
-                };
-            }
+        case 'loadImmediate':
+            return {
+                kind: 'loadImmediate',
+                destination: parseRegister(a.children[0].value),
+                value: a.children[2].value,
+                why: stripComment(a.children[3].value),
+            };
+        case 'callByRegister': {
+            return {
+                kind: 'callByRegister',
+                function: { name: a.children[0].value },
+                why: stripComment(a.children[3].value),
+            };
+        }
+        case 'callByName': {
+            return {
+                kind: 'callByName',
+                function: a.children[0].value,
+                why: stripComment(a.children[3].value),
+            };
         }
         default:
             return {
