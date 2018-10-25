@@ -1218,7 +1218,7 @@ return lengthOfFoo(1);`,
     expectedExitCode: 3,
 });
 
-test.only('string args', compileAndRun, {
+test('string args', compileAndRun, {
     source: `
 excitmentifier := (boring: String) => {
     dummy := print(boring ++ "!");
@@ -1771,7 +1771,7 @@ test('pretty-parse-error', t => {
     // nominal test
     t.deepEqual(
         prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 4 }, 'message'),
-        'contextBefore\n123456789\n   ^ message\ncontextAfter'
+        'contextBefore\n123456789\n   ^ message at line 2 column 4\ncontextAfter'
     );
 
     // line out of range too low
@@ -1784,23 +1784,26 @@ test('pretty-parse-error', t => {
     t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 10 }, ''), null);
 
     // First line
-    t.deepEqual(prettyParseError('123456789\ncontextAfter', { line: 1, column: 1 }, ''), '123456789\n^ \ncontextAfter');
+    t.deepEqual(
+        prettyParseError('123456789\ncontextAfter', { line: 1, column: 1 }, 'm'),
+        '123456789\n^ m at line 1 column 1\ncontextAfter'
+    );
     // Last line
     t.deepEqual(
-        prettyParseError('contextBefore\n123456789', { line: 2, column: 9 }, ''),
-        'contextBefore\n123456789\n        ^ '
+        prettyParseError('contextBefore\n123456789', { line: 2, column: 9 }, 'm2'),
+        'contextBefore\n123456789\n        ^ m2 at line 2 column 9'
     );
     // Only line
-    t.deepEqual(prettyParseError('123456789', { line: 1, column: 1 }, ''), '123456789\n^ ');
+    t.deepEqual(prettyParseError('123456789', { line: 1, column: 1 }, 'm3'), '123456789\n^ m3 at line 1 column 1');
 });
 
 test('tac parser regression', t => {
     const source = `(global) id: id_1 17
 (global) id: id_1 17
 (function) length:
-functionResult = 0 # Set length count to 0
+r:functionResult = 0 # Set length count to 0
 (function) stringEquality:
-functionResult = 1 # Assume equal. Write true to functionResult. Overwrite if difference found.
+r:functionResult = 1 # Assume equal. Write true to functionResult. Overwrite if difference found.
 `;
 
     const result = parseTac(source);

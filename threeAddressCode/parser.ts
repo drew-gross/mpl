@@ -1,5 +1,6 @@
 import debug from '../util/debug.js';
 import { TokenSpec, lex } from '../parser-lib/lex.js';
+import { specialRegisterNames } from '../register.js';
 import { ThreeAddressProgram, ThreeAddressCode, ThreeAddressStatement } from './generator.js';
 import {
     Grammar,
@@ -26,6 +27,7 @@ type TacToken =
     | 'rightBracket'
     | 'identifier'
     | 'assign'
+    | 'register'
     | 'star'
     | 'plusplus'
     | 'lessThan'
@@ -53,6 +55,11 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
     {
         token: 'goto',
         type: 'goto',
+        toString: x => x,
+    },
+    {
+        token: 'r:[a-z]\\w*',
+        type: 'register',
         toString: x => x,
     },
     {
@@ -171,6 +178,7 @@ type TacAstNode =
     | 'instructions'
     | 'gotoIfEqual'
     | 'instruction'
+    | 'call'
     | 'load'
     | 'increment'
     | 'comment';
@@ -182,6 +190,7 @@ const identifier = tacTerminal('identifier');
 const leftBracket = tacTerminal('leftBracket');
 const rightBracket = tacTerminal('rightBracket');
 const number = tacTerminal('number');
+const register = tacTerminal('register');
 const colon = tacTerminal('colon');
 const global_ = tacTerminal('global');
 const function_ = tacTerminal('function');
@@ -209,44 +218,24 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('comment', [comment]),
         Sequence('label', [identifier, colon, comment]),
         Sequence('syscall', [syscall, comment]),
-        Sequence('assign', [identifier, assign, 'idOrNumber', comment]),
-        Sequence('load', [identifier, assign, star, identifier, comment]),
-        Sequence('store', [star, identifier, assign, 'idOrNumber', comment]),
-        Sequence('offsetStore', [
-            star,
-            leftBracket,
-            identifier,
-            plus,
-            number,
-            rightBracket,
-            assign,
-            identifier,
-            comment,
-        ]),
-        Sequence('offsetLoad', [
-            identifier,
-            assign,
-            star,
-            leftBracket,
-            identifier,
-            plus,
-            number,
-            rightBracket,
-            comment,
-        ]),
-        Sequence('difference', [identifier, assign, identifier, minus, identifier, comment]),
-        Sequence('product', [identifier, assign, identifier, star, identifier, comment]),
-        Sequence('sum', [identifier, assign, identifier, plus, identifier, comment]),
-        Sequence('addressOf', [identifier, assign, and, identifier, comment]),
-        Sequence('gotoIfEqual', [goto, identifier, if_, identifier, doubleEqual, 'idOrNumber', comment]),
-        Sequence('gotoIfNotEqual', [goto, identifier, if_, identifier, notEqual, 'idOrNumber', comment]),
-        Sequence('gotoIfGreater', [goto, identifier, if_, identifier, greaterThan, identifier, comment]),
-        Sequence('plusEqual', [identifier, plusEqual, 'idOrNumber', comment]),
+        Sequence('assign', [register, assign, 'data', comment]),
+        Sequence('load', [register, assign, star, 'data', comment]),
+        Sequence('store', [star, register, assign, 'data', comment]),
+        Sequence('offsetStore', [star, leftBracket, register, plus, number, rightBracket, assign, 'data', comment]),
+        Sequence('offsetLoad', [register, assign, star, leftBracket, register, plus, number, rightBracket, comment]),
+        Sequence('difference', [register, assign, 'data', minus, 'data', comment]),
+        Sequence('product', [register, assign, 'data', star, 'data', comment]),
+        Sequence('sum', [register, assign, 'data', plus, 'data', comment]),
+        Sequence('addressOf', [register, assign, and, 'data', comment]),
+        Sequence('gotoIfEqual', [goto, identifier, if_, 'data', doubleEqual, 'data', comment]),
+        Sequence('gotoIfNotEqual', [goto, identifier, if_, 'data', notEqual, 'data', comment]),
+        Sequence('gotoIfGreater', [goto, identifier, if_, 'data', greaterThan, 'data', comment]),
+        Sequence('plusEqual', [register, plusEqual, 'data', comment]),
         Sequence('goto', [goto, identifier, comment]),
-        Sequence('increment', [identifier, plusplus, comment]),
-        Sequence('call', [identifier, leftBracket, rightBracket, comment]),
+        Sequence('increment', [register, plusplus, comment]),
+        Sequence('call', [register, leftBracket, rightBracket, comment]),
     ]),
-    idOrNumber: OneOf([identifier, Sequence('number', [tacOptional(minus), number])]),
+    data: OneOf([identifier, register, Sequence('number', [tacOptional(minus), number])]),
 };
 
 const mergeParseResults = (
@@ -278,12 +267,22 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
     const a = ast as any;
     switch (ast.type) {
         case 'assign':
-            return {
-                kind: 'loadImmediate',
-                destination: a.children[0].value,
-                value: a.children[2].value,
-                why: stripComment(a.children[3].value),
-            };
+            if (a.children[2].kind == 'number') {
+                return {
+                    kind: 'loadImmediate',
+                    destination: a.children[0].value,
+                    value: a.children[2].value,
+                    why: stripComment(a.children[3].value),
+                };
+            } else {
+                if (a.children[0].value == 'result_13') debugger;
+                return {
+                    kind: 'move',
+                    to: a.children[0].value,
+                    from: { name: a.children[2].value },
+                    why: stripComment(a.children[3].value),
+                };
+            }
         case 'label':
             return {
                 kind: 'label',
@@ -310,6 +309,22 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
             return {
                 kind: 'identifier',
             } as any;
+        case 'call': {
+            const lhs: string = a.children[0].value;
+            if (specialRegisterNames.includes(lhs)) {
+                return {
+                    kind: 'callByRegister',
+                    function: { name: a.children[0].value },
+                    why: stripComment(a.children[3].value),
+                };
+            } else {
+                return {
+                    kind: 'callByName',
+                    function: a.children[0].value,
+                    why: stripComment(a.children[3].value),
+                };
+            }
+        }
         default:
             return {
                 kind: ast.type,
