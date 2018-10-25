@@ -270,7 +270,12 @@ const mergeParseResults = (
     };
 };
 
+const stripComment = (str: string): string => {
+    return str.substring(2, str.length - 1);
+};
+
 const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressStatement => {
+    const a = ast as any;
     switch (ast.type) {
         case 'assign':
             return {
@@ -279,6 +284,8 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
         case 'label':
             return {
                 kind: 'label',
+                name: a.children[0].value,
+                why: stripComment(a.children[2].value),
             } as any;
         case 'load':
             return {
