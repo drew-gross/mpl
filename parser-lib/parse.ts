@@ -175,7 +175,7 @@ const parseSequence = <NodeType extends string, TokenType>(
         } else if (typeof p === 'string') {
             result = parse(grammar, p as NodeType, tokens, index);
         } else {
-            throw debug('Sequence of sequences');
+            throw debug(`Sequence of sequences: ${JSON.stringify(p)}`);
         }
 
         if (parseResultIsError(result)) {

@@ -171,6 +171,7 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
 
 type TacAstNode =
     | 'program'
+    | 'addressOf'
     | 'global'
     | 'loadImmediate'
     | 'globals'
@@ -178,8 +179,14 @@ type TacAstNode =
     | 'function'
     | 'functions'
     | 'instructions'
+    | 'difference'
     | 'gotoIfEqual'
+    | 'gotoIfNotEqual'
+    | 'gotoIfGreater'
     | 'instruction'
+    | 'store'
+    | 'offsetStore'
+    | 'offsetLoad'
     | 'callByName'
     | 'callByRegister'
     | 'load'
@@ -220,7 +227,8 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     instruction: OneOf([
         Sequence('comment', [comment]),
         Sequence('label', [identifier, colon, comment]),
-        Sequence('syscall', [syscall, comment]),
+        // TODO: probably need separate syntax for syscall with result
+        Sequence('syscall', [syscall, identifier, 'syscallArgs', comment]),
         Sequence('loadImmediate', [register, assign, number, comment]),
         Sequence('assign', [register, assign, 'data', comment]),
         Sequence('load', [register, assign, star, 'data', comment]),
@@ -241,6 +249,8 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('callByName', [identifier, leftBracket, rightBracket, comment]),
     ]),
     data: OneOf([identifier, register, number]),
+    syscallArgs: OneOf([Sequence('syscallArgs', [tacOptional(identifier), 'syscallArg', 'syscallArgs']), 'syscallArg']),
+    syscallArg: OneOf([number, register]),
 };
 
 const mergeParseResults = (
@@ -264,6 +274,18 @@ const mergeParseResults = (
     };
 };
 
+const parseSyscallArgs = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | number)[] => {
+    const a = ast as any;
+    switch (ast.type) {
+        case 'register':
+            return [parseRegister(a.value)];
+        case 'number':
+            return [a.value];
+        default:
+            return debug('unhandled case in parseS');
+    }
+};
+
 const stripComment = (str: string): string => {
     return str.substring(2, str.length - 1);
 };
@@ -283,7 +305,7 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
         case 'assign':
             return {
                 kind: 'move',
-                to: a.children[0].value,
+                to: parseRegister(a.children[0].value),
                 from: parseRegister(a.children[2].value) as any,
                 why: stripComment(a.children[3].value),
             };
@@ -322,6 +344,10 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
             }
             return {
                 kind: 'gotoIfEqual',
+                label: a.children[1].value,
+                lhs: parseRegister(a.children[3].value),
+                rhs: parseRegister(a.children[5].value),
+                why: stripComment(a.children[6].value),
             } as any;
         }
         case 'increment':
@@ -354,6 +380,104 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
                 function: a.children[0].value,
                 why: stripComment(a.children[3].value),
             };
+        }
+        case 'difference': {
+            return {
+                kind: 'subtract',
+                destination: parseRegister(a.children[0].value),
+                lhs: parseRegister(a.children[2].value),
+                rhs: parseRegister(a.children[4].value),
+                why: stripComment(a.children[5].value),
+            };
+        }
+        case 'gotoIfNotEqual': {
+            if (a.children[5].type == 'number') {
+                return { kind: 'goto undone' } as any;
+            }
+            return {
+                kind: 'gotoIfNotEqual',
+                label: a.children[1].value,
+                lhs: parseRegister(a.children[3].value),
+                rhs: parseRegister(a.children[5].value),
+                why: stripComment(a.children[6].value),
+            };
+        }
+        case 'gotoIfGreater': {
+            return {
+                kind: 'gotoIfGreater',
+                label: a.children[1].value,
+                lhs: parseRegister(a.children[3].value),
+                rhs: parseRegister(a.children[5].value),
+                why: stripComment(a.children[6].value),
+            };
+        }
+        case 'store': {
+            if (a.children[3].type == 'number') {
+                return {
+                    kind: 'storeMemoryByte',
+                    address: parseRegister(a.children[1].value),
+                    contents: a.children[3].value,
+                    why: stripComment(a.children[4].value),
+                };
+            }
+            return {
+                kind: 'storeMemoryByte',
+                address: parseRegister(a.children[1].value),
+                contents: parseRegister(a.children[3].value),
+                why: stripComment(a.children[4].value),
+            };
+        }
+        case 'offsetStore': {
+            if (a.children[7].value == 0) {
+                return {
+                    kind: 'storeZeroToMemory',
+                    address: parseRegister(a.children[2].value),
+                    offset: a.children[4].value,
+                    why: stripComment(a.children[8].value),
+                };
+            }
+            return {
+                kind: 'storeMemory',
+                address: parseRegister(a.children[2].value),
+                offset: a.children[4].value,
+                from: parseRegister(a.children[7].value),
+                why: stripComment(a.children[8].value),
+            };
+        }
+        case 'offsetLoad': {
+            return {
+                kind: 'loadMemory',
+                to: parseRegister(a.children[0].value),
+                from: parseRegister(a.children[4].value),
+                offset: a.children[6].value,
+                why: stripComment(a.children[8].value),
+            };
+        }
+        case 'addressOf': {
+            return {
+                kind: 'loadSymbolAddress',
+                symbolName: a.children[3].value,
+                to: parseRegister(a.children[0].value),
+                why: stripComment(a.children[4].value),
+            };
+        }
+        case 'syscall': {
+            if (a.children[1].value == 'sbrk') debugger;
+            return {
+                kind: 'syscall',
+                name: a.children[1].value,
+                destination: undefined,
+                arguments: parseSyscallArgs(a.children[2]),
+                why: stripComment(a.children[3].value),
+            };
+        }
+        case 'plusEqual': {
+            return {
+                kind: 'addImmediate',
+                register: parseRegister(a.children[0].value),
+                amount: a.children[2].value,
+                why: stripComment(a.children[3].value),
+            } as any;
         }
         default:
             return {

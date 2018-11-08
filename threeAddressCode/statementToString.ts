@@ -1,13 +1,21 @@
 import debug from '../util/debug.js';
-import { toString as registerToString } from '../register.js';
+import { toString as registerToString, Register } from '../register.js';
 import { ThreeAddressStatement } from './generator.js';
+
+const syscallArgToString = (regOrNumber: number | Register): string => {
+    if (typeof regOrNumber == 'number') {
+        return regOrNumber.toString();
+    } else {
+        return registerToString(regOrNumber);
+    }
+};
 
 const toStringWithoutComment = (tas: ThreeAddressStatement): string => {
     switch (tas.kind) {
         case 'comment':
             return ``;
         case 'syscall':
-            return 'syscall';
+            return 'syscall ' + tas.name + ' ' + tas.arguments.map(syscallArgToString).join(' ');
         case 'move':
             return `${registerToString(tas.to)} = ${registerToString(tas.from)}`;
         case 'loadImmediate':
@@ -47,7 +55,7 @@ const toStringWithoutComment = (tas: ThreeAddressStatement): string => {
         case 'storeMemoryByte':
             return `*${registerToString(tas.address)} = ${registerToString(tas.contents)}`;
         case 'storeZeroToMemory':
-            return `*${registerToString(tas.address)} = 0`;
+            return `*(${registerToString(tas.address)} + ${tas.offset}) = 0`;
         case 'loadMemory':
             return `${registerToString(tas.to)} = *(${registerToString(tas.from)} + ${tas.offset})`;
         case 'loadMemoryByte':

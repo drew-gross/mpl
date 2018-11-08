@@ -23,6 +23,7 @@ const switchableMallocImpl = (
                 kind: 'loadImmediate',
                 value: 0,
                 destination: zero,
+                why: 'need a zero',
             },
             {
                 kind: 'gotoIfGreater',
