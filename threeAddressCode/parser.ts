@@ -1,4 +1,5 @@
 import debug from '../util/debug.js';
+import flatten from '../util/list/flatten.js';
 import { TokenSpec, lex } from '../parser-lib/lex.js';
 import { specialRegisterNames, Register } from '../register.js';
 import { ThreeAddressProgram, ThreeAddressCode, ThreeAddressStatement } from './generator.js';
@@ -185,6 +186,7 @@ type TacAstNode =
     | 'gotoIfGreater'
     | 'instruction'
     | 'store'
+    | 'syscallArgs'
     | 'offsetStore'
     | 'offsetLoad'
     | 'callByName'
@@ -281,8 +283,10 @@ const parseSyscallArgs = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | 
             return [parseRegister(a.value)];
         case 'number':
             return [a.value];
+        case 'syscallArgs':
+            return flatten(a.children.map(parseSyscallArgs));
         default:
-            return debug('unhandled case in parseS');
+            return debug(`unhandled case in parseSyscallArgs: ${a.type}`);
     }
 };
 
@@ -462,14 +466,18 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
             };
         }
         case 'syscall': {
-            if (a.children[1].value == 'sbrk') debugger;
-            return {
-                kind: 'syscall',
-                name: a.children[1].value,
-                destination: undefined,
-                arguments: parseSyscallArgs(a.children[2]),
-                why: stripComment(a.children[3].value),
-            };
+            const syscallsWithReturns = ['sbrk']; // TODO: get this info in a better way
+            const name = a.children[1].value;
+            let args = parseSyscallArgs(a.children[2]);
+            let destination = undefined;
+            if (syscallsWithReturns.includes(name)) {
+                if (typeof args[0] == 'number') {
+                    throw debug('invlaid destination');
+                }
+                destination = args[0] as any;
+                args = args.slice(1);
+            }
+            return { kind: 'syscall', name, destination, arguments: args, why: stripComment(a.children[3].value) };
         }
         case 'plusEqual': {
             return {

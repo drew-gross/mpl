@@ -15,7 +15,9 @@ const toStringWithoutComment = (tas: ThreeAddressStatement): string => {
         case 'comment':
             return ``;
         case 'syscall':
-            return 'syscall ' + tas.name + ' ' + tas.arguments.map(syscallArgToString).join(' ');
+            return `syscall ${tas.name} ${tas.destination ? registerToString(tas.destination) : ''} ${tas.arguments
+                .map(syscallArgToString)
+                .join(' ')}`;
         case 'move':
             return `${registerToString(tas.to)} = ${registerToString(tas.from)}`;
         case 'loadImmediate':
