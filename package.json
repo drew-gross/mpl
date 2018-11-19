@@ -39,7 +39,7 @@
         "prettier": "1.14.2",
         "rimraf": "2.6.2",
         "tmp-promise": "1.0.5",
-        "typescript": "3.0.3"
+        "typescript": "3.1.6"
     },
     "prettier": {
         "printWidth": 120,
