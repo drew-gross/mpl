@@ -36,7 +36,7 @@
         "lodash": "4.17.11",
         "omit-deep": "0.3.0",
         "opn": "5.4.0",
-        "prettier": "1.14.2",
+        "prettier": "1.15.2",
         "rimraf": "2.6.2",
         "tmp-promise": "1.0.5",
         "typescript": "3.1.6"

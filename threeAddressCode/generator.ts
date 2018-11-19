@@ -946,21 +946,20 @@ export const threeAddressCodeToTarget = <TargetRegister>(
                     register: r,
                     why: 'save registers',
                 })),
-                ...tas.arguments.map(
-                    (arg, index) =>
-                        typeof arg == 'number'
-                            ? {
-                                  kind: 'loadImmediate' as 'loadImmediate',
-                                  value: arg,
-                                  destination: registerTypes.syscallArgument[index],
-                                  why: 'syscallArg = immediate',
-                              }
-                            : {
-                                  kind: 'move' as 'move',
-                                  from: getRegister(arg),
-                                  to: registerTypes.syscallArgument[index],
-                                  why: 'syscallArg = register',
-                              }
+                ...tas.arguments.map((arg, index) =>
+                    typeof arg == 'number'
+                        ? {
+                              kind: 'loadImmediate' as 'loadImmediate',
+                              value: arg,
+                              destination: registerTypes.syscallArgument[index],
+                              why: 'syscallArg = immediate',
+                          }
+                        : {
+                              kind: 'move' as 'move',
+                              from: getRegister(arg),
+                              to: registerTypes.syscallArgument[index],
+                              why: 'syscallArg = register',
+                          }
                 ),
                 {
                     kind: 'loadImmediate',
@@ -1096,19 +1095,21 @@ export const makeAllFunctions = (
     );
 
     const freeGlobalsInstructions: ThreeAddressStatement[] = flatten(
-        globalDeclarations.filter(declaration => declaration.type.kind === 'String').map(declaration => [
-            {
-                kind: 'loadGlobal',
-                from: globalNameMap[declaration.name].newName,
-                to: 'functionArgument1',
-                why: 'Load global string so we can free it',
-            } as ThreeAddressStatement,
-            {
-                kind: 'callByName',
-                function: 'my_free',
-                why: 'Free gloabal string at end of program',
-            } as ThreeAddressStatement,
-        ])
+        globalDeclarations
+            .filter(declaration => declaration.type.kind === 'String')
+            .map(declaration => [
+                {
+                    kind: 'loadGlobal',
+                    from: globalNameMap[declaration.name].newName,
+                    to: 'functionArgument1',
+                    why: 'Load global string so we can free it',
+                } as ThreeAddressStatement,
+                {
+                    kind: 'callByName',
+                    function: 'my_free',
+                    why: 'Free gloabal string at end of program',
+                } as ThreeAddressStatement,
+            ])
     );
 
     let mainProgram: ThreeAddressFunction = {
