@@ -73,7 +73,7 @@ const toStringWithoutComment = (tas: ThreeAddressStatement): string => {
         case 'returnToCaller':
             return `return`;
         case 'stackAllocateAndStorePointer':
-            return `${tas.register} = alloca(${tas.bytes})`;
+            return `${registerToString(tas.register)} = alloca(${tas.bytes})`;
         // Should be completely covered
     }
 };

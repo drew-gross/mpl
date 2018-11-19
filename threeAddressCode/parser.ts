@@ -28,6 +28,7 @@ type TacToken =
     | 'rightBracket'
     | 'identifier'
     | 'assign'
+    | 'alloca'
     | 'register'
     | 'star'
     | 'plusplus'
@@ -56,6 +57,11 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
     {
         token: 'goto',
         type: 'goto',
+        toString: x => x,
+    },
+    {
+        token: 'alloca',
+        type: 'alloca',
         toString: x => x,
     },
     {
@@ -192,6 +198,7 @@ type TacAstNode =
     | 'offsetStore'
     | 'offsetLoad'
     | 'callByName'
+    | 'stackAllocateAndStorePointer'
     | 'product'
     | 'callByRegister'
     | 'load'
@@ -213,6 +220,7 @@ const comment = tacTerminal('comment');
 const assign = tacTerminal('assign');
 const star = tacTerminal('star');
 const goto = tacTerminal('goto');
+const alloca = tacTerminal('alloca');
 const if_ = tacTerminal('if');
 const doubleEqual = tacTerminal('doubleEqual');
 const plusEqual = tacTerminal('plusEqual');
@@ -250,6 +258,15 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('plusEqual', [register, plusEqual, 'data', comment]),
         Sequence('goto', [goto, identifier, comment]),
         Sequence('increment', [register, plusplus, comment]),
+        Sequence('stackAllocateAndStorePointer', [
+            register,
+            assign,
+            alloca,
+            leftBracket,
+            number,
+            rightBracket,
+            comment,
+        ]),
         Sequence('callByRegister', [register, leftBracket, rightBracket, comment]),
         Sequence('callByName', [identifier, leftBracket, rightBracket, comment]),
     ]),
@@ -530,6 +547,13 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
                 why: stripComment(a.children[5].value),
             };
         }
+        case 'stackAllocateAndStorePointer':
+            return {
+                kind: 'stackAllocateAndStorePointer',
+                register: parseRegister(a.children[0].value),
+                bytes: a.children[4].value,
+                why: stripComment(a.children[6].value),
+            };
         default:
             return {
                 kind: ast.type,
