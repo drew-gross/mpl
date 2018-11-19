@@ -191,6 +191,7 @@ type TacAstNode =
     | 'offsetStore'
     | 'offsetLoad'
     | 'callByName'
+    | 'product'
     | 'callByRegister'
     | 'load'
     | 'increment'
@@ -508,6 +509,15 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
             return {
                 kind: 'comment',
                 why: stripComment(a.children[0].value),
+            };
+        }
+        case 'product': {
+            return {
+                kind: 'multiply',
+                destination: parseRegister(a.children[0].value),
+                lhs: parseRegister(a.children[2].value),
+                rhs: parseRegister(a.children[4].value),
+                why: stripComment(a.children[5].value),
             };
         }
         default:
