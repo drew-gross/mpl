@@ -579,7 +579,7 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
             return mergeParseResults(
                 {
                     globals: {},
-                    functions: [{ isMain: false, name, instructions }],
+                    functions: [{ isMain: name == 'main', name, instructions }],
                 },
                 remainder
             );
