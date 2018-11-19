@@ -181,6 +181,7 @@ type TacAstNode =
     | 'function'
     | 'functions'
     | 'instructions'
+    | 'sum'
     | 'difference'
     | 'gotoIfEqual'
     | 'gotoIfNotEqual'
@@ -514,6 +515,15 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
         case 'product': {
             return {
                 kind: 'multiply',
+                destination: parseRegister(a.children[0].value),
+                lhs: parseRegister(a.children[2].value),
+                rhs: parseRegister(a.children[4].value),
+                why: stripComment(a.children[5].value),
+            };
+        }
+        case 'sum': {
+            return {
+                kind: 'add',
                 destination: parseRegister(a.children[0].value),
                 lhs: parseRegister(a.children[2].value),
                 rhs: parseRegister(a.children[4].value),
