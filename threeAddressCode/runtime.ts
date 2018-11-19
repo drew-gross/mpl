@@ -333,36 +333,19 @@ export const length: RuntimeFunctionGenerator = bytesInWord => {
 };
 
 export const stringCopy: RuntimeFunctionGenerator = bytesInWord => {
-    const currentChar = { name: 'currentChar' };
-    return {
-        name: 'string_copy',
-        isMain: false,
-        instructions: [
-            { kind: 'label', name: 'string_copy_loop', why: 'Copy a byte' },
-            {
-                kind: 'loadMemoryByte',
-                to: currentChar,
-                address: 'functionArgument1',
-                why: 'Load byte from input',
-            },
-            {
-                kind: 'storeMemoryByte',
-                contents: currentChar,
-                address: 'functionArgument2',
-                why: 'Write it to output',
-            },
-            {
-                kind: 'gotoIfZero',
-                register: currentChar,
-                label: 'string_copy_return',
-                why: 'If char was the null terminator, return',
-            },
-            { kind: 'increment', register: 'functionArgument1', why: 'Bump pointers to next char' },
-            { kind: 'increment', register: 'functionArgument2', why: 'Bump pointers to next char' },
-            { kind: 'goto', label: 'string_copy_loop', why: 'Copy next char' },
-            { kind: 'label', name: 'string_copy_return', why: '' },
-        ],
-    };
+    const tac = parseTac(`
+    (function) string_copy: # Copy string pointer to by first argument to second argument
+        string_copy_loop: # Copy a byte
+            r:currentChar = *r:functionArgument1 # Load next char from string
+            *r:functionArgument2 = r:currentChar # Write car to output
+            goto string_copy_return if r:currentChar == 0 # If at end, return
+            r:functionArgument1++ # Else increment to next char
+            r:functionArgument2++ # Increment output too
+            goto string_copy_loop # and go keep copying
+        string_copy_return: # Done
+    `);
+    if (!(tac as any).functions) debugger;
+    return (tac as any).functions[0];
 };
 
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
