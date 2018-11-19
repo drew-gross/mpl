@@ -332,29 +332,24 @@ export const length: RuntimeFunctionGenerator = bytesInWord => {
     };
 };
 
-export const stringCopy: RuntimeFunctionGenerator = bytesInWord => {
-    const tac = parseTac(`
+export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
+    (parseTac(`
     (function) string_copy: # Copy string pointer to by first argument to second argument
         string_copy_loop: # Copy a byte
             r:currentChar = *r:functionArgument1 # Load next char from string
-            *r:functionArgument2 = r:currentChar # Write car to output
+            *r:functionArgument2 = r:currentChar # Write char to output
             goto string_copy_return if r:currentChar == 0 # If at end, return
             r:functionArgument1++ # Else increment to next char
             r:functionArgument2++ # Increment output too
             goto string_copy_loop # and go keep copying
         string_copy_return: # Done
-    `);
-    if (!(tac as any).functions) debugger;
-    return (tac as any).functions[0];
-};
+    `) as any).functions[0];
 
-export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
-    const tac = parseTac(`
+export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
+    (parseTac(`
     (function) print:
         syscalld print r:functionResult r:functionArgument1 # Print the thing
-    `);
-    return (tac as any).functions[0];
-};
+    `) as any).functions[0];
 
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     return {
