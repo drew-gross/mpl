@@ -294,8 +294,19 @@ const stripComment = (str: string): string => {
     return str.substring(2, str.length - 1);
 };
 
+const isRegister = (data: string): Boolean => {
+    if (specialRegisterNames.includes(data)) {
+        return true;
+    }
+    if (data.startsWith('r:')) {
+        return true;
+    }
+    return false;
+};
+
 const parseRegister = (data: string): Register => {
     if (!data) debug('no data');
+    if (!isRegister(data)) debug('not register');
     const sliced = data.substring(2, data.length);
     if (specialRegisterNames.includes(sliced)) {
         return sliced as Register;
@@ -307,18 +318,16 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
     const a = ast as any;
     switch (ast.type) {
         case 'assign':
-            return {
-                kind: 'move',
-                to: parseRegister(a.children[0].value),
-                from: parseRegister(a.children[2].value) as any,
-                why: stripComment(a.children[3].value),
-            };
+            const to = parseRegister(a.children[0].value);
+            const from = a.children[2].value;
+            const why = stripComment(a.children[3].value);
+            if (isRegister(from)) {
+                return { kind: 'move', to, from: parseRegister(from), why };
+            } else {
+                return { kind: 'loadGlobal', from, to, why };
+            }
         case 'label':
-            return {
-                kind: 'label',
-                name: a.children[0].value,
-                why: stripComment(a.children[2].value),
-            };
+            return { kind: 'label', name: a.children[0].value, why: stripComment(a.children[2].value) };
         case 'load':
             return {
                 kind: 'loadMemoryByte',
@@ -395,14 +404,12 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
             };
         }
         case 'gotoIfNotEqual': {
-            if (a.children[5].type == 'number') {
-                return { kind: 'goto undone' } as any;
-            }
+            const rhs = a.children[5].type == 'number' ? a.children[5].value : parseRegister(a.children[5].value);
             return {
                 kind: 'gotoIfNotEqual',
                 label: a.children[1].value,
                 lhs: parseRegister(a.children[3].value),
-                rhs: parseRegister(a.children[5].value),
+                rhs,
                 why: stripComment(a.children[6].value),
             };
         }
@@ -416,19 +423,28 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
             };
         }
         case 'store': {
+            const why = stripComment(a.children[4].value);
             if (a.children[3].type == 'number') {
                 return {
                     kind: 'storeMemoryByte',
                     address: parseRegister(a.children[1].value),
                     contents: a.children[3].value,
-                    why: stripComment(a.children[4].value),
+                    why,
+                };
+            }
+            if (!isRegister(a.children[1].value)) {
+                return {
+                    kind: 'storeGlobal',
+                    from: parseRegister(a.children[3].value),
+                    to: a.children[1].value,
+                    why,
                 };
             }
             return {
                 kind: 'storeMemoryByte',
                 address: parseRegister(a.children[1].value),
                 contents: parseRegister(a.children[3].value),
-                why: stripComment(a.children[4].value),
+                why,
             };
         }
         case 'offsetStore': {
@@ -458,6 +474,7 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
             };
         }
         case 'addressOf': {
+            if (stripComment(a.children[4].value) == 'Load first block so we can write to it if necessary') debugger;
             return {
                 kind: 'loadSymbolAddress',
                 symbolName: a.children[3].value,

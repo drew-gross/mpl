@@ -120,6 +120,10 @@ const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X6
             return [`mov [rel ${tas.to}], ${tas.from}`];
         case 'loadGlobal':
             return [`mov ${tas.to}, [rel ${tas.from}]`];
+        case 'loadMemoryByte':
+            return [`movsx ${tas.to}, byte [${tas.address}]`];
+        case 'loadSymbolAddress':
+            return [`lea ${tas.to}, [rel ${tas.symbolName}]`];
         case 'loadMemory':
             return [`mov ${tas.to}, [${tas.from}+${tas.offset}]`];
         case 'storeMemory':
@@ -128,10 +132,6 @@ const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X6
             return [`mov byte [${tas.address}+${tas.offset}], 0`];
         case 'storeMemoryByte':
             return [`mov byte [${tas.address}], ${tas.contents}b`];
-        case 'loadMemoryByte':
-            return [`movsx ${tas.to}, byte [${tas.address}]`];
-        case 'loadSymbolAddress':
-            return [`lea ${tas.to}, [rel ${tas.symbolName}]`];
         case 'callByRegister':
             return [`call ${tas.function}`];
         case 'callByName':

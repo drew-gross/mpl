@@ -15,9 +15,11 @@ const toStringWithoutComment = (tas: ThreeAddressStatement): string => {
         case 'comment':
             return ``;
         case 'syscall':
-            return `syscall ${tas.name} ${tas.destination ? registerToString(tas.destination) : ''} ${tas.arguments
-                .map(syscallArgToString)
-                .join(' ')}`;
+            const args = tas.arguments.map(syscallArgToString).join(' ');
+            if (tas.destination) {
+                return `syscall ${tas.name} ${registerToString(tas.destination)} ${args}`;
+            }
+            return `syscall ${tas.name} ${args}`;
         case 'move':
             return `${registerToString(tas.to)} = ${registerToString(tas.from)}`;
         case 'loadImmediate':
@@ -51,7 +53,9 @@ const toStringWithoutComment = (tas: ThreeAddressStatement): string => {
         case 'storeGlobal':
             return `*${tas.to} = ${registerToString(tas.from)}`;
         case 'loadGlobal':
-            return `${registerToString(tas.to)} = &${tas.from}`;
+            return `${registerToString(tas.to)} = ${tas.from}`;
+        case 'loadSymbolAddress':
+            return `${registerToString(tas.to)} = &${tas.symbolName}`;
         case 'storeMemory':
             return `*(${registerToString(tas.address)} + ${tas.offset}) = ${registerToString(tas.from)}`;
         case 'storeMemoryByte':
@@ -62,8 +66,6 @@ const toStringWithoutComment = (tas: ThreeAddressStatement): string => {
             return `${registerToString(tas.to)} = *(${registerToString(tas.from)} + ${tas.offset})`;
         case 'loadMemoryByte':
             return `${registerToString(tas.to)} = *${registerToString(tas.address)}`;
-        case 'loadSymbolAddress':
-            return `${registerToString(tas.to)} = &${tas.symbolName}`;
         case 'callByRegister':
             return `${registerToString(tas.function)}()`;
         case 'callByName':
