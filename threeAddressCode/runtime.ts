@@ -2,6 +2,8 @@ import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
 import { Register } from '../register.js';
 import { ThreeAddressFunction, ThreeAddressStatement } from './generator.js';
+import tacToString from './programToString.js';
+import parseTac from './parser.js';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => ThreeAddressFunction;
 
@@ -364,19 +366,11 @@ export const stringCopy: RuntimeFunctionGenerator = bytesInWord => {
 };
 
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
-    return {
-        name: 'print',
-        isMain: false,
-        instructions: [
-            {
-                kind: 'syscall',
-                name: 'print',
-                arguments: ['functionArgument1'],
-                why: 'Print',
-                destination: 'functionResult',
-            },
-        ],
-    };
+    const tac = parseTac(`
+    (function) print:
+        syscalld print r:functionResult r:functionArgument1 # Print the thing
+    `);
+    return (tac as any).functions[0];
 };
 
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
