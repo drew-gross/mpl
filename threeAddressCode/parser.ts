@@ -65,9 +65,10 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         action: x => x,
     },
     {
-        token: 'syscall',
+        token: 'syscalld?',
         type: 'syscall',
         toString: x => x,
+        action: x => x,
     },
     {
         token: 'if',
@@ -383,7 +384,7 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
         case 'callByRegister': {
             return {
                 kind: 'callByRegister',
-                function: { name: a.children[0].value },
+                function: parseRegister(a.children[0].value),
                 why: stripComment(a.children[3].value),
             };
         }
@@ -483,11 +484,10 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
             };
         }
         case 'syscall': {
-            const syscallsWithReturns = ['sbrk']; // TODO: get this info in a better way
             const name = a.children[1].value;
             let args = parseSyscallArgs(a.children[2]);
             let destination = undefined;
-            if (syscallsWithReturns.includes(name)) {
+            if (a.children[0].value == 'syscalld') {
                 if (typeof args[0] == 'number') {
                     throw debug('invlaid destination');
                 }
@@ -503,6 +503,12 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
                 amount: a.children[2].value,
                 why: stripComment(a.children[3].value),
             } as any;
+        }
+        case 'comment': {
+            return {
+                kind: 'comment',
+                why: stripComment(a.children[0].value),
+            };
         }
         default:
             return {

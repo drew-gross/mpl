@@ -17,7 +17,7 @@ const toStringWithoutComment = (tas: ThreeAddressStatement): string => {
         case 'syscall':
             const args = tas.arguments.map(syscallArgToString).join(' ');
             if (tas.destination) {
-                return `syscall ${tas.name} ${registerToString(tas.destination)} ${args}`;
+                return `syscalld ${tas.name} ${registerToString(tas.destination)} ${args}`;
             }
             return `syscall ${tas.name} ${args}`;
         case 'move':
