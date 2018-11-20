@@ -1,4 +1,5 @@
 import * as Ast from '../ast.js';
+import { stat } from 'fs-extra';
 import { file as tmpFile } from 'tmp-promise';
 import { VariableDeclaration, BackendInputs, Function, ExecutionResult, StringLiteralData } from '../api.js';
 import { Type, equal as typesAreEqual, builtinTypes } from '../types.js';
@@ -519,15 +520,24 @@ ${Cprogram}
 `;
 };
 
-const execute = async (path: string): Promise<ExecutionResult> => {
+const compileC = async (path: string): Promise<string | { error: string }> => {
     const exeFile = await tmpFile();
     try {
         await exec(`clang -Wall -Werror ${path} -o ${exeFile.path}`);
+        return exeFile.path;
     } catch (e) {
         return { error: `Failed to compile generated C code:\n${e.stderr}` };
     }
+};
+
+const execute = async (path: string): Promise<ExecutionResult> => {
     try {
-        return execAndGetResult(exeFile.path);
+        const compiledPath = await compileC(path);
+        if (typeof compiledPath == 'string') {
+            return execAndGetResult(compiledPath);
+        } else {
+            return compiledPath;
+        }
     } catch (e) {
         return {
             error: e,
@@ -552,4 +562,5 @@ export default {
     execute,
     name: 'c',
     //debug: debugWithLldb,
+    binSize: async path => (await stat(await compileC(path))).size,
 };

@@ -1,3 +1,4 @@
+import { stat } from 'fs-extra';
 import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import flatten from '../util/list/flatten.js';
@@ -231,22 +232,23 @@ ${Object.keys(errors)
 `;
 };
 
-const x64toBinary = async x64Path => {
+const x64toBinary = async (x64Path: string): Promise<string> => {
     const linkerInputPath = await tmpFile({ postfix: '.o' });
     const exePath = await tmpFile({ postfix: '.out' });
     await exec(`nasm -fmacho64 -o ${linkerInputPath.path} ${x64Path}`);
     await exec(`ld -o ${exePath.path} ${linkerInputPath.path}`);
-    return exePath;
+    return exePath.path;
 };
 
 export default {
     name: 'x64',
     toExectuable,
-    execute: async path => execAndGetResult((await x64toBinary(path)).path),
+    execute: async path => execAndGetResult(await x64toBinary(path)),
     debug: async path => {
-        console.log(`lldb ${(await x64toBinary(path)).path}`);
+        console.log(`lldb ${await x64toBinary(path)}`);
         console.log(`break set -n start`);
         console.log(`run`);
         execSync('sleep 10000000');
     },
+    binSize: async path => (await stat(await x64toBinary(path))).size,
 };

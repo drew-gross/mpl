@@ -101,6 +101,7 @@ export type TypeError =
 
 export type Backend = {
     name: string;
+    binSize: (string) => Promise<number | { error: string }>;
     toExectuable: (BackendInputs) => string;
     execute: (string) => Promise<ExecutionResult>; // Exit code or error
     debug?: (string) => Promise<void>;

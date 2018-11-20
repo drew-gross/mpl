@@ -9,6 +9,7 @@
         "files": ["built/test.js"]
     },
     "scripts": {
+        "benchmark": "rimraf built && tsc && node ./built/benchmark.js",
         "test": "rimraf built && npm run prettier-check && tsc && ava --verbose",
         "test-fast": "tsc && ava --verbose",
         "test-watch": "ava --watch --no-color",

@@ -1,4 +1,5 @@
 import { exec } from 'child-process-promise';
+import { stat } from 'fs-extra';
 import flatten from '../util/list/flatten.js';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { BackendInputs, ExecutionResult } from '../api.js';
@@ -98,4 +99,5 @@ export default {
     execute,
     name: 'js',
     debug: path => exec(`${__dirname}/../../node_modules/.bin/inspect ${path}`),
+    binSize: async path => (await stat(path)).size,
 };

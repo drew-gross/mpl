@@ -1,3 +1,4 @@
+import { stat } from 'fs-extra';
 import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import flatten from '../util/list/flatten.js';
@@ -264,4 +265,5 @@ export default {
     toExectuable,
     execute,
     debug: path => exec(`${__dirname}/../../QtSpim.app/Contents/MacOS/QtSpim ${path}`),
+    binSize: async path => (await stat(path)).size,
 };
