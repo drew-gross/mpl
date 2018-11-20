@@ -467,9 +467,9 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
         stringEquality_return: # Exit
     `) as any).functions[0];
 
+// TODO: merge adjacent free blocks
+// TOOD: check if already free
 export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
-    // TODO: merge adjacent free blocks
-    // TOOD: check if already free
     (parseTac(`
     (function) my_free:
             r:zero = 0 # Need a zero

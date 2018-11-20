@@ -1,3 +1,4 @@
+import testCases from './test-cases.js';
 import parseTac from './threeAddressCode/parser.js';
 import prettyParseError from './parser-lib/pretty-parse-error.js';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
@@ -376,14 +377,11 @@ test('lowering of bracketedExpressions', t => {
     });
 });
 
-test('bare return', compileAndRun, {
-    source: 'return 7',
-    expectedExitCode: 7,
-});
-
-test('single product', compileAndRun, {
-    source: 'return 2 * 2',
-    expectedExitCode: 4,
+testCases.forEach(({ name, source, exitCode }) => {
+    test(name, compileAndRun, {
+        source,
+        expectedExitCode: exitCode,
+    });
 });
 
 test('double product', compileAndRun, {
