@@ -450,54 +450,22 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesI
         concatenate_return: # Exit. TODO: repair input pointers?
     `) as any).functions[0];
 
-export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
-    const leftByte = { name: 'leftByte' };
-    const rightByte = { name: 'rightByte' };
-    return {
-        name: 'stringEquality',
-        isMain: false,
-        instructions: [
-            {
-                kind: 'loadImmediate',
-                destination: 'functionResult',
-                value: 1,
-                why: 'Assume equal. Write true to functionResult. Overwrite if difference found.',
-            },
-            { kind: 'label', name: 'stringEquality_loop', why: 'Check a char, (string*, string*) -> bool' },
-            {
-                kind: 'loadMemoryByte',
-                to: leftByte,
-                address: 'functionArgument1',
-                why: 'Load current left char into temporary',
-            },
-            {
-                kind: 'loadMemoryByte',
-                to: rightByte,
-                address: 'functionArgument2',
-                why: 'Load current right char into temporary',
-            },
-            {
-                kind: 'gotoIfNotEqual',
-                lhs: leftByte,
-                rhs: rightByte,
-                label: 'stringEquality_return_false',
-                why: 'Inequal: return false',
-            },
-            {
-                kind: 'gotoIfZero',
-                register: leftByte,
-                label: 'stringEquality_return',
-                why: 'Both side are equal. If both sides are null, return.',
-            },
-            { kind: 'increment', register: 'functionArgument1', why: 'Bump lhs to next char' },
-            { kind: 'increment', register: 'functionArgument2', why: 'Bump rhs to next char' },
-            { kind: 'goto', label: 'stringEquality_loop', why: 'Check next char' },
-            { kind: 'label', name: 'stringEquality_return_false', why: 'stringEquality_return_false' },
-            { kind: 'loadImmediate', destination: 'functionResult', value: 0, why: 'Set result to false' },
-            { kind: 'label', name: 'stringEquality_return', why: '' },
-        ],
-    };
-};
+export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
+    (parseTac(`
+    (function) stringEquality:
+            r:functionResult = 1 # Result = true (willl write false if diff found)
+        stringEquality_loop: # Check a char
+            r:leftByte = *r:functionArgument1 # Load left char into temporary
+            r:rightByte = *r:functionArgument2 # Load right char into temporary
+            goto stringEquality_return_false if r:leftByte != r:rightByte # Inequal: return false
+            goto stringEquality_return if r:leftByte == 0 # Both side are equal. If both sides are null, return.
+            r:functionArgument1++ # Bump lhs to next char
+            r:functionArgument2++ # Bump rhs to next char
+            goto stringEquality_loop # Check next char
+        stringEquality_return_false: # stringEquality_return_false
+            r:functionResult = 0 # Set result to false
+        stringEquality_return: # Exit
+    `) as any).functions[0];
 
 export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     // TODO: merge adjacent free blocks
