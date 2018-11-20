@@ -292,45 +292,19 @@ export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord => {
     }));
 };
 
-export const length: RuntimeFunctionGenerator = bytesInWord => {
-    const currentChar = { name: 'currentChar' };
-    return {
-        name: 'length',
-        isMain: false,
-        instructions: [
-            {
-                kind: 'loadImmediate',
-                destination: 'functionResult',
-                value: 0,
-                why: 'Set length count to 0',
-            },
-            { kind: 'label', name: 'length_loop', why: 'Count another charachter' },
-            {
-                kind: 'loadMemoryByte',
-                address: 'functionArgument1',
-                to: currentChar,
-                why: 'Load char into memory',
-            },
-            {
-                kind: 'gotoIfZero',
-                register: currentChar,
-                label: 'length_return',
-                why: 'If char is null, end of string. Return count.',
-            },
-            { kind: 'increment', register: 'functionResult', why: 'Bump string index' },
-            { kind: 'increment', register: 'functionArgument1', why: 'Bump length counter' },
-            { kind: 'goto', label: 'length_loop', why: 'Go count another char' },
-            { kind: 'label', name: 'length_return', why: 'Done' },
-            {
-                kind: 'subtract',
-                lhs: 'functionArgument1',
-                rhs: 'functionResult',
-                destination: 'functionArgument1',
-                why: 'Repair pointer passed in arg1 so caller can still use it',
-            },
-        ],
-    };
-};
+export const length: RuntimeFunctionGenerator = bytesInWord =>
+    (parseTac(`
+    (function) length:
+            r:functionResult = 0 # Result = 0
+        length_loop: # Count another charachter
+            r:currentChar = *r:functionArgument1 # Load next byte
+            goto length_return if r:currentChar == 0 # If it's null, we are done
+            r:functionResult++ # Bump string index
+            r:functionArgument1++ # Bump length counter
+            goto length_loop # Go count another char
+        length_return: # Done
+            r:functionArgument1 = r:functionArgument1 - r:functionResult # Repair input pointer
+    `) as any).functions[0];
 
 export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
     (parseTac(`
