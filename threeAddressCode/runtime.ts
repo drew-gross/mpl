@@ -499,70 +499,22 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
     };
 };
 
-export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
-    const zero = { name: 'zero' };
-    const one = { name: 'one' };
-    const err = { name: 'err' };
-    const managementBlockSize = { name: 'managementBlockSize' };
-    return {
-        name: 'my_free',
-        isMain: false,
-        instructions: [
-            { kind: 'loadImmediate', destination: zero, value: 0, why: 'Need access to a 0' },
-            {
-                kind: 'gotoIfNotEqual',
-                lhs: 'functionArgument1',
-                rhs: zero,
-                label: 'free_null_check_passed',
-                why: 'Not freeing null check passed',
-            },
-            {
-                kind: 'loadSymbolAddress',
-                to: err,
-                symbolName: errors.freeNull.name,
-                why: 'Error to print',
-            },
-            {
-                kind: 'syscall',
-                name: 'print',
-                arguments: [err],
-                why: 'Print',
-                destination: undefined,
-            },
-            {
-                kind: 'syscall',
-                name: 'exit',
-                arguments: [-1],
-                why: 'exit',
-                destination: undefined,
-            },
-            { kind: 'label', name: 'free_null_check_passed', why: 'free_null_check_passed' },
-            // TODO: merge blocks
-            // TODO: check if already free
-            { kind: 'loadImmediate', destination: one, value: 1, why: 'Need access to a 1' },
-            {
-                kind: 'loadImmediate',
-                destination: managementBlockSize,
-                value: 3 * bytesInWord,
-                why: 'managementBlockSize',
-            },
-            {
-                kind: 'subtract',
-                lhs: 'functionArgument1',
-                rhs: managementBlockSize,
-                destination: 'functionArgument1',
-                why: 'Adjust pointer to point to management struct instead of allocated space',
-            },
-            {
-                kind: 'storeMemory',
-                from: one,
-                address: 'functionArgument1',
-                offset: 2 * bytesInWord,
-                why: 'block->free = true',
-            },
-        ],
-    };
-};
+export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
+    // TODO: merge adjacent free blocks
+    // TOOD: check if already free
+    (parseTac(`
+    (function) my_free:
+            r:zero = 0 # Need a zero
+            goto free_null_check_passed if r:functionArgument1 != r:zero # Not freeing null check passed
+            r:err = &${errors.freeNull.name} # Error to print
+            syscall print r:err # Print
+            syscall exit -1 # Exit
+        free_null_check_passed: # Not attempting to free null
+            r:one = 1 # Need a 1
+            r:managementBlockSize = ${3 * bytesInWord} # 3 words for management
+            r:functionArgument1 = r:functionArgument1 - r:managementBlockSize # Get management block ptr
+            *(r:functionArgument1 + ${2 * bytesInWord}) = r:one # block->free = true
+    `) as any).functions[0];
 
 export const allRuntimeFunctions = [
     mallocWithMmap,
