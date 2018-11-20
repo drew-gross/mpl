@@ -430,48 +430,25 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord => {
     };
 };
 
-export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
-    const left = 'functionArgument1';
-    const right = 'functionArgument2';
-    const out = 'functionArgument3';
-    const currentChar = { name: 'currentChar' };
-    return {
-        name: 'string_concatenate',
-        isMain: false,
-        instructions: [
-            { kind: 'label', name: 'write_left_loop', why: 'write_left_loop' },
-            { kind: 'loadMemoryByte', to: currentChar, address: left, why: 'Load byte from left' },
-            {
-                kind: 'gotoIfZero',
-                register: currentChar,
-                label: 'copy_from_right',
-                why: 'If found lefts null terminator, start copying right',
-            },
-            { kind: 'storeMemoryByte', contents: currentChar, address: out, why: 'Write byte to output' },
-            { kind: 'increment', register: left, why: 'Bump left pointer' },
-            { kind: 'increment', register: out, why: 'Bump out pointer' },
-            { kind: 'goto', label: 'write_left_loop', why: 'Loop to next char' },
-            { kind: 'label', name: 'copy_from_right', why: 'copy_from_right' },
-            { kind: 'loadMemoryByte', to: currentChar, address: right, why: 'Load byte from right' },
-            {
-                kind: 'storeMemoryByte',
-                contents: currentChar,
-                address: out,
-                why: 'Write before checking for null terminator because we want to write null terminator',
-            },
-            {
-                kind: 'gotoIfZero',
-                register: currentChar,
-                label: 'concatenate_return',
-                why: 'If we just wrote a null terminator, we are done',
-            },
-            { kind: 'increment', register: right, why: 'Bump right pointer' },
-            { kind: 'increment', register: out, why: 'Bump out pointer' },
-            { kind: 'goto', label: 'copy_from_right', why: 'Go copy next char' },
-            { kind: 'label', name: 'concatenate_return', why: '' },
-        ],
-    };
-};
+export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
+    (parseTac(`
+    (function) string_concatenate:
+        write_left_loop: # Append left string
+            r:currentChar = *r:functionArgument1 # Load byte from left
+            goto copy_from_right if r:currentChar == 0 # If end of left, start copying right
+            *r:functionArgument3 = r:currentChar # Write byte from left
+            r:functionArgument1++ # Bump left pointer
+            r:functionArgument3++ # Bump out pointer
+            goto write_left_loop # Loop to next char
+        copy_from_right: # Append right string
+            r:currentChar = *r:functionArgument2 # Load byte from right
+            *r:functionArgument3 = r:currentChar # Copy right byte (incl. null)
+            goto concatenate_return if r:currentChar == 0 # If we just wrote null, we are done
+            r:functionArgument2++ # Bump right pointer
+            r:functionArgument3++ # Bump out pointer
+            goto copy_from_right # Go copy next char
+        concatenate_return: # Exit. TODO: repair input pointers?
+    `) as any).functions[0];
 
 export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     const leftByte = { name: 'leftByte' };
