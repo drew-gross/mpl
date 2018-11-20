@@ -437,11 +437,6 @@ test('double product', compileAndRun, {
     },
 });
 
-test('brackets', compileAndRun, {
-    source: 'return (3)',
-    expectedExitCode: 3,
-});
-
 test('brackets product', compileAndRun, {
     source: 'return (3 * 4) * 5',
     expectedExitCode: 60,
@@ -493,11 +488,6 @@ test('brackets product', compileAndRun, {
             },
         ],
     },
-});
-
-test('assign function and return', compileAndRun, {
-    source: 'constThree := a: Integer => 3; return 10',
-    expectedExitCode: 10,
 });
 
 test('correct inferred type for function', t => {
@@ -1033,13 +1023,6 @@ test('wrong type global', compileAndRun, {
             sourceLocation: { line: 1, column: 1 },
         },
     ],
-});
-
-test('string concatenation', compileAndRun, {
-    source: `str1: String = "a";
-str2: String = "b";
-return str1 ++ str2 == "ab" ? 5 : 10;`,
-    expectedExitCode: 5,
 });
 
 test('concatenate and get length then subtract', compileAndRun, {
