@@ -377,6 +377,133 @@ test('lowering of bracketedExpressions', t => {
     });
 });
 
+test('correct inferred type for function', t => {
+    const functionSource = 'a: Integer => 11';
+    const parseResult: MplParseResult = parse(grammar, 'function', lex(tokenSpecs, functionSource), 0);
+    const ast: Ast.UninferredExpression = astFromParseResult(parseResult as MplAst) as Ast.UninferredExpression;
+    t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
+        type: {
+            kind: 'Function',
+            arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
+        },
+        extractedFunctions: [
+            {
+                name: 'anonymous_1', // TODO: Make this not dependent on test order
+                parameters: [
+                    {
+                        name: 'a',
+                        type: {
+                            kind: 'Integer',
+                        },
+                    },
+                ],
+                returnType: {
+                    kind: 'Integer',
+                },
+                statements: [
+                    {
+                        expression: {
+                            kind: 'number',
+                            sourceLocation: {
+                                column: 15,
+                                line: 1,
+                            },
+                            value: 11,
+                        },
+                        kind: 'returnStatement',
+                        sourceLocation: {
+                            column: 1,
+                            line: 1,
+                        },
+                    },
+                ],
+                variables: [
+                    {
+                        name: 'a',
+                        type: {
+                            kind: 'Integer',
+                        },
+                    },
+                ],
+            },
+        ],
+    });
+});
+
+test('multiple variables called', compileAndRun, {
+    source: `
+const11 := a: Integer => 11;
+const12 := a: Integer => 12;
+return const11(1) * const12(2);`,
+    exitCode: 132,
+});
+
+test('double product with brackets', compileAndRun, {
+    source: 'return 2 * (3 * 4) * 5',
+    exitCode: 120,
+    expectedAst: {
+        type: 'program',
+        children: [
+            {
+                type: 'returnStatement',
+                children: [
+                    {
+                        type: 'return',
+                        value: null,
+                    },
+                    {
+                        type: 'product',
+                        children: [
+                            {
+                                type: 'product',
+                                children: [
+                                    {
+                                        type: 'number',
+                                        value: 2,
+                                    },
+                                    {
+                                        type: 'product',
+                                        value: null,
+                                    },
+                                    {
+                                        type: 'product',
+                                        children: [
+                                            {
+                                                type: 'number',
+                                                value: 3,
+                                            },
+                                            {
+                                                type: 'product',
+                                                value: null,
+                                            },
+                                            {
+                                                type: 'number',
+                                                value: 4,
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                            {
+                                type: 'product',
+                                value: null,
+                            },
+                            {
+                                type: 'number',
+                                value: 5,
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                type: 'endOfFile',
+                value: 'endOfFile',
+            },
+        ],
+    },
+});
+
 testCases.forEach(({ name, source, exitCode }) => {
     test(name, compileAndRun, { source, exitCode });
 });
@@ -464,138 +591,6 @@ test('brackets product', compileAndRun, {
                                     {
                                         type: 'number',
                                         value: 4,
-                                    },
-                                ],
-                            },
-                            {
-                                type: 'product',
-                                value: null,
-                            },
-                            {
-                                type: 'number',
-                                value: 5,
-                            },
-                        ],
-                    },
-                ],
-            },
-            {
-                type: 'endOfFile',
-                value: 'endOfFile',
-            },
-        ],
-    },
-});
-
-test('correct inferred type for function', t => {
-    const functionSource = 'a: Integer => 11';
-    const parseResult: MplParseResult = parse(grammar, 'function', lex(tokenSpecs, functionSource), 0);
-    const ast: Ast.UninferredExpression = astFromParseResult(parseResult as MplAst) as Ast.UninferredExpression;
-    t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
-        type: {
-            kind: 'Function',
-            arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
-        },
-        extractedFunctions: [
-            {
-                name: 'anonymous_3', // TODO: Make this not dependent on test order
-                parameters: [
-                    {
-                        name: 'a',
-                        type: {
-                            kind: 'Integer',
-                        },
-                    },
-                ],
-                returnType: {
-                    kind: 'Integer',
-                },
-                statements: [
-                    {
-                        expression: {
-                            kind: 'number',
-                            sourceLocation: {
-                                column: 15,
-                                line: 1,
-                            },
-                            value: 11,
-                        },
-                        kind: 'returnStatement',
-                        sourceLocation: {
-                            column: 1,
-                            line: 1,
-                        },
-                    },
-                ],
-                variables: [
-                    {
-                        name: 'a',
-                        type: {
-                            kind: 'Integer',
-                        },
-                    },
-                ],
-            },
-        ],
-    });
-});
-
-test('assign function and call it', compileAndRun, {
-    source: 'takeItToEleven := a: Integer => 11; return takeItToEleven(0)',
-    exitCode: 11,
-});
-
-test('multiple variables called', compileAndRun, {
-    source: `
-const11 := a: Integer => 11;
-const12 := a: Integer => 12;
-return const11(1) * const12(2);`,
-    exitCode: 132,
-});
-
-test('double product with brackets', compileAndRun, {
-    source: 'return 2 * (3 * 4) * 5',
-    exitCode: 120,
-    expectedAst: {
-        type: 'program',
-        children: [
-            {
-                type: 'returnStatement',
-                children: [
-                    {
-                        type: 'return',
-                        value: null,
-                    },
-                    {
-                        type: 'product',
-                        children: [
-                            {
-                                type: 'product',
-                                children: [
-                                    {
-                                        type: 'number',
-                                        value: 2,
-                                    },
-                                    {
-                                        type: 'product',
-                                        value: null,
-                                    },
-                                    {
-                                        type: 'product',
-                                        children: [
-                                            {
-                                                type: 'number',
-                                                value: 3,
-                                            },
-                                            {
-                                                type: 'product',
-                                                value: null,
-                                            },
-                                            {
-                                                type: 'number',
-                                                value: 4,
-                                            },
-                                        ],
                                     },
                                 ],
                             },

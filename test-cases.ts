@@ -22,6 +22,11 @@ const testCases: TestCase[] = [
         exitCode: 10,
     },
     {
+        name: 'Used Function',
+        source: 'takeItToEleven := a: Integer => 11; return takeItToEleven(0)',
+        exitCode: 11,
+    },
+    {
         name: 'String Concatenation',
         source: `
 str1: String = "a";
