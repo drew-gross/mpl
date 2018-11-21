@@ -6,7 +6,9 @@
     "license": "UNLICENSED",
     "main": "built/index.js",
     "ava": {
-        "files": ["built/test.js"]
+        "files": [
+            "built/test.js"
+        ]
     },
     "scripts": {
         "benchmark": "rimraf built && tsc && node ./built/benchmark.js",
@@ -29,6 +31,7 @@
         "@types/node": "10.12.9",
         "ava": "0.25.0",
         "child-process-promise": "2.2.1",
+        "commander": "2.19.0",
         "fs-extra": "7.0.1",
         "graphlib": "2.1.5",
         "graphlib-dot": "0.6.2",
