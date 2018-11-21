@@ -27,7 +27,7 @@ import x64Backend from './backends/x64.js';
 
 type CompileAndRunOptions = {
     source: string;
-    expectedExitCode: number;
+    exitCode: number;
     expectedTypeErrors: [any];
     expectedParseErrors: [any];
     expectedStdOut: string;
@@ -90,7 +90,7 @@ export const compileAndRun = async (
     t,
     {
         source,
-        expectedExitCode,
+        exitCode,
         expectedTypeErrors,
         expectedParseErrors,
         expectedStdOut = '',
@@ -266,9 +266,9 @@ export const compileAndRun = async (
                 return;
             }
 
-            if (result.exitCode !== expectedExitCode || result.stdout !== expectedStdOut) {
+            if (result.exitCode !== exitCode || result.stdout !== expectedStdOut) {
                 const errorMessage = `${backend.name} had unexpected output.
-Exit code: ${result.exitCode}. Expected: ${expectedExitCode}.
+Exit code: ${result.exitCode}. Expected: ${exitCode}.
 Stdout: "${result.stdout}".
 Expected: "${expectedStdOut}"`;
                 t.fail(errorMessage);
