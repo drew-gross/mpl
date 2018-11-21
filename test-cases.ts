@@ -30,6 +30,18 @@ return str1 ++ str2 == "ab" ? 5 : 10;
 `,
         exitCode: 5,
     },
+    {
+        name: 'Semi-Complex String Concatenation',
+        source: `
+lenFunc := dummy: Integer => {
+    str1 := "abc";
+    str2 := str1 ++ str1;
+    return str2 == "abcabc" ? 40 : 50;
+};
+return lenFunc(5);
+`,
+        exitCode: 40,
+    },
 ];
 
 export default testCases;
