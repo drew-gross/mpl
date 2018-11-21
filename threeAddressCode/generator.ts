@@ -1132,5 +1132,42 @@ export const makeAllFunctions = (
         verifyNoLeaks,
     ].map(f => f(bytesInWord));
 
-    return { globals, functions: [...runtimeFunctions, mallocImpl, printImpl, ...userFunctions, mainProgram] };
+    const nonMainFunctions = [...runtimeFunctions, mallocImpl, printImpl, ...userFunctions];
+
+    // Omit unused functions
+    const closedSet: ThreeAddressFunction[] = [];
+    const openSet = [mainProgram];
+    while (openSet.length > 0) {
+        const f = openSet.shift() as ThreeAddressFunction;
+        closedSet.push(f);
+        f.instructions.forEach(statement => {
+            if (statement.kind == 'callByName') {
+                const usedFunction = nonMainFunctions.find(f => f.name == statement.function);
+                if (usedFunction) {
+                    if (
+                        closedSet.find(f => f.name == usedFunction.name) ||
+                        openSet.find(f => f.name == usedFunction.name)
+                    ) {
+                        // We already know about this function
+                    } else {
+                        openSet.push(usedFunction);
+                    }
+                }
+            } else if (statement.kind == 'loadSymbolAddress') {
+                const usedFunction = nonMainFunctions.find(f => f.name == statement.symbolName);
+                if (usedFunction) {
+                    if (
+                        closedSet.find(f => f.name == usedFunction.name) ||
+                        openSet.find(f => f.name == usedFunction.name)
+                    ) {
+                        // We already know about this function
+                    } else {
+                        openSet.push(usedFunction);
+                    }
+                }
+            }
+        });
+    }
+
+    return { globals, functions: closedSet };
 };
