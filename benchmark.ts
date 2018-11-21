@@ -26,7 +26,10 @@ if ((before && !after) || (after && !before)) {
     process.exit(-1);
 }
 
-const fmtNum = num => (num < 0 ? num.toString() : '+' + num.toString());
+const fmtNum = num =>
+    num <= 0
+        ? num.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })
+        : '+' + num.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 
 if (!before) {
     (async () => {
@@ -73,16 +76,22 @@ if (!before) {
                 console.log('Name mismatch! Make sure to generate before and after using the same test cases');
                 process.exit(-1);
             }
+            console.log(`before ${before['JS Binary Size (bytes)']} / after ${after['JS Binary Size (bytes)']}`);
+            console.log(`before ${before['Mips Binary Size (bytes)']} / after ${after['Mips Binary Size (bytes)']}`);
             return {
                 name: before.name,
-                'JS Binary Size (% change)':
-                    100 * (1 - before['JS Binary Size (bytes)'] / after['JS Binary Size (bytes)']),
-                'C Binary Size (% change)':
-                    100 * (1 - before['C Binary Size (bytes)'] / after['C Binary Size (bytes)']),
-                'Mips Binary Size (% change)':
-                    100 * (1 - before['Mips Binary Size (bytes)'] / after['Mips Binary Size (bytes)']),
-                'x64 Binary Size (% change)':
-                    100 * (1 - before['x64 Binary Size (bytes)'] / after['x64 Binary Size (bytes)']),
+                'JS Binary Size (% change)': fmtNum(
+                    100 * -(1 - after['JS Binary Size (bytes)'] / before['JS Binary Size (bytes)'])
+                ),
+                'C Binary Size (% change)': fmtNum(
+                    100 * -(1 - after['C Binary Size (bytes)'] / before['C Binary Size (bytes)'])
+                ),
+                'Mips Binary Size (% change)': fmtNum(
+                    100 * -(1 - after['Mips Binary Size (bytes)'] / before['Mips Binary Size (bytes)'])
+                ),
+                'x64 Binary Size (% change)': fmtNum(
+                    100 * -(1 - after['x64 Binary Size (bytes)'] / before['x64 Binary Size (bytes)'])
+                ),
             };
         });
         console.table(comparisons);
