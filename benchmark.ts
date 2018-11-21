@@ -1,9 +1,10 @@
-import { writeFile } from 'fs-extra';
+import { writeFile, readFile } from 'fs-extra';
 import { file as tmpFile } from 'tmp-promise';
 import testCases from './test-cases.js';
 import { compile } from './frontend.js';
 import { Backend } from './api.js';
 import * as commander from 'commander';
+import { zip } from 'lodash';
 
 import mipsBackend from './backends/mips.js';
 import jsBackend from './backends/js.js';
@@ -24,6 +25,8 @@ if ((before && !after) || (after && !before)) {
     console.log('--before and --after must be specified at the same time');
     process.exit(-1);
 }
+
+const fmtNum = num => (num < 0 ? num.toString() : '+' + num.toString());
 
 if (!before) {
     (async () => {
@@ -49,7 +52,7 @@ if (!before) {
                         'JS Binary Size (bytes)': jsSize,
                         'C Binary Size (bytes)': cSize,
                         'Mips Binary Size (bytes)': mipsSize,
-                        'X64 Binary Size (bytes)': x64Size,
+                        'x64 Binary Size (bytes)': x64Size,
                     };
                 })
                 .filter(x => x !== undefined)
@@ -59,5 +62,29 @@ if (!before) {
         } else {
             console.table(results);
         }
+    })();
+} else {
+    (async () => {
+        const beforeJson = JSON.parse(await readFile(before, 'utf8'));
+        const afterJson = JSON.parse(await readFile(after, 'utf8'));
+        const jsons = zip(beforeJson, afterJson);
+        const comparisons = jsons.map(([before, after]) => {
+            if (before.name != after.name) {
+                console.log('Name mismatch! Make sure to generate before and after using the same test cases');
+                process.exit(-1);
+            }
+            return {
+                name: before.name,
+                'JS Binary Size (% change)':
+                    100 * (1 - before['JS Binary Size (bytes)'] / after['JS Binary Size (bytes)']),
+                'C Binary Size (% change)':
+                    100 * (1 - before['C Binary Size (bytes)'] / after['C Binary Size (bytes)']),
+                'Mips Binary Size (% change)':
+                    100 * (1 - before['Mips Binary Size (bytes)'] / after['Mips Binary Size (bytes)']),
+                'x64 Binary Size (% change)':
+                    100 * (1 - before['x64 Binary Size (bytes)'] / after['x64 Binary Size (bytes)']),
+            };
+        });
+        console.table(comparisons);
     })();
 }
