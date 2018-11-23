@@ -2,7 +2,7 @@ import debug from '../util/debug.js';
 import flatten from '../util/list/flatten.js';
 import { TokenSpec, lex } from '../parser-lib/lex.js';
 import { specialRegisterNames, Register } from '../register.js';
-import { ThreeAddressProgram, ThreeAddressCode, ThreeAddressStatement } from './generator.js';
+import { ThreeAddressProgram, ThreeAddressCode, ThreeAddressStatement, ThreeAddressFunction } from './generator.js';
 import {
     Grammar,
     Sequence,
@@ -233,8 +233,9 @@ const syscall = tacTerminal('syscall');
 const greaterThan = tacTerminal('greaterThan');
 
 const grammar: Grammar<TacAstNode, TacToken> = {
-    program: OneOf<TacAstNode, TacToken>(['global', 'function', endOfInput]),
+    program: OneOf<TacAstNode, TacToken>(['global', 'functions', endOfInput]),
     global: Sequence('global', [global_, identifier, colon, identifier, number, 'program']),
+    functions: OneOf([Sequence('functions', ['function', 'functions']), 'function']),
     function: Sequence('function', [function_, identifier, colon, 'instructions', 'program']),
     instructions: OneOf([Sequence('instructions', ['instruction', 'instructions']), 'instruction']),
     instruction: OneOf([
@@ -571,6 +572,13 @@ const parseInstructions = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddres
     }
 };
 
+const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressFunction | ParseError[] => {
+    if (ast.type != 'function') {
+        return ['Need a function'];
+    }
+    throw debug('wip');
+};
+
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {
     switch (ast.type) {
         case 'program':
@@ -640,7 +648,6 @@ type ParseError = string | ParseFailureInfo<TacToken>;
 
 export const parseProgram = (input: string): ThreeAddressProgram | ParseError[] => {
     const tokens = lex(tokenSpecs, input);
-    1;
     if (tokens.some(t => t.type == 'invalid')) {
         const t = tokens.find(t => t.type == 'invalid');
         if (t) return [`found an invalid token: ${t.string}`];
@@ -651,4 +658,18 @@ export const parseProgram = (input: string): ThreeAddressProgram | ParseError[] 
         return parseResult.errors;
     }
     return tacFromParseResult(parseResult);
+};
+
+export const parseFunction = (input: string): ThreeAddressFunction | ParseError[] => {
+    const tokens = lex(tokenSpecs, input);
+    if (tokens.some(t => t.type == 'invalid')) {
+        const t = tokens.find(t => t.type == 'invalid');
+        if (t) return [`found an invalid token: ${t.string}`];
+        return ['unknown invalid token'];
+    }
+    const parseResult = parse(grammar, 'function', tokens, 0);
+    if (parseResultIsError(parseResult)) {
+        return parseResult.errors;
+    }
+    return functionFromParseResult(parseResult);
 };
