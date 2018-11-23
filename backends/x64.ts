@@ -197,10 +197,10 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
 
 const toExectuable = (inputs: BackendInputs) => {
-    const { globals, functions } = makeAllFunctions(
-        inputs,
-        'start',
-        [
+    const { globals, functions } = makeAllFunctions({
+        backendInputs: inputs,
+        mainName: 'start',
+        howToExit: [
             {
                 kind: 'syscall',
                 name: 'exit',
@@ -209,11 +209,11 @@ const toExectuable = (inputs: BackendInputs) => {
                 why: 'Whole program is done',
             },
         ],
-        mallocWithMmap(bytesInWord),
-        printWithWriteRuntimeFunction(bytesInWord),
+        mallocImpl: mallocWithMmap(bytesInWord),
+        printImpl: printWithWriteRuntimeFunction(bytesInWord),
         bytesInWord,
-        { alignment: 4 }
-    );
+        reqs: { alignment: 4 },
+    });
     return `
 global start
 

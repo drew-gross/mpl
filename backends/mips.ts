@@ -197,10 +197,10 @@ const globalDeclaration = (name: string, bytes: number): string => `${name}: .sp
 
 const toExectuable = (inputs: BackendInputs) => {
     const mipsReqs: TargetRequirements = { alignment: 4 };
-    const { globals, functions } = makeAllFunctions(
-        inputs,
-        'main',
-        [
+    const { globals, functions } = makeAllFunctions({
+        backendInputs: inputs,
+        mainName: 'main',
+        howToExit: [
             {
                 kind: 'syscall',
                 name: 'printInt',
@@ -216,11 +216,11 @@ const toExectuable = (inputs: BackendInputs) => {
                 why: 'Whole program is done',
             },
         ],
-        mallocWithSbrk(bytesInWord),
-        printWithPrintRuntimeFunction(bytesInWord),
+        mallocImpl: mallocWithSbrk(bytesInWord),
+        printImpl: printWithPrintRuntimeFunction(bytesInWord),
         bytesInWord,
-        mipsReqs
-    );
+        reqs: mipsReqs,
+    });
     return `
 .data
 ${Object.values(globals)

@@ -1779,3 +1779,13 @@ r:functionResult = 1 # Assume equal. Write true to functionResult. Overwrite if 
     }
     t.deepEqual(Array.isArray(result), false);
 });
+
+test.failing('Add Numbers in ThreeAddressCode', t => {
+    const source = `
+(function) main:
+r:a = 1 # a = 1
+r:b = 2 # b = 2
+r:sum = r:a + r:b # Add the things
+r:functionResult = r:sum # Reusult = sum
+`;
+});

@@ -1047,15 +1047,26 @@ export type ThreeAddressProgram = {
     functions: ThreeAddressFunction[];
 };
 
-export const makeAllFunctions = (
-    { types, functions, program, globalDeclarations, stringLiterals }: BackendInputs,
-    mainName: string,
-    howToExit: ThreeAddressStatement[],
-    mallocImpl: ThreeAddressFunction,
-    printImpl: ThreeAddressFunction,
+export type MakeAllFunctionsInput = {
+    backendInputs;
+    mainName: string;
+    howToExit: ThreeAddressStatement[];
+    mallocImpl: ThreeAddressFunction;
+    printImpl: ThreeAddressFunction;
+    bytesInWord: number;
+    reqs: TargetRequirements;
+};
+
+export const makeAllFunctions = ({
+    backendInputs,
+    mainName,
+    howToExit,
+    mallocImpl,
+    printImpl,
     bytesInWord,
-    reqs: TargetRequirements
-): ThreeAddressProgram => {
+    reqs,
+}: MakeAllFunctionsInput): ThreeAddressProgram => {
+    const { types, functions, program, globalDeclarations, stringLiterals } = backendInputs;
     const temporaryNameMaker = idAppender();
     const makeTemporary = name => ({ name: temporaryNameMaker(name) });
     const labelMaker = idAppender();

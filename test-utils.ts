@@ -207,8 +207,16 @@ export const compileAndRun = async (
     });
 
     // Do a roundtrip on three address code to string and back to check the parser for that
-    const tac = makeAllFunctions(frontendOutput, 'main', [], mallocWithSbrk(7), printWithPrintRuntimeFunction(11), 13, {
-        alignment: 17,
+    const tac = makeAllFunctions({
+        backendInputs: frontendOutput,
+        mainName: 'main',
+        howToExit: [],
+        mallocImpl: mallocWithSbrk(7),
+        printImpl: printWithPrintRuntimeFunction(11),
+        bytesInWord: 13,
+        reqs: {
+            alignment: 17,
+        },
     });
 
     const stringForm = tacToString(tac);
