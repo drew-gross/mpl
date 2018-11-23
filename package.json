@@ -30,7 +30,6 @@
     "dependencies": {
         "@types/node": "10.12.9",
         "ava": "0.25.0",
-        "benchmark": "2.1.4",
         "child-process-promise": "2.2.1",
         "commander": "2.19.0",
         "fs-extra": "7.0.1",
@@ -38,7 +37,6 @@
         "graphlib-dot": "0.6.2",
         "inspect-process": "0.5.0",
         "lodash": "4.17.11",
-        "microtime": "2.1.8",
         "omit-deep": "0.3.0",
         "opn": "5.4.0",
         "prettier": "1.15.2",
