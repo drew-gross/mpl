@@ -27,9 +27,9 @@ if ((before && !after) || (after && !before)) {
 }
 
 const fmtNum = num =>
-    num <= 0
+    (num <= 0
         ? num.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })
-        : '+' + num.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+        : '+' + num.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })) + '%';
 
 if (!before) {
     (async () => {
@@ -80,16 +80,14 @@ if (!before) {
             console.log(`before ${before['Mips Binary Size (bytes)']} / after ${after['Mips Binary Size (bytes)']}`);
             return {
                 name: before.name,
-                'JS Binary Size (% change)': fmtNum(
+                'JS Binary Size': fmtNum(
                     100 * -(1 - after['JS Binary Size (bytes)'] / before['JS Binary Size (bytes)'])
                 ),
-                'C Binary Size (% change)': fmtNum(
-                    100 * -(1 - after['C Binary Size (bytes)'] / before['C Binary Size (bytes)'])
-                ),
-                'Mips Binary Size (% change)': fmtNum(
+                'C Binary Size': fmtNum(100 * -(1 - after['C Binary Size (bytes)'] / before['C Binary Size (bytes)'])),
+                'Mips Binary Size': fmtNum(
                     100 * -(1 - after['Mips Binary Size (bytes)'] / before['Mips Binary Size (bytes)'])
                 ),
-                'x64 Binary Size (% change)': fmtNum(
+                'x64 Binary Size': fmtNum(
                     100 * -(1 - after['x64 Binary Size (bytes)'] / before['x64 Binary Size (bytes)'])
                 ),
             };
