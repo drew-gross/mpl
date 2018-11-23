@@ -195,11 +195,11 @@ const globalDeclaration = (name: string, bytes: number): string => `${name}: .sp
 
 const toExectuable = (inputs: BackendInputs) => {
     const bytesInWord = 4;
-    const mipsReqs: TargetInfo = { alignment: 4, bytesInWord: 4 };
-    const { globals, functions } = makeAllFunctions({
-        backendInputs: inputs,
-        mainName: 'main',
-        howToExit: [
+    const mipsReqs: TargetInfo = {
+        alignment: 4,
+        bytesInWord: 4,
+        // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
+        cleanupCode: [
             {
                 kind: 'syscall',
                 name: 'printInt',
@@ -215,6 +215,10 @@ const toExectuable = (inputs: BackendInputs) => {
                 why: 'Whole program is done',
             },
         ],
+    };
+    const { globals, functions } = makeAllFunctions({
+        backendInputs: inputs,
+        mainName: 'main',
         mallocImpl: mallocWithSbrk(bytesInWord),
         printImpl: printWithPrintRuntimeFunction(bytesInWord),
         targetInfo: mipsReqs,

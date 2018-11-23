@@ -200,18 +200,22 @@ const toExectuable = (inputs: BackendInputs) => {
     const { globals, functions } = makeAllFunctions({
         backendInputs: inputs,
         mainName: 'start',
-        howToExit: [
-            {
-                kind: 'syscall',
-                name: 'exit',
-                arguments: ['functionResult'],
-                destination: undefined,
-                why: 'Whole program is done',
-            },
-        ],
         mallocImpl: mallocWithMmap(bytesInWord),
         printImpl: printWithWriteRuntimeFunction(bytesInWord),
-        targetInfo: { alignment: 4, bytesInWord },
+        targetInfo: {
+            alignment: 4,
+            bytesInWord,
+            // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
+            cleanupCode: [
+                {
+                    kind: 'syscall',
+                    name: 'exit',
+                    arguments: ['functionResult'],
+                    destination: undefined,
+                    why: 'Whole program is done',
+                },
+            ],
+        },
     });
     return `
 global start

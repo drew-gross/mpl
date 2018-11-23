@@ -210,12 +210,12 @@ export const compileAndRun = async (
     const tac = makeAllFunctions({
         backendInputs: frontendOutput,
         mainName: 'main',
-        howToExit: [],
         mallocImpl: mallocWithSbrk(7),
         printImpl: printWithPrintRuntimeFunction(11),
         targetInfo: {
             alignment: 17,
             bytesInWord: 13,
+            cleanupCode: [],
         },
     });
 

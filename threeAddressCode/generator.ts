@@ -128,6 +128,7 @@ export type BackendOptions = {
 export type TargetInfo = {
     alignment: number;
     bytesInWord: number;
+    cleanupCode: ThreeAddressStatement[];
 };
 
 const memberOffset = (type: Type, memberName: string, targetInfo: TargetInfo): number => {
@@ -1051,7 +1052,6 @@ export type ThreeAddressProgram = {
 export type MakeAllFunctionsInput = {
     backendInputs;
     mainName: string;
-    howToExit: ThreeAddressStatement[];
     mallocImpl: ThreeAddressFunction;
     printImpl: ThreeAddressFunction;
     targetInfo: TargetInfo;
@@ -1060,7 +1060,6 @@ export type MakeAllFunctionsInput = {
 export const makeAllFunctions = ({
     backendInputs,
     mainName,
-    howToExit,
     mallocImpl,
     printImpl,
     targetInfo,
@@ -1129,7 +1128,7 @@ export const makeAllFunctions = ({
             ...mainProgramInstructions,
             ...freeGlobalsInstructions,
             { kind: 'callByName', function: 'verify_no_leaks', why: 'Check for leaks' },
-            ...howToExit,
+            ...targetInfo.cleanupCode,
         ],
     };
 
