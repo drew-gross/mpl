@@ -1,5 +1,5 @@
 import testCases from './test-cases.js';
-import parseTac from './threeAddressCode/parser.js';
+import { parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
 import prettyParseError from './parser-lib/pretty-parse-error.js';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
 import { ThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
@@ -1760,7 +1760,7 @@ r:functionResult = 0 # Set length count to 0
 r:functionResult = 1 # Assume equal. Write true to functionResult. Overwrite if difference found.
 `;
 
-    const result = parseTac(source);
+    const result = parseTacProgram(source);
     if (Array.isArray(result)) {
         t.fail(
             join(

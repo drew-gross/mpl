@@ -17,7 +17,7 @@ import * as dot from 'graphlib-dot';
 import { makeAllFunctions } from './threeAddressCode/generator.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCode/runtime.js';
 import tacToString from './threeAddressCode/programToString.js';
-import parseTac from './threeAddressCode/parser.js';
+import { parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
 
 import showGraphInChrome from './util/graph/showInChrome.js';
 import mipsBackend from './backends/mips.js';
@@ -226,7 +226,7 @@ export const compileAndRun = async (
         console.log(stringForm);
     }
 
-    const roundtripResult = parseTac(stringForm);
+    const roundtripResult = parseTacProgram(stringForm);
     if (Array.isArray(roundtripResult)) {
         t.fail(
             join(

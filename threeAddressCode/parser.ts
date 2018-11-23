@@ -638,7 +638,7 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
 
 type ParseError = string | ParseFailureInfo<TacToken>;
 
-export default (input: string): ThreeAddressProgram | ParseError[] => {
+export const parseProgram = (input: string): ThreeAddressProgram | ParseError[] => {
     const tokens = lex(tokenSpecs, input);
     1;
     if (tokens.some(t => t.type == 'invalid')) {

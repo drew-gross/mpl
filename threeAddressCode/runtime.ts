@@ -3,7 +3,7 @@ import debug from '../util/debug.js';
 import { Register } from '../register.js';
 import { ThreeAddressFunction, ThreeAddressStatement } from './generator.js';
 import tacToString from './programToString.js';
-import parseTac from './parser.js';
+import { parseProgram as parseTac } from './parser.js';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => ThreeAddressFunction;
 
