@@ -122,18 +122,19 @@ export type BackendOptions = {
     makeTemporary: (name: string) => Register;
     makeLabel: (name: string) => string;
     types: TypeDeclaration[];
-    reqs: TargetRequirements;
+    targetInfo: TargetInfo;
 };
 
-export type TargetRequirements = {
+export type TargetInfo = {
     alignment: number;
+    bytesInWord: number;
 };
 
-const memberOffset = (type: Type, memberName: string, reqs: TargetRequirements): number => {
+const memberOffset = (type: Type, memberName: string, targetInfo: TargetInfo): number => {
     if (type.kind != 'Product') throw debug('need a product here');
     const result = type.members.findIndex(m => m.name == memberName);
     if (result < 0) throw debug('coudnt find member');
-    return result * reqs.alignment;
+    return result * targetInfo.alignment;
 };
 
 export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression<ThreeAddressStatement> => {
@@ -146,7 +147,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
         makeTemporary,
         makeLabel,
         types,
-        reqs,
+        targetInfo,
     } = input;
     const recurse = newInput => astToThreeAddressCode({ ...input, ...newInput });
     switch (ast.kind) {
@@ -467,7 +468,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             },
                             ...flatten(
                                 lhsType.members.map((m, i) => {
-                                    const offset = i * reqs.alignment; // TODO: Should add up sizes of preceeding members
+                                    const offset = i * targetInfo.alignment; // TODO: Should add up sizes of preceeding members
                                     const memberTemporary = makeTemporary('member');
                                     return [
                                         {
@@ -492,7 +493,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             ...e1,
                             {
                                 kind: 'stackAllocateAndStorePointer',
-                                bytes: typeSize(reqs, ast.type, types),
+                                bytes: typeSize(targetInfo, ast.type, types),
                                 register: destination,
                                 why: 'make stack space for lhs',
                             },
@@ -794,7 +795,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
         case 'objectLiteral': {
             const stackAllocateAndStorePointer: ThreeAddressStatement = {
                 kind: 'stackAllocateAndStorePointer',
-                bytes: typeSize(reqs, ast.type, types),
+                bytes: typeSize(targetInfo, ast.type, types),
                 register: destination,
                 why: 'Make space for object literal',
             };
@@ -808,7 +809,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             kind: 'storeMemory' as 'storeMemory',
                             from: memberTemporary,
                             address: destination,
-                            offset: index * reqs.alignment, // TODO: proper alignment and offsets
+                            offset: index * targetInfo.alignment, // TODO: proper alignment and offsets
                             why: `object literal member ${m.name}`,
                         },
                     ]
@@ -837,7 +838,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     kind: 'loadMemory',
                     from: lhs,
                     to: destination,
-                    offset: memberOffset(type, ast.rhs, reqs),
+                    offset: memberOffset(type, ast.rhs, targetInfo),
                     why: 'Read the memory',
                 },
             ]);
@@ -856,7 +857,7 @@ export const constructFunction = (
     makeLabel,
     makeTemporary,
     types: TypeDeclaration[],
-    reqs: TargetRequirements
+    targetInfo: TargetInfo
 ): ThreeAddressFunction => {
     const argumentRegisters: Register[] = ['functionArgument1', 'functionArgument2', 'functionArgument3'];
     if (f.parameters.length > 3) throw debug('todo'); // Don't want to deal with this yet.
@@ -883,7 +884,7 @@ export const constructFunction = (
                 makeTemporary,
                 makeLabel,
                 types,
-                reqs,
+                targetInfo,
             });
             const freeLocals = f.variables
                 // TODO: Make a better memory model for frees.
@@ -1053,8 +1054,7 @@ export type MakeAllFunctionsInput = {
     howToExit: ThreeAddressStatement[];
     mallocImpl: ThreeAddressFunction;
     printImpl: ThreeAddressFunction;
-    bytesInWord: number;
-    reqs: TargetRequirements;
+    targetInfo: TargetInfo;
 };
 
 export const makeAllFunctions = ({
@@ -1063,8 +1063,7 @@ export const makeAllFunctions = ({
     howToExit,
     mallocImpl,
     printImpl,
-    bytesInWord,
-    reqs,
+    targetInfo,
 }: MakeAllFunctionsInput): ThreeAddressProgram => {
     const { types, functions, program, globalDeclarations, stringLiterals } = backendInputs;
     const temporaryNameMaker = idAppender();
@@ -1080,11 +1079,11 @@ export const makeAllFunctions = ({
             newName: mangledName,
             originalDeclaration: declaration,
         };
-        globals[declaration.name] = { mangledName, bytes: typeSize(reqs, declaration.type, types) };
+        globals[declaration.name] = { mangledName, bytes: typeSize(targetInfo, declaration.type, types) };
     });
 
     const userFunctions: ThreeAddressFunction[] = functions.map(f =>
-        constructFunction(f, globalNameMap, stringLiterals, labelMaker, makeTemporary, types, reqs)
+        constructFunction(f, globalNameMap, stringLiterals, labelMaker, makeTemporary, types, targetInfo)
     );
 
     const mainProgramInstructions: ThreeAddressStatement[] = flatten(
@@ -1098,7 +1097,7 @@ export const makeAllFunctions = ({
                 makeLabel: labelMaker,
                 makeTemporary,
                 types,
-                reqs,
+                targetInfo,
             });
 
             return [...compiledProgram.prepare, ...compiledProgram.execute, ...compiledProgram.cleanup];
@@ -1141,7 +1140,7 @@ export const makeAllFunctions = ({
         stringCopy,
         myFreeRuntimeFunction,
         verifyNoLeaks,
-    ].map(f => f(bytesInWord));
+    ].map(f => f(targetInfo.bytesInWord));
 
     const nonMainFunctions = [...runtimeFunctions, mallocImpl, printImpl, ...userFunctions];
 

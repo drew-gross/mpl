@@ -213,9 +213,9 @@ export const compileAndRun = async (
         howToExit: [],
         mallocImpl: mallocWithSbrk(7),
         printImpl: printWithPrintRuntimeFunction(11),
-        bytesInWord: 13,
-        reqs: {
+        targetInfo: {
             alignment: 17,
+            bytesInWord: 13,
         },
     });
 

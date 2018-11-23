@@ -23,7 +23,7 @@ import {
     threeAddressCodeToTarget,
     GlobalInfo,
     makeAllFunctions,
-    TargetRequirements,
+    TargetInfo,
 } from '../threeAddressCode/generator.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from '../threeAddressCode/runtime.js';
 import { builtinFunctions, Type, TypeDeclaration, typeSize } from '../types.js';
@@ -139,8 +139,6 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
 const threeAddressCodeToMips = (tas: TargetThreeAddressStatement<MipsRegister>): string[] =>
     threeAddressCodeToMipsWithoutComment(tas).map(asm => `${asm} # ${tas.why}`);
 
-const bytesInWord = 4;
-
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
 
@@ -196,7 +194,8 @@ const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
 const globalDeclaration = (name: string, bytes: number): string => `${name}: .space ${bytes}`;
 
 const toExectuable = (inputs: BackendInputs) => {
-    const mipsReqs: TargetRequirements = { alignment: 4 };
+    const bytesInWord = 4;
+    const mipsReqs: TargetInfo = { alignment: 4, bytesInWord: 4 };
     const { globals, functions } = makeAllFunctions({
         backendInputs: inputs,
         mainName: 'main',
@@ -218,8 +217,7 @@ const toExectuable = (inputs: BackendInputs) => {
         ],
         mallocImpl: mallocWithSbrk(bytesInWord),
         printImpl: printWithPrintRuntimeFunction(bytesInWord),
-        bytesInWord,
-        reqs: mipsReqs,
+        targetInfo: mipsReqs,
     });
     return `
 .data
