@@ -22,7 +22,7 @@ import {
     TargetThreeAddressStatement,
     threeAddressCodeToTarget,
     GlobalInfo,
-    makeAllFunctions,
+    makeTargetProgram,
     TargetInfo,
 } from '../threeAddressCode/generator.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from '../threeAddressCode/runtime.js';
@@ -219,7 +219,7 @@ const toExectuable = (inputs: BackendInputs) => {
         mallocImpl: mallocWithSbrk(bytesInWord),
         printImpl: printWithPrintRuntimeFunction(bytesInWord),
     };
-    const { globals, functions } = makeAllFunctions({
+    const { globals, functions } = makeTargetProgram({
         backendInputs: inputs,
         targetInfo: mips,
     });

@@ -21,7 +21,7 @@ import {
     TargetThreeAddressStatement,
     threeAddressCodeToTarget,
     GlobalInfo,
-    makeAllFunctions,
+    makeTargetProgram,
 } from '../threeAddressCode/generator.js';
 import { mallocWithMmap, printWithWriteRuntimeFunction } from '../threeAddressCode/runtime.js';
 import { VariableDeclaration, BackendInputs, StringLiteralData } from '../api.js';
@@ -197,7 +197,7 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
 
 const toExectuable = (inputs: BackendInputs) => {
-    const { globals, functions } = makeAllFunctions({
+    const { globals, functions } = makeTargetProgram({
         backendInputs: inputs,
         targetInfo: {
             alignment: 4,

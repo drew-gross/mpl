@@ -1059,7 +1059,7 @@ export type MakeAllFunctionsInput = {
     targetInfo: TargetInfo;
 };
 
-export const makeAllFunctions = ({ backendInputs, targetInfo }: MakeAllFunctionsInput): ThreeAddressProgram => {
+export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunctionsInput): ThreeAddressProgram => {
     const { types, functions, program, globalDeclarations, stringLiterals } = backendInputs;
     const temporaryNameMaker = idAppender();
     const makeTemporary = name => ({ name: temporaryNameMaker(name) });

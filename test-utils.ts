@@ -14,7 +14,7 @@ import join from './util/join.js';
 import { tokenSpecs, grammar } from './grammar.js';
 import { parse, stripResultIndexes, toDotFile, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
 import * as dot from 'graphlib-dot';
-import { makeAllFunctions } from './threeAddressCode/generator.js';
+import { makeTargetProgram } from './threeAddressCode/generator.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCode/runtime.js';
 import tacToString from './threeAddressCode/programToString.js';
 import { parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
@@ -207,7 +207,7 @@ export const compileAndRun = async (
     });
 
     // Do a roundtrip on three address code to string and back to check the parser for that
-    const tac = makeAllFunctions({
+    const tac = makeTargetProgram({
         backendInputs: frontendOutput,
         targetInfo: {
             entryPointName: 'main',
