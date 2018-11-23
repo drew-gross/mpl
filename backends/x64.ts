@@ -22,6 +22,7 @@ import {
     threeAddressCodeToTarget,
     GlobalInfo,
     makeTargetProgram,
+    TargetInfo,
 } from '../threeAddressCode/generator.js';
 import { mallocWithMmap, printWithWriteRuntimeFunction } from '../threeAddressCode/runtime.js';
 import { VariableDeclaration, BackendInputs, StringLiteralData } from '../api.js';
@@ -196,26 +197,28 @@ const rtlFunctionToX64 = (taf: ThreeAddressFunction): string => {
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
 
+export const x64Target: TargetInfo = {
+    alignment: 4,
+    bytesInWord,
+    entryPointName: 'start',
+    // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
+    cleanupCode: [
+        {
+            kind: 'syscall',
+            name: 'exit',
+            arguments: ['functionResult'],
+            destination: undefined,
+            why: 'Whole program is done',
+        },
+    ],
+    mallocImpl: mallocWithMmap(bytesInWord),
+    printImpl: printWithWriteRuntimeFunction(bytesInWord),
+};
+
 const toExectuable = (inputs: BackendInputs) => {
     const { globals, functions } = makeTargetProgram({
         backendInputs: inputs,
-        targetInfo: {
-            alignment: 4,
-            bytesInWord,
-            entryPointName: 'start',
-            // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
-            cleanupCode: [
-                {
-                    kind: 'syscall',
-                    name: 'exit',
-                    arguments: ['functionResult'],
-                    destination: undefined,
-                    why: 'Whole program is done',
-                },
-            ],
-            mallocImpl: mallocWithMmap(bytesInWord),
-            printImpl: printWithWriteRuntimeFunction(bytesInWord),
-        },
+        targetInfo: x64Target,
     });
     return `
 global start

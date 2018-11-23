@@ -193,36 +193,34 @@ const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
 
 const globalDeclaration = (name: string, bytes: number): string => `${name}: .space ${bytes}`;
 
+const bytesInWord = 4;
+export const mipsTarget: TargetInfo = {
+    alignment: 4,
+    bytesInWord: 4,
+    entryPointName: 'main',
+    // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
+    cleanupCode: [
+        {
+            kind: 'syscall',
+            name: 'printInt',
+            arguments: ['functionResult'],
+            destination: undefined,
+            why: 'print "exit code" and exit',
+        },
+        {
+            kind: 'syscall',
+            name: 'exit',
+            arguments: ['functionResult'],
+            destination: undefined,
+            why: 'Whole program is done',
+        },
+    ],
+    mallocImpl: mallocWithSbrk(bytesInWord),
+    printImpl: printWithPrintRuntimeFunction(bytesInWord),
+};
+
 const toExectuable = (inputs: BackendInputs) => {
-    const bytesInWord = 4;
-    const mips: TargetInfo = {
-        alignment: 4,
-        bytesInWord: 4,
-        entryPointName: 'main',
-        // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
-        cleanupCode: [
-            {
-                kind: 'syscall',
-                name: 'printInt',
-                arguments: ['functionResult'],
-                destination: undefined,
-                why: 'print "exit code" and exit',
-            },
-            {
-                kind: 'syscall',
-                name: 'exit',
-                arguments: ['functionResult'],
-                destination: undefined,
-                why: 'Whole program is done',
-            },
-        ],
-        mallocImpl: mallocWithSbrk(bytesInWord),
-        printImpl: printWithPrintRuntimeFunction(bytesInWord),
-    };
-    const { globals, functions } = makeTargetProgram({
-        backendInputs: inputs,
-        targetInfo: mips,
-    });
+    const { globals, functions } = makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget });
     return `
 .data
 ${Object.values(globals)
