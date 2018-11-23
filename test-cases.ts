@@ -27,6 +27,15 @@ const testCases: TestCase[] = [
         exitCode: 11,
     },
     {
+        name: 'Multiple Used Functions',
+        source: `
+const11 := a: Integer => 11;
+const12 := a: Integer => 12;
+return const11(1) * const12(2);
+`,
+        exitCode: 132,
+    },
+    {
         name: 'String Concatenation',
         source: `
 str1: String = "a";

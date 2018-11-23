@@ -430,14 +430,6 @@ test('correct inferred type for function', t => {
     });
 });
 
-test('multiple variables called', compileAndRun, {
-    source: `
-const11 := a: Integer => 11;
-const12 := a: Integer => 12;
-return const11(1) * const12(2);`,
-    exitCode: 132,
-});
-
 test('double product with brackets', compileAndRun, {
     source: 'return 2 * (3 * 4) * 5',
     exitCode: 120,
