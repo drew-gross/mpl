@@ -3,7 +3,7 @@ import debug from '../util/debug.js';
 import { Register } from '../register.js';
 import { ThreeAddressFunction, ThreeAddressStatement } from './generator.js';
 import tacToString from './programToString.js';
-import { parseProgram as parseTac } from './parser.js';
+import { parseProgram as parseTac, parseFunction } from './parser.js';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => ThreeAddressFunction;
 
@@ -293,7 +293,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord => {
 };
 
 export const length: RuntimeFunctionGenerator = bytesInWord =>
-    (parseTac(`
+    parseFunction(`
     (function) length:
             r:functionResult = 0 # Result = 0
         length_loop: # Count another charachter
@@ -304,10 +304,10 @@ export const length: RuntimeFunctionGenerator = bytesInWord =>
             goto length_loop # Go count another char
         length_return: # Done
             r:functionArgument1 = r:functionArgument1 - r:functionResult # Repair input pointer
-    `) as any).functions[0];
+    `) as ThreeAddressFunction;
 
 export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
-    (parseTac(`
+    parseFunction(`
     (function) string_copy: # Copy string pointer to by first argument to second argument
         string_copy_loop: # Copy a byte
             r:currentChar = *r:functionArgument1 # Load next char from string
@@ -317,13 +317,13 @@ export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
             r:functionArgument2++ # Increment output too
             goto string_copy_loop # and go keep copying
         string_copy_return: # Done
-    `) as any).functions[0];
+    `) as ThreeAddressFunction;
 
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
-    (parseTac(`
+    parseFunction(`
     (function) print:
         syscalld print r:functionResult r:functionArgument1 # Print the thing
-    `) as any).functions[0];
+    `) as ThreeAddressFunction;
 
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     return {
@@ -431,7 +431,7 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord => {
 };
 
 export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
-    (parseTac(`
+    parseFunction(`
     (function) string_concatenate:
         write_left_loop: # Append left string
             r:currentChar = *r:functionArgument1 # Load byte from left
@@ -448,10 +448,10 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesI
             r:functionArgument3++ # Bump out pointer
             goto copy_from_right # Go copy next char
         concatenate_return: # Exit. TODO: repair input pointers?
-    `) as any).functions[0];
+    `) as ThreeAddressFunction;
 
 export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
-    (parseTac(`
+    parseFunction(`
     (function) stringEquality:
             r:functionResult = 1 # Result = true (willl write false if diff found)
         stringEquality_loop: # Check a char
@@ -465,12 +465,12 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
         stringEquality_return_false: # stringEquality_return_false
             r:functionResult = 0 # Set result to false
         stringEquality_return: # Exit
-    `) as any).functions[0];
+    `) as ThreeAddressFunction;
 
 // TODO: merge adjacent free blocks
 // TOOD: check if already free
 export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
-    (parseTac(`
+    parseFunction(`
     (function) my_free:
             r:zero = 0 # Need a zero
             goto free_null_check_passed if r:functionArgument1 != r:zero # Not freeing null check passed
@@ -482,7 +482,7 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
             r:managementBlockSize = ${3 * bytesInWord} # 3 words for management
             r:functionArgument1 = r:functionArgument1 - r:managementBlockSize # Get management block ptr
             *(r:functionArgument1 + ${2 * bytesInWord}) = r:one # block->free = true
-    `) as any).functions[0];
+    `) as ThreeAddressFunction;
 
 export const allRuntimeFunctions = [
     mallocWithMmap,
