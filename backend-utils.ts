@@ -36,12 +36,15 @@ export const compileExpression = <T>(
 export const stringLiteralName = ({ id, value }: StringLiteralData) =>
     `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
 
-export type RegisterAssignment<TargetRegister> = { [key: string]: TargetRegister };
+export type RegisterAssignment<TargetRegister> = {
+    registerMap: { [key: string]: TargetRegister };
+    spilled: string[];
+};
 
 export const saveRegistersCode = <TargetRegister>(
     registerAssignment: RegisterAssignment<TargetRegister>
 ): TargetThreeAddressStatement<TargetRegister>[] =>
-    Object.values(registerAssignment).map(targetRegister => ({
+    Object.values(registerAssignment.registerMap).map(targetRegister => ({
         kind: 'push' as 'push',
         register: targetRegister,
         why: 'Push register to preserve it',
@@ -50,7 +53,7 @@ export const saveRegistersCode = <TargetRegister>(
 export const restoreRegistersCode = <TargetRegister>(
     registerAssignment: RegisterAssignment<TargetRegister>
 ): TargetThreeAddressStatement<TargetRegister>[] =>
-    Object.values(registerAssignment)
+    Object.values(registerAssignment.registerMap)
         .map(targetRegister => ({
             kind: 'pop' as 'pop',
             register: targetRegister,
@@ -83,10 +86,10 @@ export const getRegisterFromAssignment = <TargetRegister>(
                 return specialRegisters.functionResult;
         }
     } else {
-        if (!(r.name in registerAssignment)) {
+        if (!(r.name in registerAssignment.registerMap)) {
             throw debug('couldnt find an assignment for this register');
         }
-        return registerAssignment[r.name];
+        return registerAssignment.registerMap[r.name];
     }
     throw debug('should not get here');
 };

@@ -445,7 +445,7 @@ export const assignRegisters = <TargetRegister>(
         }
     }
 
-    const result: RegisterAssignment<TargetRegister> = {};
+    const result: RegisterAssignment<TargetRegister> = { registerMap: {}, spilled: [] };
     colorableStack.reverse().forEach(register => {
         // Try each color in order
         const color = colors.find(color => {
@@ -455,14 +455,14 @@ export const assignRegisters = <TargetRegister>(
                 if (!other) {
                     return true;
                 }
-                if (result[(other as { name: string }).name] == color) {
+                if (result.registerMap[(other as { name: string }).name] == color) {
                     return false;
                 }
                 return true;
             });
         });
         if (!color) throw debug("couldn't find a color to assign");
-        result[(register as { name: string }).name] = color;
+        result.registerMap[(register as { name: string }).name] = color;
     });
 
     return result;
