@@ -198,6 +198,7 @@ const toExectuable = (inputs: BackendInputs) => {
     const mipsReqs: TargetInfo = {
         alignment: 4,
         bytesInWord: 4,
+        entryPointName: 'main',
         // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
         cleanupCode: [
             {
@@ -218,7 +219,6 @@ const toExectuable = (inputs: BackendInputs) => {
     };
     const { globals, functions } = makeAllFunctions({
         backendInputs: inputs,
-        mainName: 'main',
         mallocImpl: mallocWithSbrk(bytesInWord),
         printImpl: printWithPrintRuntimeFunction(bytesInWord),
         targetInfo: mipsReqs,

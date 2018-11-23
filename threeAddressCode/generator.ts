@@ -129,6 +129,7 @@ export type TargetInfo = {
     alignment: number;
     bytesInWord: number;
     cleanupCode: ThreeAddressStatement[];
+    entryPointName: string;
 };
 
 const memberOffset = (type: Type, memberName: string, targetInfo: TargetInfo): number => {
@@ -1051,7 +1052,6 @@ export type ThreeAddressProgram = {
 
 export type MakeAllFunctionsInput = {
     backendInputs;
-    mainName: string;
     mallocImpl: ThreeAddressFunction;
     printImpl: ThreeAddressFunction;
     targetInfo: TargetInfo;
@@ -1059,7 +1059,6 @@ export type MakeAllFunctionsInput = {
 
 export const makeAllFunctions = ({
     backendInputs,
-    mainName,
     mallocImpl,
     printImpl,
     targetInfo,
@@ -1122,7 +1121,7 @@ export const makeAllFunctions = ({
     );
 
     let mainProgram: ThreeAddressFunction = {
-        name: mainName,
+        name: targetInfo.entryPointName,
         isMain: true,
         instructions: [
             ...mainProgramInstructions,

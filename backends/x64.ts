@@ -199,12 +199,12 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 const toExectuable = (inputs: BackendInputs) => {
     const { globals, functions } = makeAllFunctions({
         backendInputs: inputs,
-        mainName: 'start',
         mallocImpl: mallocWithMmap(bytesInWord),
         printImpl: printWithWriteRuntimeFunction(bytesInWord),
         targetInfo: {
             alignment: 4,
             bytesInWord,
+            entryPointName: 'start',
             // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
             cleanupCode: [
                 {
