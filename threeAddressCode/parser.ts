@@ -236,7 +236,7 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     program: OneOf<TacAstNode, TacToken>(['global', 'functions', endOfInput]),
     global: Sequence('global', [global_, identifier, colon, identifier, number, 'program']),
     functions: OneOf([Sequence('functions', ['function', 'functions']), 'function']),
-    function: Sequence('function', [function_, identifier, colon, 'instructions', 'program']),
+    function: Sequence('function', [function_, identifier, colon, 'instructions']),
     instructions: OneOf([Sequence('instructions', ['instruction', 'instructions']), 'instruction']),
     instruction: OneOf([
         Sequence('comment', [comment]),
@@ -576,10 +576,35 @@ const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Three
     if (ast.type != 'function') {
         return ['Need a function'];
     }
-    throw debug('wip');
+
+    if (!('children' in ast)) {
+        debug('wrong shape ast');
+        return ['WrongShapeAst'];
+    }
+    if (ast.children[0].type != 'function') {
+        debug('wrong shape ast');
+        return ['WrongShapeAst'];
+    }
+    if (ast.children[1].type != 'identifier') {
+        debug('wrong shape ast');
+        return ['WrongShapeAst'];
+    }
+    const name = (ast.children[1] as any).value;
+    if (ast.children[2].type != 'colon') {
+        debug('wrong shape ast');
+        return ['WrongShapeAst'];
+    }
+    let instructions: ThreeAddressCode = [];
+    if (ast.children[3].type == 'instructions') {
+        instructions = parseInstructions(ast.children[3]);
+    } else if (ast.children[3].type == 'syscall') {
+        instructions = [parseInstruction(ast.children[3])];
+    }
+    return { isMain: name == 'main', name, instructions };
 };
 
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {
+    if (!ast) debug('no type');
     switch (ast.type) {
         case 'program':
             if (ast.children[0].type != 'global') {
@@ -603,38 +628,29 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
                 tacFromParseResult(a.children[5])
             );
         }
-        case 'function': {
-            if (!('children' in ast)) {
-                debug('wrong shape ast');
-                return ['WrongShapeAst'];
+        case 'functions': {
+            const f = functionFromParseResult(ast.children[0]);
+            if (Array.isArray(f)) {
+                return f;
             }
-            if (ast.children[0].type != 'function') {
-                debug('wrong shape ast');
-                return ['WrongShapeAst'];
-            }
-            if (ast.children[1].type != 'identifier') {
-                debug('wrong shape ast');
-                return ['WrongShapeAst'];
-            }
-            const name = (ast.children[1] as any).value;
-            if (ast.children[2].type != 'colon') {
-                debug('wrong shape ast');
-                return ['WrongShapeAst'];
-            }
-            let instructions: ThreeAddressCode = [];
-            if (ast.children[3].type == 'instructions') {
-                instructions = parseInstructions(ast.children[3]);
-            } else if (ast.children[3].type == 'syscall') {
-                instructions = [parseInstruction(ast.children[3])];
-            }
-            const remainder = tacFromParseResult(ast.children[4]);
+            const remainder = tacFromParseResult(ast.children[1]);
             return mergeParseResults(
                 {
                     globals: {},
-                    functions: [{ isMain: name == 'main', name, instructions }],
+                    functions: [f],
                 },
                 remainder
             );
+        }
+        case 'function': {
+            const f = functionFromParseResult(ast);
+            if (Array.isArray(f)) {
+                return f;
+            }
+            return {
+                globals: {},
+                functions: [f],
+            };
         }
         case 'endOfFile': {
             return { globals: {}, functions: [] };
