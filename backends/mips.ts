@@ -195,7 +195,7 @@ const globalDeclaration = (name: string, bytes: number): string => `${name}: .sp
 
 const toExectuable = (inputs: BackendInputs) => {
     const bytesInWord = 4;
-    const mipsReqs: TargetInfo = {
+    const mips: TargetInfo = {
         alignment: 4,
         bytesInWord: 4,
         entryPointName: 'main',
@@ -216,12 +216,12 @@ const toExectuable = (inputs: BackendInputs) => {
                 why: 'Whole program is done',
             },
         ],
+        mallocImpl: mallocWithSbrk(bytesInWord),
+        printImpl: printWithPrintRuntimeFunction(bytesInWord),
     };
     const { globals, functions } = makeAllFunctions({
         backendInputs: inputs,
-        mallocImpl: mallocWithSbrk(bytesInWord),
-        printImpl: printWithPrintRuntimeFunction(bytesInWord),
-        targetInfo: mipsReqs,
+        targetInfo: mips,
     });
     return `
 .data

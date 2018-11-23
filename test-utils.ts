@@ -209,13 +209,13 @@ export const compileAndRun = async (
     // Do a roundtrip on three address code to string and back to check the parser for that
     const tac = makeAllFunctions({
         backendInputs: frontendOutput,
-        mallocImpl: mallocWithSbrk(7),
-        printImpl: printWithPrintRuntimeFunction(11),
         targetInfo: {
             entryPointName: 'main',
             alignment: 17,
             bytesInWord: 13,
             cleanupCode: [],
+            mallocImpl: mallocWithSbrk(7),
+            printImpl: printWithPrintRuntimeFunction(11),
         },
     });
 

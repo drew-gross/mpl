@@ -129,7 +129,11 @@ export type TargetInfo = {
     alignment: number;
     bytesInWord: number;
     cleanupCode: ThreeAddressStatement[];
+    // The name of the function the assembler should treat as the global entry point.
     entryPointName: string;
+    // These functions tend to have platform specific implementations. Put your platforms implementation here.
+    mallocImpl: ThreeAddressFunction;
+    printImpl: ThreeAddressFunction;
 };
 
 const memberOffset = (type: Type, memberName: string, targetInfo: TargetInfo): number => {
@@ -1052,17 +1056,10 @@ export type ThreeAddressProgram = {
 
 export type MakeAllFunctionsInput = {
     backendInputs;
-    mallocImpl: ThreeAddressFunction;
-    printImpl: ThreeAddressFunction;
     targetInfo: TargetInfo;
 };
 
-export const makeAllFunctions = ({
-    backendInputs,
-    mallocImpl,
-    printImpl,
-    targetInfo,
-}: MakeAllFunctionsInput): ThreeAddressProgram => {
+export const makeAllFunctions = ({ backendInputs, targetInfo }: MakeAllFunctionsInput): ThreeAddressProgram => {
     const { types, functions, program, globalDeclarations, stringLiterals } = backendInputs;
     const temporaryNameMaker = idAppender();
     const makeTemporary = name => ({ name: temporaryNameMaker(name) });
@@ -1140,7 +1137,7 @@ export const makeAllFunctions = ({
         verifyNoLeaks,
     ].map(f => f(targetInfo.bytesInWord));
 
-    const nonMainFunctions = [...runtimeFunctions, mallocImpl, printImpl, ...userFunctions];
+    const nonMainFunctions = [...runtimeFunctions, targetInfo.mallocImpl, targetInfo.printImpl, ...userFunctions];
 
     // Omit unused functions
     const closedSet: ThreeAddressFunction[] = [];

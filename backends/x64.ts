@@ -199,8 +199,6 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 const toExectuable = (inputs: BackendInputs) => {
     const { globals, functions } = makeAllFunctions({
         backendInputs: inputs,
-        mallocImpl: mallocWithMmap(bytesInWord),
-        printImpl: printWithWriteRuntimeFunction(bytesInWord),
         targetInfo: {
             alignment: 4,
             bytesInWord,
@@ -215,6 +213,8 @@ const toExectuable = (inputs: BackendInputs) => {
                     why: 'Whole program is done',
                 },
             ],
+            mallocImpl: mallocWithMmap(bytesInWord),
+            printImpl: printWithWriteRuntimeFunction(bytesInWord),
         },
     });
     return `
