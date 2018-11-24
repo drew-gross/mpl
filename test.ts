@@ -1,5 +1,5 @@
 import testCases from './test-cases.js';
-import { parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
+import { parseFunction, parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
 import prettyParseError from './parser-lib/pretty-parse-error.js';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
 import { ThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
@@ -1781,11 +1781,11 @@ r:functionResult = 1 # Assume equal. Write true to functionResult. Overwrite if 
 });
 
 test.failing('Add Numbers in ThreeAddressCode', t => {
-    const source = `
+    const source = parseFunction(`
 (function) main:
 r:a = 1 # a = 1
 r:b = 2 # b = 2
 r:sum = r:a + r:b # Add the things
 r:functionResult = r:sum # Reusult = sum
-`;
+`);
 });

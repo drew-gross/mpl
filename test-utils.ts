@@ -18,12 +18,8 @@ import { makeTargetProgram } from './threeAddressCode/generator.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCode/runtime.js';
 import tacToString from './threeAddressCode/programToString.js';
 import { parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
-
 import showGraphInChrome from './util/graph/showInChrome.js';
-import mipsBackend from './backends/mips.js';
-import jsBackend from './backends/js.js';
-import cBackend from './backends/c.js';
-import x64Backend from './backends/x64.js';
+import { backends } from './backend-utils.js';
 
 type CompileAndRunOptions = {
     source: string;
@@ -252,7 +248,6 @@ export const compileAndRun = async (
     t.deepEqual(tac.functions, (roundtripResult as any).functions);
     t.deepEqual(tac.globals, (roundtripResult as any).globals);
     // Backends
-    const backends: Backend[] = [jsBackend, cBackend, mipsBackend, x64Backend];
     for (let i = 0; i < backends.length; i++) {
         const backend = backends[i];
         if (!failing.includes(backend.name)) {

@@ -1,9 +1,14 @@
 import debug from './util/debug.js';
-import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData } from './api.js';
+import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData, Backend } from './api.js';
 import flatten from './util/list/flatten.js';
 import { ThreeAddressStatement, TargetThreeAddressStatement } from './threeAddressCode/generator.js';
 import { Register } from './register.js';
 import { controlFlowGraph } from './controlFlowGraph.js';
+
+import mipsBackend from './backends/mips.js';
+import jsBackend from './backends/js.js';
+import cBackend from './backends/c.js';
+import x64Backend from './backends/x64.js';
 
 export type CompiledExpression<T> = {
     prepare: T[];
@@ -93,3 +98,5 @@ export const getRegisterFromAssignment = <TargetRegister>(
     }
     throw debug('should not get here');
 };
+
+export const backends: Backend[] = [mipsBackend, jsBackend, cBackend, x64Backend];
