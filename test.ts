@@ -1,4 +1,3 @@
-import * as clone from 'clone';
 import { file as tmpFile } from 'tmp-promise';
 import { writeFile } from 'fs-extra';
 import testCases from './test-cases.js';
@@ -12,7 +11,7 @@ import flatten from './util/list/flatten.js';
 import join from './util/join.js';
 import { lex } from './parser-lib/lex.js';
 import { parseMpl, compile, typeCheckStatement, astFromParseResult, typeOfExpression } from './frontend.js';
-import { mplTest } from './test-utils.js';
+import { mplTest, tacTest } from './test-utils.js';
 import { grammar, tokenSpecs, MplParseResult, MplAst } from './grammar.js';
 import { stripResultIndexes, ParseResult, parse, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
 import * as Ast from './ast.js';
@@ -1781,67 +1780,13 @@ r:functionResult = 1 # Assume equal. Write true to functionResult. Overwrite if 
     t.deepEqual(Array.isArray(result), false);
 });
 
-test('Add Numbers in ThreeAddressCode', async t => {
-    const source = parseFunction(`
+test('Add Numbers in ThreeAddressCode', tacTest, {
+    source: `
 (function) main:
 r:a = 1 # a = 1
 r:b = 2 # b = 2
 r:sum = r:a + r:b # Add the things
 r:functionResult = r:sum # Result = sum
-`);
-
-    if (Array.isArray(source)) {
-        t.fail('parse error');
-        return;
-    }
-
-    const exitCode = 3;
-    const printSubsteps: string[] = [];
-    const debugSubsteps: string[] = [];
-    await Promise.all(
-        backends.map(async backend => {
-            if (backend.tacToExectutable) {
-                const exeFile = await tmpFile({ postfix: `.${backend.name}` });
-                const newSource = clone(source);
-
-                // TODO: This is pure jank. Should move responsibility for adding cleanup code to some place that makes actual sense.
-                newSource.instructions.push(...backend.tacToExectutable.targetInfo.cleanupCode);
-
-                const exeContents = backend.tacToExectutable.compile({
-                    globals: {},
-                    functions: [],
-                    main: newSource.instructions,
-                    stringLiterals: [],
-                });
-
-                if (printSubsteps.includes(backend.name)) {
-                    console.log(exeContents);
-                }
-
-                await writeFile(exeFile.fd, exeContents);
-
-                if (debugSubsteps.includes(backend.name)) {
-                    if (backend.debug) {
-                        await backend.debug(exeFile.path);
-                    } else {
-                        t.fail(`${backend.name} doesn't define a debugger`);
-                    }
-                }
-
-                const result = await backend.execute(exeFile.path);
-                if ('error' in result) {
-                    t.fail(`${backend.name} execution failed: ${result.error}`);
-                    return;
-                }
-
-                if (result.exitCode !== exitCode) {
-                    const errorMessage = `${backend.name} had unexpected output.
-Exit code: ${result.exitCode}. Expected: ${exitCode}.`;
-                    t.fail(errorMessage);
-                } else {
-                    t.deepEqual(result.exitCode, exitCode);
-                }
-            }
-        })
-    );
+`,
+    exitCode: 3,
 });
