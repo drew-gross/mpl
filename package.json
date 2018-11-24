@@ -6,9 +6,7 @@
     "license": "UNLICENSED",
     "main": "built/index.js",
     "ava": {
-        "files": [
-            "built/test.js"
-        ]
+        "files": ["built/test.js"]
     },
     "scripts": {
         "benchmark": "rimraf built && tsc && node ./built/benchmark.js",
