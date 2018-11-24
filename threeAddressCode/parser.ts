@@ -590,31 +590,42 @@ const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Three
     if (ast.type != 'function') {
         return ['Need a function'];
     }
-
     if (!('children' in ast)) {
         debug('wrong shape ast');
         return ['WrongShapeAst'];
     }
-    if (ast.children[0].type != 'function') {
+
+    let childIndex = 0;
+    let spills = 0;
+    if (ast.children[childIndex].type != 'function') {
         debug('wrong shape ast');
         return ['WrongShapeAst'];
     }
-    if (ast.children[1].type != 'identifier') {
+    childIndex++;
+    if (ast.children[childIndex].type == 'spillSpec') {
+        spills = (ast.children[childIndex] as any).value;
+        childIndex++;
+    }
+    if (ast.children[childIndex].type != 'identifier') {
         debug('wrong shape ast');
         return ['WrongShapeAst'];
     }
-    const name = (ast.children[1] as any).value;
-    if (ast.children[2].type != 'colon') {
+    const name = (ast.children[childIndex] as any).value;
+    childIndex++;
+    if (ast.children[childIndex].type != 'colon') {
         debug('wrong shape ast');
         return ['WrongShapeAst'];
     }
+    childIndex++;
     let instructions: ThreeAddressCode = [];
-    if (ast.children[3].type == 'instructions') {
-        instructions = parseInstructions(ast.children[3]);
-    } else if (ast.children[3].type == 'syscall') {
-        instructions = [parseInstruction(ast.children[3])];
+    if (ast.children[childIndex].type == 'instructions') {
+        instructions = parseInstructions(ast.children[childIndex]);
+        childIndex++;
+    } else if (ast.children[childIndex].type == 'syscall') {
+        instructions = [parseInstruction(ast.children[childIndex])];
+        childIndex++;
     }
-    return { name, instructions };
+    return { name, instructions, spills };
 };
 
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {

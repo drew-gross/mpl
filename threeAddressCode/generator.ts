@@ -68,6 +68,7 @@ export type ThreeAddressCode = ThreeAddressStatement[];
 
 export type ThreeAddressFunction = {
     instructions: ThreeAddressCode;
+    spills: number;
     name: string;
 };
 
@@ -903,7 +904,7 @@ export const constructFunction = (
             ];
         })
     );
-    return { name: f.name, instructions: functionCode };
+    return { name: f.name, instructions: functionCode, spills: 0 };
 };
 
 export const threeAddressCodeToTarget = <TargetRegister>(

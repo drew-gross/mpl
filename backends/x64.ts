@@ -228,7 +228,10 @@ global start
 
 section .text
 ${join(functions.map(f => rtlFunctionToX64({ threeAddressFunction: f, mustRestoreRegisters: true })), '\n\n\n')}
-${rtlFunctionToX64({ threeAddressFunction: { instructions: main, name: 'start' }, mustRestoreRegisters: false })}
+${rtlFunctionToX64({
+        threeAddressFunction: { instructions: main, name: 'start', spills: 0 },
+        mustRestoreRegisters: false,
+    })}
 section .data
 first_block: dq 0
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}

@@ -1473,6 +1473,7 @@ test('computeBlockLiveness read and write in one', t => {
 test('liveness analysis basic test', t => {
     const testFunction: ThreeAddressFunction = {
         name: 'test',
+        spills: 0,
         instructions: [
             {
                 kind: 'add',
@@ -1515,6 +1516,7 @@ test('liveness analysis basic test', t => {
 test('4 block graph (length)', t => {
     const lengthRTLF: ThreeAddressFunction = {
         name: 'length',
+        spills: 0,
         instructions: [
             {
                 kind: 'loadImmediate',
@@ -1575,6 +1577,7 @@ test('4 block graph (length)', t => {
 test('liveness of stringEquality', t => {
     const complexFunction: ThreeAddressFunction = {
         name: 'complexFunction',
+        spills: 0,
         instructions: [
             {
                 kind: 'loadImmediate',
@@ -1808,7 +1811,7 @@ r:functionResult = r:sum # Result = sum
 test.failing('Stack Offset Load and Store', tacTest, {
     source: `
 (function) (spill:2) main:
-r:temp = 1 # Soemthing to spill
+r:temp = 1 # Something to spill
 spill:1 r:temp # Spill it
 r:temp = 2 # Use it for something else
 spill:2 r:temp # Spill this one too
@@ -1817,4 +1820,5 @@ unspill:2 r:two # Load
 r:functionResult = r:one + r:two # Add the things
 `,
     exitCode: 3,
+    spills: 2,
 });

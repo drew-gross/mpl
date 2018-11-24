@@ -242,7 +242,10 @@ first_block: .word 0
 
 .text
 ${join(functions.map(f => rtlFunctionToMips({ threeAddressFunction: f, mustRestoreRegisters: true })), '\n\n\n')}
-${rtlFunctionToMips({ threeAddressFunction: { name: 'main', instructions: main }, mustRestoreRegisters: false })}`;
+${rtlFunctionToMips({
+        threeAddressFunction: { name: 'main', instructions: main, spills: 0 },
+        mustRestoreRegisters: false,
+    })}`;
 };
 const mplToExectuable = (inputs: BackendInputs) => {
     const tac = makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget });

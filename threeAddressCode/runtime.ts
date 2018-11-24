@@ -11,7 +11,7 @@ const switchableMallocImpl = (
     bytesInWord,
     include: 'include curr = *curr' | 'dont include curr = *curr',
     makeSyscall
-) => {
+): ThreeAddressFunction => {
     const currentBlockPointer = { name: 'currentBlockPointer' };
     const previousBlockPointer = { name: 'previousBlockPointer' };
     const currentBlockIsFree = { name: 'current_block_is_free' };
@@ -19,6 +19,7 @@ const switchableMallocImpl = (
     const err = { name: 'err' };
     return {
         name: 'my_malloc',
+        spills: 0,
         instructions: [
             {
                 kind: 'loadImmediate',
@@ -327,6 +328,7 @@ export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     return {
         name: 'print',
+        spills: 0,
         instructions: [
             {
                 kind: 'callByName',
@@ -357,6 +359,7 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord => {
     const one = { name: 'one' };
     return {
         name: 'verify_no_leaks',
+        spills: 0,
         instructions: [
             {
                 kind: 'loadSymbolAddress',

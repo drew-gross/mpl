@@ -22,6 +22,7 @@ import { parseProgram as parseTacProgram, parseFunction } from './threeAddressCo
 import showGraphInChrome from './util/graph/showInChrome.js';
 import { backends } from './backend-utils.js';
 
+// TODO: separate this for mplTest vs tacTest, they have a lot of overlap but not perfect.
 type TestOptions = {
     source: string;
     exitCode: number;
@@ -33,6 +34,7 @@ type TestOptions = {
     debugSubsteps?: string[] | string;
     failing?: string[] | string;
     vizAst: boolean;
+    spills?: number;
 };
 
 const astToString = (ast: Ast) => {
@@ -285,11 +287,14 @@ Expected: "${expectedStdOut}"`;
     t.pass();
 };
 
-export const tacTest = async (t, { source, exitCode, printSubsteps = [], debugSubsteps = [] }: TestOptions) => {
+export const tacTest = async (t, { source, exitCode, printSubsteps = [], debugSubsteps = [], spills }: TestOptions) => {
     const parsed = parseFunction(source);
     if (Array.isArray(parsed)) {
         t.fail(`Parse error: ${JSON.stringify(parsed)}`);
         return;
+    }
+    if (spills) {
+        t.deepEqual(parsed.spills, spills);
     }
     await Promise.all(
         backends.map(async backend => {
