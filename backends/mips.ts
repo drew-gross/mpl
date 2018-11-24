@@ -220,21 +220,24 @@ const mipsTarget: TargetInfo = {
     printImpl: printWithPrintRuntimeFunction(bytesInWord),
 };
 
-const tacToExecutable = ({ globals, functions, stringLiterals }: ThreeAddressProgram) => `
+const tacToExecutable = ({ globals, functions, stringLiterals }: ThreeAddressProgram) => {
+    debugger;
+    return `
 .data
 ${Object.values(globals)
-    .map(({ mangledName, bytes }) => globalDeclaration(mangledName, bytes))
-    .join('\n')}
+        .map(({ mangledName, bytes }) => globalDeclaration(mangledName, bytes))
+        .join('\n')}
 ${stringLiterals.map(stringLiteralDeclaration).join('\n')}
 ${Object.keys(errors)
-    .map(key => `${errors[key].name}: .asciiz "${errors[key].value}"`)
-    .join('\n')}
+        .map(key => `${errors[key].name}: .asciiz "${errors[key].value}"`)
+        .join('\n')}
 
 # First block pointer. Block: size, next, free
 first_block: .word 0
 
 .text
 ${join(functions.map(rtlFunctionToMips), '\n\n\n')}`;
+};
 
 const mplToExectuable = (inputs: BackendInputs) => {
     const tac = makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget });

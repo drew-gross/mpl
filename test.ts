@@ -1783,25 +1783,54 @@ r:functionResult = 1 # Assume equal. Write true to functionResult. Overwrite if 
     t.deepEqual(Array.isArray(result), false);
 });
 
-test.failing('Add Numbers in ThreeAddressCode', async t => {
+test('Add Numbers in ThreeAddressCode', async t => {
     const source = parseFunction(`
 (function) main:
 r:a = 1 # a = 1
 r:b = 2 # b = 2
 r:sum = r:a + r:b # Add the things
-r:functionResult = r:sum # Reusult = sum
+r:functionResult = r:sum # Result = sum
 `);
+
+    if (Array.isArray(source)) {
+        t.fail('parse error');
+        return;
+    }
+
     const exitCode = 3;
+    const printSubsteps: string[] = [];
+    const debugSubsteps: string[] = [];
     await Promise.all(
         backends.map(async backend => {
             if (backend.tacToExectutable) {
                 const exeFile = await tmpFile({ postfix: `.${backend.name}` });
+
+                if (backend.name == 'x64') {
+                    return; // TODO: fix entry point specification
+                }
+
+                // TODO: This is pure jank. Should move responsibility for adding cleanup code to some place that makes actual sense.
+                source.instructions.push(...backend.tacToExectutable.targetInfo.cleanupCode);
+
                 const exeContents = backend.tacToExectutable.compile({
                     globals: {},
                     functions: [source],
                     stringLiterals: [],
                 });
+
+                if (printSubsteps.includes(backend.name)) {
+                    console.log(exeContents);
+                }
+
                 await writeFile(exeFile.fd, exeContents);
+
+                if (debugSubsteps.includes(backend.name)) {
+                    if (backend.debug) {
+                        await backend.debug(exeFile.path);
+                    } else {
+                        t.fail(`${backend.name} doesn't define a debugger`);
+                    }
+                }
 
                 const result = await backend.execute(exeFile.path);
                 if ('error' in result) {
@@ -1813,7 +1842,15 @@ r:functionResult = r:sum # Reusult = sum
                     const errorMessage = `${backend.name} had unexpected output.
 Exit code: ${result.exitCode}. Expected: ${exitCode}.`;
                     t.fail(errorMessage);
+                } else {
+                    t.deepEqual(result.exitCode, exitCode);
                 }
+
+                // TODO: Jank. See todo above.
+                source.instructions.splice(
+                    -backend.tacToExectutable.targetInfo.cleanupCode.length,
+                    backend.tacToExectutable.targetInfo.cleanupCode.length
+                );
             }
         })
     );
