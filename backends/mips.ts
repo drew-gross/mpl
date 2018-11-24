@@ -144,10 +144,11 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
-const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
+type RtlFunctionToMipsInput = { threeAddressFunction: ThreeAddressFunction; mustRestoreRegisters: boolean };
+const rtlFunctionToMips = ({ threeAddressFunction, mustRestoreRegisters }: RtlFunctionToMipsInput): string => {
     const stackOffsetPerInstruction: number[] = [];
     let totalStackBytes: number = 0;
-    taf.instructions.forEach(i => {
+    threeAddressFunction.instructions.forEach(i => {
         if (i.kind == 'stackAllocateAndStorePointer') {
             totalStackBytes += i.bytes;
             stackOffsetPerInstruction.push(i.bytes);
@@ -156,10 +157,13 @@ const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
         }
     });
 
-    const registerAssignment: RegisterAssignment<MipsRegister> = assignRegisters(taf, mipsRegisterTypes.generalPurpose);
+    const registerAssignment: RegisterAssignment<MipsRegister> = assignRegisters(
+        threeAddressFunction,
+        mipsRegisterTypes.generalPurpose
+    );
 
     const mips: TargetThreeAddressStatement<MipsRegister>[] = flatten(
-        taf.instructions.map((instruction, index) =>
+        threeAddressFunction.instructions.map((instruction, index) =>
             threeAddressCodeToTarget(
                 instruction,
                 stackOffsetPerInstruction[index],
@@ -170,13 +174,13 @@ const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
         )
     );
 
-    const preamble: TargetThreeAddressStatement<MipsRegister>[] = !taf.isMain
+    const preamble: TargetThreeAddressStatement<MipsRegister>[] = mustRestoreRegisters
         ? [
               { kind: 'push', register: '$ra', why: 'Always save return address' },
               ...saveRegistersCode<MipsRegister>(registerAssignment),
           ]
         : [];
-    const epilogue: TargetThreeAddressStatement<MipsRegister>[] = !taf.isMain
+    const epilogue: TargetThreeAddressStatement<MipsRegister>[] = mustRestoreRegisters
         ? [
               ...restoreRegistersCode<MipsRegister>(registerAssignment),
               { kind: 'pop', register: '$ra', why: 'Always restore return address' },
@@ -184,7 +188,8 @@ const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
           ]
         : [];
     const fullRtl: TargetThreeAddressStatement<MipsRegister>[] = [
-        { kind: 'functionLabel', name: taf.name, why: 'Function entry point' },
+        // TODO: consider adding the label outside this function so we don't need a dummy main function
+        { kind: 'functionLabel', name: threeAddressFunction.name, why: 'Function entry point' },
         ...preamble,
         ...mips,
         ...epilogue,
@@ -220,11 +225,8 @@ const mipsTarget: TargetInfo = {
     printImpl: printWithPrintRuntimeFunction(bytesInWord),
 };
 
-const tacToExecutable = ({ globals, functions, entryPoint, stringLiterals }: ThreeAddressProgram) => {
-    if (!entryPoint) throw debug('need an entry point');
-
-    // TODO: don't modify the inputs!
-    entryPoint.name = 'main';
+const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram) => {
+    if (!main) throw debug('need a main');
     return `
 .data
 ${Object.values(globals)
@@ -239,8 +241,8 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join(functions.map(rtlFunctionToMips), '\n\n\n')}
-${rtlFunctionToMips(entryPoint)}`;
+${join(functions.map(f => rtlFunctionToMips({ threeAddressFunction: f, mustRestoreRegisters: true })), '\n\n\n')}
+${rtlFunctionToMips({ threeAddressFunction: { name: 'main', instructions: main }, mustRestoreRegisters: false })}`;
 };
 const mplToExectuable = (inputs: BackendInputs) => {
     const tac = makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget });

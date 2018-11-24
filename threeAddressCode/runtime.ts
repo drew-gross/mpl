@@ -19,7 +19,6 @@ const switchableMallocImpl = (
     const err = { name: 'err' };
     return {
         name: 'my_malloc',
-        isMain: false,
         instructions: [
             {
                 kind: 'loadImmediate',
@@ -328,7 +327,6 @@ export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     return {
         name: 'print',
-        isMain: false,
         instructions: [
             {
                 kind: 'callByName',
@@ -359,7 +357,6 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord => {
     const one = { name: 'one' };
     return {
         name: 'verify_no_leaks',
-        isMain: false,
         instructions: [
             {
                 kind: 'loadSymbolAddress',

@@ -69,7 +69,6 @@ export type ThreeAddressCode = ThreeAddressStatement[];
 export type ThreeAddressFunction = {
     instructions: ThreeAddressCode;
     name: string;
-    isMain: boolean;
 };
 
 export type TargetThreeAddressStatement<TargetRegister> = { why: string } & (
@@ -911,7 +910,7 @@ export const constructFunction = (
             ];
         })
     );
-    return { name: f.name, instructions: functionCode, isMain: false };
+    return { name: f.name, instructions: functionCode };
 };
 
 export const threeAddressCodeToTarget = <TargetRegister>(
@@ -1052,7 +1051,7 @@ export const threeAddressCodeToTarget = <TargetRegister>(
 export type ThreeAddressProgram = {
     globals: { [key: string]: { mangledName: string; bytes: number } };
     functions: ThreeAddressFunction[];
-    entryPoint: ThreeAddressFunction | undefined;
+    main: ThreeAddressCode | undefined;
     stringLiterals: StringLiteralData[];
 };
 
@@ -1114,21 +1113,17 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
                 {
                     kind: 'callByName',
                     function: 'my_free',
-                    why: 'Free gloabal string at end of program',
+                    why: 'Free global string at end of program',
                 } as ThreeAddressStatement,
             ])
     );
 
-    let mainProgram: ThreeAddressFunction = {
-        name: targetInfo.entryPointName,
-        isMain: true,
-        instructions: [
-            ...mainProgramInstructions,
-            ...freeGlobalsInstructions,
-            { kind: 'callByName', function: 'verify_no_leaks', why: 'Check for leaks' },
-            ...targetInfo.cleanupCode,
-        ],
-    };
+    let mainProgram: ThreeAddressCode = [
+        ...mainProgramInstructions,
+        ...freeGlobalsInstructions,
+        { kind: 'callByName', function: 'verify_no_leaks', why: 'Check for leaks' },
+        ...targetInfo.cleanupCode,
+    ];
 
     const runtimeFunctions = [
         length,
@@ -1143,7 +1138,8 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
 
     // Omit unused functions
     const closedSet: ThreeAddressFunction[] = [];
-    const openSet = [mainProgram];
+    // See open set with dummy function consisting of the one function we are guaranteed to use (main)
+    const openSet = [{ name: 'main', instructions: mainProgram }];
     while (openSet.length > 0) {
         const f = openSet.shift() as ThreeAddressFunction;
         closedSet.push(f);
@@ -1175,7 +1171,9 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
             }
         });
     }
-    const main = closedSet.shift();
 
-    return { globals, functions: closedSet, entryPoint: main, stringLiterals: backendInputs.stringLiterals };
+    // Remove dummy main function we added at start
+    closedSet.shift();
+
+    return { globals, functions: closedSet, main: mainProgram, stringLiterals: backendInputs.stringLiterals };
 };

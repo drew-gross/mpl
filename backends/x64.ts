@@ -160,10 +160,11 @@ const threeAddressCodeToX64 = (tas: TargetThreeAddressStatement<X64Register>): s
 const bytesInWord = 8;
 
 // TODO: degeneralize this (allowing removal of several RTL instructions)
-const rtlFunctionToX64 = (taf: ThreeAddressFunction): string => {
+type RtlFunctionToX64Input = { threeAddressFunction: ThreeAddressFunction; mustRestoreRegisters: boolean };
+const rtlFunctionToX64 = ({ threeAddressFunction, mustRestoreRegisters }: RtlFunctionToX64Input): string => {
     const stackOffsetPerInstruction: number[] = [];
     let totalStackBytes: number = 0;
-    taf.instructions.forEach(i => {
+    threeAddressFunction.instructions.forEach(i => {
         if (i.kind == 'stackAllocateAndStorePointer') {
             totalStackBytes += i.bytes;
             stackOffsetPerInstruction.push(i.bytes);
@@ -172,10 +173,13 @@ const rtlFunctionToX64 = (taf: ThreeAddressFunction): string => {
         }
     });
 
-    const registerAssignment: RegisterAssignment<X64Register> = assignRegisters(taf, x64RegisterTypes.generalPurpose);
+    const registerAssignment: RegisterAssignment<X64Register> = assignRegisters(
+        threeAddressFunction,
+        x64RegisterTypes.generalPurpose
+    );
 
     const statements: TargetThreeAddressStatement<X64Register>[] = flatten(
-        taf.instructions.map((instruction, index) =>
+        threeAddressFunction.instructions.map((instruction, index) =>
             threeAddressCodeToTarget(
                 instruction,
                 stackOffsetPerInstruction[index],
@@ -186,11 +190,12 @@ const rtlFunctionToX64 = (taf: ThreeAddressFunction): string => {
         )
     );
     const fullRtl: TargetThreeAddressStatement<X64Register>[] = [
-        { kind: 'functionLabel', name: taf.name, why: 'Function entry point' },
-        ...(taf.isMain ? [] : saveRegistersCode<X64Register>(registerAssignment)),
+        // TODO: consider adding the label outside this function so we don't need a dummy main function
+        { kind: 'functionLabel', name: threeAddressFunction.name, why: 'Function entry point' },
+        ...(!mustRestoreRegisters ? [] : saveRegistersCode<X64Register>(registerAssignment)),
         ...statements,
-        ...(taf.isMain ? [] : restoreRegistersCode<X64Register>(registerAssignment)),
-        ...(taf.isMain ? [] : [{ kind: 'returnToCaller' as 'returnToCaller', why: 'Done' }]),
+        ...(!mustRestoreRegisters ? [] : restoreRegistersCode<X64Register>(registerAssignment)),
+        ...(!mustRestoreRegisters ? [] : [{ kind: 'returnToCaller' as 'returnToCaller', why: 'Done' }]),
     ];
     return join(flatten(fullRtl.map(threeAddressCodeToX64)), '\n');
 };
@@ -216,16 +221,14 @@ const x64Target: TargetInfo = {
     printImpl: printWithWriteRuntimeFunction(bytesInWord),
 };
 
-const tacToExecutable = ({ globals, functions, entryPoint, stringLiterals }: ThreeAddressProgram) => {
-    if (!entryPoint) throw debug('need an entry point');
-    // TODO: don't modify the inputs!
-    entryPoint.name = 'start';
+const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram) => {
+    if (!main) throw debug('need an entry point');
     return `
 global start
 
 section .text
-${join(functions.map(rtlFunctionToX64), '\n\n\n')}
-${rtlFunctionToX64(entryPoint)}
+${join(functions.map(f => rtlFunctionToX64({ threeAddressFunction: f, mustRestoreRegisters: true })), '\n\n\n')}
+${rtlFunctionToX64({ threeAddressFunction: { instructions: main, name: 'start' }, mustRestoreRegisters: false })}
 section .data
 first_block: dq 0
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}

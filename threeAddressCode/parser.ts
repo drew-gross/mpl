@@ -164,7 +164,7 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         toString: x => x,
     },
     {
-        token: '#.*\n',
+        token: '#.*\n?',
         type: 'comment',
         action: x => x,
         toString: x => x,
@@ -290,14 +290,14 @@ const mergeParseResults = (
     if (errors.length > 0) {
         return errors;
     }
-    if ((lhs as ThreeAddressProgram).entryPoint && (rhs as ThreeAddressProgram).entryPoint) {
+    if ((lhs as ThreeAddressProgram).main && (rhs as ThreeAddressProgram).main) {
         return ['both functions had a main!'];
     }
 
     return {
         globals: { ...(lhs as any).globals, ...(rhs as any).globals },
         functions: [...(lhs as any).functions, ...(rhs as any).functions],
-        entryPoint: (lhs as any).entryPoint || (rhs as any).entryPoint,
+        main: (lhs as any).main || (rhs as any).main,
         stringLiterals: [...(lhs as any).stringLiterals, ...(rhs as any).stringLiterals],
     };
 };
@@ -605,7 +605,7 @@ const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Three
     } else if (ast.children[3].type == 'syscall') {
         instructions = [parseInstruction(ast.children[3])];
     }
-    return { isMain: name == 'main', name, instructions };
+    return { name, instructions };
 };
 
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {
@@ -629,7 +629,7 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
                         [a.children[1].value]: { mangledName: a.children[3].value, bytes: a.children[4].value },
                     },
                     functions: [],
-                    entryPoint: undefined,
+                    main: undefined,
                     stringLiterals: [],
                 },
                 tacFromParseResult(a.children[5])
@@ -644,8 +644,8 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
             return mergeParseResults(
                 {
                     globals: {},
-                    functions: f.isMain ? [] : [f],
-                    entryPoint: f.isMain ? f : undefined,
+                    functions: f.name == 'main' ? [] : [f],
+                    main: f.name == 'main' ? f.instructions : undefined,
                     stringLiterals: [],
                 },
                 remainder
@@ -658,13 +658,13 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
             }
             return {
                 globals: {},
-                functions: f.isMain ? [] : [f],
-                entryPoint: f.isMain ? f : undefined,
+                functions: f.name == 'main' ? [] : [f],
+                main: f.name == 'main' ? f.instructions : undefined,
                 stringLiterals: [],
             };
         }
         case 'endOfFile': {
-            return { globals: {}, functions: [], stringLiterals: [], entryPoint: undefined };
+            return { globals: {}, functions: [], stringLiterals: [], main: undefined };
         }
         default:
             throw debug(`${ast.type} unhandled in tacFromParseResult`);

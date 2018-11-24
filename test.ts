@@ -1460,7 +1460,6 @@ test('computeBlockLiveness read and write in one', t => {
 test('liveness analysis basic test', t => {
     const testFunction: ThreeAddressFunction = {
         name: 'test',
-        isMain: false,
         instructions: [
             {
                 kind: 'add',
@@ -1503,7 +1502,6 @@ test('liveness analysis basic test', t => {
 test('4 block graph (length)', t => {
     const lengthRTLF: ThreeAddressFunction = {
         name: 'length',
-        isMain: false,
         instructions: [
             {
                 kind: 'loadImmediate',
@@ -1564,7 +1562,6 @@ test('4 block graph (length)', t => {
 test('liveness of stringEquality', t => {
     const complexFunction: ThreeAddressFunction = {
         name: 'complexFunction',
-        isMain: false,
         instructions: [
             {
                 kind: 'loadImmediate',
@@ -1799,7 +1796,7 @@ r:functionResult = r:sum # Result = sum
     }
 
     const exitCode = 3;
-    const printSubsteps: string[] = ['x64'];
+    const printSubsteps: string[] = [];
     const debugSubsteps: string[] = [];
     await Promise.all(
         backends.map(async backend => {
@@ -1813,7 +1810,7 @@ r:functionResult = r:sum # Result = sum
                 const exeContents = backend.tacToExectutable.compile({
                     globals: {},
                     functions: [],
-                    entryPoint: newSource,
+                    main: newSource.instructions,
                     stringLiterals: [],
                 });
 
