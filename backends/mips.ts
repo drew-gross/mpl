@@ -220,8 +220,11 @@ const mipsTarget: TargetInfo = {
     printImpl: printWithPrintRuntimeFunction(bytesInWord),
 };
 
-const tacToExecutable = ({ globals, functions, stringLiterals }: ThreeAddressProgram) => {
-    debugger;
+const tacToExecutable = ({ globals, functions, entryPoint, stringLiterals }: ThreeAddressProgram) => {
+    if (!entryPoint) throw debug('need an entry point');
+
+    // TODO: don't modify the inputs!
+    entryPoint.name = 'main';
     return `
 .data
 ${Object.values(globals)
@@ -236,9 +239,9 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join(functions.map(rtlFunctionToMips), '\n\n\n')}`;
+${join(functions.map(rtlFunctionToMips), '\n\n\n')}
+${rtlFunctionToMips(entryPoint)}`;
 };
-
 const mplToExectuable = (inputs: BackendInputs) => {
     const tac = makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget });
     return tacToExecutable(tac);

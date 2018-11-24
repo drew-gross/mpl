@@ -1814,7 +1814,8 @@ r:functionResult = r:sum # Result = sum
 
                 const exeContents = backend.tacToExectutable.compile({
                     globals: {},
-                    functions: [source],
+                    functions: [],
+                    entryPoint: source,
                     stringLiterals: [],
                 });
 

@@ -216,21 +216,28 @@ const x64Target: TargetInfo = {
     printImpl: printWithWriteRuntimeFunction(bytesInWord),
 };
 
-const tacToExecutable = ({ globals, functions, stringLiterals }: ThreeAddressProgram) => `
+const tacToExecutable = ({ globals, functions, entryPoint, stringLiterals }: ThreeAddressProgram) => {
+    if (!entryPoint) throw debug('need an entry point');
+
+    // TODO: don't modify the inputs!
+    entryPoint.name = 'start';
+    return `
 global start
 
 section .text
 ${join(functions.map(rtlFunctionToX64), '\n\n\n')}
+${rtlFunctionToX64(entryPoint)}
 section .data
 first_block: dq 0
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
 section .bss
 ${Object.values(globals)
-    .map(({ mangledName }) => `${mangledName}: resq 1`) // TODO: actual size of var instead of always resq
-    .join('\n')}
+        .map(({ mangledName }) => `${mangledName}: resq 1`) // TODO: actual size of var instead of always resq
+        .join('\n')}
 ${Object.keys(errors)
-    .map(key => `${errors[key].name}: resd 1`) // TODO: Fix this
-    .join('\n')}`;
+        .map(key => `${errors[key].name}: resd 1`) // TODO: Fix this
+        .join('\n')}`;
+};
 
 const x64toBinary = async (x64Path: string): Promise<string> => {
     const linkerInputPath = await tmpFile({ postfix: '.o' });

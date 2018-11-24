@@ -290,10 +290,14 @@ const mergeParseResults = (
     if (errors.length > 0) {
         return errors;
     }
+    if ((lhs as ThreeAddressProgram).entryPoint && (rhs as ThreeAddressProgram).entryPoint) {
+        return ['both functions had a main!'];
+    }
 
     return {
         globals: { ...(lhs as any).globals, ...(rhs as any).globals },
         functions: [...(lhs as any).functions, ...(rhs as any).functions],
+        entryPoint: (lhs as any).entryPoint || (rhs as any).entryPoint,
         stringLiterals: [...(lhs as any).stringLiterals, ...(rhs as any).stringLiterals],
     };
 };
@@ -625,6 +629,7 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
                         [a.children[1].value]: { mangledName: a.children[3].value, bytes: a.children[4].value },
                     },
                     functions: [],
+                    entryPoint: undefined,
                     stringLiterals: [],
                 },
                 tacFromParseResult(a.children[5])
@@ -639,7 +644,8 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
             return mergeParseResults(
                 {
                     globals: {},
-                    functions: [f],
+                    functions: f.isMain ? [] : [f],
+                    entryPoint: f.isMain ? f : undefined,
                     stringLiterals: [],
                 },
                 remainder
@@ -652,12 +658,13 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
             }
             return {
                 globals: {},
-                functions: [f],
+                functions: f.isMain ? [] : [f],
+                entryPoint: f.isMain ? f : undefined,
                 stringLiterals: [],
             };
         }
         case 'endOfFile': {
-            return { globals: {}, functions: [], stringLiterals: [] };
+            return { globals: {}, functions: [], stringLiterals: [], entryPoint: undefined };
         }
         default:
             throw debug(`${ast.type} unhandled in tacFromParseResult`);
