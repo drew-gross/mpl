@@ -12,7 +12,7 @@ import flatten from './util/list/flatten.js';
 import join from './util/join.js';
 import { lex } from './parser-lib/lex.js';
 import { parseMpl, compile, typeCheckStatement, astFromParseResult, typeOfExpression } from './frontend.js';
-import { compileAndRun } from './test-utils.js';
+import { mplTest } from './test-utils.js';
 import { grammar, tokenSpecs, MplParseResult, MplAst } from './grammar.js';
 import { stripResultIndexes, ParseResult, parse, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
 import * as Ast from './ast.js';
@@ -434,7 +434,7 @@ test('correct inferred type for function', t => {
     });
 });
 
-test('double product with brackets', compileAndRun, {
+test('double product with brackets', mplTest, {
     source: 'return 2 * (3 * 4) * 5',
     exitCode: 120,
     expectedAst: {
@@ -501,10 +501,10 @@ test('double product with brackets', compileAndRun, {
 });
 
 testCases.forEach(({ name, source, exitCode }) => {
-    test(name, compileAndRun, { source, exitCode });
+    test(name, mplTest, { source, exitCode });
 });
 
-test('double product', compileAndRun, {
+test('double product', mplTest, {
     source: 'return 5 * 3 * 4',
     exitCode: 60,
     expectedAst: {
@@ -557,7 +557,7 @@ test('double product', compileAndRun, {
     },
 });
 
-test('brackets product', compileAndRun, {
+test('brackets product', mplTest, {
     source: 'return (3 * 4) * 5',
     exitCode: 60,
     expectedAst: {
@@ -610,42 +610,42 @@ test('brackets product', compileAndRun, {
     },
 });
 
-test('id function', compileAndRun, {
+test('id function', mplTest, {
     source: 'id := a: Integer => a; return id(5)',
     exitCode: 5,
 });
 
-test('double function', compileAndRun, {
+test('double function', mplTest, {
     source: 'doubleIt := a: Integer => 2 * a; return doubleIt(100)',
     exitCode: 200,
 });
 
-test('subtraction', compileAndRun, {
+test('subtraction', mplTest, {
     source: 'return 7 - 5',
     exitCode: 2,
 });
 
-test('order of operations', compileAndRun, {
+test('order of operations', mplTest, {
     source: 'return 2 * 5 - 1',
     exitCode: 9,
 });
 
-test('associativity of subtraction', compileAndRun, {
+test('associativity of subtraction', mplTest, {
     source: 'return 5 - 2 - 1',
     exitCode: 2,
 });
 
-test('ternary true', compileAndRun, {
+test('ternary true', mplTest, {
     source: 'return 1 == 1 ? 5 : 6',
     exitCode: 5,
 });
 
-test('ternary false', compileAndRun, {
+test('ternary false', mplTest, {
     source: 'return 0 == 1 ? 5 : 6',
     exitCode: 6,
 });
 
-test('parse error', compileAndRun, {
+test('parse error', mplTest, {
     source: '=>',
     expectedParseErrors: [
         {
@@ -696,56 +696,56 @@ test('parse error', compileAndRun, {
     ],
 });
 
-test('ternary in function false', compileAndRun, {
+test('ternary in function false', mplTest, {
     source: `
 ternary := a: Boolean => a ? 9 : 5;
 return ternary(false);`,
     exitCode: 5,
 });
 
-test('ternary in function then subtract', compileAndRun, {
+test('ternary in function then subtract', mplTest, {
     source: `
 ternaryFunc := a:Boolean => a ? 9 : 3;
 return ternaryFunc(true) - ternaryFunc(false);`,
     exitCode: 6,
 });
 
-test('equality comparison true', compileAndRun, {
+test('equality comparison true', mplTest, {
     source: `
 isFive := five: Integer => five == 5 ? 2 : 7;
 return isFive(5);`,
     exitCode: 2,
 });
 
-test('equality comparison false', compileAndRun, {
+test('equality comparison false', mplTest, {
     source: `
 isFive := notFive: Integer => notFive == 5 ? 2 : 7;
 return isFive(11);`,
     exitCode: 7,
 });
 
-test('factorial', compileAndRun, {
+test('factorial', mplTest, {
     source: `
 factorial := x: Integer => x == 1 ? 1 : x * factorial(x - 1);
 return factorial(5);`,
     exitCode: 120,
 });
 
-test.failing('2 arg recursve', compileAndRun, {
+test.failing('2 arg recursve', mplTest, {
     source: `
 recursiveAdd := x: Integer, y: Integer => x == 0 ? y : recursiveAdd(x - 1, y + 1);
 return recursiveAdd(4,11);`,
     exitCode: 15,
 });
 
-test.failing('uninferable recursive', compileAndRun, {
+test.failing('uninferable recursive', mplTest, {
     source: `
 recursive := x: Integer => recursive(x);
 return recursive(1);`,
     exitCode: 15,
 });
 
-test('return bool fail', compileAndRun, {
+test('return bool fail', mplTest, {
     source: 'return 1 == 2',
     expectedTypeErrors: [
         {
@@ -756,17 +756,17 @@ test('return bool fail', compileAndRun, {
     ],
 });
 
-test('boolean literal false', compileAndRun, {
+test('boolean literal false', mplTest, {
     source: `return false ? 1 : 2`,
     exitCode: 2,
 });
 
-test('boolean literal true', compileAndRun, {
+test('boolean literal true', mplTest, {
     source: `return true ? 1 : 2`,
     exitCode: 1,
 });
 
-test('wrong type for arg', compileAndRun, {
+test('wrong type for arg', mplTest, {
     source: `
 boolFunc := a: Boolean => 1;
 return boolFunc(7);`,
@@ -781,7 +781,7 @@ return boolFunc(7);`,
     ],
 });
 
-test('assign wrong type', compileAndRun, {
+test('assign wrong type', mplTest, {
     source: 'myInt: Integer = false; return myInt;',
     expectedTypeErrors: [
         {
@@ -794,26 +794,26 @@ test('assign wrong type', compileAndRun, {
     ],
 });
 
-test('assign function to typed var', compileAndRun, {
+test('assign function to typed var', mplTest, {
     source: 'myFunc: Function<Integer, Integer> = a: Integer => a; return myFunc(37);',
     exitCode: 37,
 });
 
-test('assign function with multiple args to typed var', compileAndRun, {
+test('assign function with multiple args to typed var', mplTest, {
     source: `
 myFunc: Function<Integer, String, Integer> = (a: Integer, b: String) => a + length(b);
 return myFunc(4, "four");`,
     exitCode: 8,
 });
 
-test('assign function with no args to typed var', compileAndRun, {
+test('assign function with no args to typed var', mplTest, {
     source: `
 myFunc: Function<Integer> = () => 111;
 return myFunc();`,
     exitCode: 111,
 });
 
-test('assign function to wrong args number', compileAndRun, {
+test('assign function to wrong args number', mplTest, {
     source: `
 myFunc: Function<Integer, Integer> = () => 111;
 return 0;`,
@@ -834,7 +834,7 @@ return 0;`,
     ],
 });
 
-test('assign function to wrong args type', compileAndRun, {
+test('assign function to wrong args type', mplTest, {
     source: `
 myFunc: Function<Integer, Integer> = (a: String) => 111;
 return myFunc("");`,
@@ -855,21 +855,21 @@ return myFunc("");`,
     ],
 });
 
-test('return boolean', compileAndRun, {
+test('return boolean', mplTest, {
     source: `
 isFive: Function<Integer, Boolean> = a: Integer => a == 5;
 return isFive(5) ? 1 : 0`,
     exitCode: 1,
 });
 
-test('return string', compileAndRun, {
+test('return string', mplTest, {
     source: `
 isFive: Function<Integer, String> = a: Integer => a == 5 ? "isFive" : "isNotFive";
 return length(isFive(5))`,
     exitCode: 6,
 });
 
-test('assign function to wrong return type', compileAndRun, {
+test('assign function to wrong return type', mplTest, {
     source: `
 myFunc: Function<Integer, Boolean> = (a: String) => 111;
 return myFunc("");`,
@@ -890,25 +890,25 @@ return myFunc("");`,
     ],
 });
 
-test('return local integer', compileAndRun, {
+test('return local integer', mplTest, {
     source: 'myVar: Integer = 3 * 3; return myVar',
     exitCode: 9,
 });
 
 // Need spilling
-test.failing('many temporaries, spill to ram', compileAndRun, {
+test.failing('many temporaries, spill to ram', mplTest, {
     source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
     exitCode: 1,
 });
 
-test('multi statement function with locals', compileAndRun, {
+test('multi statement function with locals', mplTest, {
     source: `
 quadrupleWithLocal := a: Integer => { b: Integer = 2 * a; return 2 * b; };
 return quadrupleWithLocal(5);`,
     exitCode: 20,
 });
 
-test('multi statement function with type error', compileAndRun, {
+test('multi statement function with type error', mplTest, {
     source: `
 boolTimesInt := a: Integer => { b: Boolean = false; return a * b; };
 return boolTimesInt(1);`,
@@ -933,7 +933,7 @@ return boolTimesInt(1);`,
     ],
 });
 
-test('multi statement function on multiple lines', compileAndRun, {
+test('multi statement function on multiple lines', mplTest, {
     source: `
 quadrupleWithLocal := a: Integer => {
     b: Integer = 2 * a;
@@ -944,17 +944,17 @@ return quadrupleWithLocal(5);`,
     exitCode: 20,
 });
 
-test('string length', compileAndRun, {
+test('string length', mplTest, {
     source: `myStr: String = "test"; return length(myStr);`,
     exitCode: 4,
 });
 
-test('empty string length', compileAndRun, {
+test('empty string length', mplTest, {
     source: `myStr: String = ""; return length(myStr);`,
     exitCode: 0,
 });
 
-test('string length with type inferred', compileAndRun, {
+test('string length with type inferred', mplTest, {
     source: `myStr := "test2"; return length(myStr);`,
     exitCode: 5,
 });
@@ -971,12 +971,12 @@ test('structure is equal for inferred string type', t => {
     t.deepEqual(inferredStructure, suppliedStructure);
 });
 
-test('string copy', compileAndRun, {
+test('string copy', mplTest, {
     source: `myStr1: String = "testing"; myStr2: String = myStr1; return length(myStr2);`,
     exitCode: 7,
 });
 
-test('string equality: equal', compileAndRun, {
+test('string equality: equal', mplTest, {
     source: `str1 := "a";
 str2 := "a";
 return str1 == str2 ? 1 : 2;
@@ -984,7 +984,7 @@ return str1 == str2 ? 1 : 2;
     exitCode: 1,
 });
 
-test('string equality: inequal same length', compileAndRun, {
+test('string equality: inequal same length', mplTest, {
     source: `str1 := "a";
 str2 := "b";
 return str1 == str2 ? 1 : 2;
@@ -992,7 +992,7 @@ return str1 == str2 ? 1 : 2;
     exitCode: 2,
 });
 
-test('string equality: inequal different length', compileAndRun, {
+test('string equality: inequal different length', mplTest, {
     source: `str1 := "aa";
 str2 := "a";
 return str1 == str2 ? 7 : 2;
@@ -1000,7 +1000,7 @@ return str1 == str2 ? 7 : 2;
     exitCode: 2,
 });
 
-test('wrong type global', compileAndRun, {
+test('wrong type global', mplTest, {
     source: `str: String = 5; return length(str);`,
     expectedTypeErrors: [
         {
@@ -1013,13 +1013,13 @@ test('wrong type global', compileAndRun, {
     ],
 });
 
-test('concatenate and get length then subtract', compileAndRun, {
+test('concatenate and get length then subtract', mplTest, {
     source: `return length("abc" ++ "defg") - 2;`,
     exitCode: 5,
 });
 
 // TODO: Needs register allocator with proper spilling
-test.failing('complex string concatenation', compileAndRun, {
+test.failing('complex string concatenation', mplTest, {
     source: `lenFunc := dummy: Integer => {
     str1 := "abc";
     str2 := "def";
@@ -1032,7 +1032,7 @@ return lenFunc(5);`,
     exitCode: 6,
 });
 
-test('parsing fails for extra invalid tokens', compileAndRun, {
+test('parsing fails for extra invalid tokens', mplTest, {
     source: `return 5 (`,
     expectedParseErrors: [
         {
@@ -1048,61 +1048,61 @@ test('parsing fails for extra invalid tokens', compileAndRun, {
     ],
 });
 
-test('addition', compileAndRun, {
+test('addition', mplTest, {
     source: `return length("foo") + 5;`,
     exitCode: 8,
 });
 
-test('two args', compileAndRun, {
+test('two args', mplTest, {
     source: `
 myAdd := a: Integer, b: Integer => a + b;
 return myAdd(7, 4);`,
     exitCode: 11,
 });
 
-test('two args with expression argument', compileAndRun, {
+test('two args with expression argument', mplTest, {
     source: `
 myAdd := a: Integer, b: Integer => a + b;
 return myAdd(7 + 7, 4);`,
     exitCode: 18,
 });
 
-test('three args', compileAndRun, {
+test('three args', mplTest, {
     source: `
 myAdd := a: Integer, b: Integer, c: Integer => a + b + c;
 return myAdd(7, 4, 5);`,
     exitCode: 16,
 });
 
-test('zero args', compileAndRun, {
+test('zero args', mplTest, {
     source: `
 const11 := () => 11;
 return const11();`,
     exitCode: 11,
 });
 
-test('one bracketed arg', compileAndRun, {
+test('one bracketed arg', mplTest, {
     source: `
 times11 := (a: Integer) => a * 11;
 return times11(1);`,
     exitCode: 11,
 });
 
-test('two bracketed args', compileAndRun, {
+test('two bracketed args', mplTest, {
     source: `
 timess := (a: Integer, b: Integer) => a * b;
 return timess(11, 1);`,
     exitCode: 11,
 });
 
-test('function named times', compileAndRun, {
+test('function named times', mplTest, {
     source: `
 times := (a: Integer, b: Integer) => a * b;
 return times(11, 1);`,
     exitCode: 11,
 });
 
-test('call with wrong number of args', compileAndRun, {
+test('call with wrong number of args', mplTest, {
     source: `
 threeArgs := a: Integer, b: Integer, c: Integer => a + b + c;
 return threeArgs(7, 4);`,
@@ -1117,7 +1117,7 @@ return threeArgs(7, 4);`,
     ],
 });
 
-test('call with wrong arg type', compileAndRun, {
+test('call with wrong arg type', mplTest, {
     source: `
 threeArgs := a: Integer, b: Integer, c: Integer => a + b + c;
 return threeArgs(7, 4, "notAnInteger");`,
@@ -1132,7 +1132,7 @@ return threeArgs(7, 4, "notAnInteger");`,
     ],
 });
 
-test('print', compileAndRun, {
+test('print', mplTest, {
     source: `
 dummy := print("sample_string");
 return 1;`,
@@ -1140,7 +1140,7 @@ return 1;`,
     expectedStdOut: 'sample_string',
 });
 
-test('print string with space', compileAndRun, {
+test('print string with space', mplTest, {
     source: `
 dummy := print("sample string with space");
 return 1;`,
@@ -1148,7 +1148,7 @@ return 1;`,
     expectedStdOut: 'sample string with space',
 });
 
-test.failing('require/force no return value for print', compileAndRun, {
+test.failing('require/force no return value for print', mplTest, {
     source: `
 print("sample string");
 return 1;`,
@@ -1156,7 +1156,7 @@ return 1;`,
     expectedStdOut: 'sample string',
 });
 
-test('print string containing number', compileAndRun, {
+test('print string containing number', mplTest, {
     source: `
 dummy := print("1");
 return 1 + dummy - dummy;`,
@@ -1166,7 +1166,7 @@ return 1 + dummy - dummy;`,
     failing: ['mips'],
 });
 
-test('assign result of call to builtin to local in function', compileAndRun, {
+test('assign result of call to builtin to local in function', mplTest, {
     source: `
 lengthOfFoo := (dummy: Integer) => {
     dumme := length("foo");
@@ -1176,7 +1176,7 @@ return lengthOfFoo(1);`,
     exitCode: 3,
 });
 
-test('string args', compileAndRun, {
+test('string args', mplTest, {
     source: `
 excitmentifier := (boring: String) => {
     dummy := print(boring ++ "!");
@@ -1187,7 +1187,7 @@ return excitmentifier("Hello World");`,
     exitCode: 11,
 });
 
-test('reassign integer', compileAndRun, {
+test('reassign integer', mplTest, {
     source: `
 a := 1;
 bb := a + 5;
@@ -1197,7 +1197,7 @@ return c;`,
     exitCode: 8,
 });
 
-test('reassign to undeclared identifier', compileAndRun, {
+test('reassign to undeclared identifier', mplTest, {
     source: `
 a := 1;
 b = 2;
@@ -1207,7 +1207,7 @@ return a + b;`,
     ],
 });
 
-test('reassigning wrong type', compileAndRun, {
+test('reassigning wrong type', mplTest, {
     source: `
 a := 1;
 a = true;
@@ -1223,7 +1223,7 @@ return a;`,
     ],
 });
 
-test('reassign string', compileAndRun, {
+test('reassign string', mplTest, {
     source: `
 a := "Hello";
 dummy := print(a);
@@ -1234,7 +1234,7 @@ return dummy - dummy;`,
     expectedStdOut: 'HelloWorld!!!!!',
 });
 
-test('reassign to a using expression including a', compileAndRun, {
+test('reassign to a using expression including a', mplTest, {
     source: `
 hello := "HelloWorld";
 hello = hello ++ "!";
@@ -1242,7 +1242,7 @@ return length(hello);`,
     exitCode: 11,
 });
 
-test.failing('good parse error for missing semi-colon', compileAndRun, {
+test.failing('good parse error for missing semi-colon', mplTest, {
     source: `
 foo = () => {
     return 1;
@@ -1251,7 +1251,7 @@ return foo();`,
     expectedParseErrors: ['you forgot a semi-colon'],
 });
 
-test('reassign integer inside function', compileAndRun, {
+test('reassign integer inside function', mplTest, {
     source: `
 foo := () => {
     a := 1;
@@ -1264,7 +1264,7 @@ return foo();`,
     exitCode: 8,
 });
 
-test('reassign to undeclared identifier inside function', compileAndRun, {
+test('reassign to undeclared identifier inside function', mplTest, {
     source: `
 foo := () => {
     a := 1;
@@ -1281,7 +1281,7 @@ return foo()`,
     ],
 });
 
-test('reassigning wrong type inside function', compileAndRun, {
+test('reassigning wrong type inside function', mplTest, {
     source: `
 foo := () => {
     a := 1;
@@ -1300,7 +1300,7 @@ return foo();`,
     ],
 });
 
-test('reassign string inside function', compileAndRun, {
+test('reassign string inside function', mplTest, {
     source: `
 foo := () => {
     a := "Hello";
@@ -1315,14 +1315,14 @@ return foo();
     expectedStdOut: 'HelloWorld!!!!!',
 });
 
-test('variable named b', compileAndRun, {
+test('variable named b', mplTest, {
     source: `
 b := 2;
 return b;`,
     exitCode: 2,
 });
 
-test('bool pair', compileAndRun, {
+test('bool pair', mplTest, {
     source: `
 BoolPair := {
     first: Boolean;
@@ -1334,7 +1334,7 @@ return bp.first ? 10 : 20;
     exitCode: 10,
 });
 
-test('int pair', compileAndRun, {
+test('int pair', mplTest, {
     source: `
 IntPair := {
     first: Integer;
@@ -1346,7 +1346,7 @@ return ip.first * ip.second;
     exitCode: 21,
 });
 
-test('int pair in function', compileAndRun, {
+test('int pair in function', mplTest, {
     source: `
 IntPair := {
     first: Integer;

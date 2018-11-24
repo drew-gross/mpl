@@ -82,7 +82,7 @@ const astToString = (ast: Ast) => {
 
 const typeErrorToString = (e: TypeError): string => JSON.stringify(e, null, 2);
 
-export const compileAndRun = async (
+export const mplTest = async (
     t,
     {
         source,
