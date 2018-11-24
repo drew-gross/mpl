@@ -320,7 +320,7 @@ const stripComment = (str: string): string => {
     return str.substring(2, str.length - 1);
 };
 
-const isRegister = (data: string): Boolean => {
+const isRegister = (data: string): boolean => {
     if (specialRegisterNames.includes(data)) {
         return true;
     }
@@ -343,7 +343,7 @@ const parseRegister = (data: string): Register => {
 const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressStatement => {
     const a = ast as any;
     switch (ast.type) {
-        case 'assign':
+        case 'assign': {
             const to = parseRegister(a.children[0].value);
             const from = a.children[2].value;
             const why = stripComment(a.children[3].value);
@@ -352,6 +352,7 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
             } else {
                 return { kind: 'loadGlobal', from, to, why };
             }
+        }
         case 'label':
             return { kind: 'label', name: a.children[0].value, why: stripComment(a.children[2].value) };
         case 'load':
@@ -676,7 +677,7 @@ type ParseError = string | ParseFailureInfo<TacToken>;
 export const parseProgram = (input: string): ThreeAddressProgram | ParseError[] => {
     const tokens = lex(tokenSpecs, input);
     if (tokens.some(t => t.type == 'invalid')) {
-        const t = tokens.find(t => t.type == 'invalid');
+        const t = tokens.find(t2 => t2.type == 'invalid');
         if (t) return [`found an invalid token: ${t.string}`];
         return ['unknown invalid token'];
     }
@@ -690,7 +691,7 @@ export const parseProgram = (input: string): ThreeAddressProgram | ParseError[] 
 export const parseFunction = (input: string): ThreeAddressFunction | ParseError[] => {
     const tokens = lex(tokenSpecs, input);
     if (tokens.some(t => t.type == 'invalid')) {
-        const t = tokens.find(t => t.type == 'invalid');
+        const t = tokens.find(t2 => t2.type == 'invalid');
         if (t) return [`found an invalid token: ${t.string}`];
         return ['unknown invalid token'];
     }

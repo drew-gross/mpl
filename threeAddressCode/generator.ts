@@ -158,7 +158,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
     switch (ast.kind) {
         case 'number':
             return compileExpression<ThreeAddressStatement>([], ([]) => [
-                { kind: 'loadImmediate', value: ast.value, destination: destination, why: 'Load number literal' },
+                { kind: 'loadImmediate', value: ast.value, destination, why: 'Load number literal' },
             ]);
         case 'booleanLiteral':
             return compileExpression<ThreeAddressStatement>([], ([]) => [
@@ -382,17 +382,11 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     ([storeLeft, storeRight]) => [
                         ...storeLeft,
                         ...storeRight,
-                        {
-                            kind: 'gotoIfEqual',
-                            lhs: lhs,
-                            rhs: rhs,
-                            label: equalLabel,
-                            why: 'Goto set 1 if equal',
-                        },
-                        { kind: 'loadImmediate', value: 0, destination: destination, why: 'Not equal, set 0' },
+                        { kind: 'gotoIfEqual', lhs, rhs, label: equalLabel, why: 'Goto set 1 if equal' },
+                        { kind: 'loadImmediate', value: 0, destination, why: 'Not equal, set 0' },
                         { kind: 'goto', label: endOfConditionLabel, why: 'And goto exit' },
                         { kind: 'label', name: equalLabel, why: 'Sides are equal' },
-                        { kind: 'loadImmediate', value: 1, destination: destination, why: 'Set 1' },
+                        { kind: 'loadImmediate', value: 1, destination, why: 'Set 1' },
                         { kind: 'label', name: endOfConditionLabel, why: 'End of condition' },
                     ]
                 );
@@ -791,7 +785,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         kind: 'multiply',
                         lhs: leftSideDestination,
                         rhs: rightSideDestination,
-                        destination: destination,
+                        destination,
                         why: 'Evaluate product',
                     },
                 ]
@@ -820,9 +814,9 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     ]
                 );
             });
-            return compileExpression<ThreeAddressStatement>(createObjectMembers, createObjectMembers => [
+            return compileExpression<ThreeAddressStatement>(createObjectMembers, members => [
                 stackAllocateAndStorePointer,
-                ...flatten(createObjectMembers),
+                ...flatten(members),
             ]);
         }
         case 'memberAccess': {
@@ -1118,7 +1112,7 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
             ])
     );
 
-    let mainProgram: ThreeAddressCode = [
+    const mainProgram: ThreeAddressCode = [
         ...mainProgramInstructions,
         ...freeGlobalsInstructions,
         { kind: 'callByName', function: 'verify_no_leaks', why: 'Check for leaks' },
@@ -1145,11 +1139,11 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
         closedSet.push(f);
         f.instructions.forEach(statement => {
             if (statement.kind == 'callByName') {
-                const usedFunction = nonMainFunctions.find(f => f.name == statement.function);
+                const usedFunction = nonMainFunctions.find(f2 => f2.name == statement.function);
                 if (usedFunction) {
                     if (
-                        closedSet.find(f => f.name == usedFunction.name) ||
-                        openSet.find(f => f.name == usedFunction.name)
+                        closedSet.find(f2 => f2.name == usedFunction.name) ||
+                        openSet.find(f2 => f2.name == usedFunction.name)
                     ) {
                         // We already know about this function
                     } else {
@@ -1157,11 +1151,11 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
                     }
                 }
             } else if (statement.kind == 'loadSymbolAddress') {
-                const usedFunction = nonMainFunctions.find(f => f.name == statement.symbolName);
+                const usedFunction = nonMainFunctions.find(f2 => f2.name == statement.symbolName);
                 if (usedFunction) {
                     if (
-                        closedSet.find(f => f.name == usedFunction.name) ||
-                        openSet.find(f => f.name == usedFunction.name)
+                        closedSet.find(f2 => f2.name == usedFunction.name) ||
+                        openSet.find(f2 => f2.name == usedFunction.name)
                     ) {
                         // We already know about this function
                     } else {

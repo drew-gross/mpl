@@ -60,7 +60,7 @@ const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.Ast; exitInsteadOfRetu
 };
 
 const mplToExectuable = ({ functions, program, globalDeclarations }: BackendInputs) => {
-    let JSfunctions = functions.map(({ name, parameters, statements }) => {
+    const JSfunctions = functions.map(({ name, parameters, statements }) => {
         const prefix = `${name} = (${join(parameters.map(parameter => parameter.name), ', ')}) => {`;
         const suffix = `}`;
 
@@ -71,7 +71,7 @@ const mplToExectuable = ({ functions, program, globalDeclarations }: BackendInpu
         return [prefix, ...body, suffix].join(' ');
     });
 
-    let JS: string[] = flatten(
+    const JS: string[] = flatten(
         program.statements.map(child =>
             astToJS({
                 ast: child,

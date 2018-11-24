@@ -259,7 +259,7 @@ const execute = async (path: string): Promise<ExecutionResult> => {
         }
         const trimmedStdout = result.stdout.slice(exceptionsLoadedPreamble.length);
         const lines = trimmedStdout.split('\n');
-        const mipsExitCode = parseInt(lines[lines.length - 1].match(/[0-9]*$/)[0]);
+        const mipsExitCode = parseInt(lines[lines.length - 1].match(/[0-9]*$/)[0], 10);
         return {
             exitCode: mipsExitCode,
             stdout: trimmedStdout.slice(0, trimmedStdout.length - mipsExitCode.toString().length),

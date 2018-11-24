@@ -39,7 +39,7 @@ const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string): Toke
     input = input.slice(initialWhitespace.length);
 
     // consume input reading tokens
-    let tokens: Token<TokenType>[] = [];
+    const tokens: Token<TokenType>[] = [];
     while (input.length > 0) {
         for (const tokenSpec of tokenSpecs) {
             const match = input.match(RegExp(`^(${tokenSpec.token})[ \\t\\n]*`));

@@ -270,7 +270,7 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = bytesInWord => {
         name: 'sbrk',
         arguments: [amount],
         why: 'sbrk',
-        destination: destination,
+        destination,
     }));
 };
 
@@ -287,7 +287,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord => {
             0, // offset arg, unused, set to 0
         ],
         why: 'mmap',
-        destination: destination,
+        destination,
     }));
 };
 

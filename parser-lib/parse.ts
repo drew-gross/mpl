@@ -188,14 +188,13 @@ const parseSequence = <NodeType extends string, TokenType>(
         results.push(result);
         index = result.newIndex;
     }
-    const result: NodeWithIndex<NodeType, TokenType> = {
+    return {
         success: true,
         newIndex: index,
         type: parser.name as NodeType,
         children: results,
         sourceLocation: getSourceLocation(tokens, originalIndex),
     };
-    return result;
 };
 
 type ParserProgress<NodeType, TokenType> =
@@ -217,11 +216,14 @@ const parseAlternative = <NodeType extends string, TokenType>(
                 subParserIndex: 0,
             } as ParserProgress<NodeType, TokenType>)
     );
+
+    // TODO: fix this linter error
+    // tslint:disable-next-line
     for (let alternativeIndex = 0; alternativeIndex < alternatives.parsers.length; alternativeIndex++) {
         let alternativeNeedsSubtracting = false;
         let currentParser = alternatives.parsers[alternativeIndex];
         let currentResult: ParseResultWithIndex<NodeType, TokenType> | 'missingOptional';
-        let currentResultIsMissingOptional = false;
+        const currentResultIsMissingOptional = false;
         let currentIndex: number;
         const currentProgress = progressCache[alternativeIndex];
 
@@ -531,14 +533,14 @@ export const endOfInput: EndOfInput = { kind: 'endOfInput' };
 export const toDotFile = <NodeType, TokenType>(ast: Ast<NodeType, TokenType>) => {
     const digraph = new Graph();
     let id = 0;
-    const traverse = (ast: Ast<NodeType, TokenType>): number => {
-        let myId = id;
+    const traverse = (node: Ast<NodeType, TokenType>): number => {
+        const myId = id;
         id++;
-        const nodeString = 'children' in ast ? ast.type : `${ast.type}\n${ast.value ? ast.value : ''}`;
+        const nodeString = 'children' in node ? node.type : `${node.type}\n${node.value ? node.value : ''}`;
         digraph.setNode(myId, { label: nodeString });
-        if ('children' in ast) {
-            const childIds = ast.children.map(traverse);
-            ast.children.forEach((child, index) => {
+        if ('children' in node) {
+            const childIds = node.children.map(traverse);
+            node.children.forEach((child, index) => {
                 digraph.setEdge(myId, childIds[index]);
             });
         }

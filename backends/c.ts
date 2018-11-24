@@ -89,17 +89,18 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             if (type.kind != 'Product') {
                 throw debug('need a produduct');
             }
-            return compileExpression(memberExpressions, memberExpressions => [
+            return compileExpression(memberExpressions, expr => [
                 '(struct ',
                 type.name,
                 ')',
                 '{',
-                ...memberExpressions.map((e, i) => `.${ast.members[i].name} = ${e},`),
+                ...expr.map((e, i) => `.${ast.members[i].name} = ${e},`),
                 '}',
             ]);
-        case 'memberAccess':
+        case 'memberAccess': {
             const lhs = recurse(ast.lhs);
             return compileExpression([lhs], ([e1]) => ['(', ...e1, ').', ast.rhs]);
+        }
         case 'product':
             return binaryOperator('*');
         case 'addition':
@@ -128,7 +129,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         case 'typedDeclarationAssignment': {
             const lhs = ast.destination;
             const rhs = recurse(ast.expression);
-            const declaration = declarations.find(declaration => declaration.name === lhs);
+            const declaration = declarations.find(d => d.name === lhs);
             if (!declaration) throw debug('todo');
             switch (declaration.type.kind) {
                 case 'Function':
@@ -159,7 +160,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         case 'reassignment': {
             const lhs = ast.destination;
             const rhs = recurse(ast.expression);
-            const declaration = declarations.find(declaration => declaration.name === lhs);
+            const declaration = declarations.find(d => d.name === lhs);
             if (!declaration) throw debug('todo');
             switch (declaration.type.kind) {
                 case 'Function':
@@ -339,10 +340,10 @@ const mplToExectuable = ({ functions, program, types, globalDeclarations, string
             variables,
             globalDeclarations,
             stringLiterals,
-            buildSignature: (name, parameters) => {
-                const parameterDeclarations = parameters.map(p => mplTypeToCDeclaration(p.type, p.name));
+            buildSignature: (functionName, params) => {
+                const parameterDeclarations = params.map(p => mplTypeToCDeclaration(p.type, p.name));
                 const cReturnType = mplTypeToCType(returnType)('');
-                return `${cReturnType} ${name}(${join(parameterDeclarations, ', ')})`;
+                return `${cReturnType} ${functionName}(${join(parameterDeclarations, ', ')})`;
             },
             returnType,
         })
@@ -560,7 +561,7 @@ const cBackend: Backend = {
     mplToExectuable,
     execute,
     name: 'c',
-    //debug: debugWithLldb,
+    // debug: debugWithLldb,
     binSize: async path => (await stat(await compileC(path))).size,
 };
 
