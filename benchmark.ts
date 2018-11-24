@@ -41,9 +41,10 @@ if (!before) {
                         console.log(`Failed to compile ${name}`);
                         return;
                     }
+                    const backends: Backend[] = [jsBackend, cBackend, mipsBackend, x64Backend];
                     const [jsSize, cSize, mipsSize, x64Size] = await Promise.all(
-                        [jsBackend, cBackend, mipsBackend, x64Backend].map(async backend => {
-                            const exeContents = backend.toExectuable(frontendOutput);
+                        backends.map(async (backend: Backend) => {
+                            const exeContents = backend.mplToExectuable(frontendOutput);
                             const exeFile = await tmpFile({ postfix: `.${backend.name}` });
                             await writeFile(exeFile.fd, exeContents);
                             return await backend.binSize(exeFile.path);

@@ -2,7 +2,7 @@ import { stat } from 'fs-extra';
 import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import flatten from '../util/list/flatten.js';
-import { BackendInputs, ExecutionResult, Function, StringLiteralData } from '../api.js';
+import { BackendInputs, ExecutionResult, Function, StringLiteralData, Backend } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import { Register } from '../register.js';
@@ -24,6 +24,7 @@ import {
     GlobalInfo,
     makeTargetProgram,
     TargetInfo,
+    ThreeAddressProgram,
 } from '../threeAddressCode/generator.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from '../threeAddressCode/runtime.js';
 import { builtinFunctions, Type, TypeDeclaration, typeSize } from '../types.js';
@@ -194,7 +195,7 @@ const rtlFunctionToMips = (taf: ThreeAddressFunction): string => {
 const globalDeclaration = (name: string, bytes: number): string => `${name}: .space ${bytes}`;
 
 const bytesInWord = 4;
-export const mipsTarget: TargetInfo = {
+const mipsTarget: TargetInfo = {
     alignment: 4,
     bytesInWord: 4,
     entryPointName: 'main',
@@ -219,23 +220,25 @@ export const mipsTarget: TargetInfo = {
     printImpl: printWithPrintRuntimeFunction(bytesInWord),
 };
 
-const toExectuable = (inputs: BackendInputs) => {
-    const { globals, functions } = makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget });
-    return `
+const tacToExecutable = ({ globals, functions, stringLiterals }: ThreeAddressProgram) => `
 .data
 ${Object.values(globals)
-        .map(({ mangledName, bytes }) => globalDeclaration(mangledName, bytes))
-        .join('\n')}
-${inputs.stringLiterals.map(stringLiteralDeclaration).join('\n')}
+    .map(({ mangledName, bytes }) => globalDeclaration(mangledName, bytes))
+    .join('\n')}
+${stringLiterals.map(stringLiteralDeclaration).join('\n')}
 ${Object.keys(errors)
-        .map(key => `${errors[key].name}: .asciiz "${errors[key].value}"`)
-        .join('\n')}
+    .map(key => `${errors[key].name}: .asciiz "${errors[key].value}"`)
+    .join('\n')}
 
 # First block pointer. Block: size, next, free
 first_block: .word 0
 
 .text
 ${join(functions.map(rtlFunctionToMips), '\n\n\n')}`;
+
+const mplToExectuable = (inputs: BackendInputs) => {
+    const tac = makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget });
+    return tacToExecutable(tac);
 };
 
 const execute = async (path: string): Promise<ExecutionResult> => {
@@ -260,10 +263,13 @@ const execute = async (path: string): Promise<ExecutionResult> => {
     }
 };
 
-export default {
+const mipsBackend: Backend = {
     name: 'mips',
-    toExectuable,
+    mplToExectuable,
+    tacToExectutable: { targetInfo: mipsTarget, compile: tacToExecutable },
     execute,
     debug: path => exec(`${__dirname}/../../QtSpim.app/Contents/MacOS/QtSpim ${path}`),
     binSize: async path => (await stat(path)).size,
 };
+
+export default mipsBackend;

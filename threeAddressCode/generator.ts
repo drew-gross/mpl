@@ -1052,6 +1052,7 @@ export const threeAddressCodeToTarget = <TargetRegister>(
 export type ThreeAddressProgram = {
     globals: { [key: string]: { mangledName: string; bytes: number } };
     functions: ThreeAddressFunction[];
+    stringLiterals: StringLiteralData[];
 };
 
 export type MakeAllFunctionsInput = {
@@ -1174,5 +1175,5 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
         });
     }
 
-    return { globals, functions: closedSet };
+    return { globals, functions: closedSet, stringLiterals: backendInputs.stringLiterals };
 };

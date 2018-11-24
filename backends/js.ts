@@ -59,7 +59,7 @@ const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.Ast; exitInsteadOfRetu
     }
 };
 
-const toExectuable = ({ functions, program, globalDeclarations }: BackendInputs) => {
+const mplToExectuable = ({ functions, program, globalDeclarations }: BackendInputs) => {
     let JSfunctions = functions.map(({ name, parameters, statements }) => {
         const prefix = `${name} = (${join(parameters.map(parameter => parameter.name), ', ')}) => {`;
         const suffix = `}`;
@@ -95,7 +95,7 @@ const execute = async (path: string): Promise<ExecutionResult> => {
 };
 
 export default {
-    toExectuable,
+    mplToExectuable,
     execute,
     name: 'js',
     debug: path => exec(`${__dirname}/../../node_modules/.bin/inspect ${path}`),

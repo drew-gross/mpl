@@ -23,9 +23,10 @@ import {
     GlobalInfo,
     makeTargetProgram,
     TargetInfo,
+    ThreeAddressProgram,
 } from '../threeAddressCode/generator.js';
 import { mallocWithMmap, printWithWriteRuntimeFunction } from '../threeAddressCode/runtime.js';
-import { VariableDeclaration, BackendInputs, StringLiteralData } from '../api.js';
+import { VariableDeclaration, BackendInputs, StringLiteralData, Backend } from '../api.js';
 import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { execSync } from 'child_process';
@@ -197,7 +198,7 @@ const rtlFunctionToX64 = (taf: ThreeAddressFunction): string => {
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
 
-export const x64Target: TargetInfo = {
+const x64Target: TargetInfo = {
     alignment: 4,
     bytesInWord,
     entryPointName: 'start',
@@ -215,28 +216,21 @@ export const x64Target: TargetInfo = {
     printImpl: printWithWriteRuntimeFunction(bytesInWord),
 };
 
-const toExectuable = (inputs: BackendInputs) => {
-    const { globals, functions } = makeTargetProgram({
-        backendInputs: inputs,
-        targetInfo: x64Target,
-    });
-    return `
+const tacToExecutable = ({ globals, functions, stringLiterals }: ThreeAddressProgram) => `
 global start
 
 section .text
 ${join(functions.map(rtlFunctionToX64), '\n\n\n')}
 section .data
 first_block: dq 0
-${join(inputs.stringLiterals.map(stringLiteralDeclaration), '\n')}
+${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
 section .bss
 ${Object.values(globals)
-        .map(({ mangledName }) => `${mangledName}: resq 1`) // TODO: actual size of var instead of always resq
-        .join('\n')}
+    .map(({ mangledName }) => `${mangledName}: resq 1`) // TODO: actual size of var instead of always resq
+    .join('\n')}
 ${Object.keys(errors)
-        .map(key => `${errors[key].name}: resd 1`) // TODO: Fix this
-        .join('\n')}
-`;
-};
+    .map(key => `${errors[key].name}: resd 1`) // TODO: Fix this
+    .join('\n')}`;
 
 const x64toBinary = async (x64Path: string): Promise<string> => {
     const linkerInputPath = await tmpFile({ postfix: '.o' });
@@ -246,9 +240,21 @@ const x64toBinary = async (x64Path: string): Promise<string> => {
     return exePath.path;
 };
 
-export default {
+const mplToExectuable = (inputs: BackendInputs) => {
+    const tac = makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target });
+    return tacToExecutable(tac);
+};
+
+const x64Backend: Backend = {
     name: 'x64',
-    toExectuable,
+    mplToExectuable,
+    tacToExectutable: {
+        targetInfo: x64Target,
+        compile: () => {
+            debug('wip');
+            return '';
+        },
+    },
     execute: async path => execAndGetResult(await x64toBinary(path)),
     debug: async path => {
         console.log(`lldb ${await x64toBinary(path)}`);
@@ -258,3 +264,5 @@ export default {
     },
     binSize: async path => (await stat(await x64toBinary(path))).size,
 };
+
+export default x64Backend;

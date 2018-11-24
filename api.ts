@@ -1,5 +1,5 @@
 import { UninferredStatement, Statement } from './ast.js';
-import { ThreeAddressFunction } from './threeAddressCode/generator.js';
+import { ThreeAddressFunction, TargetInfo } from './threeAddressCode/generator.js';
 import { Type, TypeDeclaration } from './types.js';
 import SourceLocation from './parser-lib/sourceLocation.js';
 
@@ -102,7 +102,11 @@ export type TypeError =
 export type Backend = {
     name: string;
     binSize: (string) => Promise<number | { error: string }>;
-    toExectuable: (BackendInputs) => string;
+    mplToExectuable: (BackendInputs) => string;
+    tacToExectutable?: {
+        targetInfo: TargetInfo;
+        compile: (ThreeAddressProgram) => string;
+    };
     execute: (string) => Promise<ExecutionResult>; // Exit code or error
     debug?: (string) => Promise<void>;
     runtimeFunctions?: ThreeAddressFunction[];

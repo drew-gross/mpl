@@ -294,6 +294,7 @@ const mergeParseResults = (
     return {
         globals: { ...(lhs as any).globals, ...(rhs as any).globals },
         functions: [...(lhs as any).functions, ...(rhs as any).functions],
+        stringLiterals: [...(lhs as any).stringLiterals, ...(rhs as any).stringLiterals],
     };
 };
 
@@ -624,6 +625,7 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
                         [a.children[1].value]: { mangledName: a.children[3].value, bytes: a.children[4].value },
                     },
                     functions: [],
+                    stringLiterals: [],
                 },
                 tacFromParseResult(a.children[5])
             );
@@ -638,6 +640,7 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
                 {
                     globals: {},
                     functions: [f],
+                    stringLiterals: [],
                 },
                 remainder
             );
@@ -650,10 +653,11 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
             return {
                 globals: {},
                 functions: [f],
+                stringLiterals: [],
             };
         }
         case 'endOfFile': {
-            return { globals: {}, functions: [] };
+            return { globals: {}, functions: [], stringLiterals: [] };
         }
         default:
             throw debug(`${ast.type} unhandled in tacFromParseResult`);

@@ -1,7 +1,7 @@
 import * as Ast from '../ast.js';
 import { stat } from 'fs-extra';
 import { file as tmpFile } from 'tmp-promise';
-import { VariableDeclaration, BackendInputs, Function, ExecutionResult, StringLiteralData } from '../api.js';
+import { VariableDeclaration, BackendInputs, Function, ExecutionResult, StringLiteralData, Backend } from '../api.js';
 import { Type, equal as typesAreEqual, builtinTypes } from '../types.js';
 import flatten from '../util/list/flatten.js';
 import last from '../util/list/last.js';
@@ -326,7 +326,7 @@ const makeCfunctionBody = ({
 
 const productTypeMemberToCStructMember = ({ name, type }) => `${mplTypeToCDeclaration(type, '')} ${name};`;
 
-const toExectuable = ({ functions, program, types, globalDeclarations, stringLiterals }: BackendInputs) => {
+const mplToExectuable = ({ functions, program, types, globalDeclarations, stringLiterals }: BackendInputs) => {
     const CtypeDeclarations = types
         .filter(t => t.type.kind == 'Product')
         .map(t => `struct ${t.name} {${join((t.type as any).members.map(productTypeMemberToCStructMember), '\n')}};`);
@@ -556,11 +556,12 @@ const debugWithLldb = async path => {
     return exec(`lldb ${exeFile.path}`);
 };
 */
-
-export default {
-    toExectuable,
+const cBackend: Backend = {
+    mplToExectuable,
     execute,
     name: 'c',
     //debug: debugWithLldb,
     binSize: async path => (await stat(await compileC(path))).size,
 };
+
+export default cBackend;
