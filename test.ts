@@ -1,3 +1,5 @@
+import { file as tmpFile } from 'tmp-promise';
+import { writeFile } from 'fs-extra';
 import testCases from './test-cases.js';
 import { parseFunction, parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
 import prettyParseError from './parser-lib/pretty-parse-error.js';
@@ -16,6 +18,7 @@ import * as Ast from './ast.js';
 import { removeBracketsFromAst } from './frontend.js';
 import { controlFlowGraph, toDotFile, BasicBlock, computeBlockLiveness, tafLiveness } from './controlFlowGraph.js';
 import debug from './util/debug.js';
+import { backends } from './backend-utils.js';
 
 test('double flatten', t => {
     t.deepEqual(flatten(flatten([[[1, 2]], [[3], [4]], [[5]]])), [1, 2, 3, 4, 5]);
@@ -1780,7 +1783,7 @@ r:functionResult = 1 # Assume equal. Write true to functionResult. Overwrite if 
     t.deepEqual(Array.isArray(result), false);
 });
 
-test.failing('Add Numbers in ThreeAddressCode', t => {
+test.failing('Add Numbers in ThreeAddressCode', async t => {
     const source = parseFunction(`
 (function) main:
 r:a = 1 # a = 1
@@ -1788,4 +1791,30 @@ r:b = 2 # b = 2
 r:sum = r:a + r:b # Add the things
 r:functionResult = r:sum # Reusult = sum
 `);
+    const exitCode = 3;
+    await Promise.all(
+        backends.map(async backend => {
+            if (backend.tacToExectutable) {
+                const exeFile = await tmpFile({ postfix: `.${backend.name}` });
+                const exeContents = backend.tacToExectutable.compile({
+                    globals: {},
+                    functions: [source],
+                    stringLiterals: [],
+                });
+                await writeFile(exeFile.fd, exeContents);
+
+                const result = await backend.execute(exeFile.path);
+                if ('error' in result) {
+                    t.fail(`${backend.name} execution failed: ${result.error}`);
+                    return;
+                }
+
+                if (result.exitCode !== exitCode) {
+                    const errorMessage = `${backend.name} had unexpected output.
+Exit code: ${result.exitCode}. Expected: ${exitCode}.`;
+                    t.fail(errorMessage);
+                }
+            }
+        })
+    );
 });

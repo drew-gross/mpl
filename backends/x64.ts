@@ -250,10 +250,7 @@ const x64Backend: Backend = {
     mplToExectuable,
     tacToExectutable: {
         targetInfo: x64Target,
-        compile: () => {
-            debug('wip');
-            return '';
-        },
+        compile: tacToExecutable,
     },
     execute: async path => execAndGetResult(await x64toBinary(path)),
     debug: async path => {
