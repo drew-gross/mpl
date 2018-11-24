@@ -792,12 +792,6 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             );
         }
         case 'objectLiteral': {
-            const stackAllocateAndStorePointer: ThreeAddressStatement = {
-                kind: 'stackAllocateAndStorePointer',
-                bytes: typeSize(targetInfo, ast.type, types),
-                register: destination,
-                why: 'Make space for object literal',
-            };
             const createObjectMembers: CompiledExpression<ThreeAddressStatement>[] = ast.members.map((m, index) => {
                 const memberTemporary = makeTemporary(`member_${m.name}`);
                 return compileExpression(
@@ -815,7 +809,12 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 );
             });
             return compileExpression<ThreeAddressStatement>(createObjectMembers, members => [
-                stackAllocateAndStorePointer,
+                {
+                    kind: 'stackAllocateAndStorePointer',
+                    bytes: typeSize(targetInfo, ast.type, types),
+                    register: destination,
+                    why: 'Make space for object literal',
+                },
                 ...flatten(members),
             ]);
         }

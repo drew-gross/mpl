@@ -1804,3 +1804,17 @@ r:functionResult = r:sum # Result = sum
 `,
     exitCode: 3,
 });
+
+test.failing('Stack Offset Load and Store', tacTest, {
+    source: `
+(function) (spill:2) main:
+r:temp = 1 # Soemthing to spill
+spill:1 r:temp # Spill it
+r:temp = 2 # Use it for something else
+spill:2 r:temp # Spill this one too
+unspill:1 r:one # Load
+unspill:2 r:two # Load
+r:functionResult = r:one + r:two # Add the things
+`,
+    exitCode: 3,
+});

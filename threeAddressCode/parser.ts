@@ -34,6 +34,7 @@ type TacToken =
     | 'plusplus'
     | 'lessThan'
     | 'greaterThan'
+    | 'spillSpec'
     | 'plus'
     | 'and'
     | 'minus'
@@ -53,6 +54,12 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         token: '\\(function\\)',
         type: 'function',
         toString: x => x,
+    },
+    {
+        token: '\\(spill:\\d+\\)',
+        type: 'spillSpec',
+        toString: x => x,
+        action: s => parseInt(s.slice(7, -1), 10),
     },
     {
         token: 'goto',
@@ -216,6 +223,7 @@ const register = tacTerminal('register');
 const colon = tacTerminal('colon');
 const global_ = tacTerminal('global');
 const function_ = tacTerminal('function');
+const spillSpec = tacTerminal('spillSpec');
 const comment = tacTerminal('comment');
 const assign = tacTerminal('assign');
 const star = tacTerminal('star');
@@ -236,7 +244,7 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     program: OneOf<TacAstNode, TacToken>(['global', 'functions', endOfInput]),
     global: Sequence('global', [global_, identifier, colon, identifier, number, 'program']),
     functions: OneOf([Sequence('functions', ['function', 'functions']), 'function']),
-    function: Sequence('function', [function_, identifier, colon, 'instructions']),
+    function: Sequence('function', [function_, tacOptional(spillSpec), identifier, colon, 'instructions']),
     instructions: OneOf([Sequence('instructions', ['instruction', 'instructions']), 'instruction']),
     instruction: OneOf([
         Sequence('comment', [comment]),
