@@ -218,7 +218,6 @@ const x64Target: TargetInfo = {
 
 const tacToExecutable = ({ globals, functions, entryPoint, stringLiterals }: ThreeAddressProgram) => {
     if (!entryPoint) throw debug('need an entry point');
-
     // TODO: don't modify the inputs!
     entryPoint.name = 'start';
     return `

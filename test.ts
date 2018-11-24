@@ -1,3 +1,4 @@
+import * as clone from 'clone';
 import { file as tmpFile } from 'tmp-promise';
 import { writeFile } from 'fs-extra';
 import testCases from './test-cases.js';
@@ -1798,24 +1799,21 @@ r:functionResult = r:sum # Result = sum
     }
 
     const exitCode = 3;
-    const printSubsteps: string[] = [];
+    const printSubsteps: string[] = ['x64'];
     const debugSubsteps: string[] = [];
     await Promise.all(
         backends.map(async backend => {
             if (backend.tacToExectutable) {
                 const exeFile = await tmpFile({ postfix: `.${backend.name}` });
-
-                if (backend.name == 'x64') {
-                    return; // TODO: fix entry point specification
-                }
+                const newSource = clone(source);
 
                 // TODO: This is pure jank. Should move responsibility for adding cleanup code to some place that makes actual sense.
-                source.instructions.push(...backend.tacToExectutable.targetInfo.cleanupCode);
+                newSource.instructions.push(...backend.tacToExectutable.targetInfo.cleanupCode);
 
                 const exeContents = backend.tacToExectutable.compile({
                     globals: {},
                     functions: [],
-                    entryPoint: source,
+                    entryPoint: newSource,
                     stringLiterals: [],
                 });
 
@@ -1846,12 +1844,6 @@ Exit code: ${result.exitCode}. Expected: ${exitCode}.`;
                 } else {
                     t.deepEqual(result.exitCode, exitCode);
                 }
-
-                // TODO: Jank. See todo above.
-                source.instructions.splice(
-                    -backend.tacToExectutable.targetInfo.cleanupCode.length,
-                    backend.tacToExectutable.targetInfo.cleanupCode.length
-                );
             }
         })
     );
