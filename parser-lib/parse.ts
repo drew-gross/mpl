@@ -174,6 +174,13 @@ const parseSequence = <NodeType extends string, TokenType>(
             result = parseTerminal(p, tokens, index);
         } else if (typeof p === 'string') {
             result = parse(grammar, p as NodeType, tokens, index);
+        } else if (p.kind == 'optional') {
+            const maybeResult = parseOptional(grammar, p, tokens, index);
+            if (!maybeResult) {
+                continue; // Skip to the next non-optional
+            } else {
+                result = maybeResult;
+            }
         } else {
             throw debug(`Sequence of sequences: ${JSON.stringify(p)}`);
         }
