@@ -17,7 +17,7 @@ import { parse, stripResultIndexes, toDotFile, parseResultIsError, stripSourceLo
 import * as dot from 'graphlib-dot';
 import { makeTargetProgram } from './threeAddressCode/generator.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCode/runtime.js';
-import tacToString from './threeAddressCode/programToString.js';
+import { programToString } from './threeAddressCode/programToString.js';
 import { parseProgram as parseTacProgram, parseFunction } from './threeAddressCode/parser.js';
 import showGraphInChrome from './util/graph/showInChrome.js';
 import { backends } from './backend-utils.js';
@@ -218,7 +218,7 @@ export const mplTest = async (
         },
     });
 
-    const stringForm = tacToString(tac);
+    const stringForm = programToString(tac);
 
     // always print string form while working on parser
     if (printSubsteps.includes('threeAddressCode')) {

@@ -2,7 +2,7 @@ import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
 import { Register } from '../register.js';
 import { ThreeAddressFunction, ThreeAddressStatement } from './generator.js';
-import tacToString from './programToString.js';
+import { programToString, functionToString } from './programToString.js';
 import { parseProgram as parseTac, parseFunction } from './parser.js';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => ThreeAddressFunction;
@@ -352,83 +352,24 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
 };
 
 // TODO: figure out a way to verify that this is working
-export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord => {
-    const currentBlockPointer = { name: 'currentBlockPointer' };
-    const currentData = { name: 'currentData' };
-    const err = { name: 'err' };
-    const one = { name: 'one' };
-    return {
-        name: 'verify_no_leaks',
-        spills: 0,
-        instructions: [
-            {
-                kind: 'loadSymbolAddress',
-                symbolName: 'first_block',
-                to: currentBlockPointer,
-                why: 'Load first block address',
-            },
-            {
-                kind: 'loadMemory',
-                from: currentBlockPointer,
-                to: currentBlockPointer,
-                offset: 0,
-                why: 'Load first block pointer',
-            },
-            { kind: 'label', name: 'verify_no_leaks_loop', why: 'verify_no_leaks_loop' },
-            { kind: 'gotoIfZero', register: currentBlockPointer, label: 'verify_no_leaks_return', why: '' },
-            {
-                kind: 'loadMemory',
-                to: currentData,
-                from: currentBlockPointer,
-                offset: 2 * bytesInWord,
-                why: 'data = block->free',
-            },
-            {
-                kind: 'loadImmediate',
-                destination: one,
-                value: 1,
-                why: 'Need for comparison',
-            },
-            {
-                kind: 'gotoIfEqual',
-                lhs: currentData,
-                rhs: one,
-                label: 'verify_no_leaks_advance_pointers',
-                why: "Don't error if free",
-            },
-            {
-                kind: 'loadSymbolAddress',
-                to: err,
-                symbolName: errors.leaksDetected.name,
-                why: 'Error to print',
-            },
-            {
-                kind: 'syscall',
-                name: 'print',
-                arguments: [err],
-                why: 'syscall',
-                destination: undefined,
-            },
-            {
-                kind: 'syscall',
-                name: 'exit',
-                arguments: [-1],
-                why: 'syscall',
-                destination: undefined,
-            },
-            { kind: 'label', name: 'verify_no_leaks_advance_pointers', why: 'verify_no_leaks_advance_pointers' },
-            {
-                kind: 'loadMemory',
-                to: currentBlockPointer,
-                from: currentBlockPointer,
-                offset: 1 * bytesInWord,
-                why: 'block = block->next',
-            },
-            { kind: 'goto', label: 'verify_no_leaks_loop', why: 'Check next block' },
-            { kind: 'label', name: 'verify_no_leaks_return', why: '' },
-        ],
-    };
-};
+export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord =>
+    parseFunction(`
+    (function) verify_no_leaks:
+        r:currentBlockPointer = &first_block # Load first block address
+        r:currentBlockPointer = *(r:currentBlockPointer + ${0 * bytesInWord}) # Load first block pointer
+    verify_no_leaks_loop: # verify_no_leaks_loop
+        goto verify_no_leaks_return if r:currentBlockPointer == 0 # Last block, can return now
+        r:currentData = *(r:currentBlockPointer + ${2 * bytesInWord}) # data = block->free
+        r:one = 1 # Need for comparison
+        goto verify_no_leaks_advance_pointers if r:currentData == r:one # Don't error if free
+        r:err = &${errors.leaksDetected.name} # Error to print
+        syscall print r:err # syscall
+        syscall exit -1 # syscall
+    verify_no_leaks_advance_pointers: # verify_no_leaks_advance_pointers
+        r:currentBlockPointer = *(r:currentBlockPointer + ${1 * bytesInWord}) # block = block->next
+        goto verify_no_leaks_loop # Check next block
+    verify_no_leaks_return: # All done
+    `) as ThreeAddressFunction;
 
 export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunction(`
