@@ -288,6 +288,7 @@ Expected: "${expectedStdOut}"`;
 };
 
 export const tacTest = async (t, { source, exitCode, printSubsteps = [], debugSubsteps = [], spills }: TestOptions) => {
+    debugger;
     const parsed = parseFunction(source);
     if (Array.isArray(parsed)) {
         t.fail(`Parse error: ${JSON.stringify(parsed)}`);

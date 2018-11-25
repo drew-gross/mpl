@@ -1808,7 +1808,7 @@ r:functionResult = r:sum # Result = sum
     exitCode: 3,
 });
 
-test.failing('Stack Offset Load and Store', tacTest, {
+test.only('Stack Offset Load and Store', tacTest, {
     source: `
 (function) (spill:2) main:
 r:temp = 1 # Something to spill
@@ -1821,6 +1821,6 @@ r:functionResult = r:one + r:two # Add the things
 `,
     exitCode: 3,
     spills: 2,
-    //debugSubsteps: ['mips'],
-    //printSubsteps: ['mips'],
+    debugSubsteps: ['mips'],
+    printSubsteps: ['mips'],
 });

@@ -41,6 +41,8 @@ type TacToken =
     | 'syscall'
     | 'notEqual'
     | 'plusEqual'
+    | 'spillInstruction'
+    | 'unspillInstruction'
     | 'comment'
     | 'invalid';
 
@@ -60,6 +62,18 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         type: 'spillSpec',
         toString: x => x,
         action: s => parseInt(s.slice(7, -1), 10),
+    },
+    {
+        token: 'spill:\\d+',
+        type: 'spillInstruction',
+        toString: x => x,
+        action: s => parseInt(s.slice(6), 10),
+    },
+    {
+        token: 'unspill:\\d+',
+        type: 'unspillInstruction',
+        toString: x => x,
+        action: s => parseInt(s.slice(6), 10),
     },
     {
         token: 'goto',
@@ -209,6 +223,8 @@ type TacAstNode =
     | 'product'
     | 'callByRegister'
     | 'load'
+    | 'spill'
+    | 'unspill'
     | 'increment'
     | 'comment';
 
@@ -238,6 +254,8 @@ const minus = tacTerminal('minus');
 const plus = tacTerminal('plus');
 const and = tacTerminal('and');
 const syscall = tacTerminal('syscall');
+const spillInstruction = tacTerminal('spillInstruction');
+const unspillInstruction = tacTerminal('unspillInstruction');
 const greaterThan = tacTerminal('greaterThan');
 
 const grammar: Grammar<TacAstNode, TacToken> = {
@@ -267,6 +285,55 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('plusEqual', [register, plusEqual, 'data', comment]),
         Sequence('goto', [goto, identifier, comment]),
         Sequence('increment', [register, plusplus, comment]),
+        Sequence('unspill', [unspillInstruction, register]),
+        Sequence('spill', [spillInstruction, register]),
+        Sequence('stackAllocateAndStorePointer', [
+            register,
+            assign,
+            alloca,
+            leftBracket,
+            number,
+            rightBracket,
+            comment,
+        ]),
+        Sequence('callByRegister', [register, leftBracket, rightBracket, comment]),
+        Sequence('callByName', [identifier, leftBracket, rightBracket, comment]),
+    ]),
+    data: OneOf([identifier, register, number]),
+    syscallArgs: OneOf([Sequence('syscallArgs', [tacOptional(identifier), 'syscallArg', 'syscallArgs']), 'syscallArg']),
+    syscallArg: OneOf([number, register]),
+};
+
+// Need to add a endOfInput for functions. TODO: Make is easire to parse starting from different rules each time.
+const grammarForFunctionParse: Grammar<TacAstNode, TacToken> = {
+    program: OneOf<TacAstNode, TacToken>(['global', 'functions']),
+    global: Sequence('global', [global_, identifier, colon, identifier, number, 'program']),
+    functions: OneOf([Sequence('functions', ['function', 'functions']), 'function']),
+    function: Sequence('function', [function_, tacOptional(spillSpec), identifier, colon, 'instructions', endOfInput]),
+    instructions: OneOf([Sequence('instructions', ['instruction', 'instructions']), 'instruction']),
+    instruction: OneOf([
+        Sequence('comment', [comment]),
+        Sequence('label', [identifier, colon, comment]),
+        // TODO: probably need separate syntax for syscall with result
+        Sequence('syscall', [syscall, identifier, 'syscallArgs', comment]),
+        Sequence('loadImmediate', [register, assign, number, comment]),
+        Sequence('assign', [register, assign, 'data', comment]),
+        Sequence('load', [register, assign, star, 'data', comment]),
+        Sequence('store', [star, 'data', assign, 'data', comment]),
+        Sequence('offsetStore', [star, leftBracket, register, plus, number, rightBracket, assign, 'data', comment]),
+        Sequence('offsetLoad', [register, assign, star, leftBracket, register, plus, number, rightBracket, comment]),
+        Sequence('difference', [register, assign, 'data', minus, 'data', comment]),
+        Sequence('product', [register, assign, 'data', star, 'data', comment]),
+        Sequence('sum', [register, assign, 'data', plus, 'data', comment]),
+        Sequence('addressOf', [register, assign, and, 'data', comment]),
+        Sequence('gotoIfEqual', [goto, identifier, if_, 'data', doubleEqual, 'data', comment]),
+        Sequence('gotoIfNotEqual', [goto, identifier, if_, 'data', notEqual, 'data', comment]),
+        Sequence('gotoIfGreater', [goto, identifier, if_, 'data', greaterThan, 'data', comment]),
+        Sequence('plusEqual', [register, plusEqual, 'data', comment]),
+        Sequence('goto', [goto, identifier, comment]),
+        Sequence('increment', [register, plusplus, comment]),
+        Sequence('unspill', [unspillInstruction, register]),
+        Sequence('spill', [spillInstruction, register]),
         Sequence('stackAllocateAndStorePointer', [
             register,
             assign,
@@ -714,7 +781,7 @@ export const parseFunction = (input: string): ThreeAddressFunction | ParseError[
         if (t) return [`found an invalid token: ${t.string}`];
         return ['unknown invalid token'];
     }
-    const parseResult = parse(grammar, 'function', tokens, 0);
+    const parseResult = parse(grammarForFunctionParse, 'function', tokens, 0);
     if (parseResultIsError(parseResult)) {
         return parseResult.errors;
     }
