@@ -285,8 +285,8 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('plusEqual', [register, plusEqual, 'data', comment]),
         Sequence('goto', [goto, identifier, comment]),
         Sequence('increment', [register, plusplus, comment]),
-        Sequence('unspill', [unspillInstruction, register]),
-        Sequence('spill', [spillInstruction, register]),
+        Sequence('unspill', [unspillInstruction, register, comment]),
+        Sequence('spill', [spillInstruction, register, comment]),
         Sequence('stackAllocateAndStorePointer', [
             register,
             assign,
@@ -332,8 +332,8 @@ const grammarForFunctionParse: Grammar<TacAstNode, TacToken> = {
         Sequence('plusEqual', [register, plusEqual, 'data', comment]),
         Sequence('goto', [goto, identifier, comment]),
         Sequence('increment', [register, plusplus, comment]),
-        Sequence('unspill', [unspillInstruction, register]),
-        Sequence('spill', [spillInstruction, register]),
+        Sequence('unspill', [unspillInstruction, register, comment]),
+        Sequence('spill', [spillInstruction, register, comment]),
         Sequence('stackAllocateAndStorePointer', [
             register,
             assign,
@@ -636,10 +636,22 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
                 bytes: a.children[4].value,
                 why: stripComment(a.children[6].value),
             };
-        default:
+        case 'spill':
             return {
                 kind: ast.type,
-            } as any;
+                register: parseRegister(a.children[1].value),
+                offset: a.children[0].value,
+                why: stripComment(a.children[2].value),
+            };
+        case 'unspill':
+            return {
+                kind: ast.type,
+                register: parseRegister(a.children[1].value),
+                offset: a.children[0].value,
+                why: stripComment(a.children[2].value),
+            };
+        default:
+            throw debug(`${ast.type} unhandled in parseInstruction`);
     }
 };
 

@@ -74,6 +74,10 @@ const toStringWithoutComment = (tas: ThreeAddressStatement): string => {
             return `return`;
         case 'stackAllocateAndStorePointer':
             return `${registerToString(tas.register)} = alloca(${tas.bytes})`;
+        case 'spill':
+            return `spill:${tas.offset} ${registerToString(tas.register)}`;
+        case 'unspill':
+            return `unspill:${tas.offset} ${registerToString(tas.register)}`;
         // Should be completely covered
     }
 };

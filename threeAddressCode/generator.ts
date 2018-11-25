@@ -42,6 +42,9 @@ export type ThreeAddressStatement = { why: string } & (
     | { kind: 'functionLabel'; name: string }
     // Stack management
     | { kind: 'stackAllocateAndStorePointer'; bytes: number; register: Register }
+    // Spilling
+    | { kind: 'spill'; register: Register; offset: number }
+    | { kind: 'unspill'; register: Register; offset: number }
     // Branches
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: Register; rhs: Register; label: string }

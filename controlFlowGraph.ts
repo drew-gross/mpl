@@ -50,6 +50,8 @@ const blockBehaviour = (tas: ThreeAddressStatement): 'endBlock' | 'beginBlock' |
         case 'callByName':
         case 'callByRegister':
         case 'stackAllocateAndStorePointer':
+        case 'spill':
+        case 'unspill':
             return 'midBlock';
         case 'label':
         case 'functionLabel':
@@ -125,6 +127,10 @@ const livenessUpdate = (tas: ThreeAddressStatement): { newlyLive: Register[]; ne
             return { newlyLive: [tas.register], newlyDead: [] };
         case 'stackAllocateAndStorePointer':
             return { newlyLive: [], newlyDead: [tas.register] };
+        case 'unspill':
+            return { newlyLive: [], newlyDead: [tas.register] };
+        case 'spill':
+            return { newlyLive: [tas.register], newlyDead: [] };
         default:
             throw debug(`${(tas as any).kind} unhanldes in livenessUpdate`);
     }
@@ -413,6 +419,7 @@ export const assignRegisters = <TargetRegister>(
     taf: ThreeAddressFunction,
     colors: TargetRegister[]
 ): RegisterAssignment<TargetRegister> => {
+    debugger;
     const liveness = tafLiveness(taf);
     const rig = registerInterferenceGraph(liveness);
     const registersToAssign = rig.nonSpecialRegisters.copy();
@@ -462,6 +469,7 @@ export const assignRegisters = <TargetRegister>(
             });
         });
         if (!color) throw debug("couldn't find a color to assign");
+        if (!register) throw debug('invalid register');
         result.registerMap[(register as { name: string }).name] = color;
     });
 
