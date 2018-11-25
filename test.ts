@@ -1821,4 +1821,6 @@ r:functionResult = r:one + r:two # Add the things
 `,
     exitCode: 3,
     spills: 2,
+    //debugSubsteps: ['mips'],
+    //printSubsteps: ['mips'],
 });

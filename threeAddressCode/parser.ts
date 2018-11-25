@@ -621,7 +621,7 @@ const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Three
     if (ast.children[childIndex].type == 'instructions') {
         instructions = parseInstructions(ast.children[childIndex]);
         childIndex++;
-    } else if (ast.children[childIndex].type == 'syscall') {
+    } else {
         instructions = [parseInstruction(ast.children[childIndex])];
         childIndex++;
     }

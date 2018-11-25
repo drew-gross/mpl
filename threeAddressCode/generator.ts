@@ -965,7 +965,7 @@ export const threeAddressCodeToTarget = <TargetRegister>(
                     kind: 'loadImmediate',
                     value: syscallNumbers[tas.name],
                     destination: registerTypes.syscallSelectAndResult,
-                    why: 'syscall select',
+                    why: `syscall select (${tas.name})`,
                 },
                 { kind: 'syscall', why: 'syscall' },
                 ...(tas.destination

@@ -92,7 +92,11 @@ export const getRegisterFromAssignment = <TargetRegister>(
         }
     } else {
         if (!(r.name in registerAssignment.registerMap)) {
-            throw debug('couldnt find an assignment for this register');
+            throw debug(
+                `couldnt find an assignment for register: ${r.name}. Map: ${JSON.stringify(
+                    registerAssignment.registerMap
+                )}`
+            );
         }
         return registerAssignment.registerMap[r.name];
     }
