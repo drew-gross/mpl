@@ -70,6 +70,8 @@ const syscallNumbers = {
     exit: 10,
 };
 
+const bytesInWord = 4;
+
 const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<MipsRegister>): string[] => {
     switch (tas.kind) {
         case 'comment':
@@ -132,6 +134,11 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
             return [`addiu $sp, $sp, 4`, `lw ${tas.register}, ($sp)`];
         case 'loadStackOffset':
             return [`move ${tas.register}, $sp`, `addiu ${tas.register}, ${tas.offset}`];
+        case 'stackStore':
+            return [`sw ${tas.register}, ${tas.offset * bytesInWord}($sp)`];
+        case 'stackLoad':
+            if (Number.isNaN(tas.offset * bytesInWord)) throw debug('nan!');
+            return [`lw ${tas.register}, ${tas.offset * bytesInWord}($sp)`];
         default:
             throw debug(`${(tas as any).kind} unhandled in threeAddressCodeToMipsWithoutComment`);
     }
@@ -199,7 +206,6 @@ const rtlFunctionToMips = ({ threeAddressFunction, mustRestoreRegisters }: RtlFu
 
 const globalDeclaration = (name: string, bytes: number): string => `${name}: .space ${bytes}`;
 
-const bytesInWord = 4;
 const mipsTarget: TargetInfo = {
     alignment: 4,
     bytesInWord: 4,

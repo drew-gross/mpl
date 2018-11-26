@@ -149,6 +149,10 @@ const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X6
             return [`pop ${tas.register}`];
         case 'loadStackOffset':
             return [`mov ${tas.register}, rsp`, `add ${tas.register}, ${tas.offset}`];
+        case 'stackLoad':
+            return [`mov ${tas.register}, [rsp+${tas.offset}]`];
+        case 'stackStore':
+            return [`mov [rsp+${tas.offset}], ${tas.register}`];
         default:
             throw debug(`${(tas as any).kind} unhandled in threeAddressCodeToX64WithoutComment`);
     }

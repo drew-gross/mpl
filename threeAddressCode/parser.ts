@@ -73,7 +73,7 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         token: 'unspill:\\d+',
         type: 'unspillInstruction',
         toString: x => x,
-        action: s => parseInt(s.slice(6), 10),
+        action: s => parseInt(s.slice(8), 10),
     },
     {
         token: 'goto',
@@ -644,6 +644,7 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddress
                 why: stripComment(a.children[2].value),
             };
         case 'unspill':
+            if (Number.isNaN(a.children[0].value)) debug('nan!');
             return {
                 kind: ast.type,
                 register: parseRegister(a.children[1].value),

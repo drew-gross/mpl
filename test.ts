@@ -1808,7 +1808,7 @@ r:functionResult = r:sum # Result = sum
     exitCode: 3,
 });
 
-test.only('Stack Offset Load and Store', tacTest, {
+test('Stack Offset Load and Store', tacTest, {
     source: `
 (function) (spill:2) main:
 r:temp = 1 # Something to spill
@@ -1821,6 +1821,98 @@ r:functionResult = r:one + r:two # Add the things
 `,
     exitCode: 3,
     spills: 2,
-    debugSubsteps: ['mips'],
-    printSubsteps: ['mips'],
+});
+
+// This will fail due to needing to make stack space for
+// both the spilled temporaries AND the local struct, but currently we don't.
+test.failing('Spill with Local Struct', mplTest, {
+    source: `
+IntPair := {
+    first: Integer;
+    second: Integer;
+};
+
+foo := a: Integer => {
+    t1 := a + 1;
+    t2 := a + 2;
+    t3 := a + 3;
+    t4 := a + 4;
+    t5 := a + 5;
+    t6 := a + 6;
+    t7 := a + 7;
+    t8 := a + 8;
+    t9 := a + 9;
+    t10 := a + 10;
+    t11 := a + 11;
+    t12 := a + 12;
+    t13 := a + 13;
+    t14 := a + 14;
+    t15 := a + 15;
+    t16 := a + 16;
+    t17 := a + 17;
+    t18 := a + 18;
+    t19 := a + 19;
+    ip: IntPair = IntPair { first: t7, second: t18, };
+    return ip.second - ip.first;
+};
+
+return foo(1);
+`,
+    exitCode: 11,
+});
+
+// This will fail due to needing to make adjust stack pointer to make room for spilled temporaries.
+// Currently each functions in the stack's spills will clobber it's parents.
+test.failing('2-level call tree with spilling', mplTest, {
+    source: `
+
+bar := a: Integer => {
+    t1 := a + 1;
+    t2 := a + 2;
+    t3 := a + 3;
+    t4 := a + 4;
+    t5 := a + 5;
+    t6 := a + 6;
+    t7 := a + 7;
+    t8 := a + 8;
+    t9 := a + 9;
+    t10 := a + 10;
+    t11 := a + 11;
+    t12 := a + 12;
+    t13 := a + 13;
+    t14 := a + 14;
+    t15 := a + 15;
+    t16 := a + 16;
+    t17 := a + 17;
+    t18 := a + 18;
+    t19 := a + 19;
+    return t19 - t18;
+};
+
+foo := a: Integer => {
+    t1 := a + 1;
+    t2 := a + 2;
+    t3 := a + 3;
+    t4 := a + 4;
+    t5 := a + 5;
+    t6 := a + 6;
+    t7 := a + 7;
+    t8 := a + 8;
+    t9 := a + 9;
+    t10 := a + 10;
+    t11 := a + 11;
+    t12 := a + 12;
+    t13 := a + 13;
+    t14 := a + 14;
+    t15 := a + 15;
+    t16 := a + 16;
+    t17 := a + 17;
+    t18 := a + 18;
+    t19 := a + 19;
+    return bar(t19 - t18);
+};
+
+return foo(1);
+`,
+    exitCode: 1,
 });

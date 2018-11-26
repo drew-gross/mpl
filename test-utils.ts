@@ -287,8 +287,10 @@ Expected: "${expectedStdOut}"`;
     t.pass();
 };
 
-export const tacTest = async (t, { source, exitCode, printSubsteps = [], debugSubsteps = [], spills }: TestOptions) => {
-    debugger;
+export const tacTest = async (
+    t,
+    { source, exitCode, printSubsteps = [], debugSubsteps = [], spills, failing = [] }: TestOptions
+) => {
     const parsed = parseFunction(source);
     if (Array.isArray(parsed)) {
         t.fail(`Parse error: ${JSON.stringify(parsed)}`);
@@ -299,7 +301,7 @@ export const tacTest = async (t, { source, exitCode, printSubsteps = [], debugSu
     }
     await Promise.all(
         backends.map(async backend => {
-            if (backend.tacToExectutable) {
+            if (backend.tacToExectutable && !failing.includes(backend.name)) {
                 const exeFile = await tmpFile({ postfix: `.${backend.name}` });
                 const newSource = clone(parsed);
 

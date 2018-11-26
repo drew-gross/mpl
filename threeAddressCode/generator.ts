@@ -110,7 +110,9 @@ export type TargetThreeAddressStatement<TargetRegister> = { why: string } & (
     | { kind: 'callByRegister'; function: TargetRegister }
     | { kind: 'returnToCaller' }
     // Stack Management
-    | { kind: 'loadStackOffset'; register: TargetRegister; offset: number }
+    | { kind: 'loadStackOffset'; register: TargetRegister; offset: number } // TODO: This should be fused with stackStore probably
+    | { kind: 'stackStore'; register: TargetRegister; offset: number }
+    | { kind: 'stackLoad'; register: TargetRegister; offset: number }
     | { kind: 'push'; register: TargetRegister }
     | { kind: 'pop'; register: TargetRegister });
 
@@ -1040,6 +1042,27 @@ export const threeAddressCodeToTarget = <TargetRegister>(
                     why: tas.why,
                 },
             ];
+        case 'spill': {
+            return [
+                {
+                    kind: 'stackStore',
+                    register: getRegister(tas.register),
+                    offset: stackOffset + tas.offset,
+                    why: tas.why,
+                },
+            ];
+        }
+        case 'unspill': {
+            if (Number.isNaN(stackOffset + tas.offset)) debug('nan!');
+            return [
+                {
+                    kind: 'stackLoad',
+                    register: getRegister(tas.register),
+                    offset: stackOffset + tas.offset,
+                    why: tas.why,
+                },
+            ];
+        }
         default:
             throw debug(`${(tas as any).kind} unhandled in threeAddressCodeToTarget`);
     }
