@@ -895,7 +895,7 @@ test('return local integer', mplTest, {
 });
 
 // Need spilling
-test.failing('many temporaries, spill to ram', mplTest, {
+test.only('many temporaries, spill to ram', mplTest, {
     source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
     exitCode: 1,
 });
@@ -1915,4 +1915,11 @@ foo := a: Integer => {
 return foo(1);
 `,
     exitCode: 1,
+});
+
+test.failing('Spill self-assigning multiply', mplTest, {
+    source: `
+// TODO: enough stuff to cause a spill. then a = a * a. Or make this
+// a direct test of spill().
+`,
 });

@@ -164,19 +164,16 @@ const rtlFunctionToMips = ({ threeAddressFunction, mustRestoreRegisters }: RtlFu
         }
     });
 
-    const registerAssignment: RegisterAssignment<MipsRegister> = assignRegisters(
-        threeAddressFunction,
-        mipsRegisterTypes.generalPurpose
-    );
+    const { assignment, newFunction } = assignRegisters(threeAddressFunction, mipsRegisterTypes.generalPurpose);
 
     const mips: TargetThreeAddressStatement<MipsRegister>[] = flatten(
-        threeAddressFunction.instructions.map((instruction, index) =>
+        newFunction.instructions.map((instruction, index) =>
             threeAddressCodeToTarget(
                 instruction,
                 stackOffsetPerInstruction[index],
                 syscallNumbers,
                 mipsRegisterTypes,
-                r => getRegisterFromAssignment(registerAssignment, mipsRegisterTypes, r)
+                r => getRegisterFromAssignment(assignment, mipsRegisterTypes, r)
             )
         )
     );
@@ -184,19 +181,19 @@ const rtlFunctionToMips = ({ threeAddressFunction, mustRestoreRegisters }: RtlFu
     const preamble: TargetThreeAddressStatement<MipsRegister>[] = mustRestoreRegisters
         ? [
               { kind: 'push', register: '$ra', why: 'Always save return address' },
-              ...saveRegistersCode<MipsRegister>(registerAssignment),
+              ...saveRegistersCode<MipsRegister>(assignment),
           ]
         : [];
     const epilogue: TargetThreeAddressStatement<MipsRegister>[] = mustRestoreRegisters
         ? [
-              ...restoreRegistersCode<MipsRegister>(registerAssignment),
+              ...restoreRegistersCode<MipsRegister>(assignment),
               { kind: 'pop', register: '$ra', why: 'Always restore return address' },
               { kind: 'returnToCaller', why: 'Done' },
           ]
         : [];
     const fullRtl: TargetThreeAddressStatement<MipsRegister>[] = [
         // TODO: consider adding the label outside this function so we don't need a dummy main function
-        { kind: 'functionLabel', name: threeAddressFunction.name, why: 'Function entry point' },
+        { kind: 'functionLabel', name: newFunction.name, why: 'Function entry point' },
         ...preamble,
         ...mips,
         ...epilogue,

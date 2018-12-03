@@ -6,6 +6,7 @@ import { set, Set, join as setJoin, fromList as setFromList } from './util/set.j
 import { filter, FilterPredicate } from './util/list/filter.js';
 import join from './util/join.js';
 import grid from './util/grid.js';
+import idAppender from './util/idAppender.js';
 import { RegisterAssignment } from './backend-utils.js';
 import { Register, isEqual as registerIsEqual } from './register.js';
 import { ThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
@@ -415,11 +416,143 @@ export const registerInterferenceGraph = (liveness: Set<Register>[]): RegisterIn
     return result;
 };
 
+export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): ThreeAddressFunction => {
+    if (typeof registerToSpill == 'string') throw debug("Can't spill special registers");
+    const currentSpillIndex = taf.spills + 1;
+    const registerName = idAppender();
+    const newFunction: ThreeAddressFunction = { instructions: [], spills: currentSpillIndex, name: taf.name };
+
+    // When we spill a register, we replace every read of that register with an unspill to a new register that
+    // exists only as long as that read, and replace every write the write followed by a spill, so that the
+    // lifetime of the spilled register is very short. Each read or write needs to create a new register to spill
+    // from or to (we call that register a fragment) and this function creates a new fragment for each read/write.
+    const makeFragment = () => ({ name: registerName(`${registerToSpill.name}_spill`) });
+    if (registerToSpill.name == 'product_lhs_2') debugger;
+
+    taf.instructions.forEach(instruction => {
+        switch (instruction.kind) {
+            case 'comment': {
+                newFunction.instructions.push(instruction);
+                break;
+            }
+            case 'loadImmediate': {
+                // TODO: seems weird to spill in this case? Could just reload instead. Oh well, will fix later.
+                if (registerIsEqual(instruction.destination, registerToSpill)) {
+                    const fragment = makeFragment();
+                    newFunction.instructions.push({
+                        ...instruction,
+                        destination: fragment,
+                    });
+                    newFunction.instructions.push({
+                        kind: 'spill',
+                        register: fragment,
+                        offset: currentSpillIndex,
+                        why: 'spill',
+                    });
+                }
+                break;
+            }
+            case 'multiply': {
+                let newLhs = instruction.lhs;
+                let newRhs = instruction.rhs;
+                if (registerIsEqual(instruction.lhs, registerToSpill)) {
+                    newLhs = makeFragment();
+                    newFunction.instructions.push({
+                        kind: 'unspill',
+                        register: newLhs,
+                        offset: currentSpillIndex,
+                        why: 'unspill',
+                    });
+                }
+                if (registerIsEqual(instruction.rhs, registerToSpill)) {
+                    newRhs = makeFragment();
+                    newFunction.instructions.push({
+                        kind: 'unspill',
+                        register: newRhs,
+                        offset: currentSpillIndex,
+                        why: 'unspill',
+                    });
+                }
+                let newDestination = instruction.destination;
+                if (registerIsEqual(instruction.destination, registerToSpill)) {
+                    newDestination = makeFragment();
+                    newFunction.instructions.push({
+                        ...instruction,
+                        lhs: newLhs,
+                        rhs: newRhs,
+                        destination: newDestination,
+                    });
+                    newFunction.instructions.push({
+                        kind: 'spill',
+                        register: newDestination,
+                        offset: currentSpillIndex,
+                        why: 'spill',
+                    });
+                } else {
+                    newFunction.instructions.push({
+                        ...instruction,
+                        lhs: newLhs,
+                        rhs: newRhs,
+                    });
+                }
+                break;
+            }
+            case 'move': {
+                // TODO: seems weird to spill a move. Maybe should _replace_ the move or sommething?
+                let newSource = instruction.from;
+                if (registerIsEqual(instruction.from, registerToSpill)) {
+                    newSource = makeFragment();
+                    newFunction.instructions.push({
+                        kind: 'unspill',
+                        register: newSource,
+                        offset: currentSpillIndex,
+                        why: 'unspill',
+                    });
+                }
+                if (registerIsEqual(instruction.to, registerToSpill)) {
+                    let newDestination = makeFragment();
+                    newFunction.instructions.push({
+                        ...instruction,
+                        to: newDestination,
+                        from: newSource,
+                    });
+                    newFunction.instructions.push({
+                        kind: 'spill',
+                        register: newDestination,
+                        offset: currentSpillIndex,
+                        why: 'spill',
+                    });
+                } else {
+                    newFunction.instructions.push({
+                        ...instruction,
+                        from: newSource,
+                    });
+                }
+                break;
+            }
+            case 'unspill':
+            case 'spill':
+                if (registerIsEqual(instruction.register, registerToSpill)) {
+                    throw debug('repsill');
+                }
+            case 'syscall':
+            case 'callByName': {
+                newFunction.instructions.push(instruction);
+                break;
+            }
+
+            default:
+                throw debug(`${instruction.kind} unhandled in spill`);
+        }
+    });
+
+    return newFunction;
+};
+
 export const assignRegisters = <TargetRegister>(
     taf: ThreeAddressFunction,
     colors: TargetRegister[]
-): RegisterAssignment<TargetRegister> => {
-    debugger;
+): { assignment: RegisterAssignment<TargetRegister>; newFunction: ThreeAddressFunction } => {
     const liveness = tafLiveness(taf);
     const rig = registerInterferenceGraph(liveness);
     const registersToAssign = rig.nonSpecialRegisters.copy();
@@ -453,7 +586,9 @@ export const assignRegisters = <TargetRegister>(
     }
 
     const result: RegisterAssignment<TargetRegister> = { registerMap: {}, spilled: [] };
+    let needToSpill: undefined | Register = undefined;
     colorableStack.reverse().forEach(register => {
+        if (needToSpill) return;
         // Try each color in order
         const color = colors.find(color => {
             // Check we if have a neighbour with this color already
@@ -468,10 +603,20 @@ export const assignRegisters = <TargetRegister>(
                 return true;
             });
         });
-        if (!color) throw debug("couldn't find a color to assign");
+        if (!color && !(typeof register === 'string')) {
+            needToSpill = register;
+            return;
+        } else if (!color) {
+            throw debug('no color found for special register???');
+        }
         if (!register) throw debug('invalid register');
         result.registerMap[(register as { name: string }).name] = color;
     });
 
-    return result;
+    if (needToSpill) {
+        const spilled = spill(taf, needToSpill);
+        return assignRegisters(spilled, colors);
+    }
+
+    return { assignment: result, newFunction: taf };
 };

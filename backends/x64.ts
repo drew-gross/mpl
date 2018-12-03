@@ -177,28 +177,25 @@ const rtlFunctionToX64 = ({ threeAddressFunction, mustRestoreRegisters }: RtlFun
         }
     });
 
-    const registerAssignment: RegisterAssignment<X64Register> = assignRegisters(
-        threeAddressFunction,
-        x64RegisterTypes.generalPurpose
-    );
+    const { assignment, newFunction } = assignRegisters(threeAddressFunction, x64RegisterTypes.generalPurpose);
 
     const statements: TargetThreeAddressStatement<X64Register>[] = flatten(
-        threeAddressFunction.instructions.map((instruction, index) =>
+        newFunction.instructions.map((instruction, index) =>
             threeAddressCodeToTarget(
                 instruction,
                 stackOffsetPerInstruction[index],
                 syscallNumbers,
                 x64RegisterTypes,
-                r => getRegisterFromAssignment(registerAssignment, x64RegisterTypes, r)
+                r => getRegisterFromAssignment(assignment, x64RegisterTypes, r)
             )
         )
     );
     const fullRtl: TargetThreeAddressStatement<X64Register>[] = [
         // TODO: consider adding the label outside this function so we don't need a dummy main function
-        { kind: 'functionLabel', name: threeAddressFunction.name, why: 'Function entry point' },
-        ...(!mustRestoreRegisters ? [] : saveRegistersCode<X64Register>(registerAssignment)),
+        { kind: 'functionLabel', name: newFunction.name, why: 'Function entry point' },
+        ...(!mustRestoreRegisters ? [] : saveRegistersCode<X64Register>(assignment)),
         ...statements,
-        ...(!mustRestoreRegisters ? [] : restoreRegistersCode<X64Register>(registerAssignment)),
+        ...(!mustRestoreRegisters ? [] : restoreRegistersCode<X64Register>(assignment)),
         ...(!mustRestoreRegisters ? [] : [{ kind: 'returnToCaller' as 'returnToCaller', why: 'Done' }]),
     ];
     return join(flatten(fullRtl.map(threeAddressCodeToX64)), '\n');
