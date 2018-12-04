@@ -499,8 +499,12 @@ test('double product with brackets', mplTest, {
     },
 });
 
-testCases.forEach(({ name, source, exitCode }) => {
-    test(name, mplTest, { source, exitCode });
+testCases.forEach(({ name, source, exitCode, failing }) => {
+    if (failing) {
+        test.failing(name, mplTest, { source, exitCode });
+    } else {
+        test(name, mplTest, { source, exitCode });
+    }
 });
 
 test('double product', mplTest, {
@@ -895,10 +899,10 @@ test('return local integer', mplTest, {
 });
 
 // Need spilling
-test.only('many temporaries, spill to ram', mplTest, {
+test.failing('many temporaries, spill to ram', mplTest, {
     source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
     exitCode: 1,
-    printSubsteps: ['mips', 'threeAddressCode'],
+    //printSubsteps: ['mips', 'threeAddressCode'],
 });
 
 test('multi statement function with locals', mplTest, {

@@ -166,9 +166,11 @@ const bytesInWord = 8;
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 type RtlFunctionToX64Input = { threeAddressFunction: ThreeAddressFunction; mustRestoreRegisters: boolean };
 const rtlFunctionToX64 = ({ threeAddressFunction, mustRestoreRegisters }: RtlFunctionToX64Input): string => {
+    const { assignment, newFunction } = assignRegisters(threeAddressFunction, x64RegisterTypes.generalPurpose);
+
     const stackOffsetPerInstruction: number[] = [];
     let totalStackBytes: number = 0;
-    threeAddressFunction.instructions.forEach(i => {
+    newFunction.instructions.forEach(i => {
         if (i.kind == 'stackAllocateAndStorePointer') {
             totalStackBytes += i.bytes;
             stackOffsetPerInstruction.push(i.bytes);
@@ -176,8 +178,6 @@ const rtlFunctionToX64 = ({ threeAddressFunction, mustRestoreRegisters }: RtlFun
             stackOffsetPerInstruction.push(0);
         }
     });
-
-    const { assignment, newFunction } = assignRegisters(threeAddressFunction, x64RegisterTypes.generalPurpose);
 
     const statements: TargetThreeAddressStatement<X64Register>[] = flatten(
         newFunction.instructions.map((instruction, index) =>

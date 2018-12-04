@@ -153,9 +153,11 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 // TODO: degeneralize this (allowing removal of several RTL instructions)
 type RtlFunctionToMipsInput = { threeAddressFunction: ThreeAddressFunction; mustRestoreRegisters: boolean };
 const rtlFunctionToMips = ({ threeAddressFunction, mustRestoreRegisters }: RtlFunctionToMipsInput): string => {
+    const { assignment, newFunction } = assignRegisters(threeAddressFunction, mipsRegisterTypes.generalPurpose);
+
     const stackOffsetPerInstruction: number[] = [];
     let totalStackBytes: number = 0;
-    threeAddressFunction.instructions.forEach(i => {
+    newFunction.instructions.forEach(i => {
         if (i.kind == 'stackAllocateAndStorePointer') {
             totalStackBytes += i.bytes;
             stackOffsetPerInstruction.push(i.bytes);
@@ -163,8 +165,6 @@ const rtlFunctionToMips = ({ threeAddressFunction, mustRestoreRegisters }: RtlFu
             stackOffsetPerInstruction.push(0);
         }
     });
-
-    const { assignment, newFunction } = assignRegisters(threeAddressFunction, mipsRegisterTypes.generalPurpose);
 
     const mips: TargetThreeAddressStatement<MipsRegister>[] = flatten(
         newFunction.instructions.map((instruction, index) =>

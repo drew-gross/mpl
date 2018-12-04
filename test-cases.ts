@@ -63,7 +63,7 @@ a: Integer = 3;
 a = a * a;
 return a;
 `,
-        exitCode: 5,
+        exitCode: 9,
     },
 ];
 
