@@ -449,6 +449,8 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
                         offset: currentSpillIndex,
                         why: 'spill',
                     });
+                } else {
+                    newFunction.instructions.push(instruction);
                 }
                 break;
             }

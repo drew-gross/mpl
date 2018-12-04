@@ -777,15 +777,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             return compileExpression<ThreeAddressStatement>(
                 [storeLeftInstructions, storeRightInstructions],
                 ([storeLeft, storeRight]) => [
-                    {
-                        kind: 'comment',
-                        why: `Store left side of product in temporary (${registerToString(leftSideDestination)})`,
-                    },
                     ...storeLeft,
-                    {
-                        kind: 'comment',
-                        why: `Store right side of product in destination (${registerToString(rightSideDestination)})`,
-                    },
                     ...storeRight,
                     {
                         kind: 'multiply',

@@ -898,6 +898,7 @@ test('return local integer', mplTest, {
 test.only('many temporaries, spill to ram', mplTest, {
     source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
     exitCode: 1,
+    printSubsteps: ['mips', 'threeAddressCode'],
 });
 
 test('multi statement function with locals', mplTest, {
