@@ -150,9 +150,11 @@ const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X6
         case 'loadStackOffset':
             return [`mov ${tas.register}, rsp`, `add ${tas.register}, ${tas.offset}`];
         case 'stackLoad':
-            return [`mov ${tas.register}, [rsp+${tas.offset}]`];
+            // TODO: Be consistent about where bytes in word gets multiplied
+            return [`mov ${tas.register}, [rsp+${tas.offset * bytesInWord}]`];
         case 'stackStore':
-            return [`mov [rsp+${tas.offset}], ${tas.register}`];
+            // TODO: Be consistent about where bytes in word gets multiplied
+            return [`mov [rsp+${tas.offset * bytesInWord}], ${tas.register}`];
         default:
             throw debug(`${(tas as any).kind} unhandled in threeAddressCodeToX64WithoutComment`);
     }

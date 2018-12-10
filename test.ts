@@ -898,11 +898,9 @@ test('return local integer', mplTest, {
     exitCode: 9,
 });
 
-// Need spilling
-test.failing('many temporaries, spill to ram', mplTest, {
+test('many temporaries, spill to ram', mplTest, {
     source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
     exitCode: 1,
-    //printSubsteps: ['mips', 'threeAddressCode'],
 });
 
 test('multi statement function with locals', mplTest, {
