@@ -191,13 +191,7 @@ const rtlFunctionToMips = ({ threeAddressFunction, mustRestoreRegisters }: RtlFu
               { kind: 'returnToCaller', why: 'Done' },
           ]
         : [];
-    const fullRtl: TargetThreeAddressStatement<MipsRegister>[] = [
-        // TODO: consider adding the label outside this function so we don't need a dummy main function
-        { kind: 'functionLabel', name: newFunction.name, why: 'Function entry point' },
-        ...preamble,
-        ...mips,
-        ...epilogue,
-    ];
+    const fullRtl: TargetThreeAddressStatement<MipsRegister>[] = [...preamble, ...mips, ...epilogue];
     return join(flatten(fullRtl.map(threeAddressCodeToMips)), '\n');
 };
 
@@ -244,7 +238,17 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join(functions.map(f => rtlFunctionToMips({ threeAddressFunction: f, mustRestoreRegisters: true })), '\n\n\n')}
+${join(
+        functions.map(
+            f =>
+                f.name +
+                ': # Funtion entry\n' +
+                rtlFunctionToMips({ threeAddressFunction: f, mustRestoreRegisters: true })
+        ),
+        '\n\n\n'
+    )}
+
+main:
 ${rtlFunctionToMips({
         threeAddressFunction: { name: 'main', instructions: main, spills: 0 },
         mustRestoreRegisters: false,

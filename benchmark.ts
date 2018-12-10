@@ -77,8 +77,6 @@ if (!before) {
                 console.log('Name mismatch! Make sure to generate before and after using the same test cases');
                 process.exit(-1);
             }
-            console.log(`before ${before['JS Binary Size (bytes)']} / after ${after['JS Binary Size (bytes)']}`);
-            console.log(`before ${before['Mips Binary Size (bytes)']} / after ${after['Mips Binary Size (bytes)']}`);
             return {
                 name: before.name,
                 'JS Binary Size': fmtNum(

@@ -193,8 +193,6 @@ const rtlFunctionToX64 = ({ threeAddressFunction, mustRestoreRegisters }: RtlFun
         )
     );
     const fullRtl: TargetThreeAddressStatement<X64Register>[] = [
-        // TODO: consider adding the label outside this function so we don't need a dummy main function
-        { kind: 'functionLabel', name: newFunction.name, why: 'Function entry point' },
         ...(!mustRestoreRegisters ? [] : saveRegistersCode<X64Register>(assignment)),
         ...statements,
         ...(!mustRestoreRegisters ? [] : restoreRegistersCode<X64Register>(assignment)),
@@ -230,7 +228,17 @@ const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddr
 global start
 
 section .text
-${join(functions.map(f => rtlFunctionToX64({ threeAddressFunction: f, mustRestoreRegisters: true })), '\n\n\n')}
+${join(
+        functions.map(
+            f =>
+                f.name +
+                ': ;Function entry\n' +
+                rtlFunctionToX64({ threeAddressFunction: f, mustRestoreRegisters: true })
+        ),
+        '\n\n\n'
+    )}
+
+start:
 ${rtlFunctionToX64({
         threeAddressFunction: { instructions: main, name: 'start', spills: 0 },
         mustRestoreRegisters: false,

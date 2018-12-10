@@ -1150,7 +1150,7 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
 
     // Omit unused functions
     const closedSet: ThreeAddressFunction[] = [];
-    // See open set with dummy function consisting of the one function we are guaranteed to use (main)
+    // Seed open set with dummy function consisting of the one function we are guaranteed to use (main)
     const openSet = [{ name: 'main', instructions: mainProgram }];
     while (openSet.length > 0) {
         const f = openSet.shift() as ThreeAddressFunction;
