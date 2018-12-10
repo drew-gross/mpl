@@ -301,14 +301,14 @@ export const tacTest = async (
     }
     await Promise.all(
         backends.map(async backend => {
-            if (backend.tacToExectutable && !failing.includes(backend.name)) {
+            if (backend.tacToExecutable && !failing.includes(backend.name)) {
                 const exeFile = await tmpFile({ postfix: `.${backend.name}` });
                 const newSource = clone(parsed);
 
                 // TODO: This is pure jank. Should move responsibility for adding cleanup code to some place that makes actual sense.
-                newSource.instructions.push(...backend.tacToExectutable.targetInfo.cleanupCode);
+                newSource.instructions.push(...backend.tacToExecutable.targetInfo.cleanupCode);
 
-                const exeContents = backend.tacToExectutable.compile({
+                const exeContents = backend.tacToExecutable.compile({
                     globals: {},
                     functions: [],
                     main: newSource.instructions,

@@ -239,18 +239,13 @@ const x64toBinary = async (x64Path: string): Promise<string> => {
     return exePath.path;
 };
 
-const mplToExectuable = (inputs: BackendInputs) => {
-    const tac = makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target });
-    return tacToExecutable(tac);
-};
+const mplToExectuable = (inputs: BackendInputs) =>
+    tacToExecutable(makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target }));
 
 const x64Backend: Backend = {
     name: 'x64',
     mplToExectuable,
-    tacToExectutable: {
-        targetInfo: x64Target,
-        compile: tacToExecutable,
-    },
+    tacToExecutable: { targetInfo: x64Target, compile: tacToExecutable },
     execute: async path => execAndGetResult(await x64toBinary(path)),
     debug: async path => {
         console.log(`lldb ${await x64toBinary(path)}`);

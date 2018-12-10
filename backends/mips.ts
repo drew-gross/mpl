@@ -225,10 +225,8 @@ ${rtlToTarget({
         instructionTranslator: threeAddressCodeToMips,
     })}`;
 };
-const mplToExectuable = (inputs: BackendInputs) => {
-    const tac = makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget });
-    return tacToExecutable(tac);
-};
+const mplToExectuable = (inputs: BackendInputs) =>
+    tacToExecutable(makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget }));
 
 const execute = async (path: string): Promise<ExecutionResult> => {
     // This string is always printed with spim starts. Strip it from stdout. TODO: Look in to MARS, maybe it doesn't do this?
@@ -255,7 +253,7 @@ const execute = async (path: string): Promise<ExecutionResult> => {
 const mipsBackend: Backend = {
     name: 'mips',
     mplToExectuable,
-    tacToExectutable: { targetInfo: mipsTarget, compile: tacToExecutable },
+    tacToExecutable: { targetInfo: mipsTarget, compile: tacToExecutable },
     execute,
     debug: path => exec(`${__dirname}/../../QtSpim.app/Contents/MacOS/QtSpim ${path}`),
     binSize: async path => (await stat(path)).size,

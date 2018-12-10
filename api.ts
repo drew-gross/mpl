@@ -103,10 +103,7 @@ export type Backend = {
     name: string;
     binSize: (string) => Promise<number | { error: string }>;
     mplToExectuable: (BackendInputs) => string;
-    tacToExectutable?: {
-        targetInfo: TargetInfo;
-        compile: (ThreeAddressProgram) => string;
-    };
+    tacToExecutable?: { targetInfo: TargetInfo; compile: (ThreeAddressProgram) => string };
     execute: (string) => Promise<ExecutionResult>; // Exit code or error
     debug?: (string) => Promise<void>;
     runtimeFunctions?: ThreeAddressFunction[];
