@@ -1,9 +1,15 @@
+import join from './util/join.js';
 import debug from './util/debug.js';
 import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData, Backend } from './api.js';
 import flatten from './util/list/flatten.js';
-import { ThreeAddressStatement, TargetThreeAddressStatement } from './threeAddressCode/generator.js';
+import {
+    ThreeAddressStatement,
+    TargetThreeAddressStatement,
+    ThreeAddressFunction,
+    threeAddressCodeToTarget,
+} from './threeAddressCode/generator.js';
 import { Register } from './register.js';
-import { controlFlowGraph } from './controlFlowGraph.js';
+import { assignRegisters, controlFlowGraph } from './controlFlowGraph.js';
 
 import mipsBackend from './backends/mips.js';
 import jsBackend from './backends/js.js';
@@ -101,6 +107,49 @@ export const getRegisterFromAssignment = <TargetRegister>(
         return registerAssignment.registerMap[r.name];
     }
     throw debug('should not get here');
+};
+
+type RtlToTargetInput<TargetRegister> = {
+    threeAddressFunction: ThreeAddressFunction;
+    makePrologue: (a: RegisterAssignment<TargetRegister>) => TargetThreeAddressStatement<TargetRegister>[];
+    makeEpilogue: (a: RegisterAssignment<TargetRegister>) => TargetThreeAddressStatement<TargetRegister>[];
+    registers: RegisterDescription<TargetRegister>;
+    syscallNumbers: any;
+    instructionTranslator: (t: TargetThreeAddressStatement<TargetRegister>) => string[];
+};
+export const rtlToTarget = <TargetRegister>({
+    threeAddressFunction,
+    registers,
+    syscallNumbers,
+    instructionTranslator,
+    makePrologue,
+    makeEpilogue,
+}: RtlToTargetInput<TargetRegister>): string => {
+    const { assignment, newFunction } = assignRegisters(threeAddressFunction, registers.generalPurpose);
+
+    const stackOffsetPerInstruction: number[] = [];
+    let totalStackBytes: number = 0;
+    newFunction.instructions.forEach(i => {
+        if (i.kind == 'stackAllocateAndStorePointer') {
+            totalStackBytes += i.bytes;
+            stackOffsetPerInstruction.push(i.bytes);
+        } else {
+            stackOffsetPerInstruction.push(0);
+        }
+    });
+
+    const statements: TargetThreeAddressStatement<TargetRegister>[] = flatten(
+        newFunction.instructions.map((instruction, index) =>
+            threeAddressCodeToTarget(instruction, stackOffsetPerInstruction[index], syscallNumbers, registers, r =>
+                getRegisterFromAssignment(assignment, registers, r)
+            )
+        )
+    );
+
+    return join(
+        flatten([...makePrologue(assignment), ...statements, ...makeEpilogue(assignment)].map(instructionTranslator)),
+        '\n'
+    );
 };
 
 export const backends: Backend[] = [mipsBackend, jsBackend, cBackend, x64Backend];

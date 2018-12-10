@@ -12,14 +12,13 @@ import {
     restoreRegistersCode,
     RegisterDescription,
     getRegisterFromAssignment,
+    rtlToTarget,
 } from '../backend-utils.js';
 import { Register } from '../register.js';
 import {
     astToThreeAddressCode,
     ThreeAddressStatement,
-    ThreeAddressFunction,
     TargetThreeAddressStatement,
-    threeAddressCodeToTarget,
     GlobalInfo,
     makeTargetProgram,
     TargetInfo,
@@ -30,7 +29,6 @@ import { VariableDeclaration, BackendInputs, StringLiteralData, Backend } from '
 import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { execSync } from 'child_process';
-import { assignRegisters } from '../controlFlowGraph.js';
 
 type X64Register =
     // function args
@@ -165,42 +163,6 @@ const threeAddressCodeToX64 = (tas: TargetThreeAddressStatement<X64Register>): s
 
 const bytesInWord = 8;
 
-// TODO: degeneralize this (allowing removal of several RTL instructions)
-type RtlFunctionToX64Input = { threeAddressFunction: ThreeAddressFunction; mustRestoreRegisters: boolean };
-const rtlFunctionToX64 = ({ threeAddressFunction, mustRestoreRegisters }: RtlFunctionToX64Input): string => {
-    const { assignment, newFunction } = assignRegisters(threeAddressFunction, x64RegisterTypes.generalPurpose);
-
-    const stackOffsetPerInstruction: number[] = [];
-    let totalStackBytes: number = 0;
-    newFunction.instructions.forEach(i => {
-        if (i.kind == 'stackAllocateAndStorePointer') {
-            totalStackBytes += i.bytes;
-            stackOffsetPerInstruction.push(i.bytes);
-        } else {
-            stackOffsetPerInstruction.push(0);
-        }
-    });
-
-    const statements: TargetThreeAddressStatement<X64Register>[] = flatten(
-        newFunction.instructions.map((instruction, index) =>
-            threeAddressCodeToTarget(
-                instruction,
-                stackOffsetPerInstruction[index],
-                syscallNumbers,
-                x64RegisterTypes,
-                r => getRegisterFromAssignment(assignment, x64RegisterTypes, r)
-            )
-        )
-    );
-    const fullRtl: TargetThreeAddressStatement<X64Register>[] = [
-        ...(!mustRestoreRegisters ? [] : saveRegistersCode<X64Register>(assignment)),
-        ...statements,
-        ...(!mustRestoreRegisters ? [] : restoreRegistersCode<X64Register>(assignment)),
-        ...(!mustRestoreRegisters ? [] : [{ kind: 'returnToCaller' as 'returnToCaller', why: 'Done' }]),
-    ];
-    return join(flatten(fullRtl.map(threeAddressCodeToX64)), '\n');
-};
-
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
 
@@ -233,15 +195,29 @@ ${join(
             f =>
                 f.name +
                 ': ;Function entry\n' +
-                rtlFunctionToX64({ threeAddressFunction: f, mustRestoreRegisters: true })
+                rtlToTarget({
+                    threeAddressFunction: f,
+                    makePrologue: assignment => saveRegistersCode<X64Register>(assignment),
+                    makeEpilogue: assignment => [
+                        ...restoreRegistersCode<X64Register>(assignment),
+                        { kind: 'returnToCaller' as 'returnToCaller', why: 'Done' },
+                    ],
+                    registers: x64RegisterTypes,
+                    syscallNumbers,
+                    instructionTranslator: threeAddressCodeToX64,
+                })
         ),
         '\n\n\n'
     )}
 
 start:
-${rtlFunctionToX64({
-        threeAddressFunction: { instructions: main, name: 'start', spills: 0 },
-        mustRestoreRegisters: false,
+${rtlToTarget({
+        threeAddressFunction: { instructions: main, name: 'unused', spills: 0 },
+        makePrologue: () => [],
+        makeEpilogue: () => [],
+        registers: x64RegisterTypes,
+        syscallNumbers,
+        instructionTranslator: threeAddressCodeToX64,
     })}
 section .data
 first_block: dq 0

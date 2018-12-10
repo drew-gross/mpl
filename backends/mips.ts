@@ -14,13 +14,12 @@ import {
     restoreRegistersCode,
     RegisterDescription,
     getRegisterFromAssignment,
+    rtlToTarget,
 } from '../backend-utils.js';
 import {
     astToThreeAddressCode,
     ThreeAddressStatement,
-    ThreeAddressFunction,
     TargetThreeAddressStatement,
-    threeAddressCodeToTarget,
     GlobalInfo,
     makeTargetProgram,
     TargetInfo,
@@ -28,7 +27,6 @@ import {
 } from '../threeAddressCode/generator.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from '../threeAddressCode/runtime.js';
 import { builtinFunctions, Type, TypeDeclaration, typeSize } from '../types.js';
-import { assignRegisters } from '../controlFlowGraph.js';
 
 type MipsRegister =
     // s
@@ -150,51 +148,6 @@ const threeAddressCodeToMips = (tas: TargetThreeAddressStatement<MipsRegister>):
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
 
-// TODO: degeneralize this (allowing removal of several RTL instructions)
-type RtlFunctionToMipsInput = { threeAddressFunction: ThreeAddressFunction; mustRestoreRegisters: boolean };
-const rtlFunctionToMips = ({ threeAddressFunction, mustRestoreRegisters }: RtlFunctionToMipsInput): string => {
-    const { assignment, newFunction } = assignRegisters(threeAddressFunction, mipsRegisterTypes.generalPurpose);
-
-    const stackOffsetPerInstruction: number[] = [];
-    let totalStackBytes: number = 0;
-    newFunction.instructions.forEach(i => {
-        if (i.kind == 'stackAllocateAndStorePointer') {
-            totalStackBytes += i.bytes;
-            stackOffsetPerInstruction.push(i.bytes);
-        } else {
-            stackOffsetPerInstruction.push(0);
-        }
-    });
-
-    const mips: TargetThreeAddressStatement<MipsRegister>[] = flatten(
-        newFunction.instructions.map((instruction, index) =>
-            threeAddressCodeToTarget(
-                instruction,
-                stackOffsetPerInstruction[index],
-                syscallNumbers,
-                mipsRegisterTypes,
-                r => getRegisterFromAssignment(assignment, mipsRegisterTypes, r)
-            )
-        )
-    );
-
-    const preamble: TargetThreeAddressStatement<MipsRegister>[] = mustRestoreRegisters
-        ? [
-              { kind: 'push', register: '$ra', why: 'Always save return address' },
-              ...saveRegistersCode<MipsRegister>(assignment),
-          ]
-        : [];
-    const epilogue: TargetThreeAddressStatement<MipsRegister>[] = mustRestoreRegisters
-        ? [
-              ...restoreRegistersCode<MipsRegister>(assignment),
-              { kind: 'pop', register: '$ra', why: 'Always restore return address' },
-              { kind: 'returnToCaller', why: 'Done' },
-          ]
-        : [];
-    const fullRtl: TargetThreeAddressStatement<MipsRegister>[] = [...preamble, ...mips, ...epilogue];
-    return join(flatten(fullRtl.map(threeAddressCodeToMips)), '\n');
-};
-
 const globalDeclaration = (name: string, bytes: number): string => `${name}: .space ${bytes}`;
 
 const mipsTarget: TargetInfo = {
@@ -243,15 +196,33 @@ ${join(
             f =>
                 f.name +
                 ': # Funtion entry\n' +
-                rtlFunctionToMips({ threeAddressFunction: f, mustRestoreRegisters: true })
+                rtlToTarget({
+                    threeAddressFunction: f,
+                    makePrologue: assignment => [
+                        { kind: 'push', register: '$ra', why: 'Always save return address' } as any,
+                        ...saveRegistersCode<MipsRegister>(assignment),
+                    ],
+                    makeEpilogue: assignment => [
+                        ...restoreRegistersCode<MipsRegister>(assignment),
+                        { kind: 'pop', register: '$ra', why: 'Always restore return address' } as any,
+                        { kind: 'returnToCaller', why: 'Done' } as any,
+                    ],
+                    registers: mipsRegisterTypes,
+                    syscallNumbers,
+                    instructionTranslator: threeAddressCodeToMips,
+                })
         ),
         '\n\n\n'
     )}
 
 main:
-${rtlFunctionToMips({
-        threeAddressFunction: { name: 'main', instructions: main, spills: 0 },
-        mustRestoreRegisters: false,
+${rtlToTarget({
+        threeAddressFunction: { name: 'unused', instructions: main, spills: 0 },
+        makePrologue: () => [],
+        makeEpilogue: () => [],
+        registers: mipsRegisterTypes,
+        syscallNumbers,
+        instructionTranslator: threeAddressCodeToMips,
     })}`;
 };
 const mplToExectuable = (inputs: BackendInputs) => {
