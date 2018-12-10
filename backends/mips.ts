@@ -153,7 +153,6 @@ const globalDeclaration = (name: string, bytes: number): string => `${name}: .sp
 const mipsTarget: TargetInfo = {
     alignment: 4,
     bytesInWord: 4,
-    entryPointName: 'main',
     // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
     cleanupCode: [
         {

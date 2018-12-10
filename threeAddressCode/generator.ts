@@ -134,8 +134,6 @@ export type TargetInfo = {
     alignment: number;
     bytesInWord: number;
     cleanupCode: ThreeAddressStatement[];
-    // The name of the function the assembler should treat as the global entry point.
-    entryPointName: string;
     // These functions tend to have platform specific implementations. Put your platforms implementation here.
     mallocImpl: ThreeAddressFunction;
     printImpl: ThreeAddressFunction;

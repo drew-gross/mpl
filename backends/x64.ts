@@ -169,7 +169,6 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 const x64Target: TargetInfo = {
     alignment: 4,
     bytesInWord,
-    entryPointName: 'start',
     // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
     cleanupCode: [
         {

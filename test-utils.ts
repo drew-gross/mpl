@@ -209,7 +209,6 @@ export const mplTest = async (
     const tac = makeTargetProgram({
         backendInputs: frontendOutput,
         targetInfo: {
-            entryPointName: 'main',
             alignment: 17,
             bytesInWord: 13,
             cleanupCode: [],
