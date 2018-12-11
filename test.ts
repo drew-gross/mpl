@@ -1826,9 +1826,69 @@ r:functionResult = r:one + r:two # Add the things
     spills: 2,
 });
 
+test('Spill With Local Variables', mplTest, {
+    source: `
+a := 0;
+t1 := a + 1;
+t2 := a + 2;
+t3 := a + 3;
+t4 := a + 4;
+t5 := a + 5;
+t6 := a + 6;
+t7 := a + 7;
+t8 := a + 8;
+t9 := a + 9;
+t10 := a + 10;
+t11 := a + 11;
+t12 := a + 12;
+t13 := a + 13;
+t14 := a + 14;
+t15 := a + 15;
+t16 := a + 16;
+t17 := a + 17;
+t18 := a + 18;
+t19 := a + 19;
+return t19 - t16;
+`,
+    exitCode: 3,
+});
+
+test.failing('Spill With Local Variables and Local Struct', mplTest, {
+    source: `
+IntPair := {
+    first: Integer;
+    second: Integer;
+};
+
+a := 0;
+t1 := a + 1;
+t2 := a + 2;
+t3 := a + 3;
+t4 := a + 4;
+t5 := a + 5;
+t6 := a + 6;
+t7 := a + 7;
+t8 := a + 8;
+t9 := a + 9;
+t10 := a + 10;
+t11 := a + 11;
+t12 := a + 12;
+t13 := a + 13;
+t14 := a + 14;
+t15 := a + 15;
+t16 := a + 16;
+t17 := a + 17;
+t18 := a + 18;
+t19 := a + 19;
+ip: IntPair = IntPair { first: t19, second: t8, };
+return a + t1 + t2 + t3 + ip.first - ip.second;
+`,
+    exitCode: 17,
+});
+
 // This will fail due to needing to make stack space for
 // both the spilled temporaries AND the local struct, but currently we don't.
-test.failing('Spill with Local Struct', mplTest, {
+test.only('Spill with Local Variables and Local Struct in Function', mplTest, {
     source: `
 IntPair := {
     first: Integer;

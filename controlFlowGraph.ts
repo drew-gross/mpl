@@ -70,6 +70,7 @@ const blockBehaviour = (tas: ThreeAddressStatement): 'endBlock' | 'beginBlock' |
 };
 
 const livenessUpdate = (tas: ThreeAddressStatement): { newlyLive: Register[]; newlyDead: Register[] } => {
+    if (!tas) debug('!tas');
     switch (tas.kind) {
         case 'comment':
             return { newlyLive: [], newlyDead: [] };
@@ -136,6 +137,10 @@ const livenessUpdate = (tas: ThreeAddressStatement): { newlyLive: Register[]; ne
             throw debug(`${(tas as any).kind} unhanldes in livenessUpdate`);
     }
 };
+
+// TODO: Its slightly odd that this is implemented in terms of livenessUpdate instead of the other way around
+export const readRegisters = (tas: ThreeAddressStatement): Register[] => livenessUpdate(tas).newlyLive;
+export const writtenRegisters = (tas: ThreeAddressStatement): Register[] => livenessUpdate(tas).newlyDead;
 
 const blockName = (rtl: ThreeAddressStatement[]) => {
     if (rtl.length == 0) throw debug('empty rtl in blockName');
@@ -324,6 +329,7 @@ const propagateBlockLiveness = (block: BasicBlock, liveness: Set<Register>[], li
 
 const verifyingOverlappingJoin = (blocks: Set<Register>[][]): Set<Register>[] => {
     const result: Set<Register>[] = [];
+    // TODO: what is this forEach even doing?
     blocks.forEach((block, index) => {
         if (index == blocks.length - 1) return;
         const nextBlock = blocks[index + 1];
@@ -331,6 +337,9 @@ const verifyingOverlappingJoin = (blocks: Set<Register>[][]): Set<Register>[] =>
         if (!lastOfCurrent) throw debug('empty block');
         const firstOfNext = nextBlock[0];
     });
+    // Block building results in the end of each block having the same last element as the first
+    // item of the next block. Put the blocks together in a way that accounts for this. TODO: maybe
+    // refactor the code so this isn't necessary?
     blocks.forEach((block, index) => {
         result.push(...block);
         if (index == blocks.length - 1) return;
@@ -551,18 +560,44 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
     return newFunction;
 };
 
+const removeDeadStores = (taf: ThreeAddressFunction, liveness: Set<Register>[]): ThreeAddressFunction => {
+    const newFunction: ThreeAddressFunction = { ...taf, instructions: [] };
+    if (taf.instructions.length + 1 != liveness.length) throw debug('Liveness length != taf length + 1');
+    for (let i = 0; i < taf.instructions.length; i++) {
+        const targets = writtenRegisters(taf.instructions[i]);
+        // If there are written registers and none of them are live, omit the write. This
+        // will fail if the instruction doing the writing also has side effects. TODO:
+        // Implement something that takes this into account.
+        if (targets.length == 0) {
+            newFunction.instructions.push(taf.instructions[i]);
+        } else if (targets.length == 1) {
+            const isLiveWrite = liveness[i + 1].has(targets[0]);
+            if (isLiveWrite) {
+                newFunction.instructions.push(taf.instructions[i]);
+            }
+        } else {
+            throw debug('instructions with more than one target not supported');
+        }
+    }
+    return newFunction;
+};
+
 export const assignRegisters = <TargetRegister>(
     taf: ThreeAddressFunction,
     colors: TargetRegister[]
 ): { assignment: RegisterAssignment<TargetRegister>; newFunction: ThreeAddressFunction } => {
-    const liveness = tafLiveness(taf);
+    let liveness = tafLiveness(taf);
+    // TODO: iterate this
+    taf = removeDeadStores(taf, liveness);
+    liveness = tafLiveness(taf);
+
     const rig = registerInterferenceGraph(liveness);
     const registersToAssign = rig.nonSpecialRegisters.copy();
     const interferences = rig.interferences.copy();
     const colorableStack: Register[] = [];
-    while (colorableStack.length < rig.nonSpecialRegisters.size()) {
+    while (colorableStack.length < registersToAssign.size()) {
         let stackGrew = false;
-        rig.nonSpecialRegisters.toList().forEach(register => {
+        registersToAssign.toList().forEach(register => {
             if (stackGrew) {
                 return;
             }
