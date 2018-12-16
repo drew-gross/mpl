@@ -524,7 +524,8 @@ ${Cprogram}
 const compileC = async (path: string): Promise<string | { error: string }> => {
     const exeFile = await tmpFile();
     try {
-        await exec(`clang -Wall -Werror ${path} -o ${exeFile.path}`);
+        // TODO: Don't emit unused variables
+        await exec(`clang -Wall -Werror -Wno-error=unused-variable ${path} -o ${exeFile.path}`);
         return exeFile.path;
     } catch (e) {
         return { error: `Failed to compile generated C code:\n${e.stderr}` };

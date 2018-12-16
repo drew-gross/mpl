@@ -12,6 +12,7 @@ import { Register, isEqual as registerIsEqual } from './register.js';
 import { ThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
 import tasToString from './threeAddressCode/statementToString.js';
 import { Graph } from 'graphlib';
+import { functionToString } from './threeAddressCode/programToString.js';
 
 export type BasicBlock = {
     name: string;
@@ -348,6 +349,7 @@ const verifyingOverlappingJoin = (blocks: Set<Register>[][]): Set<Register>[] =>
     return result;
 };
 
+// TODO: Maybe treat function resuls specially somehow? Its kinda always live but that feels too special-casey.
 export const tafLiveness = (taf: ThreeAddressFunction): Set<Register>[] => {
     const cfg = controlFlowGraph(taf.instructions);
     const blockLiveness = cfg.blocks.map(computeBlockLiveness);
@@ -560,24 +562,31 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
     return newFunction;
 };
 
-const removeDeadStores = (taf: ThreeAddressFunction, liveness: Set<Register>[]): ThreeAddressFunction => {
+// Returns a new function if anything changed
+const removeDeadStores = (taf: ThreeAddressFunction, liveness: Set<Register>[]): ThreeAddressFunction | undefined => {
     const newFunction: ThreeAddressFunction = { ...taf, instructions: [] };
+    let anythingChanged: boolean = false;
     if (taf.instructions.length + 1 != liveness.length) throw debug('Liveness length != taf length + 1');
     for (let i = 0; i < taf.instructions.length; i++) {
         const targets = writtenRegisters(taf.instructions[i]);
         // If there are written registers and none of them are live, omit the write. This
-        // will fail if the instruction doing the writing also has side effects. TODO:
-        // Implement something that takes this into account.
-        if (targets.length == 0) {
+        // will fail if the instruction doing the writing also has side effects, e.g. syscall. TODO:
+        // Implement something that takes this into account. TODO: Treat function result less special-casey somehow. Maybe put it into liveness computing.
+        if (targets.length == 0 || registerIsEqual(targets[0], 'functionResult')) {
             newFunction.instructions.push(taf.instructions[i]);
         } else if (targets.length == 1) {
             const isLiveWrite = liveness[i + 1].has(targets[0]);
             if (isLiveWrite) {
                 newFunction.instructions.push(taf.instructions[i]);
+            } else {
+                anythingChanged = true;
             }
         } else {
             throw debug('instructions with more than one target not supported');
         }
+    }
+    if (!anythingChanged) {
+        return undefined;
     }
     return newFunction;
 };
@@ -587,15 +596,17 @@ export const assignRegisters = <TargetRegister>(
     colors: TargetRegister[]
 ): { assignment: RegisterAssignment<TargetRegister>; newFunction: ThreeAddressFunction } => {
     let liveness = tafLiveness(taf);
-    // TODO: iterate this
-    taf = removeDeadStores(taf, liveness);
-    liveness = tafLiveness(taf);
+    let newFunction: undefined | ThreeAddressFunction = undefined;
+    while ((newFunction = removeDeadStores(taf, liveness))) {
+        taf = newFunction;
+        liveness = tafLiveness(taf);
+    }
 
     const rig = registerInterferenceGraph(liveness);
     const registersToAssign = rig.nonSpecialRegisters.copy();
     const interferences = rig.interferences.copy();
     const colorableStack: Register[] = [];
-    while (colorableStack.length < registersToAssign.size()) {
+    while (registersToAssign.size() > 0) {
         let stackGrew = false;
         registersToAssign.toList().forEach(register => {
             if (stackGrew) {

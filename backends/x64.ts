@@ -234,7 +234,8 @@ const x64toBinary = async (x64Path: string): Promise<string> => {
     const linkerInputPath = await tmpFile({ postfix: '.o' });
     const exePath = await tmpFile({ postfix: '.out' });
     await exec(`nasm -fmacho64 -o ${linkerInputPath.path} ${x64Path}`);
-    await exec(`ld -o ${exePath.path} ${linkerInputPath.path}`);
+    // TODO: Cross compiling or something? IDK. Dependency on system linker sucks.
+    await exec(`ld ${linkerInputPath.path} -o ${exePath.path} -macosx_version_min 10.6 -lSystem`);
     return exePath.path;
 };
 

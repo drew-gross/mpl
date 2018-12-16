@@ -109,7 +109,7 @@ export const mplTest = async (
     if (typeof failing === 'string') {
         failing = [failing];
     }
-    const printableSubsteps = ['js', 'tokens', 'ast', 'c', 'mips', 'structure', 'threeAddressCode'];
+    const printableSubsteps = ['js', 'tokens', 'ast', 'c', 'mips', 'x64', 'structure', 'threeAddressCode'];
     printSubsteps.forEach(substepToPrint => {
         if (!printableSubsteps.includes(substepToPrint)) {
             t.fail(`${substepToPrint} is not a printable substep`);
