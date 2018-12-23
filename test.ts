@@ -1090,11 +1090,13 @@ return times11(1);`,
     exitCode: 11,
 });
 
-test('two bracketed args', mplTest, {
+test.only('two bracketed args', mplTest, {
     source: `
 timess := (a: Integer, b: Integer) => a * b;
 return timess(11, 1);`,
     exitCode: 11,
+    printSubsteps: 'mips',
+    debugSubsteps: 'mips',
 });
 
 test('function named times', mplTest, {
@@ -1886,9 +1888,7 @@ return a + t1 + t2 + t3 + ip.first - ip.second;
     exitCode: 17,
 });
 
-// This will fail due to needing to make stack space for
-// both the spilled temporaries AND the local struct, but currently we don't.
-test.only('Spill with Local Variables and Local Struct in Function', mplTest, {
+test('Spill with Local Variables and Local Struct in Function', mplTest, {
     source: `
 IntPair := {
     first: Integer;
