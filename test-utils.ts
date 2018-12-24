@@ -5,7 +5,6 @@ import * as omitDeep from 'omit-deep';
 import { exec } from 'child-process-promise';
 import { Backend, BackendInputs, TypeError } from './api.js';
 import { Ast } from './ast.js';
-import { lex } from './parser-lib/lex.js';
 import { parseMpl, compile, parseErrorToString } from './frontend.js';
 import { toString as typeToString } from './types.js';
 import { file as tmpFile } from 'tmp-promise';
@@ -21,6 +20,7 @@ import { programToString } from './threeAddressCode/programToString.js';
 import { parseProgram as parseTacProgram, parseFunction } from './threeAddressCode/parser.js';
 import showGraphInChrome from './util/graph/showInChrome.js';
 import { backends } from './backend-utils.js';
+import produceProgramInfo from './produceProgramInfo.js';
 
 // TODO: separate this for mplTest vs tacTest, they have a lot of overlap but not perfect.
 type TestOptions = {
@@ -117,27 +117,26 @@ export const mplTest = async (
     });
 
     // Make sure it parses
-    const lexResult = lex(tokenSpecs, source);
-    lexResult.forEach(({ string, type }) => {
-        if (type === 'invalid') {
-            t.fail(`Unable to lex. Invalid token: ${string}`);
-        }
-    });
+    const programInfo = produceProgramInfo(source);
+    if (typeof programInfo == 'string') {
+        t.faile(programInfo);
+        return;
+    }
 
     if (printSubsteps.includes('tokens')) {
-        console.log(JSON.stringify(lexResult, null, 2));
+        console.log(JSON.stringify(programInfo.lexResult, null, 2));
     }
 
     if (debugSubsteps.includes('parse')) {
         debugger;
     }
-    const parseResult = parseMpl(lexResult);
+    const parseResult = parseMpl(programInfo.lexResult);
     if (printSubsteps.includes('ast')) {
         console.log(JSON.stringify(parseResult, null, 2));
     }
 
     if (vizAst) {
-        const parseResult = stripResultIndexes(parse(grammar, 'program', lexResult, 0));
+        const parseResult = stripResultIndexes(parse(grammar, 'program', programInfo.lexResult, 0));
         if (parseResultIsError(parseResult)) {
             t.fail(`Bad parse result: ${parseErrorToString({ kind: 'unexpectedToken', errors: parseResult.errors })}`);
             return;
