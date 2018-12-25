@@ -1090,13 +1090,11 @@ return times11(1);`,
     exitCode: 11,
 });
 
-test.only('two bracketed args', mplTest, {
+test('two bracketed args', mplTest, {
     source: `
 timess := (a: Integer, b: Integer) => a * b;
 return timess(11, 1);`,
     exitCode: 11,
-    printSubsteps: 'mips',
-    debugSubsteps: 'mips',
 });
 
 test('function named times', mplTest, {

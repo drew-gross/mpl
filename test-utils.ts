@@ -1,6 +1,5 @@
 import * as clone from 'clone';
 import prettyParseError from './parser-lib/pretty-parse-error.js';
-import * as open from 'opn';
 import * as omitDeep from 'omit-deep';
 import { exec } from 'child-process-promise';
 import { Backend, BackendInputs, TypeError } from './api.js';
@@ -12,13 +11,11 @@ import { writeFile, outputFile } from 'fs-extra';
 import debug from './util/debug.js';
 import join from './util/join.js';
 import { tokenSpecs, grammar } from './grammar.js';
-import { parse, stripResultIndexes, toDotFile, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
-import * as dot from 'graphlib-dot';
+import { parse, stripResultIndexes, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
 import { makeTargetProgram } from './threeAddressCode/generator.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCode/runtime.js';
 import { programToString } from './threeAddressCode/programToString.js';
 import { parseProgram as parseTacProgram, parseFunction } from './threeAddressCode/parser.js';
-import showGraphInChrome from './util/graph/showInChrome.js';
 import { backends } from './backend-utils.js';
 import produceProgramInfo from './produceProgramInfo.js';
 
@@ -121,17 +118,6 @@ export const mplTest = async (
     if (typeof programInfo == 'string') {
         t.fail(programInfo);
         return;
-    }
-
-    if (vizAst) {
-        const unpreprocessedAst = stripResultIndexes(parse(grammar, 'program', programInfo.tokens, 0));
-        if (parseResultIsError(unpreprocessedAst)) {
-            t.fail(
-                `Bad parse result: ${parseErrorToString({ kind: 'unexpectedToken', errors: unpreprocessedAst.errors })}`
-            );
-            return;
-        }
-        showGraphInChrome(dot.write(toDotFile(unpreprocessedAst)));
     }
 
     // Frontend

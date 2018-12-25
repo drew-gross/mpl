@@ -2,7 +2,10 @@ import testCases from './test-cases.js';
 import produceProgramInfo from './produceProgramInfo.js';
 import { file as tmpFile } from 'tmp-promise';
 import { writeFile } from 'fs-extra';
+import writeSvg from './util/graph/writeSvg.js';
 import { prompt } from 'inquirer';
+import * as dot from 'graphlib-dot';
+import { toDotFile } from './parser-lib/parse.js';
 
 (async () => {
     if (process.argv.length != 3) {
@@ -33,6 +36,11 @@ import { prompt } from 'inquirer';
     const astFile = await tmpFile({ postfix: '.json' });
     await writeFile(astFile.fd, JSON.stringify(programInfo.ast, null, 2));
     console.log(`Ast: ${astFile.path}`);
+
+    const dotText = dot.write(toDotFile(programInfo.ast));
+    const svgFile = await tmpFile({ postfix: '.svg' });
+    await writeSvg(dotText, svgFile.path);
+    console.log(`Ast SVG: ${svgFile.path}`);
 
     // Wait for user to kill program so that temp files aren't cleaned up.
     await prompt();
