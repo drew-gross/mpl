@@ -881,7 +881,7 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
     }
 };
 
-type FrontendOutput = BackendInputs | { parseErrors: ParseError[] } | { typeErrors: TypeError[] };
+export type FrontendOutput = BackendInputs | { parseErrors: ParseError[] } | { typeErrors: TypeError[] };
 
 const makeProgramAstNodeFromStatmentParseResult = (ast): Ast.UninferredStatement[] => {
     const children: Ast.UninferredStatement[] = [];

@@ -124,15 +124,17 @@ export const mplTest = async (
     if (expectedAst) {
         t.deepEqual(stripSourceLocation(programInfo.ast), expectedAst);
     }
-    const frontendOutput = compile(source);
-    if (expectedParseErrors && 'parseErrors' in frontendOutput) {
+    if (expectedParseErrors && 'parseErrors' in programInfo.frontendOutput) {
         // I'm still iterating on how these keys will work. No point fixing the tests yet.
         const keysToOmit = ['whileParsing', 'foundTokenText'];
-        t.deepEqual(expectedParseErrors, omitDeep(frontendOutput.parseErrors, keysToOmit));
+        t.deepEqual(expectedParseErrors, omitDeep(programInfo.frontendOutput.parseErrors, keysToOmit));
         return;
-    } else if ('parseErrors' in frontendOutput) {
+    } else if ('parseErrors' in programInfo.frontendOutput) {
         t.fail(
-            `Found parse errors when none expected: ${join(frontendOutput.parseErrors.map(parseErrorToString), ', ')}`
+            `Found parse errors when none expected: ${join(
+                programInfo.frontendOutput.parseErrors.map(parseErrorToString),
+                ', '
+            )}`
         );
         return;
     } else if (expectedParseErrors) {
@@ -140,11 +142,16 @@ export const mplTest = async (
         return;
     }
 
-    if (expectedTypeErrors && 'typeErrors' in frontendOutput) {
-        t.deepEqual(expectedTypeErrors, frontendOutput.typeErrors);
+    if (expectedTypeErrors && 'typeErrors' in programInfo.frontendOutput) {
+        t.deepEqual(expectedTypeErrors, programInfo.frontendOutput.typeErrors);
         return;
-    } else if ('typeErrors' in frontendOutput) {
-        t.fail(`Found type errors when none expected: ${join(frontendOutput.typeErrors.map(typeErrorToString), ', ')}`);
+    } else if ('typeErrors' in programInfo.frontendOutput) {
+        t.fail(
+            `Found type errors when none expected: ${join(
+                programInfo.frontendOutput.typeErrors.map(typeErrorToString),
+                ', '
+            )}`
+        );
         return;
     } else if (expectedTypeErrors) {
         t.fail('Expected type errors and none found');
@@ -152,7 +159,7 @@ export const mplTest = async (
     }
 
     // Run valdations on frontend output (currently just detects values that don't match their type)
-    frontendOutput.functions.forEach(f => {
+    programInfo.frontendOutput.functions.forEach(f => {
         f.variables.forEach(v => {
             if (!v.type.kind) {
                 t.fail(`Invalid frontend output: ${v.name} (in ${f.name}) had a bad type!`);
@@ -162,7 +169,7 @@ export const mplTest = async (
 
     // Print the structure if requested, make sure this doesn't crash if not requested
     const printStructure = printSubsteps.includes('structure') ? console.log.bind(console) : () => {};
-    const structure = frontendOutput as BackendInputs;
+    const structure = programInfo.frontendOutput as BackendInputs;
     printStructure('Functions:');
     structure.functions.forEach(f => {
         printStructure(`-> ${f.name}(${join(f.parameters.map(p => typeToString(p.type)), ', ')})`);
@@ -182,7 +189,7 @@ export const mplTest = async (
 
     // Do a roundtrip on three address code to string and back to check the parser for that
     const tac = makeTargetProgram({
-        backendInputs: frontendOutput,
+        backendInputs: programInfo.frontendOutput,
         targetInfo: {
             alignment: 17,
             bytesInWord: 13,
@@ -229,7 +236,7 @@ export const mplTest = async (
         const backend = backends[i];
         if (!failing.includes(backend.name)) {
             const exeFile = await tmpFile({ postfix: `.${backend.name}` });
-            const exeContents = backend.mplToExectuable(frontendOutput);
+            const exeContents = backend.mplToExectuable(programInfo.frontendOutput);
             if (printSubsteps.includes(backend.name)) {
                 console.log(exeContents);
             }

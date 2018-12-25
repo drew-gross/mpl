@@ -1,15 +1,16 @@
 import { tokenSpecs, MplToken, MplAst, grammar } from './grammar.js';
 import { lex, Token } from './parser-lib/lex.js';
-import { parseMpl, parseErrorToString } from './frontend.js';
+import { parseMpl, compile, parseErrorToString, FrontendOutput } from './frontend.js';
 import { parse, stripResultIndexes, toDotFile, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
 
 type ProgramInfo = {
     tokens: Token<MplToken>[];
     ast: MplAst;
+    frontendOutput: FrontendOutput;
 };
 
-export default (program: string): ProgramInfo | string => {
-    const tokens = lex(tokenSpecs, program);
+export default (source: string): ProgramInfo | string => {
+    const tokens = lex(tokenSpecs, source);
 
     tokens.forEach(({ string, type }) => {
         if (type === 'invalid') {
@@ -22,5 +23,7 @@ export default (program: string): ProgramInfo | string => {
         return `Bad parse result: ${ast.map(parseErrorToString)}`;
     }
 
-    return { tokens, ast };
+    const frontendOutput = compile(source);
+
+    return { tokens, ast, frontendOutput };
 };
