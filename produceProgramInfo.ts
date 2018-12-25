@@ -1,17 +1,26 @@
-import { tokenSpecs, MplToken, grammar } from './grammar.js';
+import { tokenSpecs, MplToken, MplAst, grammar } from './grammar.js';
 import { lex, Token } from './parser-lib/lex.js';
+import { parseMpl, parseErrorToString } from './frontend.js';
+import { parse, stripResultIndexes, toDotFile, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
 
 type ProgramInfo = {
-    lexResult: Token<MplToken>[];
+    tokens: Token<MplToken>[];
+    ast: MplAst;
 };
 
 export default (program: string): ProgramInfo | string => {
-    const lexResult = lex(tokenSpecs, program);
+    const tokens = lex(tokenSpecs, program);
 
-    lexResult.forEach(({ string, type }) => {
+    tokens.forEach(({ string, type }) => {
         if (type === 'invalid') {
             return `Unable to lex. Invalid token: ${string}`;
         }
     });
-    return { lexResult };
+
+    const ast = parseMpl(tokens);
+    if (Array.isArray(ast)) {
+        return `Bad parse result: ${ast.map(parseErrorToString)}`;
+    }
+
+    return { tokens, ast };
 };

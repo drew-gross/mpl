@@ -5,7 +5,7 @@ import * as omitDeep from 'omit-deep';
 import { exec } from 'child-process-promise';
 import { Backend, BackendInputs, TypeError } from './api.js';
 import { Ast } from './ast.js';
-import { parseMpl, compile, parseErrorToString } from './frontend.js';
+import { compile, parseErrorToString } from './frontend.js';
 import { toString as typeToString } from './types.js';
 import { file as tmpFile } from 'tmp-promise';
 import { writeFile, outputFile } from 'fs-extra';
@@ -119,34 +119,24 @@ export const mplTest = async (
     // Make sure it parses
     const programInfo = produceProgramInfo(source);
     if (typeof programInfo == 'string') {
-        t.faile(programInfo);
+        t.fail(programInfo);
         return;
     }
 
-    if (printSubsteps.includes('tokens')) {
-        console.log(JSON.stringify(programInfo.lexResult, null, 2));
-    }
-
-    if (debugSubsteps.includes('parse')) {
-        debugger;
-    }
-    const parseResult = parseMpl(programInfo.lexResult);
-    if (printSubsteps.includes('ast')) {
-        console.log(JSON.stringify(parseResult, null, 2));
-    }
-
     if (vizAst) {
-        const parseResult = stripResultIndexes(parse(grammar, 'program', programInfo.lexResult, 0));
-        if (parseResultIsError(parseResult)) {
-            t.fail(`Bad parse result: ${parseErrorToString({ kind: 'unexpectedToken', errors: parseResult.errors })}`);
+        const unpreprocessedAst = stripResultIndexes(parse(grammar, 'program', programInfo.tokens, 0));
+        if (parseResultIsError(unpreprocessedAst)) {
+            t.fail(
+                `Bad parse result: ${parseErrorToString({ kind: 'unexpectedToken', errors: unpreprocessedAst.errors })}`
+            );
             return;
         }
-        showGraphInChrome(dot.write(toDotFile(parseResult)));
+        showGraphInChrome(dot.write(toDotFile(unpreprocessedAst)));
     }
 
     // Frontend
     if (expectedAst) {
-        t.deepEqual(stripSourceLocation(parseResult), expectedAst);
+        t.deepEqual(stripSourceLocation(programInfo.ast), expectedAst);
     }
     const frontendOutput = compile(source);
     if (expectedParseErrors && 'parseErrors' in frontendOutput) {

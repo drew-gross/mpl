@@ -1,10 +1,13 @@
 import testCases from './test-cases.js';
 import produceProgramInfo from './produceProgramInfo.js';
+import { file as tmpFile } from 'tmp-promise';
+import { writeFile } from 'fs-extra';
+import { prompt } from 'inquirer';
 
-(() => {
+(async () => {
     if (process.argv.length != 3) {
         console.log('Exactly one test case must be named');
-        process.exit(1);
+        return;
     }
 
     const testName = process.argv[2];
@@ -13,9 +16,24 @@ import produceProgramInfo from './produceProgramInfo.js';
 
     if (!testCase) {
         console.log(`Could not find a test case named "${testName}"`);
-        process.exit(1);
         return;
     }
 
-    const progamInfo = produceProgramInfo(testCase.source);
+    const programInfo = produceProgramInfo(testCase.source);
+
+    if (typeof programInfo === 'string') {
+        console.log(`Error in program: ${programInfo}`);
+        return;
+    }
+
+    const tokensFile = await tmpFile({ postfix: '.json' });
+    await writeFile(tokensFile.fd, JSON.stringify(programInfo.tokens, null, 2));
+    console.log(`Tokens: ${tokensFile.path}`);
+
+    const astFile = await tmpFile({ postfix: '.json' });
+    await writeFile(astFile.fd, JSON.stringify(programInfo.ast, null, 2));
+    console.log(`Ast: ${astFile.path}`);
+
+    // Wait for user to kill program so that temp files aren't cleaned up.
+    await prompt();
 })();

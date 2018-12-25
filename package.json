@@ -6,7 +6,9 @@
     "license": "UNLICENSED",
     "main": "built/index.js",
     "ava": {
-        "files": ["built/test.js"]
+        "files": [
+            "built/test.js"
+        ]
     },
     "scripts": {
         "benchmark": "rimraf built && tsc && node ./built/benchmark.js",
@@ -14,6 +16,7 @@
         "test-fast": "tsc && ava --verbose",
         "test-all": "npm run test && npm run benchmark",
         "test-watch": "ava --watch --no-color",
+        "tsc": "tsc",
         "tsc-watch": "tsc --watch",
         "build+install": "tsc && npm link",
         "test-debug": "tsc && inspect node_modules/ava/profile.js built/test.js",
@@ -35,6 +38,7 @@
         "fs-extra": "7.0.1",
         "graphlib": "2.1.5",
         "graphlib-dot": "0.6.2",
+        "inquirer": "6.2.1",
         "inspect-process": "0.5.0",
         "lodash": "4.17.11",
         "omit-deep": "0.3.0",
