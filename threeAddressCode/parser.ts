@@ -1,6 +1,6 @@
 import debug from '../util/debug.js';
 import flatten from '../util/list/flatten.js';
-import { TokenSpec, lex } from '../parser-lib/lex.js';
+import { TokenSpec, lex, LexError } from '../parser-lib/lex.js';
 import { specialRegisterNames, Register } from '../register.js';
 import { ThreeAddressProgram, ThreeAddressCode, ThreeAddressStatement, ThreeAddressFunction } from './generator.js';
 import {
@@ -773,8 +773,11 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
 
 type ParseError = string | ParseFailureInfo<TacToken>;
 
-export const parseProgram = (input: string): ThreeAddressProgram | ParseError[] => {
+export const parseProgram = (input: string): ThreeAddressProgram | LexError | ParseError[] => {
     const tokens = lex(tokenSpecs, input);
+    if ('kind' in tokens) {
+        return tokens;
+    }
     if (tokens.some(t => t.type == 'invalid')) {
         const t = tokens.find(t2 => t2.type == 'invalid');
         if (t) return [`found an invalid token: ${t.string}`];
@@ -782,13 +785,16 @@ export const parseProgram = (input: string): ThreeAddressProgram | ParseError[] 
     }
     const parseResult = parse(grammar, 'program', tokens, 0);
     if (parseResultIsError(parseResult)) {
-        return parseResult.errors;
+        return parseResult.errors as any;
     }
-    return tacFromParseResult(parseResult);
+    return tacFromParseResult(parseResult as any);
 };
 
-export const parseFunction = (input: string): ThreeAddressFunction | ParseError[] => {
+export const parseFunction = (input: string): ThreeAddressFunction | LexError | ParseError[] => {
     const tokens = lex(tokenSpecs, input);
+    if ('kind' in tokens) {
+        return tokens;
+    }
     if (tokens.some(t => t.type == 'invalid')) {
         const t = tokens.find(t2 => t2.type == 'invalid');
         if (t) return [`found an invalid token: ${t.string}`];
@@ -796,7 +802,7 @@ export const parseFunction = (input: string): ThreeAddressFunction | ParseError[
     }
     const parseResult = parse(grammarForFunctionParse, 'function', tokens, 0);
     if (parseResultIsError(parseResult)) {
-        return parseResult.errors;
+        return parseResult.errors as any;
     }
-    return functionFromParseResult(parseResult);
+    return functionFromParseResult(parseResult as any);
 };

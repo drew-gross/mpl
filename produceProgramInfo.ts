@@ -16,6 +16,9 @@ type ProgramInfo = {
 
 export default (source: string): ProgramInfo | string => {
     const tokens = lex(tokenSpecs, source);
+    if ('kind' in tokens) {
+        return tokens.error;
+    }
 
     tokens.forEach(({ string, type }) => {
         if (type === 'invalid') {

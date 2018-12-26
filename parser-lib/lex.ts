@@ -1,21 +1,26 @@
 import debug from '../util/debug.js';
 import SourceLocation from './sourceLocation.js';
 
-type TokenSpec<TokenType> = {
+export type TokenSpec<TokenType> = {
     token: string;
     type: TokenType;
     action?: (x: string) => string | number | null;
     toString: (x: any) => string;
 };
 
-type Token<TokenType> = {
+export type Token<TokenType> = {
     type: TokenType;
     string: string;
     value?: string | number | null;
     sourceLocation: SourceLocation;
 };
 
-const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string): Token<TokenType>[] => {
+export type LexError = {
+    kind: 'lexError';
+    error: string;
+};
+
+export const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string): Token<TokenType>[] | LexError => {
     // Source location tracking
     let currentSourceLine = 1;
     let currentSourceColumn = 1;
@@ -41,23 +46,24 @@ const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string): Toke
     // consume input reading tokens
     const tokens: Token<TokenType>[] = [];
     while (input.length > 0) {
-        for (const tokenSpec of tokenSpecs) {
-            const match = input.match(RegExp(`^(${tokenSpec.token})[ \\t\\n]*`));
-            if (!match) continue;
+        // This results in runnng match twice. Once to find if there is a match, and once to extract it. TODO: optimize!
+        const matchingSpec = tokenSpecs.find(spec => !!input.match(RegExp(`^(${spec.token})[ \\t\\n]*`)));
+        if (!matchingSpec) {
+            return { kind: 'lexError', error: `Invalid token: ${input}` };
+        } else {
+            const match = input.match(RegExp(`^(${matchingSpec.token})[ \\t\\n]*`));
+            if (!match) throw debug('Should have failed earlier.');
             input = input.slice(match[0].length);
-            const action = tokenSpec.action || (() => null);
+            const action = matchingSpec.action || (() => null);
             const value = action(match[1]);
             tokens.push({
-                type: tokenSpec.type,
+                type: matchingSpec.type,
                 value,
-                string: tokenSpec.toString(value),
+                string: matchingSpec.toString(value),
                 sourceLocation: { line: currentSourceLine, column: currentSourceColumn },
             });
             updateSourceLocation(match[0]);
-            break;
         }
     }
     return tokens;
 };
-
-export { lex, Token, TokenSpec };

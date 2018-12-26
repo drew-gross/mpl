@@ -206,6 +206,10 @@ export const tacTest = async (
     { source, exitCode, printSubsteps = [], debugSubsteps = [], spills, failing = [] }: TestOptions
 ) => {
     const parsed = parseFunction(source);
+    if ('kind' in parsed) {
+        t.fail(`LexError error: ${parsed}`);
+        return;
+    }
     if (Array.isArray(parsed)) {
         t.fail(`Parse error: ${JSON.stringify(parsed)}`);
         return;

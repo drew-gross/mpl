@@ -1237,6 +1237,10 @@ const parseErrorToString = (compilerError: ParseError): string => {
 
 const compile = (source: string): FrontendOutput => {
     const tokens = lex<MplToken>(tokenSpecs, source);
+    if ('kind' in tokens) {
+        return { parseErrors: [{ kind: 'internalError' }] };
+    }
+
     const parseResult = parseMpl(tokens);
 
     if (Array.isArray(parseResult)) {

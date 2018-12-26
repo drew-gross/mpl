@@ -9,10 +9,10 @@ import * as threeAddressCodeRuntime from './threeAddressCode/runtime.js';
 import test from 'ava';
 import flatten from './util/list/flatten.js';
 import join from './util/join.js';
-import { lex } from './parser-lib/lex.js';
+import { lex, Token } from './parser-lib/lex.js';
 import { parseMpl, compile, typeCheckStatement, astFromParseResult, typeOfExpression } from './frontend.js';
 import { mplTest, tacTest } from './test-utils.js';
-import { grammar, tokenSpecs, MplParseResult, MplAst } from './grammar.js';
+import { grammar, tokenSpecs, MplParseResult, MplAst, MplToken } from './grammar.js';
 import { stripResultIndexes, ParseResult, parse, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
 import * as Ast from './ast.js';
 import { removeBracketsFromAst } from './frontend.js';
@@ -57,7 +57,7 @@ test('lex with initial whitespace', t => {
 });
 
 test('ast for single number', t => {
-    const tokens = lex(tokenSpecs, 'return 7;');
+    const tokens = lex(tokenSpecs, 'return 7;') as Token<MplToken>[];
     const parseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
     if (parseResultIsError(parseResult)) {
         t.fail('Parse Failed');
@@ -100,7 +100,9 @@ test('ast for single number', t => {
 
 test('ast for number in brackets', t => {
     t.deepEqual(
-        removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, ' return (5);'), 0))),
+        removeBracketsFromAst(
+            stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, ' return (5);') as Token<MplToken>[], 0))
+        ),
         {
             type: 'program',
             sourceLocation: { line: 1, column: 2 },
@@ -138,7 +140,9 @@ test('ast for number in brackets', t => {
 
 test('ast for number in double brackets', t => {
     t.deepEqual(
-        removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'return ((20));'), 0))),
+        removeBracketsFromAst(
+            stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'return ((20));') as Token<MplToken>[], 0))
+        ),
         {
             type: 'program',
             sourceLocation: { line: 1, column: 1 },
@@ -176,7 +180,11 @@ test('ast for number in double brackets', t => {
 
 test('ast for product with brackets', t => {
     t.deepEqual(
-        removeBracketsFromAst(stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'return 3 * (4 * 5);'), 0))),
+        removeBracketsFromAst(
+            stripResultIndexes(
+                parse(grammar, 'program', lex(tokenSpecs, 'return 3 * (4 * 5);') as Token<MplToken>[], 0)
+            )
+        ),
         {
             type: 'program',
             sourceLocation: { line: 1, column: 1 },
@@ -335,7 +343,12 @@ test('ast for assignment then return', t => {
     const astWithSemicolon = stripSourceLocation(
         removeBracketsFromAst(
             stripResultIndexes(
-                parse(grammar, 'program', lex(tokenSpecs, 'constThree := a: Integer => 3; return 10;'), 0)
+                parse(
+                    grammar,
+                    'program',
+                    lex(tokenSpecs, 'constThree := a: Integer => 3; return 10;') as Token<MplToken>[],
+                    0
+                )
             )
         )
     );
@@ -343,7 +356,8 @@ test('ast for assignment then return', t => {
 });
 
 test('lowering of bracketedExpressions', t => {
-    t.deepEqual(stripSourceLocation(parseMpl(lex(tokenSpecs, 'return (8 * ((7)))'))), {
+    const lexResult = lex(tokenSpecs, 'return (8 * ((7)))') as Token<MplToken>[];
+    t.deepEqual(stripSourceLocation(parseMpl(lexResult)), {
         type: 'program',
         children: [
             {
@@ -382,7 +396,12 @@ test('lowering of bracketedExpressions', t => {
 
 test('correct inferred type for function', t => {
     const functionSource = 'a: Integer => 11';
-    const parseResult: MplParseResult = parse(grammar, 'function', lex(tokenSpecs, functionSource), 0);
+    const parseResult: MplParseResult = parse(
+        grammar,
+        'function',
+        lex(tokenSpecs, functionSource) as Token<MplToken>[],
+        0
+    );
     const ast: Ast.UninferredExpression = astFromParseResult(parseResult as MplAst) as Ast.UninferredExpression;
     t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
         type: {
