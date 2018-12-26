@@ -2,10 +2,9 @@ import * as clone from 'clone';
 import prettyParseError from './parser-lib/pretty-parse-error.js';
 import * as omitDeep from 'omit-deep';
 import { exec } from 'child-process-promise';
-import { Backend, BackendInputs, TypeError } from './api.js';
+import { Backend, TypeError } from './api.js';
 import { Ast } from './ast.js';
 import { compile, parseErrorToString } from './frontend.js';
-import { toString as typeToString } from './types.js';
 import { file as tmpFile } from 'tmp-promise';
 import { writeFile, outputFile } from 'fs-extra';
 import debug from './util/debug.js';
@@ -32,52 +31,6 @@ type TestOptions = {
     failing?: string[] | string;
     vizAst: boolean;
     spills?: number;
-};
-
-const astToString = (ast: Ast) => {
-    if (!ast) debug('Null ast in astToString');
-    switch (ast.kind) {
-        case 'returnStatement':
-            return `return ${astToString(ast.expression)}`;
-        case 'ternary':
-            return `${astToString(ast.condition)} ? ${astToString(ast.ifTrue)} : ${astToString(ast.ifFalse)}`;
-        case 'equality':
-            return `${astToString(ast.lhs)} == ${astToString(ast.rhs)}`;
-        case 'identifier':
-            return ast.value;
-        case 'number':
-            return ast.value.toString();
-        case 'callExpression':
-            const args = join(ast.arguments.map(astToString), ', ');
-            return `${ast.name}(${args})`;
-        case 'functionLiteral':
-            return ast.deanonymizedName;
-        case 'product':
-            return `${astToString(ast.lhs)} * ${astToString(ast.rhs)}`;
-        case 'addition':
-            return `${astToString(ast.lhs)} + ${astToString(ast.rhs)}`;
-        case 'subtraction':
-            return `${astToString(ast.lhs)} - ${astToString(ast.rhs)}`;
-        case 'stringLiteral':
-            return `"${ast.value}"`;
-        case 'booleanLiteral':
-            return ast.value ? 'True' : 'False';
-        case 'concatenation':
-            return `${ast.lhs} ++ ${ast.rhs}`;
-        case 'typedDeclarationAssignment':
-            return `${ast.destination}: ${ast.type.kind} = ${astToString(ast.expression)};`;
-        case 'typeDeclaration':
-            return `(${ast.kind})`; // TODO: Figure out what parts of type declaration should go in AST vs uninferred AST.
-        case 'reassignment':
-            return `${ast.destination} = ${astToString(ast.expression)};`;
-        case 'objectLiteral':
-            const members = ast.members.map(({ name, expression }) => `${name}: ${astToString(expression)}`);
-            return `{ ${join(members, ', ')} }`;
-        case 'memberAccess':
-            return `(${astToString(ast.lhs)}).${ast.rhs}`;
-        default:
-            throw debug(`${(ast as any).kind} unhandled in astToString`);
-    }
 };
 
 const typeErrorToString = (e: TypeError): string => JSON.stringify(e, null, 2);
@@ -165,26 +118,6 @@ export const mplTest = async (
                 t.fail(`Invalid frontend output: ${v.name} (in ${f.name}) had a bad type!`);
             }
         });
-    });
-
-    // Print the structure if requested, make sure this doesn't crash if not requested
-    const printStructure = printSubsteps.includes('structure') ? console.log.bind(console) : () => {};
-    const structure = programInfo.frontendOutput as BackendInputs;
-    printStructure('Functions:');
-    structure.functions.forEach(f => {
-        printStructure(`-> ${f.name}(${join(f.parameters.map(p => typeToString(p.type)), ', ')})`);
-        f.statements.forEach(statement => {
-            printStructure(`---> `, astToString(statement));
-        });
-    });
-    printStructure('Program:');
-    printStructure('-> Globals:');
-    structure.globalDeclarations.forEach(declaration => {
-        printStructure(`---> ${declaration.type.kind} ${declaration.name}`);
-    });
-    printStructure('-> Statements:');
-    structure.program.statements.forEach(statement => {
-        printStructure(`---> `, astToString(statement));
     });
 
     // Do a roundtrip on three address code to string and back to check the parser for that

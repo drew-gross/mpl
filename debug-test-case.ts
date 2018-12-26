@@ -42,6 +42,10 @@ import { toDotFile } from './parser-lib/parse.js';
     await writeSvg(dotText, svgFile.path);
     console.log(`Ast SVG: ${svgFile.path}`);
 
+    const structureFile = await tmpFile({ postfix: '.txt' });
+    await writeFile(structureFile.fd, programInfo.structure);
+    console.log(`Structure: ${structureFile.path}`);
+
     // Wait for user to kill program so that temp files aren't cleaned up.
     await prompt();
 })();
