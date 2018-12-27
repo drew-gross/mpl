@@ -23,7 +23,7 @@ export type Function = {
     returnType: Type;
 };
 export type StringLiteralData = { id: number; value: string };
-export type BackendInputs = {
+export type FrontendOutput = {
     types: TypeDeclaration[];
     functions: Function[];
     program: Function;

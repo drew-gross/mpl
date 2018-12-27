@@ -23,7 +23,7 @@ import {
     VariableDeclaration,
     Function,
     UninferredFunction,
-    BackendInputs,
+    FrontendOutput,
     ParseError,
     TypeError,
     StringLiteralData,
@@ -881,8 +881,6 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
     }
 };
 
-export type FrontendOutput = BackendInputs | { parseErrors: ParseError[] } | { typeErrors: TypeError[] };
-
 const makeProgramAstNodeFromStatmentParseResult = (ast): Ast.UninferredStatement[] => {
     const children: Ast.UninferredStatement[] = [];
     if (ast.type === 'statement') {
@@ -1235,7 +1233,7 @@ const parseErrorToString = (compilerError: ParseError): string => {
     }
 };
 
-const compile = (source: string): FrontendOutput => {
+const compile = (source: string): FrontendOutput | { parseErrors: ParseError[] } | { typeErrors: TypeError[] } => {
     const tokens = lex<MplToken>(tokenSpecs, source);
     if ('kind' in tokens) {
         return { parseErrors: [{ kind: 'internalError' }] };

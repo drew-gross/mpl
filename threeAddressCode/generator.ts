@@ -23,7 +23,7 @@ import {
     RegisterDescription,
 } from '../backend-utils.js';
 import { Register, toString as registerToString } from '../register.js';
-import { Function, VariableDeclaration, StringLiteralData, BackendInputs } from '../api.js';
+import { Function, VariableDeclaration, StringLiteralData } from '../api.js';
 
 type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 

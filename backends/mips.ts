@@ -2,7 +2,7 @@ import { stat } from 'fs-extra';
 import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import flatten from '../util/list/flatten.js';
-import { BackendInputs, ExecutionResult, Function, StringLiteralData, Backend } from '../api.js';
+import { FrontendOutput, ExecutionResult, Function, StringLiteralData, Backend } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import { Register } from '../register.js';
@@ -224,7 +224,7 @@ ${rtlToTarget({
         instructionTranslator: threeAddressCodeToMips,
     })}`;
 };
-const mplToExectuable = (inputs: BackendInputs) =>
+const mplToExectuable = (inputs: FrontendOutput) =>
     tacToExecutable(makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget }));
 
 const execute = async (path: string): Promise<ExecutionResult> => {

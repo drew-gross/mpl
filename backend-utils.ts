@@ -1,6 +1,6 @@
 import join from './util/join.js';
 import debug from './util/debug.js';
-import { VariableDeclaration, BackendInputs, ExecutionResult, Function, StringLiteralData, Backend } from './api.js';
+import { VariableDeclaration, ExecutionResult, Function, StringLiteralData, Backend } from './api.js';
 import flatten from './util/list/flatten.js';
 import {
     ThreeAddressStatement,

@@ -25,7 +25,7 @@ import {
     ThreeAddressProgram,
 } from '../threeAddressCode/generator.js';
 import { mallocWithMmap, printWithWriteRuntimeFunction } from '../threeAddressCode/runtime.js';
-import { VariableDeclaration, BackendInputs, StringLiteralData, Backend } from '../api.js';
+import { VariableDeclaration, FrontendOutput, StringLiteralData, Backend } from '../api.js';
 import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { execSync } from 'child_process';
@@ -239,7 +239,7 @@ const x64toBinary = async (x64Path: string): Promise<string> => {
     return exePath.path;
 };
 
-const mplToExectuable = (inputs: BackendInputs) =>
+const mplToExectuable = (inputs: FrontendOutput) =>
     tacToExecutable(makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target }));
 
 const x64Backend: Backend = {

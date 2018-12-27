@@ -1,8 +1,8 @@
 import { tokenSpecs, MplToken, MplAst, grammar } from './grammar.js';
-import { lex, Token } from './parser-lib/lex.js';
-import { parseMpl, compile, parseErrorToString, FrontendOutput } from './frontend.js';
+import { lex, Token, LexError } from './parser-lib/lex.js';
+import { parseMpl, compile, parseErrorToString } from './frontend.js';
 import { parse, stripResultIndexes, toDotFile, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
-import { BackendInputs } from './api.js';
+import { FrontendOutput, ParseError } from './api.js';
 import join from './util/join.js';
 import { toString as typeToString } from './types.js';
 import { astToString } from './ast.js';
@@ -14,10 +14,12 @@ type ProgramInfo = {
     structure: string;
 };
 
-export default (source: string): ProgramInfo | string => {
+export default (
+    source: string
+): ProgramInfo | LexError | { parseErrors: ParseError[] } | { typeErrors: TypeError[] } => {
     const tokens = lex(tokenSpecs, source);
     if ('kind' in tokens) {
-        return tokens.error;
+        return tokens;
     }
 
     tokens.forEach(({ string, type }) => {
@@ -28,15 +30,18 @@ export default (source: string): ProgramInfo | string => {
 
     const ast = parseMpl(tokens);
     if (Array.isArray(ast)) {
-        return `Bad parse result: ${ast.map(parseErrorToString)}`;
+        return { parseErrors: ast };
     }
 
     const frontendOutput = compile(source);
 
+    if ('parseErrors' in frontendOutput || 'typeErrors' in frontendOutput) {
+        return frontendOutput as any;
+    }
+
     let structureText = '';
-    const structure = frontendOutput as BackendInputs;
     structureText += 'Functions:\n';
-    structure.functions.forEach(f => {
+    frontendOutput.functions.forEach(f => {
         structureText += `-> ${f.name}(${join(f.parameters.map(p => typeToString(p.type)), ', ')})\n`;
         f.statements.forEach(statement => {
             structureText += `---> ${astToString(statement)}\n`;
@@ -44,11 +49,11 @@ export default (source: string): ProgramInfo | string => {
     });
     structureText += 'Program:\n';
     structureText += '-> Globals:\n';
-    structure.globalDeclarations.forEach(declaration => {
+    frontendOutput.globalDeclarations.forEach(declaration => {
         structureText += `---> ${declaration.type.kind} ${declaration.name}\n`;
     });
     structureText += '-> Statements:\n';
-    structure.program.statements.forEach(statement => {
+    frontendOutput.program.statements.forEach(statement => {
         structureText += `---> ${astToString(statement)}\n`;
     });
 

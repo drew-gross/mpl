@@ -2,7 +2,7 @@ import { exec } from 'child-process-promise';
 import { stat } from 'fs-extra';
 import flatten from '../util/list/flatten.js';
 import execAndGetResult from '../util/execAndGetResult.js';
-import { BackendInputs, ExecutionResult } from '../api.js';
+import { FrontendOutput, ExecutionResult } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
@@ -59,7 +59,7 @@ const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.Ast; exitInsteadOfRetu
     }
 };
 
-const mplToExectuable = ({ functions, program, globalDeclarations }: BackendInputs) => {
+const mplToExectuable = ({ functions, program, globalDeclarations }: FrontendOutput) => {
     const JSfunctions = functions.map(({ name, parameters, statements }) => {
         const prefix = `${name} = (${join(parameters.map(parameter => parameter.name), ', ')}) => {`;
         const suffix = `}`;

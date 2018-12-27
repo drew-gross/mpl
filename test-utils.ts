@@ -68,47 +68,55 @@ export const mplTest = async (
 
     // Make sure it parses
     const programInfo = produceProgramInfo(source);
-    if (typeof programInfo == 'string') {
-        t.fail(programInfo);
+    if ('kind' in programInfo) {
+        t.fail(`Lex Error: ${programInfo.error}`);
+        return;
+    }
+
+    if ('parseErrors' in programInfo) {
+        if (expectedParseErrors) {
+            // I'm still iterating on how these keys will work. No point fixing the tests yet.
+            const keysToOmit = ['whileParsing', 'foundTokenText'];
+            t.deepEqual(expectedParseErrors, omitDeep(programInfo.parseErrors, keysToOmit));
+        } else {
+            t.fail(
+                `Found parse errors when none expected: ${join(programInfo.parseErrors.map(parseErrorToString), ', ')}`
+            );
+        }
+        return;
+    }
+
+    if (expectedParseErrors) {
+        t.fail('Expected parse errors and none found');
+        return;
+    }
+
+    if ('typeErrors' in programInfo) {
+        if (expectedTypeErrors) {
+            t.deepEqual(expectedTypeErrors, programInfo.typeErrors);
+            return;
+        } else {
+            t.fail(
+                `Found type errors when none expected: ${join(
+                    programInfo.typeErrors.map(typeErrorToString as any),
+                    ', '
+                )}`
+            );
+        }
+        return;
+    }
+
+    if (expectedTypeErrors && 'typeErrors' in programInfo.frontendOutput) {
+    } else if ('typeErrors' in programInfo.frontendOutput) {
+        return;
+    } else if (expectedTypeErrors) {
+        t.fail('Expected type errors and none found');
         return;
     }
 
     // Frontend
     if (expectedAst) {
         t.deepEqual(stripSourceLocation(programInfo.ast), expectedAst);
-    }
-    if (expectedParseErrors && 'parseErrors' in programInfo.frontendOutput) {
-        // I'm still iterating on how these keys will work. No point fixing the tests yet.
-        const keysToOmit = ['whileParsing', 'foundTokenText'];
-        t.deepEqual(expectedParseErrors, omitDeep(programInfo.frontendOutput.parseErrors, keysToOmit));
-        return;
-    } else if ('parseErrors' in programInfo.frontendOutput) {
-        t.fail(
-            `Found parse errors when none expected: ${join(
-                programInfo.frontendOutput.parseErrors.map(parseErrorToString),
-                ', '
-            )}`
-        );
-        return;
-    } else if (expectedParseErrors) {
-        t.fail('Expected parse errors and none found');
-        return;
-    }
-
-    if (expectedTypeErrors && 'typeErrors' in programInfo.frontendOutput) {
-        t.deepEqual(expectedTypeErrors, programInfo.frontendOutput.typeErrors);
-        return;
-    } else if ('typeErrors' in programInfo.frontendOutput) {
-        t.fail(
-            `Found type errors when none expected: ${join(
-                programInfo.frontendOutput.typeErrors.map(typeErrorToString),
-                ', '
-            )}`
-        );
-        return;
-    } else if (expectedTypeErrors) {
-        t.fail('Expected type errors and none found');
-        return;
     }
 
     // Run valdations on frontend output (currently just detects values that don't match their type)

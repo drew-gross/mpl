@@ -1,7 +1,7 @@
 import * as Ast from '../ast.js';
 import { stat } from 'fs-extra';
 import { file as tmpFile } from 'tmp-promise';
-import { VariableDeclaration, BackendInputs, Function, ExecutionResult, StringLiteralData, Backend } from '../api.js';
+import { VariableDeclaration, FrontendOutput, Function, ExecutionResult, StringLiteralData, Backend } from '../api.js';
 import { Type, equal as typesAreEqual, builtinTypes } from '../types.js';
 import flatten from '../util/list/flatten.js';
 import last from '../util/list/last.js';
@@ -327,7 +327,7 @@ const makeCfunctionBody = ({
 
 const productTypeMemberToCStructMember = ({ name, type }) => `${mplTypeToCDeclaration(type, '')} ${name};`;
 
-const mplToExectuable = ({ functions, program, types, globalDeclarations, stringLiterals }: BackendInputs) => {
+const mplToExectuable = ({ functions, program, types, globalDeclarations, stringLiterals }: FrontendOutput) => {
     const CtypeDeclarations = types
         .filter(t => t.type.kind == 'Product')
         .map(t => `struct ${t.name} {${join((t.type as any).members.map(productTypeMemberToCStructMember), '\n')}};`);

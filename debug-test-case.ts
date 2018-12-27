@@ -24,7 +24,8 @@ import { toDotFile } from './parser-lib/parse.js';
 
     const programInfo = produceProgramInfo(testCase.source);
 
-    if (typeof programInfo === 'string') {
+    if ('kind' in programInfo || 'parseErrors' in programInfo || 'typeErrors' in programInfo) {
+        // TODO: Unify and improve error printing logic with test-utils and produceProgramInfo
         console.log(`Error in program: ${programInfo}`);
         return;
     }
