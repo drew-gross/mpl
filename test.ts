@@ -520,9 +520,9 @@ test('double product with brackets', mplTest, {
 
 testCases.forEach(({ name, source, exitCode, failing }) => {
     if (failing) {
-        test.failing(name, mplTest, { source, exitCode });
+        test.failing(name, mplTest, { source, exitCode, name });
     } else {
-        test(name, mplTest, { source, exitCode });
+        test(name, mplTest, { source, exitCode, name });
     }
 });
 
@@ -875,13 +875,6 @@ return myFunc("");`,
             sourceLocation: { line: 2, column: 1 },
         },
     ],
-});
-
-test('return boolean', mplTest, {
-    source: `
-isFive: Function<Integer, Boolean> = a: Integer => a == 5;
-return isFive(5) ? 1 : 0`,
-    exitCode: 1,
 });
 
 test('return string', mplTest, {

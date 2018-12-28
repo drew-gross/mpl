@@ -65,6 +65,13 @@ return a;
 `,
         exitCode: 9,
     },
+    {
+        name: 'Function Returns Boolean',
+        source: `
+isFive: Function<Integer, Boolean> = a: Integer => a == 5;
+return isFive(5) ? 1 : 0`,
+        exitCode: 1,
+    },
 ];
 
 export default testCases;

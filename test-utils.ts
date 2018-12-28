@@ -164,19 +164,10 @@ export const mplTest = async (
                     { exitCode, stdout: expectedStdOut, name: testCaseName ? testCaseName : 'unnamed', source: source },
                     executionResult
                 ),
-                testCaseName ? `Test failed. Run \`npm run debug-test-case "${testCaseName}"` : 'Unnamed test failed'
+                testCaseName
+                    ? `Test failed. Run $ npm run debug-test-case "${testCaseName}" for more info.`
+                    : 'Unnamed test failed'
             );
-
-            if (
-                !('error' in executionResult) &&
-                (executionResult.exitCode !== exitCode || executionResult.stdout !== expectedStdOut)
-            ) {
-                const errorMessage = `${name} had unexpected output.
-Exit code: ${executionResult.exitCode}. Expected: ${exitCode}.
-Stdout: "${executionResult.stdout}".
-Expected: "${expectedStdOut}"`;
-                t.fail(errorMessage);
-            }
         }
     }
 
