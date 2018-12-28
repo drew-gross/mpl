@@ -1,6 +1,5 @@
 import { toString as registerToString, Register } from '../register.js';
 import { filter, FilterPredicate } from '../util/list/filter.js';
-import debug from '../util/debug.js';
 
 type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 
@@ -120,14 +119,12 @@ const toStringWithoutComment = (tas: Statement): string => {
             return `spill:${tas.offset} ${registerToString(tas.register)}`;
         case 'unspill':
             return `unspill:${tas.offset} ${registerToString(tas.register)}`;
-        // Should be completely covered
     }
 };
 
 export const toString = (tas: Statement): string => `${toStringWithoutComment(tas)} # ${tas.why}`;
 
 export const reads = (tas: Statement): Register[] => {
-    if (!tas) debug('!tas');
     switch (tas.kind) {
         case 'comment':
             return [];
@@ -186,13 +183,10 @@ export const reads = (tas: Statement): Register[] => {
             return [];
         case 'spill':
             return [tas.register];
-        default:
-            throw debug(`${(tas as any).kind} unhanlded in reads`);
     }
 };
 
 export const writes = (tas: Statement): Register[] => {
-    if (!tas) debug('!tas');
     switch (tas.kind) {
         case 'comment':
             return [];
@@ -245,7 +239,5 @@ export const writes = (tas: Statement): Register[] => {
             return [tas.register];
         case 'spill':
             return [];
-        default:
-            throw debug(`${(tas as any).kind} unhanldes in livenessUpdate`);
     }
 };
