@@ -52,6 +52,11 @@ import { programToString } from './threeAddressCode/programToString.js';
     await writeFile(tacFile.fd, programToString(programInfo.threeAddressCode));
     console.log(`Three Address Code: ${tacFile.path}`);
 
+    console.log('\nBackends:');
+    programInfo.backendResults.forEach(({ name }) => {
+        console.log(`    ${name}:`);
+    });
+
     // Wait for user to kill program so that temp files aren't cleaned up.
     await prompt();
 })();

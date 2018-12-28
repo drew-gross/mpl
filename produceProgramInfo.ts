@@ -9,12 +9,18 @@ import { toString as typeToString } from './types.js';
 import { astToString } from './ast.js';
 import { ThreeAddressProgram } from './threeAddressCode/generator.js';
 import { makeTargetProgram } from './threeAddressCode/generator.js';
+import { backends } from './backend-utils.js';
+
+type BackendResult = {
+    name: string;
+};
 
 type ProgramInfo = {
     tokens: Token<MplToken>[];
     ast: MplAst;
     threeAddressCode: ThreeAddressProgram;
     frontendOutput: FrontendOutput;
+    backendResults: BackendResult[];
     structure: string;
 };
 
@@ -73,5 +79,9 @@ export default (
         },
     });
 
-    return { tokens, ast, frontendOutput, structure, threeAddressCode };
+    const backendResults = backends.map(b => {
+        return { name: b.name };
+    });
+
+    return { tokens, ast, frontendOutput, structure, threeAddressCode, backendResults };
 };
