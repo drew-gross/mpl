@@ -151,15 +151,16 @@ export const mplTest = async (
     // TODO: check the whole struct. Currently we don't check string literals because I haven't implemented that in the parser/generator
     t.deepEqual(programInfo.threeAddressCode.functions, (roundtripResult as any).functions);
     t.deepEqual(programInfo.threeAddressCode.globals, (roundtripResult as any).globals);
-    // Backends
+
+    programInfo.backendResults.forEach(({ name }) => {
+        // TODO: stuff
+    });
+
     for (let i = 0; i < backends.length; i++) {
         const backend = backends[i];
         if (!failing.includes(backend.name)) {
             const exeFile = await tmpFile({ postfix: `.${backend.name}` });
             const exeContents = backend.mplToExectuable(programInfo.frontendOutput);
-            if (printSubsteps.includes(backend.name)) {
-                console.log(exeContents);
-            }
             await writeFile(exeFile.fd, exeContents);
 
             if (debugSubsteps.includes(backend.name)) {

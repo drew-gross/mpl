@@ -53,10 +53,19 @@ import { programToString } from './threeAddressCode/programToString.js';
     console.log(`Three Address Code: ${tacFile.path}`);
 
     console.log('\nBackends:');
-    programInfo.backendResults.forEach(({ name }) => {
+    for (let i = 0; i < programInfo.backendResults.length; i++) {
+        const { name, targetSource } = programInfo.backendResults[i];
         console.log(`    ${name}:`);
-    });
+
+        const targetSourceFile = await tmpFile({ postfix: `.${name}` });
+        await writeFile(targetSourceFile.fd, targetSource);
+        console.log(`        Source: ${targetSourceFile.path}\n`);
+    }
 
     // Wait for user to kill program so that temp files aren't cleaned up.
-    await prompt();
+    await prompt({
+        type: 'confirm',
+        message: 'Holding temporary files. Press Enter when you are done to exit. Temporary files may be removed.',
+        name: 'unused',
+    });
 })();

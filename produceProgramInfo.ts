@@ -13,6 +13,7 @@ import { backends } from './backend-utils.js';
 
 type BackendResult = {
     name: string;
+    targetSource: string;
 };
 
 type ProgramInfo = {
@@ -79,8 +80,9 @@ export default (
         },
     });
 
-    const backendResults = backends.map(b => {
-        return { name: b.name };
+    const backendResults = backends.map(({ name, mplToExectuable }) => {
+        const targetSource = mplToExectuable(frontendOutput);
+        return { name, targetSource };
     });
 
     return { tokens, ast, frontendOutput, structure, threeAddressCode, backendResults };
