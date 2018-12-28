@@ -1,3 +1,4 @@
+import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCode/runtime.js';
 import { tokenSpecs, MplToken, MplAst, grammar } from './grammar.js';
 import { lex, Token, LexError } from './parser-lib/lex.js';
 import { parseMpl, compile, parseErrorToString } from './frontend.js';
@@ -6,10 +7,13 @@ import { FrontendOutput, ParseError } from './api.js';
 import join from './util/join.js';
 import { toString as typeToString } from './types.js';
 import { astToString } from './ast.js';
+import { ThreeAddressProgram } from './threeAddressCode/generator.js';
+import { makeTargetProgram } from './threeAddressCode/generator.js';
 
 type ProgramInfo = {
     tokens: Token<MplToken>[];
     ast: MplAst;
+    threeAddressCode: ThreeAddressProgram;
     frontendOutput: FrontendOutput;
     structure: string;
 };
@@ -39,23 +43,35 @@ export default (
         return frontendOutput as any;
     }
 
-    let structureText = '';
-    structureText += 'Functions:\n';
+    let structure = '';
+    structure += 'Functions:\n';
     frontendOutput.functions.forEach(f => {
-        structureText += `-> ${f.name}(${join(f.parameters.map(p => typeToString(p.type)), ', ')})\n`;
+        structure += `-> ${f.name}(${join(f.parameters.map(p => typeToString(p.type)), ', ')})\n`;
         f.statements.forEach(statement => {
-            structureText += `---> ${astToString(statement)}\n`;
+            structure += `---> ${astToString(statement)}\n`;
         });
     });
-    structureText += 'Program:\n';
-    structureText += '-> Globals:\n';
+    structure += 'Program:\n';
+    structure += '-> Globals:\n';
     frontendOutput.globalDeclarations.forEach(declaration => {
-        structureText += `---> ${declaration.type.kind} ${declaration.name}\n`;
+        structure += `---> ${declaration.type.kind} ${declaration.name}\n`;
     });
-    structureText += '-> Statements:\n';
+    structure += '-> Statements:\n';
     frontendOutput.program.statements.forEach(statement => {
-        structureText += `---> ${astToString(statement)}\n`;
+        structure += `---> ${astToString(statement)}\n`;
     });
 
-    return { tokens, ast, frontendOutput, structure: structureText };
+    // Make three address code with randome allocation, bytesInWord, and malloc/print impl. TODO: This is jank. Maybe three addree code should abstract voer platform stuff?
+    const threeAddressCode = makeTargetProgram({
+        backendInputs: frontendOutput,
+        targetInfo: {
+            alignment: 17,
+            bytesInWord: 13,
+            cleanupCode: [],
+            mallocImpl: mallocWithSbrk(7),
+            printImpl: printWithPrintRuntimeFunction(11),
+        },
+    });
+
+    return { tokens, ast, frontendOutput, structure, threeAddressCode };
 };

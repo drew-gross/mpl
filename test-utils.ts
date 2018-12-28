@@ -11,8 +11,6 @@ import debug from './util/debug.js';
 import join from './util/join.js';
 import { tokenSpecs, grammar } from './grammar.js';
 import { parse, stripResultIndexes, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
-import { makeTargetProgram } from './threeAddressCode/generator.js';
-import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCode/runtime.js';
 import { programToString } from './threeAddressCode/programToString.js';
 import { parseProgram as parseTacProgram, parseFunction } from './threeAddressCode/parser.js';
 import { backends } from './backend-utils.js';
@@ -126,25 +124,9 @@ export const mplTest = async (
     });
 
     // Do a roundtrip on three address code to string and back to check the parser for that
-    const tac = makeTargetProgram({
-        backendInputs: programInfo.frontendOutput,
-        targetInfo: {
-            alignment: 17,
-            bytesInWord: 13,
-            cleanupCode: [],
-            mallocImpl: mallocWithSbrk(7),
-            printImpl: printWithPrintRuntimeFunction(11),
-        },
-    });
-
-    const stringForm = programToString(tac);
-
-    // always print string form while working on parser
-    if (printSubsteps.includes('threeAddressCode')) {
-        console.log(stringForm);
-    }
-
+    const stringForm = programToString(programInfo.threeAddressCode);
     const roundtripResult = parseTacProgram(stringForm);
+
     if (Array.isArray(roundtripResult)) {
         t.fail(
             join(
@@ -167,8 +149,8 @@ export const mplTest = async (
     }
 
     // TODO: check the whole struct. Currently we don't check string literals because I haven't implemented that in the parser/generator
-    t.deepEqual(tac.functions, (roundtripResult as any).functions);
-    t.deepEqual(tac.globals, (roundtripResult as any).globals);
+    t.deepEqual(programInfo.threeAddressCode.functions, (roundtripResult as any).functions);
+    t.deepEqual(programInfo.threeAddressCode.globals, (roundtripResult as any).globals);
     // Backends
     for (let i = 0; i < backends.length; i++) {
         const backend = backends[i];
