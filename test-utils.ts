@@ -44,29 +44,14 @@ export const mplTest = async (
         expectedParseErrors,
         expectedStdOut = '',
         expectedAst,
-        printSubsteps = [],
-        debugSubsteps = [],
         failing = [],
         vizAst = false,
         name = undefined,
     }: TestOptions
 ) => {
-    if (typeof printSubsteps === 'string') {
-        printSubsteps = [printSubsteps];
-    }
-    if (typeof debugSubsteps === 'string') {
-        debugSubsteps = [debugSubsteps];
-    }
     if (typeof failing === 'string') {
         failing = [failing];
     }
-    const printableSubsteps = ['js', 'tokens', 'ast', 'c', 'mips', 'x64', 'structure', 'threeAddressCode'];
-    printSubsteps.forEach(substepToPrint => {
-        if (!printableSubsteps.includes(substepToPrint)) {
-            t.fail(`${substepToPrint} is not a printable substep`);
-        }
-    });
-
     // Make sure it parses
     const programInfo = await produceProgramInfo(source);
     if ('kind' in programInfo) {
