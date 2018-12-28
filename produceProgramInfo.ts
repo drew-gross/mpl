@@ -1,9 +1,11 @@
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCode/runtime.js';
 import { tokenSpecs, MplToken, MplAst, grammar } from './grammar.js';
+import { file as tmpFile } from 'tmp-promise';
+import { writeFile } from 'fs-extra';
 import { lex, Token, LexError } from './parser-lib/lex.js';
 import { parseMpl, compile, parseErrorToString } from './frontend.js';
 import { parse, stripResultIndexes, toDotFile, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
-import { FrontendOutput, ParseError } from './api.js';
+import { FrontendOutput, ParseError, ExecutionResult } from './api.js';
 import join from './util/join.js';
 import { toString as typeToString } from './types.js';
 import { astToString } from './ast.js';
@@ -14,6 +16,7 @@ import { backends } from './backend-utils.js';
 type BackendResult = {
     name: string;
     targetSource: string;
+    executionResult: ExecutionResult;
 };
 
 type ProgramInfo = {
@@ -25,9 +28,9 @@ type ProgramInfo = {
     structure: string;
 };
 
-export default (
+export default async (
     source: string
-): ProgramInfo | LexError | { parseErrors: ParseError[] } | { typeErrors: TypeError[] } => {
+): Promise<ProgramInfo | LexError | { parseErrors: ParseError[] } | { typeErrors: TypeError[] }> => {
     const tokens = lex(tokenSpecs, source);
     if ('kind' in tokens) {
         return tokens;
@@ -80,10 +83,17 @@ export default (
         },
     });
 
-    const backendResults = backends.map(({ name, mplToExectuable }) => {
-        const targetSource = mplToExectuable(frontendOutput);
-        return { name, targetSource };
-    });
+    const backendResults = await Promise.all(
+        backends.map(async ({ name, mplToExectuable, execute }) => {
+            const targetSource = mplToExectuable(frontendOutput);
+
+            const exeFile = await tmpFile({ postfix: `.${name}` });
+            await writeFile(exeFile.fd, targetSource);
+            const executionResult = await execute(exeFile.path);
+
+            return { name, targetSource, executionResult };
+        })
+    );
 
     return { tokens, ast, frontendOutput, structure, threeAddressCode, backendResults };
 };

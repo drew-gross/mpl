@@ -1,4 +1,4 @@
-import TestCase from './test-case.js';
+import { TestCase } from './test-case.js';
 
 const testCases: TestCase[] = [
     {

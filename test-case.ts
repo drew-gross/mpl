@@ -1,8 +1,16 @@
-type TestCase = {
+import { ExecutionResult } from './api.js';
+
+export type TestCase = {
     name: string;
-    exitCode: number;
     source: string;
+    exitCode: number;
+    stdout?: string;
     failing?: boolean;
 };
 
-export default TestCase;
+export const passed = (testCase: TestCase, result: ExecutionResult) => {
+    if ('error' in result) return false;
+    if (testCase.exitCode != result.exitCode) return false;
+    if (testCase.stdout && testCase.stdout != result.stdout) return false;
+    return true;
+};

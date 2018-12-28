@@ -6,7 +6,7 @@ import { Backend, TypeError } from './api.js';
 import { Ast } from './ast.js';
 import { compile, parseErrorToString } from './frontend.js';
 import { file as tmpFile } from 'tmp-promise';
-import { writeFile, outputFile } from 'fs-extra';
+import { writeFile } from 'fs-extra';
 import debug from './util/debug.js';
 import join from './util/join.js';
 import { tokenSpecs, grammar } from './grammar.js';
@@ -14,6 +14,7 @@ import { parse, stripResultIndexes, parseResultIsError, stripSourceLocation } fr
 import { programToString } from './threeAddressCode/programToString.js';
 import { parseProgram as parseTacProgram, parseFunction } from './threeAddressCode/parser.js';
 import { backends } from './backend-utils.js';
+import { passed } from './test-case.js';
 import produceProgramInfo from './produceProgramInfo.js';
 
 // TODO: separate this for mplTest vs tacTest, they have a lot of overlap but not perfect.
@@ -29,6 +30,7 @@ type TestOptions = {
     failing?: string[] | string;
     vizAst: boolean;
     spills?: number;
+    name?: string;
 };
 
 const typeErrorToString = (e: TypeError): string => JSON.stringify(e, null, 2);
@@ -46,6 +48,7 @@ export const mplTest = async (
         debugSubsteps = [],
         failing = [],
         vizAst = false,
+        name = undefined,
     }: TestOptions
 ) => {
     if (typeof printSubsteps === 'string') {
@@ -65,7 +68,7 @@ export const mplTest = async (
     });
 
     // Make sure it parses
-    const programInfo = produceProgramInfo(source);
+    const programInfo = await produceProgramInfo(source);
     if ('kind' in programInfo) {
         t.fail(`Lex Error: ${programInfo.error}`);
         return;
@@ -152,34 +155,25 @@ export const mplTest = async (
     t.deepEqual(programInfo.threeAddressCode.functions, (roundtripResult as any).functions);
     t.deepEqual(programInfo.threeAddressCode.globals, (roundtripResult as any).globals);
 
-    programInfo.backendResults.forEach(({ name }) => {
-        // TODO: stuff
-    });
+    const testCaseName = name;
+    for (let i = 0; i < programInfo.backendResults.length; i++) {
+        const { name, executionResult } = programInfo.backendResults[i];
+        if (!failing.includes(name)) {
+            t.true(
+                passed(
+                    { exitCode, stdout: expectedStdOut, name: testCaseName ? testCaseName : 'unnamed', source: source },
+                    executionResult
+                ),
+                testCaseName ? `Test failed. Run \`npm run debug-test-case "${testCaseName}"` : 'Unnamed test failed'
+            );
 
-    for (let i = 0; i < backends.length; i++) {
-        const backend = backends[i];
-        if (!failing.includes(backend.name)) {
-            const exeFile = await tmpFile({ postfix: `.${backend.name}` });
-            const exeContents = backend.mplToExectuable(programInfo.frontendOutput);
-            await writeFile(exeFile.fd, exeContents);
-
-            if (debugSubsteps.includes(backend.name)) {
-                if (backend.debug) {
-                    await backend.debug(exeFile.path);
-                } else {
-                    t.fail(`${backend.name} doesn't define a debugger`);
-                }
-            }
-            const result = await backend.execute(exeFile.path);
-            if ('error' in result) {
-                t.fail(`${backend.name} execution failed: ${result.error}`);
-                return;
-            }
-
-            if (result.exitCode !== exitCode || result.stdout !== expectedStdOut) {
-                const errorMessage = `${backend.name} had unexpected output.
-Exit code: ${result.exitCode}. Expected: ${exitCode}.
-Stdout: "${result.stdout}".
+            if (
+                !('error' in executionResult) &&
+                (executionResult.exitCode !== exitCode || executionResult.stdout !== expectedStdOut)
+            ) {
+                const errorMessage = `${name} had unexpected output.
+Exit code: ${executionResult.exitCode}. Expected: ${exitCode}.
+Stdout: "${executionResult.stdout}".
 Expected: "${expectedStdOut}"`;
                 t.fail(errorMessage);
             }

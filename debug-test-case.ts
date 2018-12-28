@@ -1,4 +1,5 @@
 import testCases from './test-cases.js';
+import { passed } from './test-case.js';
 import produceProgramInfo from './produceProgramInfo.js';
 import { file as tmpFile } from 'tmp-promise';
 import { writeFile } from 'fs-extra';
@@ -23,7 +24,7 @@ import { programToString } from './threeAddressCode/programToString.js';
         return;
     }
 
-    const programInfo = produceProgramInfo(testCase.source);
+    const programInfo = await produceProgramInfo(testCase.source);
 
     if ('kind' in programInfo || 'parseErrors' in programInfo || 'typeErrors' in programInfo) {
         // TODO: Unify and improve error printing logic with test-utils and produceProgramInfo
@@ -54,15 +55,16 @@ import { programToString } from './threeAddressCode/programToString.js';
 
     console.log('\nBackends:');
     for (let i = 0; i < programInfo.backendResults.length; i++) {
-        const { name, targetSource } = programInfo.backendResults[i];
+        const { name, targetSource, executionResult } = programInfo.backendResults[i];
         console.log(`    ${name}:`);
 
         const targetSourceFile = await tmpFile({ postfix: `.${name}` });
         await writeFile(targetSourceFile.fd, targetSource);
-        console.log(`        Source: ${targetSourceFile.path}\n`);
+        console.log(`        Source: ${targetSourceFile.path}`);
+        console.log(`        Passed: ${passed(testCase, executionResult)}`);
+        console.log('');
     }
 
-    // Wait for user to kill program so that temp files aren't cleaned up.
     await prompt({
         type: 'confirm',
         message: 'Holding temporary files. Press Enter when you are done to exit. Temporary files may be removed.',
