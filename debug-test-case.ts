@@ -6,6 +6,7 @@ import writeSvg from './util/graph/writeSvg.js';
 import { prompt } from 'inquirer';
 import * as dot from 'graphlib-dot';
 import { toDotFile } from './parser-lib/parse.js';
+import { programToString } from './threeAddressCode/programToString.js';
 
 (async () => {
     if (process.argv.length != 3) {
@@ -46,6 +47,10 @@ import { toDotFile } from './parser-lib/parse.js';
     const structureFile = await tmpFile({ postfix: '.txt' });
     await writeFile(structureFile.fd, programInfo.structure);
     console.log(`Structure: ${structureFile.path}`);
+
+    const tacFile = await tmpFile({ postfix: '.txt' });
+    await writeFile(tacFile.fd, programToString(programInfo.threeAddressCode));
+    console.log(`Three Address Code: ${tacFile.path}`);
 
     // Wait for user to kill program so that temp files aren't cleaned up.
     await prompt();
