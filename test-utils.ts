@@ -106,10 +106,7 @@ export const mplTest = async (
         return;
     }
 
-    if (expectedTypeErrors && 'typeErrors' in programInfo.frontendOutput) {
-    } else if ('typeErrors' in programInfo.frontendOutput) {
-        return;
-    } else if (expectedTypeErrors) {
+    if (expectedTypeErrors) {
         t.fail('Expected type errors and none found');
         return;
     }
