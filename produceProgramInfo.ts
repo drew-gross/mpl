@@ -61,7 +61,7 @@ export default (
         structure += `---> ${astToString(statement)}\n`;
     });
 
-    // Make three address code with randome allocation, bytesInWord, and malloc/print impl. TODO: This is jank. Maybe three addree code should abstract voer platform stuff?
+    // Make three address code with random alignment, bytesInWord, and malloc/print impl. TODO: This is jank. Maybe three addree code should abstract over platform stuff?
     const threeAddressCode = makeTargetProgram({
         backendInputs: frontendOutput,
         targetInfo: {
