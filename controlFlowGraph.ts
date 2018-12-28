@@ -111,13 +111,16 @@ const livenessUpdate = (tas: ThreeAddressStatement): { newlyLive: Register[]; ne
         case 'loadSymbolAddress':
             return { newlyLive: [], newlyDead: [tas.to] };
         case 'callByRegister':
-            return { newlyLive: [tas.function], newlyDead: [] };
+            return {
+                newlyLive: [tas.function, 'functionArgument1', 'functionArgument2', 'functionArgument3'],
+                newlyDead: [],
+            };
         case 'label':
         case 'callByName':
         case 'functionLabel':
         case 'returnToCaller':
         case 'goto':
-            return { newlyLive: [], newlyDead: [] };
+            return { newlyLive: ['functionArgument1', 'functionArgument2', 'functionArgument3'], newlyDead: [] };
         case 'gotoIfEqual':
         case 'gotoIfNotEqual':
         case 'gotoIfGreater':
