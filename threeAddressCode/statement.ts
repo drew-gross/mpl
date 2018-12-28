@@ -1,4 +1,6 @@
 import { toString as registerToString, Register } from '../register.js';
+import { filter, FilterPredicate } from '../util/list/filter.js';
+import debug from '../util/debug.js';
 
 type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 
@@ -123,3 +125,127 @@ const toStringWithoutComment = (tas: Statement): string => {
 };
 
 export const toString = (tas: Statement): string => `${toStringWithoutComment(tas)} # ${tas.why}`;
+
+export const reads = (tas: Statement): Register[] => {
+    if (!tas) debug('!tas');
+    switch (tas.kind) {
+        case 'comment':
+            return [];
+        case 'syscall':
+            const predicate: FilterPredicate<Register | number, Register> = (arg: Register | number): arg is Register =>
+                typeof arg !== 'number';
+            return filter<Register | number, Register>(tas.arguments, predicate);
+        case 'move':
+            return [tas.from];
+        case 'loadImmediate':
+            return [];
+        case 'addImmediate':
+        case 'increment':
+            return [tas.register];
+        case 'subtract':
+        case 'add':
+        case 'multiply':
+            return [tas.lhs, tas.rhs];
+        case 'storeGlobal':
+            return [tas.from];
+        case 'loadGlobal':
+            return [];
+        case 'storeMemory':
+            return [tas.from, tas.address];
+        case 'storeMemoryByte':
+            return [tas.contents, tas.address];
+        case 'storeZeroToMemory':
+            return [tas.address];
+        case 'loadMemory':
+            return [tas.from];
+        case 'loadMemoryByte':
+            return [tas.address];
+        case 'loadSymbolAddress':
+            return [];
+        case 'callByRegister':
+            return [tas.function, 'functionArgument1', 'functionArgument2', 'functionArgument3'];
+        case 'label':
+        case 'callByName':
+        case 'functionLabel':
+        case 'returnToCaller':
+        case 'goto':
+            return ['functionArgument1', 'functionArgument2', 'functionArgument3'];
+        case 'gotoIfEqual':
+        case 'gotoIfNotEqual':
+        case 'gotoIfGreater':
+            const result = [tas.lhs];
+            if (typeof tas.rhs != 'number') {
+                result.push(tas.rhs);
+            }
+            return result;
+        case 'gotoIfZero':
+            return [tas.register];
+        case 'stackAllocateAndStorePointer':
+            return [];
+        case 'unspill':
+            return [];
+        case 'spill':
+            return [tas.register];
+        default:
+            throw debug(`${(tas as any).kind} unhanlded in reads`);
+    }
+};
+
+export const writes = (tas: Statement): Register[] => {
+    if (!tas) debug('!tas');
+    switch (tas.kind) {
+        case 'comment':
+            return [];
+        case 'syscall':
+            return tas.destination ? [tas.destination] : [];
+        case 'move':
+            return [tas.to];
+        case 'loadImmediate':
+            return [tas.destination];
+        case 'addImmediate':
+        case 'increment':
+            return [];
+        case 'subtract':
+        case 'add':
+        case 'multiply':
+            return [tas.destination];
+        case 'storeGlobal':
+            return [];
+        case 'loadGlobal':
+            return [tas.to];
+        case 'storeMemory':
+            return [];
+        case 'storeMemoryByte':
+            return [];
+        case 'storeZeroToMemory':
+            return [];
+        case 'loadMemory':
+            return [tas.to];
+        case 'loadMemoryByte':
+            return [tas.to];
+        case 'loadSymbolAddress':
+            return [tas.to];
+        case 'callByRegister':
+            return [];
+        case 'label':
+        case 'callByName':
+        case 'functionLabel':
+        case 'returnToCaller':
+        case 'goto':
+            return [];
+        case 'gotoIfEqual':
+        case 'gotoIfNotEqual':
+        case 'gotoIfGreater':
+            return [];
+        case 'gotoIfZero':
+            return [];
+        case 'stackAllocateAndStorePointer':
+            return [tas.register];
+        case 'unspill':
+            return [tas.register];
+        case 'spill':
+            return [];
+        default:
+            throw debug(`${(tas as any).kind} unhanldes in livenessUpdate`);
+    }
+};

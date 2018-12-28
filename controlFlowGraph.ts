@@ -3,14 +3,13 @@ import last from './util/list/last.js';
 import sum from './util/list/sum.js';
 import flatten from './util/list/flatten.js';
 import { set, Set, join as setJoin, fromList as setFromList } from './util/set.js';
-import { filter, FilterPredicate } from './util/list/filter.js';
 import join from './util/join.js';
 import grid from './util/grid.js';
 import idAppender from './util/idAppender.js';
 import { RegisterAssignment } from './backend-utils.js';
 import { Register, isEqual as registerIsEqual } from './register.js';
 import { ThreeAddressFunction } from './threeAddressCode/generator.js';
-import { Statement, toString as tasToString } from './threeAddressCode/statement.js';
+import { Statement, toString as tasToString, reads, writes } from './threeAddressCode/statement.js';
 import { Graph } from 'graphlib';
 import { functionToString } from './threeAddressCode/programToString.js';
 
@@ -69,82 +68,6 @@ const blockBehaviour = (tas: Statement): 'endBlock' | 'beginBlock' | 'midBlock' 
             throw debug(`${(tas as any).kind} unhanldes in blockBehaviour`);
     }
 };
-
-const livenessUpdate = (tas: Statement): { newlyLive: Register[]; newlyDead: Register[] } => {
-    if (!tas) debug('!tas');
-    switch (tas.kind) {
-        case 'comment':
-            return { newlyLive: [], newlyDead: [] };
-        case 'syscall':
-            const predicate: FilterPredicate<Register | number, Register> = (arg: Register | number): arg is Register =>
-                typeof arg !== 'number';
-            const registerArguments: Register[] = filter<Register | number, Register>(tas.arguments, predicate);
-            return {
-                newlyLive: registerArguments,
-                newlyDead: tas.destination ? [tas.destination] : [],
-            };
-        case 'move':
-            return { newlyLive: [tas.from], newlyDead: [tas.to] };
-        case 'loadImmediate':
-            return { newlyLive: [], newlyDead: [tas.destination] };
-        case 'addImmediate':
-        case 'increment':
-            return { newlyLive: [tas.register], newlyDead: [] };
-        case 'subtract':
-        case 'add':
-        case 'multiply':
-            return { newlyLive: [tas.lhs, tas.rhs], newlyDead: [tas.destination] };
-        case 'storeGlobal':
-            return { newlyLive: [tas.from], newlyDead: [] };
-        case 'loadGlobal':
-            return { newlyLive: [], newlyDead: [tas.to] };
-        case 'storeMemory':
-            return { newlyLive: [tas.from, tas.address], newlyDead: [] };
-        case 'storeMemoryByte':
-            return { newlyLive: [tas.contents, tas.address], newlyDead: [] };
-        case 'storeZeroToMemory':
-            return { newlyLive: [tas.address], newlyDead: [] };
-        case 'loadMemory':
-            return { newlyLive: [tas.from], newlyDead: [tas.to] };
-        case 'loadMemoryByte':
-            return { newlyLive: [tas.address], newlyDead: [tas.to] };
-        case 'loadSymbolAddress':
-            return { newlyLive: [], newlyDead: [tas.to] };
-        case 'callByRegister':
-            return {
-                newlyLive: [tas.function, 'functionArgument1', 'functionArgument2', 'functionArgument3'],
-                newlyDead: [],
-            };
-        case 'label':
-        case 'callByName':
-        case 'functionLabel':
-        case 'returnToCaller':
-        case 'goto':
-            return { newlyLive: ['functionArgument1', 'functionArgument2', 'functionArgument3'], newlyDead: [] };
-        case 'gotoIfEqual':
-        case 'gotoIfNotEqual':
-        case 'gotoIfGreater':
-            const live = [tas.lhs];
-            if (typeof tas.rhs != 'number') {
-                live.push(tas.rhs);
-            }
-            return { newlyLive: live, newlyDead: [] };
-        case 'gotoIfZero':
-            return { newlyLive: [tas.register], newlyDead: [] };
-        case 'stackAllocateAndStorePointer':
-            return { newlyLive: [], newlyDead: [tas.register] };
-        case 'unspill':
-            return { newlyLive: [], newlyDead: [tas.register] };
-        case 'spill':
-            return { newlyLive: [tas.register], newlyDead: [] };
-        default:
-            throw debug(`${(tas as any).kind} unhanldes in livenessUpdate`);
-    }
-};
-
-// TODO: Its slightly odd that this is implemented in terms of livenessUpdate instead of the other way around
-export const readRegisters = (tas: Statement): Register[] => livenessUpdate(tas).newlyLive;
-export const writtenRegisters = (tas: Statement): Register[] => livenessUpdate(tas).newlyDead;
 
 const blockName = (rtl: Statement[]) => {
     if (rtl.length == 0) throw debug('empty rtl in blockName');
@@ -298,7 +221,8 @@ export const computeBlockLiveness = (block: BasicBlock): Set<Register>[] => {
         .reduce(
             (liveness, next) => {
                 const newLiveness = liveness[0].copy();
-                const { newlyLive, newlyDead } = livenessUpdate(next);
+                const newlyLive = reads(next);
+                const newlyDead = reads(next);
                 newlyDead.forEach(item => {
                     newLiveness.remove(item);
                 });
@@ -317,7 +241,7 @@ const propagateBlockLiveness = (block: BasicBlock, liveness: Set<Register>[], li
     liveAtExit.toList().forEach(item => {
         for (let i = liveness.length - 1; i >= 0; i--) {
             if (i < block.instructions.length) {
-                const newlyDead = setFromList(registerIsEqual, livenessUpdate(block.instructions[i]).newlyDead);
+                const newlyDead = setFromList(registerIsEqual, writes(block.instructions[i]));
                 if (newlyDead.has(item)) {
                     return;
                 }
@@ -571,7 +495,7 @@ const removeDeadStores = (taf: ThreeAddressFunction, liveness: Set<Register>[]):
     let anythingChanged: boolean = false;
     if (taf.instructions.length + 1 != liveness.length) throw debug('Liveness length != taf length + 1');
     for (let i = 0; i < taf.instructions.length; i++) {
-        const targets = writtenRegisters(taf.instructions[i]);
+        const targets = writes(taf.instructions[i]);
         // If there are written registers and none of them are live, omit the write. This
         // will fail if the instruction doing the writing also has side effects, e.g. syscall. TODO:
         // Implement something that takes this into account. TODO: Treat function result less special-casey somehow. Maybe put it into liveness computing.
