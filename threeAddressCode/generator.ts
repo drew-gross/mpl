@@ -24,50 +24,9 @@ import {
 } from '../backend-utils.js';
 import { Register, toString as registerToString } from '../register.js';
 import { Function, VariableDeclaration, StringLiteralData } from '../api.js';
+import { Statement } from './statement.js';
 
-type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
-
-export type ThreeAddressStatement = { why: string } & (
-    | { kind: 'comment' }
-    // Arithmetic
-    | { kind: 'move'; from: Register; to: Register }
-    | { kind: 'loadImmediate'; value: number; destination: Register }
-    | { kind: 'addImmediate'; register: Register; amount: number }
-    | { kind: 'subtract'; lhs: Register; rhs: Register; destination: Register }
-    | { kind: 'add'; lhs: Register; rhs: Register; destination: Register }
-    | { kind: 'multiply'; lhs: Register; rhs: Register; destination: Register }
-    | { kind: 'increment'; register: Register }
-    // Labels
-    | { kind: 'label'; name: string }
-    | { kind: 'functionLabel'; name: string }
-    // Stack management
-    | { kind: 'stackAllocateAndStorePointer'; bytes: number; register: Register }
-    // Spilling
-    | { kind: 'spill'; register: Register; offset: number }
-    | { kind: 'unspill'; register: Register; offset: number }
-    // Branches
-    | { kind: 'goto'; label: string }
-    | { kind: 'gotoIfEqual'; lhs: Register; rhs: Register; label: string }
-    | { kind: 'gotoIfNotEqual'; lhs: Register; rhs: Register | number; label: string }
-    | { kind: 'gotoIfZero'; register: Register; label: string }
-    | { kind: 'gotoIfGreater'; lhs: Register; rhs: Register; label: string }
-    // Memory Writes
-    | { kind: 'storeGlobal'; from: Register; to: string }
-    | { kind: 'storeMemory'; from: Register; address: Register; offset: number }
-    | { kind: 'storeMemoryByte'; address: Register; contents: Register }
-    | { kind: 'storeZeroToMemory'; address: Register; offset: number }
-    // Memory reads
-    | { kind: 'loadGlobal'; from: string; to: Register }
-    | { kind: 'loadMemory'; from: Register; to: Register; offset: number }
-    | { kind: 'loadMemoryByte'; address: Register; to: Register }
-    | { kind: 'loadSymbolAddress'; to: Register; symbolName: string }
-    // Function calls
-    | { kind: 'syscall'; name: SyscallName; arguments: (Register | number)[]; destination: Register | undefined }
-    | { kind: 'callByName'; function: string }
-    | { kind: 'callByRegister'; function: Register }
-    | { kind: 'returnToCaller' });
-
-export type ThreeAddressCode = ThreeAddressStatement[];
+export type ThreeAddressCode = Statement[];
 
 export type ThreeAddressFunction = {
     instructions: ThreeAddressCode;
@@ -133,7 +92,7 @@ export type BackendOptions = {
 export type TargetInfo = {
     alignment: number;
     bytesInWord: number;
-    cleanupCode: ThreeAddressStatement[];
+    cleanupCode: Statement[];
     // These functions tend to have platform specific implementations. Put your platforms implementation here.
     mallocImpl: ThreeAddressFunction;
     printImpl: ThreeAddressFunction;
@@ -146,7 +105,7 @@ const memberOffset = (type: Type, memberName: string, targetInfo: TargetInfo): n
     return result * targetInfo.alignment;
 };
 
-export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression<ThreeAddressStatement> => {
+export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression<Statement> => {
     const {
         ast,
         variablesInScope,
@@ -161,11 +120,11 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
     const recurse = newInput => astToThreeAddressCode({ ...input, ...newInput });
     switch (ast.kind) {
         case 'number':
-            return compileExpression<ThreeAddressStatement>([], ([]) => [
+            return compileExpression<Statement>([], ([]) => [
                 { kind: 'loadImmediate', value: ast.value, destination, why: 'Load number literal' },
             ]);
         case 'booleanLiteral':
-            return compileExpression<ThreeAddressStatement>([], ([]) => [
+            return compileExpression<Statement>([], ([]) => [
                 {
                     kind: 'loadImmediate',
                     value: ast.value ? 1 : 0,
@@ -176,7 +135,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
         case 'stringLiteral': {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
             if (!stringLiteralData) throw debug('todo');
-            return compileExpression<ThreeAddressStatement>([], ([]) => [
+            return compileExpression<Statement>([], ([]) => [
                 {
                     kind: 'loadSymbolAddress',
                     symbolName: stringLiteralName(stringLiteralData),
@@ -191,7 +150,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 ast: ast.expression,
                 destination: result,
             });
-            return compileExpression<ThreeAddressStatement>([subExpression], ([e1]) => [
+            return compileExpression<Statement>([subExpression], ([e1]) => [
                 ...e1,
                 {
                     kind: 'move',
@@ -206,7 +165,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const computeLhs = recurse({ ast: ast.lhs, destination: lhs });
             const computeRhs = recurse({ ast: ast.rhs, destination: rhs });
 
-            return compileExpression<ThreeAddressStatement>([computeLhs, computeRhs], ([storeLeft, storeRight]) => [
+            return compileExpression<Statement>([computeLhs, computeRhs], ([storeLeft, storeRight]) => [
                 ...storeLeft,
                 ...storeRight,
                 {
@@ -224,7 +183,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const computeLhs = recurse({ ast: ast.lhs, destination: lhs });
             const computeRhs = recurse({ ast: ast.rhs, destination: rhs });
 
-            return compileExpression<ThreeAddressStatement>([computeLhs, computeRhs], ([storeLeft, storeRight]) => [
+            return compileExpression<Statement>([computeLhs, computeRhs], ([storeLeft, storeRight]) => [
                 ...storeLeft,
                 ...storeRight,
                 {
@@ -243,7 +202,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const computeCondition = recurse({ ast: ast.condition, destination: condition });
             const ifTrueExpression = recurse({ ast: ast.ifTrue });
             const ifFalseExpression = recurse({ ast: ast.ifFalse });
-            return compileExpression<ThreeAddressStatement>(
+            return compileExpression<Statement>(
                 [computeCondition, ifTrueExpression, ifFalseExpression],
                 ([e1, e2, e3]) => [
                     ...e1,
@@ -262,7 +221,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             );
         }
         case 'functionLiteral':
-            return compileExpression<ThreeAddressStatement>([], ([]) => [
+            return compileExpression<Statement>([], ([]) => [
                 {
                     kind: 'loadSymbolAddress',
                     to: destination,
@@ -272,7 +231,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             ]);
         case 'callExpression': {
             const functionName = ast.name;
-            let callInstructions: (string | ThreeAddressStatement)[] = [];
+            let callInstructions: (string | Statement)[] = [];
             if (builtinFunctions.map(b => b.name).includes(functionName)) {
                 const functionPointer = makeTemporary('function_pointer');
                 callInstructions = [
@@ -333,7 +292,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 ...argumentComputer,
             ];
 
-            return compileExpression<ThreeAddressStatement>(computeArgumentsMips, argumentComputers => [
+            return compileExpression<Statement>(computeArgumentsMips, argumentComputers => [
                 ...flatten(argumentComputers.map(argumentComputerToMips)),
                 { kind: 'comment', why: `call ${functionName}` },
                 ...callInstructions,
@@ -356,22 +315,19 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     ast: ast.rhs,
                     destination: 'functionArgument2',
                 });
-                return compileExpression<ThreeAddressStatement>(
-                    [storeLeftInstructions, storeRightInstructions],
-                    ([e1, e2]) => [
-                        { kind: 'comment', why: 'Store left side in s0' },
-                        ...e1,
-                        { kind: 'comment', why: 'Store right side in s1' },
-                        ...e2,
-                        { kind: 'callByName', function: 'stringEquality', why: 'Call stringEquality' },
-                        {
-                            kind: 'move',
-                            from: 'functionResult',
-                            to: destination,
-                            why: 'Return value in functionResult to destination',
-                        },
-                    ]
-                );
+                return compileExpression<Statement>([storeLeftInstructions, storeRightInstructions], ([e1, e2]) => [
+                    { kind: 'comment', why: 'Store left side in s0' },
+                    ...e1,
+                    { kind: 'comment', why: 'Store right side in s1' },
+                    ...e2,
+                    { kind: 'callByName', function: 'stringEquality', why: 'Call stringEquality' },
+                    {
+                        kind: 'move',
+                        from: 'functionResult',
+                        to: destination,
+                        why: 'Return value in functionResult to destination',
+                    },
+                ]);
             } else {
                 const lhs = makeTemporary('equality_lhs');
                 const rhs = makeTemporary('equality_rhs');
@@ -381,7 +337,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 const equalLabel = makeLabel('equal');
                 const endOfConditionLabel = makeLabel('endOfCondition');
 
-                return compileExpression<ThreeAddressStatement>(
+                return compileExpression<Statement>(
                     [storeLeftInstructions, storeRightInstructions],
                     ([storeLeft, storeRight]) => [
                         ...storeLeft,
@@ -409,7 +365,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 switch (lhsType.kind) {
                     case 'Function':
                     case 'Integer':
-                        return compileExpression<ThreeAddressStatement>([computeRhs], ([e1]) => [
+                        return compileExpression<Statement>([computeRhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'storeGlobal',
@@ -419,7 +375,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             },
                         ]);
                     case 'String':
-                        return compileExpression<ThreeAddressStatement>([computeRhs], ([e1]) => [
+                        return compileExpression<Statement>([computeRhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'move',
@@ -462,7 +418,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         ]);
                     case 'Product':
                         const lhsAddress = makeTemporary('lhsAddress');
-                        const copyStructInstructions: ThreeAddressStatement[] = [
+                        const copyStructInstructions: Statement[] = [
                             {
                                 kind: 'loadSymbolAddress',
                                 to: lhsAddress,
@@ -492,7 +448,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 })
                             ),
                         ];
-                        return compileExpression<ThreeAddressStatement>([computeRhs], ([e1]) => [
+                        return compileExpression<Statement>([computeRhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'stackAllocateAndStorePointer',
@@ -522,7 +478,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const lhs: string = ast.destination;
             if (lhs in globalNameMap) {
                 const reassignmentRhs = makeTemporary('reassignment_rhs');
-                const rhs: CompiledExpression<ThreeAddressStatement> = recurse({
+                const rhs: CompiledExpression<Statement> = recurse({
                     ast: ast.expression,
                     destination: reassignmentRhs,
                 });
@@ -530,7 +486,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 switch (declaration.originalDeclaration.type.kind) {
                     case 'Function':
                     case 'Integer':
-                        return compileExpression<ThreeAddressStatement>([rhs], ([e1]) => [
+                        return compileExpression<Statement>([rhs], ([e1]) => [
                             ...e1,
                             {
                                 kind: 'storeGlobal',
@@ -548,7 +504,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                     to: oldData,
                                     from: declaration.newName,
                                     why: 'Save global for freeing after assignment',
-                                } as ThreeAddressStatement,
+                                } as Statement,
                             ],
                             execute: [],
                             cleanup: [
@@ -563,9 +519,9 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                     function: 'my_free',
                                     why: 'Free string that is no longer accessible',
                                 },
-                            ] as ThreeAddressStatement[],
+                            ] as Statement[],
                         };
-                        return compileExpression<ThreeAddressStatement>([rhs, prepAndCleanup], ([e1, _]) => [
+                        return compileExpression<Statement>([rhs, prepAndCleanup], ([e1, _]) => [
                             ...e1,
                             {
                                 kind: 'move',
@@ -627,7 +583,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 ast: ast.rhs,
                 destination: rightSideDestination,
             });
-            const cleanup: CompiledExpression<ThreeAddressStatement> = {
+            const cleanup: CompiledExpression<Statement> = {
                 prepare: [],
                 execute: [],
                 cleanup: [
@@ -641,7 +597,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     { kind: 'callByName', function: 'my_free', why: 'Freeing temporary from concat' },
                 ],
             };
-            return compileExpression<ThreeAddressStatement>(
+            return compileExpression<Statement>(
                 [storeLeftInstructions, storeRightInstructions, cleanup],
                 ([e1, e2, _]) => [
                     {
@@ -731,7 +687,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             if (identifierName in globalNameMap) {
                 const info = globalNameMap[identifierName];
                 if (info.originalDeclaration.type.kind == 'Product') {
-                    return compileExpression<ThreeAddressStatement>([], ([]) => [
+                    return compileExpression<Statement>([], ([]) => [
                         {
                             kind: 'loadSymbolAddress',
                             to: destination,
@@ -740,7 +696,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         },
                     ]);
                 } else {
-                    return compileExpression<ThreeAddressStatement>([], ([]) => [
+                    return compileExpression<Statement>([], ([]) => [
                         {
                             kind: 'loadGlobal',
                             to: destination,
@@ -751,7 +707,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 }
             }
             const identifierRegister = variablesInScope[identifierName];
-            return compileExpression<ThreeAddressStatement>([], ([]) => [
+            return compileExpression<Statement>([], ([]) => [
                 {
                     kind: 'move',
                     from: identifierRegister,
@@ -772,7 +728,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 ast: ast.rhs,
                 destination: rightSideDestination,
             });
-            return compileExpression<ThreeAddressStatement>(
+            return compileExpression<Statement>(
                 [storeLeftInstructions, storeRightInstructions],
                 ([storeLeft, storeRight]) => [
                     ...storeLeft,
@@ -788,7 +744,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             );
         }
         case 'objectLiteral': {
-            const createObjectMembers: CompiledExpression<ThreeAddressStatement>[] = ast.members.map((m, index) => {
+            const createObjectMembers: CompiledExpression<Statement>[] = ast.members.map((m, index) => {
                 const memberTemporary = makeTemporary(`member_${m.name}`);
                 return compileExpression(
                     [recurse({ ast: m.expression, destination: memberTemporary })],
@@ -804,7 +760,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     ]
                 );
             });
-            return compileExpression<ThreeAddressStatement>(createObjectMembers, members => [
+            return compileExpression<Statement>(createObjectMembers, members => [
                 {
                     kind: 'stackAllocateAndStorePointer',
                     bytes: typeSize(targetInfo, ast.type, types),
@@ -826,7 +782,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     throw debug('invalid nameref');
                 }
             }
-            return compileExpression<ThreeAddressStatement>([lhsInstructions], ([makeLhs]) => [
+            return compileExpression<Statement>([lhsInstructions], ([makeLhs]) => [
                 ...makeLhs,
                 {
                     kind: 'loadMemory',
@@ -903,7 +859,7 @@ export const constructFunction = (
 };
 
 export const threeAddressCodeToTarget = <TargetRegister>(
-    tas: ThreeAddressStatement,
+    tas: Statement,
     stackOffset: number,
     syscallNumbers,
     registerTypes: RegisterDescription<TargetRegister>,
@@ -1092,7 +1048,7 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
         constructFunction(f, globalNameMap, stringLiterals, labelMaker, makeTemporary, types, targetInfo)
     );
 
-    const mainProgramInstructions: ThreeAddressStatement[] = flatten(
+    const mainProgramInstructions: Statement[] = flatten(
         program.statements.map(statement => {
             const compiledProgram = astToThreeAddressCode({
                 ast: statement,
@@ -1110,7 +1066,7 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
         })
     );
 
-    const freeGlobalsInstructions: ThreeAddressStatement[] = flatten(
+    const freeGlobalsInstructions: Statement[] = flatten(
         globalDeclarations
             .filter(declaration => declaration.type.kind === 'String')
             .map(declaration => [
@@ -1119,12 +1075,12 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
                     from: globalNameMap[declaration.name].newName,
                     to: 'functionArgument1',
                     why: 'Load global string so we can free it',
-                } as ThreeAddressStatement,
+                } as Statement,
                 {
                     kind: 'callByName',
                     function: 'my_free',
                     why: 'Free global string at end of program',
-                } as ThreeAddressStatement,
+                } as Statement,
             ])
     );
 

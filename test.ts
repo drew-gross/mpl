@@ -4,7 +4,8 @@ import testCases from './test-cases.js';
 import { parseFunction, parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
 import prettyParseError from './parser-lib/pretty-parse-error.js';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
-import { ThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
+import { ThreeAddressFunction } from './threeAddressCode/generator.js';
+import { Statement } from './threeAddressCode/statement.js';
 import * as threeAddressCodeRuntime from './threeAddressCode/runtime.js';
 import test from 'ava';
 import flatten from './util/list/flatten.js';
@@ -1395,7 +1396,7 @@ return ip1.first + ip1.second + ip2.second;
 });
 
 test('controlFlowGraph basic test', t => {
-    const rtl: ThreeAddressStatement[] = [
+    const rtl: Statement[] = [
         {
             kind: 'functionLabel',
             name: 'test',

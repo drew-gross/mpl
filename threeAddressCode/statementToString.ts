@@ -1,6 +1,6 @@
 import debug from '../util/debug.js';
 import { toString as registerToString, Register } from '../register.js';
-import { ThreeAddressStatement } from './generator.js';
+import { Statement } from './statement.js';
 
 const syscallArgToString = (regOrNumber: number | Register): string => {
     if (typeof regOrNumber == 'number') {
@@ -10,7 +10,7 @@ const syscallArgToString = (regOrNumber: number | Register): string => {
     }
 };
 
-const toStringWithoutComment = (tas: ThreeAddressStatement): string => {
+const toStringWithoutComment = (tas: Statement): string => {
     switch (tas.kind) {
         case 'comment':
             return ``;
@@ -82,4 +82,4 @@ const toStringWithoutComment = (tas: ThreeAddressStatement): string => {
     }
 };
 
-export default (tas: ThreeAddressStatement): string => `${toStringWithoutComment(tas)} # ${tas.why}`;
+export default (tas: Statement): string => `${toStringWithoutComment(tas)} # ${tas.why}`;

@@ -1,7 +1,6 @@
 #! /usr/bin/env node
 
 import { allRuntimeFunctions } from '../threeAddressCode/runtime.js';
-import { ThreeAddressStatement } from '../threeAddressCode/generator.js';
 import { controlFlowGraph, toDotFile } from '../controlFlowGraph.js';
 import writeSvg from '../util/graph/writeSvg.js';
 

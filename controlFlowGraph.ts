@@ -9,14 +9,15 @@ import grid from './util/grid.js';
 import idAppender from './util/idAppender.js';
 import { RegisterAssignment } from './backend-utils.js';
 import { Register, isEqual as registerIsEqual } from './register.js';
-import { ThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
+import { ThreeAddressFunction } from './threeAddressCode/generator.js';
+import { Statement } from './threeAddressCode/statement.js';
 import tasToString from './threeAddressCode/statementToString.js';
 import { Graph } from 'graphlib';
 import { functionToString } from './threeAddressCode/programToString.js';
 
 export type BasicBlock = {
     name: string;
-    instructions: ThreeAddressStatement[];
+    instructions: Statement[];
 };
 
 export type ControlFlowGraph = {
@@ -30,7 +31,7 @@ export type ControlFlowGraph = {
     exits: number[];
 };
 
-const blockBehaviour = (tas: ThreeAddressStatement): 'endBlock' | 'beginBlock' | 'midBlock' => {
+const blockBehaviour = (tas: Statement): 'endBlock' | 'beginBlock' | 'midBlock' => {
     switch (tas.kind) {
         case 'comment':
         case 'syscall':
@@ -70,7 +71,7 @@ const blockBehaviour = (tas: ThreeAddressStatement): 'endBlock' | 'beginBlock' |
     }
 };
 
-const livenessUpdate = (tas: ThreeAddressStatement): { newlyLive: Register[]; newlyDead: Register[] } => {
+const livenessUpdate = (tas: Statement): { newlyLive: Register[]; newlyDead: Register[] } => {
     if (!tas) debug('!tas');
     switch (tas.kind) {
         case 'comment':
@@ -143,10 +144,10 @@ const livenessUpdate = (tas: ThreeAddressStatement): { newlyLive: Register[]; ne
 };
 
 // TODO: Its slightly odd that this is implemented in terms of livenessUpdate instead of the other way around
-export const readRegisters = (tas: ThreeAddressStatement): Register[] => livenessUpdate(tas).newlyLive;
-export const writtenRegisters = (tas: ThreeAddressStatement): Register[] => livenessUpdate(tas).newlyDead;
+export const readRegisters = (tas: Statement): Register[] => livenessUpdate(tas).newlyLive;
+export const writtenRegisters = (tas: Statement): Register[] => livenessUpdate(tas).newlyDead;
 
-const blockName = (rtl: ThreeAddressStatement[]) => {
+const blockName = (rtl: Statement[]) => {
     if (rtl.length == 0) throw debug('empty rtl in blockName');
     const rtx = rtl[0];
     switch (rtx.kind) {
@@ -166,7 +167,7 @@ const blockName = (rtl: ThreeAddressStatement[]) => {
 
 type Exits = { blockName: string | false; next: boolean; exit: boolean };
 
-const blockExits = (rtl: ThreeAddressStatement[]): Exits => {
+const blockExits = (rtl: Statement[]): Exits => {
     const rtx = last(rtl);
     if (!rtx) throw debug('empty rtl');
     switch (rtx.kind) {
@@ -202,7 +203,7 @@ const blockExits = (rtl: ThreeAddressStatement[]): Exits => {
         case 'callByRegister':
             return { blockName: false, next: true, exit: false };
         default:
-            throw debug('Unrecognized ThreeAddressStatement kind in blockExits');
+            throw debug('Unrecognized Statement kind in blockExits');
     }
 };
 
@@ -229,9 +230,9 @@ export const toDotFile = ({ blocks, connections, labelToIndexMap, exits }: Contr
     return dotText;
 };
 
-export const controlFlowGraph = (rtl: ThreeAddressStatement[]): ControlFlowGraph => {
+export const controlFlowGraph = (rtl: Statement[]): ControlFlowGraph => {
     let blocks: BasicBlock[] = [];
-    var currentBlock: ThreeAddressStatement[] = [];
+    var currentBlock: Statement[] = [];
     rtl.forEach(rtx => {
         const change = blockBehaviour(rtx);
         if (change == 'midBlock') {

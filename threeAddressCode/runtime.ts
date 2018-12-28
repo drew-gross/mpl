@@ -1,7 +1,7 @@
 import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
 import { Register } from '../register.js';
-import { ThreeAddressFunction, ThreeAddressStatement } from './generator.js';
+import { ThreeAddressFunction } from './generator.js';
 import { programToString, functionToString } from './programToString.js';
 import { parseProgram as parseTac, parseFunction } from './parser.js';
 
@@ -179,7 +179,7 @@ const switchableMallocImpl = (
                 rhs: -1,
                 label: 'alloc_exit_check_passed',
                 why: 'If mmap failed, exit',
-            } as ThreeAddressStatement,
+            },
             {
                 kind: 'loadSymbolAddress',
                 to: err,

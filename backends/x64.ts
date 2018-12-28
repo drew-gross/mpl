@@ -17,13 +17,13 @@ import {
 import { Register } from '../register.js';
 import {
     astToThreeAddressCode,
-    ThreeAddressStatement,
     TargetThreeAddressStatement,
     GlobalInfo,
     makeTargetProgram,
     TargetInfo,
     ThreeAddressProgram,
 } from '../threeAddressCode/generator.js';
+import { Statement } from '../threeAddressCode/statement.js';
 import { mallocWithMmap, printWithWriteRuntimeFunction } from '../threeAddressCode/runtime.js';
 import { VariableDeclaration, FrontendOutput, StringLiteralData, Backend } from '../api.js';
 import { file as tmpFile } from 'tmp-promise';

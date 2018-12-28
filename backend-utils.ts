@@ -3,11 +3,11 @@ import debug from './util/debug.js';
 import { VariableDeclaration, ExecutionResult, Function, StringLiteralData, Backend } from './api.js';
 import flatten from './util/list/flatten.js';
 import {
-    ThreeAddressStatement,
     TargetThreeAddressStatement,
     ThreeAddressFunction,
     threeAddressCodeToTarget,
 } from './threeAddressCode/generator.js';
+import { Statement } from './threeAddressCode/statement.js';
 import { Register } from './register.js';
 import { assignRegisters, controlFlowGraph } from './controlFlowGraph.js';
 

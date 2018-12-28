@@ -2,7 +2,8 @@ import debug from '../util/debug.js';
 import flatten from '../util/list/flatten.js';
 import { TokenSpec, lex, LexError } from '../parser-lib/lex.js';
 import { specialRegisterNames, Register } from '../register.js';
-import { ThreeAddressProgram, ThreeAddressCode, ThreeAddressStatement, ThreeAddressFunction } from './generator.js';
+import { ThreeAddressProgram, ThreeAddressCode, ThreeAddressFunction } from './generator.js';
+import { Statement } from './statement.js';
 import {
     Grammar,
     Sequence,
@@ -415,7 +416,7 @@ const parseRegister = (data: string): Register => {
     return { name: sliced };
 };
 
-const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressStatement => {
+const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): Statement => {
     const a = ast as any;
     switch (ast.type) {
         case 'assign': {

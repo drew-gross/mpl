@@ -18,13 +18,13 @@ import {
 } from '../backend-utils.js';
 import {
     astToThreeAddressCode,
-    ThreeAddressStatement,
     TargetThreeAddressStatement,
     GlobalInfo,
     makeTargetProgram,
     TargetInfo,
     ThreeAddressProgram,
 } from '../threeAddressCode/generator.js';
+import { Statement } from '../threeAddressCode/statement.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from '../threeAddressCode/runtime.js';
 import { builtinFunctions, Type, TypeDeclaration, typeSize } from '../types.js';
 
