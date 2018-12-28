@@ -10,8 +10,7 @@ import idAppender from './util/idAppender.js';
 import { RegisterAssignment } from './backend-utils.js';
 import { Register, isEqual as registerIsEqual } from './register.js';
 import { ThreeAddressFunction } from './threeAddressCode/generator.js';
-import { Statement } from './threeAddressCode/statement.js';
-import tasToString from './threeAddressCode/statementToString.js';
+import { Statement, toString as tasToString } from './threeAddressCode/statement.js';
 import { Graph } from 'graphlib';
 import { functionToString } from './threeAddressCode/programToString.js';
 

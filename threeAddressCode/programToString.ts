@@ -1,4 +1,4 @@
-import statementToString from './statementToString.js';
+import { toString as statementToString } from './statement.js';
 import { ThreeAddressProgram, ThreeAddressFunction } from './generator.js';
 import join from '../util/join.js';
 
