@@ -97,11 +97,6 @@ test('ast for single number', t => {
                     },
                 ],
             },
-            {
-                type: 'endOfFile',
-                value: 'endOfFile',
-                sourceLocation: { line: 1, column: 10 },
-            },
         ],
         sourceLocation: { line: 1, column: 1 },
     } as MplAst;
@@ -138,11 +133,6 @@ test('ast for number in brackets', t => {
                         },
                     ],
                 },
-                {
-                    type: 'endOfFile',
-                    value: 'endOfFile',
-                    sourceLocation: { line: 1, column: 13 },
-                },
             ],
         }
     );
@@ -177,11 +167,6 @@ test('ast for number in double brackets', t => {
                             sourceLocation: { line: 1, column: 14 },
                         },
                     ],
-                },
-                {
-                    type: 'endOfFile',
-                    value: 'endOfFile',
-                    sourceLocation: { line: 1, column: 15 },
                 },
             ],
         }
@@ -249,11 +234,6 @@ test('ast for product with brackets', t => {
                             sourceLocation: { line: 1, column: 19 },
                         },
                     ],
-                },
-                {
-                    type: 'endOfFile',
-                    value: 'endOfFile',
-                    sourceLocation: { line: 1, column: 20 },
                 },
             ],
         }
@@ -342,10 +322,6 @@ test('ast for assignment then return', t => {
                     },
                 ],
             },
-            {
-                type: 'endOfFile',
-                value: 'endOfFile',
-            },
         ],
     };
     const astWithSemicolon = stripSourceLocation(
@@ -390,10 +366,6 @@ test('lowering of bracketedExpressions', t => {
                         ],
                     },
                 ],
-            },
-            {
-                type: 'endOfFile',
-                value: 'endOfFile',
             },
         ],
     });
@@ -512,10 +484,6 @@ test('double product with brackets', mplTest, {
                     },
                 ],
             },
-            {
-                type: 'endOfFile',
-                value: 'endOfFile',
-            },
         ],
     },
 });
@@ -573,10 +541,6 @@ test('double product', mplTest, {
                     },
                 ],
             },
-            {
-                type: 'endOfFile',
-                value: 'endOfFile',
-            },
         ],
     },
 });
@@ -626,10 +590,6 @@ test('brackets product', mplTest, {
                     },
                 ],
             },
-            {
-                type: 'endOfFile',
-                value: 'endOfFile',
-            },
         ],
     },
 });
@@ -664,7 +624,7 @@ test('ternary true', mplTest, {
     exitCode: 5,
 });
 
-test('ternary false', mplTest, {
+test.only('ternary false', mplTest, {
     source: 'return 0 == 1 ? 5 : 6',
     exitCode: 6,
 });

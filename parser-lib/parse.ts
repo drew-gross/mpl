@@ -575,7 +575,7 @@ export const parse = <NodeType extends string, TokenType>(
                 {
                     found: firstExtraToken.type,
                     foundTokenText: firstExtraToken.string,
-                    expected: '!!!!!endOfFiles!!!!!!' as any,
+                    expected: 'endOfFile',
                     whileParsing: [firstRule],
                     sourceLocation: firstExtraToken.sourceLocation,
                 },
