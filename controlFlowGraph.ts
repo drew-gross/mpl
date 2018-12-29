@@ -365,7 +365,6 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
     // lifetime of the spilled register is very short. Each read or write needs to create a new register to spill
     // from or to (we call that register a fragment) and this function creates a new fragment for each read/write.
     const makeFragment = () => ({ name: registerName(`${registerToSpill.name}_spill`) });
-    if (registerToSpill.name == 'product_lhs_2') debugger;
 
     taf.instructions.forEach(instruction => {
         switch (instruction.kind) {

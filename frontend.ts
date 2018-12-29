@@ -225,7 +225,7 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
 const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[1], ast, true);
 
 const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
-    const parseResult: MplParseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
+    const parseResult: MplParseResult = stripResultIndexes(parse(grammar, 'program', tokens));
 
     if (parseResultIsError(parseResult)) {
         return [{ kind: 'unexpectedToken', errors: parseResult.errors }];

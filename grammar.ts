@@ -1,14 +1,4 @@
-import {
-    Terminal,
-    endOfInput,
-    Grammar,
-    Ast,
-    Leaf as AstLeaf,
-    ParseResult,
-    Sequence,
-    OneOf,
-    Optional,
-} from './parser-lib/parse.js';
+import { Terminal, Grammar, Ast, Leaf as AstLeaf, ParseResult, Sequence, OneOf, Optional } from './parser-lib/parse.js';
 import { TokenSpec } from './parser-lib/lex.js';
 import debug from './util/debug.js';
 
@@ -34,7 +24,6 @@ export type MplToken =
     | 'colon'
     | 'comma'
     | 'ternaryOperator'
-    | 'endOfFile'
     | 'concatenation'
     | 'lessThan'
     | 'greaterThan'
@@ -243,7 +232,7 @@ const greaterThan = mplTerminal('greaterThan');
 const memberAccess = mplTerminal('memberAccess');
 
 export const grammar: Grammar<MplAstNode, MplToken> = {
-    program: Sequence<MplAstNode, MplToken>('program', ['functionBody', endOfInput]),
+    program: Sequence<MplAstNode, MplToken>('program', ['functionBody']),
     function: OneOf([
         Sequence('function', ['argList', fatArrow, 'expression']),
         Sequence('functionWithBlock', ['argList', fatArrow, leftCurlyBrace, 'functionBody', rightCurlyBrace]),

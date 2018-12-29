@@ -9,14 +9,12 @@ export const programToString = ({ globals, functions, main }: ThreeAddressProgra
     const globalStrings = Object.keys(globals).map(
         originalName => `(global) ${originalName}: ${globals[originalName].mangledName} ${globals[originalName].bytes}`
     );
-    const mainStr = main
-        ? `
-(function) main:
-${join(main.map(statementToString), '\n')}`
-        : '';
+    let mainStr = '';
+    if (main) {
+        mainStr = `(function) main:\n${join(main.map(statementToString), '\n')}`;
+    }
     return `
 ${join(globalStrings, '\n')}
 ${join(functions.map(functionToString), '\n')}
-(function) main:
 ${mainStr}`;
 };

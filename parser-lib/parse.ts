@@ -38,6 +38,7 @@ interface NodeWithIndex<NodeType, LeafType> {
 
 export type AstWithIndex<NodeType, TokenType> = NodeWithIndex<NodeType, TokenType> | LeafWithIndex<TokenType>;
 
+// TODO: just put the actual token in here instead of most of it's members
 export interface ParseFailureInfo<TokenType> {
     found: TokenType | 'endOfFile';
     foundTokenText: string;
@@ -173,7 +174,7 @@ const parseSequence = <NodeType extends string, TokenType>(
         if (isTerminalParser(p)) {
             result = parseTerminal(p, tokens, index);
         } else if (typeof p === 'string') {
-            result = parse(grammar, p as NodeType, tokens, index);
+            result = parseRule(grammar, p as NodeType, tokens, index);
         } else if (p.kind == 'optional') {
             const maybeResult = parseOptional(grammar, p, tokens, index);
             if (!maybeResult) {
@@ -296,7 +297,7 @@ const parseAlternative = <NodeType extends string, TokenType>(
                 currentResult = parseTerminal(currentParser, tokens, tokenIndex);
                 currentIndex = currentProgress.subParserIndex;
             } else if (typeof currentParser == 'string') {
-                currentResult = parse(grammar, currentParser as NodeType, tokens, tokenIndex);
+                currentResult = parseRule(grammar, currentParser as NodeType, tokens, tokenIndex);
                 currentIndex = currentProgress.subParserIndex;
             } else if (currentParser.kind == 'optional') {
                 const optionalResult = parseOptional(grammar, currentParser, tokens, tokenIndex);
@@ -427,7 +428,7 @@ const parseAnything = <NodeType extends string, TokenType>(
     index: number
 ): ParseResultWithIndex<NodeType, TokenType> => {
     if (typeof parser === 'string') {
-        return parse(grammar, parser as NodeType, tokens, index);
+        return parseRule(grammar, parser as NodeType, tokens, index);
     } else if (isTerminalParser(parser)) {
         return parseTerminal(parser, tokens, index);
     } else if (parser.kind == 'sequence') {
@@ -450,17 +451,6 @@ const parseOptional = <NodeType extends string, TokenType>(
         return undefined;
     }
     return result;
-};
-
-export const parse = <NodeType extends string, TokenType>(
-    grammar: Grammar<NodeType, TokenType>,
-    firstRule: NodeType,
-    tokens: Token<TokenType>[],
-    index: number
-): ParseResultWithIndex<NodeType, TokenType> => {
-    const childrenParser: Parser<NodeType, TokenType> = grammar[firstRule];
-    if (!childrenParser) throw debug('!childrenParser in parse');
-    return parseAnything(grammar, childrenParser, tokens, index);
 };
 
 const parseTerminal = <NodeType, TokenType>(
@@ -555,4 +545,42 @@ export const toDotFile = <NodeType, TokenType>(ast: Ast<NodeType, TokenType>) =>
     };
     traverse(ast);
     return digraph;
+};
+
+const parseRule = <NodeType extends string, TokenType>(
+    grammar: Grammar<NodeType, TokenType>,
+    rule: NodeType,
+    tokens: Token<TokenType>[],
+    index: number
+): ParseResultWithIndex<NodeType, TokenType> => {
+    const childrenParser: Parser<NodeType, TokenType> = grammar[rule];
+    if (!childrenParser) throw debug('invalid rule name');
+    return parseAnything(grammar, childrenParser, tokens, index);
+};
+
+export const parse = <NodeType extends string, TokenType>(
+    grammar: Grammar<NodeType, TokenType>,
+    firstRule: NodeType,
+    tokens: Token<TokenType>[]
+): ParseResultWithIndex<NodeType, TokenType> => {
+    const result = parseRule(grammar, firstRule, tokens, 0);
+    if (parseResultIsError(result)) return result;
+    if (result.newIndex != tokens.length) {
+        const firstExtraToken = tokens[result.newIndex];
+        if (!firstExtraToken) debug('there are extra tokens but also not');
+        debugger;
+        return {
+            kind: 'parseError',
+            errors: [
+                {
+                    found: firstExtraToken.type,
+                    foundTokenText: firstExtraToken.string,
+                    expected: '!!!!!endOfFiles!!!!!!' as any,
+                    whileParsing: [firstRule],
+                    sourceLocation: firstExtraToken.sourceLocation,
+                },
+            ],
+        };
+    }
+    return result;
 };

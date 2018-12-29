@@ -1140,6 +1140,5 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
 
     // Remove dummy main function we added at start
     closedSet.shift();
-
     return { globals, functions: closedSet, main: mainProgram, stringLiterals: backendInputs.stringLiterals };
 };

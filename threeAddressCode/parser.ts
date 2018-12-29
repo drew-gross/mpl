@@ -253,57 +253,15 @@ const unspillInstruction = tacTerminal('unspillInstruction');
 const greaterThan = tacTerminal('greaterThan');
 
 const grammar: Grammar<TacAstNode, TacToken> = {
-    program: OneOf<TacAstNode, TacToken>(['global', 'functions', endOfInput]),
-    global: Sequence('global', [global_, identifier, colon, identifier, number, 'program']),
+    program: Sequence('program', ['globals', 'functions']),
+
+    globals: OneOf([Sequence('globals', ['global', 'globals']), 'global']),
+    global: Sequence('global', [global_, identifier, colon, identifier, number]),
+
     functions: OneOf([Sequence('functions', ['function', 'functions']), 'function']),
     function: Sequence('function', [function_, tacOptional(spillSpec), identifier, colon, 'instructions']),
-    instructions: OneOf([Sequence('instructions', ['instruction', 'instructions']), 'instruction']),
-    instruction: OneOf([
-        Sequence('comment', [comment]),
-        Sequence('label', [identifier, colon, comment]),
-        // TODO: probably need separate syntax for syscall with result
-        Sequence('syscall', [syscall, identifier, 'syscallArgs', comment]),
-        Sequence('loadImmediate', [register, assign, number, comment]),
-        Sequence('assign', [register, assign, 'data', comment]),
-        Sequence('load', [register, assign, star, 'data', comment]),
-        Sequence('store', [star, 'data', assign, 'data', comment]),
-        Sequence('offsetStore', [star, leftBracket, register, plus, number, rightBracket, assign, 'data', comment]),
-        Sequence('offsetLoad', [register, assign, star, leftBracket, register, plus, number, rightBracket, comment]),
-        Sequence('difference', [register, assign, 'data', minus, 'data', comment]),
-        Sequence('product', [register, assign, 'data', star, 'data', comment]),
-        Sequence('sum', [register, assign, 'data', plus, 'data', comment]),
-        Sequence('addressOf', [register, assign, and, 'data', comment]),
-        Sequence('gotoIfEqual', [goto, identifier, if_, 'data', doubleEqual, 'data', comment]),
-        Sequence('gotoIfNotEqual', [goto, identifier, if_, 'data', notEqual, 'data', comment]),
-        Sequence('gotoIfGreater', [goto, identifier, if_, 'data', greaterThan, 'data', comment]),
-        Sequence('plusEqual', [register, plusEqual, 'data', comment]),
-        Sequence('goto', [goto, identifier, comment]),
-        Sequence('increment', [register, plusplus, comment]),
-        Sequence('unspill', [unspillInstruction, register, comment]),
-        Sequence('spill', [spillInstruction, register, comment]),
-        Sequence('stackAllocateAndStorePointer', [
-            register,
-            assign,
-            alloca,
-            leftBracket,
-            number,
-            rightBracket,
-            comment,
-        ]),
-        Sequence('callByRegister', [register, leftBracket, rightBracket, comment]),
-        Sequence('callByName', [identifier, leftBracket, rightBracket, comment]),
-    ]),
-    data: OneOf([identifier, register, number]),
-    syscallArgs: OneOf([Sequence('syscallArgs', [tacOptional(identifier), 'syscallArg', 'syscallArgs']), 'syscallArg']),
-    syscallArg: OneOf([number, register]),
-};
 
-// Need to add a endOfInput for functions. TODO: Make is easire to parse starting from different rules each time.
-const grammarForFunctionParse: Grammar<TacAstNode, TacToken> = {
-    program: OneOf<TacAstNode, TacToken>(['global', 'functions']),
-    global: Sequence('global', [global_, identifier, colon, identifier, number, 'program']),
-    functions: OneOf([Sequence('functions', ['function', 'functions']), 'function']),
-    function: Sequence('function', [function_, tacOptional(spillSpec), identifier, colon, 'instructions', endOfInput]),
+    // TODO: make it possible to have function with no instructions
     instructions: OneOf([Sequence('instructions', ['instruction', 'instructions']), 'instruction']),
     instruction: OneOf([
         Sequence('comment', [comment]),
@@ -340,9 +298,11 @@ const grammarForFunctionParse: Grammar<TacAstNode, TacToken> = {
         Sequence('callByRegister', [register, leftBracket, rightBracket, comment]),
         Sequence('callByName', [identifier, leftBracket, rightBracket, comment]),
     ]),
-    data: OneOf([identifier, register, number]),
+
     syscallArgs: OneOf([Sequence('syscallArgs', [tacOptional(identifier), 'syscallArg', 'syscallArgs']), 'syscallArg']),
     syscallArg: OneOf([number, register]),
+
+    data: OneOf([identifier, register, number]),
 };
 
 const mergeParseResults = (
@@ -710,24 +670,25 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
                 debug('wrong shape ast');
                 return ['WrongShapeAst'];
             }
-            if (ast.children[1].type != 'colon') {
+            if (ast.children[1].type != 'functions') {
                 debug('wrong shape ast');
                 return ['WrongShapeAst'];
             }
-            return tacFromParseResult(ast.children[2]);
+            if (ast.children.length != 2) {
+                debug('wrong shape ast');
+                return ['WrongShapeAst'];
+            }
+            return mergeParseResults(tacFromParseResult(ast.children[0]), tacFromParseResult(ast.children[1]));
         case 'global': {
             const a = ast as any;
-            return mergeParseResults(
-                {
-                    globals: {
-                        [a.children[1].value]: { mangledName: a.children[3].value, bytes: a.children[4].value },
-                    },
-                    functions: [],
-                    main: undefined,
-                    stringLiterals: [],
+            return {
+                globals: {
+                    [a.children[1].value]: { mangledName: a.children[3].value, bytes: a.children[4].value },
                 },
-                tacFromParseResult(a.children[5])
-            );
+                functions: [],
+                main: undefined,
+                stringLiterals: [],
+            };
         }
         case 'functions': {
             const f = functionFromParseResult(ast.children[0]);
@@ -772,7 +733,7 @@ export const parseProgram = (input: string): ThreeAddressProgram | LexError | Pa
     if ('kind' in tokens) {
         return tokens;
     }
-    const parseResult = parse(grammar, 'program', tokens, 0);
+    const parseResult = parse(grammar, 'program', tokens);
     if (parseResultIsError(parseResult)) {
         return parseResult.errors as any;
     }
@@ -784,7 +745,7 @@ export const parseFunction = (input: string): ThreeAddressFunction | LexError | 
     if ('kind' in tokens) {
         return tokens;
     }
-    const parseResult = parse(grammarForFunctionParse, 'function', tokens, 0);
+    const parseResult = parse(grammar, 'function', tokens);
     if (parseResultIsError(parseResult)) {
         return parseResult.errors as any;
     }

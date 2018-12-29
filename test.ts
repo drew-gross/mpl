@@ -14,7 +14,18 @@ import { lex, Token } from './parser-lib/lex.js';
 import { parseMpl, compile, typeCheckStatement, astFromParseResult, typeOfExpression } from './frontend.js';
 import { mplTest, tacTest } from './test-utils.js';
 import { grammar, tokenSpecs, MplParseResult, MplAst, MplToken } from './grammar.js';
-import { stripResultIndexes, ParseResult, parse, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
+import {
+    stripResultIndexes,
+    parse,
+    parseResultIsError,
+    stripSourceLocation,
+    Grammar,
+    Sequence,
+    OneOf,
+    Terminal,
+    endOfInput,
+    Optional,
+} from './parser-lib/parse.js';
 import * as Ast from './ast.js';
 import { removeBracketsFromAst } from './frontend.js';
 import { controlFlowGraph, toDotFile, BasicBlock, computeBlockLiveness, tafLiveness } from './controlFlowGraph.js';
@@ -57,7 +68,7 @@ test('lex with initial whitespace', t => {
 
 test('ast for single number', t => {
     const tokens = lex(tokenSpecs, 'return 7;') as Token<MplToken>[];
-    const parseResult = stripResultIndexes(parse(grammar, 'program', tokens, 0));
+    const parseResult = stripResultIndexes(parse(grammar, 'program', tokens));
     if (parseResultIsError(parseResult)) {
         t.fail('Parse Failed');
         return;
@@ -100,7 +111,7 @@ test('ast for single number', t => {
 test('ast for number in brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(
-            stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, ' return (5);') as Token<MplToken>[], 0))
+            stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, ' return (5);') as Token<MplToken>[]))
         ),
         {
             type: 'program',
@@ -140,7 +151,7 @@ test('ast for number in brackets', t => {
 test('ast for number in double brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(
-            stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'return ((20));') as Token<MplToken>[], 0))
+            stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'return ((20));') as Token<MplToken>[]))
         ),
         {
             type: 'program',
@@ -180,9 +191,7 @@ test('ast for number in double brackets', t => {
 test('ast for product with brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(
-            stripResultIndexes(
-                parse(grammar, 'program', lex(tokenSpecs, 'return 3 * (4 * 5);') as Token<MplToken>[], 0)
-            )
+            stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'return 3 * (4 * 5);') as Token<MplToken>[]))
         ),
         {
             type: 'program',
@@ -342,12 +351,9 @@ test('ast for assignment then return', t => {
     const astWithSemicolon = stripSourceLocation(
         removeBracketsFromAst(
             stripResultIndexes(
-                parse(
-                    grammar,
-                    'program',
-                    lex(tokenSpecs, 'constThree := a: Integer => 3; return 10;') as Token<MplToken>[],
-                    0
-                )
+                parse(grammar, 'program', lex(tokenSpecs, 'constThree := a: Integer => 3; return 10;') as Token<
+                    MplToken
+                >[])
             )
         )
     );
@@ -395,12 +401,9 @@ test('lowering of bracketedExpressions', t => {
 
 test('correct inferred type for function', t => {
     const functionSource = 'a: Integer => 11';
-    const parseResult: MplParseResult = parse(
-        grammar,
-        'function',
-        lex(tokenSpecs, functionSource) as Token<MplToken>[],
-        0
-    );
+    const parseResult: MplParseResult = parse(grammar, 'function', lex(tokenSpecs, functionSource) as Token<
+        MplToken
+    >[]);
     const ast: Ast.UninferredExpression = astFromParseResult(parseResult as MplAst) as Ast.UninferredExpression;
     t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
         type: {
@@ -1994,4 +1997,60 @@ test.failing('Spill self-assigning multiply', mplTest, {
 // TODO: enough stuff to cause a spill. then a = a * a. Or make this
 // a direct test of spill().
 `,
+});
+
+test('Parse grammar from multiple entry points', t => {
+    type TestToken = 'a' | 'b';
+    type TestNode = 'a' | 'b';
+
+    const tacTerminal = token => Terminal<TestNode, TestToken>(token);
+    const tacOptional = parser => Optional<TestNode, TestToken>(parser);
+
+    const grammar = {
+        a: tacTerminal('a'),
+        b: tacTerminal('b'),
+    };
+
+    const dummySourceLocation = { line: 0, column: 0 };
+
+    // Try parsing from an a
+    const aresult = parse(grammar, 'a', [{ type: 'a', string: 'anything', sourceLocation: dummySourceLocation }]);
+    t.deepEqual(aresult, {
+        newIndex: 1,
+        sourceLocation: dummySourceLocation,
+        success: true,
+        type: 'a',
+        value: undefined,
+    });
+
+    // Try parsing from a b
+    const bresult = parse(grammar, 'b', [{ type: 'b', string: 'anything', sourceLocation: dummySourceLocation }]);
+    t.deepEqual(bresult, {
+        newIndex: 1,
+        sourceLocation: dummySourceLocation,
+        success: true,
+        type: 'b',
+        value: undefined,
+    });
+
+    // Try parsing from a when there are extra tokens
+    const afail = parse(grammar, 'a', [
+        { type: 'a', string: 'anything', sourceLocation: dummySourceLocation },
+        { type: 'a', string: 'anything', sourceLocation: dummySourceLocation },
+    ]);
+    t.deepEqual(afail, {
+        kind: 'parseError',
+        errors: [
+            {
+                expected: 'endOfFile',
+                found: 'a',
+                foundTokenText: 'anything',
+                sourceLocation: {
+                    column: 0,
+                    line: 0,
+                },
+                whileParsing: ['a'],
+            },
+        ],
+    });
 });
