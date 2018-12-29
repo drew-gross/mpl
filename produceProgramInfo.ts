@@ -36,12 +36,6 @@ export default async (
         return tokens;
     }
 
-    tokens.forEach(({ string, type }) => {
-        if (type === 'invalid') {
-            return `Unable to lex. Invalid token: ${string}`;
-        }
-    });
-
     const ast = parseMpl(tokens);
     if (Array.isArray(ast)) {
         return { parseErrors: ast };

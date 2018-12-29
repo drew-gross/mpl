@@ -44,8 +44,7 @@ type TacToken =
     | 'plusEqual'
     | 'spillInstruction'
     | 'unspillInstruction'
-    | 'comment'
-    | 'invalid';
+    | 'comment';
 
 const tokenSpecs: TokenSpec<TacToken>[] = [
     {
@@ -188,12 +187,6 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
     {
         token: '#.*\n?',
         type: 'comment',
-        action: x => x,
-        toString: x => x,
-    },
-    {
-        token: '.*',
-        type: 'invalid',
         action: x => x,
         toString: x => x,
     },
@@ -779,11 +772,6 @@ export const parseProgram = (input: string): ThreeAddressProgram | LexError | Pa
     if ('kind' in tokens) {
         return tokens;
     }
-    if (tokens.some(t => t.type == 'invalid')) {
-        const t = tokens.find(t2 => t2.type == 'invalid');
-        if (t) return [`found an invalid token: ${t.string}`];
-        return ['unknown invalid token'];
-    }
     const parseResult = parse(grammar, 'program', tokens, 0);
     if (parseResultIsError(parseResult)) {
         return parseResult.errors as any;
@@ -795,11 +783,6 @@ export const parseFunction = (input: string): ThreeAddressFunction | LexError | 
     const tokens = lex(tokenSpecs, input);
     if ('kind' in tokens) {
         return tokens;
-    }
-    if (tokens.some(t => t.type == 'invalid')) {
-        const t = tokens.find(t2 => t2.type == 'invalid');
-        if (t) return [`found an invalid token: ${t.string}`];
-        return ['unknown invalid token'];
     }
     const parseResult = parse(grammarForFunctionParse, 'function', tokens, 0);
     if (parseResultIsError(parseResult)) {

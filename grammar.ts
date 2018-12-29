@@ -38,8 +38,7 @@ export type MplToken =
     | 'concatenation'
     | 'lessThan'
     | 'greaterThan'
-    | 'memberAccess'
-    | 'invalid';
+    | 'memberAccess';
 
 export const tokenSpecs: TokenSpec<MplToken>[] = [
     {
@@ -175,12 +174,6 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
         token: '\\.',
         type: 'memberAccess',
         toString: _ => '.',
-    },
-    {
-        token: '.*',
-        type: 'invalid',
-        action: x => x,
-        toString: x => x,
     },
 ];
 

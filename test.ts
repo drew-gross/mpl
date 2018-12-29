@@ -33,9 +33,7 @@ test('lexer', t => {
         { type: 'number', value: 123, string: '123', sourceLocation: { line: 1, column: 1 } },
         { type: 'number', value: 456, string: '456', sourceLocation: { line: 1, column: 5 } },
     ]);
-    t.deepEqual(lex(tokenSpecs, '&&&&&'), [
-        { type: 'invalid', value: '&&&&&', string: '&&&&&', sourceLocation: { line: 1, column: 1 } },
-    ]);
+    t.deepEqual(lex(tokenSpecs, '&&&&&'), { kind: 'lexError', error: 'Invalid token: &&&&&' });
     t.deepEqual(lex(tokenSpecs, '(1)'), [
         { type: 'leftBracket', value: null, string: '(', sourceLocation: { line: 1, column: 1 } },
         { type: 'number', value: 1, string: '1', sourceLocation: { line: 1, column: 2 } },
