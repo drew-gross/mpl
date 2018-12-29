@@ -624,11 +624,6 @@ test('ternary true', mplTest, {
     exitCode: 5,
 });
 
-test.only('ternary false', mplTest, {
-    source: 'return 0 == 1 ? 5 : 6',
-    exitCode: 6,
-});
-
 test('parse error', mplTest, {
     source: '=>',
     expectedParseErrors: [

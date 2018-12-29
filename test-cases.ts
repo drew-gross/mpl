@@ -72,6 +72,11 @@ isFive: Function<Integer, Boolean> = a: Integer => a == 5;
 return isFive(5) ? 1 : 0`,
         exitCode: 1,
     },
+    {
+        name: 'Ternary False',
+        source: 'return 0 == 1 ? 5 : 6',
+        exitCode: 6,
+    },
 ];
 
 export default testCases;

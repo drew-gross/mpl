@@ -8,6 +8,7 @@ import { prompt } from 'inquirer';
 import * as dot from 'graphlib-dot';
 import { toDotFile } from './parser-lib/parse.js';
 import { programToString } from './threeAddressCode/programToString.js';
+import chalk from 'chalk';
 
 (async () => {
     if (process.argv.length != 3) {
@@ -50,8 +51,20 @@ import { programToString } from './threeAddressCode/programToString.js';
     console.log(`Structure: ${structureFile.path}`);
 
     const tacFile = await tmpFile({ postfix: '.txt' });
-    await writeFile(tacFile.fd, programToString(programInfo.threeAddressCode));
+    await writeFile(tacFile.fd, programInfo.threeAddressCode.asString);
     console.log(`Three Address Code: ${tacFile.path}`);
+
+    const roundTripParsedFile = await tmpFile({ postfix: '.txt' });
+    await writeFile(roundTripParsedFile.fd, JSON.stringify(programInfo.threeAddressCode.roundTripParsed, null, 2));
+
+    const roundTripSuccess =
+        !Array.isArray(programInfo.threeAddressCode.roundTripParsed) &&
+        !('kind' in programInfo.threeAddressCode.roundTripParsed);
+    if (roundTripSuccess) {
+        console.log(`Three Address Code Round Trip Parse: ${roundTripParsedFile.path}`);
+    } else {
+        console.log(chalk.red(`Three Address Code Round Trip Parse: ${roundTripParsedFile.path}`));
+    }
 
     console.log('\nBackends:');
     for (let i = 0; i < programInfo.backendResults.length; i++) {

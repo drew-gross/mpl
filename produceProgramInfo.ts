@@ -1,3 +1,5 @@
+import { parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
+import { programToString } from './threeAddressCode/programToString.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCode/runtime.js';
 import { tokenSpecs, MplToken, MplAst, grammar } from './grammar.js';
 import { file as tmpFile } from 'tmp-promise';
@@ -22,7 +24,11 @@ type BackendResult = {
 type ProgramInfo = {
     tokens: Token<MplToken>[];
     ast: MplAst;
-    threeAddressCode: ThreeAddressProgram;
+    threeAddressCode: {
+        parsed: ThreeAddressProgram;
+        asString: string;
+        roundTripParsed: ThreeAddressProgram | LexError | ParseError[];
+    };
     frontendOutput: FrontendOutput;
     backendResults: BackendResult[];
     structure: string;
@@ -77,6 +83,10 @@ export default async (
         },
     });
 
+    // Do a roundtrip on three address code to string and back to check the parser for that
+    const stringForm = programToString(threeAddressCode);
+    const roundTripParsed = parseTacProgram(stringForm);
+
     const backendResults = await Promise.all(
         backends.map(async ({ name, mplToExectuable, execute }) => {
             const targetSource = mplToExectuable(frontendOutput);
@@ -89,5 +99,16 @@ export default async (
         })
     );
 
-    return { tokens, ast, frontendOutput, structure, threeAddressCode, backendResults };
+    return {
+        tokens,
+        ast,
+        frontendOutput,
+        structure,
+        threeAddressCode: {
+            parsed: threeAddressCode,
+            asString: stringForm,
+            roundTripParsed: roundTripParsed as any,
+        },
+        backendResults,
+    };
 };

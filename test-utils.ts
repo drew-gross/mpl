@@ -11,8 +11,7 @@ import debug from './util/debug.js';
 import join from './util/join.js';
 import { tokenSpecs, grammar } from './grammar.js';
 import { parse, stripResultIndexes, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
-import { programToString } from './threeAddressCode/programToString.js';
-import { parseProgram as parseTacProgram, parseFunction } from './threeAddressCode/parser.js';
+import { parseFunction } from './threeAddressCode/parser.js';
 import { backends } from './backend-utils.js';
 import { passed } from './test-case.js';
 import produceProgramInfo from './produceProgramInfo.js';
@@ -111,20 +110,16 @@ export const mplTest = async (
         });
     });
 
-    // Do a roundtrip on three address code to string and back to check the parser for that
-    const stringForm = programToString(programInfo.threeAddressCode);
-    const roundtripResult = parseTacProgram(stringForm);
-
-    if (Array.isArray(roundtripResult)) {
+    if (Array.isArray(programInfo.threeAddressCode.roundTripParsed)) {
         t.fail(
             join(
-                roundtripResult.map(e => {
+                programInfo.threeAddressCode.roundTripParsed.map((e: any) => {
                     if (typeof e === 'string') {
                         return e;
                     } else {
                         return (
                             prettyParseError(
-                                stringForm,
+                                programInfo.threeAddressCode.asString,
                                 e.sourceLocation,
                                 `found ${e.found}, expected ${e.expected}`
                             ) || ''
@@ -134,11 +129,17 @@ export const mplTest = async (
                 '\n\n'
             )
         );
+        return;
+    }
+
+    if ('kind' in programInfo.threeAddressCode.roundTripParsed) {
+        t.fail('lex error');
+        return;
     }
 
     // TODO: check the whole struct. Currently we don't check string literals because I haven't implemented that in the parser/generator
-    t.deepEqual(programInfo.threeAddressCode.functions, (roundtripResult as any).functions);
-    t.deepEqual(programInfo.threeAddressCode.globals, (roundtripResult as any).globals);
+    t.deepEqual(programInfo.threeAddressCode.roundTripParsed.functions, programInfo.threeAddressCode.parsed.functions);
+    t.deepEqual(programInfo.threeAddressCode.roundTripParsed.globals, programInfo.threeAddressCode.parsed.globals);
 
     const testCaseName = name;
     for (let i = 0; i < programInfo.backendResults.length; i++) {
