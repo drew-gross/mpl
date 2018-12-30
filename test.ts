@@ -23,7 +23,6 @@ import {
     Sequence,
     OneOf,
     Terminal,
-    endOfInput,
     Optional,
 } from './parser-lib/parse.js';
 import * as Ast from './ast.js';

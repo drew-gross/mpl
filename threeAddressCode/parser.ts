@@ -9,7 +9,6 @@ import {
     Sequence,
     OneOf,
     Terminal,
-    endOfInput,
     Optional,
     parse,
     parseResultIsError,
