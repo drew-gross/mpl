@@ -2,7 +2,7 @@ import debug from '../util/debug.js';
 import flatten from '../util/list/flatten.js';
 import { TokenSpec, lex, LexError } from '../parser-lib/lex.js';
 import { specialRegisterNames, Register } from '../register.js';
-import { ThreeAddressProgram, ThreeAddressCode, ThreeAddressFunction } from './generator.js';
+import { ThreeAddressProgram, ThreeAddressFunction } from './generator.js';
 import { Statement } from './statement.js';
 import {
     Grammar,
@@ -609,7 +609,7 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
     }
 };
 
-const instructionsFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressCode => {
+const instructionsFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Statement[] => {
     if (ast.type == 'instructions') {
         const a = ast as any;
         return [instructionFromParseResult(a.children[0]), ...instructionsFromParseResult(a.children[1])];
@@ -650,7 +650,7 @@ const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Three
         return ['WrongShapeAst'];
     }
     childIndex++;
-    let instructions: ThreeAddressCode = [];
+    let instructions: Statement[] = [];
     if (ast.children[childIndex].type == 'instructions') {
         instructions = instructionsFromParseResult(ast.children[childIndex]);
         childIndex++;
@@ -744,7 +744,7 @@ export const parseFunction = (input: string): ThreeAddressFunction | LexError | 
     return functionFromParseResult(parseResult);
 };
 
-export const parseInstructions = (input: string): ThreeAddressCode | LexError | ParseError[] => {
+export const parseInstructions = (input: string): Statement[] | LexError | ParseError[] => {
     const tokens = lex(tokenSpecs, input);
     if ('kind' in tokens) {
         return tokens;

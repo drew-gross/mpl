@@ -26,10 +26,8 @@ import { Register, toString as registerToString } from '../register.js';
 import { Function, VariableDeclaration, StringLiteralData } from '../api.js';
 import { Statement } from './statement.js';
 
-export type ThreeAddressCode = Statement[];
-
 export type ThreeAddressFunction = {
-    instructions: ThreeAddressCode;
+    instructions: Statement[];
     spills: number;
     name: string;
 };
@@ -1017,7 +1015,7 @@ export const threeAddressCodeToTarget = <TargetRegister>(
 export type ThreeAddressProgram = {
     globals: { [key: string]: { mangledName: string; bytes: number } };
     functions: ThreeAddressFunction[];
-    main: ThreeAddressCode | undefined;
+    main: Statement[] | undefined;
     stringLiterals: StringLiteralData[];
 };
 
@@ -1084,7 +1082,7 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
             ])
     );
 
-    const mainProgram: ThreeAddressCode = [
+    const mainProgram: Statement[] = [
         ...mainProgramInstructions,
         ...freeGlobalsInstructions,
         { kind: 'callByName', function: 'verify_no_leaks', why: 'Check for leaks' },
