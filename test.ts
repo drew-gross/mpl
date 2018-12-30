@@ -1,7 +1,7 @@
 import { file as tmpFile } from 'tmp-promise';
 import { writeFile } from 'fs-extra';
 import testCases from './test-cases.js';
-import { parseFunction, parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
+import { parseFunction, parseProgram as parseTacProgram, parseInstructions } from './threeAddressCode/parser.js';
 import prettyParseError from './parser-lib/pretty-parse-error.js';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
 import { ThreeAddressFunction } from './threeAddressCode/generator.js';
@@ -1371,47 +1371,22 @@ test('controlFlowGraph basic test', t => {
 test('computeBlockLiveness basic test', t => {
     const block: BasicBlock = {
         name: 'test',
-        instructions: [
-            {
-                kind: 'add',
-                lhs: { name: 'l' },
-                rhs: { name: 'r' },
-                destination: { name: 'd' },
-                why: 'd = l + r',
-            },
-            {
-                kind: 'subtract',
-                lhs: { name: 'l2' },
-                rhs: { name: 'd' },
-                destination: { name: 'r' },
-                why: 'r = l2 - d',
-            },
-            {
-                kind: 'move',
-                from: { name: 'l' },
-                to: { name: 'v' },
-                why: 'v = l (dead)',
-            },
-            {
-                kind: 'move',
-                from: { name: 'r' },
-                to: { name: 'v' },
-                why: 'v = r',
-            },
-        ],
+        instructions: parseInstructions(`
+            r:d = r:l + r:r # d = l + r
+            r:r = r:l2 - r:d # r = l2 - d
+            r:v = r:l # v = l (dead)
+            r:v = r:r # v = r
+        `) as Statement[],
     };
-    const liveness = computeBlockLiveness(block);
+    const liveness = computeBlockLiveness(block).map(l => l.toList().sort());
     const expected = [
         [{ name: 'l' }, { name: 'l2' }, { name: 'r' }],
         [{ name: 'l' }, { name: 'l2' }, { name: 'd' }],
         [{ name: 'r' }, { name: 'l' }],
         [{ name: 'r' }],
         [],
-    ];
-    t.deepEqual(liveness.length, expected.length);
-    expected.forEach((e, i) => {
-        t.deepEqual(e.sort(), liveness[i].toList().sort());
-    });
+    ].map(e => e.sort());
+    t.deepEqual(liveness, expected);
 });
 
 test('computeBlockLiveness read and write in one', t => {

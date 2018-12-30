@@ -368,7 +368,7 @@ const parseRegister = (data: string): Register => {
     return { name: sliced };
 };
 
-const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): Statement => {
+const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Statement => {
     const a = ast as any;
     switch (ast.type) {
         case 'assign': {
@@ -605,17 +605,17 @@ const parseInstruction = (ast: AstWithIndex<TacAstNode, TacToken>): Statement =>
                 why: stripComment(a.children[2].value),
             };
         default:
-            throw debug(`${ast.type} unhandled in parseInstruction`);
+            throw debug(`${ast.type} unhandled in instructionFromParseResult`);
     }
 };
 
-const parseInstructions = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressCode => {
+const instructionsFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressCode => {
     if (ast.type == 'instructions') {
         const a = ast as any;
-        return [parseInstruction(a.children[0]), ...parseInstructions(a.children[1])];
+        return [instructionFromParseResult(a.children[0]), ...instructionsFromParseResult(a.children[1])];
     } else {
         const a = ast as any;
-        return [parseInstruction(a)];
+        return [instructionFromParseResult(a)];
     }
 };
 
@@ -652,10 +652,10 @@ const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Three
     childIndex++;
     let instructions: ThreeAddressCode = [];
     if (ast.children[childIndex].type == 'instructions') {
-        instructions = parseInstructions(ast.children[childIndex]);
+        instructions = instructionsFromParseResult(ast.children[childIndex]);
         childIndex++;
     } else {
-        instructions = [parseInstruction(ast.children[childIndex])];
+        instructions = [instructionFromParseResult(ast.children[childIndex])];
         childIndex++;
     }
     return { name, instructions, spills };
@@ -727,9 +727,9 @@ export const parseProgram = (input: string): ThreeAddressProgram | LexError | Pa
     }
     const parseResult = parse(grammar, 'program', tokens);
     if (parseResultIsError(parseResult)) {
-        return parseResult.errors as any;
+        return parseResult.errors;
     }
-    return tacFromParseResult(parseResult as any);
+    return tacFromParseResult(parseResult);
 };
 
 export const parseFunction = (input: string): ThreeAddressFunction | LexError | ParseError[] => {
@@ -739,7 +739,19 @@ export const parseFunction = (input: string): ThreeAddressFunction | LexError | 
     }
     const parseResult = parse(grammar, 'function', tokens);
     if (parseResultIsError(parseResult)) {
-        return parseResult.errors as any;
+        return parseResult.errors;
     }
-    return functionFromParseResult(parseResult as any);
+    return functionFromParseResult(parseResult);
+};
+
+export const parseInstructions = (input: string): ThreeAddressCode | LexError | ParseError[] => {
+    const tokens = lex(tokenSpecs, input);
+    if ('kind' in tokens) {
+        return tokens;
+    }
+    const parseResult = parse(grammar, 'instructions', tokens);
+    if (parseResultIsError(parseResult)) {
+        return parseResult.errors;
+    }
+    return instructionsFromParseResult(parseResult);
 };

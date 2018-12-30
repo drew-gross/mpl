@@ -222,7 +222,7 @@ export const computeBlockLiveness = (block: BasicBlock): Set<Register>[] => {
             (liveness, next) => {
                 const newLiveness = liveness[0].copy();
                 const newlyLive = reads(next);
-                const newlyDead = reads(next);
+                const newlyDead = writes(next);
                 newlyDead.forEach(item => {
                     newLiveness.remove(item);
                 });
