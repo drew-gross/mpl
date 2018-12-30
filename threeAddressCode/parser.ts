@@ -682,6 +682,9 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
                 stringLiterals: [],
             };
         }
+        case 'globals': {
+            return mergeParseResults(tacFromParseResult(ast.children[0]), tacFromParseResult(ast.children[1]));
+        }
         case 'functions': {
             const f = functionFromParseResult(ast.children[0]);
             if (Array.isArray(f)) {
@@ -709,9 +712,6 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
                 main: f.name == 'main' ? f.instructions : undefined,
                 stringLiterals: [],
             };
-        }
-        case 'endOfFile': {
-            return { globals: {}, functions: [], stringLiterals: [], main: undefined };
         }
         default:
             throw debug(`${ast.type} unhandled in tacFromParseResult`);

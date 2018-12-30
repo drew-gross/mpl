@@ -941,11 +941,6 @@ test('structure is equal for inferred string type', t => {
     t.deepEqual(inferredStructure, suppliedStructure);
 });
 
-test('string copy', mplTest, {
-    source: `myStr1: String = "testing"; myStr2: String = myStr1; return length(myStr2);`,
-    exitCode: 7,
-});
-
 test('string equality: equal', mplTest, {
     source: `str1 := "a";
 str2 := "a";
@@ -1102,6 +1097,7 @@ return threeArgs(7, 4, "notAnInteger");`,
     ],
 });
 
+// TODO: print() maybe shouldn't return anything? Or return on error?
 test('print', mplTest, {
     source: `
 dummy := print("sample_string");

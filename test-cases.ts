@@ -77,6 +77,11 @@ return isFive(5) ? 1 : 0`,
         source: 'return 0 == 1 ? 5 : 6',
         exitCode: 6,
     },
+    {
+        name: 'String Copy',
+        source: `myStr1: String = "testing"; myStr2: String = myStr1; return length(myStr2);`,
+        exitCode: 7,
+    },
 ];
 
 export default testCases;
