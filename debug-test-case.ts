@@ -69,13 +69,34 @@ import chalk from 'chalk';
     console.log('\nBackends:');
     for (let i = 0; i < programInfo.backendResults.length; i++) {
         const { name, targetSource, executionResult } = programInfo.backendResults[i];
-        console.log(`    ${name}:`);
+        const testPassed = passed(testCase, executionResult);
 
-        const targetSourceFile = await tmpFile({ postfix: `.${name}` });
-        await writeFile(targetSourceFile.fd, targetSource);
-        console.log(`        Source: ${targetSourceFile.path}`);
-        console.log(`        Passed: ${passed(testCase, executionResult)}`);
-        console.log('');
+        if (testPassed) {
+            console.log(`    ${name}:`);
+        } else {
+            console.log(chalk.red(`    ${name}:`));
+        }
+
+        if ('error' in executionResult) {
+            console.log(chalk.red(`        Execution Failed: ${executionResult.error}`));
+        } else {
+            const targetSourceFile = await tmpFile({ postfix: `.${name}` });
+            await writeFile(targetSourceFile.fd, targetSource);
+            console.log(`        Source: ${targetSourceFile.path}`);
+            if (!testPassed) {
+                let log =
+                    testCase.exitCode == executionResult.exitCode
+                        ? s => console.log(s)
+                        : s => console.log(chalk.red(s));
+                log(`        Expected Exit Code: ${testCase.exitCode}`);
+                log(`        Actual Exit Code: ${testCase.exitCode}`);
+
+                log = testCase.stdout == executionResult.stdout ? s => console.log(s) : s => console.log(chalk.red(s));
+                log(`        Expected stdout: ${testCase.stdout}`);
+                log(`        Actual stdout: ${executionResult.stdout}`);
+            }
+            console.log('');
+        }
     }
 
     await prompt({
