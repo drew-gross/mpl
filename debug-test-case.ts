@@ -1,9 +1,10 @@
+import { file as tmpFile } from 'tmp-promise';
+import { writeFile } from 'fs-extra';
 import testCases from './test-cases.js';
 import { passed } from './test-case.js';
 import produceProgramInfo from './produceProgramInfo.js';
-import { file as tmpFile } from 'tmp-promise';
-import { writeFile } from 'fs-extra';
 import writeSvg from './util/graph/writeSvg.js';
+import writeTempFile from './util/writeTempFile.js';
 import { prompt } from 'inquirer';
 import * as dot from 'graphlib-dot';
 import { toDotFile } from './parser-lib/parse.js';
@@ -33,37 +34,28 @@ import chalk from 'chalk';
         return;
     }
 
-    const tokensFile = await tmpFile({ postfix: '.json' });
-    await writeFile(tokensFile.fd, JSON.stringify(programInfo.tokens, null, 2));
-    console.log(`Tokens: ${tokensFile.path}`);
-
-    const astFile = await tmpFile({ postfix: '.json' });
-    await writeFile(astFile.fd, JSON.stringify(programInfo.ast, null, 2));
-    console.log(`Ast: ${astFile.path}`);
+    console.log(`Tokens: ${(await writeTempFile(JSON.stringify(programInfo.tokens, null, 2), '.json')).path}`);
+    console.log(`Ast: ${(await writeTempFile(JSON.stringify(programInfo.ast, null, 2), '.json')).path}`);
 
     const dotText = dot.write(toDotFile(programInfo.ast));
     const svgFile = await tmpFile({ postfix: '.svg' });
     await writeSvg(dotText, svgFile.path);
     console.log(`Ast SVG: ${svgFile.path}`);
 
-    const structureFile = await tmpFile({ postfix: '.txt' });
-    await writeFile(structureFile.fd, programInfo.structure);
-    console.log(`Structure: ${structureFile.path}`);
+    console.log(`Structure: ${(await writeTempFile(programInfo.structure, '.txt')).path}`);
+    console.log(`Three Address Code: ${(await writeTempFile(programInfo.threeAddressCode.asString, '.txt')).path}`);
 
-    const tacFile = await tmpFile({ postfix: '.txt' });
-    await writeFile(tacFile.fd, programInfo.threeAddressCode.asString);
-    console.log(`Three Address Code: ${tacFile.path}`);
-
-    const roundTripParsedFile = await tmpFile({ postfix: '.txt' });
-    await writeFile(roundTripParsedFile.fd, JSON.stringify(programInfo.threeAddressCode.roundTripParsed, null, 2));
-
+    const roundTripParsedPath = (await writeTempFile(
+        JSON.stringify(programInfo.threeAddressCode.roundTripParsed, null, 2),
+        '.txt'
+    )).path;
     const roundTripSuccess =
         !Array.isArray(programInfo.threeAddressCode.roundTripParsed) &&
         !('kind' in programInfo.threeAddressCode.roundTripParsed);
     if (roundTripSuccess) {
-        console.log(`Three Address Code Round Trip Parse: ${roundTripParsedFile.path}`);
+        console.log(`Three Address Code Round Trip Parse: ${roundTripParsedPath}`);
     } else {
-        console.log(chalk.red(`Three Address Code Round Trip Parse: ${roundTripParsedFile.path}`));
+        console.log(chalk.red(`Three Address Code Round Trip Parse: ${roundTripParsedPath}`));
     }
 
     console.log('\nBackends:');
@@ -80,9 +72,7 @@ import chalk from 'chalk';
         if ('error' in executionResult) {
             console.log(chalk.red(`        Execution Failed: ${executionResult.error}`));
         } else {
-            const targetSourceFile = await tmpFile({ postfix: `.${name}` });
-            await writeFile(targetSourceFile.fd, targetSource);
-            console.log(`        Source: ${targetSourceFile.path}`);
+            console.log(`        Source: ${(await writeTempFile(targetSource, `.${name}`)).path}`);
             if (!testPassed) {
                 let log =
                     testCase.exitCode == executionResult.exitCode
