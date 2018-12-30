@@ -82,6 +82,15 @@ return isFive(5) ? 1 : 0`,
         source: `myStr1: String = "testing"; myStr2: String = myStr1; return length(myStr2);`,
         exitCode: 7,
     },
+    {
+        name: 'Print',
+        // TODO: print() maybe shouldn't return anything? Or return on error?
+        source: `
+    dummy := print("sample_string");
+    return 1;`,
+        exitCode: 1,
+        stdout: 'sample_string',
+    },
 ];
 
 export default testCases;

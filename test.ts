@@ -1097,15 +1097,6 @@ return threeArgs(7, 4, "notAnInteger");`,
     ],
 });
 
-// TODO: print() maybe shouldn't return anything? Or return on error?
-test('print', mplTest, {
-    source: `
-dummy := print("sample_string");
-return 1;`,
-    exitCode: 1,
-    expectedStdOut: 'sample_string',
-});
-
 test('print string with space', mplTest, {
     source: `
 dummy := print("sample string with space");
