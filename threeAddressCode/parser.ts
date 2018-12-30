@@ -253,7 +253,7 @@ const unspillInstruction = tacTerminal('unspillInstruction');
 const greaterThan = tacTerminal('greaterThan');
 
 const grammar: Grammar<TacAstNode, TacToken> = {
-    program: Sequence('program', ['globals', 'functions']),
+    program: Sequence('program', [tacOptional('globals'), tacOptional('functions')]),
 
     globals: OneOf([Sequence('globals', ['global', 'globals']), 'global']),
     global: Sequence('global', [global_, identifier, colon, identifier, number]),
@@ -666,19 +666,12 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
     if (!ast) debug('no type');
     switch (ast.type) {
         case 'program':
-            if (ast.children[0].type != 'global') {
-                debug('wrong shape ast');
-                return ['WrongShapeAst'];
-            }
-            if (ast.children[1].type != 'functions') {
-                debug('wrong shape ast');
-                return ['WrongShapeAst'];
-            }
-            if (ast.children.length != 2) {
-                debug('wrong shape ast');
-                return ['WrongShapeAst'];
-            }
-            return mergeParseResults(tacFromParseResult(ast.children[0]), tacFromParseResult(ast.children[1]));
+            return ast.children.reduce((results, child) => mergeParseResults(results, tacFromParseResult(child)), {
+                globals: {},
+                functions: [],
+                main: undefined,
+                stringLiterals: [],
+            });
         case 'global': {
             const a = ast as any;
             return {
