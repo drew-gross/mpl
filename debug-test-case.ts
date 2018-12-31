@@ -70,6 +70,9 @@ import chalk from 'chalk';
         if ('error' in executionResult) {
             console.log(chalk.red(`        Execution Failed: ${executionResult.error}`));
         } else {
+            if (compilationResult.threeAddressCodeFile) {
+                console.log(`        Three Address Code: ${compilationResult.threeAddressCodeFile.path}`);
+            }
             console.log(`        Source: ${compilationResult.sourceFile.path}`);
             console.log(`        Binary: ${compilationResult.binaryFile.path}`);
             if (!testPassed) {
@@ -84,6 +87,7 @@ import chalk from 'chalk';
                 log(`        Expected stdout: ${testCase.stdout}`);
                 log(`        Actual stdout: ${executionResult.stdout}`);
             }
+            console.log(`        Debug: ${compilationResult.debugInstructions}`);
             console.log('');
         }
     }
