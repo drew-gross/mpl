@@ -1,4 +1,5 @@
-import { stat } from 'fs-extra';
+import { programToString } from '../threeAddressCode/programToString.js';
+import writeTempFile from '../util/writeTempFile.js';
 import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import flatten from '../util/list/flatten.js';
@@ -25,7 +26,7 @@ import {
 } from '../threeAddressCode/generator.js';
 import { Statement } from '../threeAddressCode/statement.js';
 import { mallocWithMmap, printWithWriteRuntimeFunction } from '../threeAddressCode/runtime.js';
-import { VariableDeclaration, FrontendOutput, StringLiteralData, Backend } from '../api.js';
+import { VariableDeclaration, FrontendOutput, StringLiteralData, Backend, CompilationResult } from '../api.js';
 import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { execSync } from 'child_process';
@@ -230,30 +231,30 @@ ${Object.keys(errors)
         .join('\n')}`;
 };
 
-const x64toBinary = async (x64Path: string): Promise<string> => {
+const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
+    compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target }));
+
+const compileTac = async (tac: ThreeAddressProgram): Promise<CompilationResult | { error: string }> => {
+    const threeAddressString = programToString(tac);
+    const threeAddressCodeFile = await writeTempFile(threeAddressString, '.txt');
+
+    const x64String = tacToExecutable(tac);
+    const sourceFile = await writeTempFile(x64String, '.x64');
+
     const linkerInputPath = await tmpFile({ postfix: '.o' });
-    const exePath = await tmpFile({ postfix: '.out' });
-    await exec(`nasm -fmacho64 -o ${linkerInputPath.path} ${x64Path}`);
+
+    const binaryFile = await tmpFile({ postfix: '.out' });
+    await exec(`nasm -fmacho64 -o ${linkerInputPath.path} ${sourceFile.path}`);
     // TODO: Cross compiling or something? IDK. Dependency on system linker sucks.
-    await exec(`ld ${linkerInputPath.path} -o ${exePath.path} -macosx_version_min 10.6 -lSystem`);
-    return exePath.path;
+    await exec(`ld ${linkerInputPath.path} -o ${binaryFile.path} -macosx_version_min 10.6 -lSystem`);
+
+    return {
+        sourceFile,
+        binaryFile,
+        threeAddressCodeFile,
+        debugInstructions: `lldb ${binaryFile.path}; break set -n start; run`,
+    };
 };
 
-const mplToExectuable = (inputs: FrontendOutput) =>
-    tacToExecutable(makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target }));
-
-const x64Backend: Backend = {
-    name: 'x64',
-    mplToExectuable,
-    tacToExecutable: { targetInfo: x64Target, compile: tacToExecutable },
-    execute: async path => execAndGetResult(await x64toBinary(path)),
-    debug: async path => {
-        console.log(`lldb ${await x64toBinary(path)}`);
-        console.log(`break set -n start`);
-        console.log(`run`);
-        execSync('sleep 10000000');
-    },
-    binSize: async path => (await stat(await x64toBinary(path))).size,
-};
-
+const x64Backend: Backend = { name: 'x64', compile, compileTac, execute: execAndGetResult };
 export default x64Backend;

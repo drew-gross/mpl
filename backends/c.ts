@@ -1,7 +1,15 @@
 import * as Ast from '../ast.js';
 import { stat } from 'fs-extra';
 import { file as tmpFile } from 'tmp-promise';
-import { VariableDeclaration, FrontendOutput, Function, ExecutionResult, StringLiteralData, Backend } from '../api.js';
+import {
+    VariableDeclaration,
+    FrontendOutput,
+    Function,
+    ExecutionResult,
+    StringLiteralData,
+    Backend,
+    CompilationResult,
+} from '../api.js';
 import { Type, equal as typesAreEqual, builtinTypes } from '../types.js';
 import flatten from '../util/list/flatten.js';
 import last from '../util/list/last.js';
@@ -13,6 +21,8 @@ import { CompiledProgram, CompiledExpression, compileExpression, CompiledAssignm
 import { errors } from '../runtime-strings.js';
 import { mergeDeclarations } from '../frontend.js';
 import idAppender from '../util/idAppender.js';
+import writeTempFile from '../util/writeTempFile.js';
+import { FileResult } from 'fs-extra';
 
 // Beginnings of experiment with tracing code from source to target
 const callFree = (target: string, reason: string) => `my_free(${target}); // ${reason}`;
@@ -327,7 +337,13 @@ const makeCfunctionBody = ({
 
 const productTypeMemberToCStructMember = ({ name, type }) => `${mplTypeToCDeclaration(type, '')} ${name};`;
 
-const mplToExectuable = ({ functions, program, types, globalDeclarations, stringLiterals }: FrontendOutput) => {
+const compile = async ({
+    functions,
+    program,
+    types,
+    globalDeclarations,
+    stringLiterals,
+}: FrontendOutput): Promise<CompilationResult | { error: string }> => {
     const CtypeDeclarations = types
         .filter(t => t.type.kind == 'Product')
         .map(t => `struct ${t.name} {${join((t.type as any).members.map(productTypeMemberToCStructMember), '\n')}};`);
@@ -368,7 +384,7 @@ const mplToExectuable = ({ functions, program, types, globalDeclarations, string
         .map(declaration => mplTypeToCDeclaration(declaration.type, declaration.name))
         .map(cDeclaration => `${cDeclaration};`);
 
-    return `
+    const cSource = `
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -519,51 +535,30 @@ ${join(Cdeclarations, '\n')}
 ${join(Cfunctions, '\n')}
 ${Cprogram}
 `;
-};
 
-const compileC = async (path: string): Promise<string | { error: string }> => {
-    const exeFile = await tmpFile();
+    const sourceFile = await writeTempFile(cSource, '.c');
+    const binaryFile = await tmpFile();
     try {
         // TODO: Don't emit unused variables
-        await exec(`clang -Wall -Werror -Wno-error=unused-variable ${path} -o ${exeFile.path}`);
-        return exeFile.path;
+        await exec(`clang -Wall -Werror -Wno-error=unused-variable ${sourceFile.path} -o ${binaryFile.path}`);
     } catch (e) {
         return { error: `Failed to compile generated C code:\n${e.stderr}` };
     }
+    return {
+        sourceFile,
+        binaryFile,
+        threeAddressCodeFile: undefined,
+        debugInstructions: 'No debug instructions for C yet. Try one of the online GDB things.',
+    };
 };
 
 const execute = async (path: string): Promise<ExecutionResult> => {
     try {
-        const compiledPath = await compileC(path);
-        if (typeof compiledPath == 'string') {
-            return execAndGetResult(compiledPath);
-        } else {
-            return compiledPath;
-        }
+        return execAndGetResult(path);
     } catch (e) {
-        return {
-            error: e,
-        };
+        return { error: e };
     }
 };
 
-/*
-const debugWithLldb = async path => {
-    const exeFile = await tmpFile();
-    try {
-        await exec(`clang -Wall -Werror ${path} -g -o ${exeFile.path}`);
-    } catch (e) {
-        return { error: `Failed to compile generated C code:\n${e.stderr}` };
-    }
-    return exec(`lldb ${exeFile.path}`);
-};
-*/
-const cBackend: Backend = {
-    mplToExectuable,
-    execute,
-    name: 'c',
-    // debug: debugWithLldb,
-    binSize: async path => (await stat(await compileC(path))).size,
-};
-
+const cBackend: Backend = { name: 'c', compile, execute };
 export default cBackend;

@@ -1,5 +1,4 @@
 import * as clone from 'clone';
-import prettyParseError from './parser-lib/pretty-parse-error.js';
 import * as omitDeep from 'omit-deep';
 import { exec } from 'child-process-promise';
 import { Backend, TypeError } from './api.js';
@@ -110,20 +109,15 @@ export const mplTest = async (
         });
     });
 
-    if (Array.isArray(programInfo.threeAddressCode.roundTripParsed)) {
+    if (Array.isArray(programInfo.threeAddressRoundTrip)) {
         t.fail(
             join(
-                programInfo.threeAddressCode.roundTripParsed.map((e: any) => {
+                programInfo.threeAddressRoundTrip.map((e: any) => {
                     if (typeof e === 'string') {
                         return e;
                     } else {
-                        return (
-                            prettyParseError(
-                                programInfo.threeAddressCode.asString,
-                                e.sourceLocation,
-                                `found ${e.found}, expected ${e.expected}`
-                            ) || ''
-                        );
+                        // TODO: get the source and do pretty parse errors
+                        return JSON.stringify(e, null, 2);
                     }
                 }),
                 '\n\n'
@@ -132,14 +126,14 @@ export const mplTest = async (
         return;
     }
 
-    if ('kind' in programInfo.threeAddressCode.roundTripParsed) {
+    if ('kind' in programInfo.threeAddressRoundTrip) {
         t.fail('lex error');
         return;
     }
 
     // TODO: check the whole struct. Currently we don't check string literals because I haven't implemented that in the parser/generator
-    t.deepEqual(programInfo.threeAddressCode.roundTripParsed.functions, programInfo.threeAddressCode.parsed.functions);
-    t.deepEqual(programInfo.threeAddressCode.roundTripParsed.globals, programInfo.threeAddressCode.parsed.globals);
+    t.deepEqual(programInfo.threeAddressRoundTrip.functions, programInfo.threeAddressRoundTrip.functions);
+    t.deepEqual(programInfo.threeAddressRoundTrip.globals, programInfo.threeAddressRoundTrip.globals);
 
     const testCaseName = name;
     for (let i = 0; i < programInfo.backendResults.length; i++) {
@@ -178,35 +172,26 @@ export const tacTest = async (
     }
     await Promise.all(
         backends.map(async backend => {
-            if (backend.tacToExecutable && !failing.includes(backend.name)) {
+            if (backend.compileTac && !failing.includes(backend.name)) {
                 const exeFile = await tmpFile({ postfix: `.${backend.name}` });
                 const newSource = clone(parsed);
 
                 // TODO: This is pure jank. Should move responsibility for adding cleanup code to some place that makes actual sense.
-                newSource.instructions.push(...backend.tacToExecutable.targetInfo.cleanupCode);
+                newSource.instructions.push(...(backend.targetInfo as any).cleanupCode);
 
-                const exeContents = backend.tacToExecutable.compile({
+                const compilationResult = await backend.compileTac({
                     globals: {},
                     functions: [],
                     main: newSource.instructions,
                     stringLiterals: [],
                 });
 
-                if (printSubsteps.includes(backend.name)) {
-                    console.log(exeContents);
+                if ('error' in compilationResult) {
+                    t.fail(`${backend.name} compilation failed: ${compilationResult.error}`);
+                    return;
                 }
 
-                await writeFile(exeFile.fd, exeContents);
-
-                if (debugSubsteps.includes(backend.name)) {
-                    if (backend.debug) {
-                        await backend.debug(exeFile.path);
-                    } else {
-                        t.fail(`${backend.name} doesn't define a debugger`);
-                    }
-                }
-
-                const result = await backend.execute(exeFile.path);
+                const result = await backend.execute(compilationResult.binaryFile);
                 if ('error' in result) {
                     t.fail(`${backend.name} execution failed: ${result.error}`);
                     return;

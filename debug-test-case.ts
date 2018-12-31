@@ -43,15 +43,13 @@ import chalk from 'chalk';
     console.log(`Ast SVG: ${svgFile.path}`);
 
     console.log(`Structure: ${(await writeTempFile(programInfo.structure, '.txt')).path}`);
-    console.log(`Three Address Code: ${(await writeTempFile(programInfo.threeAddressCode.asString, '.txt')).path}`);
 
     const roundTripParsedPath = (await writeTempFile(
-        JSON.stringify(programInfo.threeAddressCode.roundTripParsed, null, 2),
+        JSON.stringify(programInfo.threeAddressRoundTrip, null, 2),
         '.txt'
     )).path;
     const roundTripSuccess =
-        !Array.isArray(programInfo.threeAddressCode.roundTripParsed) &&
-        !('kind' in programInfo.threeAddressCode.roundTripParsed);
+        !Array.isArray(programInfo.threeAddressRoundTrip) && !('kind' in programInfo.threeAddressRoundTrip);
     if (roundTripSuccess) {
         console.log(`Three Address Code Round Trip Parse: ${roundTripParsedPath}`);
     } else {
@@ -60,7 +58,7 @@ import chalk from 'chalk';
 
     console.log('\nBackends:');
     for (let i = 0; i < programInfo.backendResults.length; i++) {
-        const { name, targetSource, executionResult } = programInfo.backendResults[i];
+        const { name, compilationResult, executionResult } = programInfo.backendResults[i];
         const testPassed = passed(testCase, executionResult);
 
         if (testPassed) {
@@ -72,7 +70,8 @@ import chalk from 'chalk';
         if ('error' in executionResult) {
             console.log(chalk.red(`        Execution Failed: ${executionResult.error}`));
         } else {
-            console.log(`        Source: ${(await writeTempFile(targetSource, `.${name}`)).path}`);
+            console.log(`        Source: ${compilationResult.sourceFile.path}`);
+            console.log(`        Binary: ${compilationResult.binaryFile.path}`);
             if (!testPassed) {
                 let log =
                     testCase.exitCode == executionResult.exitCode

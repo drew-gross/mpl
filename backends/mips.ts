@@ -1,8 +1,9 @@
+import writeTempFile from '../util/writeTempFile.js';
 import { stat } from 'fs-extra';
 import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import flatten from '../util/list/flatten.js';
-import { FrontendOutput, ExecutionResult, Function, StringLiteralData, Backend } from '../api.js';
+import { FrontendOutput, ExecutionResult, Function, StringLiteralData, Backend, CompilationResult } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import { Register } from '../register.js';
@@ -24,6 +25,7 @@ import {
     TargetInfo,
     ThreeAddressProgram,
 } from '../threeAddressCode/generator.js';
+import { programToString } from '../threeAddressCode/programToString.js';
 import { Statement } from '../threeAddressCode/statement.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from '../threeAddressCode/runtime.js';
 import { builtinFunctions, Type, TypeDeclaration, typeSize } from '../types.js';
@@ -224,8 +226,24 @@ ${rtlToTarget({
         instructionTranslator: threeAddressCodeToMips,
     })}`;
 };
-const mplToExectuable = (inputs: FrontendOutput) =>
-    tacToExecutable(makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget }));
+const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
+    compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget }));
+
+const compileTac = async (tac: ThreeAddressProgram): Promise<CompilationResult | { error: string }> => {
+    const threeAddressString = programToString(tac);
+    const threeAddressCodeFile = await writeTempFile(threeAddressString, '.txt');
+
+    const mipsString = tacToExecutable(tac);
+    const sourceFile = await writeTempFile(mipsString, '.mips');
+    const binaryFile = sourceFile;
+
+    return {
+        sourceFile,
+        binaryFile,
+        threeAddressCodeFile,
+        debugInstructions: `./QtSpim.app/Contents/MacOS/QtSpim ${binaryFile.path}`,
+    };
+};
 
 const execute = async (path: string): Promise<ExecutionResult> => {
     // This string is always printed with spim starts. Strip it from stdout. TODO: Look in to MARS, maybe it doesn't do this?
@@ -249,13 +267,5 @@ const execute = async (path: string): Promise<ExecutionResult> => {
     }
 };
 
-const mipsBackend: Backend = {
-    name: 'mips',
-    mplToExectuable,
-    tacToExecutable: { targetInfo: mipsTarget, compile: tacToExecutable },
-    execute,
-    debug: path => exec(`${__dirname}/../../QtSpim.app/Contents/MacOS/QtSpim ${path}`),
-    binSize: async path => (await stat(path)).size,
-};
-
+const mipsBackend: Backend = { name: 'mips', compile, compileTac, targetInfo: mipsTarget, execute };
 export default mipsBackend;

@@ -1,8 +1,9 @@
+import writeTempFile from '../util/writeTempFile.js';
 import { exec } from 'child-process-promise';
 import { stat } from 'fs-extra';
 import flatten from '../util/list/flatten.js';
 import execAndGetResult from '../util/execAndGetResult.js';
-import { FrontendOutput, ExecutionResult } from '../api.js';
+import { FrontendOutput, ExecutionResult, CompilationResult, Backend } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
@@ -59,7 +60,11 @@ const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.Ast; exitInsteadOfRetu
     }
 };
 
-const mplToExectuable = ({ functions, program, globalDeclarations }: FrontendOutput) => {
+const compile = async ({
+    functions,
+    program,
+    globalDeclarations,
+}: FrontendOutput): Promise<CompilationResult | { error: string }> => {
     const JSfunctions = functions.map(({ name, parameters, statements }) => {
         const prefix = `${name} = (${join(parameters.map(parameter => parameter.name), ', ')}) => {`;
         const suffix = `}`;
@@ -79,11 +84,20 @@ const mplToExectuable = ({ functions, program, globalDeclarations }: FrontendOut
             })
         )
     );
-    return `
+    const jsSource = `
 const length = str => str.length;
 const print = str => process.stdout.write(str);
 ${join(JSfunctions, '\n')}
 ${join(JS, '\n')}`;
+
+    const sourceFile = await writeTempFile(jsSource, '.js');
+    const binaryFile = sourceFile;
+    return {
+        sourceFile,
+        binaryFile,
+        threeAddressCodeFile: undefined,
+        debugInstructions: `./node_modules/.bin/inspect ${binaryFile.path}`,
+    };
 };
 
 const execute = async (path: string): Promise<ExecutionResult> => {
@@ -94,10 +108,5 @@ const execute = async (path: string): Promise<ExecutionResult> => {
     }
 };
 
-export default {
-    mplToExectuable,
-    execute,
-    name: 'js',
-    debug: path => exec(`${__dirname}/../../node_modules/.bin/inspect ${path}`),
-    binSize: async path => (await stat(path)).size,
-};
+const jsBackend: Backend = { name: 'js', compile, execute };
+export default jsBackend;

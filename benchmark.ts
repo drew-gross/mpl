@@ -1,3 +1,4 @@
+import { stat } from 'fs-extra';
 import { writeFile, readFile } from 'fs-extra';
 import { file as tmpFile } from 'tmp-promise';
 import testCases from './test-cases.js';
@@ -44,10 +45,11 @@ if (!before) {
                     const backends: Backend[] = [jsBackend, cBackend, mipsBackend, x64Backend];
                     const [jsSize, cSize, mipsSize, x64Size] = await Promise.all(
                         backends.map(async (backend: Backend) => {
-                            const exeContents = backend.mplToExectuable(frontendOutput);
-                            const exeFile = await tmpFile({ postfix: `.${backend.name}` });
-                            await writeFile(exeFile.fd, exeContents);
-                            return await backend.binSize(exeFile.path);
+                            const compilationResult = await backend.compile(frontendOutput);
+                            if ('error' in compilationResult) {
+                                throw `Failed to compile ${name} to ${backend.name}: ${compilationResult.error}`;
+                            }
+                            return await stat(compilationResult.binaryFile.path);
                         })
                     );
 

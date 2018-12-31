@@ -2,6 +2,8 @@ import { UninferredStatement, Statement } from './ast.js';
 import { ThreeAddressFunction, TargetInfo } from './threeAddressCode/generator.js';
 import { Type, TypeDeclaration } from './types.js';
 import SourceLocation from './parser-lib/sourceLocation.js';
+import { FileResult } from 'fs-extra';
+import { ThreeAddressProgram } from './threeAddressCode/generator.js';
 
 export type VariableLocation = 'Global' | 'Parameter' | 'Stack';
 export type VariableDeclaration = {
@@ -99,12 +101,17 @@ export type TypeError =
     | { kind: 'objectDoesNotHaveMember'; lhsType: Type; member: string; sourceLocation: SourceLocation }
     | { kind: 'couldNotFindType'; name: string; sourceLocation: SourceLocation };
 
+export type CompilationResult = {
+    sourceFile: FileResult;
+    binaryFile: FileResult;
+    threeAddressCodeFile: FileResult | undefined;
+    debugInstructions: string;
+};
+
 export type Backend = {
     name: string;
-    binSize: (string) => Promise<number | { error: string }>;
-    mplToExectuable: (BackendInputs) => string;
-    tacToExecutable?: { targetInfo: TargetInfo; compile: (ThreeAddressProgram) => string };
-    execute: (string) => Promise<ExecutionResult>; // Exit code or error
-    debug?: (string) => Promise<void>;
-    runtimeFunctions?: ThreeAddressFunction[];
+    compile: (input: FrontendOutput) => Promise<CompilationResult | { error: string }>;
+    compileTac?: (input: ThreeAddressProgram) => Promise<CompilationResult | { error: string }>;
+    targetInfo?: TargetInfo;
+    execute: (path: string) => Promise<ExecutionResult>;
 };

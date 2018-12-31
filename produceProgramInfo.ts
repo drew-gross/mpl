@@ -1,3 +1,4 @@
+import debug from './util/debug.js';
 import { parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
 import { programToString } from './threeAddressCode/programToString.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCode/runtime.js';
@@ -7,7 +8,7 @@ import { writeFile } from 'fs-extra';
 import { lex, Token, LexError } from './parser-lib/lex.js';
 import { parseMpl, compile, parseErrorToString } from './frontend.js';
 import { parse, stripResultIndexes, toDotFile, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
-import { FrontendOutput, ParseError, ExecutionResult } from './api.js';
+import { FrontendOutput, ParseError, ExecutionResult, CompilationResult } from './api.js';
 import join from './util/join.js';
 import { toString as typeToString } from './types.js';
 import { astToString } from './ast.js';
@@ -17,18 +18,14 @@ import { backends } from './backend-utils.js';
 
 type BackendResult = {
     name: string;
-    targetSource: string;
+    compilationResult: CompilationResult;
     executionResult: ExecutionResult;
 };
 
 type ProgramInfo = {
     tokens: Token<MplToken>[];
     ast: MplAst;
-    threeAddressCode: {
-        parsed: ThreeAddressProgram;
-        asString: string;
-        roundTripParsed: ThreeAddressProgram | LexError | ParseError[];
-    };
+    threeAddressRoundTrip: ThreeAddressProgram | LexError | ParseError[];
     frontendOutput: FrontendOutput;
     backendResults: BackendResult[];
     structure: string;
@@ -88,14 +85,12 @@ export default async (
     const roundTripParsed = parseTacProgram(stringForm);
 
     const backendResults = await Promise.all(
-        backends.map(async ({ name, mplToExectuable, execute }) => {
-            const targetSource = mplToExectuable(frontendOutput);
+        backends.map(async ({ name, compile, execute }) => {
+            const compilationResult = await compile(frontendOutput);
 
-            const exeFile = await tmpFile({ postfix: `.${name}` });
-            await writeFile(exeFile.fd, targetSource);
-            const executionResult = await execute(exeFile.path);
-
-            return { name, targetSource, executionResult };
+            if ('error' in compilationResult) throw debug(compilationResult.error);
+            const executionResult = await execute(compilationResult.binaryFile.path);
+            return { name, compilationResult, executionResult };
         })
     );
 
@@ -104,11 +99,7 @@ export default async (
         ast,
         frontendOutput,
         structure,
-        threeAddressCode: {
-            parsed: threeAddressCode,
-            asString: stringForm,
-            roundTripParsed: roundTripParsed as any,
-        },
+        threeAddressRoundTrip: roundTripParsed as any,
         backendResults,
     };
 };
