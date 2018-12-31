@@ -49,7 +49,7 @@ if (!before) {
                             if ('error' in compilationResult) {
                                 throw `Failed to compile ${name} to ${backend.name}: ${compilationResult.error}`;
                             }
-                            return await stat(compilationResult.binaryFile.path);
+                            return (await stat(compilationResult.binaryFile.path)).size;
                         })
                     );
 
