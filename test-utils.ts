@@ -138,12 +138,14 @@ export const mplTest = async (
     const testCaseName = name;
     for (let i = 0; i < programInfo.backendResults.length; i++) {
         const { name, executionResult } = programInfo.backendResults[i];
+        const testPassed = passed(
+            { exitCode, stdout: expectedStdOut, name: testCaseName ? testCaseName : 'unnamed', source: source },
+            executionResult
+        );
+
         if (!failing.includes(name)) {
             t.true(
-                passed(
-                    { exitCode, stdout: expectedStdOut, name: testCaseName ? testCaseName : 'unnamed', source: source },
-                    executionResult
-                ),
+                testPassed,
                 testCaseName
                     ? `Test failed. Run $ npm run debug-test-case "${testCaseName}" for more info.`
                     : 'Unnamed test failed'
@@ -177,7 +179,8 @@ export const tacTest = async (
                 const newSource = clone(parsed);
 
                 // TODO: This is pure jank. Should move responsibility for adding cleanup code to some place that makes actual sense.
-                newSource.instructions.push(...(backend.targetInfo as any).cleanupCode);
+                if (!backend.targetInfo) throw debug('onoz');
+                newSource.instructions.push(...backend.targetInfo.cleanupCode);
 
                 const compilationResult = await backend.compileTac({
                     globals: {},
@@ -191,13 +194,10 @@ export const tacTest = async (
                     return;
                 }
 
-                const result = await backend.execute(compilationResult.binaryFile);
+                const result = await backend.execute(compilationResult.binaryFile.path);
                 if ('error' in result) {
                     t.fail(`${backend.name} execution failed: ${result.error}`);
-                    return;
-                }
-
-                if (result.exitCode !== exitCode) {
+                } else if (result.exitCode !== exitCode) {
                     const errorMessage = `${backend.name} had unexpected output.
     Exit code: ${result.exitCode}. Expected: ${exitCode}.`;
                     t.fail(errorMessage);

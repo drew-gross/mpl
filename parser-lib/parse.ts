@@ -541,7 +541,6 @@ export const parse = <NodeType extends string, TokenType>(
     if (result.newIndex != tokens.length) {
         const firstExtraToken = tokens[result.newIndex];
         if (!firstExtraToken) debug('there are extra tokens but also not');
-        debugger;
         return {
             kind: 'parseError',
             errors: [

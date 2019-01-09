@@ -256,5 +256,5 @@ const compileTac = async (tac: ThreeAddressProgram): Promise<CompilationResult |
     };
 };
 
-const x64Backend: Backend = { name: 'x64', compile, compileTac, execute: execAndGetResult };
+const x64Backend: Backend = { name: 'x64', compile, compileTac, execute: execAndGetResult, targetInfo: x64Target };
 export default x64Backend;

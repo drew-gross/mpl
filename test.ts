@@ -487,11 +487,11 @@ test('double product with brackets', mplTest, {
     },
 });
 
-testCases.forEach(({ name, source, exitCode, failing }) => {
+testCases.forEach(({ name, source, exitCode, stdout, failing }) => {
     if (failing) {
         test.failing(name, mplTest, { source, exitCode, name });
     } else {
-        test(name, mplTest, { source, exitCode, name });
+        test(name, mplTest, { source, exitCode, name, expectedStdOut: stdout });
     }
 });
 
@@ -1437,10 +1437,25 @@ test('liveness analysis basic test', t => {
     };
     const testFunctionLiveness = tafLiveness(testFunction).map(s => s.toList());
     const expectedLiveness = [
-        [{ name: 'add_l' }, { name: 'add_r' }, { name: 'sub_l' }, { name: 'sub_r' }],
-        [{ name: 'add_d' }, { name: 'sub_l' }, { name: 'sub_r' }],
-        [{ name: 'sub_l' }, { name: 'sub_r' }],
-        [],
+        [
+            { name: 'add_l' },
+            { name: 'add_r' },
+            { name: 'sub_l' },
+            { name: 'sub_r' },
+            'functionArgument1',
+            'functionArgument2',
+            'functionArgument3',
+        ],
+        [
+            { name: 'add_d' },
+            { name: 'sub_l' },
+            { name: 'sub_r' },
+            'functionArgument1',
+            'functionArgument2',
+            'functionArgument3',
+        ],
+        [{ name: 'sub_l' }, { name: 'sub_r' }, 'functionArgument1', 'functionArgument2', 'functionArgument3'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3'],
         [],
     ];
     t.deepEqual(testFunctionLiveness, expectedLiveness);
@@ -1493,14 +1508,14 @@ test('4 block graph (length)', t => {
             .sort()
     );
     const expectedLiveness = [
-        ['functionArgument1'],
-        ['functionArgument1', 'functionResult'],
-        ['functionArgument1', 'functionResult'],
-        ['currentChar', 'functionArgument1', 'functionResult'],
-        ['functionArgument1', 'functionResult'],
-        ['functionArgument1', 'functionResult'],
-        ['functionArgument1', 'functionResult'],
-        ['functionArgument1', 'functionResult'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'],
+        ['currentChar', 'functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'],
         ['functionArgument1', 'functionResult'],
         [],
     ];
@@ -1582,16 +1597,16 @@ test('liveness of stringEquality', t => {
     );
 
     const expectedLiveness = [
-        ['leftByte', 'rightByte'],
-        ['leftByte', 'rightByte'],
-        ['leftByte', 'rightByte'],
-        ['leftByte', 'rightByte'],
-        ['leftByte', 'rightByte'],
-        ['leftByte', 'rightByte'],
-        ['leftByte', 'rightByte'],
-        [],
-        [],
-        [],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'leftByte', 'rightByte'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'leftByte', 'rightByte'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'leftByte', 'rightByte'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'leftByte', 'rightByte'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'leftByte', 'rightByte'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'leftByte', 'rightByte'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'leftByte', 'rightByte'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3'],
+        ['functionArgument1', 'functionArgument2', 'functionArgument3'],
         [],
     ];
     t.deepEqual(liveness, expectedLiveness);
@@ -1783,7 +1798,8 @@ return t19 - t16;
     exitCode: 3,
 });
 
-test.failing('Spill With Local Variables and Local Struct', mplTest, {
+// TODO: rewrite this in a way that it is guaranteed to cause spilling
+test('Spill With Local Variables and Local Struct', mplTest, {
     source: `
 IntPair := {
     first: Integer;
@@ -1852,9 +1868,8 @@ return foo(1);
     exitCode: 11,
 });
 
-// This will fail due to needing to make adjust stack pointer to make room for spilled temporaries.
-// Currently each functions in the stack's spills will clobber it's parents.
-test.failing('2-level call tree with spilling', mplTest, {
+// TODO: rewrite this in a way that it is guaranteed to cause spilling
+test('2-level call tree with spilling', mplTest, {
     source: `
 
 bar := a: Integer => {
