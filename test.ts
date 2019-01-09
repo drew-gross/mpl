@@ -1928,6 +1928,7 @@ test.failing('Spill self-assigning multiply', mplTest, {
 // TODO: enough stuff to cause a spill. then a = a * a. Or make this
 // a direct test of spill().
 `,
+    exitCode: 9001,
 });
 
 test('Parse grammar from multiple entry points', t => {

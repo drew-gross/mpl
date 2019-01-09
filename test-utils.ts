@@ -16,17 +16,17 @@ import { passed } from './test-case.js';
 import produceProgramInfo from './produceProgramInfo.js';
 
 // TODO: separate this for mplTest vs tacTest, they have a lot of overlap but not perfect.
+// TODO: express in the type that exitCode OR expectedErrors of some sort must be provided.
 type TestOptions = {
     source: string;
-    exitCode: number;
-    expectedTypeErrors: [any];
-    expectedParseErrors: [any];
-    expectedStdOut: string;
-    expectedAst: [any];
+    exitCode?: number;
+    expectedTypeErrors?: any[];
+    expectedParseErrors?: any[];
+    expectedStdOut?: string;
+    expectedAst?: any;
     printSubsteps?: string[] | string;
     debugSubsteps?: string[] | string;
     failing?: string[] | string;
-    vizAst: boolean;
     spills?: number;
     name?: string;
 };
@@ -43,7 +43,6 @@ export const mplTest = async (
         expectedStdOut = '',
         expectedAst,
         failing = [],
-        vizAst = false,
         name = undefined,
     }: TestOptions
 ) => {
@@ -138,6 +137,10 @@ export const mplTest = async (
     const testCaseName = name;
     for (let i = 0; i < programInfo.backendResults.length; i++) {
         const { name, executionResult } = programInfo.backendResults[i];
+        if (exitCode === undefined) {
+            t.fail('Exit code mandatory');
+            return;
+        }
         const testPassed = passed(
             { exitCode, stdout: expectedStdOut, name: testCaseName ? testCaseName : 'unnamed', source: source },
             executionResult
