@@ -591,7 +591,7 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
             };
         case 'spill':
             return {
-                kind: ast.type,
+                kind: ast.type as any,
                 register: parseRegister(a.children[1].value),
                 offset: a.children[0].value,
                 why: stripComment(a.children[2].value),
@@ -599,7 +599,7 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
         case 'unspill':
             if (Number.isNaN(a.children[0].value)) debug('nan!');
             return {
-                kind: ast.type,
+                kind: ast.type as any,
                 register: parseRegister(a.children[1].value),
                 offset: a.children[0].value,
                 why: stripComment(a.children[2].value),
