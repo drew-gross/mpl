@@ -91,6 +91,21 @@ return isFive(5) ? 1 : 0`,
         exitCode: 1,
         stdout: 'sample_string',
     },
+    {
+        name: 'Complex String Concatenation',
+        source: `
+            lenFunc := dummy: Integer => {
+                str1 := "abc";
+                str2 := "def";
+                str3 := "abc";
+                concat1 := str1 ++ str2 ++ str3;
+                concat2 := str3 ++ str2 ++ str3;
+                return concat1 == concat2 ? (length(str1 ++ str2)) : 99;
+            };
+            return lenFunc(5);
+        `,
+        exitCode: 6,
+    },
 ];
 
 export default testCases;

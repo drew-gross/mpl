@@ -983,20 +983,6 @@ test('concatenate and get length then subtract', mplTest, {
     exitCode: 5,
 });
 
-// TODO: Needs register allocator with proper spilling
-test.failing('complex string concatenation', mplTest, {
-    source: `lenFunc := dummy: Integer => {
-    str1 := "abc";
-    str2 := "def";
-    str3 := "abc";
-    concat1 := str1 ++ str2 ++ str3;
-    concat2 := str3 ++ str2 ++ str3;
-    return concat1 == concat2 ? (length(str1 ++ str2)) : 99;
-};
-return lenFunc(5);`,
-    exitCode: 6,
-});
-
 test('parsing fails for extra invalid tokens', mplTest, {
     source: `return 5 (`,
     expectedParseErrors: [

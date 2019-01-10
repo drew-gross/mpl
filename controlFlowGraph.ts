@@ -391,6 +391,7 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
                 }
                 break;
             }
+            case 'add':
             case 'multiply': {
                 let newLhs = instruction.lhs;
                 let newRhs = instruction.rhs;
@@ -479,9 +480,29 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
                 newFunction.instructions.push(instruction);
                 break;
             }
-
+            case 'loadSymbolAddress':
+                if (registerIsEqual(instruction.to, registerToSpill)) {
+                    let newDestination = makeFragment();
+                    newFunction.instructions.push({
+                        ...instruction,
+                        to: newDestination,
+                    });
+                    newFunction.instructions.push({
+                        kind: 'spill',
+                        register: newDestination,
+                        offset: currentSpillIndex,
+                        why: 'spill',
+                    });
+                } else {
+                    newFunction.instructions.push(instruction);
+                }
+                break;
             default:
-                throw debug(`${instruction.kind} unhandled in spill`);
+                if (reads(instruction).includes(registerToSpill) || writes(instruction).includes(registerToSpill)) {
+                    throw debug(`${instruction.kind} unhandled in spill`);
+                } else {
+                    newFunction.instructions.push(instruction);
+                }
         }
     });
 
