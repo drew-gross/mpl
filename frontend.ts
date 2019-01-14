@@ -114,10 +114,7 @@ const extractVariable = (ctx: WithContext<Ast.UninferredStatement>): VariableDec
             const variablesIncludingSelf = mergeDeclarations(ctx.availableVariables, [
                 {
                     name: ctx.w.destination,
-                    type: {
-                        kind: 'Function',
-                        arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
-                    },
+                    type: { kind: 'Function', arguments: [{ kind: 'Integer' }], returnType: { kind: 'Integer' } },
                 },
             ]);
             return {
@@ -376,10 +373,7 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): TO
                 return f;
             }
             return {
-                type: {
-                    kind: 'Function',
-                    arguments: [...ast.parameters.map(p => p.type), f.returnType],
-                },
+                type: { kind: 'Function', arguments: ast.parameters.map(p => p.type), returnType: f.returnType },
                 extractedFunctions: [f], // TODO: Add functions extracted within the function itself
             };
         case 'callExpression': {
@@ -415,13 +409,13 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): TO
                     },
                 ];
             }
-            if (argTypes.length !== functionType.arguments.length - 1) {
+            if (argTypes.length !== functionType.arguments.length) {
                 return [
                     {
                         kind: 'wrongNumberOfArguments',
                         targetFunction: functionName,
                         passedArgumentCount: argTypes.length,
-                        expectedArgumentCount: functionType.arguments.length - 1,
+                        expectedArgumentCount: functionType.arguments.length,
                         sourceLocation: ast.sourceLocation,
                     },
                 ];
@@ -439,11 +433,7 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): TO
                     ];
                 }
             }
-            const maybeReturnType: Type | null = last(functionType.arguments);
-            if (!maybeReturnType) {
-                throw debug('Function had no return type');
-            }
-            return { type: maybeReturnType, extractedFunctions: [] };
+            return { type: functionType.returnType, extractedFunctions: [] };
         }
         case 'identifier': {
             const declaration = availableVariables.find(({ name }) => ast.value == name);
@@ -584,10 +574,7 @@ const typeCheckStatement = (
                 availableVariables: mergeDeclarations(availableVariables, [
                     {
                         name: ast.destination,
-                        type: {
-                            kind: 'Function',
-                            arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
-                        },
+                        type: { kind: 'Function', arguments: [{ kind: 'Integer' }], returnType: { kind: 'Integer' } },
                     },
                 ]),
             });
@@ -697,11 +684,15 @@ const typeCheckFunction = (ctx: WithContext<UninferredFunction>) => {
 };
 
 const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaration[] =>
-    functions.map(({ name, parameters }) => ({
-        name: name,
-        type: { kind: 'Function' as 'Function', arguments: parameters.map(p => p.type) },
-        location: 'Global' as 'Global',
-    }));
+    functions.map(({ name, parameters }) => {
+        const args = parameters.map(p => p.type);
+        const returnType = args.shift();
+        return {
+            name: name,
+            type: { kind: 'Function' as 'Function', arguments: args, returnType: returnType as any },
+            location: 'Global' as 'Global',
+        };
+    });
 
 const assignmentToGlobalDeclaration = (ctx: WithContext<Ast.UninferredDeclarationAssignment>): VariableDeclaration => {
     const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
@@ -960,9 +951,11 @@ const parseType = (ast: MplAst): Type => {
         case 'typeWithArgs': {
             const name = (ast.children[0] as any).value;
             if (name != 'Function') throw debug('Only functions support args right now');
+            const typeList = extractTypeList(ast.children[2]);
             return {
                 kind: name,
-                arguments: extractTypeList(ast.children[2]),
+                arguments: typeList.slice(0, typeList.length - 1),
+                returnType: typeList[typeList.length - 1],
             };
         }
         case 'typeWithoutArgs': {

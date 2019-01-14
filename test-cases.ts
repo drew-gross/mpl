@@ -106,6 +106,23 @@ return isFive(5) ? 1 : 0`,
         `,
         exitCode: 6,
     },
+    {
+        name: 'No Args',
+        source: `
+            const11 := () => 11;
+            return const11();
+        `,
+        exitCode: 11,
+    },
+    // {
+    //     name: 'Read',
+    //     source: `
+    //         val := readInt();
+    //         return val;
+    //     `,
+    //     stdin: '5',
+    //     exitCode: 5,
+    // },
 ];
 
 export default testCases;

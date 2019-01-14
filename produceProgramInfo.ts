@@ -88,18 +88,14 @@ export default async (
         backends.map(async ({ name, compile, execute }) => {
             const compilationResult = await compile(frontendOutput);
 
-            if ('error' in compilationResult) throw debug(compilationResult.error);
-            const executionResult = await execute(compilationResult.binaryFile.path);
-            return { name, compilationResult, executionResult };
+            if ('error' in compilationResult) {
+                return { name, compilationResult, executionResult: { error: 'Compilation failed' } };
+            } else {
+                const executionResult = await execute(compilationResult.binaryFile.path);
+                return { name, compilationResult, executionResult };
+            }
         })
     );
 
-    return {
-        tokens,
-        ast,
-        frontendOutput,
-        structure,
-        threeAddressRoundTrip: roundTripParsed as any,
-        backendResults,
-    };
+    return { tokens, ast, frontendOutput, structure, threeAddressRoundTrip: roundTripParsed as any, backendResults };
 };

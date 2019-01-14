@@ -101,12 +101,14 @@ export type TypeError =
     | { kind: 'objectDoesNotHaveMember'; lhsType: Type; member: string; sourceLocation: SourceLocation }
     | { kind: 'couldNotFindType'; name: string; sourceLocation: SourceLocation };
 
-export type CompilationResult = {
-    sourceFile: FileResult;
-    binaryFile: FileResult;
-    threeAddressCodeFile: FileResult | undefined;
-    debugInstructions: string;
-};
+export type CompilationResult =
+    | {
+          sourceFile: FileResult;
+          binaryFile: FileResult;
+          threeAddressCodeFile: FileResult | undefined;
+          debugInstructions: string;
+      }
+    | { error: string; intermediateFile?: FileResult };
 
 export type Backend = {
     name: string;

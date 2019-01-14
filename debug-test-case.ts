@@ -30,7 +30,7 @@ import chalk from 'chalk';
 
     if ('kind' in programInfo || 'parseErrors' in programInfo || 'typeErrors' in programInfo) {
         // TODO: Unify and improve error printing logic with test-utils and produceProgramInfo
-        console.log(`Error in program: ${programInfo}`);
+        console.log(`Error in program: ${JSON.stringify(programInfo)}`);
         return;
     }
 
@@ -67,7 +67,12 @@ import chalk from 'chalk';
             console.log(chalk.red(`    ${name}:`));
         }
 
-        if ('error' in executionResult) {
+        if ('error' in compilationResult) {
+            console.log(chalk.red(`        Compilation Failed: ${compilationResult.error}`));
+            if ('intermediateFile' in compilationResult) {
+                console.log(chalk.red(`        Intermediate File:: ${compilationResult.intermediateFile.path}`));
+            }
+        } else if ('error' in executionResult) {
             console.log(chalk.red(`        Execution Failed: ${executionResult.error}`));
         } else {
             if (compilationResult.threeAddressCodeFile) {

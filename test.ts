@@ -377,49 +377,24 @@ test('correct inferred type for function', t => {
     >[]);
     const ast: Ast.UninferredExpression = astFromParseResult(parseResult as MplAst) as Ast.UninferredExpression;
     t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
-        type: {
-            kind: 'Function',
-            arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
-        },
+        type: { kind: 'Function', arguments: [{ kind: 'Integer' }], returnType: { kind: 'Integer' } },
         extractedFunctions: [
             {
                 name: 'anonymous_1', // TODO: Make this not dependent on test order
-                parameters: [
-                    {
-                        name: 'a',
-                        type: {
-                            kind: 'Integer',
-                        },
-                    },
-                ],
-                returnType: {
-                    kind: 'Integer',
-                },
+                parameters: [{ name: 'a', type: { kind: 'Integer' } }],
+                returnType: { kind: 'Integer' },
                 statements: [
                     {
                         expression: {
                             kind: 'number',
-                            sourceLocation: {
-                                column: 15,
-                                line: 1,
-                            },
+                            sourceLocation: { column: 15, line: 1 },
                             value: 11,
                         },
                         kind: 'returnStatement',
-                        sourceLocation: {
-                            column: 1,
-                            line: 1,
-                        },
+                        sourceLocation: { column: 1, line: 1 },
                     },
                 ],
-                variables: [
-                    {
-                        name: 'a',
-                        type: {
-                            kind: 'Integer',
-                        },
-                    },
-                ],
+                variables: [{ name: 'a', type: { kind: 'Integer' } }],
             },
         ],
     });
@@ -434,51 +409,27 @@ test('double product with brackets', mplTest, {
             {
                 type: 'returnStatement',
                 children: [
-                    {
-                        type: 'return',
-                        value: null,
-                    },
+                    { type: 'return', value: null },
                     {
                         type: 'product',
                         children: [
                             {
                                 type: 'product',
                                 children: [
-                                    {
-                                        type: 'number',
-                                        value: 2,
-                                    },
-                                    {
-                                        type: 'product',
-                                        value: null,
-                                    },
+                                    { type: 'number', value: 2 },
+                                    { type: 'product', value: null },
                                     {
                                         type: 'product',
                                         children: [
-                                            {
-                                                type: 'number',
-                                                value: 3,
-                                            },
-                                            {
-                                                type: 'product',
-                                                value: null,
-                                            },
-                                            {
-                                                type: 'number',
-                                                value: 4,
-                                            },
+                                            { type: 'number', value: 3 },
+                                            { type: 'product', value: null },
+                                            { type: 'number', value: 4 },
                                         ],
                                     },
                                 ],
                             },
-                            {
-                                type: 'product',
-                                value: null,
-                            },
-                            {
-                                type: 'number',
-                                value: 5,
-                            },
+                            { type: 'product', value: null },
+                            { type: 'number', value: 5 },
                         ],
                     },
                 ],
@@ -799,14 +750,8 @@ return 0;`,
         {
             kind: 'assignWrongType',
             lhsName: 'myFunc',
-            lhsType: {
-                kind: 'Function',
-                arguments: [builtinTypes.Integer, builtinTypes.Integer],
-            },
-            rhsType: {
-                kind: 'Function',
-                arguments: [builtinTypes.Integer],
-            },
+            lhsType: { kind: 'Function', arguments: [builtinTypes.Integer], returnType: builtinTypes.Integer },
+            rhsType: { kind: 'Function', arguments: [], returnType: builtinTypes.Integer },
             sourceLocation: { line: 2, column: 1 },
         },
     ],
@@ -820,14 +765,8 @@ return myFunc("");`,
         {
             kind: 'assignWrongType',
             lhsName: 'myFunc',
-            lhsType: {
-                kind: 'Function',
-                arguments: [builtinTypes.Integer, builtinTypes.Integer],
-            },
-            rhsType: {
-                kind: 'Function',
-                arguments: [builtinTypes.String, builtinTypes.Integer],
-            },
+            lhsType: { kind: 'Function', arguments: [builtinTypes.Integer], returnType: builtinTypes.Integer },
+            rhsType: { kind: 'Function', arguments: [builtinTypes.String], returnType: builtinTypes.Integer },
             sourceLocation: { line: 2, column: 1 },
         },
     ],
@@ -848,14 +787,8 @@ return myFunc("");`,
         {
             kind: 'assignWrongType',
             lhsName: 'myFunc',
-            lhsType: {
-                kind: 'Function',
-                arguments: [builtinTypes.Integer, builtinTypes.Boolean],
-            },
-            rhsType: {
-                kind: 'Function',
-                arguments: [builtinTypes.String, builtinTypes.Integer],
-            },
+            lhsType: { kind: 'Function', arguments: [builtinTypes.Integer], returnType: builtinTypes.Boolean },
+            rhsType: { kind: 'Function', arguments: [builtinTypes.String], returnType: builtinTypes.Integer },
             sourceLocation: { line: 2, column: 1 },
         },
     ],
@@ -1023,13 +956,6 @@ test('three args', mplTest, {
 myAdd := a: Integer, b: Integer, c: Integer => a + b + c;
 return myAdd(7, 4, 5);`,
     exitCode: 16,
-});
-
-test('zero args', mplTest, {
-    source: `
-const11 := () => 11;
-return const11();`,
-    exitCode: 11,
 });
 
 test('one bracketed arg', mplTest, {
@@ -1603,11 +1529,13 @@ test('type equality', t => {
         typesAreEqual(
             {
                 kind: 'Function',
-                arguments: [{ kind: 'Integer' }],
+                arguments: [],
+                returnType: { kind: 'Integer' },
             },
             {
                 kind: 'Function',
-                arguments: [{ kind: 'Integer' }, { kind: 'Integer' }, { kind: 'Integer' }],
+                arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
+                returnType: { kind: 'Integer' },
             },
             []
         )

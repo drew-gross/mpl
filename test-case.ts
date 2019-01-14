@@ -5,6 +5,7 @@ export type TestCase = {
     source: string;
     exitCode: number;
     stdout?: string;
+    stdin?: string;
     failing?: boolean;
 };
 

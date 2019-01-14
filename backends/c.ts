@@ -38,11 +38,8 @@ const mplTypeToCType = (type: Type): ((name: string) => string) => {
         case 'String':
             return name => `char *${name}`;
         case 'Function':
-            const returnType = mplTypeToCType(last(type.arguments) as Type)('');
-            const argumentTypes = type.arguments
-                .slice(0, type.arguments.length - 1)
-                .map(mplTypeToCType)
-                .map(f => f(''));
+            const returnType = mplTypeToCType(type.returnType)('');
+            const argumentTypes = type.arguments.map(mplTypeToCType).map(f => f(''));
             const argumentsString = join(argumentTypes, ', ');
             return name => `${returnType} (*${name})(${argumentsString})`;
         case 'Product':
@@ -542,7 +539,7 @@ ${Cprogram}
         // TODO: Don't emit unused variables
         await exec(`clang -Wall -Werror -Wno-error=unused-variable ${sourceFile.path} -o ${binaryFile.path}`);
     } catch (e) {
-        return { error: `Failed to compile generated C code:\n${e.stderr}` };
+        return { error: `Failed to compile generated C code:\n${e.stderr}`, intermediateFile: sourceFile };
     }
     return {
         sourceFile,

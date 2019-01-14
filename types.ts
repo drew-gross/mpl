@@ -11,7 +11,7 @@ export type ProductComponent = {
 export type String = { kind: 'String' };
 export type Integer = { kind: 'Integer' };
 export type Boolean = { kind: 'Boolean' };
-export type Function = { kind: 'Function'; arguments: Type[] };
+export type Function = { kind: 'Function'; arguments: Type[]; returnType: Type };
 export type Product = { kind: 'Product'; name: string; members: ProductComponent[] };
 export type NameRef = { kind: 'NameRef'; namedType: string };
 
@@ -96,14 +96,24 @@ export const builtinFunctions: VariableDeclaration[] = [
         name: 'length',
         type: {
             kind: 'Function',
-            arguments: [builtinTypes.String, builtinTypes.Integer],
+            arguments: [builtinTypes.String],
+            returnType: builtinTypes.Integer,
         },
     },
     {
         name: 'print',
         type: {
             kind: 'Function',
-            arguments: [builtinTypes.String, builtinTypes.Integer],
+            arguments: [builtinTypes.String],
+            returnType: builtinTypes.Integer,
+        },
+    },
+    {
+        name: 'readInt',
+        type: {
+            kind: 'Function',
+            arguments: [],
+            returnType: builtinTypes.Integer,
         },
     },
 ];
