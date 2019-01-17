@@ -244,16 +244,19 @@ const compileTac = async (tac: ThreeAddressProgram): Promise<CompilationResult |
     const linkerInputPath = await tmpFile({ postfix: '.o' });
 
     const binaryFile = await tmpFile({ postfix: '.out' });
-    await exec(`nasm -fmacho64 -o ${linkerInputPath.path} ${sourceFile.path}`);
-    // TODO: Cross compiling or something? IDK. Dependency on system linker sucks.
-    await exec(`ld ${linkerInputPath.path} -o ${binaryFile.path} -macosx_version_min 10.6 -lSystem`);
-
-    return {
-        sourceFile,
-        binaryFile,
-        threeAddressCodeFile,
-        debugInstructions: `lldb ${binaryFile.path}; break set -n start; run`,
-    };
+    try {
+        await exec(`nasm -fmacho64 -o ${linkerInputPath.path} ${sourceFile.path}`);
+        // TODO: Cross compiling or something? IDK. Dependency on system linker sucks.
+        await exec(`ld ${linkerInputPath.path} -o ${binaryFile.path} -macosx_version_min 10.6 -lSystem`);
+        return {
+            sourceFile,
+            binaryFile,
+            threeAddressCodeFile,
+            debugInstructions: `lldb ${binaryFile.path}; break set -n start; run`,
+        };
+    } catch (e) {
+        return { error: `Exception: ${e.message}` };
+    }
 };
 
 const x64Backend: Backend = { name: 'x64', compile, compileTac, execute: execAndGetResult, targetInfo: x64Target };

@@ -87,6 +87,7 @@ const compile = async ({
     const jsSource = `
 const length = str => str.length;
 const print = str => process.stdout.write(str);
+
 ${join(JSfunctions, '\n')}
 ${join(JS, '\n')}`;
 

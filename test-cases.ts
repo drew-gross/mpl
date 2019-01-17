@@ -114,15 +114,15 @@ return isFive(5) ? 1 : 0`,
         `,
         exitCode: 11,
     },
-    // {
-    //     name: 'Read',
-    //     source: `
-    //         val := readInt();
-    //         return val;
-    //     `,
-    //     stdin: '5',
-    //     exitCode: 5,
-    // },
+    {
+        name: 'Read Integer',
+        source: `
+            val := readInt();
+            return val;
+        `,
+        stdin: '5',
+        exitCode: 5,
+    },
 ];
 
 export default testCases;

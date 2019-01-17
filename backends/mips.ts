@@ -261,9 +261,7 @@ const execute = async (path: string): Promise<ExecutionResult> => {
             stdout: trimmedStdout.slice(0, trimmedStdout.length - mipsExitCode.toString().length),
         };
     } catch (e) {
-        return {
-            error: `Exception: ${e.message}`,
-        };
+        return { error: `Exception: ${e.message}` };
     }
 };
 
