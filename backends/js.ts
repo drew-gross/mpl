@@ -3,14 +3,22 @@ import { exec } from 'child-process-promise';
 import { stat } from 'fs-extra';
 import flatten from '../util/list/flatten.js';
 import execAndGetResult from '../util/execAndGetResult.js';
-import { FrontendOutput, ExecutionResult, CompilationResult, Backend } from '../api.js';
+import { FrontendOutput, ExecutionResult, CompilationResult, Backend, VariableDeclaration } from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
 
-const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.Ast; exitInsteadOfReturn: boolean }): string[] => {
+const astToJS = ({
+    ast,
+    exitInsteadOfReturn,
+    builtinFunctions,
+}: {
+    ast: Ast.Ast;
+    exitInsteadOfReturn: boolean;
+    builtinFunctions: VariableDeclaration[];
+}): string[] => {
     if (!ast) debugger;
-    const recurse = newInput => astToJS({ ast: newInput, exitInsteadOfReturn });
+    const recurse = newInput => astToJS({ ast: newInput, exitInsteadOfReturn, builtinFunctions });
     switch (ast.kind) {
         case 'returnStatement': {
             if (exitInsteadOfReturn) {
@@ -34,8 +42,15 @@ const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.Ast; exitInsteadOfRetu
         case 'functionLiteral':
             return [ast.deanonymizedName];
         case 'callExpression':
+            const functionName = ast.name;
+            const functionDecl = builtinFunctions.find(({ name, type }) => name == functionName);
             const jsArguments: string[][] = ast.arguments.map(argument => recurse(argument));
-            return [`${ast.name}(`, join(jsArguments.map(argument => join(argument, ' ')), ', '), `)`];
+            const needsAwait =
+                functionDecl &&
+                functionDecl.type.kind == 'Function' &&
+                functionDecl.type.permissions.includes('stdout');
+            const awaitStr = needsAwait ? 'await' : '';
+            return [awaitStr + ` ${ast.name}(`, join(jsArguments.map(argument => join(argument, ' ')), ', '), `)`];
         case 'identifier':
             return [ast.value];
         case 'ternary':
@@ -62,6 +77,7 @@ const astToJS = ({ ast, exitInsteadOfReturn }: { ast: Ast.Ast; exitInsteadOfRetu
 
 const compile = async ({
     functions,
+    builtinFunctions,
     program,
     globalDeclarations,
 }: FrontendOutput): Promise<CompilationResult | { error: string }> => {
@@ -70,28 +86,41 @@ const compile = async ({
         const suffix = `}`;
 
         const body = statements.map(statement => {
-            return join(astToJS({ ast: statement, exitInsteadOfReturn: false }), ' ');
+            return join(astToJS({ ast: statement, exitInsteadOfReturn: false, builtinFunctions }), ' ');
         });
 
         return [prefix, ...body, suffix].join(' ');
     });
 
     const JS: string[] = flatten(
-        program.statements.map(child =>
-            astToJS({
-                ast: child,
-                exitInsteadOfReturn: true,
-            })
-        )
+        program.statements.map(child => astToJS({ ast: child, builtinFunctions, exitInsteadOfReturn: true }))
     );
     const jsSource = `
+const readline = require('readline');
+
 const length = str => str.length;
 const print = str => process.stdout.write(str);
 
-${join(JSfunctions, '\n')}
-${join(JS, '\n')}`;
+const readInt = async () => {
+    return new Promise((resolve, reject) => {
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+        });
+        rl.on('line', line => {
+            rl.close();
+            resolve(line);
+        });
+    });
+};
+
+(async () => {
+    ${join(JSfunctions, '\n')}
+    ${join(JS, '\n')}
+})();`;
 
     const sourceFile = await writeTempFile(jsSource, '.js');
+    console.log(sourceFile.path);
     const binaryFile = sourceFile;
     return {
         sourceFile,

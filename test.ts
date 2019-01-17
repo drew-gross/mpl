@@ -377,7 +377,7 @@ test('correct inferred type for function', t => {
     >[]);
     const ast: Ast.UninferredExpression = astFromParseResult(parseResult as MplAst) as Ast.UninferredExpression;
     t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
-        type: { kind: 'Function', arguments: [{ kind: 'Integer' }], returnType: { kind: 'Integer' } },
+        type: { kind: 'Function', arguments: [{ kind: 'Integer' }], permissions: [], returnType: { kind: 'Integer' } },
         extractedFunctions: [
             {
                 name: 'anonymous_1', // TODO: Make this not dependent on test order
@@ -653,13 +653,6 @@ return isFive(11);`,
     exitCode: 7,
 });
 
-test('factorial', mplTest, {
-    source: `
-factorial := x: Integer => x == 1 ? 1 : x * factorial(x - 1);
-return factorial(5);`,
-    exitCode: 120,
-});
-
 test.failing('2 arg recursve', mplTest, {
     source: `
 recursiveAdd := x: Integer, y: Integer => x == 0 ? y : recursiveAdd(x - 1, y + 1);
@@ -750,8 +743,12 @@ return 0;`,
         {
             kind: 'assignWrongType',
             lhsName: 'myFunc',
-            lhsType: { kind: 'Function', arguments: [builtinTypes.Integer], returnType: builtinTypes.Integer },
-            rhsType: { kind: 'Function', arguments: [], returnType: builtinTypes.Integer },
+            lhsType: {
+                kind: 'Function',
+                arguments: [builtinTypes.Integer],
+                returnType: builtinTypes.Integer,
+            },
+            rhsType: { kind: 'Function', arguments: [], permissions: [], returnType: builtinTypes.Integer },
             sourceLocation: { line: 2, column: 1 },
         },
     ],
@@ -765,8 +762,17 @@ return myFunc("");`,
         {
             kind: 'assignWrongType',
             lhsName: 'myFunc',
-            lhsType: { kind: 'Function', arguments: [builtinTypes.Integer], returnType: builtinTypes.Integer },
-            rhsType: { kind: 'Function', arguments: [builtinTypes.String], returnType: builtinTypes.Integer },
+            lhsType: {
+                kind: 'Function',
+                arguments: [builtinTypes.Integer],
+                returnType: builtinTypes.Integer,
+            },
+            rhsType: {
+                kind: 'Function',
+                arguments: [builtinTypes.String],
+                permissions: [],
+                returnType: builtinTypes.Integer,
+            },
             sourceLocation: { line: 2, column: 1 },
         },
     ],
@@ -787,8 +793,17 @@ return myFunc("");`,
         {
             kind: 'assignWrongType',
             lhsName: 'myFunc',
-            lhsType: { kind: 'Function', arguments: [builtinTypes.Integer], returnType: builtinTypes.Boolean },
-            rhsType: { kind: 'Function', arguments: [builtinTypes.String], returnType: builtinTypes.Integer },
+            lhsType: {
+                kind: 'Function',
+                arguments: [builtinTypes.Integer],
+                returnType: builtinTypes.Boolean,
+            },
+            rhsType: {
+                kind: 'Function',
+                arguments: [builtinTypes.String],
+                permissions: [],
+                returnType: builtinTypes.Integer,
+            },
             sourceLocation: { line: 2, column: 1 },
         },
     ],
@@ -1530,11 +1545,13 @@ test('type equality', t => {
             {
                 kind: 'Function',
                 arguments: [],
+                permissions: [],
                 returnType: { kind: 'Integer' },
             },
             {
                 kind: 'Function',
                 arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
+                permissions: [],
                 returnType: { kind: 'Integer' },
             },
             []

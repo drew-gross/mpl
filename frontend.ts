@@ -114,7 +114,12 @@ const extractVariable = (ctx: WithContext<Ast.UninferredStatement>): VariableDec
             const variablesIncludingSelf = mergeDeclarations(ctx.availableVariables, [
                 {
                     name: ctx.w.destination,
-                    type: { kind: 'Function', arguments: [{ kind: 'Integer' }], returnType: { kind: 'Integer' } },
+                    type: {
+                        kind: 'Function',
+                        arguments: [{ kind: 'Integer' }],
+                        permissions: [],
+                        returnType: { kind: 'Integer' },
+                    },
                 },
             ]);
             return {
@@ -373,7 +378,12 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): TO
                 return f;
             }
             return {
-                type: { kind: 'Function', arguments: ast.parameters.map(p => p.type), returnType: f.returnType },
+                type: {
+                    kind: 'Function',
+                    arguments: ast.parameters.map(p => p.type),
+                    permissions: [],
+                    returnType: f.returnType,
+                },
                 extractedFunctions: [f], // TODO: Add functions extracted within the function itself
             };
         case 'callExpression': {
@@ -574,7 +584,12 @@ const typeCheckStatement = (
                 availableVariables: mergeDeclarations(availableVariables, [
                     {
                         name: ast.destination,
-                        type: { kind: 'Function', arguments: [{ kind: 'Integer' }], returnType: { kind: 'Integer' } },
+                        type: {
+                            kind: 'Function',
+                            arguments: [{ kind: 'Integer' }],
+                            permissions: [],
+                            returnType: { kind: 'Integer' },
+                        },
                     },
                 ]),
             });
@@ -689,7 +704,7 @@ const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaratio
         const returnType = args.shift();
         return {
             name: name,
-            type: { kind: 'Function' as 'Function', arguments: args, returnType: returnType as any },
+            type: { kind: 'Function' as 'Function', arguments: args, permissions: [], returnType: returnType as any },
             location: 'Global' as 'Global',
         };
     });
@@ -1336,6 +1351,7 @@ const compile = (source: string): FrontendOutput | { parseErrors: ParseError[] }
     return {
         types: availableTypes,
         functions: typedFunctions,
+        builtinFunctions,
         program: inferredProgram,
         globalDeclarations,
         stringLiterals,

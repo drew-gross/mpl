@@ -27,6 +27,14 @@ const testCases: TestCase[] = [
         exitCode: 11,
     },
     {
+        name: 'Recursive Function',
+        source: `
+            factorial := x: Integer => x == 1 ? 1 : x * factorial(x - 1);
+            return factorial(5);
+        `,
+        exitCode: 120,
+    },
+    {
         name: 'Multiple Used Functions',
         source: `
 const11 := a: Integer => 11;

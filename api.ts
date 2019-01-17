@@ -28,6 +28,7 @@ export type StringLiteralData = { id: number; value: string };
 export type FrontendOutput = {
     types: TypeDeclaration[];
     functions: Function[];
+    builtinFunctions: VariableDeclaration[];
     program: Function;
     globalDeclarations: VariableDeclaration[];
     stringLiterals: StringLiteralData[];

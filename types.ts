@@ -8,10 +8,12 @@ export type ProductComponent = {
     type: Type;
 };
 
+type Permission = 'stdout';
+
 export type String = { kind: 'String' };
 export type Integer = { kind: 'Integer' };
 export type Boolean = { kind: 'Boolean' };
-export type Function = { kind: 'Function'; arguments: Type[]; returnType: Type };
+export type Function = { kind: 'Function'; permissions: Permission[]; arguments: Type[]; returnType: Type };
 export type Product = { kind: 'Product'; name: string; members: ProductComponent[] };
 export type NameRef = { kind: 'NameRef'; namedType: string };
 
@@ -97,6 +99,7 @@ export const builtinFunctions: VariableDeclaration[] = [
         type: {
             kind: 'Function',
             arguments: [builtinTypes.String],
+            permissions: [],
             returnType: builtinTypes.Integer,
         },
     },
@@ -105,6 +108,7 @@ export const builtinFunctions: VariableDeclaration[] = [
         type: {
             kind: 'Function',
             arguments: [builtinTypes.String],
+            permissions: [],
             returnType: builtinTypes.Integer,
         },
     },
@@ -113,6 +117,7 @@ export const builtinFunctions: VariableDeclaration[] = [
         type: {
             kind: 'Function',
             arguments: [],
+            permissions: ['stdout'],
             returnType: builtinTypes.Integer,
         },
     },
