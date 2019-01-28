@@ -29,6 +29,7 @@ type TestOptions = {
     failing?: string[] | string;
     spills?: number;
     name?: string;
+    stdin?: string;
 };
 
 const typeErrorToString = (e: TypeError): string => JSON.stringify(e, null, 2);
@@ -44,13 +45,14 @@ export const mplTest = async (
         expectedAst,
         failing = [],
         name = undefined,
+        stdin = '',
     }: TestOptions
 ) => {
     if (typeof failing === 'string') {
         failing = [failing];
     }
     // Make sure it parses
-    const programInfo = await produceProgramInfo(source);
+    const programInfo = await produceProgramInfo(source, stdin);
     if ('kind' in programInfo) {
         t.fail(`Lex Error: ${programInfo.error}`);
         return;
@@ -161,7 +163,7 @@ export const mplTest = async (
 
 export const tacTest = async (
     t,
-    { source, exitCode, printSubsteps = [], debugSubsteps = [], spills, failing = [] }: TestOptions
+    { source, exitCode, printSubsteps = [], debugSubsteps = [], spills, failing = [], stdin = '' }: TestOptions
 ) => {
     const parsed = parseFunction(source);
     if ('kind' in parsed) {
@@ -197,7 +199,7 @@ export const tacTest = async (
                     return;
                 }
 
-                const result = await backend.execute(compilationResult.binaryFile.path);
+                const result = await backend.execute(compilationResult.binaryFile.path, stdin);
                 if ('error' in result) {
                     t.fail(`${backend.name} execution failed: ${result.error}`);
                 } else if (result.exitCode !== exitCode) {

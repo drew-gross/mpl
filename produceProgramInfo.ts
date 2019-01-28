@@ -32,7 +32,8 @@ type ProgramInfo = {
 };
 
 export default async (
-    source: string
+    source: string,
+    stdin: string
 ): Promise<ProgramInfo | LexError | { parseErrors: ParseError[] } | { typeErrors: TypeError[] }> => {
     const tokens = lex(tokenSpecs, source);
     if ('kind' in tokens) {
@@ -91,7 +92,7 @@ export default async (
             if ('error' in compilationResult) {
                 return { name, compilationResult, executionResult: { error: 'Compilation failed' } };
             } else {
-                const executionResult = await execute(compilationResult.binaryFile.path);
+                const executionResult = await execute(compilationResult.binaryFile.path, stdin);
                 return { name, compilationResult, executionResult };
             }
         })

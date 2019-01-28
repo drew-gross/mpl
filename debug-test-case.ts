@@ -26,7 +26,7 @@ import chalk from 'chalk';
         return;
     }
 
-    const programInfo = await produceProgramInfo(testCase.source);
+    const programInfo = await produceProgramInfo(testCase.source, testCase.stdin ? testCase.stdin : '');
 
     if ('kind' in programInfo || 'parseErrors' in programInfo || 'typeErrors' in programInfo) {
         // TODO: Unify and improve error printing logic with test-utils and produceProgramInfo

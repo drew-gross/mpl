@@ -120,7 +120,6 @@ const readInt = async () => {
 })();`;
 
     const sourceFile = await writeTempFile(jsSource, '.js');
-    console.log(sourceFile.path);
     const binaryFile = sourceFile;
     return {
         sourceFile,
@@ -130,9 +129,9 @@ const readInt = async () => {
     };
 };
 
-const execute = async (path: string): Promise<ExecutionResult> => {
+const execute = async (path: string, stdin: string): Promise<ExecutionResult> => {
     try {
-        return execAndGetResult(`node ${path}`);
+        return execAndGetResult(`echo "${stdin}" | node ${path}`);
     } catch (e) {
         return { error: e.msg };
     }

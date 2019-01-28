@@ -131,6 +131,16 @@ return isFive(5) ? 1 : 0`,
         stdin: '5',
         exitCode: 5,
     },
+    {
+        // TODO: Errors/sum types
+        name: 'Read Integer Errors on Empty Input',
+        source: `
+            val := readInt();
+            return val;
+        `,
+        stdin: '',
+        exitCode: 5, // TODO select an exit code
+    },
 ];
 
 export default testCases;
