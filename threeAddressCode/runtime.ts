@@ -351,6 +351,19 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
     };
 };
 
+export const readInt: RuntimeFunctionGenerator = bytesInWord => {
+    const result = parseFunction(`
+        (function) readInt:
+              syscalld readInt r:functionResult # make syscall
+    `);
+    if (Array.isArray(result)) {
+        throw debug('was array');
+    } else if ('kind' in result) {
+        throw debug('was lex error');
+    }
+    return result;
+};
+
 // TODO: figure out a way to verify that this is working
 export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord =>
     parseFunction(`
@@ -436,4 +449,5 @@ export const allRuntimeFunctions = [
     stringConcatenateRuntimeFunction,
     stringEqualityRuntimeFunction,
     myFreeRuntimeFunction,
+    readInt,
 ];

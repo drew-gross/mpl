@@ -72,28 +72,33 @@ import chalk from 'chalk';
             if ('intermediateFile' in compilationResult) {
                 console.log(chalk.red(`        Intermediate File:: ${compilationResult.intermediateFile.path}`));
             }
-        } else if ('error' in executionResult) {
-            console.log(chalk.red(`        Execution Failed: ${executionResult.error}`));
         } else {
+            console.log(`        Source: ${compilationResult.sourceFile.path}`);
+            console.log(`        Binary: ${compilationResult.binaryFile.path}`);
             if (compilationResult.threeAddressCodeFile) {
                 console.log(`        Three Address Code: ${compilationResult.threeAddressCodeFile.path}`);
             }
-            console.log(`        Source: ${compilationResult.sourceFile.path}`);
-            console.log(`        Binary: ${compilationResult.binaryFile.path}`);
-            if (!testPassed) {
-                let log =
-                    testCase.exitCode == executionResult.exitCode
-                        ? s => console.log(s)
-                        : s => console.log(chalk.red(s));
-                log(`        Expected Exit Code: ${testCase.exitCode}`);
-                log(`        Actual Exit Code: ${testCase.exitCode}`);
-
-                log = testCase.stdout == executionResult.stdout ? s => console.log(s) : s => console.log(chalk.red(s));
-                log(`        Expected stdout: ${testCase.stdout}`);
-                log(`        Actual stdout: ${executionResult.stdout}`);
-            }
             console.log(`        Debug: ${compilationResult.debugInstructions}`);
-            console.log('');
+            if ('error' in executionResult) {
+                console.log(chalk.red(`        Execution Failed: ${executionResult.error}`));
+            } else {
+                if (!testPassed) {
+                    let log =
+                        testCase.exitCode == executionResult.exitCode
+                            ? s => console.log(s)
+                            : s => console.log(chalk.red(s));
+                    log(`        Expected Exit Code: ${testCase.exitCode}`);
+                    log(`        Actual Exit Code: ${testCase.exitCode}`);
+
+                    log =
+                        testCase.stdout == executionResult.stdout
+                            ? s => console.log(s)
+                            : s => console.log(chalk.red(s));
+                    log(`        Expected stdout: ${testCase.stdout}`);
+                    log(`        Actual stdout: ${executionResult.stdout}`);
+                }
+                console.log('');
+            }
         }
     }
 

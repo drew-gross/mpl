@@ -1,6 +1,7 @@
 import {
     length,
     stringCopy,
+    readInt,
     verifyNoLeaks,
     stringConcatenateRuntimeFunction,
     stringEqualityRuntimeFunction,
@@ -889,6 +890,8 @@ export const threeAddressCodeToTarget = <TargetRegister>(
                 registersToSave.push(argRegister);
             });
             // TODO: Allow a "replacements" feature, to convert complex/unsupported RTL instructions into supported ones
+            const syscallNumber = syscallNumbers[tas.name];
+            if (!syscallNumber) debug(`missing syscall number for (${tas.name})`);
             const result: TargetThreeAddressStatement<TargetRegister>[] = [
                 ...registersToSave.map(r => ({
                     kind: 'push' as 'push',
@@ -912,7 +915,7 @@ export const threeAddressCodeToTarget = <TargetRegister>(
                 ),
                 {
                     kind: 'loadImmediate',
-                    value: syscallNumbers[tas.name],
+                    value: syscallNumber,
                     destination: registerTypes.syscallSelectAndResult,
                     why: `syscall select (${tas.name})`,
                 },
@@ -1094,6 +1097,7 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
         stringEqualityRuntimeFunction,
         stringConcatenateRuntimeFunction,
         stringCopy,
+        readInt,
         myFreeRuntimeFunction,
         verifyNoLeaks,
     ].map(f => f(targetInfo.bytesInWord));
