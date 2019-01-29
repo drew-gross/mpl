@@ -47,7 +47,7 @@
         "prettier": "1.16.1",
         "rimraf": "2.6.3",
         "tmp-promise": "1.0.5",
-        "tslint": "5.12.0",
+        "tslint": "5.12.1",
         "tslint-config-prettier": "1.17.0",
         "typescript": "3.2.2"
     },
