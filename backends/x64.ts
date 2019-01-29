@@ -26,7 +26,14 @@ import {
 } from '../threeAddressCode/generator.js';
 import { Statement } from '../threeAddressCode/statement.js';
 import { mallocWithMmap, printWithWriteRuntimeFunction } from '../threeAddressCode/runtime.js';
-import { VariableDeclaration, FrontendOutput, StringLiteralData, Backend, CompilationResult } from '../api.js';
+import {
+    ExecutionResult,
+    VariableDeclaration,
+    FrontendOutput,
+    StringLiteralData,
+    Backend,
+    CompilationResult,
+} from '../api.js';
 import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { execSync } from 'child_process';
@@ -259,6 +266,9 @@ const compileTac = async (tac: ThreeAddressProgram): Promise<CompilationResult |
         return { error: `Exception: ${e.message}` };
     }
 };
+
+const execute = async (path: string, stdin: string): Promise<ExecutionResult> =>
+    execAndGetResult(`echo ${stdin} | ${path}`);
 
 const x64Backend: Backend = { name: 'x64', compile, compileTac, execute: execAndGetResult, targetInfo: x64Target };
 export default x64Backend;

@@ -526,6 +526,16 @@ char *string_concatenate(char *left, char *right, char *out) {
     return original_out;
 }
 
+int readInt() {
+    int result;
+    int success = scanf("%d", &result);
+    if (success != 1) {
+        printf("${errors.readIntFailed.value}"); // TODO: readInt returns optional
+        exit(-1);
+    }
+    return result;
+}
+
 ${join(CtypeDeclarations, '\n')}
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
 ${join(Cdeclarations, '\n')}
@@ -549,9 +559,9 @@ ${Cprogram}
     };
 };
 
-const execute = async (path: string): Promise<ExecutionResult> => {
+const execute = async (path: string, stdin: string): Promise<ExecutionResult> => {
     try {
-        return execAndGetResult(path);
+        return execAndGetResult(`echo ${stdin} | ${path}`);
     } catch (e) {
         return { error: e };
     }
