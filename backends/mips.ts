@@ -182,50 +182,50 @@ const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddr
     return `
 .data
 ${Object.values(globals)
-        .map(({ mangledName, bytes }) => globalDeclaration(mangledName, bytes))
-        .join('\n')}
+    .map(({ mangledName, bytes }) => globalDeclaration(mangledName, bytes))
+    .join('\n')}
 ${stringLiterals.map(stringLiteralDeclaration).join('\n')}
 ${Object.keys(errors)
-        .map(key => `${errors[key].name}: .asciiz "${errors[key].value}"`)
-        .join('\n')}
+    .map(key => `${errors[key].name}: .asciiz "${errors[key].value}"`)
+    .join('\n')}
 
 # First block pointer. Block: size, next, free
 first_block: .word 0
 
 .text
 ${join(
-        functions.map(
-            f =>
-                f.name +
-                ': # Funtion entry\n' +
-                rtlToTarget({
-                    threeAddressFunction: f,
-                    makePrologue: assignment => [
-                        { kind: 'push', register: '$ra', why: 'Always save return address' } as any,
-                        ...saveRegistersCode<MipsRegister>(assignment),
-                    ],
-                    makeEpilogue: assignment => [
-                        ...restoreRegistersCode<MipsRegister>(assignment),
-                        { kind: 'pop', register: '$ra', why: 'Always restore return address' } as any,
-                        { kind: 'returnToCaller', why: 'Done' } as any,
-                    ],
-                    registers: mipsRegisterTypes,
-                    syscallNumbers,
-                    instructionTranslator: threeAddressCodeToMips,
-                })
-        ),
-        '\n\n\n'
-    )}
+    functions.map(
+        f =>
+            f.name +
+            ': # Funtion entry\n' +
+            rtlToTarget({
+                threeAddressFunction: f,
+                makePrologue: assignment => [
+                    { kind: 'push', register: '$ra', why: 'Always save return address' } as any,
+                    ...saveRegistersCode<MipsRegister>(assignment),
+                ],
+                makeEpilogue: assignment => [
+                    ...restoreRegistersCode<MipsRegister>(assignment),
+                    { kind: 'pop', register: '$ra', why: 'Always restore return address' } as any,
+                    { kind: 'returnToCaller', why: 'Done' } as any,
+                ],
+                registers: mipsRegisterTypes,
+                syscallNumbers,
+                instructionTranslator: threeAddressCodeToMips,
+            })
+    ),
+    '\n\n\n'
+)}
 
 main:
 ${rtlToTarget({
-        threeAddressFunction: { name: 'unused', instructions: main, spills: 0 },
-        makePrologue: () => [],
-        makeEpilogue: () => [],
-        registers: mipsRegisterTypes,
-        syscallNumbers,
-        instructionTranslator: threeAddressCodeToMips,
-    })}`;
+    threeAddressFunction: { name: 'unused', instructions: main, spills: 0 },
+    makePrologue: () => [],
+    makeEpilogue: () => [],
+    registers: mipsRegisterTypes,
+    syscallNumbers,
+    instructionTranslator: threeAddressCodeToMips,
+})}`;
 };
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
     compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget }));

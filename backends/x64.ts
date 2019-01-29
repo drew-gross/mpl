@@ -199,44 +199,44 @@ global start
 
 section .text
 ${join(
-        functions.map(
-            f =>
-                f.name +
-                ': ;Function entry\n' +
-                rtlToTarget({
-                    threeAddressFunction: f,
-                    makePrologue: assignment => saveRegistersCode<X64Register>(assignment),
-                    makeEpilogue: assignment => [
-                        ...restoreRegistersCode<X64Register>(assignment),
-                        { kind: 'returnToCaller' as 'returnToCaller', why: 'Done' },
-                    ],
-                    registers: x64RegisterTypes,
-                    syscallNumbers,
-                    instructionTranslator: threeAddressCodeToX64,
-                })
-        ),
-        '\n\n\n'
-    )}
+    functions.map(
+        f =>
+            f.name +
+            ': ;Function entry\n' +
+            rtlToTarget({
+                threeAddressFunction: f,
+                makePrologue: assignment => saveRegistersCode<X64Register>(assignment),
+                makeEpilogue: assignment => [
+                    ...restoreRegistersCode<X64Register>(assignment),
+                    { kind: 'returnToCaller' as 'returnToCaller', why: 'Done' },
+                ],
+                registers: x64RegisterTypes,
+                syscallNumbers,
+                instructionTranslator: threeAddressCodeToX64,
+            })
+    ),
+    '\n\n\n'
+)}
 
 start:
 ${rtlToTarget({
-        threeAddressFunction: { instructions: main, name: 'unused', spills: 0 },
-        makePrologue: () => [],
-        makeEpilogue: () => [],
-        registers: x64RegisterTypes,
-        syscallNumbers,
-        instructionTranslator: threeAddressCodeToX64,
-    })}
+    threeAddressFunction: { instructions: main, name: 'unused', spills: 0 },
+    makePrologue: () => [],
+    makeEpilogue: () => [],
+    registers: x64RegisterTypes,
+    syscallNumbers,
+    instructionTranslator: threeAddressCodeToX64,
+})}
 section .data
 first_block: dq 0
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
 section .bss
 ${Object.values(globals)
-        .map(({ mangledName }) => `${mangledName}: resq 1`) // TODO: actual size of var instead of always resq
-        .join('\n')}
+    .map(({ mangledName }) => `${mangledName}: resq 1`) // TODO: actual size of var instead of always resq
+    .join('\n')}
 ${Object.keys(errors)
-        .map(key => `${errors[key].name}: resd 1`) // TODO: Fix this
-        .join('\n')}`;
+    .map(key => `${errors[key].name}: resd 1`) // TODO: Fix this
+    .join('\n')}`;
 };
 
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>

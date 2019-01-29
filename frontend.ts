@@ -177,7 +177,7 @@ const functionObjectFromAst = (ctx: WithContext<Ast.UninferredFunctionLiteral>):
 const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
     ast: Ast.UninferredAst,
     nodeKinds: string[],
-    extractItem: ((item: NodeType) => ReturnType)
+    extractItem: (item: NodeType) => ReturnType
 ): ReturnType[] => {
     const recurse = ast => walkAst(ast, nodeKinds, extractItem);
     let result: ReturnType[] = [];
