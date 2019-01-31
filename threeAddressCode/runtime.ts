@@ -438,6 +438,23 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
             *(r:functionArgument1 + ${2 * bytesInWord}) = r:one # block->free = true
     `) as ThreeAddressFunction;
 
+// TODO: return error if string doesn't contain an int
+export const intFromString: RuntimeFunctionGenerator = bytesInWord =>
+    parseFunction(`
+    (function) int_from_string:
+        r:functionResult = 0 # Accumulate into here
+        r:input = r:functionArgument1 # Make a copy so we can modify it
+    add_char:
+        r:currentChar = *r:input # load a char
+        goto exit if r:currentChar == 0 # Found the null terminator; done
+        r:currentNum = r:currentChar - 48 # Subtract '0' to get actual number
+        r:functionResult = r:functionResult * 10 # Previous digit was 10x
+        r:functionResult = r:functionResult + r:currentNum # Add the num
+        r:input++ # Get next char in next loop iteration
+        goto add_char
+    exit:
+    `) as ThreeAddressFunction;
+
 export const allRuntimeFunctions = [
     mallocWithMmap,
     mallocWithSbrk,

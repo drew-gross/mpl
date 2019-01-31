@@ -130,7 +130,6 @@ return isFive(5) ? 1 : 0`,
         `,
         stdin: '5',
         exitCode: 5,
-        failing: true,
     },
     {
         // TODO: Errors/sum types
