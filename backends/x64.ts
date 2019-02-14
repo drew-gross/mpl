@@ -236,7 +236,7 @@ ${Object.values(globals)
     .map(({ mangledName }) => `${mangledName}: resq 1`) // TODO: actual size of var instead of always resq
     .join('\n')}
 ${Object.keys(errors)
-    .map(key => `${errors[key].name}: resd 1`) // TODO: Fix this
+    .map(key => `${errors[key].name}: db "${errors[key].value}", 0`)
     .join('\n')}`;
 };
 

@@ -142,6 +142,15 @@ return isFive(5) ? 1 : 0`,
         exitCode: 5, // TODO select an exit code
         failing: true,
     },
+    {
+        name: 'Should leak',
+        source: `
+            __internal_leak_memory();
+            return 0;
+        `,
+        exitCode: -1,
+        stdout: 'Leaks found',
+    },
 ];
 
 export default testCases;

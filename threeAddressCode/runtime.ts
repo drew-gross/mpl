@@ -384,15 +384,18 @@ export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
             r:functionArgument1 = ${bufferSize} # 10 byte buffer because why not TODO
             my_malloc() # malloc
             r:buffer = r:functionResult # rename
-            syscalld read r:readResult ${stdinFd} ${bufferSize} # syscall
-            r:negativeOne = -1 # goto doesn not support literals
+            syscalld read r:readResult ${stdinFd} r:buffer ${bufferSize} # syscall
+            r:negativeOne = -1 # goto does not support literals
             goto read_failed if r:readResult == r:negativeOne # syscall failed
             r:functionArgument1 = r:buffer # prep to parse int
             intFromString() # parse int and return
+            my_free() # Free the buffer
+            goto readIntExit # result already in result
         read_failed: # label
             r:err = &${errors.readIntFailed.name} # Error to print
             syscall print r:err # syscall
             syscall exit -1 # syscall
+        readIntExit: # exit
     `);
 };
 
@@ -471,21 +474,24 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     `) as ThreeAddressFunction;
 
 // TODO: return error if string doesn't contain an int
-export const intFromString: RuntimeFunctionGenerator = bytesInWord =>
-    parseFunction(`
+export const intFromString: RuntimeFunctionGenerator = bytesInWord => {
+    return parseFunctionOrDie(`
     (function) intFromString:
         r:functionResult = 0 # Accumulate into here
         r:input = r:functionArgument1 # Make a copy so we can modify it
-    add_char:
+    add_char: # comment
         r:currentChar = *r:input # load a char
         goto exit if r:currentChar == 0 # Found the null terminator; done
-        r:currentNum = r:currentChar - 48 # Subtract '0' to get actual number
-        r:functionResult = r:functionResult * 10 # Previous digit was 10x
+        r:fortyEight = 48 # forty eight
+        r:currentNum = r:currentChar - r:fortyEight # Subtract '0' to get actual number
+        r:ten = 10 # ten
+        r:functionResult = r:functionResult * r:ten # Previous digit was 10x
         r:functionResult = r:functionResult + r:currentNum # Add the num
         r:input++ # Get next char in next loop iteration
-        goto add_char
-    exit:
+        goto add_char # comment
+    exit: # comment
     `) as ThreeAddressFunction;
+};
 
 export const allRuntimeFunctions = [
     mallocWithMmap,
