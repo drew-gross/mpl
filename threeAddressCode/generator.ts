@@ -1,7 +1,7 @@
 import {
     length,
+    intFromString,
     stringCopy,
-    readInt,
     verifyNoLeaks,
     stringConcatenateRuntimeFunction,
     stringEqualityRuntimeFunction,
@@ -95,6 +95,7 @@ export type TargetInfo = {
     // These functions tend to have platform specific implementations. Put your platforms implementation here.
     mallocImpl: ThreeAddressFunction;
     printImpl: ThreeAddressFunction;
+    readIntImpl: ThreeAddressFunction;
 };
 
 const memberOffset = (type: Type, memberName: string, targetInfo: TargetInfo): number => {
@@ -891,7 +892,7 @@ export const threeAddressCodeToTarget = <TargetRegister>(
             });
             // TODO: Allow a "replacements" feature, to convert complex/unsupported RTL instructions into supported ones
             const syscallNumber = syscallNumbers[tas.name];
-            if (!syscallNumber) debug(`missing syscall number for (${tas.name})`);
+            if (syscallNumber === undefined) debug(`missing syscall number for (${tas.name})`);
             const result: TargetThreeAddressStatement<TargetRegister>[] = [
                 ...registersToSave.map(r => ({
                     kind: 'push' as 'push',
@@ -1097,12 +1098,18 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
         stringEqualityRuntimeFunction,
         stringConcatenateRuntimeFunction,
         stringCopy,
-        readInt,
         myFreeRuntimeFunction,
         verifyNoLeaks,
+        intFromString,
     ].map(f => f(targetInfo.bytesInWord));
 
-    const nonMainFunctions = [...runtimeFunctions, targetInfo.mallocImpl, targetInfo.printImpl, ...userFunctions];
+    const nonMainFunctions = [
+        ...runtimeFunctions,
+        targetInfo.mallocImpl,
+        targetInfo.printImpl,
+        targetInfo.readIntImpl,
+        ...userFunctions,
+    ];
 
     // Omit unused functions
     const closedSet: ThreeAddressFunction[] = [];

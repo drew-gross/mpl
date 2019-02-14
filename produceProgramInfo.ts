@@ -1,7 +1,7 @@
 import debug from './util/debug.js';
 import { parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
 import { programToString } from './threeAddressCode/programToString.js';
-import { mallocWithSbrk, printWithPrintRuntimeFunction } from './threeAddressCode/runtime.js';
+import { mallocWithSbrk, printWithPrintRuntimeFunction, readIntDirect } from './threeAddressCode/runtime.js';
 import { tokenSpecs, MplToken, MplAst, grammar } from './grammar.js';
 import { file as tmpFile } from 'tmp-promise';
 import { writeFile } from 'fs-extra';
@@ -78,6 +78,7 @@ export default async (
             cleanupCode: [],
             mallocImpl: mallocWithSbrk(7),
             printImpl: printWithPrintRuntimeFunction(11),
+            readIntImpl: readIntDirect(5),
         },
     });
 

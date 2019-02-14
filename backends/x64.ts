@@ -25,7 +25,7 @@ import {
     ThreeAddressProgram,
 } from '../threeAddressCode/generator.js';
 import { Statement } from '../threeAddressCode/statement.js';
-import { mallocWithMmap, printWithWriteRuntimeFunction } from '../threeAddressCode/runtime.js';
+import { mallocWithMmap, printWithWriteRuntimeFunction, readIntThroughSyscall } from '../threeAddressCode/runtime.js';
 import {
     ExecutionResult,
     VariableDeclaration,
@@ -66,12 +66,12 @@ const x64RegisterTypes: RegisterDescription<X64Register> = {
 };
 
 const syscallNumbers = {
-    // printInt: 0, // Should be unused on x64
+    // printInt: XXX, // Should be unused on x64
     print: 0x02000004,
     sbrk: 0x02000045,
     exit: 0x02000001,
     mmap: 0x020000c5,
-    readInt: -1, // TODO: implement this!
+    read: 0,
 };
 
 const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X64Register>): string[] => {
@@ -189,6 +189,7 @@ const x64Target: TargetInfo = {
         },
     ],
     mallocImpl: mallocWithMmap(bytesInWord),
+    readIntImpl: readIntThroughSyscall(bytesInWord),
     printImpl: printWithWriteRuntimeFunction(bytesInWord),
 };
 

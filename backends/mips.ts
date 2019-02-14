@@ -27,7 +27,7 @@ import {
 } from '../threeAddressCode/generator.js';
 import { programToString } from '../threeAddressCode/programToString.js';
 import { Statement } from '../threeAddressCode/statement.js';
-import { mallocWithSbrk, printWithPrintRuntimeFunction } from '../threeAddressCode/runtime.js';
+import { mallocWithSbrk, printWithPrintRuntimeFunction, readIntDirect } from '../threeAddressCode/runtime.js';
 import { builtinFunctions, Type, TypeDeclaration, typeSize } from '../types.js';
 
 type MipsRegister =
@@ -175,6 +175,7 @@ const mipsTarget: TargetInfo = {
     ],
     mallocImpl: mallocWithSbrk(bytesInWord),
     printImpl: printWithPrintRuntimeFunction(bytesInWord),
+    readIntImpl: readIntDirect(bytesInWord),
 };
 
 const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram) => {

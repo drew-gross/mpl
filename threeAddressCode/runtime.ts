@@ -4,8 +4,20 @@ import { Register } from '../register.js';
 import { ThreeAddressFunction } from './generator.js';
 import { programToString, functionToString } from './programToString.js';
 import { parseProgram as parseTac, parseFunction } from './parser.js';
+import prettyParseError from '../parser-lib/pretty-parse-error.js';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => ThreeAddressFunction;
+
+const parseFunctionOrDie = (tacString: string): ThreeAddressFunction => {
+    const parsed = parseFunction(tacString);
+    if ('kind' in parsed) {
+        throw debug('error');
+    }
+    if (Array.isArray(parsed)) {
+        throw debug('error');
+    }
+    return parsed;
+};
 
 const switchableMallocImpl = (
     bytesInWord,
@@ -307,7 +319,7 @@ export const length: RuntimeFunctionGenerator = bytesInWord =>
     `) as ThreeAddressFunction;
 
 export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
-    parseFunction(`
+    parseFunctionOrDie(`
     (function) string_copy: # Copy string pointer to by first argument to second argument
         string_copy_loop: # Copy a byte
             r:currentChar = *r:functionArgument1 # Load next char from string
@@ -317,7 +329,7 @@ export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
             r:functionArgument2++ # Increment output too
             goto string_copy_loop # and go keep copying
         string_copy_return: # Done
-    `) as ThreeAddressFunction;
+    `);
 
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunction(`
@@ -351,7 +363,7 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
     };
 };
 
-export const readInt: RuntimeFunctionGenerator = bytesInWord => {
+export const readIntDirect: RuntimeFunctionGenerator = bytesInWord => {
     const result = parseFunction(`
         (function) readInt:
               syscalld readInt r:functionResult # make syscall
@@ -362,6 +374,26 @@ export const readInt: RuntimeFunctionGenerator = bytesInWord => {
         throw debug('was lex error');
     }
     return result;
+};
+
+export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
+    const stdinFd = 0;
+    const bufferSize = 10;
+    return parseFunctionOrDie(`
+        (function) readInt:
+            r:functionArgument1 = ${bufferSize} # 10 byte buffer because why not TODO
+            my_malloc() # malloc
+            r:buffer = r:functionResult # rename
+            syscalld read r:readResult ${stdinFd} ${bufferSize} # syscall
+            r:negativeOne = -1 # goto doesn not support literals
+            goto read_failed if r:readResult == r:negativeOne # syscall failed
+            r:functionArgument1 = r:buffer # prep to parse int
+            intFromString() # parse int and return
+        read_failed: # label
+            r:err = &${errors.readIntFailed.name} # Error to print
+            syscall print r:err # syscall
+            syscall exit -1 # syscall
+    `);
 };
 
 // TODO: figure out a way to verify that this is working
@@ -441,7 +473,7 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
 // TODO: return error if string doesn't contain an int
 export const intFromString: RuntimeFunctionGenerator = bytesInWord =>
     parseFunction(`
-    (function) int_from_string:
+    (function) intFromString:
         r:functionResult = 0 # Accumulate into here
         r:input = r:functionArgument1 # Make a copy so we can modify it
     add_char:
@@ -466,5 +498,5 @@ export const allRuntimeFunctions = [
     stringConcatenateRuntimeFunction,
     stringEqualityRuntimeFunction,
     myFreeRuntimeFunction,
-    readInt,
+    readIntDirect,
 ];

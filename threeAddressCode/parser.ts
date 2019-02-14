@@ -352,6 +352,7 @@ const isRegister = (data: string): boolean => {
     if (specialRegisterNames.includes(data)) {
         return true;
     }
+    if (typeof data.startsWith !== 'function') debug('no data');
     if (data.startsWith('r:')) {
         return true;
     }
@@ -407,6 +408,15 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
                     kind: 'gotoIfZero',
                     label: a.children[1].value,
                     register: parseRegister(a.children[3].value),
+                    why: stripComment(a.children[6].value),
+                };
+            }
+            if (a.children[5].type == 'number') {
+                return {
+                    kind: 'gotoIfEqual',
+                    label: a.children[1].value,
+                    lhs: parseRegister(a.children[3].value),
+                    rhs: parseRegister(a.children[5].value),
                     why: stripComment(a.children[6].value),
                 };
             }
