@@ -71,7 +71,7 @@ const syscallNumbers = {
     sbrk: 0x02000045,
     exit: 0x02000001,
     mmap: 0x020000c5,
-    read: 0,
+    read: 0x02000003,
 };
 
 const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X64Register>): string[] => {
