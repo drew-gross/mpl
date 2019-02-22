@@ -17,7 +17,6 @@ import * as commander from 'commander';
         .arguments('<test_name>')
         .option('--no-execute', "Only produce binaries, don't execute them")
         .parse(process.argv);
-    console.log(commander);
 
     const testCase = testCases.find(c => c.name == commander.args[0]);
 
