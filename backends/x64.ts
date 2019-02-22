@@ -271,5 +271,5 @@ const compileTac = async (tac: ThreeAddressProgram): Promise<CompilationResult |
 const execute = async (path: string, stdin: string): Promise<ExecutionResult> =>
     execAndGetResult(`echo ${stdin} | ${path}`);
 
-const x64Backend: Backend = { name: 'x64', compile, compileTac, execute: execAndGetResult, targetInfo: x64Target };
+const x64Backend: Backend = { name: 'x64', compile, compileTac, execute, targetInfo: x64Target };
 export default x64Backend;
