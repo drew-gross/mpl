@@ -52,7 +52,7 @@ export const mplTest = async (
         failing = [failing];
     }
     // Make sure it parses
-    const programInfo = await produceProgramInfo(source, stdin);
+    const programInfo = await produceProgramInfo(source, stdin, { includeExecutionResult: true });
     if ('kind' in programInfo) {
         t.fail(`Lex Error: ${programInfo.error}`);
         return;

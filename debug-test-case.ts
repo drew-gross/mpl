@@ -10,23 +10,25 @@ import * as dot from 'graphlib-dot';
 import { toDotFile } from './parser-lib/parse.js';
 import { programToString } from './threeAddressCode/programToString.js';
 import chalk from 'chalk';
+import * as commander from 'commander';
 
 (async () => {
-    if (process.argv.length != 3) {
-        console.log('Exactly one test case must be named');
-        return;
-    }
+    commander
+        .arguments('<test_name>')
+        .option('--no-execute', "Only produce binaries, don't execute them")
+        .parse(process.argv);
+    console.log(commander);
 
-    const testName = process.argv[2];
-
-    const testCase = testCases.find(c => c.name == testName);
+    const testCase = testCases.find(c => c.name == commander.args[0]);
 
     if (!testCase) {
-        console.log(`Could not find a test case named "${testName}"`);
+        console.log(`Could not find a test case named "${commander.args[0]}"`);
         return;
     }
 
-    const programInfo = await produceProgramInfo(testCase.source, testCase.stdin ? testCase.stdin : '');
+    const programInfo = await produceProgramInfo(testCase.source, testCase.stdin ? testCase.stdin : '', {
+        includeExecutionResult: commander.execute,
+    });
 
     if ('kind' in programInfo || 'parseErrors' in programInfo || 'typeErrors' in programInfo) {
         // TODO: Unify and improve error printing logic with test-utils and produceProgramInfo
