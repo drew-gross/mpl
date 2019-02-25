@@ -247,11 +247,11 @@ const compileTac = async (tac: ThreeAddressProgram): Promise<CompilationResult |
     };
 };
 
-const execute = async (path: string, stdin: string): Promise<ExecutionResult> => {
+const execute = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
     // This string is always printed with spim starts. Strip it from stdout. TODO: Look in to MARS, maybe it doesn't do this?
     const exceptionsLoadedPreamble = 'Loaded: /usr/local/Cellar/spim/9.1.17/share/exceptions.s\n';
     try {
-        const result = await exec(`echo ${stdin} | spim -file ${path}`);
+        const result = await exec(`spim -file ${executablePath} < ${stdinPath}`);
         if (result.stderr !== '') {
             return { error: `Spim error: ${result.stderr}` };
         }

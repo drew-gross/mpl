@@ -3,7 +3,7 @@ import { parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
 import { programToString } from './threeAddressCode/programToString.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction, readIntDirect } from './threeAddressCode/runtime.js';
 import { tokenSpecs, MplToken, MplAst, grammar } from './grammar.js';
-import { file as tmpFile } from 'tmp-promise';
+import writeTempFile from './util/writeTempFile.js';
 import { writeFile } from 'fs-extra';
 import { lex, Token, LexError } from './parser-lib/lex.js';
 import { parseMpl, compile, parseErrorToString } from './frontend.js';
@@ -91,6 +91,8 @@ export default async (
     const stringForm = programToString(threeAddressCode);
     const roundTripParsed = parseTacProgram(stringForm);
 
+    const stdinFile = await writeTempFile(stdin, '.txt');
+
     const backendResults = await Promise.all(
         backends.map(async ({ name, compile, execute }) => {
             const compilationResult = await compile(frontendOutput);
@@ -101,7 +103,7 @@ export default async (
             } else if (!includeExecutionResult) {
                 return { name, compilationResult, executionResult: { error: 'Not requested' } };
             } else {
-                const executionResult = await execute(compilationResult.binaryFile.path, stdin);
+                const executionResult = await execute(compilationResult.binaryFile.path, stdinFile.path);
                 return { name, compilationResult, executionResult };
             }
         })

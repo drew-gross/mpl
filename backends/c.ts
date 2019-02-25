@@ -559,9 +559,9 @@ ${Cprogram}
     };
 };
 
-const execute = async (path: string, stdin: string): Promise<ExecutionResult> => {
+const execute = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
     try {
-        return execAndGetResult(`echo ${stdin} | ${path}`);
+        return execAndGetResult(`${executablePath} < ${stdinPath}`);
     } catch (e) {
         return { error: e };
     }

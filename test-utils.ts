@@ -5,6 +5,7 @@ import { Backend, TypeError } from './api.js';
 import { Ast } from './ast.js';
 import { compile, parseErrorToString } from './frontend.js';
 import { file as tmpFile } from 'tmp-promise';
+import writeTempFile from './util/writeTempFile.js';
 import { writeFile } from 'fs-extra';
 import debug from './util/debug.js';
 import join from './util/join.js';
@@ -163,7 +164,7 @@ export const mplTest = async (
 
 export const tacTest = async (
     t,
-    { source, exitCode, printSubsteps = [], debugSubsteps = [], spills, failing = [], stdin = '' }: TestOptions
+    { name, source, exitCode, printSubsteps = [], debugSubsteps = [], spills, failing = [], stdin = '' }: TestOptions
 ) => {
     const parsed = parseFunction(source);
     if ('kind' in parsed) {
@@ -180,7 +181,6 @@ export const tacTest = async (
     await Promise.all(
         backends.map(async backend => {
             if (backend.compileTac && !failing.includes(backend.name)) {
-                const exeFile = await tmpFile({ postfix: `.${backend.name}` });
                 const newSource = clone(parsed);
 
                 // TODO: This is pure jank. Should move responsibility for adding cleanup code to some place that makes actual sense.
@@ -199,7 +199,9 @@ export const tacTest = async (
                     return;
                 }
 
-                const result = await backend.execute(compilationResult.binaryFile.path, stdin);
+                const stdinFile = await writeTempFile(stdin, '.txt');
+
+                const result = await backend.execute(compilationResult.binaryFile.path, stdinFile.path);
                 if ('error' in result) {
                     t.fail(`${backend.name} execution failed: ${result.error}`);
                 } else if (result.exitCode !== exitCode) {

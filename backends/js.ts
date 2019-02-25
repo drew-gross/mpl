@@ -129,9 +129,9 @@ const readInt = async () => {
     };
 };
 
-const execute = async (path: string, stdin: string): Promise<ExecutionResult> => {
+const execute = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
     try {
-        return execAndGetResult(`echo "${stdin}" | node ${path}`);
+        return execAndGetResult(`node ${executablePath} < ${stdinPath}`);
     } catch (e) {
         return { error: e.msg };
     }
