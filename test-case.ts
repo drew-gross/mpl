@@ -7,6 +7,7 @@ export type TestCase = {
     stdout?: string;
     stdin?: string;
     failing?: boolean;
+    only?: boolean;
 };
 
 export const passed = (testCase: TestCase, result: ExecutionResult) => {

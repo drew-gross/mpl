@@ -438,12 +438,9 @@ test('double product with brackets', mplTest, {
     },
 });
 
-testCases.forEach(({ name, source, exitCode, stdout, failing }) => {
-    if (failing) {
-        test.failing(name, mplTest, { source, exitCode, name });
-    } else {
-        test(name, mplTest, { source, exitCode, name, expectedStdOut: stdout });
-    }
+testCases.forEach(({ name, source, exitCode, stdout, failing, only }) => {
+    const runner = failing ? test.failing : only ? test.only : test;
+    runner(name, mplTest, { source, exitCode, name, expectedStdOut: stdout });
 });
 
 test('double product', mplTest, {
