@@ -156,6 +156,16 @@ export const mplTest = async (
                     ? `Test failed. Run $ npm run debug-test-case "${testCaseName}" for more info.`
                     : 'Unnamed test failed'
             );
+            // TODO: share this code with some of the code in debug-test-case.ts
+            const verbose = true;
+            if (verbose) {
+                console.log('');
+                console.log(`Name: ${name}`);
+                console.log(`Exit code: ${(executionResult as any).exitCode}`);
+                console.log(`Expected exit code: ${exitCode}`);
+                console.log(`Stdout: ${(executionResult as any).stdout}`);
+                console.log(`Expected Stdout: ${expectedStdOut}`);
+            }
         }
     }
 
