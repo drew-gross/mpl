@@ -157,7 +157,7 @@ export const mplTest = async (
                     : 'Unnamed test failed'
             );
             // TODO: share this code with some of the code in debug-test-case.ts
-            const verbose = true;
+            const verbose = false;
             if (verbose) {
                 console.log('');
                 console.log(`Name: ${name}`);

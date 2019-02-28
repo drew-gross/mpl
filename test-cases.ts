@@ -130,7 +130,6 @@ return isFive(5) ? 1 : 0`,
         `,
         stdin: '5',
         exitCode: 5,
-        only: true,
     },
     {
         // TODO: Errors/sum types
@@ -151,6 +150,7 @@ return isFive(5) ? 1 : 0`,
         `,
         exitCode: -1,
         stdout: 'Leaks found',
+        failing: true,
     },
 ];
 
