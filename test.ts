@@ -2,7 +2,7 @@ import { file as tmpFile } from 'tmp-promise';
 import { writeFile } from 'fs-extra';
 import testCases from './test-cases.js';
 import { parseFunction, parseProgram as parseTacProgram, parseInstructions } from './threeAddressCode/parser.js';
-import prettyParseError from './parser-lib/pretty-parse-error.js';
+import annontateSource from './annotateSource.js';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
 import { ThreeAddressFunction } from './threeAddressCode/generator.js';
 import { Statement } from './threeAddressCode/statement.js';
@@ -573,53 +573,7 @@ test('ternary true', mplTest, {
 
 test('parse error', mplTest, {
     source: '=>',
-    expectedParseErrors: [
-        {
-            kind: 'unexpectedToken',
-            errors: [
-                {
-                    expected: 'identifier',
-                    found: 'fatArrow',
-                    sourceLocation: {
-                        column: 1,
-                        line: 1,
-                    },
-                },
-                {
-                    expected: 'identifier',
-                    found: 'fatArrow',
-                    sourceLocation: {
-                        column: 1,
-                        line: 1,
-                    },
-                },
-                {
-                    expected: 'typeIdentifier',
-                    found: 'fatArrow',
-                    sourceLocation: {
-                        column: 1,
-                        line: 1,
-                    },
-                },
-                {
-                    expected: 'identifier',
-                    found: 'fatArrow',
-                    sourceLocation: {
-                        column: 1,
-                        line: 1,
-                    },
-                },
-                {
-                    expected: 'return',
-                    found: 'fatArrow',
-                    sourceLocation: {
-                        column: 1,
-                        line: 1,
-                    },
-                },
-            ],
-        },
-    ],
+    expectedParseErrors: [{ expected: 'identifier', found: 'fatArrow', sourceLocation: { column: 1, line: 1 } }],
 });
 
 test('ternary in function false', mplTest, {
@@ -932,14 +886,9 @@ test('parsing fails for extra invalid tokens', mplTest, {
     source: `return 5 (`,
     expectedParseErrors: [
         {
-            errors: [
-                {
-                    found: 'leftBracket',
-                    expected: 'endOfFile',
-                    sourceLocation: { line: 1, column: 10 },
-                },
-            ],
-            kind: 'unexpectedToken',
+            found: 'leftBracket',
+            expected: 'endOfFile',
+            sourceLocation: { line: 1, column: 10 },
         },
     ],
 });
@@ -1608,31 +1557,31 @@ test('type equality via name lookup', t => {
 test('pretty-parse-error', t => {
     // nominal test
     t.deepEqual(
-        prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 4 }, 'message'),
+        annontateSource('contextBefore\n123456789\ncontextAfter', { line: 2, column: 4 }, 'message'),
         'contextBefore\n123456789\n   ^ message at line 2 column 4\ncontextAfter'
     );
 
     // line out of range too low
-    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 0, column: 4 }, ''), null);
+    t.deepEqual(annontateSource('contextBefore\n123456789\ncontextAfter', { line: 0, column: 4 }, ''), null);
     // line out of range too high
-    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 4, column: 4 }, ''), null);
+    t.deepEqual(annontateSource('contextBefore\n123456789\ncontextAfter', { line: 4, column: 4 }, ''), null);
     // column out of range too low
-    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 0 }, ''), null);
+    t.deepEqual(annontateSource('contextBefore\n123456789\ncontextAfter', { line: 2, column: 0 }, ''), null);
     // column out of range too high
-    t.deepEqual(prettyParseError('contextBefore\n123456789\ncontextAfter', { line: 2, column: 10 }, ''), null);
+    t.deepEqual(annontateSource('contextBefore\n123456789\ncontextAfter', { line: 2, column: 10 }, ''), null);
 
     // First line
     t.deepEqual(
-        prettyParseError('123456789\ncontextAfter', { line: 1, column: 1 }, 'm'),
+        annontateSource('123456789\ncontextAfter', { line: 1, column: 1 }, 'm'),
         '123456789\n^ m at line 1 column 1\ncontextAfter'
     );
     // Last line
     t.deepEqual(
-        prettyParseError('contextBefore\n123456789', { line: 2, column: 9 }, 'm2'),
+        annontateSource('contextBefore\n123456789', { line: 2, column: 9 }, 'm2'),
         'contextBefore\n123456789\n        ^ m2 at line 2 column 9'
     );
     // Only line
-    t.deepEqual(prettyParseError('123456789', { line: 1, column: 1 }, 'm3'), '123456789\n^ m3 at line 1 column 1');
+    t.deepEqual(annontateSource('123456789', { line: 1, column: 1 }, 'm3'), '123456789\n^ m3 at line 1 column 1');
 });
 
 test('tac parser regression', t => {
@@ -1653,7 +1602,7 @@ r:functionResult = 1 # Assume equal. Write true to functionResult. Overwrite if 
                         return e;
                     } else {
                         return (
-                            prettyParseError(source, e.sourceLocation, `found ${e.found}, expected ${e.expected}`) || ''
+                            annontateSource(source, e.sourceLocation, `found ${e.found}, expected ${e.expected}`) || ''
                         );
                     }
                 }),

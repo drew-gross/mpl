@@ -8,9 +8,11 @@ import writeTempFile from './util/writeTempFile.js';
 import { prompt } from 'inquirer';
 import * as dot from 'graphlib-dot';
 import { toDotFile } from './parser-lib/parse.js';
+import parseErrorToString from './parser-lib/parseErrorToString.js';
 import { programToString } from './threeAddressCode/programToString.js';
 import chalk from 'chalk';
 import * as commander from 'commander';
+import annotateSource from './annotateSource.js';
 
 (async () => {
     commander
@@ -29,9 +31,24 @@ import * as commander from 'commander';
         includeExecutionResult: commander.execute,
     });
 
-    if ('kind' in programInfo || 'parseErrors' in programInfo || 'typeErrors' in programInfo) {
-        // TODO: Unify and improve error printing logic with test-utils and produceProgramInfo
-        console.log(`Error in program: ${JSON.stringify(programInfo)}`);
+    // TODO: Unify and improve error printing logic with test-utils and produceProgramInfo
+    if ('kind' in programInfo) {
+        console.log('Failed to lex');
+        return;
+    }
+
+    if ('parseErrors' in programInfo) {
+        console.log(`Failed to parse:`);
+        let errorString: string = '';
+        programInfo.parseErrors.forEach(e => {
+            errorString += annotateSource(testCase.source, e.sourceLocation, parseErrorToString(e));
+        });
+        console.log(errorString);
+        return;
+    }
+
+    if ('typeErrors' in programInfo) {
+        console.log('Failed to type check');
         return;
     }
 

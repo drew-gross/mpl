@@ -4,7 +4,6 @@ import { Register } from '../register.js';
 import { ThreeAddressFunction } from './generator.js';
 import { programToString, functionToString } from './programToString.js';
 import { parseProgram as parseTac, parseFunction } from './parser.js';
-import prettyParseError from '../parser-lib/pretty-parse-error.js';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => ThreeAddressFunction;
 

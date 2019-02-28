@@ -41,21 +41,6 @@ export type ExecutionResult =
     | {
           error: string;
       };
-export type ParseError =
-    | {
-          kind: 'unexpectedToken';
-          errors: {
-              expected: string;
-              found: string;
-              sourceLocation: SourceLocation;
-          }[];
-      }
-    | {
-          kind: 'unexpectedProgram';
-      }
-    | {
-          kind: 'internalError';
-      };
 
 export type TypeError =
     | {

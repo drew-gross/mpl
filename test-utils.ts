@@ -3,7 +3,7 @@ import * as omitDeep from 'omit-deep';
 import { exec } from 'child-process-promise';
 import { Backend, TypeError } from './api.js';
 import { Ast } from './ast.js';
-import { compile, parseErrorToString } from './frontend.js';
+import { compile } from './frontend.js';
 import { file as tmpFile } from 'tmp-promise';
 import writeTempFile from './util/writeTempFile.js';
 import { writeFile } from 'fs-extra';
@@ -52,6 +52,11 @@ export const mplTest = async (
     if (typeof failing === 'string') {
         failing = [failing];
     }
+
+    const error = () => {
+        t.fail(name ? `Test failed. Run $ npm run debug-test-case "${name}" for more info.` : 'Unnamed test failed');
+    };
+
     // Make sure it parses
     const programInfo = await produceProgramInfo(source, stdin, { includeExecutionResult: true });
     if ('kind' in programInfo) {
@@ -65,9 +70,7 @@ export const mplTest = async (
             const keysToOmit = ['whileParsing', 'foundTokenText'];
             t.deepEqual(expectedParseErrors, omitDeep(programInfo.parseErrors, keysToOmit));
         } else {
-            t.fail(
-                `Found parse errors when none expected: ${join(programInfo.parseErrors.map(parseErrorToString), ', ')}`
-            );
+            error();
         }
         return;
     }
@@ -150,12 +153,9 @@ export const mplTest = async (
         );
 
         if (!failing.includes(name)) {
-            t.true(
-                testPassed,
-                testCaseName
-                    ? `Test failed. Run $ npm run debug-test-case "${testCaseName}" for more info.`
-                    : 'Unnamed test failed'
-            );
+            if (!testPassed) {
+                error();
+            }
             // TODO: share this code with some of the code in debug-test-case.ts
             const verbose = false;
             if (verbose) {

@@ -6,9 +6,10 @@ import join from './util/join.js';
 import idMaker from './util/idMaker.js';
 import last from './util/list/last.js';
 import debug from './util/debug.js';
-import { lex, Token } from './parser-lib/lex.js';
+import { lex, Token, LexError } from './parser-lib/lex.js';
 import { tokenSpecs, grammar, MplAst, MplParseResult, MplToken } from './grammar.js';
 import { ParseResult, parseResultIsError, parse, stripResultIndexes, Leaf as AstLeaf } from './parser-lib/parse.js';
+import ParseError from './parser-lib/ParseError.js';
 import {
     Type,
     Product,
@@ -24,7 +25,6 @@ import {
     Function,
     UninferredFunction,
     FrontendOutput,
-    ParseError,
     TypeError,
     StringLiteralData,
 } from './api.js';
@@ -230,7 +230,8 @@ const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
     const parseResult: MplParseResult = stripResultIndexes(parse(grammar, 'program', tokens));
 
     if (parseResultIsError(parseResult)) {
-        return [{ kind: 'unexpectedToken', errors: parseResult.errors }];
+        // TODO: Just get the parser to give us good errors directly
+        return [parseResult.errors[0]];
     }
     let ast = parseResult;
 
@@ -1224,27 +1225,17 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
     }
 };
 
-const parseErrorToString = (compilerError: ParseError): string => {
-    switch (compilerError.kind) {
-        case 'unexpectedProgram':
-            return 'Failed to parse. Top Level of AST was not a program.';
-        case 'unexpectedToken':
-            const errorStrings: string[] = compilerError.errors.map(
-                parserError =>
-                    `Expected ${parserError.expected} but found ${parserError.found} at ${
-                        parserError.sourceLocation.line
-                    }:${parserError.sourceLocation.column}`
-            );
-            return `Errors: \n${join(errorStrings, '\n')}`;
-        default:
-            throw debug('Unhandled error in parseErrorToString');
-    }
-};
-
-const compile = (source: string): FrontendOutput | { parseErrors: ParseError[] } | { typeErrors: TypeError[] } => {
+const compile = (
+    source: string
+):
+    | FrontendOutput
+    | { parseErrors: ParseError[] }
+    | { typeErrors: TypeError[] }
+    | LexError
+    | { internalError: string } => {
     const tokens = lex<MplToken>(tokenSpecs, source);
     if ('kind' in tokens) {
-        return { parseErrors: [{ kind: 'internalError' }] };
+        return tokens;
     }
 
     const parseResult = parseMpl(tokens);
@@ -1256,13 +1247,11 @@ const compile = (source: string): FrontendOutput | { parseErrors: ParseError[] }
     const ast = astFromParseResult(parseResult);
 
     if (ast == 'WrongShapeAst') {
-        return {
-            parseErrors: [{ kind: 'internalError' }],
-        };
+        return { internalError: 'Wrong shape AST' };
     }
 
     if (ast.kind !== 'program') {
-        return { parseErrors: [{ kind: 'unexpectedProgram' }] };
+        return { internalError: 'AST was not a program' };
     }
 
     const availableTypes = walkAst<TypeDeclaration, Ast.UninferredTypeDeclaration>(ast, ['typeDeclaration'], n => n);
@@ -1358,13 +1347,4 @@ const compile = (source: string): FrontendOutput | { parseErrors: ParseError[] }
     };
 };
 
-export {
-    parseMpl,
-    lex,
-    compile,
-    removeBracketsFromAst,
-    typeCheckStatement,
-    parseErrorToString,
-    astFromParseResult,
-    mergeDeclarations,
-};
+export { parseMpl, lex, compile, removeBracketsFromAst, typeCheckStatement, astFromParseResult, mergeDeclarations };

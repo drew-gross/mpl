@@ -6,9 +6,10 @@ import { tokenSpecs, MplToken, MplAst, grammar } from './grammar.js';
 import writeTempFile from './util/writeTempFile.js';
 import { writeFile } from 'fs-extra';
 import { lex, Token, LexError } from './parser-lib/lex.js';
-import { parseMpl, compile, parseErrorToString } from './frontend.js';
+import { parseMpl, compile } from './frontend.js';
 import { parse, stripResultIndexes, toDotFile, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
-import { FrontendOutput, ParseError, ExecutionResult, CompilationResult } from './api.js';
+import { FrontendOutput, ExecutionResult, CompilationResult } from './api.js';
+import ParseError from './parser-lib/ParseError.js';
 import join from './util/join.js';
 import { toString as typeToString } from './types.js';
 import { astToString } from './ast.js';
@@ -52,7 +53,12 @@ export default async (
 
     const frontendOutput = compile(source);
 
-    if ('parseErrors' in frontendOutput || 'typeErrors' in frontendOutput) {
+    if (
+        'parseErrors' in frontendOutput ||
+        'typeErrors' in frontendOutput ||
+        'kind' in frontendOutput ||
+        'internalError' in frontendOutput
+    ) {
         return frontendOutput as any;
     }
 

@@ -38,7 +38,12 @@ if (!before) {
             testCases
                 .map(async ({ name, source }) => {
                     const frontendOutput = compile(source);
-                    if ('parseErrors' in frontendOutput || 'typeErrors' in frontendOutput) {
+                    if (
+                        'parseErrors' in frontendOutput ||
+                        'typeErrors' in frontendOutput ||
+                        'kind' in frontendOutput ||
+                        'internalError' in frontendOutput
+                    ) {
                         console.log(`Failed to compile ${name}`);
                         return;
                     }

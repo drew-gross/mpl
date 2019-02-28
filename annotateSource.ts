@@ -1,5 +1,5 @@
-import SourceLocation from './sourceLocation.js';
-import join from '../util/join.js';
+import SourceLocation from './parser-lib/sourceLocation.js';
+import join from './util/join.js';
 
 // Return a pretty representation of the source with the source location highlighted.
 // Subject to change. Returns null if you provide bad input (e.g. source location
