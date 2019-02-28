@@ -1,11 +1,21 @@
 import { ExecutionResult } from './api.js';
 
 export type TestCase = {
+    // Test name
     name: string;
+
+    // Test source code
     source: string;
-    exitCode: number;
+
+    // Expected results of test
+    exitCode?: number;
     stdout?: string;
+    parseErrors?: string[];
+
+    // Runtime inputs to test
     stdin?: string;
+
+    // Control test runner
     failing?: boolean;
     only?: boolean;
 };

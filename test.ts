@@ -1123,15 +1123,6 @@ return length(hello);`,
     exitCode: 11,
 });
 
-test.failing('good parse error for missing semi-colon', mplTest, {
-    source: `
-foo = () => {
-    return 1;
-}
-return foo();`,
-    expectedParseErrors: ['you forgot a semi-colon'],
-});
-
 test('reassign integer inside function', mplTest, {
     source: `
 foo := () => {

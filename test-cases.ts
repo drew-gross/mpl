@@ -152,6 +152,16 @@ return isFive(5) ? 1 : 0`,
         stdout: 'Leaks found',
         failing: true,
     },
+    {
+        name: 'Missing Semicolon',
+        source: `
+            foo = () => {
+                return 1;
+            }
+            return foo();
+        `,
+        parseErrors: ['you forgot a semi-colon'],
+    },
 ];
 
 export default testCases;
