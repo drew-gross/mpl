@@ -21,6 +21,8 @@ export type MplToken =
     | 'rightBracket'
     | 'leftCurlyBrace'
     | 'rightCurlyBrace'
+    | 'leftSquareBracket'
+    | 'rightSquareBracket'
     | 'colon'
     | 'comma'
     | 'ternaryOperator'
@@ -140,6 +142,16 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
         toString: _ => '}',
     },
     {
+        token: '\\[',
+        type: 'leftSquareBracket',
+        toString: _ => '[',
+    },
+    {
+        token: '\\]',
+        type: 'rightSquareBracket',
+        toString: _ => ']',
+    },
+    {
         token: '\\:',
         type: 'colon',
         toString: _ => ':',
@@ -222,6 +234,8 @@ const fatArrow = mplTerminal('fatArrow');
 const thinArrow = mplTerminal('thinArrow');
 const leftCurlyBrace = mplTerminal('leftCurlyBrace');
 const rightCurlyBrace = mplTerminal('rightCurlyBrace');
+const leftSquareBracket = mplTerminal('leftSquareBracket');
+const rightSquareBracket = mplTerminal('rightSquareBracket');
 const comma = mplTerminal('comma');
 const concatenation = mplTerminal('concatenation');
 const equality = mplTerminal('equality');
@@ -283,7 +297,13 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     product: OneOf([Sequence('product', ['equality', times, 'product']), 'equality']),
     equality: OneOf([Sequence('equality', ['concatenation', equality, 'equality']), 'concatenation']),
     concatenation: OneOf([Sequence('concatenation', ['memberAccess', concatenation, 'concatenation']), 'memberAccess']),
-    memberAccess: OneOf([Sequence('memberAccess', ['simpleExpression', memberAccess, identifier]), 'simpleExpression']),
+    memberAccess: OneOf([Sequence('memberAccess', ['simpleExpression', memberAccess, identifier]), 'indexAccess']),
+    indexAccess: Sequence('indexAccess', [
+        'simpleExpression',
+        leftSquareBracket,
+        'simpleExpression',
+        rightSquareBracket,
+    ]),
     simpleExpression: OneOf([
         Sequence('bracketedExpression', [leftBracket, 'expression', rightBracket]),
         Sequence('callExpression', [identifier, leftBracket, mplOptional('paramList'), rightBracket]),
