@@ -160,7 +160,12 @@ return isFive(5) ? 1 : 0`,
             }
             return foo();
         `,
-        parseErrors: ['you forgot a semi-colon'],
+        parseErrors: [
+            `return 1;
+}
+ ^ Expected statementSeparator but found return at 4:14
+return foo();`,
+        ],
     },
 ];
 

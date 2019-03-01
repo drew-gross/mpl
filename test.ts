@@ -573,7 +573,7 @@ test('ternary true', mplTest, {
 
 test('parse error', mplTest, {
     source: '=>',
-    expectedParseErrors: [{ expected: 'identifier', found: 'fatArrow', sourceLocation: { column: 1, line: 1 } }],
+    expectedParseErrors: [{ expected: 'identifier', found: 'fatArrow', sourceLocation: { column: 0, line: 0 } }],
 });
 
 test('ternary in function false', mplTest, {

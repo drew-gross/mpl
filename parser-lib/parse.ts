@@ -152,6 +152,8 @@ const getSourceLocation = <TokenType>(tokens: Token<TokenType>[], index: number)
             line: lastToken.sourceLocation.line,
             column: lastToken.sourceLocation.column + lastToken.string.length,
         };
+    } else if (index < 0) {
+        return { line: 0, column: 0 };
     } else {
         return tokens[index].sourceLocation;
     }
@@ -489,7 +491,10 @@ const parseTerminal = <NodeType, TokenType>(
                 found: tokens[index].type,
                 foundTokenText: tokens[index].string,
                 whileParsing: [],
-                sourceLocation: getSourceLocation(tokens, index),
+                // Use index of prevoius token so that the parse error shows up right
+                // after the place where the user should have done something (e.g. they
+                // place where they forgot the semicolon
+                sourceLocation: getSourceLocation(tokens, index - 1),
             },
         ],
     };

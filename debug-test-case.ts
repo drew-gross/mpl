@@ -41,7 +41,11 @@ import annotateSource from './annotateSource.js';
         console.log(`Failed to parse:`);
         let errorString: string = '';
         programInfo.parseErrors.forEach(e => {
-            errorString += annotateSource(testCase.source, e.sourceLocation, parseErrorToString(e));
+            // The semicolor the user forgot probably should go one space after where
+            // the error is.
+            let adjustedSourceLocation = e.sourceLocation;
+            adjustedSourceLocation.column += 1;
+            errorString += annotateSource(testCase.source, adjustedSourceLocation, parseErrorToString(e));
         });
         console.log(errorString);
         return;

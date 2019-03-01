@@ -10,7 +10,7 @@ export default (source: string, { line, column }: SourceLocation, message: strin
     const contextBefore = lines[line - 2];
     const contextAfter = lines[line];
     const mainLine = lines[line - 1];
-    if (column <= 0 || column >= mainLine.length + 1) return null;
-    const pointerLine = ' '.repeat(column - 1) + `^ ${message} at line ${line} column ${column}`;
+    if (column <= 0) return null;
+    const pointerLine = ' '.repeat(column - 1) + `^ ${message}`;
     return join([contextBefore, mainLine, pointerLine, contextAfter].filter(l => l !== undefined), '\n');
 };

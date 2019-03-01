@@ -230,7 +230,7 @@ const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
     const parseResult: MplParseResult = stripResultIndexes(parse(grammar, 'program', tokens));
 
     if (parseResultIsError(parseResult)) {
-        // TODO: Just get the parser to give us good errors directly
+        // TODO: Just get the parser to give us good errors directly instead of taking the first
         return [parseResult.errors[0]];
     }
     let ast = parseResult;
