@@ -160,12 +160,7 @@ return isFive(5) ? 1 : 0`,
             }
             return foo();
         `,
-        parseErrors: [
-            `return 1;
-}
- ^ Expected statementSeparator but found return at 4:14
-return foo();`,
-        ],
+        parseErrors: [{ expected: 'statementSeparator', found: 'return', sourceLocation: { line: 4, column: 13 } }],
     },
 ];
 

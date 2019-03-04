@@ -10,7 +10,7 @@ export type TestCase = {
     // Expected results of test
     exitCode?: number;
     stdout?: string;
-    parseErrors?: string[];
+    parseErrors?: any[];
 
     // Runtime inputs to test
     stdin?: string;

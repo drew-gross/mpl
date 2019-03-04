@@ -53,8 +53,13 @@ export const mplTest = async (
         failing = [failing];
     }
 
-    const error = () => {
-        t.fail(name ? `Test failed. Run $ npm run debug-test-case "${name}" for more info.` : 'Unnamed test failed');
+    const error = (msg: string | undefined = undefined) => {
+        const userMessage = msg === undefined ? '' : ` (${msg})`;
+        t.fail(
+            name
+                ? `Test failed${userMessage}. Run $ npm run debug-test-case "${name}" for more info.`
+                : 'Unnamed test failed'
+        );
     };
 
     // Make sure it parses
@@ -70,7 +75,7 @@ export const mplTest = async (
             const keysToOmit = ['whileParsing', 'foundTokenText'];
             t.deepEqual(expectedParseErrors, omitDeep(programInfo.parseErrors, keysToOmit));
         } else {
-            error();
+            error('unexpected parse error');
         }
         return;
     }
