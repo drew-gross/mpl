@@ -1558,7 +1558,7 @@ test('pretty-parse-error', t => {
     // nominal test
     t.deepEqual(
         annontateSource('contextBefore\n123456789\ncontextAfter', { line: 2, column: 4 }, 'message'),
-        'contextBefore\n123456789\n   ^ message at line 2 column 4\ncontextAfter'
+        'contextBefore\n123456789\n   ^ message\ncontextAfter'
     );
 
     // line out of range too low
@@ -1567,21 +1567,25 @@ test('pretty-parse-error', t => {
     t.deepEqual(annontateSource('contextBefore\n123456789\ncontextAfter', { line: 4, column: 4 }, ''), null);
     // column out of range too low
     t.deepEqual(annontateSource('contextBefore\n123456789\ncontextAfter', { line: 2, column: 0 }, ''), null);
-    // column out of range too high
-    t.deepEqual(annontateSource('contextBefore\n123456789\ncontextAfter', { line: 2, column: 10 }, ''), null);
+
+    // annotation is past line length
+    t.deepEqual(
+        annontateSource('contextBefore\n123456789\ncontextAfter', { line: 2, column: 10 }, ''),
+        'contextBefore\n123456789\n         ^ \ncontextAfter'
+    );
 
     // First line
     t.deepEqual(
         annontateSource('123456789\ncontextAfter', { line: 1, column: 1 }, 'm'),
-        '123456789\n^ m at line 1 column 1\ncontextAfter'
+        '123456789\n^ m\ncontextAfter'
     );
     // Last line
     t.deepEqual(
         annontateSource('contextBefore\n123456789', { line: 2, column: 9 }, 'm2'),
-        'contextBefore\n123456789\n        ^ m2 at line 2 column 9'
+        'contextBefore\n123456789\n        ^ m2'
     );
     // Only line
-    t.deepEqual(annontateSource('123456789', { line: 1, column: 1 }, 'm3'), '123456789\n^ m3 at line 1 column 1');
+    t.deepEqual(annontateSource('123456789', { line: 1, column: 1 }, 'm3'), '123456789\n^ m3');
 });
 
 test('tac parser regression', t => {
