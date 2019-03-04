@@ -162,6 +162,23 @@ return isFive(5) ? 1 : 0`,
         `,
         parseErrors: [{ expected: 'statementSeparator', found: 'return', sourceLocation: { line: 4, column: 13 } }],
     },
+    {
+        name: 'Spill Self-Assigning Multiply',
+        source: `
+        // TODO: read enough stuff to cause a spill. then a = a * a. Or make this
+        // a direct test of spill().
+        `,
+        exitCode: 9001,
+        failing: true,
+    },
+    {
+        name: 'One Item List',
+        source: `
+            myList := [11];
+            return myList[0];
+        `,
+        exitCode: 11,
+    },
 ];
 
 export default testCases;

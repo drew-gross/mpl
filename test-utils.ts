@@ -65,7 +65,7 @@ export const mplTest = async (
     // Make sure it parses
     const programInfo = await produceProgramInfo(source, stdin, { includeExecutionResult: true });
     if ('kind' in programInfo) {
-        t.fail(`Lex Error: ${programInfo.error}`);
+        error();
         return;
     }
 
@@ -145,7 +145,6 @@ export const mplTest = async (
     t.deepEqual(programInfo.threeAddressRoundTrip.functions, programInfo.threeAddressRoundTrip.functions);
     t.deepEqual(programInfo.threeAddressRoundTrip.globals, programInfo.threeAddressRoundTrip.globals);
 
-    const testCaseName = name;
     for (let i = 0; i < programInfo.backendResults.length; i++) {
         const { name, executionResult } = programInfo.backendResults[i];
         if (exitCode === undefined) {
@@ -153,7 +152,7 @@ export const mplTest = async (
             return;
         }
         const testPassed = passed(
-            { exitCode, stdout: expectedStdOut, name: testCaseName ? testCaseName : 'unnamed', source: source },
+            { exitCode, stdout: expectedStdOut, name: name ? name : 'unnamed', source: source },
             executionResult
         );
 
