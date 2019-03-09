@@ -298,11 +298,14 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     equality: OneOf([Sequence('equality', ['concatenation', equality, 'equality']), 'concatenation']),
     concatenation: OneOf([Sequence('concatenation', ['memberAccess', concatenation, 'concatenation']), 'memberAccess']),
     memberAccess: OneOf([Sequence('memberAccess', ['simpleExpression', memberAccess, identifier]), 'indexAccess']),
-    indexAccess: Sequence('indexAccess', [
+    indexAccess: OneOf([
+        Sequence('indexAccess', ['simpleExpression', leftSquareBracket, 'simpleExpression', rightSquareBracket]),
+        'listLiteral',
+    ]),
+    listLiteral: OneOf([
+        // TODO suport list literals with more than one item
+        Sequence('listLiteral', [leftSquareBracket, 'expression', rightSquareBracket]),
         'simpleExpression',
-        leftSquareBracket,
-        'simpleExpression',
-        rightSquareBracket,
     ]),
     simpleExpression: OneOf([
         Sequence('bracketedExpression', [leftBracket, 'expression', rightBracket]),
