@@ -85,7 +85,10 @@ export type TypeError =
     | { kind: 'assignWrongType'; lhsName: string; lhsType: Type; rhsType: Type; sourceLocation: SourceLocation }
     | { kind: 'invalidMemberAccess'; found: Type; sourceLocation: SourceLocation }
     | { kind: 'objectDoesNotHaveMember'; lhsType: Type; member: string; sourceLocation: SourceLocation }
-    | { kind: 'couldNotFindType'; name: string; sourceLocation: SourceLocation };
+    | { kind: 'couldNotFindType'; name: string; sourceLocation: SourceLocation }
+    | { kind: 'nonhomogenousList' } // TODO infer nonhomogenousList as sum type so this isn't an error
+    | { kind: 'nonIntegerIndex'; index: Type; sourceLocation: SourceLocation }
+    | { kind: 'indexAccessNonList'; accessed: Type; sourceLocation: SourceLocation };
 
 export type CompilationResult =
     | {

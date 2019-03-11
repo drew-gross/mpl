@@ -265,6 +265,19 @@ export type UninferredObjectLiteral = {
     members: UninferredObjectMember[];
 };
 
+export type UninferredListLiteral = {
+    kind: 'listLiteral';
+    sourceLocation: SourceLocation;
+    items: UninferredExpression[];
+};
+
+export type UninferredIndexAccess = {
+    kind: 'indexAccess';
+    sourceLocation: SourceLocation;
+    index: UninferredExpression;
+    accessed: UninferredExpression;
+};
+
 export type UninferredProgram = {
     kind: 'program';
     sourceLocation: SourceLocation;
@@ -289,7 +302,9 @@ export type UninferredExpression =
     | UninferredAddition
     | UninferredProduct
     | UninferredConcatenation
-    | UninferredMemberAccess;
+    | UninferredMemberAccess
+    | UninferredListLiteral
+    | UninferredIndexAccess;
 
 export type UninferredAst = UninferredStatement | UninferredProgram | UninferredExpression;
 

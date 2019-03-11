@@ -195,7 +195,7 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
         case 'subtraction':
         case 'equality':
         case 'concatenation':
-            return [...result, ...recurse(ast.lhs).concat(recurse(ast.rhs))];
+            return [...result, ...recurse(ast.lhs), ...recurse(ast.rhs)];
         case 'callExpression':
             return [...result, ...flatten(ast.arguments.map(recurse))];
         case 'ternary':
@@ -219,6 +219,10 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
         case 'booleanLiteral':
         case 'typeDeclaration':
             return result;
+        case 'listLiteral':
+            return [...result, ...flatten(ast.items.map(recurse))];
+        case 'indexAccess':
+            return [...result, ...recurse(ast.accessed), ...recurse(ast.index)];
         default:
             throw debug(`${(ast as any).kind} unhandled in walkAst`);
     }
@@ -559,6 +563,46 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): TO
                 ];
             }
             return { type: accessedMember.type, extractedFunctions: [] };
+        case 'listLiteral':
+            let innerType: Type | undefined;
+            const extractedFunctions: Function[] = [];
+            for (const item of ast.items) {
+                const result = recurse(item);
+                if (isTypeError(result)) {
+                    return result;
+                }
+                if (!innerType) {
+                    innerType = result.type;
+                } else if (!typesAreEqual(innerType, result.type, availableTypes)) {
+                    return [{ kind: 'nonhomogenousList' }];
+                }
+                extractedFunctions.push(...result.extractedFunctions);
+            }
+            if (!innerType) {
+                return [{ kind: 'nonhomogenousList' }]; // TODO infer from target
+            }
+            return { type: { kind: 'List', of: innerType }, extractedFunctions };
+        case 'indexAccess':
+            const accessedType = recurse(ast.accessed);
+            if (isTypeError(accessedType)) {
+                return accessedType;
+            }
+            if (accessedType.type.kind != 'List') {
+                return [
+                    { kind: 'indexAccessNonList', accessed: accessedType.type, sourceLocation: ast.sourceLocation },
+                ];
+            }
+            const indexType = recurse(ast.index);
+            if (isTypeError(indexType)) {
+                return indexType;
+            }
+            if (indexType.type.kind != 'Integer') {
+                return [{ kind: 'nonIntegerIndex', index: indexType.type, sourceLocation: ast.sourceLocation }];
+            }
+            return {
+                type: accessedType.type.of,
+                extractedFunctions: [...accessedType.extractedFunctions, ...indexType.extractedFunctions],
+            };
         default:
             throw debug(`${(ast as any).kind} unhandled in typeOfExpression`);
     }
@@ -1218,6 +1262,19 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             return {
                 kind: 'program',
                 statements: makeProgramAstNodeFromStatmentParseResult(ast.children[0]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'listLiteral':
+            return {
+                kind: 'listLiteral',
+                items: [astFromParseResult(ast.children[1]) as Ast.UninferredExpression],
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'indexAccess':
+            return {
+                kind: 'indexAccess',
+                index: astFromParseResult(ast.children[2]) as Ast.UninferredExpression,
+                accessed: astFromParseResult(ast.children[0]) as Ast.UninferredExpression,
                 sourceLocation: ast.sourceLocation,
             };
         default:

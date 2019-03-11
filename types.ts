@@ -3,6 +3,7 @@ import join from './util/join.js';
 import sum from './util/list/sum.js';
 import { VariableDeclaration } from './api.js';
 import { TargetInfo } from './threeAddressCode/generator.js';
+
 export type ProductComponent = {
     name: string;
     type: Type;
@@ -14,10 +15,11 @@ export type String = { kind: 'String' };
 export type Integer = { kind: 'Integer' };
 export type Boolean = { kind: 'Boolean' };
 export type Function = { kind: 'Function'; permissions: Permission[]; arguments: Type[]; returnType: Type };
+export type List = { kind: 'List'; of: Type };
 export type Product = { kind: 'Product'; name: string; members: ProductComponent[] };
 export type NameRef = { kind: 'NameRef'; namedType: string };
 
-export type Type = String | Integer | Boolean | Function | Product | NameRef;
+export type Type = String | Integer | Boolean | Function | List | Product | NameRef;
 
 export const toString = (type: Type): string => {
     switch (type.kind) {

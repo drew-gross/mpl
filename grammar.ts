@@ -209,6 +209,8 @@ export type MplAstNode =
     | 'objectLiteralComponent'
     | 'objectLiteralComponents'
     | 'memberAccess'
+    | 'listLiteral'
+    | 'indexAccess'
     | 'paramList';
 
 export type MplAst = Ast<MplAstNode, MplToken>;
