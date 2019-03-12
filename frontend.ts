@@ -922,6 +922,34 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
                 rhs: ast.rhs,
                 lhsType: accessedType.type,
             };
+        case 'listLiteral':
+            let itemType: Type | undefined = undefined;
+            const items: Ast.Ast[] = [];
+            for (const item of ast.items) {
+                const newItem = recurse(item);
+                items.push(newItem);
+                if (itemType === undefined) {
+                    const maybeItemType = typeOfExpression({ w: item, availableVariables, availableTypes });
+                    if (isTypeError(maybeItemType)) {
+                        throw debug("shouldn't be type error here");
+                    }
+                    itemType = maybeItemType.type;
+                }
+            }
+            if (!itemType) throw debug('no itemType');
+            return {
+                kind: 'listLiteral',
+                sourceLocation: ast.sourceLocation,
+                type: { kind: 'List', of: itemType },
+                items,
+            };
+        case 'indexAccess':
+            return {
+                kind: 'indexAccess',
+                sourceLocation: ast.sourceLocation,
+                accessed: recurse(ast.accessed),
+                index: recurse(ast.index),
+            };
         case 'number':
         case 'identifier':
         case 'booleanLiteral':

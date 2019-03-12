@@ -128,12 +128,26 @@ export type ObjectLiteral = {
     members: ObjectMember[];
 };
 
+export type ListLiteral = {
+    kind: 'listLiteral';
+    sourceLocation: SourceLocation;
+    type: Type;
+    items: Ast[];
+};
+
 export type MemberAccess = {
     kind: 'memberAccess';
     sourceLocation: SourceLocation;
     lhs: Ast;
     lhsType: Type;
     rhs: string;
+};
+
+export type IndexAccess = {
+    kind: 'indexAccess';
+    sourceLocation: SourceLocation;
+    accessed: Ast;
+    index: Ast;
 };
 
 export type Ast =
@@ -149,6 +163,8 @@ export type Ast =
     | Concatenation
     | TypeDeclaration
     | ObjectLiteral
+    | ListLiteral
+    | IndexAccess
     | MemberAccess;
 
 // Untyped versions (...kinda)
@@ -349,6 +365,10 @@ export const astToString = (ast: Ast) => {
             return `{ ${join(members, ', ')} }`;
         case 'memberAccess':
             return `(${astToString(ast.lhs)}).${ast.rhs}`;
+        case 'listLiteral':
+            return `[${join(ast.items.map(astToString), ', ')}]`;
+        case 'indexAccess':
+            return `(${astToString(ast.accessed)})[${astToString(ast.index)}]`;
         default:
             throw debug(`${(ast as any).kind} unhandled in astToString`);
     }

@@ -127,6 +127,9 @@ export const builtinFunctions: VariableDeclaration[] = [
 
 export const typeSize = (targetInfo: TargetInfo, type: Type, typeDeclarations: TypeDeclaration[]): number => {
     switch (type.kind) {
+        case 'List':
+            // Pointer + size
+            return targetInfo.alignment * 2;
         case 'Product':
             return sum(type.members.map(m => typeSize(targetInfo, m.type, typeDeclarations)));
         case 'Boolean':
