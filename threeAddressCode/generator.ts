@@ -459,11 +459,8 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             ...copyStructInstructions,
                         ]);
                     default:
-                        throw debug(
-                            `${
-                                lhsInfo.originalDeclaration.type.kind
-                            } unhandled in lhsInfo.originalDeclaration.type.kind`
-                        );
+                        const unhandled = lhsInfo.originalDeclaration.type.kind;
+                        throw debug(`${unhandled} unhandled in typedDeclarationAssignment`);
                 }
             } else if (lhs in variablesInScope) {
                 return recurse({
@@ -768,6 +765,47 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     why: 'Make space for object literal',
                 },
                 ...flatten(members),
+            ]);
+        }
+        case 'listLiteral': {
+            const bytesToAllocate = makeTemporary('bytesToAllocate');
+            const dataPointer = makeTemporary('dataPointer');
+            const createItems: CompiledExpression<Statement>[] = ast.items.map((m, index) => {
+                const itemTemporary = makeTemporary(`item_${index})`);
+                return compileExpression(
+                    [recurse({ ast: m, destination: itemTemporary })],
+                    ([makeItemInstructions]) => [
+                        ...makeItemInstructions,
+                        {
+                            kind: 'storeMemory' as 'storeMemory',
+                            from: itemTemporary,
+                            address: dataPointer,
+                            offset: index * targetInfo.alignment, // TODO: proper alignment for lists of larger-than-word types.
+                            why: 'Store this item in the list',
+                        },
+                    ]
+                );
+            });
+            return compileExpression<Statement>(createItems, create => [
+                {
+                    kind: 'loadImmediate' as 'loadImmediate',
+                    value: ast.items.length * typeSize(targetInfo, ast.type, types),
+                    destination: 'functionArgument1',
+                    why: 'num bytes for list',
+                },
+                {
+                    kind: 'addImmediate',
+                    register: 'functionArgument1',
+                    amount: targetInfo.bytesInWord,
+                    why: 'add room for length',
+                },
+                { kind: 'callByName', function: 'my_malloc', why: 'Allocate that much space' },
+                { kind: 'move', from: 'functionResult', to: dataPointer, why: 'save memory for pointer' },
+                { kind: 'loadImmediate', value: ast.items.length, destination: destination, why: 'store size' },
+                { kind: 'loadImmediate', value: ast.items.length, destination: destination, why: 'store size' },
+                ...flatten(create),
+                { kind: 'move', from: dataPointer, to: 'functionArgument1', why: 'prepare to free temp list' },
+                { kind: 'callByName', function: 'my_free', why: 'free temporary list' },
             ]);
         }
         case 'memberAccess': {
