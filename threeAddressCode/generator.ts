@@ -458,6 +458,88 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             },
                             ...copyStructInstructions,
                         ]);
+                    case 'List':
+                        const remainingCount = makeTemporary('remainingCount');
+                        const copyLoop = makeLabel('copyLoop');
+                        const temp = makeTemporary('temp');
+                        const currentIndex = makeTemporary('currentIndex');
+                        return compileExpression<Statement>([computeRhs], ([e1]) => [
+                            ...e1,
+                            {
+                                kind: 'loadMemory',
+                                from: rhs,
+                                to: remainingCount,
+                                offset: 0,
+                                why: 'Get length of list',
+                            },
+                            {
+                                kind: 'addImmediate',
+                                register: remainingCount,
+                                amount: 1,
+                                why: 'add storage for length of list',
+                            },
+                            {
+                                kind: 'move',
+                                from: remainingCount,
+                                to: 'functionArgument1',
+                                why: 'prepare to malloc',
+                            },
+                            {
+                                kind: 'callByName',
+                                function: 'malloc',
+                                why: 'malloc',
+                            },
+                            {
+                                kind: 'move',
+                                from: 'functionResult',
+                                to: destination,
+                                why: 'destination pointer',
+                            },
+                            {
+                                kind: 'move',
+                                from: 'functionResult',
+                                to: currentIndex,
+                                why: '',
+                            },
+                            {
+                                kind: 'label',
+                                name: copyLoop,
+                                why: 'copy loop',
+                            },
+                            {
+                                kind: 'loadMemory',
+                                from: rhs,
+                                to: temp,
+                                offset: 0,
+                                why: 'copy a byte',
+                            },
+                            {
+                                kind: 'storeMemory',
+                                from: temp,
+                                address: currentIndex,
+                                offset: 0,
+                                why: 'finish copying',
+                            },
+                            {
+                                kind: 'addImmediate',
+                                register: remainingCount,
+                                amount: -1,
+                                why: 'copied a byte',
+                            },
+                            {
+                                kind: 'addImmediate',
+                                register: currentIndex,
+                                amount: 1,
+                                why: 'next byte to copy',
+                            },
+                            {
+                                kind: 'gotoIfNotEqual',
+                                why: 'not done yet',
+                                lhs: remainingCount,
+                                rhs: 0,
+                                label: copyLoop,
+                            },
+                        ]);
                     default:
                         const unhandled = lhsInfo.originalDeclaration.type.kind;
                         throw debug(`${unhandled} unhandled in typedDeclarationAssignment`);
