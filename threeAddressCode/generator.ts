@@ -913,6 +913,34 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 },
             ]);
         }
+        case 'indexAccess': {
+            const index = makeTemporary('index');
+            const indexInstructions = recurse({ ast: ast.index, destination: index });
+            const accessed = makeTemporary('accessed');
+            const accessedInstructions = recurse({ ast: ast.accessed, destination: accessed });
+            const length = makeTemporary('length');
+            const outOfRange = makeLabel('outOfRange');
+            const itemAddress = makeTemporary('itemAddress');
+            return compileExpression<Statement>(
+                [indexInstructions, accessedInstructions],
+                ([makeIndex, makeAccess]) => [
+                    ...makeIndex,
+                    ...makeAccess,
+                    { kind: 'loadMemory', from: accessed, to: length, offset: 0, why: 'get the length of the list' },
+                    { kind: 'gotoIfGreater', label: outOfRange, lhs: index, rhs: length, why: 'check OOB' },
+                    { kind: 'add', destination: itemAddress, lhs: index, rhs: accessed, why: 'get address of item' },
+                    {
+                        kind: 'loadMemory',
+                        from: itemAddress,
+                        to: destination,
+                        offset: 1,
+                        why: 'add one to adjust for length',
+                    },
+                    { kind: 'label', name: outOfRange, why: 'lol' },
+                    // TODO: exit on out of range
+                ]
+            );
+        }
         case 'typeDeclaration':
             return compileExpression([], ([]) => []);
         default:
