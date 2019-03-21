@@ -44,6 +44,8 @@ const mplTypeToCType = (type: Type): ((name: string) => string) => {
             return name => `${returnType} (*${name})(${argumentsString})`;
         case 'Product':
             return name => `struct ${type.name} ${name}`;
+        case 'List':
+            return name => 'TODO implement lists in C';
         default:
             throw debug(`${type.kind} unhandled in mplTypeToCType`);
     }
@@ -82,7 +84,6 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         const rhs = recurse((ast as any).rhs);
         return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, operator, ...e2]);
     };
-    if (!ast) debug('todo');
     switch (ast.kind) {
         case 'returnStatement': {
             const subExpression = recurse(ast.expression);
@@ -160,6 +161,8 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                     } else {
                         return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhsWillAlloc);
                     }
+                case 'List':
+                    return { prepare: [], execute: ['TODO: implement lists in C'], cleanup: [] };
                 default:
                     throw debug(`${declaration.type.kind} unhandled in typedDeclarationAssignment`);
             }
@@ -239,6 +242,9 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             return compileExpression([], ([]) => [stringLiteralName(stringLiteralData)]);
         case 'typeDeclaration':
             return compileExpression([], ([]) => []);
+        case 'listLiteral':
+        case 'indexAccess':
+            return { prepare: [], execute: ['TODO: implement lists in C'], cleanup: [] };
         default:
             throw debug(`${(ast as any).kind} unhandled in astToC`);
     }

@@ -70,6 +70,11 @@ const astToJS = ({
             return ['{', join(members, ','), '}'];
         case 'memberAccess':
             return ['(', ...recurse(ast.lhs), ').', ast.rhs];
+        case 'listLiteral':
+            const items = ast.items.map(item => join(recurse(item), ', '));
+            return ['[', join(items, ', '), ']'];
+        case 'indexAccess':
+            return ['(', ...recurse(ast.accessed), ')[(', ...recurse(ast.index), ')]'];
         default:
             throw debug(`${(ast as any).kind} unhanlded in toJS`);
     }
