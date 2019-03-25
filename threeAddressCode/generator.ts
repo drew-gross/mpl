@@ -853,7 +853,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const bytesToAllocate = makeTemporary('bytesToAllocate');
             const dataPointer = makeTemporary('dataPointer');
             const createItems: CompiledExpression<Statement>[] = ast.items.map((m, index) => {
-                const itemTemporary = makeTemporary(`item_${index})`);
+                const itemTemporary = makeTemporary(`item_${index}`);
                 return compileExpression(
                     [recurse({ ast: m, destination: itemTemporary })],
                     ([makeItemInstructions]) => [
