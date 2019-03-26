@@ -470,7 +470,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 from: rhs,
                                 to: remainingCount,
                                 offset: 0,
-                                why: 'Get length of list',
+                                why: `Get length of list from ${registerToString(rhs)}`,
                             },
                             {
                                 kind: 'addImmediate',
@@ -486,7 +486,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             },
                             {
                                 kind: 'callByName',
-                                function: 'malloc',
+                                function: 'my_malloc',
                                 why: 'malloc',
                             },
                             {
@@ -852,6 +852,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
         case 'listLiteral': {
             const bytesToAllocate = makeTemporary('bytesToAllocate');
             const dataPointer = makeTemporary('dataPointer');
+            const listLength = makeTemporary('listLength');
             const createItems: CompiledExpression<Statement>[] = ast.items.map((m, index) => {
                 const itemTemporary = makeTemporary(`item_${index}`);
                 return compileExpression(
@@ -862,32 +863,42 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             kind: 'storeMemory' as 'storeMemory',
                             from: itemTemporary,
                             address: dataPointer,
-                            offset: index * targetInfo.alignment, // TODO: proper alignment for lists of larger-than-word types.
+                            //  Plus 1 because we leave one word for list length. TODO: proper alignment for lists of larger-than-word types.
+                            offset: index * (targetInfo.alignment + 1),
                             why: 'Store this item in the list',
                         },
                     ]
                 );
             });
-            return compileExpression<Statement>(createItems, create => [
-                {
-                    kind: 'loadImmediate' as 'loadImmediate',
-                    value: ast.items.length * typeSize(targetInfo, ast.type, types),
-                    destination: 'functionArgument1',
-                    why: 'num bytes for list',
-                },
-                {
-                    kind: 'addImmediate',
-                    register: 'functionArgument1',
-                    amount: targetInfo.bytesInWord,
-                    why: 'add room for length',
-                },
-                { kind: 'callByName', function: 'my_malloc', why: 'Allocate that much space' },
-                { kind: 'move', from: 'functionResult', to: dataPointer, why: 'save memory for pointer' },
-                { kind: 'loadImmediate', value: ast.items.length, destination: destination, why: 'store size' },
-                { kind: 'loadImmediate', value: ast.items.length, destination: destination, why: 'store size' },
-                ...flatten(create),
-                { kind: 'move', from: dataPointer, to: 'functionArgument1', why: 'prepare to free temp list' },
-                { kind: 'callByName', function: 'my_free', why: 'free temporary list' },
+            const prepAndCleanup: CompiledExpression<Statement> = {
+                prepare: [
+                    {
+                        kind: 'loadImmediate' as 'loadImmediate',
+                        value: ast.items.length * typeSize(targetInfo, ast.type, types),
+                        destination: 'functionArgument1',
+                        why: 'num bytes for list',
+                    },
+                    {
+                        kind: 'addImmediate',
+                        register: 'functionArgument1',
+                        amount: targetInfo.bytesInWord,
+                        why: 'add room for length',
+                    },
+                    { kind: 'callByName', function: 'my_malloc', why: 'Allocate that much space' },
+                    { kind: 'move', from: 'functionResult', to: dataPointer, why: 'save memory for pointer' },
+                    { kind: 'loadImmediate', value: ast.items.length, destination: listLength, why: 'store size' },
+                    { kind: 'storeMemory', from: listLength, address: dataPointer, offset: 0, why: 'save list length' },
+                    { kind: 'move', from: dataPointer, to: destination, why: 'save memory for pointer' },
+                ],
+                execute: [],
+                cleanup: [
+                    { kind: 'move', from: dataPointer, to: 'functionArgument1', why: 'prepare to free temp list' },
+                    { kind: 'callByName', function: 'my_free', why: 'free temporary list' },
+                ],
+            };
+            return compileExpression<Statement>([prepAndCleanup, ...createItems], ([allocate, create]) => [
+                ...allocate,
+                ...create,
             ]);
         }
         case 'memberAccess': {
