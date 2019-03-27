@@ -475,7 +475,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             {
                                 kind: 'addImmediate',
                                 register: remainingCount,
-                                amount: 1,
+                                amount: targetInfo.bytesInWord,
                                 why: 'add storage for length of list',
                             },
                             {
@@ -523,13 +523,13 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             {
                                 kind: 'addImmediate',
                                 register: remainingCount,
-                                amount: -1,
+                                amount: -targetInfo.bytesInWord,
                                 why: 'copied a byte',
                             },
                             {
                                 kind: 'addImmediate',
                                 register: currentIndex,
-                                amount: 1,
+                                amount: targetInfo.bytesInWord,
                                 why: 'next byte to copy',
                             },
                             {
