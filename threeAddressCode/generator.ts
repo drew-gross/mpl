@@ -461,7 +461,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     case 'List':
                         const remainingCount = makeTemporary('remainingCount');
                         const copyLoop = makeLabel('copyLoop');
-                        const temp = makeTemporary('temp');
+                        const targetAddess = makeTemporary('targetAddess');
                         const currentIndex = makeTemporary('currentIndex');
                         return compileExpression<Statement>([computeRhs], ([e1]) => [
                             ...e1,
@@ -509,13 +509,13 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             {
                                 kind: 'loadMemory',
                                 from: rhs,
-                                to: temp,
+                                to: targetAddess,
                                 offset: 0,
                                 why: 'copy a byte',
                             },
                             {
                                 kind: 'storeMemory',
-                                from: temp,
+                                from: targetAddess,
                                 address: currentIndex,
                                 offset: 0,
                                 why: 'finish copying',
@@ -529,6 +529,12 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             {
                                 kind: 'addImmediate',
                                 register: currentIndex,
+                                amount: targetInfo.bytesInWord,
+                                why: 'next byte to copy',
+                            },
+                            {
+                                kind: 'addImmediate',
+                                register: targetAddess,
                                 amount: targetInfo.bytesInWord,
                                 why: 'next byte to copy',
                             },
@@ -864,7 +870,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             from: itemTemporary,
                             address: dataPointer,
                             //  Plus 1 because we leave one word for list length. TODO: proper alignment for lists of larger-than-word types.
-                            offset: index * (targetInfo.alignment + 1),
+                            offset: (index + 1) * targetInfo.alignment,
                             why: 'Store this item in the list',
                         },
                     ]
@@ -944,8 +950,8 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         kind: 'loadMemory',
                         from: itemAddress,
                         to: destination,
-                        offset: 1,
-                        why: 'add one to adjust for length',
+                        offset: targetInfo.bytesInWord,
+                        why: 'add one word to adjust for length',
                     },
                     { kind: 'label', name: outOfRange, why: 'lol' },
                     // TODO: exit on out of range
