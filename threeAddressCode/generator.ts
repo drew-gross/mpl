@@ -463,6 +463,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         const copyLoop = makeLabel('copyLoop');
                         const targetAddess = makeTemporary('targetAddess');
                         const currentIndex = makeTemporary('currentIndex');
+                        const itemSize = makeTemporary('itemSize');
                         return compileExpression<Statement>([computeRhs], ([e1]) => [
                             ...e1,
                             {
@@ -471,6 +472,19 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 to: remainingCount,
                                 offset: 0,
                                 why: `Get length of list from ${registerToString(rhs)}`,
+                            },
+                            {
+                                kind: 'loadImmediate',
+                                destination: itemSize,
+                                value: targetInfo.bytesInWord,
+                                why: 'for multiplying',
+                            },
+                            {
+                                kind: 'multiply',
+                                lhs: remainingCount,
+                                rhs: itemSize,
+                                destination: remainingCount,
+                                why: 'Multiple item count by item size',
                             },
                             {
                                 kind: 'addImmediate',
@@ -544,6 +558,12 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 lhs: remainingCount,
                                 rhs: 0,
                                 label: copyLoop,
+                            },
+                            {
+                                kind: 'storeGlobal',
+                                from: destination,
+                                to: lhsInfo.newName,
+                                why: 'Store into global',
                             },
                         ]);
                     default:
