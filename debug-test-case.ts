@@ -18,6 +18,15 @@ import annotateSource from './annotateSource.js';
     commander
         .arguments('<test_name>')
         .option('--no-execute', "Only produce binaries, don't execute them")
+        .option(
+            '--skip-backends [backends]',
+            "Don't run x64",
+            (val, memo) => {
+                memo.push(val);
+                return memo;
+            },
+            []
+        )
         .parse(process.argv);
 
     const testCase = testCases.find(c => c.name == commander.args[0]);
@@ -29,6 +38,7 @@ import annotateSource from './annotateSource.js';
 
     const programInfo = await produceProgramInfo(testCase.source, testCase.stdin ? testCase.stdin : '', {
         includeExecutionResult: commander.execute,
+        skipBackends: commander.skipBackends,
     });
 
     // TODO: Unify and improve error printing logic with test-utils and produceProgramInfo

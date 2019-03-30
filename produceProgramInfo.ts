@@ -34,12 +34,13 @@ type ProgramInfo = {
 
 type RequestedInfo = {
     includeExecutionResult: boolean;
+    skipBackends?: string[];
 };
 
 export default async (
     source: string,
     stdin: string,
-    { includeExecutionResult }: RequestedInfo
+    { includeExecutionResult, skipBackends }: RequestedInfo
 ): Promise<ProgramInfo | LexError | { parseErrors: ParseError[] } | { typeErrors: TypeError[] }> => {
     const tokens = lex(tokenSpecs, source);
     if ('kind' in tokens) {
@@ -106,7 +107,7 @@ export default async (
 
             if ('error' in compilationResult) {
                 return { name, compilationResult, executionResult: { error: 'Compilation failed' } };
-            } else if (!includeExecutionResult) {
+            } else if (!includeExecutionResult || (skipBackends || []).includes(name)) {
                 return { name, compilationResult, executionResult: { error: 'Not requested' } };
             } else {
                 const executionResult = await execute(compilationResult.binaryFile.path, stdinFile.path);
