@@ -462,8 +462,9 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         const remainingCount = makeTemporary('remainingCount');
                         const copyLoop = makeLabel('copyLoop');
                         const targetAddess = makeTemporary('targetAddess');
-                        const currentIndex = makeTemporary('currentIndex');
                         const itemSize = makeTemporary('itemSize');
+                        const sourceAddress = makeTemporary('sourceAddress');
+                        const temp = makeTemporary('temp');
                         return compileExpression<Statement>([computeRhs], ([e1]) => [
                             ...e1,
                             {
@@ -472,6 +473,12 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 to: remainingCount,
                                 offset: 0,
                                 why: `Get length of list from ${registerToString(rhs)}`,
+                            },
+                            {
+                                kind: 'move',
+                                from: rhs,
+                                to: sourceAddress,
+                                why: 'Local copy of pointer we can modify',
                             },
                             {
                                 kind: 'loadImmediate',
@@ -511,9 +518,9 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             },
                             {
                                 kind: 'move',
-                                from: 'functionResult',
-                                to: currentIndex,
-                                why: '',
+                                from: destination,
+                                to: targetAddess,
+                                why: 'destination pointer',
                             },
                             {
                                 kind: 'label',
@@ -522,15 +529,15 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             },
                             {
                                 kind: 'loadMemory',
-                                from: rhs,
-                                to: targetAddess,
+                                from: sourceAddress,
+                                to: temp,
                                 offset: 0,
                                 why: 'copy a byte',
                             },
                             {
                                 kind: 'storeMemory',
-                                from: targetAddess,
-                                address: currentIndex,
+                                from: temp,
+                                address: targetAddess,
                                 offset: 0,
                                 why: 'finish copying',
                             },
@@ -542,7 +549,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             },
                             {
                                 kind: 'addImmediate',
-                                register: currentIndex,
+                                register: sourceAddress,
                                 amount: targetInfo.bytesInWord,
                                 why: 'next byte to copy',
                             },
@@ -1255,7 +1262,7 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
 
     const freeGlobalsInstructions: Statement[] = flatten(
         globalDeclarations
-            .filter(declaration => declaration.type.kind === 'String')
+            .filter(declaration => ['String', 'List'].includes(declaration.type.kind))
             .map(declaration => [
                 {
                     kind: 'loadGlobal',
