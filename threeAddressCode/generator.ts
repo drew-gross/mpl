@@ -89,6 +89,7 @@ export type BackendOptions = {
 };
 
 export type TargetInfo = {
+    // TOOD alignment and bytesInWord need to be distinguished better. Is alignment even necessary?
     alignment: number;
     bytesInWord: number;
     cleanupCode: Statement[];
@@ -102,7 +103,7 @@ const memberOffset = (type: Type, memberName: string, targetInfo: TargetInfo): n
     if (type.kind != 'Product') throw debug('need a product here');
     const result = type.members.findIndex(m => m.name == memberName);
     if (result < 0) throw debug('coudnt find member');
-    return result * targetInfo.alignment;
+    return result * targetInfo.bytesInWord;
 };
 
 export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression<Statement> => {
@@ -427,7 +428,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             },
                             ...flatten(
                                 lhsType.members.map((m, i) => {
-                                    const offset = i * targetInfo.alignment; // TODO: Should add up sizes of preceeding members
+                                    const offset = i * targetInfo.bytesInWord; // TODO: Should add up sizes of preceeding members
                                     const memberTemporary = makeTemporary('member');
                                     return [
                                         {
@@ -866,7 +867,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             kind: 'storeMemory' as 'storeMemory',
                             from: memberTemporary,
                             address: destination,
-                            offset: index * targetInfo.alignment, // TODO: proper alignment and offsets
+                            offset: index * targetInfo.bytesInWord, // TODO: proper alignment and offsets
                             why: `object literal member ${m.name}`,
                         },
                     ]
@@ -897,7 +898,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             from: itemTemporary,
                             address: dataPointer,
                             //  Plus 1 because we leave one word for list length. TODO: proper alignment for lists of larger-than-word types.
-                            offset: (index + 1) * targetInfo.alignment,
+                            offset: (index + 1) * targetInfo.bytesInWord,
                             why: 'Store this item in the list',
                         },
                     ]
