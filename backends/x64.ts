@@ -232,7 +232,7 @@ first_block: dq 0
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
 section .bss
 ${Object.values(globals)
-    .map(({ mangledName }) => `${mangledName}: resq 1`) // TODO: actual size of var instead of always resq
+    .map(({ mangledName, bytes }) => `${mangledName}: resq ${bytes / bytesInWord}`)
     .join('\n')}
 ${Object.keys(errors)
     .map(key => `${errors[key].name}: db "${errors[key].value}", 0`)

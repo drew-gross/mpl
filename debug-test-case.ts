@@ -66,6 +66,7 @@ import annotateSource from './annotateSource.js';
         return;
     }
 
+    console.log(`Mpl: ${(await writeTempFile(testCase.source, '.mpl')).path}`);
     console.log(`Tokens: ${(await writeTempFile(JSON.stringify(programInfo.tokens, null, 2), '.json')).path}`);
     console.log(`Ast: ${(await writeTempFile(JSON.stringify(programInfo.ast, null, 2), '.json')).path}`);
 

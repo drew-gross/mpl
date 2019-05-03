@@ -1187,20 +1187,6 @@ return foo();`,
     exitCode: 34 - 12,
 });
 
-test('multiple int pairs in function', mplTest, {
-    source: `
-IntPair := {
-    first: Integer;
-    second: Integer;
-};
-
-ip1: IntPair = IntPair { first: 1, second: 2, };
-ip2: IntPair = IntPair { first: 3, second: 4, };
-return ip1.first + ip1.second + ip2.second;
-`,
-    exitCode: 7,
-});
-
 test('controlFlowGraph basic test', t => {
     const rtl: Statement[] = [
         {

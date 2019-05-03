@@ -961,7 +961,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const indexInstructions = recurse({ ast: ast.index, destination: index });
             const accessed = makeTemporary('accessed');
             const accessedInstructions = recurse({ ast: ast.accessed, destination: accessed });
-            const length = makeTemporary('length');
+            const listLength = makeTemporary('length');
             const outOfRange = makeLabel('outOfRange');
             const itemAddress = makeTemporary('itemAddress');
             return compileExpression<Statement>(
@@ -969,8 +969,14 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 ([makeIndex, makeAccess]) => [
                     ...makeIndex,
                     ...makeAccess,
-                    { kind: 'loadMemory', from: accessed, to: length, offset: 0, why: 'get the length of the list' },
-                    { kind: 'gotoIfGreater', label: outOfRange, lhs: index, rhs: length, why: 'check OOB' },
+                    {
+                        kind: 'loadMemory',
+                        from: accessed,
+                        to: listLength,
+                        offset: 0,
+                        why: 'get the length of the list',
+                    },
+                    { kind: 'gotoIfGreater', label: outOfRange, lhs: index, rhs: listLength, why: 'check OOB' },
                     { kind: 'add', destination: itemAddress, lhs: index, rhs: accessed, why: 'get address of item' },
                     {
                         kind: 'loadMemory',

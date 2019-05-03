@@ -247,7 +247,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             return compileExpression([], ([]) => [stringLiteralName(stringLiteralData)]);
         case 'typeDeclaration':
             return compileExpression([], ([]) => []);
-        case 'indexAccess':
+        case 'indexAccess': {
             const index = recurse(ast.index);
             const accessed = recurse(ast.accessed);
             // TODO: OOB assertions
@@ -258,7 +258,8 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                 ...indexCode,
                 ']',
             ]);
-        case 'listLiteral':
+        }
+        case 'listLiteral': {
             const listLiteral = makeTemporary('listLiteral');
             // Prepare by allocating the memory and putting the data in it
             const allocate = [
@@ -276,6 +277,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                 cleanup: [],
             };
             return compileExpression([buildLiteral, assignItems], _ => [listLiteral]);
+        }
         default:
             throw debug(`${(ast as any).kind} unhandled in astToC`);
     }

@@ -179,6 +179,20 @@ return isFive(5) ? 1 : 0`,
         `,
         exitCode: 11,
     },
+    {
+        name: 'Multiple Int Pairs in Function',
+        source: `
+            IntPair := {
+                first: Integer;
+                second: Integer;
+            };
+
+            ip1: IntPair = IntPair { first: 1, second: 2, };
+            ip2: IntPair = IntPair { first: 3, second: 4, };
+            return ip1.first + ip1.second + ip2.second;
+        `,
+        exitCode: 7,
+    },
 ];
 
 export default testCases;
