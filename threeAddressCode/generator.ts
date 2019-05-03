@@ -26,6 +26,7 @@ import {
 import { Register, toString as registerToString } from '../register.js';
 import { Function, VariableDeclaration, StringLiteralData } from '../api.js';
 import { Statement } from './statement.js';
+import { parseInstructionsOrDie as ins } from './parser.js';
 
 export type ThreeAddressFunction = {
     instructions: Statement[];
@@ -119,9 +120,9 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
     const recurse = newInput => astToThreeAddressCode({ ...input, ...newInput });
     switch (ast.kind) {
         case 'number':
-            return compileExpression<Statement>([], ([]) => [
-                { kind: 'loadImmediate', value: ast.value, destination, why: 'Load number literal' },
-            ]);
+            return compileExpression<Statement>([], ([]) =>
+                ins(`${registerToString(destination)} = ${ast.value} # Load number literal`)
+            );
         case 'booleanLiteral':
             return compileExpression<Statement>([], ([]) => [
                 {

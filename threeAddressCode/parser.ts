@@ -757,10 +757,10 @@ export const parseFunction = (input: string): ThreeAddressFunction | LexError | 
 export const parseFunctionOrDie = (tacString: string): ThreeAddressFunction => {
     const parsed = parseFunction(tacString);
     if ('kind' in parsed) {
-        throw debug('error');
+        throw debug('error in parseFunctionOrDie');
     }
     if (Array.isArray(parsed)) {
-        throw debug('error');
+        throw debug('error in parseFunctionOrDie');
     }
     return parsed;
 };
@@ -775,4 +775,19 @@ export const parseInstructions = (input: string): Statement[] | LexError | Parse
         return parseResult.errors;
     }
     return instructionsFromParseResult(parseResult);
+};
+
+export const parseInstructionsOrDie = (tacString: string): Statement[] => {
+    const parsed = parseInstructions(tacString);
+    if ('kind' in parsed) {
+        debugger;
+        parseInstructions(tacString);
+        throw debug(`error in parseInstructionsOrDie: ${parsed.kind}`);
+    }
+    if (Array.isArray(parsed)) {
+        return parsed as Statement[]; // TODO: Is ambiguous with ParseError[] :(
+    }
+    debugger;
+    parseInstructions(tacString);
+    throw debug('error in parseInstructionsOrDie: not array');
 };
