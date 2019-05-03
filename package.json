@@ -32,7 +32,7 @@
     "author": "Drew Gross",
     "dependencies": {
         "@types/node": "11.9.5",
-        "ava": "1.2.1",
+        "ava": "1.4.1",
         "chalk": "2.4.2",
         "child-process-promise": "2.2.1",
         "clone": "2.1.2",
