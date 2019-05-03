@@ -149,17 +149,10 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const rhs = makeTemporary('addition_rhs');
             const computeLhs = recurse({ ast: ast.lhs, destination: lhs });
             const computeRhs = recurse({ ast: ast.rhs, destination: rhs });
-
             return compileExpression<Statement>([computeLhs, computeRhs], ([storeLeft, storeRight]) => [
                 ...storeLeft,
                 ...storeRight,
-                {
-                    kind: 'subtract',
-                    lhs,
-                    rhs,
-                    destination,
-                    why: 'Evaluate subtraction',
-                },
+                ...ins(`${r2s(destination)} = ${r2s(lhs)} - ${r2s(rhs)} # Evaluate subtraction`),
             ]);
         }
         case 'addition': {
@@ -167,17 +160,10 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const rhs = makeTemporary('addition_rhs');
             const computeLhs = recurse({ ast: ast.lhs, destination: lhs });
             const computeRhs = recurse({ ast: ast.rhs, destination: rhs });
-
             return compileExpression<Statement>([computeLhs, computeRhs], ([storeLeft, storeRight]) => [
                 ...storeLeft,
                 ...storeRight,
-                {
-                    kind: 'add',
-                    lhs,
-                    rhs,
-                    destination,
-                    why: 'Evaluate addition',
-                },
+                ...ins(`${r2s(destination)} = ${r2s(lhs)} + ${r2s(rhs)} # Evaluate addition`),
             ]);
         }
         case 'ternary': {
