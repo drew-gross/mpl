@@ -194,14 +194,9 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             );
         }
         case 'functionLiteral':
-            return compileExpression<Statement>([], ([]) => [
-                {
-                    kind: 'loadSymbolAddress',
-                    to: destination,
-                    symbolName: ast.deanonymizedName,
-                    why: 'Loading function into register',
-                },
-            ]);
+            return compileExpression<Statement>([], ([]) =>
+                ins(`${r2s(destination)} = &${ast.deanonymizedName} # Load function into register`)
+            );
         case 'callExpression': {
             const functionName = ast.name;
             let callInstructions: (string | Statement)[] = [];
