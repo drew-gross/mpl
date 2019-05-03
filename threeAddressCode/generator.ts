@@ -184,8 +184,10 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         why: 'Go to false branch if zero',
                     },
                     ...e2,
-                    { kind: 'goto', label: endOfTernaryLabel, why: 'Jump to end of ternary' },
-                    { kind: 'label', name: falseBranchLabel, why: 'False branch begin' },
+                    ...ins(`
+                        goto ${endOfTernaryLabel} # Jump to end of ternary
+                    ${falseBranchLabel}: # False branch begin
+                    `),
                     ...e3,
                     { kind: 'label', name: endOfTernaryLabel, why: 'End of ternary label' },
                 ]
