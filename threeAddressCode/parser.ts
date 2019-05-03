@@ -754,6 +754,17 @@ export const parseFunction = (input: string): ThreeAddressFunction | LexError | 
     return functionFromParseResult(parseResult);
 };
 
+export const parseFunctionOrDie = (tacString: string): ThreeAddressFunction => {
+    const parsed = parseFunction(tacString);
+    if ('kind' in parsed) {
+        throw debug('error');
+    }
+    if (Array.isArray(parsed)) {
+        throw debug('error');
+    }
+    return parsed;
+};
+
 export const parseInstructions = (input: string): Statement[] | LexError | ParseError[] => {
     const tokens = lex(tokenSpecs, input);
     if ('kind' in tokens) {

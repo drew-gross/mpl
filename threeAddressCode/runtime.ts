@@ -3,20 +3,9 @@ import debug from '../util/debug.js';
 import { Register } from '../register.js';
 import { ThreeAddressFunction } from './generator.js';
 import { programToString, functionToString } from './programToString.js';
-import { parseProgram as parseTac, parseFunction } from './parser.js';
+import { parseProgram as parseTac, parseFunctionOrDie } from './parser.js';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => ThreeAddressFunction;
-
-const parseFunctionOrDie = (tacString: string): ThreeAddressFunction => {
-    const parsed = parseFunction(tacString);
-    if ('kind' in parsed) {
-        throw debug('error');
-    }
-    if (Array.isArray(parsed)) {
-        throw debug('error');
-    }
-    return parsed;
-};
 
 const switchableMallocImpl = (
     bytesInWord,
@@ -304,7 +293,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord => {
 };
 
 export const length: RuntimeFunctionGenerator = bytesInWord =>
-    parseFunction(`
+    parseFunctionOrDie(`
     (function) length:
             r:functionResult = 0 # Result = 0
         length_loop: # Count another charachter
@@ -315,7 +304,7 @@ export const length: RuntimeFunctionGenerator = bytesInWord =>
             goto length_loop # Go count another char
         length_return: # Done
             r:functionArgument1 = r:functionArgument1 - r:functionResult # Repair input pointer
-    `) as ThreeAddressFunction;
+    `);
 
 export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
@@ -331,10 +320,10 @@ export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
     `);
 
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
-    parseFunction(`
+    parseFunctionOrDie(`
     (function) print:
         syscalld print r:functionResult r:functionArgument1 # Print the thing
-    `) as ThreeAddressFunction;
+    `);
 
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
     return {
@@ -362,18 +351,11 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
     };
 };
 
-export const readIntDirect: RuntimeFunctionGenerator = bytesInWord => {
-    const result = parseFunction(`
+export const readIntDirect: RuntimeFunctionGenerator = bytesInWord =>
+    parseFunctionOrDie(`
         (function) readInt:
               syscalld readInt r:functionResult # make syscall
     `);
-    if (Array.isArray(result)) {
-        throw debug('was array');
-    } else if ('kind' in result) {
-        throw debug('was lex error');
-    }
-    return result;
-};
 
 export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
     const stdinFd = 0;
@@ -400,7 +382,7 @@ export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
 
 // TODO: figure out a way to verify that this is working
 export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord =>
-    parseFunction(`
+    parseFunctionOrDie(`
     (function) verify_no_leaks:
         r:currentBlockPointer = &first_block # Load first block address
         r:currentBlockPointer = *(r:currentBlockPointer + ${0 * bytesInWord}) # Load first block pointer
@@ -416,10 +398,10 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord =>
         r:currentBlockPointer = *(r:currentBlockPointer + ${1 * bytesInWord}) # block = block->next
         goto verify_no_leaks_loop # Check next block
     verify_no_leaks_return: # All done
-    `) as ThreeAddressFunction;
+    `);
 
 export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
-    parseFunction(`
+    parseFunctionOrDie(`
     (function) string_concatenate:
         write_left_loop: # Append left string
             r:currentChar = *r:functionArgument1 # Load byte from left
@@ -436,10 +418,10 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesI
             r:functionArgument3++ # Bump out pointer
             goto copy_from_right # Go copy next char
         concatenate_return: # Exit. TODO: repair input pointers?
-    `) as ThreeAddressFunction;
+    `);
 
 export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
-    parseFunction(`
+    parseFunctionOrDie(`
     (function) stringEquality:
             r:functionResult = 1 # Result = true (willl write false if diff found)
         stringEquality_loop: # Check a char
@@ -453,12 +435,12 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
         stringEquality_return_false: # stringEquality_return_false
             r:functionResult = 0 # Set result to false
         stringEquality_return: # Exit
-    `) as ThreeAddressFunction;
+    `);
 
 // TODO: merge adjacent free blocks
 // TOOD: check if already free
 export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
-    parseFunction(`
+    parseFunctionOrDie(`
     (function) my_free:
             r:zero = 0 # Need a zero
             goto free_null_check_passed if r:functionArgument1 != r:zero # Not freeing null check passed
@@ -470,7 +452,7 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
             r:managementBlockSize = ${3 * bytesInWord} # 3 words for management
             r:functionArgument1 = r:functionArgument1 - r:managementBlockSize # Get management block ptr
             *(r:functionArgument1 + ${2 * bytesInWord}) = r:one # block->free = true
-    `) as ThreeAddressFunction;
+    `);
 
 // TODO: return error if string doesn't contain an int
 export const intFromString: RuntimeFunctionGenerator = bytesInWord => {
@@ -489,7 +471,7 @@ export const intFromString: RuntimeFunctionGenerator = bytesInWord => {
         r:input++ # Get next char in next loop iteration
         goto add_char # comment
     exit: # comment
-    `) as ThreeAddressFunction;
+    `);
 };
 
 export const allRuntimeFunctions = [
