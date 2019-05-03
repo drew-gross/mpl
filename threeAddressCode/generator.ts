@@ -134,6 +134,10 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 ins(`${r2s(destination)} = &${stringLiteralName(stringLiteralData)} # Load string literal address`)
             );
         }
+        case 'functionLiteral':
+            return compileExpression<Statement>([], ([]) =>
+                ins(`${r2s(destination)} = &${ast.deanonymizedName} # Load function into register`)
+            );
         case 'returnStatement':
             const result = makeTemporary('result');
             const subExpression = recurse({
@@ -193,10 +197,6 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 ]
             );
         }
-        case 'functionLiteral':
-            return compileExpression<Statement>([], ([]) =>
-                ins(`${r2s(destination)} = &${ast.deanonymizedName} # Load function into register`)
-            );
         case 'callExpression': {
             const functionName = ast.name;
             let callInstructions: (string | Statement)[] = [];
@@ -345,44 +345,17 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     case 'String':
                         return compileExpression<Statement>([computeRhs], ([e1]) => [
                             ...e1,
-                            {
-                                kind: 'move',
-                                to: 'functionArgument1',
-                                from: rhs,
-                                why: 'Put string pointer into temporary',
-                            },
-                            { kind: 'callByName', function: 'length', why: 'Get string length' },
-                            {
-                                kind: 'increment',
-                                register: 'functionResult',
-                                why: 'Add one for null terminator',
-                            },
-                            {
-                                kind: 'move',
-                                to: 'functionArgument1',
-                                from: 'functionResult',
-                                why: 'Move length to argument1',
-                            },
-                            { kind: 'callByName', function: 'my_malloc', why: 'Allocate that much space' },
-                            {
-                                kind: 'move',
-                                to: 'functionArgument1',
-                                from: rhs,
-                                why: 'Move destination to argument 1',
-                            },
-                            {
-                                kind: 'move',
-                                to: 'functionArgument2',
-                                from: 'functionResult',
-                                why: 'Move output pointer to argument 2',
-                            },
-                            { kind: 'callByName', function: 'string_copy', why: 'Copy string into allocated space' },
-                            {
-                                kind: 'storeGlobal',
-                                from: 'functionResult',
-                                to: lhsInfo.newName,
-                                why: 'Store into global',
-                            },
+                            ...ins(`
+                                r:functionArgument1 = ${r2s(rhs)} # Put string pointer into temporary
+                                length() # Get string length
+                                r:functionResult++ # Add one for null terminator
+                                r:functionArgument1 = r:functionResult # Move length to argument 1
+                                my_malloc() # Allocate that much space
+                                r:functionArgument1 = ${r2s(rhs)} # Move destination to argument 1
+                                r:functionArgument2 = r:functionResult # Move output pointer to argument2
+                                string_copy() # Copy string into allocated space
+                                *${lhsInfo.newName} = r:functionResult # Store into global
+                            `),
                         ]);
                     case 'Product':
                         const lhsAddress = makeTemporary('lhsAddress');
