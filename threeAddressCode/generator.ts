@@ -23,7 +23,7 @@ import {
     restoreRegistersCode,
     RegisterDescription,
 } from '../backend-utils.js';
-import { Register, toString as regToString } from '../register.js';
+import { Register, toString as r2s } from '../register.js';
 import { Function, VariableDeclaration, StringLiteralData } from '../api.js';
 import { Statement } from './statement.js';
 import { parseInstructionsOrDie as ins } from './parser.js';
@@ -121,23 +121,18 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
     switch (ast.kind) {
         case 'number':
             return compileExpression<Statement>([], ([]) =>
-                ins(`${regToString(destination)} = ${ast.value} # Load number literal`)
+                ins(`${r2s(destination)} = ${ast.value} # Load number literal`)
             );
         case 'booleanLiteral':
             return compileExpression<Statement>([], ([]) =>
-                ins(`${regToString(destination)} = ${ast.value ? 1 : 0} # Load boolean literal`)
+                ins(`${r2s(destination)} = ${ast.value ? 1 : 0} # Load boolean literal`)
             );
         case 'stringLiteral': {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
             if (!stringLiteralData) throw debug('todo');
-            return compileExpression<Statement>([], ([]) => [
-                {
-                    kind: 'loadSymbolAddress',
-                    symbolName: stringLiteralName(stringLiteralData),
-                    to: destination,
-                    why: 'Load string literal address into register',
-                },
-            ]);
+            return compileExpression<Statement>([], ([]) =>
+                ins(`${r2s(destination)} = &${stringLiteralName(stringLiteralData)} # Load string literal address`)
+            );
         }
         case 'returnStatement':
             const result = makeTemporary('result');
@@ -467,7 +462,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 from: rhs,
                                 to: remainingCount,
                                 offset: 0,
-                                why: `Get length of list from ${regToString(rhs)}`,
+                                why: `Get length of list from ${r2s(rhs)}`,
                             },
                             {
                                 kind: 'move',
