@@ -142,12 +142,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             });
             return compileExpression<Statement>([subExpression], ([e1]) => [
                 ...e1,
-                {
-                    kind: 'move',
-                    from: result,
-                    to: 'functionResult',
-                    why: 'Return previous expression',
-                },
+                ...ins(`${r2s('functionResult')} = ${r2s(result)} # Return previous expression`),
             ]);
         case 'subtraction': {
             const lhs = makeTemporary('addition_lhs');
