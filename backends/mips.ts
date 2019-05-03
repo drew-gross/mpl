@@ -154,7 +154,6 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 const globalDeclaration = (name: string, bytes: number): string => `${name}: .space ${bytes}`;
 
 const mipsTarget: TargetInfo = {
-    alignment: 4,
     bytesInWord: 4,
     // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
     cleanupCode: [

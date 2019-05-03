@@ -89,8 +89,6 @@ export type BackendOptions = {
 };
 
 export type TargetInfo = {
-    // TOOD alignment and bytesInWord need to be distinguished better. Is alignment even necessary?
-    alignment: number;
     bytesInWord: number;
     cleanupCode: Statement[];
     // These functions tend to have platform specific implementations. Put your platforms implementation here.

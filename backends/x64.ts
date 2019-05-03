@@ -176,7 +176,6 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
 
 const x64Target: TargetInfo = {
-    alignment: 4,
     bytesInWord,
     // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
     cleanupCode: [

@@ -85,7 +85,6 @@ export default async (
     const threeAddressCode = makeTargetProgram({
         backendInputs: frontendOutput,
         targetInfo: {
-            alignment: 17,
             bytesInWord: 13,
             cleanupCode: [],
             mallocImpl: mallocWithSbrk(7),

@@ -129,14 +129,14 @@ export const typeSize = (targetInfo: TargetInfo, type: Type, typeDeclarations: T
     switch (type.kind) {
         case 'List':
             // Pointer + size
-            return targetInfo.alignment * 2;
+            return targetInfo.bytesInWord * 2;
         case 'Product':
             return sum(type.members.map(m => typeSize(targetInfo, m.type, typeDeclarations)));
         case 'Boolean':
         case 'Function':
         case 'String':
         case 'Integer':
-            return targetInfo.alignment;
+            return targetInfo.bytesInWord;
         case 'NameRef':
             const resolved = resolve(type, typeDeclarations);
             if (!resolved) throw debug('couldnt resolve');
