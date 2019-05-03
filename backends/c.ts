@@ -45,7 +45,7 @@ const mplTypeToCType = (type: Type): ((name: string) => string) => {
         case 'Product':
             return name => `struct ${type.name} ${name}`;
         case 'List':
-            return name => 'TODO implement lists in C';
+            return name => `struct list ${name}`;
         default:
             throw debug(`${type.kind} unhandled in mplTypeToCType`);
     }
@@ -162,7 +162,12 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                         return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhsWillAlloc);
                     }
                 case 'List':
-                    return { prepare: [], execute: ['TODO: implement lists in C'], cleanup: [] };
+                    // TODO: Pretty sure I need to copy the list
+                    if (predeclaredVariables.includes(declaration.name)) {
+                        return compileAssignment(declaration.name, rhs);
+                    } else {
+                        return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
+                    }
                 default:
                     throw debug(`${declaration.type.kind} unhandled in typedDeclarationAssignment`);
             }
@@ -242,9 +247,35 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             return compileExpression([], ([]) => [stringLiteralName(stringLiteralData)]);
         case 'typeDeclaration':
             return compileExpression([], ([]) => []);
-        case 'listLiteral':
         case 'indexAccess':
-            return { prepare: [], execute: ['TODO: implement lists in C'], cleanup: [] };
+            const index = recurse(ast.index);
+            const accessed = recurse(ast.accessed);
+            // TODO: OOB assertions
+            return compileExpression([index, accessed], ([indexCode, accessedCode]) => [
+                `((uint8_t*)`,
+                ...accessedCode,
+                '.data)[',
+                ...indexCode,
+                ']',
+            ]);
+        case 'listLiteral':
+            const listLiteral = makeTemporary('listLiteral');
+            // Prepare by allocating the memory and putting the data in it
+            const allocate = [
+                `struct list ${listLiteral};`,
+                `${listLiteral}.size = ${ast.items.length};`,
+                `${listLiteral}.data = my_malloc(${ast.items.length} * sizeof(uint8_t));`, // TODO actual type size
+            ];
+            const buildItems = ast.items.map(recurse);
+            const assignItems = compileExpression(buildItems, buildItemCodes =>
+                buildItemCodes.map((buildItem, index) => `((uint8_t*)${listLiteral}.data)[${index}] = ${buildItem};`)
+            );
+            const buildLiteral: CompiledExpression<string> = {
+                prepare: [...allocate, ...assignItems.prepare, ...assignItems.execute, ...assignItems.cleanup],
+                execute: [],
+                cleanup: [],
+            };
+            return compileExpression([buildLiteral, assignItems], _ => [listLiteral]);
         default:
             throw debug(`${(ast as any).kind} unhandled in astToC`);
     }
@@ -378,8 +409,14 @@ const compile = async ({
         returnType: { kind: 'Integer' }, // Main can only ever return integer
         beforeExit: [
             ...globalDeclarations
-                .filter(d => d.type.kind == 'String')
-                .map(d => `my_free(${d.name}); // Free global string`),
+                .filter(d => ['String', 'List'].includes(d.type.kind))
+                .map(d => {
+                    if (d.type.kind == 'String') {
+                        return `my_free(${d.name}); // Free global string`;
+                    } else {
+                        return `my_free(${d.name}.data); // Free global list`;
+                    }
+                }),
             'verify_no_leaks();',
         ],
     });
@@ -393,6 +430,11 @@ const compile = async ({
 #include <stdlib.h>
 #include <stdbool.h>
 #include <unistd.h>
+
+struct list {
+    size_t size;
+    void *data;
+};
 
 struct block_info {
     size_t size;
