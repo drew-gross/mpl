@@ -402,7 +402,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     case 'List':
                         const remainingCount = makeTemporary('remainingCount');
                         const copyLoop = makeLabel('copyLoop');
-                        const targetAddess = makeTemporary('targetAddess');
+                        const targetAddress = makeTemporary('targetAddress');
                         const itemSize = makeTemporary('itemSize');
                         const sourceAddress = makeTemporary('sourceAddress');
                         const temp = makeTemporary('temp');
@@ -417,49 +417,16 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 r:functionArgument1 = ${s(remainingCount)} # Prepare to malloc
                                 my_malloc() # Malloc
                                 ${s(destination)} = r:functionResult # Destination pointer
-                                ${s(targetAddess)} = ${s(destination)} # Local copy of dest data pointer
+                                ${s(targetAddress)} = ${s(destination)} # Local copy of dest data pointer
                             ${copyLoop}: # Copy loop
                                 ${s(temp)} = *(${s(sourceAddress)} + 0) # Copy a byte
-                                *(${s(targetAddess)} + 0) = ${s(temp)} # Finish copy
+                                *(${s(targetAddress)} + 0) = ${s(temp)} # Finish copy
+                                ${s(remainingCount)} += ${-targetInfo.bytesInWord} # Bump pointers
+                                ${s(sourceAddress)} += ${targetInfo.bytesInWord} # Bump pointers
+                                ${s(targetAddress)} += ${targetInfo.bytesInWord} # Bump pointers
+                                goto ${copyLoop} if ${s(remainingCount)} != 0 # Not done
+                                *${lhsInfo.newName} = ${s(destination)} # Store global. TODO: really????
                             `),
-                            {
-                                kind: 'storeMemory',
-                                from: temp,
-                                address: targetAddess,
-                                offset: 0,
-                                why: 'finish copying',
-                            },
-                            {
-                                kind: 'addImmediate',
-                                register: remainingCount,
-                                amount: -targetInfo.bytesInWord,
-                                why: 'copied a byte',
-                            },
-                            {
-                                kind: 'addImmediate',
-                                register: sourceAddress,
-                                amount: targetInfo.bytesInWord,
-                                why: 'next byte to copy',
-                            },
-                            {
-                                kind: 'addImmediate',
-                                register: targetAddess,
-                                amount: targetInfo.bytesInWord,
-                                why: 'next byte to copy',
-                            },
-                            {
-                                kind: 'gotoIfNotEqual',
-                                why: 'not done yet',
-                                lhs: remainingCount,
-                                rhs: 0,
-                                label: copyLoop,
-                            },
-                            {
-                                kind: 'storeGlobal',
-                                from: destination,
-                                to: lhsInfo.newName,
-                                why: 'Store into global',
-                            },
                         ]);
                     default:
                         const unhandled = lhsInfo.originalDeclaration.type.kind;
