@@ -412,26 +412,10 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 ${s(remainingCount)} = *(${s(rhs)} + 0) # Get length of list
                                 ${s(sourceAddress)} = ${s(rhs)} # Local copy of data pointer
                                 ${s(itemSize)} = ${targetInfo.bytesInWord} # For multiplying
+                                ${s(remainingCount)} = ${s(remainingCount)} * ${s(itemSize)} # Count = count * size
+                                ${s(remainingCount)} += ${targetInfo.bytesInWord} # Add place to store length of list
+                                r:functionArgument1 = ${s(remainingCount)} # Prepare to malloc
                             `),
-                            {
-                                kind: 'multiply',
-                                lhs: remainingCount,
-                                rhs: itemSize,
-                                destination: remainingCount,
-                                why: 'Multiple item count by item size',
-                            },
-                            {
-                                kind: 'addImmediate',
-                                register: remainingCount,
-                                amount: targetInfo.bytesInWord,
-                                why: 'add storage for length of list',
-                            },
-                            {
-                                kind: 'move',
-                                from: remainingCount,
-                                to: 'functionArgument1',
-                                why: 'prepare to malloc',
-                            },
                             {
                                 kind: 'callByName',
                                 function: 'my_malloc',
