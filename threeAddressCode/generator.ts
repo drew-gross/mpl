@@ -410,41 +410,18 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             ...e1,
                             ...ins(`
                                 ${s(remainingCount)} = *(${s(rhs)} + 0) # Get length of list
-                                ${s(sourceAddress)} = ${s(rhs)} # Local copy of data pointer
+                                ${s(sourceAddress)} = ${s(rhs)} # Local copy of source data pointer
                                 ${s(itemSize)} = ${targetInfo.bytesInWord} # For multiplying
                                 ${s(remainingCount)} = ${s(remainingCount)} * ${s(itemSize)} # Count = count * size
                                 ${s(remainingCount)} += ${targetInfo.bytesInWord} # Add place to store length of list
                                 r:functionArgument1 = ${s(remainingCount)} # Prepare to malloc
+                                my_malloc() # Malloc
+                                ${s(destination)} = r:functionResult # Destination pointer
+                                ${s(targetAddess)} = ${s(destination)} # Local copy of dest data pointer
+                            ${copyLoop}: # Copy loop
+                                ${s(temp)} = *(${s(sourceAddress)} + 0) # Copy a byte
+                                *(${s(targetAddess)} + 0) = ${s(temp)} # Finish copy
                             `),
-                            {
-                                kind: 'callByName',
-                                function: 'my_malloc',
-                                why: 'malloc',
-                            },
-                            {
-                                kind: 'move',
-                                from: 'functionResult',
-                                to: destination,
-                                why: 'destination pointer',
-                            },
-                            {
-                                kind: 'move',
-                                from: destination,
-                                to: targetAddess,
-                                why: 'destination pointer',
-                            },
-                            {
-                                kind: 'label',
-                                name: copyLoop,
-                                why: 'copy loop',
-                            },
-                            {
-                                kind: 'loadMemory',
-                                from: sourceAddress,
-                                to: temp,
-                                offset: 0,
-                                why: 'copy a byte',
-                            },
                             {
                                 kind: 'storeMemory',
                                 from: temp,
