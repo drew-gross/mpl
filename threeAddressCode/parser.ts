@@ -782,7 +782,7 @@ export const parseInstructionsOrDie = (tacString: string): Statement[] => {
     if ('kind' in parsed) {
         debugger;
         parseInstructions(tacString);
-        throw debug(`error in parseInstructionsOrDie: ${parsed.kind}`);
+        throw debug(`error in parseInstructionsOrDie: ${parsed.kind}. ${JSON.stringify(parse, null, 2)}`);
     }
     if (Array.isArray(parsed)) {
         return parsed as Statement[]; // TODO: Is ambiguous with ParseError[] :(
