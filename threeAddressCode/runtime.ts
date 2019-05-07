@@ -1,9 +1,9 @@
 import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
-import { Register } from '../register.js';
+import { Register, toString as s } from '../register.js';
 import { ThreeAddressFunction } from './generator.js';
 import { programToString, functionToString } from './programToString.js';
-import { parseProgram as parseTac, parseFunctionOrDie } from './parser.js';
+import { parseProgram as parseTac, parseFunctionOrDie, parseInstructionsOrDie as ins } from './parser.js';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => ThreeAddressFunction;
 
@@ -21,19 +21,11 @@ const switchableMallocImpl = (
         name: 'my_malloc',
         spills: 0,
         instructions: [
-            {
-                kind: 'loadImmediate',
-                value: 0,
-                destination: zero,
-                why: 'need a zero',
-            },
-            {
-                kind: 'gotoIfGreater',
-                lhs: 'arg1',
-                rhs: zero,
-                label: 'my_malloc_zero_size_check_passed',
-                why: 'Error if no memory requested',
-            },
+            ...ins(`
+                ${s(zero)} = 0;
+                goto my_malloc_zero_size_check_passed if $arg1 > ${s(zero)};
+                ; Error if zero bytes requested
+            `),
             {
                 kind: 'loadSymbolAddress',
                 symbolName: errors.allocatedZero.name,
