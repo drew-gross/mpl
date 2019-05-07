@@ -61,7 +61,7 @@ const switchableMallocImpl = (
                 goto sbrk_more_space if ${s(currentBlockPointer)} == 0; JK need to syscall lol
                 *(${s(currentBlockPointer)} + ${2 * bytesInWord}) = 0; block->free = false
                 $result = ${s(currentBlockPointer)};
-                $result += ${3 * bytesInWord}; Adjust ptr to point to actual space, not control block
+                $result += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
                 goto my_malloc_return;
             sbrk_more_space:;
                 $arg1 += ${3 * bytesInWord}; sbrk enough space for management block too
@@ -80,43 +80,16 @@ const switchableMallocImpl = (
                 ; if no existing blocks, mark this as the first block
                 *first_block = $result;
                 goto set_up_new_space;
+            assign_previous:;
+                goto set_up_new_space if ${s(previousBlockPointer)} == 0;
+                *(${s(previousBlockPointer)} + 0) = $result; prev->next = new
+            set_up_new_space:;
+                *($result + 0) = $arg1; new->size = requested_size
+                *($result + ${1 * bytesInWord}) = 0; new->next = null
+                *($result + ${2 * bytesInWord}) = 0; new->free = false
+                $result += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
+            my_malloc_return:;
             `),
-            { kind: 'label', name: 'assign_previous', why: 'Set up prevous block pointer' },
-            { kind: 'gotoIfZero', register: previousBlockPointer, label: 'set_up_new_space', why: '' },
-            {
-                kind: 'storeMemory',
-                from: 'result',
-                address: previousBlockPointer,
-                offset: 0,
-                why: 'prev->next = new',
-            },
-            { kind: 'label', name: 'set_up_new_space', why: '' },
-            {
-                kind: 'storeMemory',
-                from: 'arg1',
-                address: 'result',
-                offset: 0,
-                why: 'new->size = requested_size',
-            },
-            {
-                kind: 'storeZeroToMemory',
-                address: 'result',
-                offset: 1 * bytesInWord,
-                why: 'new->next = null',
-            },
-            {
-                kind: 'storeZeroToMemory',
-                address: 'result',
-                offset: 2 * bytesInWord,
-                why: 'new->free = false',
-            },
-            {
-                kind: 'addImmediate',
-                register: 'result',
-                amount: 3 * bytesInWord,
-                why: 'Adjust result pointer to point to actuall space, not management block',
-            },
-            { kind: 'label', name: 'my_malloc_return', why: 'Done' },
         ],
     };
 };
