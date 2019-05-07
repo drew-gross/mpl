@@ -67,39 +67,13 @@ const switchableMallocImpl = (
                 $arg1 += ${3 * bytesInWord}; sbrk enough space for management block too
             `),
             makeSyscall('arg1', 'result'),
-            {
-                kind: 'addImmediate',
-                register: 'arg1',
-                amount: -3 * bytesInWord,
-                why: 'Repair arg 1 after adding management block length to it',
-            },
-            {
-                kind: 'gotoIfNotEqual',
-                lhs: 'result',
-                rhs: -1,
-                label: 'alloc_exit_check_passed',
-                why: 'If mmap failed, exit',
-            },
-            {
-                kind: 'loadSymbolAddress',
-                to: err,
-                symbolName: errors.allocationFailed.name,
-                why: 'Load string to print',
-            },
-            {
-                kind: 'syscall',
-                name: 'print',
-                arguments: [err],
-                why: 'Print',
-                destination: undefined,
-            },
-            {
-                kind: 'syscall',
-                name: 'exit',
-                arguments: [-1],
-                why: 'Exit',
-                destination: undefined,
-            },
+            ...ins(`
+                $arg1 += ${-3 * bytesInWord}; Repair arg1
+                goto alloc_exit_check_passed if $result != -1;
+                ${s(err)} = &${errors.allocationFailed.name};
+                syscall print ${s(err)};
+                syscall exit -1;
+            `),
             {
                 kind: 'label',
                 name: 'alloc_exit_check_passed',
