@@ -160,14 +160,14 @@ const mipsTarget: TargetInfo = {
         {
             kind: 'syscall',
             name: 'printInt',
-            arguments: ['functionResult'],
+            arguments: ['result'],
             destination: undefined,
             why: 'print "exit code" and exit',
         },
         {
             kind: 'syscall',
             name: 'exit',
-            arguments: ['functionResult'],
+            arguments: ['result'],
             destination: undefined,
             why: 'Whole program is done',
         },

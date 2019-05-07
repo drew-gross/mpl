@@ -87,13 +87,13 @@ export const getRegisterFromAssignment = <TargetRegister>(
 ): TargetRegister => {
     if (typeof r == 'string') {
         switch (r) {
-            case 'functionArgument1':
+            case 'arg1':
                 return specialRegisters.functionArgument[0];
-            case 'functionArgument2':
+            case 'arg2':
                 return specialRegisters.functionArgument[1];
-            case 'functionArgument3':
+            case 'arg3':
                 return specialRegisters.functionArgument[2];
-            case 'functionResult':
+            case 'result':
                 return specialRegisters.functionResult;
         }
     } else {

@@ -1287,25 +1287,10 @@ test('liveness analysis basic test', t => {
     };
     const testFunctionLiveness = tafLiveness(testFunction).map(s => s.toList());
     const expectedLiveness = [
-        [
-            { name: 'add_l' },
-            { name: 'add_r' },
-            { name: 'sub_l' },
-            { name: 'sub_r' },
-            'functionArgument1',
-            'functionArgument2',
-            'functionArgument3',
-        ],
-        [
-            { name: 'add_d' },
-            { name: 'sub_l' },
-            { name: 'sub_r' },
-            'functionArgument1',
-            'functionArgument2',
-            'functionArgument3',
-        ],
-        [{ name: 'sub_l' }, { name: 'sub_r' }, 'functionArgument1', 'functionArgument2', 'functionArgument3'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3'],
+        [{ name: 'add_l' }, { name: 'add_r' }, { name: 'sub_l' }, { name: 'sub_r' }, 'arg1', 'arg2', 'arg3'],
+        [{ name: 'add_d' }, { name: 'sub_l' }, { name: 'sub_r' }, 'arg1', 'arg2', 'arg3'],
+        [{ name: 'sub_l' }, { name: 'sub_r' }, 'arg1', 'arg2', 'arg3'],
+        ['arg1', 'arg2', 'arg3'],
         [],
     ];
     t.deepEqual(testFunctionLiveness, expectedLiveness);
@@ -1318,16 +1303,16 @@ test('4 block graph (length)', t => {
         instructions: [
             {
                 kind: 'loadImmediate',
-                destination: 'functionResult',
+                destination: 'result',
                 value: 0,
-                why: 'functionResult = 0',
+                why: 'result = 0',
             },
             { kind: 'label', name: 'length_loop', why: 'Count another charachter' },
             {
                 kind: 'loadMemoryByte',
-                address: 'functionArgument1',
+                address: 'arg1',
                 to: { name: 'currentChar' },
-                why: 'currentChar = *functionArgument1',
+                why: 'currentChar = *arg1',
             },
             {
                 kind: 'gotoIfZero',
@@ -1335,16 +1320,16 @@ test('4 block graph (length)', t => {
                 label: 'length_return',
                 why: 'if currentChar == 0 goto length_return',
             },
-            { kind: 'increment', register: 'functionResult', why: 'functionResult++' },
-            { kind: 'increment', register: 'functionArgument1', why: 'functionArgument1++' },
+            { kind: 'increment', register: 'result', why: 'result++' },
+            { kind: 'increment', register: 'arg1', why: 'arg1++' },
             { kind: 'goto', label: 'length_loop', why: 'goto length_loop' },
             { kind: 'label', name: 'length_return', why: 'length_return:' },
             {
                 kind: 'subtract',
-                lhs: 'functionArgument1',
-                rhs: 'functionResult',
-                destination: 'functionArgument1',
-                why: 'functionArgument1 = functionResult - functionArgument1',
+                lhs: 'arg1',
+                rhs: 'result',
+                destination: 'arg1',
+                why: 'arg1 = result - arg1',
             },
         ],
     };
@@ -1358,15 +1343,15 @@ test('4 block graph (length)', t => {
             .sort()
     );
     const expectedLiveness = [
-        ['functionArgument1', 'functionArgument2', 'functionArgument3'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'],
-        ['currentChar', 'functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'],
-        ['functionArgument1', 'functionResult'],
+        ['arg1', 'arg2', 'arg3'],
+        ['arg1', 'arg2', 'arg3', 'result'],
+        ['arg1', 'arg2', 'arg3', 'result'],
+        ['arg1', 'arg2', 'arg3', 'currentChar', 'result'],
+        ['arg1', 'arg2', 'arg3', 'result'],
+        ['arg1', 'arg2', 'arg3', 'result'],
+        ['arg1', 'arg2', 'arg3', 'result'],
+        ['arg1', 'arg2', 'arg3', 'result'],
+        ['arg1', 'result'],
         [],
     ];
     t.deepEqual(lengthLiveness, expectedLiveness);
@@ -1379,7 +1364,7 @@ test('liveness of stringEquality', t => {
         instructions: [
             {
                 kind: 'loadImmediate',
-                destination: 'functionResult',
+                destination: 'result',
                 value: 1,
                 why: '',
             },
@@ -1390,7 +1375,7 @@ test('liveness of stringEquality', t => {
             },
             {
                 kind: 'loadImmediate',
-                destination: 'functionResult',
+                destination: 'result',
                 value: 1,
                 why: '',
             },
@@ -1409,7 +1394,7 @@ test('liveness of stringEquality', t => {
             },
             {
                 kind: 'loadImmediate',
-                destination: 'functionResult',
+                destination: 'result',
                 value: 1,
                 why: '',
             },
@@ -1425,7 +1410,7 @@ test('liveness of stringEquality', t => {
             },
             {
                 kind: 'loadImmediate',
-                destination: 'functionResult',
+                destination: 'result',
                 value: 1,
                 why: '',
             },
@@ -1447,16 +1432,16 @@ test('liveness of stringEquality', t => {
     );
 
     const expectedLiveness = [
-        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'leftByte', 'rightByte'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'leftByte', 'rightByte'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'leftByte', 'rightByte'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'leftByte', 'rightByte'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'leftByte', 'rightByte'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'leftByte', 'rightByte'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3', 'leftByte', 'rightByte'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3'],
-        ['functionArgument1', 'functionArgument2', 'functionArgument3'],
+        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
+        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
+        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
+        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
+        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
+        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
+        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
+        ['arg1', 'arg2', 'arg3'],
+        ['arg1', 'arg2', 'arg3'],
+        ['arg1', 'arg2', 'arg3'],
         [],
     ];
     t.deepEqual(liveness, expectedLiveness);
@@ -1578,9 +1563,9 @@ test('tac parser regression', t => {
     const source = `(global) id: id_1 17
 (global) id: id_1 17
 (function) length:
-r:functionResult = 0; Set length count to 0
+$result = 0; Set length count to 0
 (function) stringEquality:
-r:functionResult = 1; Assume equal. Write true to functionResult. Overwrite if difference found.
+$result = 1; Assume equal. Write true to result. Overwrite if difference found.
 `;
 
     const result = parseTacProgram(source);
@@ -1609,7 +1594,7 @@ test('Add Numbers in ThreeAddressCode', tacTest, {
 r:a = 1; a = 1
 r:b = 2; b = 2
 r:sum = r:a + r:b; Add the things
-r:functionResult = r:sum; Result = sum
+$result = r:sum; Result = sum
 `,
     exitCode: 3,
 });
@@ -1623,7 +1608,7 @@ r:temp = 2; Use it for something else
 spill:2 r:temp; Spill this one too
 unspill:1 r:one; Load
 unspill:2 r:two; Load
-r:functionResult = r:one + r:two; Add the things
+$result = r:one + r:two; Add the things
 `,
     exitCode: 3,
     spills: 2,

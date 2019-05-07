@@ -1,11 +1,6 @@
-export const specialRegisterNames = ['functionArgument1', 'functionArgument2', 'functionArgument3', 'functionResult'];
+export const specialRegisterNames = ['arg1', 'arg2', 'arg3', 'result'];
 
-export type Register =
-    | 'functionArgument1'
-    | 'functionArgument2'
-    | 'functionArgument3'
-    | 'functionResult'
-    | { name: string };
+export type Register = 'arg1' | 'arg2' | 'arg3' | 'result' | { name: string };
 
 export const isEqual = (lhs: Register, rhs: Register): boolean => {
     if (typeof lhs == 'string' && typeof rhs == 'string') {
@@ -19,7 +14,7 @@ export const isEqual = (lhs: Register, rhs: Register): boolean => {
 
 export const toString = (r: Register): string => {
     if (typeof r == 'string') {
-        return `r:${r}`;
+        return `$${r}`;
     }
     return `r:${r.name}`;
 };

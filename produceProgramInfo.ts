@@ -26,6 +26,7 @@ type BackendResult = {
 type ProgramInfo = {
     tokens: Token<MplToken>[];
     ast: MplAst;
+    threeAddressCode: string;
     threeAddressRoundTrip: ThreeAddressProgram | LexError | ParseError[];
     frontendOutput: FrontendOutput;
     backendResults: BackendResult[];
@@ -115,5 +116,13 @@ export default async (
         })
     );
 
-    return { tokens, ast, frontendOutput, structure, threeAddressRoundTrip: roundTripParsed as any, backendResults };
+    return {
+        tokens,
+        ast,
+        frontendOutput,
+        structure,
+        threeAddressCode: stringForm,
+        threeAddressRoundTrip: roundTripParsed as any,
+        backendResults,
+    };
 };

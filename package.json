@@ -12,7 +12,7 @@
     },
     "scripts": {
         "benchmark": "rimraf built && tsc && node ./built/benchmark.js",
-        "test": "rimraf built && npm run prettier-check && tsc && ava --verbose && tslint --project ./package.json  ./**/*.ts",
+        "test": "rimraf built && tsc && ava --verbose && tslint --project ./package.json  ./**/*.ts && npm run prettier-check",
         "test-fast": "tsc && ava --verbose",
         "test-all": "npm run test && npm run benchmark",
         "test-watch": "ava --watch --no-color",

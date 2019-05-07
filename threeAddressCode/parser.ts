@@ -1,5 +1,6 @@
 import debug from '../util/debug.js';
 import flatten from '../util/list/flatten.js';
+import join from '../util/join.js';
 import { TokenSpec, lex, LexError } from '../parser-lib/lex.js';
 import { specialRegisterNames, Register } from '../register.js';
 import { ThreeAddressProgram, ThreeAddressFunction } from './generator.js';
@@ -30,6 +31,7 @@ type TacToken =
     | 'assign'
     | 'alloca'
     | 'register'
+    | 'specialRegister'
     | 'star'
     | 'plusplus'
     | 'lessThan'
@@ -87,6 +89,12 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
     {
         token: 'r:[a-z]\\w*',
         type: 'register',
+        toString: x => x,
+        action: x => x,
+    },
+    {
+        token: `\\$(${join(specialRegisterNames, '|')})`,
+        type: 'specialRegister',
         toString: x => x,
         action: x => x,
     },
@@ -229,6 +237,7 @@ const leftBracket = tacTerminal('leftBracket');
 const rightBracket = tacTerminal('rightBracket');
 const number = tacTerminal('number');
 const register = tacTerminal('register');
+const specialRegister = tacTerminal('specialRegister');
 const colon = tacTerminal('colon');
 const global_ = tacTerminal('global');
 const function_ = tacTerminal('function');
@@ -260,6 +269,8 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     functions: OneOf([Sequence('functions', ['function', 'functions']), 'function']),
     function: Sequence('function', [function_, tacOptional(spillSpec), identifier, colon, 'instructions']),
 
+    register: OneOf([register, specialRegister]),
+
     // TODO: make it possible to have function with no instructions
     instructions: OneOf([Sequence('instructions', ['instruction', 'instructions']), 'instruction']),
     instruction: OneOf([
@@ -267,14 +278,14 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('label', [identifier, colon, statementSeparator]),
         // TODO: probably need separate syntax for syscall with result
         Sequence('syscall', [syscall, identifier, 'syscallArgs', statementSeparator]),
-        Sequence('loadImmediate', [register, assign, number, statementSeparator]),
-        Sequence('assign', [register, assign, 'data', statementSeparator]),
-        Sequence('load', [register, assign, star, 'data', statementSeparator]),
+        Sequence('loadImmediate', ['register', assign, number, statementSeparator]),
+        Sequence('assign', ['register', assign, 'data', statementSeparator]),
+        Sequence('load', ['register', assign, star, 'data', statementSeparator]),
         Sequence('store', [star, 'data', assign, 'data', statementSeparator]),
         Sequence('offsetStore', [
             star,
             leftBracket,
-            register,
+            'register',
             plus,
             number,
             rightBracket,
@@ -283,30 +294,30 @@ const grammar: Grammar<TacAstNode, TacToken> = {
             statementSeparator,
         ]),
         Sequence('offsetLoad', [
-            register,
+            'register',
             assign,
             star,
             leftBracket,
-            register,
+            'register',
             plus,
             number,
             rightBracket,
             statementSeparator,
         ]),
-        Sequence('difference', [register, assign, 'data', minus, 'data', statementSeparator]),
-        Sequence('product', [register, assign, 'data', star, 'data', statementSeparator]),
-        Sequence('sum', [register, assign, 'data', plus, 'data', statementSeparator]),
-        Sequence('addressOf', [register, assign, and, 'data', statementSeparator]),
+        Sequence('difference', ['register', assign, 'data', minus, 'data', statementSeparator]),
+        Sequence('product', ['register', assign, 'data', star, 'data', statementSeparator]),
+        Sequence('sum', ['register', assign, 'data', plus, 'data', statementSeparator]),
+        Sequence('addressOf', ['register', assign, and, 'data', statementSeparator]),
         Sequence('gotoIfEqual', [goto, identifier, if_, 'data', doubleEqual, 'data', statementSeparator]),
         Sequence('gotoIfNotEqual', [goto, identifier, if_, 'data', notEqual, 'data', statementSeparator]),
         Sequence('gotoIfGreater', [goto, identifier, if_, 'data', greaterThan, 'data', statementSeparator]),
-        Sequence('plusEqual', [register, plusEqual, 'data', statementSeparator]),
+        Sequence('plusEqual', ['register', plusEqual, 'data', statementSeparator]),
         Sequence('goto', [goto, identifier, statementSeparator]),
-        Sequence('increment', [register, plusplus, statementSeparator]),
-        Sequence('unspill', [unspillInstruction, register, statementSeparator]),
-        Sequence('spill', [spillInstruction, register, statementSeparator]),
+        Sequence('increment', ['register', plusplus, statementSeparator]),
+        Sequence('unspill', [unspillInstruction, 'register', statementSeparator]),
+        Sequence('spill', [spillInstruction, 'register', statementSeparator]),
         Sequence('stackAllocateAndStorePointer', [
-            register,
+            'register',
             assign,
             alloca,
             leftBracket,
@@ -314,14 +325,14 @@ const grammar: Grammar<TacAstNode, TacToken> = {
             rightBracket,
             statementSeparator,
         ]),
-        Sequence('callByRegister', [register, leftBracket, rightBracket, statementSeparator]),
+        Sequence('callByRegister', ['register', leftBracket, rightBracket, statementSeparator]),
         Sequence('callByName', [identifier, leftBracket, rightBracket, statementSeparator]),
     ]),
 
     syscallArgs: OneOf([Sequence('syscallArgs', [tacOptional(identifier), 'syscallArg', 'syscallArgs']), 'syscallArg']),
-    syscallArg: OneOf([number, register]),
+    syscallArg: OneOf([number, 'register']),
 
-    data: OneOf([identifier, register, number]),
+    data: OneOf([identifier, 'register', number]),
 };
 
 const mergeParseResults = (
@@ -354,6 +365,7 @@ const parseSyscallArgs = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | 
     const a = ast as any;
     switch (ast.type) {
         case 'register':
+        case 'specialRegister':
             return [parseRegister(a.value)];
         case 'number':
             return [a.value];
@@ -369,10 +381,9 @@ const stripComment = (str: string): string => {
 };
 
 const isRegister = (data: string): boolean => {
-    if (specialRegisterNames.includes(data)) {
+    if (data.startsWith('$') && specialRegisterNames.includes(data.slice(1))) {
         return true;
     }
-    if (typeof data.startsWith !== 'function') debug('no data');
     if (data.startsWith('r:')) {
         return true;
     }
@@ -380,13 +391,15 @@ const isRegister = (data: string): boolean => {
 };
 
 const parseRegister = (data: string): Register => {
-    if (!data) debug('no data');
-    if (!isRegister(data)) debug('not register');
-    const sliced = data.substring(2, data.length);
-    if (specialRegisterNames.includes(sliced)) {
+    if (data.startsWith('$')) {
+        const sliced = data.substring(1);
+        if (!specialRegisterNames.includes(sliced)) debug('invalid special register');
         return sliced as Register;
+    } else if (data.startsWith('r:')) {
+        const sliced = data.substring(2);
+        return { name: sliced };
     }
-    return { name: sliced };
+    throw debug('invalid register name');
 };
 
 const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Statement => {

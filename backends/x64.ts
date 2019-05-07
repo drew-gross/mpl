@@ -182,7 +182,7 @@ const x64Target: TargetInfo = {
         {
             kind: 'syscall',
             name: 'exit',
-            arguments: ['functionResult'],
+            arguments: ['result'],
             destination: undefined,
             why: 'Whole program is done',
         },

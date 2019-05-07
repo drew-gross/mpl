@@ -77,6 +77,7 @@ import annotateSource from './annotateSource.js';
 
     console.log(`Structure: ${(await writeTempFile(programInfo.structure, '.txt')).path}`);
 
+    console.log(`Three Address Code: ${(await writeTempFile(programInfo.threeAddressCode, '.txt')).path}`);
     const roundTripParsedPath = (await writeTempFile(
         JSON.stringify(programInfo.threeAddressRoundTrip, null, 2),
         '.txt'

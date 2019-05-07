@@ -521,10 +521,10 @@ const removeDeadStores = (taf: ThreeAddressFunction, liveness: Set<Register>[]):
         // Implement something that takes this into account. TODO: Treat function result and arguments less special-casey somehow. Maybe put it into liveness computing. NOTE: Writes to arguments are not dead because length is implemented in a way where the arguments are destroyed and repaired.
         if (
             targets.length == 0 ||
-            registerIsEqual(targets[0], 'functionResult') ||
-            registerIsEqual(targets[0], 'functionArgument1') ||
-            registerIsEqual(targets[0], 'functionArgument2') ||
-            registerIsEqual(targets[0], 'functionArgument3')
+            registerIsEqual(targets[0], 'result') ||
+            registerIsEqual(targets[0], 'arg1') ||
+            registerIsEqual(targets[0], 'arg2') ||
+            registerIsEqual(targets[0], 'arg3')
         ) {
             newFunction.instructions.push(taf.instructions[i]);
         } else if (targets.length == 1) {

@@ -160,13 +160,13 @@ export const reads = (tas: Statement): Register[] => {
         case 'loadSymbolAddress':
             return [];
         case 'callByRegister':
-            return [tas.function, 'functionArgument1', 'functionArgument2', 'functionArgument3'];
+            return [tas.function, 'arg1', 'arg2', 'arg3'];
         case 'label':
         case 'callByName':
         case 'functionLabel':
         case 'returnToCaller':
         case 'goto':
-            return ['functionArgument1', 'functionArgument2', 'functionArgument3'];
+            return ['arg1', 'arg2', 'arg3'];
         case 'gotoIfEqual':
         case 'gotoIfNotEqual':
         case 'gotoIfGreater':
