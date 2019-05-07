@@ -43,19 +43,11 @@ const switchableMallocImpl = (
                       },
                   ]
                 : []),
-            {
-                kind: 'loadImmediate',
-                destination: previousBlockPointer,
-                value: 0,
-                why: 'prev = NULL',
-            },
-            { kind: 'label', name: 'find_large_enough_free_block_loop', why: 'Find a block' },
-            {
-                kind: 'gotoIfZero',
-                register: currentBlockPointer,
-                label: 'found_large_enough_block',
-                why: 'No blocks left (will require syscall)',
-            },
+            ...ins(`
+                ${s(previousBlockPointer)} = 0;
+            find_large_enough_free_block_loop:;
+                goto found_large_enough_block if ${s(currentBlockPointer)} == 0; No blocks left, need syscall
+            `),
             {
                 kind: 'loadMemory',
                 to: currentBlockIsFree,
