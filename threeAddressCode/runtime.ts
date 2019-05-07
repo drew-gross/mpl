@@ -16,18 +16,16 @@ const switchableMallocImpl = (
     const previousBlockPointer = { name: 'previousBlockPointer' };
     const currentBlockIsFree = { name: 'currentBlockIsFree' };
     const currentBlockSize = { name: 'currentBlockSize' };
-    const zero = { name: 'zero' };
-    const err = { name: 'err' };
     return {
         name: 'my_malloc',
         spills: 0,
         instructions: [
             ...ins(`
-                ${s(zero)} = 0;
-                goto my_malloc_zero_size_check_passed if $arg1 > ${s(zero)};
+                r:zero = 0;
+                goto my_malloc_zero_size_check_passed if $arg1 > r:zero;
                 ; Error if zero bytes requested
-                ${s(err)} = &${errors.allocatedZero.name};
-                syscall print ${s(err)}; TODO probably need to use a function since syscall isn't portable
+                r:err = &${errors.allocatedZero.name};
+                syscall print r:err; TODO probably need to use a function since syscall isn't portable
                 syscall exit -1;
             my_malloc_zero_size_check_passed:;
                 ${s(currentBlockPointer)} = &first_block;
@@ -70,8 +68,8 @@ const switchableMallocImpl = (
             ...ins(`
                 $arg1 += ${-3 * bytesInWord}; Repair arg1
                 goto alloc_exit_check_passed if $result != -1;
-                ${s(err)} = &${errors.allocationFailed.name};
-                syscall print ${s(err)};
+                r:err = &${errors.allocationFailed.name};
+                syscall print r:err;
                 syscall exit -1;
             alloc_exit_check_passed:;
                 ; if there are any existing blocks, set up this block
