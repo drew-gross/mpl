@@ -13,7 +13,6 @@ const switchableMallocImpl = (
     makeSyscall
 ): ThreeAddressFunction => {
     const currentBlockPointer = { name: 'currentBlockPointer' };
-    const previousBlockPointer = { name: 'previousBlockPointer' };
     return {
         name: 'my_malloc',
         spills: 0,
@@ -41,7 +40,7 @@ const switchableMallocImpl = (
                   ]
                 : []),
             ...ins(`
-                ${s(previousBlockPointer)} = 0;
+                r:previousBlockPointer = 0;
             find_large_enough_free_block_loop:;
                 goto found_large_enough_block if ${s(currentBlockPointer)} == 0; No blocks left, need syscall
                 r:currentBlockIsFree = *(${s(currentBlockPointer)} + ${2 * bytesInWord});
@@ -50,7 +49,7 @@ const switchableMallocImpl = (
                 goto advance_pointers if $arg1 > r:currentBlockSize; Current block too small
                 goto found_large_enough_block;
             advance_pointers:;
-                ${s(previousBlockPointer)} = ${s(currentBlockPointer)};
+                r:previousBlockPointer = ${s(currentBlockPointer)};
                 ${s(currentBlockPointer)} = *(${s(currentBlockPointer)} + ${1 * bytesInWord});
                 goto find_large_enough_free_block_loop; Try the next block
             found_large_enough_block:;
@@ -77,8 +76,8 @@ const switchableMallocImpl = (
                 *first_block = $result;
                 goto set_up_new_space;
             assign_previous:;
-                goto set_up_new_space if ${s(previousBlockPointer)} == 0;
-                *(${s(previousBlockPointer)} + 0) = $result; prev->next = new
+                goto set_up_new_space if r:previousBlockPointer == 0;
+                *(r:previousBlockPointer + 0) = $result; prev->next = new
             set_up_new_space:;
                 *($result + 0) = $arg1; new->size = requested_size
                 *($result + ${1 * bytesInWord}) = 0; new->next = null
