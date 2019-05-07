@@ -25,35 +25,13 @@ const switchableMallocImpl = (
                 ${s(zero)} = 0;
                 goto my_malloc_zero_size_check_passed if $arg1 > ${s(zero)};
                 ; Error if zero bytes requested
+                ${s(err)} = &${errors.allocatedZero.name};
+                syscall print ${s(err)}; TODO probably need to use a function since syscall isn't portable
+                syscall exit -1;
+            my_malloc_zero_size_check_passed:;
+                ${s(currentBlockPointer)} = &first_block;
             `),
-            {
-                kind: 'loadSymbolAddress',
-                symbolName: errors.allocatedZero.name,
-                to: err,
-                why: 'Error to print',
-            },
-            {
-                kind: 'syscall',
-                name: 'print',
-                arguments: [err],
-                why: 'Print',
-                destination: undefined,
-            },
-            {
-                kind: 'syscall',
-                name: 'exit',
-                arguments: [-1],
-                why: 'Exit',
-                destination: undefined,
-            },
-            { kind: 'label', name: 'my_malloc_zero_size_check_passed', why: 'Done checking for zero size' },
-            {
-                kind: 'loadSymbolAddress',
-                symbolName: 'first_block',
-                to: currentBlockPointer,
-                why: 'curr = &first_block',
-            },
-            // TODO: something weird is going on here. For some reason, x64 backend requires this line, and mips doesn't. TODO: figure out what is right.
+            // TODO: something weird is going on here. For some reason, x64 backend requires this line, and mips doesn't. Figure out what is right.
             ...(include == 'include curr = *curr'
                 ? [
                       {

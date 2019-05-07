@@ -818,7 +818,11 @@ export const parseInstructionsOrDie = (tacString: string): Statement[] => {
         throw debug(`error in parseInstructionsOrDie: ${parsed.kind}. ${JSON.stringify(parse, null, 2)}`);
     }
     if (Array.isArray(parsed)) {
-        return parsed as Statement[]; // TODO: Is ambiguous with ParseError[] :(
+        if (parsed.length == 0) debug('empty instructions');
+        const parsed0: any = parsed[0];
+        if ('kind' in parsed0) {
+            return parsed as Statement[];
+        }
     }
     debugger;
     parseInstructions(tacString);
