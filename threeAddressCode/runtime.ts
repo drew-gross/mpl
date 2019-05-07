@@ -11,82 +11,80 @@ const switchableMallocImpl = (
     bytesInWord,
     include: 'include curr = *curr' | 'dont include curr = *curr',
     makeSyscall
-): ThreeAddressFunction => {
-    return {
-        name: 'my_malloc',
-        spills: 0,
-        instructions: [
-            ...ins(`
-                r:zero = 0;
-                goto my_malloc_zero_size_check_passed if $arg1 > r:zero;
-                ; Error if zero bytes requested
-                r:err = &${errors.allocatedZero.name};
-                syscall print r:err; TODO probably need to use a function since syscall isn't portable
-                syscall exit -1;
-            my_malloc_zero_size_check_passed:;
-                r:currentBlockPointer = &first_block;
-            `),
-            // TODO: something weird is going on here. For some reason, x64 backend requires this line, and mips doesn't. Figure out what is right.
-            ...(include == 'include curr = *curr'
-                ? [
-                      {
-                          kind: 'loadMemory',
-                          from: { name: 'currentBlockPointer' },
-                          to: { name: 'currentBlockPointer' },
-                          offset: 0,
-                          why: 'curr = *curr',
-                      },
-                  ]
-                : []),
-            ...ins(`
-                r:previousBlockPointer = 0;
-            find_large_enough_free_block_loop:;
-                goto found_large_enough_block if r:currentBlockPointer == 0; No blocks left, need syscall
-                r:currentBlockIsFree = *(r:currentBlockPointer + ${2 * bytesInWord});
-                goto advance_pointers if r:currentBlockIsFree == 0; Current block not free
-                r:currentBlockSize = *(r:currentBlockPointer + 0);
-                goto advance_pointers if $arg1 > r:currentBlockSize; Current block too small
-                goto found_large_enough_block;
-            advance_pointers:;
-                r:previousBlockPointer = r:currentBlockPointer;
-                r:currentBlockPointer = *(r:currentBlockPointer + ${1 * bytesInWord});
-                goto find_large_enough_free_block_loop; Try the next block
-            found_large_enough_block:;
-                goto sbrk_more_space if r:currentBlockPointer == 0; JK need to syscall lol
-                *(r:currentBlockPointer + ${2 * bytesInWord}) = 0; block->free = false
-                $result = r:currentBlockPointer;
-                $result += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
-                goto my_malloc_return;
-            sbrk_more_space:;
-                $arg1 += ${3 * bytesInWord}; sbrk enough space for management block too
-            `),
-            makeSyscall('arg1', 'result'),
-            ...ins(`
-                $arg1 += ${-3 * bytesInWord}; Repair arg1
-                goto alloc_exit_check_passed if $result != -1;
-                r:err = &${errors.allocationFailed.name};
-                syscall print r:err;
-                syscall exit -1;
-            alloc_exit_check_passed:;
-                ; if there are any existing blocks, set up this block
-                r:firstBlockPointerAddress = &first_block;
-                goto assign_previous if r:firstBlockPointerAddress != 0;
-                ; if no existing blocks, mark this as the first block
-                *first_block = $result;
-                goto set_up_new_space;
-            assign_previous:;
-                goto set_up_new_space if r:previousBlockPointer == 0;
-                *(r:previousBlockPointer + 0) = $result; prev->next = new
-            set_up_new_space:;
-                *($result + 0) = $arg1; new->size = requested_size
-                *($result + ${1 * bytesInWord}) = 0; new->next = null
-                *($result + ${2 * bytesInWord}) = 0; new->free = false
-                $result += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
-            my_malloc_return:;
-            `),
-        ],
-    };
-};
+): ThreeAddressFunction => ({
+    name: 'my_malloc',
+    spills: 0,
+    instructions: [
+        ...ins(`
+            r:zero = 0;
+            goto my_malloc_zero_size_check_passed if $arg1 > r:zero;
+            ; Error if zero bytes requested
+            r:err = &${errors.allocatedZero.name};
+            syscall print r:err; TODO probably need to use a function since syscall isn't portable
+            syscall exit -1;
+        my_malloc_zero_size_check_passed:;
+            r:currentBlockPointer = &first_block;
+        `),
+        // TODO: something weird is going on here. For some reason, x64 backend requires this line, and mips doesn't. Figure out what is right.
+        ...(include == 'include curr = *curr'
+            ? [
+                  {
+                      kind: 'loadMemory',
+                      from: { name: 'currentBlockPointer' },
+                      to: { name: 'currentBlockPointer' },
+                      offset: 0,
+                      why: 'curr = *curr',
+                  },
+              ]
+            : []),
+        ...ins(`
+            r:previousBlockPointer = 0;
+        find_large_enough_free_block_loop:;
+            goto found_large_enough_block if r:currentBlockPointer == 0; No blocks left, need syscall
+            r:currentBlockIsFree = *(r:currentBlockPointer + ${2 * bytesInWord});
+            goto advance_pointers if r:currentBlockIsFree == 0; Current block not free
+            r:currentBlockSize = *(r:currentBlockPointer + 0);
+            goto advance_pointers if $arg1 > r:currentBlockSize; Current block too small
+            goto found_large_enough_block;
+        advance_pointers:;
+            r:previousBlockPointer = r:currentBlockPointer;
+            r:currentBlockPointer = *(r:currentBlockPointer + ${1 * bytesInWord});
+            goto find_large_enough_free_block_loop; Try the next block
+        found_large_enough_block:;
+            goto sbrk_more_space if r:currentBlockPointer == 0; JK need to syscall lol
+            *(r:currentBlockPointer + ${2 * bytesInWord}) = 0; block->free = false
+            $result = r:currentBlockPointer;
+            $result += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
+            goto my_malloc_return;
+        sbrk_more_space:;
+            $arg1 += ${3 * bytesInWord}; sbrk enough space for management block too
+        `),
+        makeSyscall('arg1', 'result'),
+        ...ins(`
+            $arg1 += ${-3 * bytesInWord}; Repair arg1
+            goto alloc_exit_check_passed if $result != -1;
+            r:err = &${errors.allocationFailed.name};
+            syscall print r:err;
+            syscall exit -1;
+        alloc_exit_check_passed:;
+            ; if there are any existing blocks, set up this block
+            r:firstBlockPointerAddress = &first_block;
+            goto assign_previous if r:firstBlockPointerAddress != 0;
+            ; if no existing blocks, mark this as the first block
+            *first_block = $result;
+            goto set_up_new_space;
+        assign_previous:;
+            goto set_up_new_space if r:previousBlockPointer == 0;
+            *(r:previousBlockPointer + 0) = $result; prev->next = new
+        set_up_new_space:;
+            *($result + 0) = $arg1; new->size = requested_size
+            *($result + ${1 * bytesInWord}) = 0; new->next = null
+            *($result + ${2 * bytesInWord}) = 0; new->free = false
+            $result += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
+        my_malloc_return:;
+        `),
+    ],
+});
 
 export const mallocWithSbrk: RuntimeFunctionGenerator = bytesInWord => {
     return switchableMallocImpl(bytesInWord, 'dont include curr = *curr', (amount, destination) => ({
