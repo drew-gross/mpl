@@ -14,8 +14,6 @@ const switchableMallocImpl = (
 ): ThreeAddressFunction => {
     const currentBlockPointer = { name: 'currentBlockPointer' };
     const previousBlockPointer = { name: 'previousBlockPointer' };
-    const currentBlockIsFree = { name: 'currentBlockIsFree' };
-    const currentBlockSize = { name: 'currentBlockSize' };
     return {
         name: 'my_malloc',
         spills: 0,
@@ -46,10 +44,10 @@ const switchableMallocImpl = (
                 ${s(previousBlockPointer)} = 0;
             find_large_enough_free_block_loop:;
                 goto found_large_enough_block if ${s(currentBlockPointer)} == 0; No blocks left, need syscall
-                ${s(currentBlockIsFree)} = *(${s(currentBlockPointer)} + ${2 * bytesInWord});
-                goto advance_pointers if ${s(currentBlockIsFree)} == 0; Current block not free
-                ${s(currentBlockSize)} = *(${s(currentBlockPointer)} + 0);
-                goto advance_pointers if $arg1 > ${s(currentBlockSize)}; Current block too small
+                r:currentBlockIsFree = *(${s(currentBlockPointer)} + ${2 * bytesInWord});
+                goto advance_pointers if r:currentBlockIsFree == 0; Current block not free
+                r:currentBlockSize = *(${s(currentBlockPointer)} + 0);
+                goto advance_pointers if $arg1 > r:currentBlockSize; Current block too small
                 goto found_large_enough_block;
             advance_pointers:;
                 ${s(previousBlockPointer)} = ${s(currentBlockPointer)};
