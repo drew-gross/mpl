@@ -295,34 +295,34 @@ export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord => {
 export const length: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) length:
-            r:functionResult = 0 # Result = 0
-        length_loop: # Count another charachter
-            r:currentChar = *r:functionArgument1 # Load next byte
-            goto length_return if r:currentChar == 0 # If it's null, we are done
-            r:functionResult++ # Bump string index
-            r:functionArgument1++ # Bump length counter
-            goto length_loop # Go count another char
-        length_return: # Done
-            r:functionArgument1 = r:functionArgument1 - r:functionResult # Repair input pointer
+            r:functionResult = 0;
+        length_loop:; Count another charachter
+            r:currentChar = *r:functionArgument1; Load next byte
+            goto length_return if r:currentChar == 0; If it's null, we are done
+            r:functionResult++; Bump string index
+            r:functionArgument1++; Bump length counter
+            goto length_loop; Go count another char
+        length_return:; Done
+            r:functionArgument1 = r:functionArgument1 - r:functionResult; Repair input pointer
     `);
 
 export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
-    (function) string_copy: # Copy string pointer to by first argument to second argument
-        string_copy_loop: # Copy a byte
-            r:currentChar = *r:functionArgument1 # Load next char from string
-            *r:functionArgument2 = r:currentChar # Write char to output
-            goto string_copy_return if r:currentChar == 0 # If at end, return
-            r:functionArgument1++ # Else increment to next char
-            r:functionArgument2++ # Increment output too
-            goto string_copy_loop # and go keep copying
-        string_copy_return: # Done
+    (function) string_copy:; Copy string pointer to by first argument to second argument
+        string_copy_loop:; Copy a byte
+            r:currentChar = *r:functionArgument1; Load next char from string
+            *r:functionArgument2 = r:currentChar; Write char to output
+            goto string_copy_return if r:currentChar == 0; If at end, return
+            r:functionArgument1++; Else increment to next char
+            r:functionArgument2++; Increment output too
+            goto string_copy_loop; and go keep copying
+        string_copy_return:; Done
     `);
 
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) print:
-        syscalld print r:functionResult r:functionArgument1 # Print the thing
+        syscalld print r:functionResult r:functionArgument1; Print the thing
     `);
 
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
@@ -354,7 +354,7 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
 export const readIntDirect: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
         (function) readInt:
-              syscalld readInt r:functionResult # make syscall
+              syscalld readInt r:functionResult; make syscall
     `);
 
 export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
@@ -362,21 +362,21 @@ export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
     const bufferSize = 10;
     return parseFunctionOrDie(`
         (function) readInt:
-            r:functionArgument1 = ${bufferSize} # 10 byte buffer because why not TODO
-            my_malloc() # malloc
-            r:buffer = r:functionResult # rename
-            syscalld read r:readResult ${stdinFd} r:buffer ${bufferSize} # syscall
-            r:negativeOne = -1 # goto does not support literals
-            goto read_failed if r:readResult == r:negativeOne # syscall failed
-            r:functionArgument1 = r:buffer # prep to parse int
-            intFromString() # parse int and return
-            my_free() # Free the buffer
-            goto readIntExit # result already in result
-        read_failed: # label
-            r:err = &${errors.readIntFailed.name} # Error to print
-            syscall print r:err # syscall
-            syscall exit -1 # syscall
-        readIntExit: # exit
+            r:functionArgument1 = ${bufferSize}; 10 byte buffer because why not TODO
+            my_malloc(); malloc
+            r:buffer = r:functionResult; rename
+            syscalld read r:readResult ${stdinFd} r:buffer ${bufferSize}; syscall
+            r:negativeOne = -1; goto does not support literals
+            goto read_failed if r:readResult == r:negativeOne; syscall failed
+            r:functionArgument1 = r:buffer; prep to parse int
+            intFromString(); parse int and return
+            my_free(); Free the buffer
+            goto readIntExit; result already in result
+        read_failed:; label
+            r:err = &${errors.readIntFailed.name}; Error to print
+            syscall print r:err; syscall
+            syscall exit -1; syscall
+        readIntExit:; exit
     `);
 };
 
@@ -384,57 +384,57 @@ export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
 export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) verify_no_leaks:
-        r:currentBlockPointer = &first_block # Load first block address
-        r:currentBlockPointer = *(r:currentBlockPointer + ${0 * bytesInWord}) # Load first block pointer
-    verify_no_leaks_loop: # verify_no_leaks_loop
-        goto verify_no_leaks_return if r:currentBlockPointer == 0 # Last block, can return now
-        r:currentData = *(r:currentBlockPointer + ${2 * bytesInWord}) # data = block->free
-        r:one = 1 # Need for comparison
-        goto verify_no_leaks_advance_pointers if r:currentData == r:one # Don't error if free
-        r:err = &${errors.leaksDetected.name} # Error to print
-        syscall print r:err # syscall
-        syscall exit -1 # syscall
-    verify_no_leaks_advance_pointers: # verify_no_leaks_advance_pointers
-        r:currentBlockPointer = *(r:currentBlockPointer + ${1 * bytesInWord}) # block = block->next
-        goto verify_no_leaks_loop # Check next block
-    verify_no_leaks_return: # All done
+        r:currentBlockPointer = &first_block; Load first block address
+        r:currentBlockPointer = *(r:currentBlockPointer + ${0 * bytesInWord}); Load first block pointer
+    verify_no_leaks_loop:; verify_no_leaks_loop
+        goto verify_no_leaks_return if r:currentBlockPointer == 0; Last block, can return now
+        r:currentData = *(r:currentBlockPointer + ${2 * bytesInWord}); data = block->free
+        r:one = 1; Need for comparison
+        goto verify_no_leaks_advance_pointers if r:currentData == r:one; Don't error if free
+        r:err = &${errors.leaksDetected.name}; Error to print
+        syscall print r:err; syscall
+        syscall exit -1; syscall
+    verify_no_leaks_advance_pointers:; verify_no_leaks_advance_pointers
+        r:currentBlockPointer = *(r:currentBlockPointer + ${1 * bytesInWord}); block = block->next
+        goto verify_no_leaks_loop; Check next block
+    verify_no_leaks_return:; All done
     `);
 
 export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) string_concatenate:
-        write_left_loop: # Append left string
-            r:currentChar = *r:functionArgument1 # Load byte from left
-            goto copy_from_right if r:currentChar == 0 # If end of left, start copying right
-            *r:functionArgument3 = r:currentChar # Write byte from left
-            r:functionArgument1++ # Bump left pointer
-            r:functionArgument3++ # Bump out pointer
-            goto write_left_loop # Loop to next char
-        copy_from_right: # Append right string
-            r:currentChar = *r:functionArgument2 # Load byte from right
-            *r:functionArgument3 = r:currentChar # Copy right byte (incl. null)
-            goto concatenate_return if r:currentChar == 0 # If we just wrote null, we are done
-            r:functionArgument2++ # Bump right pointer
-            r:functionArgument3++ # Bump out pointer
-            goto copy_from_right # Go copy next char
-        concatenate_return: # Exit. TODO: repair input pointers?
+        write_left_loop:; Append left string
+            r:currentChar = *r:functionArgument1; Load byte from left
+            goto copy_from_right if r:currentChar == 0; If end of left, start copying right
+            *r:functionArgument3 = r:currentChar; Write byte from left
+            r:functionArgument1++; Bump left pointer
+            r:functionArgument3++; Bump out pointer
+            goto write_left_loop; Loop to next char
+        copy_from_right:; Append right string
+            r:currentChar = *r:functionArgument2; Load byte from right
+            *r:functionArgument3 = r:currentChar; Copy right byte (incl. null)
+            goto concatenate_return if r:currentChar == 0; If we just wrote null, we are done
+            r:functionArgument2++; Bump right pointer
+            r:functionArgument3++; Bump out pointer
+            goto copy_from_right; Go copy next char
+        concatenate_return:; Exit. TODO: repair input pointers?
     `);
 
 export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) stringEquality:
-            r:functionResult = 1 # Result = true (willl write false if diff found)
-        stringEquality_loop: # Check a char
-            r:leftByte = *r:functionArgument1 # Load left char into temporary
-            r:rightByte = *r:functionArgument2 # Load right char into temporary
-            goto stringEquality_return_false if r:leftByte != r:rightByte # Inequal: return false
-            goto stringEquality_return if r:leftByte == 0 # Both side are equal. If both sides are null, return.
-            r:functionArgument1++ # Bump lhs to next char
-            r:functionArgument2++ # Bump rhs to next char
-            goto stringEquality_loop # Check next char
-        stringEquality_return_false: # stringEquality_return_false
-            r:functionResult = 0 # Set result to false
-        stringEquality_return: # Exit
+            r:functionResult = 1; Result = true (willl write false if diff found)
+        stringEquality_loop:; Check a char
+            r:leftByte = *r:functionArgument1; Load left char into temporary
+            r:rightByte = *r:functionArgument2; Load right char into temporary
+            goto stringEquality_return_false if r:leftByte != r:rightByte; Inequal: return false
+            goto stringEquality_return if r:leftByte == 0; Both side are equal. If both sides are null, return.
+            r:functionArgument1++; Bump lhs to next char
+            r:functionArgument2++; Bump rhs to next char
+            goto stringEquality_loop; Check next char
+        stringEquality_return_false:; stringEquality_return_false
+            r:functionResult = 0; Set result to false
+        stringEquality_return:; Exit
     `);
 
 // TODO: merge adjacent free blocks
@@ -442,35 +442,35 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
 export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) my_free:
-            r:zero = 0 # Need a zero
-            goto free_null_check_passed if r:functionArgument1 != r:zero # Not freeing null check passed
-            r:err = &${errors.freeNull.name} # Error to print
-            syscall print r:err # Print
-            syscall exit -1 # Exit
-        free_null_check_passed: # Not attempting to free null
-            r:one = 1 # Need a 1
-            r:managementBlockSize = ${3 * bytesInWord} # 3 words for management
-            r:functionArgument1 = r:functionArgument1 - r:managementBlockSize # Get management block ptr
-            *(r:functionArgument1 + ${2 * bytesInWord}) = r:one # block->free = true
+            r:zero = 0; Need a zero
+            goto free_null_check_passed if r:functionArgument1 != r:zero; Not freeing null check passed
+            r:err = &${errors.freeNull.name}; Error to print
+            syscall print r:err; Print
+            syscall exit -1; Exit
+        free_null_check_passed:; Not attempting to free null
+            r:one = 1; Need a 1
+            r:managementBlockSize = ${3 * bytesInWord}; 3 words for management
+            r:functionArgument1 = r:functionArgument1 - r:managementBlockSize; Get management block ptr
+            *(r:functionArgument1 + ${2 * bytesInWord}) = r:one; block->free = true
     `);
 
 // TODO: return error if string doesn't contain an int
 export const intFromString: RuntimeFunctionGenerator = bytesInWord => {
     return parseFunctionOrDie(`
     (function) intFromString:
-        r:functionResult = 0 # Accumulate into here
-        r:input = r:functionArgument1 # Make a copy so we can modify it
-    add_char: # comment
-        r:currentChar = *r:input # load a char
-        goto exit if r:currentChar == 0 # Found the null terminator; done
-        r:fortyEight = 48 # forty eight
-        r:currentNum = r:currentChar - r:fortyEight # Subtract '0' to get actual number
-        r:ten = 10 # ten
-        r:functionResult = r:functionResult * r:ten # Previous digit was 10x
-        r:functionResult = r:functionResult + r:currentNum # Add the num
-        r:input++ # Get next char in next loop iteration
-        goto add_char # comment
-    exit: # comment
+        r:functionResult = 0; Accumulate into here
+        r:input = r:functionArgument1; Make a copy so we can modify it
+    add_char:; comment
+        r:currentChar = *r:input; load a char
+        goto exit if r:currentChar == 0; Found the null terminator; done
+        r:fortyEight = 48; forty eight
+        r:currentNum = r:currentChar - r:fortyEight; Subtract '0' to get actual number
+        r:ten = 10; ten
+        r:functionResult = r:functionResult * r:ten; Previous digit was 10x
+        r:functionResult = r:functionResult + r:currentNum; Add the num
+        r:input++; Get next char in next loop iteration
+        goto add_char; comment
+    exit:; comment
     `);
 };
 

@@ -121,22 +121,22 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
     switch (ast.kind) {
         case 'number':
             return compileExpression<Statement>([], ([]) =>
-                ins(`${s(destination)} = ${ast.value} # Load number literal`)
+                ins(`${s(destination)} = ${ast.value}; Load number literal`)
             );
         case 'booleanLiteral':
             return compileExpression<Statement>([], ([]) =>
-                ins(`${s(destination)} = ${ast.value ? 1 : 0} # Load boolean literal`)
+                ins(`${s(destination)} = ${ast.value ? 1 : 0}; Load boolean literal`)
             );
         case 'stringLiteral': {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
             if (!stringLiteralData) throw debug('todo');
             return compileExpression<Statement>([], ([]) =>
-                ins(`${s(destination)} = &${stringLiteralName(stringLiteralData)} # Load string literal address`)
+                ins(`${s(destination)} = &${stringLiteralName(stringLiteralData)}; Load string literal address`)
             );
         }
         case 'functionLiteral':
             return compileExpression<Statement>([], ([]) =>
-                ins(`${s(destination)} = &${ast.deanonymizedName} # Load function into register`)
+                ins(`${s(destination)} = &${ast.deanonymizedName}; Load function into register`)
             );
         case 'returnStatement':
             const result = makeTemporary('result');
@@ -146,7 +146,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             });
             return compileExpression<Statement>([subExpression], ([e1]) => [
                 ...e1,
-                ...ins(`${s('functionResult')} = ${s(result)} # Return previous expression`),
+                ...ins(`${s('functionResult')} = ${s(result)}; Return previous expression`),
             ]);
         case 'subtraction': {
             const lhs = makeTemporary('addition_lhs');
@@ -156,7 +156,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             return compileExpression<Statement>([computeLhs, computeRhs], ([storeLeft, storeRight]) => [
                 ...storeLeft,
                 ...storeRight,
-                ...ins(`${s(destination)} = ${s(lhs)} - ${s(rhs)} # Evaluate subtraction`),
+                ...ins(`${s(destination)} = ${s(lhs)} - ${s(rhs)}; Evaluate subtraction`),
             ]);
         }
         case 'addition': {
@@ -167,7 +167,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             return compileExpression<Statement>([computeLhs, computeRhs], ([storeLeft, storeRight]) => [
                 ...storeLeft,
                 ...storeRight,
-                ...ins(`${s(destination)} = ${s(lhs)} + ${s(rhs)} # Evaluate addition`),
+                ...ins(`${s(destination)} = ${s(lhs)} + ${s(rhs)}; Evaluate addition`),
             ]);
         }
         case 'ternary': {
@@ -189,8 +189,8 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     },
                     ...e2,
                     ...ins(`
-                        goto ${endOfTernaryLabel} # Jump to end of ternary
-                    ${falseBranchLabel}: # False branch begin
+                        goto ${endOfTernaryLabel}; Jump to end of ternary
+                    ${falseBranchLabel}:; False branch begin
                     `),
                     ...e3,
                     { kind: 'label', name: endOfTernaryLabel, why: 'End of ternary label' },
@@ -256,13 +256,13 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             });
 
             const argumentComputerToMips = (argumentComputer, index) => [
-                { kind: 'comment', why: `Put argument ${index} in register` },
+                { kind: 'empty', why: `Put argument ${index} in register` },
                 ...argumentComputer,
             ];
 
             return compileExpression<Statement>(computeArgumentsMips, argumentComputers => [
                 ...flatten(argumentComputers.map(argumentComputerToMips)),
-                { kind: 'comment', why: `call ${functionName}` },
+                { kind: 'empty', why: `call ${functionName}` },
                 ...callInstructions,
                 {
                     kind: 'move',
@@ -284,9 +284,9 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     destination: 'functionArgument2',
                 });
                 return compileExpression<Statement>([storeLeftInstructions, storeRightInstructions], ([e1, e2]) => [
-                    { kind: 'comment', why: 'Store left side in s0' },
+                    { kind: 'empty', why: 'Store left side in s0' },
                     ...e1,
-                    { kind: 'comment', why: 'Store right side in s1' },
+                    { kind: 'empty', why: 'Store right side in s1' },
                     ...e2,
                     { kind: 'callByName', function: 'stringEquality', why: 'Call stringEquality' },
                     {
@@ -346,15 +346,15 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         return compileExpression<Statement>([computeRhs], ([e1]) => [
                             ...e1,
                             ...ins(`
-                                r:functionArgument1 = ${s(rhs)} # Put string pointer into temporary
-                                length() # Get string length
-                                r:functionResult++ # Add one for null terminator
-                                r:functionArgument1 = r:functionResult # Move length to argument 1
-                                my_malloc() # Allocate that much space
-                                r:functionArgument1 = ${s(rhs)} # Move destination to argument 1
-                                r:functionArgument2 = r:functionResult # Move output pointer to argument2
-                                string_copy() # Copy string into allocated space
-                                *${lhsInfo.newName} = r:functionResult # Store into global
+                                r:functionArgument1 = ${s(rhs)}; Put string pointer into temporary
+                                length(); Get string length
+                                r:functionResult++; Add one for null terminator
+                                r:functionArgument1 = r:functionResult; Move length to argument 1
+                                my_malloc(); Allocate that much space
+                                r:functionArgument1 = ${s(rhs)}; Move destination to argument 1
+                                r:functionArgument2 = r:functionResult; Move output pointer to argument2
+                                string_copy(); Copy string into allocated space
+                                *${lhsInfo.newName} = r:functionResult; Store into global
                             `),
                         ]);
                     case 'Product':
@@ -409,23 +409,23 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         return compileExpression<Statement>([computeRhs], ([e1]) => [
                             ...e1,
                             ...ins(`
-                                ${s(remainingCount)} = *(${s(rhs)} + 0) # Get length of list
-                                ${s(sourceAddress)} = ${s(rhs)} # Local copy of source data pointer
-                                ${s(itemSize)} = ${targetInfo.bytesInWord} # For multiplying
-                                ${s(remainingCount)} = ${s(remainingCount)} * ${s(itemSize)} # Count = count * size
-                                ${s(remainingCount)} += ${targetInfo.bytesInWord} # Add place to store length of list
-                                r:functionArgument1 = ${s(remainingCount)} # Prepare to malloc
-                                my_malloc() # Malloc
-                                ${s(destination)} = r:functionResult # Destination pointer
-                                ${s(targetAddress)} = ${s(destination)} # Local copy of dest data pointer
-                            ${copyLoop}: # Copy loop
-                                ${s(temp)} = *(${s(sourceAddress)} + 0) # Copy a byte
-                                *(${s(targetAddress)} + 0) = ${s(temp)} # Finish copy
-                                ${s(remainingCount)} += ${-targetInfo.bytesInWord} # Bump pointers
-                                ${s(sourceAddress)} += ${targetInfo.bytesInWord} # Bump pointers
-                                ${s(targetAddress)} += ${targetInfo.bytesInWord} # Bump pointers
-                                goto ${copyLoop} if ${s(remainingCount)} != 0 # Not done
-                                *${lhsInfo.newName} = ${s(destination)} # Store global. TODO: really????
+                                ${s(remainingCount)} = *(${s(rhs)} + 0); Get length of list
+                                ${s(sourceAddress)} = ${s(rhs)}; Local copy of source data pointer
+                                ${s(itemSize)} = ${targetInfo.bytesInWord}; For multiplying
+                                ${s(remainingCount)} = ${s(remainingCount)} * ${s(itemSize)}; Count = count * size
+                                ${s(remainingCount)} += ${targetInfo.bytesInWord}; Add place to store length of list
+                                r:functionArgument1 = ${s(remainingCount)}; Prepare to malloc
+                                my_malloc(); Malloc
+                                ${s(destination)} = r:functionResult; Destination pointer
+                                ${s(targetAddress)} = ${s(destination)}; Local copy of dest data pointer
+                            ${copyLoop}:; Copy loop
+                                ${s(temp)} = *(${s(sourceAddress)} + 0); Copy a byte
+                                *(${s(targetAddress)} + 0) = ${s(temp)}; Finish copy
+                                ${s(remainingCount)} += ${-targetInfo.bytesInWord}; Bump pointers
+                                ${s(sourceAddress)} += ${targetInfo.bytesInWord}; Bump pointers
+                                ${s(targetAddress)} += ${targetInfo.bytesInWord}; Bump pointers
+                                goto ${copyLoop} if ${s(remainingCount)} != 0; Not done
+                                *${lhsInfo.newName} = ${s(destination)}; Store global. TODO: really????
                             `),
                         ]);
                     default:
@@ -919,7 +919,8 @@ export const threeAddressCodeToTarget = <TargetRegister>(
     getRegister: (r: Register) => TargetRegister
 ): TargetThreeAddressStatement<TargetRegister>[] => {
     switch (tas.kind) {
-        case 'comment':
+        case 'empty':
+            return [];
         case 'functionLabel':
         case 'returnToCaller':
         case 'callByName':

@@ -1209,10 +1209,10 @@ test('computeBlockLiveness basic test', t => {
     const block: BasicBlock = {
         name: 'test',
         instructions: parseInstructions(`
-            r:d = r:l + r:r # d = l + r
-            r:r = r:l2 - r:d # r = l2 - d
-            r:v = r:l # v = l (dead)
-            r:v = r:r # v = r
+            r:d = r:l + r:r;
+            r:r = r:l2 - r:d;
+            r:v = r:l; dead
+            r:v = r:r;
         `) as Statement[],
     };
     const liveness = computeBlockLiveness(block).map(l => l.toList().sort());
@@ -1578,9 +1578,9 @@ test('tac parser regression', t => {
     const source = `(global) id: id_1 17
 (global) id: id_1 17
 (function) length:
-r:functionResult = 0 # Set length count to 0
+r:functionResult = 0; Set length count to 0
 (function) stringEquality:
-r:functionResult = 1 # Assume equal. Write true to functionResult. Overwrite if difference found.
+r:functionResult = 1; Assume equal. Write true to functionResult. Overwrite if difference found.
 `;
 
     const result = parseTacProgram(source);
@@ -1606,10 +1606,10 @@ r:functionResult = 1 # Assume equal. Write true to functionResult. Overwrite if 
 test('Add Numbers in ThreeAddressCode', tacTest, {
     source: `
 (function) main:
-r:a = 1 # a = 1
-r:b = 2 # b = 2
-r:sum = r:a + r:b # Add the things
-r:functionResult = r:sum # Result = sum
+r:a = 1; a = 1
+r:b = 2; b = 2
+r:sum = r:a + r:b; Add the things
+r:functionResult = r:sum; Result = sum
 `,
     exitCode: 3,
 });
@@ -1617,13 +1617,13 @@ r:functionResult = r:sum # Result = sum
 test('Stack Offset Load and Store', tacTest, {
     source: `
 (function) (spill:2) main:
-r:temp = 1 # Something to spill
-spill:1 r:temp # Spill it
-r:temp = 2 # Use it for something else
-spill:2 r:temp # Spill this one too
-unspill:1 r:one # Load
-unspill:2 r:two # Load
-r:functionResult = r:one + r:two # Add the things
+r:temp = 1; Something to spill
+spill:1 r:temp; Spill it
+r:temp = 2; Use it for something else
+spill:2 r:temp; Spill this one too
+unspill:1 r:one; Load
+unspill:2 r:two; Load
+r:functionResult = r:one + r:two; Add the things
 `,
     exitCode: 3,
     spills: 2,
@@ -1835,4 +1835,27 @@ test('Parse grammar from multiple entry points', t => {
             },
         ],
     });
+});
+
+test('Parse instructions with no comment', t => {
+    const result = parseInstructions(`
+        r:d = r:l + r:r;
+        r:r = r:l2 - r:d;
+    `);
+    t.deepEqual(result, [
+        {
+            destination: { name: 'd' },
+            lhs: { name: 'l' },
+            rhs: { name: 'r' },
+            kind: 'add',
+            why: '\n',
+        },
+        {
+            destination: { name: 'r' },
+            lhs: { name: 'l2' },
+            rhs: { name: 'd' },
+            kind: 'subtract',
+            why: '\n',
+        },
+    ]);
 });

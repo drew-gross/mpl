@@ -31,7 +31,7 @@ export type ControlFlowGraph = {
 
 const blockBehaviour = (tas: Statement): 'endBlock' | 'beginBlock' | 'midBlock' => {
     switch (tas.kind) {
-        case 'comment':
+        case 'empty':
         case 'syscall':
         case 'move':
         case 'loadImmediate':
@@ -102,7 +102,7 @@ const blockExits = (rtl: Statement[]): Exits => {
             return { blockName: rtx.label, next: true, exit: false };
         case 'returnToCaller':
             return { blockName: false, next: false, exit: true };
-        case 'comment':
+        case 'empty':
         case 'syscall':
         case 'move':
         case 'loadImmediate':
@@ -368,7 +368,7 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
 
     taf.instructions.forEach(instruction => {
         switch (instruction.kind) {
-            case 'comment': {
+            case 'empty': {
                 newFunction.instructions.push(instruction);
                 break;
             }

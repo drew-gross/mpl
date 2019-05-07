@@ -43,7 +43,7 @@ type TacToken =
     | 'plusEqual'
     | 'spillInstruction'
     | 'unspillInstruction'
-    | 'comment';
+    | 'statementSeparator';
 
 const tokenSpecs: TokenSpec<TacToken>[] = [
     {
@@ -184,8 +184,8 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         toString: x => x,
     },
     {
-        token: '#.*\n?',
-        type: 'comment',
+        token: ';.*\n?',
+        type: 'statementSeparator',
         action: x => x,
         toString: x => x,
     },
@@ -219,7 +219,7 @@ type TacAstNode =
     | 'spill'
     | 'unspill'
     | 'increment'
-    | 'comment';
+    | 'statementSeparator';
 
 const tacTerminal = token => Terminal<TacAstNode, TacToken>(token);
 const tacOptional = parser => Optional<TacAstNode, TacToken>(parser);
@@ -233,7 +233,7 @@ const colon = tacTerminal('colon');
 const global_ = tacTerminal('global');
 const function_ = tacTerminal('function');
 const spillSpec = tacTerminal('spillSpec');
-const comment = tacTerminal('comment');
+const statementSeparator = tacTerminal('statementSeparator');
 const assign = tacTerminal('assign');
 const star = tacTerminal('star');
 const goto = tacTerminal('goto');
@@ -263,28 +263,48 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     // TODO: make it possible to have function with no instructions
     instructions: OneOf([Sequence('instructions', ['instruction', 'instructions']), 'instruction']),
     instruction: OneOf([
-        Sequence('comment', [comment]),
-        Sequence('label', [identifier, colon, comment]),
+        Sequence('statementSeparator', [statementSeparator]),
+        Sequence('label', [identifier, colon, statementSeparator]),
         // TODO: probably need separate syntax for syscall with result
-        Sequence('syscall', [syscall, identifier, 'syscallArgs', comment]),
-        Sequence('loadImmediate', [register, assign, number, comment]),
-        Sequence('assign', [register, assign, 'data', comment]),
-        Sequence('load', [register, assign, star, 'data', comment]),
-        Sequence('store', [star, 'data', assign, 'data', comment]),
-        Sequence('offsetStore', [star, leftBracket, register, plus, number, rightBracket, assign, 'data', comment]),
-        Sequence('offsetLoad', [register, assign, star, leftBracket, register, plus, number, rightBracket, comment]),
-        Sequence('difference', [register, assign, 'data', minus, 'data', comment]),
-        Sequence('product', [register, assign, 'data', star, 'data', comment]),
-        Sequence('sum', [register, assign, 'data', plus, 'data', comment]),
-        Sequence('addressOf', [register, assign, and, 'data', comment]),
-        Sequence('gotoIfEqual', [goto, identifier, if_, 'data', doubleEqual, 'data', comment]),
-        Sequence('gotoIfNotEqual', [goto, identifier, if_, 'data', notEqual, 'data', comment]),
-        Sequence('gotoIfGreater', [goto, identifier, if_, 'data', greaterThan, 'data', comment]),
-        Sequence('plusEqual', [register, plusEqual, 'data', comment]),
-        Sequence('goto', [goto, identifier, comment]),
-        Sequence('increment', [register, plusplus, comment]),
-        Sequence('unspill', [unspillInstruction, register, comment]),
-        Sequence('spill', [spillInstruction, register, comment]),
+        Sequence('syscall', [syscall, identifier, 'syscallArgs', statementSeparator]),
+        Sequence('loadImmediate', [register, assign, number, statementSeparator]),
+        Sequence('assign', [register, assign, 'data', statementSeparator]),
+        Sequence('load', [register, assign, star, 'data', statementSeparator]),
+        Sequence('store', [star, 'data', assign, 'data', statementSeparator]),
+        Sequence('offsetStore', [
+            star,
+            leftBracket,
+            register,
+            plus,
+            number,
+            rightBracket,
+            assign,
+            'data',
+            statementSeparator,
+        ]),
+        Sequence('offsetLoad', [
+            register,
+            assign,
+            star,
+            leftBracket,
+            register,
+            plus,
+            number,
+            rightBracket,
+            statementSeparator,
+        ]),
+        Sequence('difference', [register, assign, 'data', minus, 'data', statementSeparator]),
+        Sequence('product', [register, assign, 'data', star, 'data', statementSeparator]),
+        Sequence('sum', [register, assign, 'data', plus, 'data', statementSeparator]),
+        Sequence('addressOf', [register, assign, and, 'data', statementSeparator]),
+        Sequence('gotoIfEqual', [goto, identifier, if_, 'data', doubleEqual, 'data', statementSeparator]),
+        Sequence('gotoIfNotEqual', [goto, identifier, if_, 'data', notEqual, 'data', statementSeparator]),
+        Sequence('gotoIfGreater', [goto, identifier, if_, 'data', greaterThan, 'data', statementSeparator]),
+        Sequence('plusEqual', [register, plusEqual, 'data', statementSeparator]),
+        Sequence('goto', [goto, identifier, statementSeparator]),
+        Sequence('increment', [register, plusplus, statementSeparator]),
+        Sequence('unspill', [unspillInstruction, register, statementSeparator]),
+        Sequence('spill', [spillInstruction, register, statementSeparator]),
         Sequence('stackAllocateAndStorePointer', [
             register,
             assign,
@@ -292,10 +312,10 @@ const grammar: Grammar<TacAstNode, TacToken> = {
             leftBracket,
             number,
             rightBracket,
-            comment,
+            statementSeparator,
         ]),
-        Sequence('callByRegister', [register, leftBracket, rightBracket, comment]),
-        Sequence('callByName', [identifier, leftBracket, rightBracket, comment]),
+        Sequence('callByRegister', [register, leftBracket, rightBracket, statementSeparator]),
+        Sequence('callByName', [identifier, leftBracket, rightBracket, statementSeparator]),
     ]),
 
     syscallArgs: OneOf([Sequence('syscallArgs', [tacOptional(identifier), 'syscallArg', 'syscallArgs']), 'syscallArg']),
@@ -568,9 +588,9 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
                 why: stripComment(a.children[3].value),
             } as any;
         }
-        case 'comment': {
+        case 'statementSeparator': {
             return {
-                kind: 'comment',
+                kind: 'empty',
                 why: stripComment(a.children[0].value),
             };
         }

@@ -4,7 +4,7 @@ import { filter, FilterPredicate } from '../util/list/filter.js';
 type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 
 export type Statement = { why: string } & (
-    | { kind: 'comment' }
+    | { kind: 'empty' }
     // Arithmetic
     | { kind: 'move'; from: Register; to: Register }
     | { kind: 'loadImmediate'; value: number; destination: Register }
@@ -53,8 +53,8 @@ const syscallArgToString = (regOrNumber: number | Register): string => {
 
 const toStringWithoutComment = (tas: Statement): string => {
     switch (tas.kind) {
-        case 'comment':
-            return ``;
+        case 'empty':
+            return '';
         case 'syscall':
             const args = tas.arguments.map(syscallArgToString).join(' ');
             if (tas.destination) {
@@ -122,11 +122,11 @@ const toStringWithoutComment = (tas: Statement): string => {
     }
 };
 
-export const toString = (tas: Statement): string => `${toStringWithoutComment(tas)} # ${tas.why}`;
+export const toString = (tas: Statement): string => `${toStringWithoutComment(tas)}; ${tas.why}`;
 
 export const reads = (tas: Statement): Register[] => {
     switch (tas.kind) {
-        case 'comment':
+        case 'empty':
             return [];
         case 'syscall':
             const predicate: FilterPredicate<Register | number, Register> = (arg: Register | number): arg is Register =>
@@ -188,7 +188,7 @@ export const reads = (tas: Statement): Register[] => {
 
 export const writes = (tas: Statement): Register[] => {
     switch (tas.kind) {
-        case 'comment':
+        case 'empty':
             return [];
         case 'syscall':
             return tas.destination ? [tas.destination] : [];
