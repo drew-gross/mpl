@@ -12,7 +12,6 @@ const switchableMallocImpl = (
     include: 'include curr = *curr' | 'dont include curr = *curr',
     makeSyscall
 ): ThreeAddressFunction => {
-    const currentBlockPointer = { name: 'currentBlockPointer' };
     return {
         name: 'my_malloc',
         spills: 0,
@@ -25,15 +24,15 @@ const switchableMallocImpl = (
                 syscall print r:err; TODO probably need to use a function since syscall isn't portable
                 syscall exit -1;
             my_malloc_zero_size_check_passed:;
-                ${s(currentBlockPointer)} = &first_block;
+                r:currentBlockPointer = &first_block;
             `),
             // TODO: something weird is going on here. For some reason, x64 backend requires this line, and mips doesn't. Figure out what is right.
             ...(include == 'include curr = *curr'
                 ? [
                       {
                           kind: 'loadMemory',
-                          from: currentBlockPointer,
-                          to: currentBlockPointer,
+                          from: { name: 'currentBlockPointer' },
+                          to: { name: 'currentBlockPointer' },
                           offset: 0,
                           why: 'curr = *curr',
                       },
@@ -42,20 +41,20 @@ const switchableMallocImpl = (
             ...ins(`
                 r:previousBlockPointer = 0;
             find_large_enough_free_block_loop:;
-                goto found_large_enough_block if ${s(currentBlockPointer)} == 0; No blocks left, need syscall
-                r:currentBlockIsFree = *(${s(currentBlockPointer)} + ${2 * bytesInWord});
+                goto found_large_enough_block if r:currentBlockPointer == 0; No blocks left, need syscall
+                r:currentBlockIsFree = *(r:currentBlockPointer + ${2 * bytesInWord});
                 goto advance_pointers if r:currentBlockIsFree == 0; Current block not free
-                r:currentBlockSize = *(${s(currentBlockPointer)} + 0);
+                r:currentBlockSize = *(r:currentBlockPointer + 0);
                 goto advance_pointers if $arg1 > r:currentBlockSize; Current block too small
                 goto found_large_enough_block;
             advance_pointers:;
-                r:previousBlockPointer = ${s(currentBlockPointer)};
-                ${s(currentBlockPointer)} = *(${s(currentBlockPointer)} + ${1 * bytesInWord});
+                r:previousBlockPointer = r:currentBlockPointer;
+                r:currentBlockPointer = *(r:currentBlockPointer + ${1 * bytesInWord});
                 goto find_large_enough_free_block_loop; Try the next block
             found_large_enough_block:;
-                goto sbrk_more_space if ${s(currentBlockPointer)} == 0; JK need to syscall lol
-                *(${s(currentBlockPointer)} + ${2 * bytesInWord}) = 0; block->free = false
-                $result = ${s(currentBlockPointer)};
+                goto sbrk_more_space if r:currentBlockPointer == 0; JK need to syscall lol
+                *(r:currentBlockPointer + ${2 * bytesInWord}) = 0; block->free = false
+                $result = r:currentBlockPointer;
                 $result += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
                 goto my_malloc_return;
             sbrk_more_space:;
