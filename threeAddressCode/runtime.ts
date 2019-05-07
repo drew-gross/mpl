@@ -58,39 +58,14 @@ const switchableMallocImpl = (
                 ${s(currentBlockPointer)} = *(${s(currentBlockPointer)} + ${1 * bytesInWord});
                 goto find_large_enough_free_block_loop; Try the next block
             found_large_enough_block:;
+                goto sbrk_more_space if ${s(currentBlockPointer)} == 0; JK need to syscall lol
+                *(${s(currentBlockPointer)} + ${2 * bytesInWord}) = 0; block->free = false
+                $result = ${s(currentBlockPointer)};
+                $result += ${3 * bytesInWord}; Adjust ptr to point to actual space, not control block
+                goto my_malloc_return;
+            sbrk_more_space:;
+                $arg1 += ${3 * bytesInWord}; sbrk enough space for management block too
             `),
-            {
-                kind: 'gotoIfZero',
-                register: currentBlockPointer,
-                label: 'sbrk_more_space',
-                why: 'No good blocks, so make one',
-            },
-            {
-                kind: 'storeZeroToMemory',
-                address: currentBlockPointer,
-                offset: 2 * bytesInWord,
-                why: 'block->free = false',
-            },
-            {
-                kind: 'move',
-                to: 'result',
-                from: currentBlockPointer,
-                why: 'Return current block pointer',
-            },
-            {
-                kind: 'addImmediate',
-                register: 'result',
-                amount: 3 * bytesInWord,
-                why: 'Adjust pointer to point to allocated space instead of management struct',
-            },
-            { kind: 'goto', label: 'my_malloc_return', why: 'Found good existing block' },
-            { kind: 'label', name: 'sbrk_more_space', why: 'Here we sbrk a new block' },
-            {
-                kind: 'addImmediate',
-                amount: 3 * bytesInWord,
-                register: 'arg1',
-                why: 'Add space for management block',
-            },
             makeSyscall('arg1', 'result'),
             {
                 kind: 'addImmediate',
