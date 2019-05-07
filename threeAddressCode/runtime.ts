@@ -52,28 +52,13 @@ const switchableMallocImpl = (
                 goto advance_pointers if ${s(currentBlockIsFree)} == 0; Current block not free
                 ${s(currentBlockSize)} = *(${s(currentBlockPointer)} + 0);
                 goto advance_pointers if $arg1 > ${s(currentBlockSize)}; Current block too small
+                goto found_large_enough_block;
+            advance_pointers:;
+                ${s(previousBlockPointer)} = ${s(currentBlockPointer)};
+                ${s(currentBlockPointer)} = *(${s(currentBlockPointer)} + ${1 * bytesInWord});
+                goto find_large_enough_free_block_loop; Try the next block
+            found_large_enough_block:;
             `),
-            {
-                kind: 'goto',
-                label: 'found_large_enough_block',
-                why: 'We found a large enough block! Hooray!',
-            },
-            { kind: 'label', name: 'advance_pointers', why: 'Bump pointers to next block' },
-            {
-                kind: 'move',
-                to: previousBlockPointer,
-                from: currentBlockPointer,
-                why: 'prev = curr',
-            },
-            {
-                kind: 'loadMemory',
-                to: currentBlockPointer,
-                from: currentBlockPointer,
-                offset: 1 * bytesInWord,
-                why: 'curr = curr->next',
-            },
-            { kind: 'goto', label: 'find_large_enough_free_block_loop', why: "Didn't find a block, try again" },
-            { kind: 'label', name: 'found_large_enough_block', why: 'Found a block' },
             {
                 kind: 'gotoIfZero',
                 register: currentBlockPointer,
