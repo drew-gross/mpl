@@ -325,31 +325,12 @@ export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
         syscalld print $result $arg1; Print the thing
     `);
 
-export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord => {
-    return {
-        name: 'print',
-        spills: 0,
-        instructions: [
-            {
-                kind: 'callByName',
-                function: 'length',
-                why:
-                    'Call length on argument so we can pass it to write(2). (Arugment is already in argument register)',
-            },
-            {
-                kind: 'syscall',
-                name: 'print',
-                arguments: [
-                    1, // Load stdout fd into argument 1 of write(2) (stdout fd is 1)
-                    'arg1', // Put string ptr in arg 2 of write(2)
-                    'result', // 3rd argument to write(2) is length
-                ],
-                why: 'Print',
-                destination: 'result',
-            },
-        ],
-    };
-};
+export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
+    parseFunctionOrDie(`
+    (function) print:
+        length(); Call length on argument (Arugment is already in argument register)
+        syscalld print $result 1 $arg1 $result; 1: fd of stdout. $arg1: ptr to data to write. $result: length to write
+   `);
 
 export const readIntDirect: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
