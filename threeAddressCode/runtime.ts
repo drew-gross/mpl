@@ -73,32 +73,14 @@ const switchableMallocImpl = (
                 ${s(err)} = &${errors.allocationFailed.name};
                 syscall print ${s(err)};
                 syscall exit -1;
+            alloc_exit_check_passed:;
+                ; if there are any existing blocks, set up this block
+                r:firstBlockPointerAddress = &first_block;
+                goto assign_previous if r:firstBlockPointerAddress != 0;
+                ; if no existing blocks, mark this as the first block
+                *first_block = $result;
+                goto set_up_new_space;
             `),
-            {
-                kind: 'label',
-                name: 'alloc_exit_check_passed',
-                why: 'result now contains pointer to block. Set up pointer to new block.',
-            },
-            {
-                kind: 'loadGlobal',
-                from: 'first_block',
-                to: { name: 'first_block_pointer_address' },
-                why: 'Load first block so we can write to it if necessary',
-            },
-            {
-                kind: 'gotoIfNotEqual',
-                lhs: { name: 'first_block_pointer_address' },
-                rhs: 0,
-                label: 'assign_previous',
-                why: 'If there is no previous block, set up first block pointer',
-            },
-            {
-                kind: 'storeGlobal',
-                from: 'result',
-                to: 'first_block',
-                why: 'Setup first block pointer',
-            },
-            { kind: 'goto', label: 'set_up_new_space', why: '' },
             { kind: 'label', name: 'assign_previous', why: 'Set up prevous block pointer' },
             { kind: 'gotoIfZero', register: previousBlockPointer, label: 'set_up_new_space', why: '' },
             {
