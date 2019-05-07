@@ -14,7 +14,8 @@ const switchableMallocImpl = (
 ): ThreeAddressFunction => {
     const currentBlockPointer = { name: 'currentBlockPointer' };
     const previousBlockPointer = { name: 'previousBlockPointer' };
-    const currentBlockIsFree = { name: 'current_block_is_free' };
+    const currentBlockIsFree = { name: 'currentBlockIsFree' };
+    const currentBlockSize = { name: 'currentBlockSize' };
     const zero = { name: 'zero' };
     const err = { name: 'err' };
     return {
@@ -47,34 +48,11 @@ const switchableMallocImpl = (
                 ${s(previousBlockPointer)} = 0;
             find_large_enough_free_block_loop:;
                 goto found_large_enough_block if ${s(currentBlockPointer)} == 0; No blocks left, need syscall
+                ${s(currentBlockIsFree)} = *(${s(currentBlockPointer)} + ${2 * bytesInWord});
+                goto advance_pointers if ${s(currentBlockIsFree)} == 0; Current block not free
+                ${s(currentBlockSize)} = *(${s(currentBlockPointer)} + 0);
+                goto advance_pointers if $arg1 > ${s(currentBlockSize)}; Current block too small
             `),
-            {
-                kind: 'loadMemory',
-                to: currentBlockIsFree,
-                from: currentBlockPointer,
-                offset: 2 * bytesInWord,
-                why: 'Current block not free, load next block',
-            },
-            {
-                kind: 'gotoIfZero',
-                register: currentBlockIsFree,
-                label: 'advance_pointers',
-                why: 'Check next block',
-            },
-            {
-                kind: 'loadMemory',
-                to: { name: 'current_bock_size' },
-                from: currentBlockPointer,
-                offset: 0,
-                why: 'Current block not large enough, try next',
-            },
-            {
-                kind: 'gotoIfGreater',
-                lhs: { name: 'current_bock_size' },
-                rhs: 'arg1',
-                label: 'advance_pointers',
-                why: 'Check next block if current not large enough',
-            },
             {
                 kind: 'goto',
                 label: 'found_large_enough_block',
