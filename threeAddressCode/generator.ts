@@ -927,19 +927,20 @@ export const threeAddressCodeToTarget = <TargetRegister>(
         case 'goto':
         case 'label':
             return [tas];
-        case 'syscall':
+        case 'syscallWithResult':
+        case 'syscallWithoutResult':
             // TOOD: DRY with syscall impl in mips
             // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
             if (tas.arguments.length > registerTypes.syscallArgument.length)
                 throw debug(`this backend only supports ${registerTypes.syscallArgument.length} syscall args`);
             const registersToSave: TargetRegister[] = [];
 
-            if (tas.destination && getRegister(tas.destination) != registerTypes.syscallSelectAndResult) {
+            if ('destination' in tas && getRegister(tas.destination) != registerTypes.syscallSelectAndResult) {
                 registersToSave.push(registerTypes.syscallSelectAndResult);
             }
             tas.arguments.forEach((_, index) => {
                 const argRegister = registerTypes.syscallArgument[index];
-                if (tas.destination && getRegister(tas.destination) == argRegister) {
+                if ('destination' in tas && getRegister(tas.destination) == argRegister) {
                     return;
                 }
                 registersToSave.push(argRegister);
@@ -975,7 +976,7 @@ export const threeAddressCodeToTarget = <TargetRegister>(
                     why: `syscall select (${tas.name})`,
                 },
                 { kind: 'syscall', why: 'syscall' },
-                ...(tas.destination
+                ...('destination' in tas
                     ? ([
                           {
                               kind: 'move',

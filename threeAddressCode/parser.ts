@@ -99,7 +99,7 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         action: x => x,
     },
     {
-        token: 'syscalld?',
+        token: 'syscall',
         type: 'syscall',
         toString: x => x,
         action: x => x,
@@ -216,6 +216,8 @@ type TacAstNode =
     | 'gotoIfGreater'
     | 'instruction'
     | 'store'
+    | 'syscallWithResult'
+    | 'syscallWithoutResult'
     | 'syscallArgs'
     | 'offsetStore'
     | 'offsetLoad'
@@ -236,7 +238,7 @@ const identifier = tacTerminal('identifier');
 const leftBracket = tacTerminal('leftBracket');
 const rightBracket = tacTerminal('rightBracket');
 const number = tacTerminal('number');
-const register = tacTerminal('register');
+const normalRegister = tacTerminal('register');
 const specialRegister = tacTerminal('specialRegister');
 const colon = tacTerminal('colon');
 const global_ = tacTerminal('global');
@@ -269,7 +271,7 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     functions: OneOf([Sequence('functions', ['function', 'functions']), 'function']),
     function: Sequence('function', [function_, tacOptional(spillSpec), identifier, colon, 'instructions']),
 
-    register: OneOf([register, specialRegister]),
+    register: OneOf([normalRegister, specialRegister]),
 
     // TODO: make it possible to have function with no instructions
     instructions: OneOf([Sequence('instructions', ['instruction', 'instructions']), 'instruction']),
@@ -277,7 +279,8 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('statementSeparator', [statementSeparator]),
         Sequence('label', [identifier, colon, statementSeparator]),
         // TODO: probably need separate syntax for syscall with result
-        Sequence('syscall', [syscall, identifier, 'syscallArgs', statementSeparator]),
+        Sequence('syscallWithoutResult', [syscall, identifier, 'syscallArgs', statementSeparator]),
+        Sequence('syscallWithResult', ['register', assign, syscall, identifier, 'syscallArgs', statementSeparator]),
         Sequence('loadImmediate', ['register', assign, number, statementSeparator]),
         Sequence('assign', ['register', assign, 'data', statementSeparator]),
         Sequence('load', ['register', assign, star, 'data', statementSeparator]),
@@ -580,18 +583,22 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
                 why: stripComment(a.children[4].value),
             };
         }
-        case 'syscall': {
-            const name = a.children[1].value;
-            let args = parseSyscallArgs(a.children[2]);
-            let destination = undefined;
-            if (a.children[0].value == 'syscalld') {
-                if (typeof args[0] == 'number') {
-                    throw debug('invlaid destination');
-                }
-                destination = args[0] as any;
-                args = args.slice(1);
-            }
-            return { kind: 'syscall', name, destination, arguments: args, why: stripComment(a.children[3].value) };
+        case 'syscallWithoutResult': {
+            return {
+                kind: 'syscallWithoutResult',
+                name: a.children[1].value,
+                arguments: parseSyscallArgs(a.children[2]),
+                why: stripComment(a.children[3].value),
+            };
+        }
+        case 'syscallWithResult': {
+            return {
+                kind: 'syscallWithResult',
+                name: a.children[3].value,
+                arguments: parseSyscallArgs(a.children[4]),
+                destination: a.children[0],
+                why: stripComment(a.children[3].value),
+            };
         }
         case 'plusEqual': {
             return {
@@ -790,9 +797,13 @@ export const parseFunction = (input: string): ThreeAddressFunction | LexError | 
 export const parseFunctionOrDie = (tacString: string): ThreeAddressFunction => {
     const parsed = parseFunction(tacString);
     if ('kind' in parsed) {
+        debugger;
+        parseFunction(tacString);
         throw debug('error in parseFunctionOrDie');
     }
     if (Array.isArray(parsed)) {
+        debugger;
+        parseFunction(tacString);
         throw debug('error in parseFunctionOrDie');
     }
     return parsed;

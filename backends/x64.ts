@@ -180,10 +180,9 @@ const x64Target: TargetInfo = {
     // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
     cleanupCode: [
         {
-            kind: 'syscall',
+            kind: 'syscallWithoutResult',
             name: 'exit',
             arguments: ['result'],
-            destination: undefined,
             why: 'Whole program is done',
         },
     ],

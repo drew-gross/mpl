@@ -38,7 +38,8 @@ export type Statement = { why: string } & (
     | { kind: 'loadMemoryByte'; address: Register; to: Register }
     | { kind: 'loadSymbolAddress'; to: Register; symbolName: string }
     // Function calls
-    | { kind: 'syscall'; name: SyscallName; arguments: (Register | number)[]; destination: Register | undefined }
+    | { kind: 'syscallWithResult'; name: SyscallName; arguments: (Register | number)[]; destination: Register }
+    | { kind: 'syscallWithoutResult'; name: SyscallName; arguments: (Register | number)[] }
     | { kind: 'callByName'; function: string }
     | { kind: 'callByRegister'; function: Register }
     | { kind: 'returnToCaller' });
@@ -55,12 +56,14 @@ const toStringWithoutComment = (tas: Statement): string => {
     switch (tas.kind) {
         case 'empty':
             return '';
-        case 'syscall':
+        case 'syscallWithoutResult': {
             const args = tas.arguments.map(syscallArgToString).join(' ');
-            if (tas.destination) {
-                return `syscalld ${tas.name} ${registerToString(tas.destination)} ${args}`;
-            }
             return `syscall ${tas.name} ${args}`;
+        }
+        case 'syscallWithResult': {
+            const args = tas.arguments.map(syscallArgToString).join(' ');
+            return `${registerToString(tas.destination)} = syscall ${tas.name} ${args}`;
+        }
         case 'move':
             return `${registerToString(tas.to)} = ${registerToString(tas.from)}`;
         case 'loadImmediate':
@@ -128,7 +131,8 @@ export const reads = (tas: Statement): Register[] => {
     switch (tas.kind) {
         case 'empty':
             return [];
-        case 'syscall':
+        case 'syscallWithResult':
+        case 'syscallWithoutResult':
             const predicate: FilterPredicate<Register | number, Register> = (arg: Register | number): arg is Register =>
                 typeof arg !== 'number';
             return filter<Register | number, Register>(tas.arguments, predicate);
@@ -190,8 +194,10 @@ export const writes = (tas: Statement): Register[] => {
     switch (tas.kind) {
         case 'empty':
             return [];
-        case 'syscall':
-            return tas.destination ? [tas.destination] : [];
+        case 'syscallWithResult':
+            return [tas.destination];
+        case 'syscallWithoutResult':
+            return [];
         case 'move':
             return [tas.to];
         case 'loadImmediate':

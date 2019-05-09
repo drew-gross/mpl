@@ -158,17 +158,15 @@ const mipsTarget: TargetInfo = {
     // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
     cleanupCode: [
         {
-            kind: 'syscall',
+            kind: 'syscallWithoutResult',
             name: 'printInt',
             arguments: ['result'],
-            destination: undefined,
             why: 'print "exit code" and exit',
         },
         {
-            kind: 'syscall',
+            kind: 'syscallWithoutResult',
             name: 'exit',
             arguments: ['result'],
-            destination: undefined,
             why: 'Whole program is done',
         },
     ],

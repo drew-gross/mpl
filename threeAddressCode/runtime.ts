@@ -143,20 +143,20 @@ export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) print:
-        syscalld print $result $arg1; Print the thing
+        $result = syscall print $arg1;
     `);
 
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) print:
         length(); Call length on argument (Arugment is already in argument register)
-        syscalld print $result 1 $arg1 $result; 1: fd of stdout. $arg1: ptr to data to write. $result: length to write
+        $result = syscall print 1 $arg1 $result; 1: fd of stdout. $arg1: ptr to data to write. $result: length to write
    `);
 
 export const readIntDirect: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
         (function) readInt:
-              syscalld readInt $result; make syscall
+              $result = syscall readInt $arg1;
     `);
 
 export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
@@ -167,7 +167,7 @@ export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
             $arg1 = ${bufferSize}; 10 byte buffer because why not TODO
             my_malloc(); malloc
             r:buffer = $result; rename
-            syscalld read r:readResult ${stdinFd} r:buffer ${bufferSize}; syscall
+            r:readResult = syscall read ${stdinFd} r:buffer ${bufferSize};
             r:negativeOne = -1; goto does not support literals
             goto read_failed if r:readResult == r:negativeOne; syscall failed
             $arg1 = r:buffer; prep to parse int

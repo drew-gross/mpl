@@ -51,6 +51,7 @@ export const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string
         if (!matchingSpec) {
             return { kind: 'lexError', error: `Invalid token: ${input}` };
         } else {
+            // TOOO don't allow a single "word" to be parsed as 2 token.
             const match = input.match(RegExp(`^(${matchingSpec.token})[ \\t\\n]*`));
             if (!match) throw debug('Should have failed earlier.');
             input = input.slice(match[0].length);
