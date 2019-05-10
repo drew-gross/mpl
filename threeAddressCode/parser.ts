@@ -575,7 +575,6 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
             };
         }
         case 'addressOf': {
-            if (stripComment(a.children[4].value) == 'Load first block so we can write to it if necessary') debugger;
             return {
                 kind: 'loadSymbolAddress',
                 symbolName: a.children[3].value,
@@ -596,7 +595,7 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
                 kind: 'syscallWithResult',
                 name: a.children[3].value,
                 arguments: parseSyscallArgs(a.children[4]),
-                destination: a.children[0],
+                destination: parseRegister(a.children[0].value),
                 why: stripComment(a.children[3].value),
             };
         }

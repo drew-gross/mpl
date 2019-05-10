@@ -27,9 +27,16 @@ import {
 } from './parser-lib/parse.js';
 import * as Ast from './ast.js';
 import { removeBracketsFromAst } from './frontend.js';
-import { controlFlowGraph, toDotFile, BasicBlock, computeBlockLiveness, tafLiveness } from './controlFlowGraph.js';
+import {
+    assignRegisters,
+    controlFlowGraph,
+    toDotFile,
+    BasicBlock,
+    computeBlockLiveness,
+    tafLiveness,
+} from './controlFlowGraph.js';
 import debug from './util/debug.js';
-import { backends } from './backend-utils.js';
+import { backends, rtlToTarget } from './backend-utils.js';
 
 test('double flatten', t => {
     t.deepEqual(flatten(flatten([[[1, 2]], [[3], [4]], [[5]]])), [1, 2, 3, 4, 5]);
@@ -1843,4 +1850,18 @@ test('Parse instructions with no comment', t => {
             why: '\n',
         },
     ]);
+});
+
+test('Assign registers for syscall-only functions', t => {
+    const f = threeAddressCodeRuntime.printWithPrintRuntimeFunction(0);
+    const assigned = assignRegisters(f, []);
+    // Print function should new need any registers, should spill nothing,
+    // and should not change the function.
+    t.deepEqual(assigned, {
+        assignment: {
+            registerMap: {},
+            spilled: [],
+        },
+        newFunction: f,
+    });
 });
