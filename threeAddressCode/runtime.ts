@@ -86,19 +86,18 @@ const switchableMallocImpl = (
     ],
 });
 
-export const mallocWithSbrk: RuntimeFunctionGenerator = bytesInWord => {
-    return switchableMallocImpl(bytesInWord, 'dont include curr = *curr', (amount, destination) => ({
-        kind: 'syscall',
+export const mallocWithSbrk: RuntimeFunctionGenerator = bytesInWord =>
+    switchableMallocImpl(bytesInWord, 'dont include curr = *curr', (amount, destination) => ({
+        kind: 'syscallWithResult',
         name: 'sbrk',
         arguments: [amount],
         why: 'sbrk',
         destination,
     }));
-};
 
-export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord => {
-    return switchableMallocImpl(bytesInWord, 'include curr = *curr', (amount, destination) => ({
-        kind: 'syscall',
+export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord =>
+    switchableMallocImpl(bytesInWord, 'include curr = *curr', (amount, destination) => ({
+        kind: 'syscallWithResult',
         name: 'mmap',
         arguments: [
             0, // addr, use null
@@ -111,7 +110,6 @@ export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord => {
         why: 'mmap',
         destination,
     }));
-};
 
 export const length: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
