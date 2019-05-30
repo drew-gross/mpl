@@ -14,9 +14,11 @@ export type Set<T> = {
     toList: () => T[];
     isSubsetOf: (other: Set<T>) => boolean;
     isEqual: (other: Set<T>) => boolean;
+    forEach: (f: SetForEachPredicate<T>) => void;
 };
 
 type SetComparator<T> = (lhs: T, rhs: T) => boolean;
+type SetForEachPredicate<T> = (item: T) => void;
 
 export const set = <T>(isEqual: SetComparator<T>): Set<T> => {
     let data: T[] = [];
@@ -63,6 +65,7 @@ export const set = <T>(isEqual: SetComparator<T>): Set<T> => {
             return self.isSubsetOf(other) && other.isSubsetOf(self);
         },
         size: () => data.length,
+        forEach: (f: SetForEachPredicate<T>) => data.forEach(f),
     };
     return self;
 };

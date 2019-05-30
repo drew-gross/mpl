@@ -240,7 +240,7 @@ export const computeBlockLiveness = (block: BasicBlock): Set<Register>[] => {
 // Returns whether entry liveness changed
 const propagateBlockLiveness = (block: BasicBlock, liveness: Set<Register>[], liveAtExit: Set<Register>): boolean => {
     let changeEntry = false;
-    liveAtExit.toList().forEach(item => {
+    liveAtExit.forEach(item => {
         for (let i = liveness.length - 1; i >= 0; i--) {
             if (i < block.instructions.length) {
                 const newlyDead = setFromList(registerIsEqual, writes(block.instructions[i]));
@@ -341,8 +341,8 @@ export const registerInterferenceGraph = (liveness: Set<Register>[]): RegisterIn
         interferences: set(interferenceIsEqual),
     };
     liveness.forEach(registers => {
-        registers.toList().forEach(i => {
-            registers.toList().forEach(j => {
+        registers.forEach(i => {
+            registers.forEach(j => {
                 if (typeof i != 'string' && typeof j != 'string') {
                     result.nonSpecialRegisters.add(i);
                     result.nonSpecialRegisters.add(j);
@@ -564,7 +564,7 @@ export const assignRegisters = <TargetRegister>(
     const colorableStack: Register[] = [];
     while (registersToAssign.size() > 0) {
         let stackGrew = false;
-        registersToAssign.toList().forEach(register => {
+        registersToAssign.forEach(register => {
             if (stackGrew) {
                 return;
             }
@@ -572,7 +572,7 @@ export const assignRegisters = <TargetRegister>(
                 return;
             }
             let interferenceCount = 0;
-            interferences.toList().forEach(interference => {
+            interferences.forEach(interference => {
                 if (interferenceInvolvesRegister(interference, register)) {
                     interferenceCount++;
                 }
