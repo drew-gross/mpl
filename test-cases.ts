@@ -1,4 +1,21 @@
 import { TestCase } from './test-case.js';
+import join from './util/join.js';
+
+const spillMultiply = () => {
+    const numbers = Array.from({ length: 56 }, (v, k) => k + 1);
+    const createVars = join(numbers.map(i => `var_${i} := readInt();`), '\n');
+    const multiplyVars = join(numbers.map(i => `var_${i}`), ' * ');
+    const stdin = join(numbers.map(i => `1\n`), '');
+    return {
+        name: 'Spill Multiply',
+        source: `
+            ${createVars}
+            return ${multiplyVars};
+        `,
+        exitCode: 1,
+        stdin,
+    };
+};
 
 const testCases: TestCase[] = [
     {
@@ -162,15 +179,7 @@ return isFive(5) ? 1 : 0`,
         `,
         parseErrors: [{ expected: 'statementSeparator', found: 'return', sourceLocation: { line: 4, column: 13 } }],
     },
-    {
-        name: 'Spill Self-Assigning Multiply',
-        source: `
-        // TODO: read enough stuff to cause a spill. then a = a * a. Or make this
-        // a direct test of spill().
-        `,
-        exitCode: 9001,
-        failing: true,
-    },
+    spillMultiply(),
     {
         name: 'One Item List',
         source: `
