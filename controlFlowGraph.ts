@@ -3,6 +3,7 @@ import last from './util/list/last.js';
 import sum from './util/list/sum.js';
 import flatten from './util/list/flatten.js';
 import { set, Set, join as setJoin, fromList as setFromList } from './util/set.js';
+import { orderedSet, OrderedSet } from './util/ordered-set.js';
 import join from './util/join.js';
 import grid from './util/grid.js';
 import idAppender from './util/idAppender.js';
@@ -306,8 +307,8 @@ export const tafLiveness = (taf: ThreeAddressFunction): Set<Register>[] => {
 type RegisterInterference = { r1: Register; r2: Register };
 
 export type RegisterInterferenceGraph = {
-    nonSpecialRegisters: Set<Register>;
-    interferences: Set<RegisterInterference>;
+    nonSpecialRegisters: OrderedSet<Register>;
+    interferences: OrderedSet<RegisterInterference>;
 };
 
 const interferenceIsEqual = (lhs: RegisterInterference, rhs: RegisterInterference): boolean => {
@@ -337,8 +338,8 @@ export const registerInterferenceGraph = (liveness: Set<Register>[]): RegisterIn
     const nonSpecialRegisters = setJoin(registerIsEqual, liveness);
     nonSpecialRegisters.removeWithPredicate(item => typeof item == 'string');
     const result: RegisterInterferenceGraph = {
-        nonSpecialRegisters: set(registerIsEqual),
-        interferences: set(interferenceIsEqual),
+        nonSpecialRegisters: orderedSet(registerIsEqual),
+        interferences: orderedSet(interferenceIsEqual),
     };
     liveness.forEach(registers => {
         registers.forEach(i => {

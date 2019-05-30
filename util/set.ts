@@ -1,3 +1,5 @@
+// Flat array based set structure. Not sorted.
+
 export type Set<T> = {
     add: (item: T) => void;
     addUnique: (item: T) => void;

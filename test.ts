@@ -37,6 +37,7 @@ import {
 } from './controlFlowGraph.js';
 import debug from './util/debug.js';
 import { backends, rtlToTarget } from './backend-utils.js';
+import { orderedSet } from './util/ordered-set.js';
 
 test('double flatten', t => {
     t.deepEqual(flatten(flatten([[[1, 2]], [[3], [4]], [[5]]])), [1, 2, 3, 4, 5]);
@@ -1864,4 +1865,9 @@ test('Assign registers for syscall-only functions', t => {
         },
         newFunction: f,
     });
+});
+
+test.only('Ordered Set', t => {
+    const s = orderedSet<number>((x, y) => x == y);
+    t.deepEqual(true, false, 'add actual tests');
 });
