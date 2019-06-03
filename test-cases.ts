@@ -1,8 +1,9 @@
 import { TestCase } from './test-case.js';
 import join from './util/join.js';
+import range from './util/list/range.js';
 
 const spillMultiply = () => {
-    const numbers = Array.from({ length: 56 }, (v, k) => k + 1);
+    const numbers = range(1, 56);
     const createVars = join(numbers.map(i => `var_${i} := readInt();`), '\n');
     const multiplyVars = join(numbers.map(i => `var_${i}`), ' * ');
     const stdin = join(numbers.map(i => `1\n`), '');

@@ -10,6 +10,7 @@ import * as threeAddressCodeRuntime from './threeAddressCode/runtime.js';
 import test from 'ava';
 import flatten from './util/list/flatten.js';
 import join from './util/join.js';
+import range from './util/list/range.js';
 import { lex, Token } from './parser-lib/lex.js';
 import { parseMpl, compile, typeCheckStatement, astFromParseResult, typeOfExpression } from './frontend.js';
 import { mplTest, tacTest } from './test-utils.js';
@@ -38,6 +39,7 @@ import {
 import debug from './util/debug.js';
 import { backends, rtlToTarget } from './backend-utils.js';
 import { orderedSet } from './util/ordered-set.js';
+import { shuffle } from 'shuffle-seed';
 
 test('double flatten', t => {
     t.deepEqual(flatten(flatten([[[1, 2]], [[3], [4]], [[5]]])), [1, 2, 3, 4, 5]);
@@ -1867,7 +1869,41 @@ test('Assign registers for syscall-only functions', t => {
     });
 });
 
-test.only('Ordered Set', t => {
-    const s = orderedSet<number>((x, y) => x == y);
-    t.deepEqual(true, false, 'add actual tests');
+test.only('Range', t => {
+    t.deepEqual(range(6, 9), [6, 7, 8]);
+});
+
+test.only('Ordered Set Insertion', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+    s.add(1);
+    s.add(2);
+    s.add(3);
+    t.deepEqual(s.toList(), [1, 2, 3]);
+
+    s.add(2);
+    s.add(3);
+    s.add(5);
+    s.add(4);
+    t.deepEqual(s.toList(), [1, 2, 3, 4, 5]);
+});
+
+test.only('Ordered Set Insertion Fuzz', t => {
+    const expected = range(0, 100);
+    for (let seed = 0; seed < 100; seed++) {
+        const shuffled = shuffle(expected, seed);
+        const s = orderedSet<number>((x, y) => {
+            if (x < y) return -1;
+            if (x > y) return 1;
+            return 0;
+        });
+
+        shuffled.forEach(x => s.add(x));
+
+        const traversed = s.toList();
+        t.deepEqual(expected, traversed);
+    }
 });

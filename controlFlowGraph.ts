@@ -337,9 +337,10 @@ const otherRegister = (interference: RegisterInterference, r: Register): Registe
 export const registerInterferenceGraph = (liveness: Set<Register>[]): RegisterInterferenceGraph => {
     const nonSpecialRegisters = setJoin(registerIsEqual, liveness);
     nonSpecialRegisters.removeWithPredicate(item => typeof item == 'string');
+    debug('todo remove any');
     const result: RegisterInterferenceGraph = {
-        nonSpecialRegisters: orderedSet(registerIsEqual),
-        interferences: orderedSet(interferenceIsEqual),
+        nonSpecialRegisters: orderedSet(registerIsEqual as any),
+        interferences: orderedSet(interferenceIsEqual as any),
     };
     liveness.forEach(registers => {
         registers.forEach(i => {

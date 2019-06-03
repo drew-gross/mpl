@@ -15,7 +15,7 @@
         "test": "rimraf built && tsc && ava --verbose && tslint --project ./package.json  ./**/*.ts && npm run prettier-check",
         "test-fast": "tsc && ava --verbose",
         "test-all": "npm run test && npm run benchmark",
-        "test-watch": "ava --watch --no-color",
+        "test-watch": "parallelshell 'ava --watch --no-color' 'tsc --watch'",
         "tsc": "tsc",
         "tsc-watch": "tsc --watch",
         "build+install": "tsc && npm link",
@@ -39,6 +39,7 @@
         "child-process-promise": "2.2.1",
         "clone": "2.1.2",
         "commander": "2.20.0",
+        "deepcopy": "2.0.0",
         "fs-extra": "8.0.1",
         "graphlib": "2.1.7",
         "graphlib-dot": "0.6.2",
@@ -46,6 +47,7 @@
         "inspect-process": "0.5.0",
         "lodash": "4.17.11",
         "omit-deep": "0.3.0",
+        "parallelshell": "3.0.1",
         "prettier": "1.17.1",
         "rimraf": "2.6.3",
         "tmp-promise": "2.0.1",
@@ -58,5 +60,8 @@
         "singleQuote": true,
         "trailingComma": "es5",
         "tabWidth": 4
+    },
+    "devDependencies": {
+        "shuffle-seed": "^1.1.6"
     }
 }
