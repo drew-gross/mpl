@@ -64,17 +64,93 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                 while (current.parent && current.parent.higher == current) {
                     current = current.parent;
                 }
-                // We have done that item and it's subtree. Next do it's parent and parent's higher items..
-                if (current.parent) {
-                    current = current.parent;
-                } else {
+                if (!current.parent) {
                     return;
                 }
+                // Start iterating from the item we are lower than, with lowerDone still true.
+                current = current.parent;
             } else {
-                // No higher or parent nodes, implies current is root and lower-leaning and we are done
+                // No parent == at top, done higher == done all
                 if (current !== head || current.higher) debug('expected state');
                 return;
             }
+        }
+    };
+
+    const remove = (item: T, node: TreeNode<T>) => {
+        // Constant space w/tail recursion
+        switch (cmp(item, node.data)) {
+            case ComparisonResult.LT:
+                if (node.lower) remove(item, node.lower);
+                break;
+            case ComparisonResult.GT:
+                if (node.higher) remove(item, node.higher);
+                break;
+            case ComparisonResult.EQ:
+                // See diagrams from https://www.techiedelight.com/deletion-from-bst/
+                if (!node.lower && !node.higher) {
+                    // Case #1
+                    if (node.parent) {
+                        if (node.parent.lower == node) {
+                            node.parent.lower == null;
+                        } else if (node.parent.higher == node) {
+                            node.parent.higher == null;
+                        } else {
+                            debug('recursion broke');
+                        }
+                    } else {
+                        if (head != node) {
+                            debug('Something is horribly wrong');
+                        }
+                        head = null;
+                    }
+                } else if (!node.lower) {
+                    // Case #3 (lower)
+                    // Move actual node because identity needs to be same, we compare pointers in forEach.
+                    // Replace ourselves in parent.
+                    if (!node.higher) throw debug('Boole was wrong! /ts');
+                    if (node.parent) {
+                        if (node.parent.lower == node) {
+                            node.parent.lower = node.higher;
+                            node.higher.parent = node.parent;
+                        } else {
+                            node.parent.higher = node.higher;
+                            node.higher.parent = node.parent;
+                        }
+                    } else {
+                        head = node.higher;
+                    }
+                } else if (!node.higher) {
+                    // Case #3, but for higher
+                    if (node.parent) {
+                        if (node.parent.lower == node) {
+                            node.parent.lower = node.lower;
+                            node.lower.parent = node.parent;
+                        } else {
+                            node.parent.higher = node.lower;
+                            node.lower.parent = node.parent;
+                        }
+                    }
+                } else {
+                    // Case #2
+                    // Arbitrarily copy up from higher subtree. TODO: balancing/rb-tree
+                    let leastUpperBound = node.higher;
+                    while (leastUpperBound.lower) {
+                        leastUpperBound = leastUpperBound.lower;
+                    }
+                    if (!leastUpperBound.parent) throw debug('magic happened');
+                    leastUpperBound.parent.lower = null;
+                    if (node.parent) {
+                        node.parent.higher = leastUpperBound;
+                    } else {
+                        if (!head) throw debug('magic happened');
+                        leastUpperBound.lower = head.lower;
+                        leastUpperBound.higher = head.higher;
+                        leastUpperBound.parent = null;
+                        head = leastUpperBound;
+                    }
+                }
+                break;
         }
     };
     return {
@@ -139,7 +215,7 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
             if (head) forEach(f, head);
         },
         remove: (item: Exclude<T, object | []>) => {
-            throw debug('not im lemented');
+            if (head) remove(item, head);
         },
     };
 };

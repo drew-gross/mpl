@@ -1869,11 +1869,11 @@ test('Assign registers for syscall-only functions', t => {
     });
 });
 
-test.only('Range', t => {
+test('Range', t => {
     t.deepEqual(range(6, 9), [6, 7, 8]);
 });
 
-test.only('Ordered Set Insertion', t => {
+test('Ordered Set Insertion', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
@@ -1891,8 +1891,9 @@ test.only('Ordered Set Insertion', t => {
     t.deepEqual(s.toList(), [1, 2, 3, 4, 5]);
 });
 
-test.only('Ordered Set Insertion Fuzz', t => {
+test('Ordered Set Insertion Fuzz', t => {
     const expected = range(0, 100);
+    const doubleAdd = range(20, 50);
     for (let seed = 0; seed < 100; seed++) {
         const shuffled = shuffle(expected, seed);
         const s = orderedSet<number>((x, y) => {
@@ -1902,8 +1903,62 @@ test.only('Ordered Set Insertion Fuzz', t => {
         });
 
         shuffled.forEach(x => s.add(x));
+        doubleAdd.forEach(x => s.add(x));
 
         const traversed = s.toList();
         t.deepEqual(expected, traversed);
+    }
+});
+
+test.only('Ordered Set Removal', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+    s.add(1);
+    s.add(2);
+    s.add(3);
+    s.add(5);
+    s.add(4);
+    debugger;
+    s.remove(3);
+    t.deepEqual(s.toList(), [1, 2, 4, 5]);
+});
+
+test.only('Ordered Set Remove Only Element', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+    s.add(1);
+    s.remove(1);
+    t.deepEqual(s.toList(), []);
+});
+
+test.only('Ordered Set Remove Fuzze', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+
+    const inserted = range(0, 100);
+    const removed = range(50, 100);
+    const remaining = range(0, 50);
+    for (let seed = 0; seed < 100; seed++) {
+        const s = orderedSet<number>((x, y) => {
+            if (x < y) return -1;
+            if (x > y) return 1;
+            return 0;
+        });
+
+        shuffle(inserted, seed).forEach(x => s.add(x));
+        s.toList();
+        shuffle(removed, seed).forEach(x => s.remove(x));
+
+        const traversed = s.toList();
+        t.deepEqual(remaining, traversed);
     }
 });
