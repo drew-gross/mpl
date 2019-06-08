@@ -1910,7 +1910,7 @@ test('Ordered Set Insertion Fuzz', t => {
     }
 });
 
-test.only('Ordered Set Removal', t => {
+test('Ordered Set Removal', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
@@ -1921,12 +1921,11 @@ test.only('Ordered Set Removal', t => {
     s.add(3);
     s.add(5);
     s.add(4);
-    debugger;
     s.remove(3);
     t.deepEqual(s.toList(), [1, 2, 4, 5]);
 });
 
-test.only('Ordered Set Remove Only Element', t => {
+test('Ordered Set Remove Only Element', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
@@ -1937,7 +1936,178 @@ test.only('Ordered Set Remove Only Element', t => {
     t.deepEqual(s.toList(), []);
 });
 
-test.only('Ordered Set Remove Fuzze', t => {
+test.only('Orderedd set remove regression', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+
+    // 0-99
+    const inserted = [
+        88,
+        35,
+        52,
+        72,
+        63,
+        2,
+        81,
+        45,
+        19,
+        40,
+        44,
+        97,
+        93,
+        7,
+        8,
+        71,
+        99,
+        34,
+        94,
+        51,
+        3,
+        57,
+        13,
+        78,
+        74,
+        76,
+        33,
+        16,
+        69,
+        90,
+        25,
+        50,
+        48,
+        77,
+        26,
+        4,
+        70,
+        14,
+        47,
+        41,
+        53,
+        10,
+        56,
+        83,
+        28,
+        29,
+        38,
+        68,
+        49,
+        6,
+        31,
+        67,
+        15,
+        23,
+        95,
+        66,
+        18,
+        12,
+        80,
+        0,
+        39,
+        20,
+        58,
+        27,
+        11,
+        86,
+        42,
+        54,
+        61,
+        55,
+        64,
+        32,
+        87,
+        21,
+        9,
+        65,
+        98,
+        79,
+        5,
+        75,
+        84,
+        62,
+        73,
+        91,
+        1,
+        92,
+        30,
+        60,
+        24,
+        85,
+        37,
+        96,
+        36,
+        59,
+        22,
+        17,
+        82,
+        46,
+        43,
+        89,
+    ];
+
+    // 50-99
+    const removed = [
+        94,
+        67,
+        76,
+        86,
+        81,
+        51,
+        90,
+        71,
+        59,
+        69,
+        73,
+        98,
+        96,
+        53,
+        54,
+        85,
+        99,
+        65,
+        95,
+        75,
+        52,
+        78,
+        57,
+        88,
+        84,
+        87,
+        64,
+        58,
+        83,
+        93,
+        62,
+        72,
+        74,
+        89,
+        61,
+        50,
+        82,
+        56,
+        70,
+        68,
+        79,
+        55,
+        80,
+        92,
+        63,
+        66,
+        77,
+        97,
+        60,
+        91,
+    ];
+
+    inserted.forEach(x => s.add(x));
+    removed.forEach(x => s.remove(x));
+
+    t.deepEqual(s.toList(), range(0, 50));
+});
+
+test('Ordered Set Remove Fuzz', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
@@ -1955,7 +2125,6 @@ test.only('Ordered Set Remove Fuzze', t => {
         });
 
         shuffle(inserted, seed).forEach(x => s.add(x));
-        s.toList();
         shuffle(removed, seed).forEach(x => s.remove(x));
 
         const traversed = s.toList();
