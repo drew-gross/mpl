@@ -1936,7 +1936,7 @@ test('Ordered Set Remove Only Element', t => {
     t.deepEqual(s.toList(), []);
 });
 
-test.only('Orderedd set remove regression', t => {
+test.only('Ordered Set Remove - regression', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
