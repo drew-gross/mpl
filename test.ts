@@ -1943,7 +1943,7 @@ test.only('Ordered Set Remove - regression', t => {
         return 0;
     });
 
-    const inserted = [88, 35, 52, 72, 63, 2, 81, 45, 3, 57];
+    const inserted = [88, 35, 52, 72, 63, 81, 45, 57];
     const removed = [52, 57];
 
     inserted.forEach(x => s.add(x));
