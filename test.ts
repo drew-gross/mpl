@@ -2091,14 +2091,6 @@ test.only('Orderedd set remove regression', t => {
         68,
         79,
         55,
-        80,
-        92,
-        63,
-        66,
-        77,
-        97,
-        60,
-        91,
     ];
 
     inserted.forEach(x => s.add(x));
