@@ -1982,6 +1982,21 @@ test('Ordered Set Remove Higher Inner Element', t => {
     t.deepEqual(s.toList(), [0, 2, 3]);
 });
 
+test('Ordered Set Remove With Deep Tree', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+
+    const inserted = [1, 3, 2, 5, 4];
+    const removed = [3];
+
+    inserted.forEach(x => s.add(x));
+    removed.forEach(x => s.remove(x));
+    t.deepEqual(s.toList(), [1, 2, 4, 5]);
+});
+
 test.only('Ordered Set Remove - regression', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
@@ -1995,7 +2010,7 @@ test.only('Ordered Set Remove - regression', t => {
     inserted.forEach(x => s.add(x));
     removed.forEach(x => s.remove(x));
 
-    t.deepEqual(s.toList(), [35, 45, 63, 81, 88]);
+    t.deepEqual(s.toList(), [35, 45, 63, 72, 81, 88]);
 });
 
 test('Ordered Set Remove Fuzz', t => {

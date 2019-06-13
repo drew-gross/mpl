@@ -141,7 +141,13 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                     if (!leastUpperBound.parent) throw debug('magic happened');
 
                     // Detach least upper bound from it's parent
-                    leastUpperBound.parent.higher = null;
+                    if (leastUpperBound.parent.higher == leastUpperBound) {
+                        leastUpperBound.parent.higher = null;
+                    } else if (leastUpperBound.parent.lower == leastUpperBound) {
+                        leastUpperBound.parent.lower = null;
+                    } else {
+                        debug('wat');
+                    }
 
                     // Reattach least upper bound replacing node
                     leastUpperBound.parent = node.parent;
