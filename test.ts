@@ -1936,7 +1936,22 @@ test('Ordered Set Remove Only Element', t => {
     t.deepEqual(s.toList(), []);
 });
 
-test.only('Ordered Set Remove - regression', t => {
+test.only('Ordered Set Remove Inner Element', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+
+    const inserted = [1, 3, 2, 4];
+    const removed = [3];
+
+    inserted.forEach(x => s.add(x));
+    removed.forEach(x => s.remove(x));
+    t.deepEqual(s.toList(), [1, 2, 4]);
+});
+
+test('Ordered Set Remove - regression', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
