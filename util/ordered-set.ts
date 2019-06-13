@@ -133,21 +133,36 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                     }
                 } else {
                     // Case #2
-                    // Arbitrarily copy up from higher subtree. TODO: balancing/rb-tree
+                    // Arbitrarily copy up from higher subtree. TODO: choose left or right based on balancing
                     let leastUpperBound = node.higher;
                     while (leastUpperBound.lower) {
                         leastUpperBound = leastUpperBound.lower;
                     }
                     if (!leastUpperBound.parent) throw debug('magic happened');
-                    leastUpperBound.parent.lower = null;
-                    if (node.parent) {
-                        node.parent.higher = leastUpperBound;
-                    } else {
-                        if (!head) throw debug('magic happened');
-                        leastUpperBound.lower = head.lower;
-                        leastUpperBound.higher = head.higher;
-                        leastUpperBound.parent = null;
-                        head = leastUpperBound;
+
+                    // Detach least upper bound from it's parent
+                    leastUpperBound.parent.higher = null;
+
+                    // Reattach least upper bound replacing node
+                    leastUpperBound.parent = node.parent;
+                    leastUpperBound.lower = node.lower;
+                    leastUpperBound.higher = node.higher;
+
+                    // Patch children and parent to point at right place. Then node is fully detached
+                    if (leastUpperBound.lower) {
+                        leastUpperBound.lower.parent = leastUpperBound;
+                    }
+                    if (leastUpperBound.higher) {
+                        leastUpperBound.higher.parent = leastUpperBound;
+                    }
+                    if (leastUpperBound.parent) {
+                        if (leastUpperBound.parent.lower == node) {
+                            leastUpperBound.parent.lower = leastUpperBound;
+                        } else if (leastUpperBound.parent.higher == node) {
+                            leastUpperBound.parent.higher = leastUpperBound;
+                        } else {
+                            throw debug('onoz');
+                        }
                     }
                 }
                 break;
