@@ -1936,7 +1936,7 @@ test('Ordered Set Remove Only Element', t => {
     t.deepEqual(s.toList(), []);
 });
 
-test.only('Ordered Set Remove Inner Element', t => {
+test('Ordered Set Remove Lower Inner Element', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
@@ -1951,7 +1951,38 @@ test.only('Ordered Set Remove Inner Element', t => {
     t.deepEqual(s.toList(), [1, 2, 4]);
 });
 
-test('Ordered Set Remove - regression', t => {
+test('Ordered Set Remove Central Leaf', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+
+    const inserted = [3, 1, 2, 0];
+    const removed = [2];
+
+    inserted.forEach(x => s.add(x));
+    debugger;
+    removed.forEach(x => s.remove(x));
+    t.deepEqual(s.toList(), [0, 1, 3]);
+});
+
+test('Ordered Set Remove Higher Inner Element', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+
+    const inserted = [3, 1, 2, 0];
+    const removed = [1];
+
+    inserted.forEach(x => s.add(x));
+    removed.forEach(x => s.remove(x));
+    t.deepEqual(s.toList(), [0, 2, 3]);
+});
+
+test.only('Ordered Set Remove - regression', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
@@ -1964,7 +1995,7 @@ test('Ordered Set Remove - regression', t => {
     inserted.forEach(x => s.add(x));
     removed.forEach(x => s.remove(x));
 
-    t.deepEqual(s.toList(), range(0, 50));
+    t.deepEqual(s.toList(), [35, 45, 63, 81, 88]);
 });
 
 test('Ordered Set Remove Fuzz', t => {

@@ -92,9 +92,9 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                     // Case #1
                     if (node.parent) {
                         if (node.parent.lower == node) {
-                            node.parent.lower == null;
+                            node.parent.lower = null;
                         } else if (node.parent.higher == node) {
-                            node.parent.higher == null;
+                            node.parent.higher = null;
                         } else {
                             debug('recursion broke');
                         }
