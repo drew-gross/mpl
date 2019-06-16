@@ -2013,7 +2013,7 @@ test('Ordered Set Remove - regression', t => {
     t.deepEqual(s.toList(), [35, 45, 63, 72, 81, 88]);
 });
 
-test.only('Ordered Set To List After Aemoving', t => {
+test.only('Ordered Set To List After Removing', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
@@ -2021,36 +2021,7 @@ test.only('Ordered Set To List After Aemoving', t => {
     });
 
     const inserted = [88, 97, 93, 7, 8, 71, 99, 34, 94, 51, 3, 57, 13, 78, 74];
-
-    const removed = [
-        94,
-        67,
-        76,
-        86,
-        81,
-        51,
-        53,
-        54,
-        85,
-        99,
-        65,
-        95,
-        75,
-        52,
-        78,
-        57,
-        88,
-        74,
-        89,
-        61,
-        50,
-        82,
-        56,
-        70,
-        97,
-        60,
-        91,
-    ];
+    const removed = [94, 67, 76, 86, 81, 51, 53, 54, 85, 99, 65, 88, 74, 89, 61, 50, 82, 56, 70, 97, 60, 91];
 
     inserted.forEach(x => s.add(x));
     removed.forEach(x => s.remove(x));
