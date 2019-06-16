@@ -2020,7 +2020,7 @@ test.only('Ordered Set To List After Aemoving', t => {
         return 0;
     });
 
-    const inserted = [88, 35, 52, 72, 63, 2, 81, 45, 19, 40, 44, 97, 93, 7, 8, 71, 99, 34, 94, 51, 3, 57, 13, 78, 74];
+    const inserted = [88, 97, 93, 7, 8, 71, 99, 34, 94, 51, 3, 57, 13, 78, 74];
 
     const removed = [
         94,
