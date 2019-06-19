@@ -1,3 +1,4 @@
+import writeSvg from './util/graph/writeSvg.js';
 import { file as tmpFile } from 'tmp-promise';
 import { writeFile } from 'fs-extra';
 import testCases from './test-cases.js';
@@ -1962,7 +1963,6 @@ test('Ordered Set Remove Central Leaf', t => {
     const removed = [2];
 
     inserted.forEach(x => s.add(x));
-    debugger;
     removed.forEach(x => s.remove(x));
     t.deepEqual(s.toList(), [0, 1, 3]);
 });
@@ -2013,7 +2013,7 @@ test('Ordered Set Remove - regression', t => {
     t.deepEqual(s.toList(), [35, 45, 63, 72, 81, 88]);
 });
 
-test.only('Ordered Set To List After Removing', t => {
+test.failing('Ordered Set To List After Removing', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
@@ -2052,4 +2052,44 @@ test('Ordered Set Remove Fuzz', t => {
         const traversed = s.toList();
         t.deepEqual(remaining, traversed);
     }
+});
+
+test.only('Ordered Set Dotfile', async t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+
+    const inserted = [88, 35, 52, 72, 63, 81, 45, 57];
+    const removed = [52, 57];
+
+    inserted.forEach(x => s.add(x));
+    removed.forEach(x => s.remove(x));
+
+    const dotText = s.toDotFile();
+
+    t.deepEqual(
+        dotText,
+        `digraph {
+node_0 [shape="box", label="35"]
+node_1 [shape="box", label="45"]
+node_2 [shape="box", label="63"]
+node_3 [shape="box", label="72"]
+node_4 [shape="box", label="81"]
+node_5 [shape="box", label="88"]
+node_0 -> node_5
+node_0 -> node_2
+node_1 -> node_2
+node_2 -> node_0
+node_2 -> node_1
+node_2 -> node_3
+node_3 -> node_2
+node_3 -> node_4
+node_4 -> node_3
+node_5 -> node_0
+}`
+    );
+
+    // await writeSvg(dotText, './set.svg');
 });

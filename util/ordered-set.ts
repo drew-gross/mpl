@@ -25,6 +25,7 @@ export type OrderedSet<T> = {
 
     toList: () => T[];
     forEach: (f: SetForEachPredicate<T>) => void;
+    toDotFile: () => string;
 };
 
 // All items in lower side are lower. All items in higher side are higher.
@@ -35,9 +36,11 @@ type TreeNode<T> = {
     data: T;
 };
 
+type SetForEachPredicateInternal<T> = (item: TreeNode<T>) => void;
+
 export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
     let head: TreeNode<T> | null = null;
-    const forEach = (f: SetForEachPredicate<T>, node: TreeNode<T>) => {
+    const forEachNode = (f: SetForEachPredicateInternal<T>, node: TreeNode<T>) => {
         // See https://www.geeksforgeeks.org/inorder-non-threaded-binary-tree-traversal-without-recursion-or-stack/
         let current: TreeNode<T> = node;
         let lowerDone = false;
@@ -50,7 +53,7 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
             }
 
             // Iterate it.
-            f(current.data);
+            f(current);
 
             // We have done this item and everything left of it.
             lowerDone = true;
@@ -229,14 +232,50 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
         },
         toList: () => {
             const out: T[] = [];
-            if (head) forEach(x => out.push(x), head);
+            if (head) forEachNode(x => out.push(x.data), head);
             return out;
         },
         forEach: (f: SetForEachPredicate<T>) => {
-            if (head) forEach(f, head);
+            if (head) forEachNode(n => f(n.data), head);
         },
         remove: (item: Exclude<T, object | []>) => {
             if (head) remove(item, head);
+        },
+        toDotFile: (): string => {
+            let dotText = 'digraph {\n';
+
+            const idMap = new Map();
+            let i = 0;
+            if (head) {
+                // Give each node an ID
+                forEachNode(x => {
+                    idMap.set(x, i);
+                    i++;
+                }, head);
+
+                // Add a node for each ID
+                forEachNode(x => {
+                    dotText += `node_${idMap.get(x)} [shape="box", label="${JSON.stringify(x.data, null, 2).replace(
+                        '"',
+                        '\\"'
+                    )}"]\n`;
+                }, head);
+
+                // Add edges
+                forEachNode(x => {
+                    if (x.parent) {
+                        dotText += `node_${idMap.get(x)} -> node_${idMap.get(x.parent)}\n`;
+                    }
+                    if (x.lower) {
+                        dotText += `node_${idMap.get(x)} -> node_${idMap.get(x.lower)}\n`;
+                    }
+                    if (x.higher) {
+                        dotText += `node_${idMap.get(x)} -> node_${idMap.get(x.higher)}\n`;
+                    }
+                }, head);
+            }
+            dotText += '}';
+            return dotText;
         },
     };
 };
