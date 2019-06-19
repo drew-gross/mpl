@@ -273,9 +273,7 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
 
                 // Add a node for each ID
                 forEachNode(x => {
-                    let label = x == head ? '(head) ' : '';
-                    label += JSON.stringify(x.data, null, 2).replace('"', '\\"');
-                    label += ` (rank:${idToRankMap.get(idMap.get(x))})`;
+                    let label = JSON.stringify(x.data, null, 2).replace('"', '\\"');
                     dotText += `node_${idMap.get(x)} [shape="box", label="${label}"]\n`;
                 }, head);
 
