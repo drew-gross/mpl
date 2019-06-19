@@ -2070,36 +2070,35 @@ test.only('Ordered Set Dotfile', async t => {
     removed.forEach(x => s.remove(x));
 
     const dotText = s.toDotFile();
-    console.log(dotText);
     t.deepEqual(
         dotText,
         `digraph {
-node_0 [shape="box", label="35 (rank:1)"]
-node_1 [shape="box", label="45 (rank:3)"]
-node_2 [shape="box", label="63 (rank:2)"]
-node_3 [shape="box", label="72 (rank:3)"]
-node_4 [shape="box", label="81 (rank:4)"]
-node_5 [shape="box", label="(head) 88 (rank:0)"]
+node_0 [shape="box", label="35" pos="0,1!"]
+node_1 [shape="box", label="45" pos="1,3!"]
+node_2 [shape="box", label="63" pos="2,2!"]
+node_3 [shape="box", label="72" pos="3,3!"]
+node_4 [shape="box", label="81" pos="4,4!"]
+node_5 [shape="box", label="88" pos="5,0!"]
 null_0 [shape="point"]
-node_0 -> null_0 [label="l"]
-node_0 -> node_2 [label="h"]
-null_1 [shape="point"]
-node_1 -> null_1 [label="l"]
+node_0 -> null_0
+node_0 -> node_2
+null_0 -> node_2 [style="invis"]{rank=same; null_0; node_2;}null_1 [shape="point"]
+node_1 -> null_1
 null_2 [shape="point"]
-node_1 -> null_2 [label="h"]
-node_2 -> node_1 [label="l"]
-node_2 -> node_3 [label="h"]
-null_3 [shape="point"]
-node_3 -> null_3 [label="l"]
-node_3 -> node_4 [label="h"]
-null_4 [shape="point"]
-node_4 -> null_4 [label="l"]
+node_1 -> null_2
+null_1 -> null_2 [style="invis"]{rank=same; null_1; null_2;}node_2 -> node_1
+node_2 -> node_3
+node_1 -> node_3 [style="invis"]{rank=same; node_1; node_3;}null_3 [shape="point"]
+node_3 -> null_3
+node_3 -> node_4
+null_3 -> node_4 [style="invis"]{rank=same; null_3; node_4;}null_4 [shape="point"]
+node_4 -> null_4
 null_5 [shape="point"]
-node_4 -> null_5 [label="h"]
-node_5 -> node_0 [label="l"]
+node_4 -> null_5
+null_4 -> null_5 [style="invis"]{rank=same; null_4; null_5;}node_5 -> node_0
 null_6 [shape="point"]
-node_5 -> null_6 [label="h"]
-{rank=same;node_0;}
+node_5 -> null_6
+node_0 -> null_6 [style="invis"]{rank=same; node_0; null_6;}{rank=same;node_0;}
 {rank=same;node_1;node_3;}
 {rank=same;node_2;}
 {rank=same;node_4;}
@@ -2107,5 +2106,5 @@ node_5 -> null_6 [label="h"]
 }`
     );
 
-    await writeSvg(dotText, './set.svg');
+    // await writeSvg(dotText, './set.svg');
 });

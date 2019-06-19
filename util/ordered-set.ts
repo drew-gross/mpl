@@ -276,8 +276,8 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
 
                 // Add a node for each ID
                 forEachNode(x => {
-                    let label = JSON.stringify(x.data, null, 2).replace('"', '\\"');
-                    let [xpos, ypos] = objectToPositionMap.get(x);
+                    const label = JSON.stringify(x.data, null, 2).replace('"', '\\"');
+                    const [xpos, ypos] = objectToPositionMap.get(x);
                     // xpos/ypos only used for neato and fdp layout engines. Doesn't look good though.
                     dotText += `node_${idMap.get(x)} [shape="box", label="${label}" pos="${xpos},${ypos}!"]\n`;
                 }, head);
@@ -326,8 +326,8 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                 // Add rank enforcement
                 rankToIdsMap.forEach((ids, rank) => {
                     let rankText = '{rank=same;';
-                    ids.forEach(id => {
-                        rankText += `node_${id};`;
+                    ids.forEach(nodeId => {
+                        rankText += `node_${nodeId};`;
                     });
                     rankText += '}\n';
                     dotText += rankText;
