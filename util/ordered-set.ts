@@ -297,21 +297,21 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                     let lowerNode = '';
                     if (x.lower) {
                         lowerNode = `node_${idMap.get(x.lower)}`;
-                        dotText += `node_${idMap.get(x)} -> ${lowerNode} [label="l"]\n`;
+                        dotText += `node_${idMap.get(x)} -> ${lowerNode}\n`;
                     } else {
                         dotText += `null_${nullId} [shape="point"]\n`;
                         lowerNode = `null_${nullId}`;
-                        dotText += `node_${idMap.get(x)} -> ${lowerNode} [label="l"]\n`;
+                        dotText += `node_${idMap.get(x)} -> ${lowerNode}\n`;
                         nullId++;
                     }
                     let higherNode = '';
                     if (x.higher) {
                         higherNode = `node_${idMap.get(x.higher)}`;
-                        dotText += `node_${idMap.get(x)} -> ${higherNode} [label="h"]\n`;
+                        dotText += `node_${idMap.get(x)} -> ${higherNode}\n`;
                     } else {
                         dotText += `null_${nullId} [shape="point"]\n`;
                         higherNode = `null_${nullId}`;
-                        dotText += `node_${idMap.get(x)} -> ${higherNode} [label="h"]\n`;
+                        dotText += `node_${idMap.get(x)} -> ${higherNode}\n`;
                         nullId++;
                     }
 
