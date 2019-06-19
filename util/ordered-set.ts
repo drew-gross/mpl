@@ -36,24 +36,27 @@ type TreeNode<T> = {
     data: T;
 };
 
-type SetForEachPredicateInternal<T> = (item: TreeNode<T>) => void;
+// Look at each tree node with it's rank. Head has rank 0, it's children have rank 1, etc.
+type SetForEachPredicateInternal<T> = (item: TreeNode<T>, rank: number) => void;
 
 export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
     let head: TreeNode<T> | null = null;
     const forEachNode = (f: SetForEachPredicateInternal<T>, node: TreeNode<T>) => {
         // See https://www.geeksforgeeks.org/inorder-non-threaded-binary-tree-traversal-without-recursion-or-stack/
         let current: TreeNode<T> = node;
+        let rank = 0;
         let lowerDone = false;
         while (true) {
             // Get to the lowest item of this tree that we haven't done.
             if (!lowerDone) {
                 while (current.lower) {
                     current = current.lower;
+                    rank++;
                 }
             }
 
             // Iterate it.
-            f(current);
+            f(current, rank);
 
             // We have done this item and everything left of it.
             lowerDone = true;
@@ -61,17 +64,20 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
             if (current.higher) {
                 // If there are higher items, iterate them.
                 current = current.higher;
+                rank++;
                 lowerDone = false;
             } else if (current.parent) {
                 // Iterate back up the tree until we find an item we are lower than.
                 while (current.parent && current.parent.higher == current) {
                     current = current.parent;
+                    rank--;
                 }
                 if (!current.parent) {
                     return;
                 }
                 // Start iterating from the item we are lower than, with lowerDone still true.
                 current = current.parent;
+                rank--;
             } else {
                 // No parent == at top, done higher == done all
                 if (current !== head || current.higher) debug('expected state');
@@ -244,35 +250,85 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
         toDotFile: (): string => {
             let dotText = 'digraph {\n';
 
+            // Map from node -> id number
             const idMap = new Map();
-            let i = 0;
+            // Map from rank -> node numbers at that rank
+            const rankToIdsMap = new Map();
+            // Rank by ID
+            const idToRankMap = new Map();
+
             if (head) {
                 // Give each node an ID
-                forEachNode(x => {
-                    idMap.set(x, i);
-                    i++;
+                let id = 0;
+                forEachNode((x, rank) => {
+                    idMap.set(x, id);
+                    idToRankMap.set(id, rank);
+                    if (!rankToIdsMap.has(rank)) {
+                        rankToIdsMap.set(rank, [id]);
+                    } else {
+                        rankToIdsMap.get(rank).push(id);
+                    }
+                    id++;
                 }, head);
 
                 // Add a node for each ID
                 forEachNode(x => {
-                    dotText += `node_${idMap.get(x)} [shape="box", label="${JSON.stringify(x.data, null, 2).replace(
-                        '"',
-                        '\\"'
-                    )}"]\n`;
+                    let label = x == head ? '(head) ' : '';
+                    label += JSON.stringify(x.data, null, 2).replace('"', '\\"');
+                    label += ` (rank:${idToRankMap.get(idMap.get(x))})`;
+                    dotText += `node_${idMap.get(x)} [shape="box", label="${label}"]\n`;
                 }, head);
 
                 // Add edges
+                let nullId = 0;
                 forEachNode(x => {
-                    if (x.parent) {
-                        dotText += `node_${idMap.get(x)} -> node_${idMap.get(x.parent)}\n`;
+                    const includeParent = false; // Causes bad edge shapes
+                    if (includeParent) {
+                        if (x.parent) {
+                            dotText += `node_${idMap.get(x)} -> node_${idMap.get(
+                                x.parent
+                            )} [constraint=false label="p"]\n`;
+                        } else {
+                            dotText += `null_${nullId} [shape="point"]\n`;
+                            dotText += `node_${idMap.get(x)} -> null_${nullId} [constraint=false label="p"]\n`;
+                            nullId++;
+                        }
                     }
+                    let lowerNode = '';
                     if (x.lower) {
-                        dotText += `node_${idMap.get(x)} -> node_${idMap.get(x.lower)}\n`;
+                        lowerNode = `node_${idMap.get(x.lower)}`;
+                        dotText += `node_${idMap.get(x)} -> ${lowerNode} [label="l"]\n`;
+                    } else {
+                        dotText += `null_${nullId} [shape="point"]\n`;
+                        lowerNode = `null_${nullId}`;
+                        dotText += `node_${idMap.get(x)} -> ${lowerNode} [label="l"]\n`;
+                        nullId++;
                     }
+                    let higherNode = '';
                     if (x.higher) {
-                        dotText += `node_${idMap.get(x)} -> node_${idMap.get(x.higher)}\n`;
+                        higherNode = `node_${idMap.get(x.higher)}`;
+                        dotText += `node_${idMap.get(x)} -> ${higherNode} [label="h"]\n`;
+                    } else {
+                        dotText += `null_${nullId} [shape="point"]\n`;
+                        higherNode = `null_${nullId}`;
+                        dotText += `node_${idMap.get(x)} -> ${higherNode} [label="h"]\n`;
+                        nullId++;
                     }
+
+                    // Add an invinisble egde from lower to higher to convince graphvis to put lower on the left
+                    dotText += `${lowerNode} -> ${higherNode} [style="invis"]`;
+                    dotText += `{rank=same; ${lowerNode}; ${higherNode};}`;
                 }, head);
+
+                // Add rank enforcement
+                rankToIdsMap.forEach((ids, rank) => {
+                    let rankText = '{rank=same;';
+                    ids.forEach(id => {
+                        rankText += `node_${id};`;
+                    });
+                    rankText += '}\n';
+                    dotText += rankText;
+                });
             }
             dotText += '}';
             return dotText;

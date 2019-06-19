@@ -2013,7 +2013,7 @@ test('Ordered Set Remove - regression', t => {
     t.deepEqual(s.toList(), [35, 45, 63, 72, 81, 88]);
 });
 
-test.failing('Ordered Set To List After Removing', t => {
+test('Ordered Set To List After Removing', async t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
@@ -2024,8 +2024,10 @@ test.failing('Ordered Set To List After Removing', t => {
     const removed = [94, 86, 99, 88, 97, 60, 91];
 
     inserted.forEach(x => s.add(x));
+    await writeSvg(s.toDotFile(), './set.svg');
     removed.forEach(x => s.remove(x));
 
+    await writeSvg(s.toDotFile(), './set.svg');
     t.deepEqual(s.toList(), range(0, 50));
 });
 
@@ -2068,28 +2070,42 @@ test.only('Ordered Set Dotfile', async t => {
     removed.forEach(x => s.remove(x));
 
     const dotText = s.toDotFile();
-
+    console.log(dotText);
     t.deepEqual(
         dotText,
         `digraph {
-node_0 [shape="box", label="35"]
-node_1 [shape="box", label="45"]
-node_2 [shape="box", label="63"]
-node_3 [shape="box", label="72"]
-node_4 [shape="box", label="81"]
-node_5 [shape="box", label="88"]
-node_0 -> node_5
-node_0 -> node_2
-node_1 -> node_2
-node_2 -> node_0
-node_2 -> node_1
-node_2 -> node_3
-node_3 -> node_2
-node_3 -> node_4
-node_4 -> node_3
-node_5 -> node_0
+node_0 [shape="box", label="35 (rank:1)"]
+node_1 [shape="box", label="45 (rank:3)"]
+node_2 [shape="box", label="63 (rank:2)"]
+node_3 [shape="box", label="72 (rank:3)"]
+node_4 [shape="box", label="81 (rank:4)"]
+node_5 [shape="box", label="(head) 88 (rank:0)"]
+null_0 [shape="point"]
+node_0 -> null_0 [label="l"]
+node_0 -> node_2 [label="h"]
+null_1 [shape="point"]
+node_1 -> null_1 [label="l"]
+null_2 [shape="point"]
+node_1 -> null_2 [label="h"]
+node_2 -> node_1 [label="l"]
+node_2 -> node_3 [label="h"]
+null_3 [shape="point"]
+node_3 -> null_3 [label="l"]
+node_3 -> node_4 [label="h"]
+null_4 [shape="point"]
+node_4 -> null_4 [label="l"]
+null_5 [shape="point"]
+node_4 -> null_5 [label="h"]
+node_5 -> node_0 [label="l"]
+null_6 [shape="point"]
+node_5 -> null_6 [label="h"]
+{rank=same;node_0;}
+{rank=same;node_1;node_3;}
+{rank=same;node_2;}
+{rank=same;node_4;}
+{rank=same;node_5;}
 }`
     );
 
-    // await writeSvg(dotText, './set.svg');
+    await writeSvg(dotText, './set.svg');
 });
