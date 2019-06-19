@@ -256,6 +256,8 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
             const rankToIdsMap = new Map();
             // Rank by ID
             const idToRankMap = new Map();
+            // Object to position map. Position = [order, rank]
+            const objectToPositionMap = new Map();
 
             if (head) {
                 // Give each node an ID
@@ -268,13 +270,16 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                     } else {
                         rankToIdsMap.get(rank).push(id);
                     }
+                    objectToPositionMap.set(x, [id, rank]);
                     id++;
                 }, head);
 
                 // Add a node for each ID
                 forEachNode(x => {
                     let label = JSON.stringify(x.data, null, 2).replace('"', '\\"');
-                    dotText += `node_${idMap.get(x)} [shape="box", label="${label}"]\n`;
+                    let [xpos, ypos] = objectToPositionMap.get(x);
+                    // xpos/ypos only used for neato and fdp layout engines. Doesn't look good though.
+                    dotText += `node_${idMap.get(x)} [shape="box", label="${label}" pos="${xpos},${ypos}!"]\n`;
                 }, head);
 
                 // Add edges
