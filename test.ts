@@ -2020,10 +2020,10 @@ test.only('Ordered Set Remove - Least Upper Bound has Higher Elements', t => {
         return 0;
     });
 
-    const inserted = [1, 4, 2, 3];
+    const inserted = [1, 0, 4, 2, 3];
     inserted.forEach(x => s.add(x));
     s.remove(1);
-    t.deepEqual(s.toList(), [2, 3, 4]);
+    t.deepEqual(s.toList(), [0, 2, 3, 4]);
 });
 
 test('Ordered Set To List After Removing', async t => {
