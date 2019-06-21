@@ -2110,34 +2110,7 @@ test.only('Ordered Set Remove Regression', t => {
         80,
     ];
 
-    const removed = [
-        78,
-        57,
-        88,
-        84,
-        87,
-        64,
-        58,
-        83,
-        93,
-        62,
-        72,
-        74,
-        89,
-        61,
-        50,
-        82,
-        56,
-        70,
-        68,
-        79,
-        55,
-        80,
-        92,
-        63,
-        66,
-        77,
-    ];
+    const removed = [78, 57, 88, 84, 87, 64, 58, 79, 55, 80, 92, 63, 66, 77];
 
     inserted.forEach(x => s.add(x));
     removed.forEach(x => s.remove(x));
