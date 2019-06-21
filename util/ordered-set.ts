@@ -149,19 +149,18 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                     }
                     if (!leastUpperBound.parent) throw debug('magic happened');
 
-                    // If least upper bound has a child, it must be higher
+                    // Detach least upper bound from it's parent. If least upper bound has children, make those the child of least upper bound's children. Only least upper bound can't have lower chilren, if it did they would be a lower upper bound.
                     let leastUpperBoundsChildren = leastUpperBound.higher;
-
-                    // Detach least upper bound from it's parent
-                    if (leastUpperBound.parent.higher == leastUpperBound) {
-                        debug('huh');
-                    } else if (leastUpperBound.parent.lower == leastUpperBound) {
-                        leastUpperBound.parent.lower = leastUpperBoundsChildren;
-                        if (leastUpperBoundsChildren) {
+                    if (leastUpperBoundsChildren) {
+                        if (leastUpperBound.parent.higher == leastUpperBound) {
+                            leastUpperBound.parent.lower = leastUpperBoundsChildren;
                             leastUpperBoundsChildren.parent = leastUpperBound.parent;
+                        } else if (leastUpperBound.parent.lower == leastUpperBound) {
+                            leastUpperBound.parent.lower = leastUpperBoundsChildren;
+                            leastUpperBoundsChildren.parent = leastUpperBound.parent;
+                        } else {
+                            debug('wat');
                         }
-                    } else {
-                        debug('wat');
                     }
 
                     // Reattach least upper bound replacing node
