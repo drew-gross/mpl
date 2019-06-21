@@ -2013,7 +2013,7 @@ test('Ordered Set Remove - regression', t => {
     t.deepEqual(s.toList(), [35, 45, 63, 72, 81, 88]);
 });
 
-test.only('Ordered Set Remove - Least Upper Bound has Higher Elements', t => {
+test('Ordered Set Remove - Least Upper Bound has Higher Elements', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
@@ -2041,7 +2041,7 @@ test('Ordered Set To List After Removing', async t => {
     t.deepEqual(s.toList(), [34, 93, 94]);
 });
 
-test('Ordered Set Remove Fuzz', t => {
+test.only('Ordered Set Remove Fuzz', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
