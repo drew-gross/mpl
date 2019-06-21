@@ -149,11 +149,17 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                     }
                     if (!leastUpperBound.parent) throw debug('magic happened');
 
+                    // If least upper bound has a child, it must be higher
+                    let leastUpperBoundsChildren = leastUpperBound.higher;
+
                     // Detach least upper bound from it's parent
                     if (leastUpperBound.parent.higher == leastUpperBound) {
-                        leastUpperBound.parent.higher = null;
+                        debug('huh');
                     } else if (leastUpperBound.parent.lower == leastUpperBound) {
-                        leastUpperBound.parent.lower = null;
+                        leastUpperBound.parent.lower = leastUpperBoundsChildren;
+                        if (leastUpperBoundsChildren) {
+                            leastUpperBoundsChildren.parent = leastUpperBound.parent;
+                        }
                     } else {
                         debug('wat');
                     }
@@ -285,7 +291,7 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                 // Add edges
                 let nullId = 0;
                 forEachNode(x => {
-                    const includeParent = false; // Causes bad edge shapes
+                    const includeParent = true; // Causes bad edge shapes
                     if (includeParent) {
                         if (x.parent) {
                             dotText += `node_${idMap.get(x)} -> node_${idMap.get(

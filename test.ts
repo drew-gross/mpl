@@ -2013,6 +2013,19 @@ test('Ordered Set Remove - regression', t => {
     t.deepEqual(s.toList(), [35, 45, 63, 72, 81, 88]);
 });
 
+test.only('Ordered Set Remove - Least Upper Bound has Higher Elements', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+
+    const inserted = [1, 4, 2, 3];
+    inserted.forEach(x => s.add(x));
+    s.remove(1);
+    t.deepEqual(s.toList(), [2, 3, 4]);
+});
+
 test('Ordered Set To List After Removing', async t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
@@ -2021,14 +2034,11 @@ test('Ordered Set To List After Removing', async t => {
     });
 
     const inserted = [88, 97, 93, 99, 34, 94];
-    const removed = [94, 86, 99, 88, 97, 60, 91];
+    const removed = [99, 88, 97, 60, 91];
 
     inserted.forEach(x => s.add(x));
-    await writeSvg(s.toDotFile(), './set.svg');
     removed.forEach(x => s.remove(x));
-
-    await writeSvg(s.toDotFile(), './set.svg');
-    t.deepEqual(s.toList(), range(0, 50));
+    t.deepEqual(s.toList(), [34, 93, 94]);
 });
 
 test('Ordered Set Remove Fuzz', t => {
@@ -2056,7 +2066,7 @@ test('Ordered Set Remove Fuzz', t => {
     }
 });
 
-test.only('Ordered Set Dotfile', async t => {
+test('Ordered Set Dotfile', async t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
