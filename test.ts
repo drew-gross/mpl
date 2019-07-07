@@ -2041,7 +2041,23 @@ test('Ordered Set To List After Removing', async t => {
     t.deepEqual(s.toList(), [34, 93, 94]);
 });
 
-test.only('Ordered Set Remove Regression', t => {
+test.only('Ordered Set Remove Top of Left Leaning Tree', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+
+    s.add(2);
+    s.add(3);
+    s.add(1);
+    s.add(0);
+
+    s.remove(2);
+    t.deepEqual(s.toList(), [0, 1, 3]);
+});
+
+test('Ordered Set Remove Regression', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
@@ -2049,7 +2065,7 @@ test.only('Ordered Set Remove Regression', t => {
     });
 
     const inserted = [88, 90, 77, 70];
-    const removed = [78, 57, 88, 77];
+    const removed = [78, 88, 77];
 
     inserted.forEach(x => s.add(x));
     removed.forEach(x => s.remove(x));

@@ -151,22 +151,29 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
 
                     // Detach least upper bound from it's parent. If least upper bound has children, make those the child of least upper bound's children. Only least upper bound can't have lower chilren, if it did they would be a lower upper bound.
                     let leastUpperBoundsChildren = leastUpperBound.higher;
-                    if (leastUpperBoundsChildren) {
-                        if (leastUpperBound.parent.higher == leastUpperBound) {
-                            leastUpperBound.parent.lower = leastUpperBoundsChildren;
+                    if (leastUpperBound.parent.higher == leastUpperBound) {
+                        leastUpperBound.parent.higher = leastUpperBoundsChildren;
+                        if (leastUpperBoundsChildren) {
                             leastUpperBoundsChildren.parent = leastUpperBound.parent;
-                        } else if (leastUpperBound.parent.lower == leastUpperBound) {
-                            leastUpperBound.parent.lower = leastUpperBoundsChildren;
-                            leastUpperBoundsChildren.parent = leastUpperBound.parent;
-                        } else {
-                            debug('wat');
                         }
+                    } else if (leastUpperBound.parent.lower == leastUpperBound) {
+                        leastUpperBound.parent.lower = leastUpperBoundsChildren;
+                        if (leastUpperBoundsChildren) {
+                            leastUpperBoundsChildren.parent = leastUpperBound.parent;
+                        }
+                    } else {
+                        debug('wat');
                     }
 
                     // Reattach least upper bound replacing node
                     leastUpperBound.parent = node.parent;
                     leastUpperBound.lower = node.lower;
                     leastUpperBound.higher = node.higher;
+
+                    // Set up new head if necessary
+                    if (head == node) {
+                        head = leastUpperBound;
+                    }
 
                     // Patch children and parent to point at right place. Then node is fully detached
                     if (leastUpperBound.lower) {
