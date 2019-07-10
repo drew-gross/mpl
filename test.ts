@@ -2083,22 +2083,6 @@ test.only('Ordered Set Remove Last Item Regression', t => {
     const inserted = [88, 35, 52, 72, 63, 2, 81, 45, 19, 40, 91];
 
     const removed = [
-        94,
-        67,
-        76,
-        86,
-        81,
-        51,
-        90,
-        71,
-        59,
-        69,
-        73,
-        98,
-        96,
-        53,
-        54,
-        85,
         99,
         65,
         95,
