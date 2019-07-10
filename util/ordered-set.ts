@@ -128,6 +128,7 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                         }
                     } else {
                         head = node.higher;
+                        head.parent = null;
                     }
                 } else if (!node.higher) {
                     // Case #3, but for higher
@@ -139,6 +140,9 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                             node.parent.higher = node.lower;
                             node.lower.parent = node.parent;
                         }
+                    } else {
+                        head = node.lower;
+                        head.parent = null;
                     }
                 } else {
                     // Case #2
@@ -150,7 +154,7 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                     if (!leastUpperBound.parent) throw debug('magic happened');
 
                     // Detach least upper bound from it's parent. If least upper bound has children, make those the child of least upper bound's children. Only least upper bound can't have lower chilren, if it did they would be a lower upper bound.
-                    let leastUpperBoundsChildren = leastUpperBound.higher;
+                    const leastUpperBoundsChildren = leastUpperBound.higher;
                     if (leastUpperBound.parent.higher == leastUpperBound) {
                         leastUpperBound.parent.higher = leastUpperBoundsChildren;
                         if (leastUpperBoundsChildren) {

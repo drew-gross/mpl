@@ -2070,18 +2070,34 @@ test('Ordered Set Remove Upside Down Nike Symbol', t => {
     inserted.forEach(x => s.add(x));
     removed.forEach(x => s.remove(x));
 
-    t.deepEqual(s.toList(), []);
+    t.deepEqual(s.toList(), [70, 90]);
 });
 
-test.only('Ordered Set Remove Last Item Regression', t => {
+test('Ordered Set Remove Last Item Regression', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
         return 0;
     });
 
-    const inserted = [88, 52, 19, 40, 91];
-    const removed = [52, 88, 91];
+    const inserted = [3, 2, 0, 1, 4];
+    const removed = [2, 3, 4];
+
+    inserted.forEach(x => s.add(x));
+    removed.forEach(x => s.remove(x));
+
+    t.deepEqual(s.toList(), [0, 1]);
+});
+
+test('Ordered Set Remove All Regression', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+
+    const inserted = [3, 2, 4];
+    const removed = [2, 3, 4];
 
     inserted.forEach(x => s.add(x));
     removed.forEach(x => s.remove(x));
@@ -2089,7 +2105,7 @@ test.only('Ordered Set Remove Last Item Regression', t => {
     t.deepEqual(s.toList(), []);
 });
 
-test('Ordered Set Remove Fuzz', t => {
+test.only('Ordered Set Remove Fuzz', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
