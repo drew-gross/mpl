@@ -23,6 +23,7 @@ const testCases: TestCase[] = [
         name: 'Bare Return',
         source: 'return 7',
         exitCode: 7,
+        only: true,
     },
     {
         name: 'Single Product',

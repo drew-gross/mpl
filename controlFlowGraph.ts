@@ -1,3 +1,4 @@
+import ComparisonResult from './util/comparisonResult.js';
 import debug from './util/debug.js';
 import last from './util/list/last.js';
 import sum from './util/list/sum.js';
@@ -8,7 +9,7 @@ import join from './util/join.js';
 import grid from './util/grid.js';
 import idAppender from './util/idAppender.js';
 import { RegisterAssignment } from './backend-utils.js';
-import { Register, isEqual as registerIsEqual } from './register.js';
+import { Register, isEqual as registerIsEqual, compare as registerCompare } from './register.js';
 import { ThreeAddressFunction } from './threeAddressCode/generator.js';
 import { Statement, toString as tasToString, reads, writes } from './threeAddressCode/statement.js';
 import { Graph } from 'graphlib';
@@ -321,6 +322,14 @@ const interferenceIsEqual = (lhs: RegisterInterference, rhs: RegisterInterferenc
     return false;
 };
 
+const interferenceCompare = (lhs: RegisterInterference, rhs: RegisterInterference): ComparisonResult => {
+    const r1Comparison = registerCompare(lhs.r1, rhs.r1);
+    if (r1Comparison != ComparisonResult.EQ) {
+        return r1Comparison;
+    }
+    return registerCompare(lhs.r2, rhs.r2);
+};
+
 const interferenceInvolvesRegister = (interference: RegisterInterference, r: Register): boolean =>
     registerIsEqual(interference.r1, r) || registerIsEqual(interference.r2, r);
 
@@ -337,10 +346,9 @@ const otherRegister = (interference: RegisterInterference, r: Register): Registe
 export const registerInterferenceGraph = (liveness: Set<Register>[]): RegisterInterferenceGraph => {
     const nonSpecialRegisters = setJoin(registerIsEqual, liveness);
     nonSpecialRegisters.removeWithPredicate(item => typeof item == 'string');
-    debug('todo remove any');
     const result: RegisterInterferenceGraph = {
-        nonSpecialRegisters: orderedSet(registerIsEqual as any),
-        interferences: orderedSet(interferenceIsEqual as any),
+        nonSpecialRegisters: orderedSet(registerCompare),
+        interferences: orderedSet(interferenceCompare),
     };
     liveness.forEach(registers => {
         registers.forEach(i => {

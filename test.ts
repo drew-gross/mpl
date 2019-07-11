@@ -2105,7 +2105,7 @@ test('Ordered Set Remove All Regression', t => {
     t.deepEqual(s.toList(), []);
 });
 
-test.only('Ordered Set Remove Fuzz', t => {
+test('Ordered Set Remove Fuzz', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
@@ -2127,7 +2127,51 @@ test.only('Ordered Set Remove Fuzz', t => {
 
         const traversed = s.toList();
         t.deepEqual(remaining, traversed);
+        t.deepEqual(s.size(), 50);
     }
+});
+
+test('Oredered Set Remove With Predicate Fuzz', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+
+    const inserted = range(0, 100);
+    const remaining = range(0, 51);
+    for (let seed = 0; seed < 100; seed++) {
+        const s = orderedSet<number>((x, y) => {
+            if (x < y) return -1;
+            if (x > y) return 1;
+            return 0;
+        });
+
+        shuffle(inserted, seed).forEach(x => s.add(x));
+        s.removeWithPredicate(item => item > 50);
+
+        const traversed = s.toList();
+        t.deepEqual(remaining, traversed);
+        t.deepEqual(s.size(), 51);
+    }
+});
+
+test('Ordered Set Size', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+
+    t.deepEqual(s.size(), 0);
+    s.add(1);
+    t.deepEqual(s.size(), 1);
+    s.add(0);
+    t.deepEqual(s.size(), 2);
+    s.add(2);
+    t.deepEqual(s.size(), 3);
+    s.remove(0);
+    t.deepEqual(s.size(), 2);
 });
 
 test('Ordered Set Dotfile', async t => {

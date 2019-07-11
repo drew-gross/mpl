@@ -1,12 +1,6 @@
 import debug from './debug.js';
-import deepcopy from 'deepcopy';
+import ComparisonResult from './comparisonResult';
 // Binary search tree based set structure. No balancing. Iterations is ordered lowest to highest. TODO: use red-black tree.
-
-enum ComparisonResult {
-    LT = -1,
-    EQ = 0,
-    GT = 1,
-}
 
 type SetComparator<T> = (lhs: T, rhs: T) => ComparisonResult;
 
@@ -86,6 +80,109 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
         }
     };
 
+    const removeNode = (node: TreeNode<T>) => {
+        // See diagrams from https://www.techiedelight.com/deletion-from-bst/
+        if (!node.lower && !node.higher) {
+            // Case #1
+            if (node.parent) {
+                if (node.parent.lower == node) {
+                    node.parent.lower = null;
+                } else if (node.parent.higher == node) {
+                    node.parent.higher = null;
+                } else {
+                    debug('recursion broke');
+                }
+            } else {
+                if (head != node) {
+                    debug('Something is horribly wrong');
+                }
+                head = null;
+            }
+        } else if (!node.lower) {
+            // Case #3 (lower)
+            // Move actual node because identity needs to be same, we compare pointers in forEach.
+            // Replace ourselves in parent.
+            if (!node.higher) throw debug('Boole was wrong! /ts');
+            if (node.parent) {
+                if (node.parent.lower == node) {
+                    node.parent.lower = node.higher;
+                    node.higher.parent = node.parent;
+                } else {
+                    node.parent.higher = node.higher;
+                    node.higher.parent = node.parent;
+                }
+            } else {
+                head = node.higher;
+                head.parent = null;
+            }
+        } else if (!node.higher) {
+            // Case #3, but for higher
+            if (node.parent) {
+                if (node.parent.lower == node) {
+                    node.parent.lower = node.lower;
+                    node.lower.parent = node.parent;
+                } else {
+                    node.parent.higher = node.lower;
+                    node.lower.parent = node.parent;
+                }
+            } else {
+                head = node.lower;
+                head.parent = null;
+            }
+        } else {
+            // Case #2
+            // Arbitrarily copy up from higher subtree. TODO: choose left or right based on balancing
+            let leastUpperBound = node.higher;
+            while (leastUpperBound.lower) {
+                leastUpperBound = leastUpperBound.lower;
+            }
+            if (!leastUpperBound.parent) throw debug('magic happened');
+
+            // Detach least upper bound from it's parent. If least upper bound has children, make those the child of least upper bound's children. Only least upper bound can't have lower chilren, if it did they would be a lower upper bound.
+            const leastUpperBoundsChildren = leastUpperBound.higher;
+            if (leastUpperBound.parent.higher == leastUpperBound) {
+                leastUpperBound.parent.higher = leastUpperBoundsChildren;
+                if (leastUpperBoundsChildren) {
+                    leastUpperBoundsChildren.parent = leastUpperBound.parent;
+                }
+            } else if (leastUpperBound.parent.lower == leastUpperBound) {
+                leastUpperBound.parent.lower = leastUpperBoundsChildren;
+                if (leastUpperBoundsChildren) {
+                    leastUpperBoundsChildren.parent = leastUpperBound.parent;
+                }
+            } else {
+                debug('wat');
+            }
+
+            // Reattach least upper bound replacing node
+            leastUpperBound.parent = node.parent;
+            leastUpperBound.lower = node.lower;
+            leastUpperBound.higher = node.higher;
+
+            // Set up new head if necessary
+            if (head == node) {
+                head = leastUpperBound;
+            }
+
+            // Patch children and parent to point at right place. Then node is fully detached
+            if (leastUpperBound.lower) {
+                leastUpperBound.lower.parent = leastUpperBound;
+            }
+            if (leastUpperBound.higher) {
+                leastUpperBound.higher.parent = leastUpperBound;
+            }
+            if (leastUpperBound.parent) {
+                if (leastUpperBound.parent.lower == node) {
+                    leastUpperBound.parent.lower = leastUpperBound;
+                } else if (leastUpperBound.parent.higher == node) {
+                    leastUpperBound.parent.higher = leastUpperBound;
+                } else {
+                    throw debug('onoz');
+                }
+            }
+        }
+    };
+
     const remove = (item: T, node: TreeNode<T>) => {
         // Constant space w/tail recursion
         switch (cmp(item, node.data)) {
@@ -96,109 +193,28 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                 if (node.higher) remove(item, node.higher);
                 break;
             case ComparisonResult.EQ:
-                // See diagrams from https://www.techiedelight.com/deletion-from-bst/
-                if (!node.lower && !node.higher) {
-                    // Case #1
-                    if (node.parent) {
-                        if (node.parent.lower == node) {
-                            node.parent.lower = null;
-                        } else if (node.parent.higher == node) {
-                            node.parent.higher = null;
-                        } else {
-                            debug('recursion broke');
-                        }
-                    } else {
-                        if (head != node) {
-                            debug('Something is horribly wrong');
-                        }
-                        head = null;
-                    }
-                } else if (!node.lower) {
-                    // Case #3 (lower)
-                    // Move actual node because identity needs to be same, we compare pointers in forEach.
-                    // Replace ourselves in parent.
-                    if (!node.higher) throw debug('Boole was wrong! /ts');
-                    if (node.parent) {
-                        if (node.parent.lower == node) {
-                            node.parent.lower = node.higher;
-                            node.higher.parent = node.parent;
-                        } else {
-                            node.parent.higher = node.higher;
-                            node.higher.parent = node.parent;
-                        }
-                    } else {
-                        head = node.higher;
-                        head.parent = null;
-                    }
-                } else if (!node.higher) {
-                    // Case #3, but for higher
-                    if (node.parent) {
-                        if (node.parent.lower == node) {
-                            node.parent.lower = node.lower;
-                            node.lower.parent = node.parent;
-                        } else {
-                            node.parent.higher = node.lower;
-                            node.lower.parent = node.parent;
-                        }
-                    } else {
-                        head = node.lower;
-                        head.parent = null;
-                    }
-                } else {
-                    // Case #2
-                    // Arbitrarily copy up from higher subtree. TODO: choose left or right based on balancing
-                    let leastUpperBound = node.higher;
-                    while (leastUpperBound.lower) {
-                        leastUpperBound = leastUpperBound.lower;
-                    }
-                    if (!leastUpperBound.parent) throw debug('magic happened');
-
-                    // Detach least upper bound from it's parent. If least upper bound has children, make those the child of least upper bound's children. Only least upper bound can't have lower chilren, if it did they would be a lower upper bound.
-                    const leastUpperBoundsChildren = leastUpperBound.higher;
-                    if (leastUpperBound.parent.higher == leastUpperBound) {
-                        leastUpperBound.parent.higher = leastUpperBoundsChildren;
-                        if (leastUpperBoundsChildren) {
-                            leastUpperBoundsChildren.parent = leastUpperBound.parent;
-                        }
-                    } else if (leastUpperBound.parent.lower == leastUpperBound) {
-                        leastUpperBound.parent.lower = leastUpperBoundsChildren;
-                        if (leastUpperBoundsChildren) {
-                            leastUpperBoundsChildren.parent = leastUpperBound.parent;
-                        }
-                    } else {
-                        debug('wat');
-                    }
-
-                    // Reattach least upper bound replacing node
-                    leastUpperBound.parent = node.parent;
-                    leastUpperBound.lower = node.lower;
-                    leastUpperBound.higher = node.higher;
-
-                    // Set up new head if necessary
-                    if (head == node) {
-                        head = leastUpperBound;
-                    }
-
-                    // Patch children and parent to point at right place. Then node is fully detached
-                    if (leastUpperBound.lower) {
-                        leastUpperBound.lower.parent = leastUpperBound;
-                    }
-                    if (leastUpperBound.higher) {
-                        leastUpperBound.higher.parent = leastUpperBound;
-                    }
-                    if (leastUpperBound.parent) {
-                        if (leastUpperBound.parent.lower == node) {
-                            leastUpperBound.parent.lower = leastUpperBound;
-                        } else if (leastUpperBound.parent.higher == node) {
-                            leastUpperBound.parent.higher = leastUpperBound;
-                        } else {
-                            throw debug('onoz');
-                        }
-                    }
-                }
+                removeNode(node);
                 break;
         }
     };
+
+    const removeWithPredicate = (predicate: (item: T) => boolean, node: TreeNode<T>) => {
+        if (predicate(node.data)) {
+            if (node == head) {
+                removeNode(head);
+                if (head) removeWithPredicate(predicate, head);
+            } else {
+                const parent = node.parent;
+                removeNode(node);
+                if (!parent) throw debug('Expected a parent');
+                removeWithPredicate(predicate, parent);
+            }
+        } else {
+            if (node.lower) removeWithPredicate(predicate, node.lower);
+            if (node.higher) removeWithPredicate(predicate, node.higher);
+        }
+    };
+
     return {
         add: (item: T) => {
             if (head == null) {
@@ -245,12 +261,28 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                 }
             }
         },
-        copy: () => deepcopy(head),
+        copy: () => {
+            let copy = orderedSet(cmp);
+            if (head) {
+                forEachNode((x, _) => {
+                    copy.add(x.data);
+                }, head);
+            }
+            return copy;
+        },
         removeWithPredicate: (predicate: (item: T) => boolean): void => {
-            throw debug('not implemented');
+            if (head) {
+                removeWithPredicate(predicate, head);
+            }
         },
         size: () => {
-            throw debug('not im lemented');
+            let size = 0;
+            if (head) {
+                forEachNode((node, rank) => {
+                    size++;
+                }, head);
+            }
+            return size;
         },
         toList: () => {
             const out: T[] = [];
