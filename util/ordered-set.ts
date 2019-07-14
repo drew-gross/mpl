@@ -4,14 +4,16 @@ import ComparisonResult from './comparisonResult';
 
 type SetComparator<T> = (lhs: T, rhs: T) => ComparisonResult;
 
-// TODO: These are duplcited from set.ts. DRY up.
+// TODO: Unify with set.ts maybe?
 type SetForEachPredicate<T> = (item: T) => void;
+type SetExtractPredicate<T> = (item: T) => boolean;
 
 export type OrderedSet<T> = {
     add: (item: T) => void;
 
     remove: (item: T) => void;
-    removeWithPredicate: (predicate: (item: T) => boolean) => void;
+    removeWithPredicate: (predicate: SetExtractPredicate<T>) => void;
+    extractOne: (predicate: SetExtractPredicate<T>) => T | null;
 
     size: () => number;
 
@@ -34,6 +36,7 @@ type TreeNode<T> = {
 type SetForEachPredicateInternal<T> = (item: TreeNode<T>, rank: number) => void;
 
 export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
+    let operating = false;
     let head: TreeNode<T> | null = null;
     const forEachNode = (f: SetForEachPredicateInternal<T>, node: TreeNode<T>) => {
         // See https://www.geeksforgeeks.org/inorder-non-threaded-binary-tree-traversal-without-recursion-or-stack/
@@ -198,7 +201,7 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
         }
     };
 
-    const removeWithPredicate = (predicate: (item: T) => boolean, node: TreeNode<T>) => {
+    const removeWithPredicate = (predicate: SetExtractPredicate<T>, node: TreeNode<T>) => {
         if (predicate(node.data)) {
             if (node == head) {
                 removeNode(head);
@@ -213,6 +216,26 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
             if (node.lower) removeWithPredicate(predicate, node.lower);
             if (node.higher) removeWithPredicate(predicate, node.higher);
         }
+    };
+
+    const extractOne = (predicate: SetExtractPredicate<T>, node: TreeNode<T>) => {
+        if (predicate(node.data)) {
+            removeNode(node);
+            return node.data;
+        }
+        if (node.lower) {
+            const extracted = extractOne(predicate, node.lower);
+            if (extracted) {
+                return extracted;
+            }
+        }
+        if (node.higher) {
+            const extracted = extractOne(predicate, node.higher);
+            if (extracted) {
+                return extracted;
+            }
+        }
+        return null;
     };
 
     return {
@@ -262,7 +285,7 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
             }
         },
         copy: () => {
-            let copy = orderedSet(cmp);
+            const copy = orderedSet(cmp);
             if (head) {
                 forEachNode((x, _) => {
                     copy.add(x.data);
@@ -274,6 +297,12 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
             if (head) {
                 removeWithPredicate(predicate, head);
             }
+        },
+        extractOne: (predicate: SetExtractPredicate<T>): T | null => {
+            if (head) {
+                return extractOne(predicate, head);
+            }
+            return null;
         },
         size: () => {
             let size = 0;
@@ -290,10 +319,16 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
             return out;
         },
         forEach: (f: SetForEachPredicate<T>) => {
+            if (operating) debug('attempted to operate while iterating');
+            operating = true;
             if (head) forEachNode(n => f(n.data), head);
+            operating = false;
         },
         remove: (item: Exclude<T, object | []>) => {
+            if (operating) debug('attempted to operate while iterating');
+            operating = true;
             if (head) remove(item, head);
+            operating = false;
         },
         toDotFile: (): string => {
             let dotText = 'digraph {\n';

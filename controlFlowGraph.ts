@@ -568,35 +568,48 @@ export const assignRegisters = <TargetRegister>(
         liveness = tafLiveness(taf);
     }
 
+    // http://web.cecs.pdx.edu/~mperkows/temp/register-allocation.pdf
     const rig = registerInterferenceGraph(liveness);
     const registersToAssign = rig.nonSpecialRegisters.copy();
     const interferences = rig.interferences.copy();
     const colorableStack: Register[] = [];
     while (registersToAssign.size() > 0) {
         let stackGrew = false;
-        registersToAssign.forEach(register => {
-            if (stackGrew) {
-                return;
-            }
+        // We are looking for one node ...
+        const colorableRegister = registersToAssign.extractOne(register => {
+            // ... that we haven't already colored ...
             if (!colorableStack.every(alreadyColored => !registerIsEqual(register, alreadyColored))) {
-                return;
+                return false;
             }
+
+            // ... that interferces with a number of nodes ...
             let interferenceCount = 0;
             interferences.forEach(interference => {
                 if (interferenceInvolvesRegister(interference, register)) {
                     interferenceCount++;
                 }
             });
-            if (interferenceCount < colors.length) {
-                colorableStack.push(register);
-                stackGrew = true;
-                interferences.removeWithPredicate(interference => interferenceInvolvesRegister(interference, register));
-                registersToAssign.remove(register);
+
+            // ... that is less than the number of available registers ...
+            if (interferenceCount >= colors.length) {
+                return false;
             }
+
+            return true;
         });
-        if (!stackGrew) {
+
+        if (!colorableRegister) {
             throw debug('would spill - not implemented yet');
         }
+
+        // ... and put it on the top of the colorable stack ...
+        colorableStack.push(colorableRegister);
+
+        // ... and remove it from the "to assign" list.
+        interferences.removeWithPredicate(interference =>
+            interferenceInvolvesRegister(interference, colorableRegister)
+        );
+        registersToAssign.remove(colorableRegister);
     }
 
     const result: RegisterAssignment<TargetRegister> = { registerMap: {}, spilled: [] };

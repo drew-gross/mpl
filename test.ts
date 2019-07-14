@@ -2174,6 +2174,28 @@ test('Ordered Set Size', t => {
     t.deepEqual(s.size(), 2);
 });
 
+test.only('Ordered Set Extract One', t => {
+    const s = orderedSet<number>((x, y) => {
+        if (x < y) return -1;
+        if (x > y) return 1;
+        return 0;
+    });
+
+    s.add(1);
+    s.add(2);
+    s.add(3);
+    s.add(4);
+
+    const extracted3 = s.extractOne(x => x == 3);
+    t.deepEqual(extracted3, 3);
+    t.deepEqual(s.toList(), [1, 2, 4]);
+    const extracted1 = s.extractOne(x => x == 1);
+    t.deepEqual(extracted1, 1);
+    t.deepEqual(s.toList(), [2, 4]);
+    const extractedNothing = s.extractOne(x => x == 5);
+    t.deepEqual(extractedNothing, null);
+});
+
 test('Ordered Set Dotfile', async t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
