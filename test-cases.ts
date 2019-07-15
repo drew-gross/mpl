@@ -23,7 +23,6 @@ const testCases: TestCase[] = [
         name: 'Bare Return',
         source: 'return 7',
         exitCode: 7,
-        only: true,
     },
     {
         name: 'Single Product',
@@ -203,6 +202,23 @@ return isFive(5) ? 1 : 0`,
             return ip1.first + ip1.second + ip2.second;
         `,
         exitCode: 7,
+    },
+    {
+        name: 'String Length',
+        source: `
+            myStr: String = "test";
+            return length(myStr);
+        `,
+        exitCode: 4,
+    },
+    {
+        name: 'Empty String Length',
+        source: `
+            myStr: String = "";
+            return length(myStr);
+        `,
+        exitCode: 0,
+        only: true,
     },
 ];
 

@@ -824,16 +824,6 @@ return quadrupleWithLocal(5);`,
     exitCode: 20,
 });
 
-test('string length', mplTest, {
-    source: `myStr: String = "test"; return length(myStr);`,
-    exitCode: 4,
-});
-
-test('empty string length', mplTest, {
-    source: `myStr: String = ""; return length(myStr);`,
-    exitCode: 0,
-});
-
 test('string length with type inferred', mplTest, {
     source: `myStr := "test2"; return length(myStr);`,
     exitCode: 5,
@@ -2174,7 +2164,7 @@ test('Ordered Set Size', t => {
     t.deepEqual(s.size(), 2);
 });
 
-test.only('Ordered Set Extract One', t => {
+test('Ordered Set Extract One', t => {
     const s = orderedSet<number>((x, y) => {
         if (x < y) return -1;
         if (x > y) return 1;
