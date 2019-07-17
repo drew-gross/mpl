@@ -576,7 +576,7 @@ export const assignRegisters = <TargetRegister>(
     while (registersToAssign.size() > 0) {
         let stackGrew = false;
         // We are looking for one node ...
-        const colorableRegister = registersToAssign.extractOne(register => {
+        let colorableRegister = registersToAssign.extractOne(register => {
             // ... that we haven't already colored ...
             if (!colorableStack.every(alreadyColored => !registerIsEqual(register, alreadyColored))) {
                 return false;
@@ -598,17 +598,25 @@ export const assignRegisters = <TargetRegister>(
             return true;
         });
 
+        // ... or we choose a node to spill if we can't find one we can color ...
         if (!colorableRegister) {
-            throw debug('would spill - not implemented yet');
+            colorableRegister = registersToAssign.extractOne(_ => true);
+        }
+
+        if (!colorableRegister) {
+            throw debug('Should have found a register of some sort.');
         }
 
         // ... and put it on the top of the colorable stack ...
         colorableStack.push(colorableRegister);
 
         // ... and remove it from the "to assign" list.
-        interferences.removeWithPredicate(interference =>
-            interferenceInvolvesRegister(interference, colorableRegister)
-        );
+        interferences.removeWithPredicate(interference => {
+            if (!colorableRegister) {
+                throw debug('Should have found a register of some sort.');
+            }
+            return interferenceInvolvesRegister(interference, colorableRegister);
+        });
         registersToAssign.remove(colorableRegister);
     }
 
