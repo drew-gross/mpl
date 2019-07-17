@@ -130,7 +130,7 @@ const readInt = async () => {
         sourceFile,
         binaryFile,
         threeAddressCodeFile: undefined,
-        debugInstructions: `./node_modules/.bin/inspect ${binaryFile.path}`,
+        debugInstructions: `./node_modules/.bin/node --inspect --inspect-brk ${binaryFile.path}`,
     };
 };
 

@@ -2,13 +2,13 @@ import { TestCase } from './test-case.js';
 import join from './util/join.js';
 import range from './util/list/range.js';
 
-const spillMultiply = () => {
+const manyGlobalsMultiply = () => {
     const numbers = range(1, 56);
     const createVars = join(numbers.map(i => `var_${i} := readInt();`), '\n');
     const multiplyVars = join(numbers.map(i => `var_${i}`), ' * ');
     const stdin = join(numbers.map(i => `1\n`), '');
     return {
-        name: 'Spill Multiply',
+        name: 'Many Globals Multiply',
         source: `
             ${createVars}
             return ${multiplyVars};
@@ -180,7 +180,7 @@ return isFive(5) ? 1 : 0`,
         `,
         parseErrors: [{ expected: 'statementSeparator', found: 'return', sourceLocation: { line: 4, column: 13 } }],
     },
-    spillMultiply(),
+    manyGlobalsMultiply(),
     {
         name: 'One Item List',
         source: `
