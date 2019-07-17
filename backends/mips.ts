@@ -175,6 +175,9 @@ const mipsTarget: TargetInfo = {
     readIntImpl: readIntDirect(bytesInWord),
 };
 
+// TODO: put this in TargetInfo
+const registersClobberedBySyscall: MipsRegister[] = [];
+
 const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram) => {
     if (!main) throw debug('need a main');
     return `
@@ -210,6 +213,7 @@ ${join(
                 registers: mipsRegisterTypes,
                 syscallNumbers,
                 instructionTranslator: threeAddressCodeToMips,
+                registersClobberedBySyscall,
             })
     ),
     '\n\n\n'
@@ -223,6 +227,7 @@ ${rtlToTarget({
     registers: mipsRegisterTypes,
     syscallNumbers,
     instructionTranslator: threeAddressCodeToMips,
+    registersClobberedBySyscall,
 })}`;
 };
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>

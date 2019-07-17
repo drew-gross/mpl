@@ -191,6 +191,8 @@ const x64Target: TargetInfo = {
     printImpl: printWithWriteRuntimeFunction(bytesInWord),
 };
 
+const registersClobberedBySyscall: X64Register[] = ['r11'];
+
 const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram) => {
     if (!main) throw debug('need an entry point');
     return `
@@ -212,6 +214,7 @@ ${join(
                 registers: x64RegisterTypes,
                 syscallNumbers,
                 instructionTranslator: threeAddressCodeToX64,
+                registersClobberedBySyscall,
             })
     ),
     '\n\n\n'
@@ -225,6 +228,7 @@ ${rtlToTarget({
     registers: x64RegisterTypes,
     syscallNumbers,
     instructionTranslator: threeAddressCodeToX64,
+    registersClobberedBySyscall,
 })}
 section .data
 first_block: dq 0

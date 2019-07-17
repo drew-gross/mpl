@@ -916,7 +916,8 @@ export const threeAddressCodeToTarget = <TargetRegister>(
     stackOffset: number,
     syscallNumbers,
     registerTypes: RegisterDescription<TargetRegister>,
-    getRegister: (r: Register) => TargetRegister
+    getRegister: (r: Register) => TargetRegister,
+    registersClobberedBySyscall: TargetRegister[] // TDDO: accept a backend info?
 ): TargetThreeAddressStatement<TargetRegister>[] => {
     switch (tas.kind) {
         case 'empty':
@@ -933,11 +934,16 @@ export const threeAddressCodeToTarget = <TargetRegister>(
             // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
             if (tas.arguments.length > registerTypes.syscallArgument.length)
                 throw debug(`this backend only supports ${registerTypes.syscallArgument.length} syscall args`);
+
+            // We need to save some registers that the kernel is allowed to clobber during syscalls, ...
             const registersToSave: TargetRegister[] = [];
 
+            // ... spcifically the place where the syscall stores the result ...
             if ('destination' in tas && getRegister(tas.destination) != registerTypes.syscallSelectAndResult) {
                 registersToSave.push(registerTypes.syscallSelectAndResult);
             }
+
+            // ... the registers used for arguments to the syscall ...
             tas.arguments.forEach((_, index) => {
                 const argRegister = registerTypes.syscallArgument[index];
                 if ('destination' in tas && getRegister(tas.destination) == argRegister) {
@@ -945,6 +951,12 @@ export const threeAddressCodeToTarget = <TargetRegister>(
                 }
                 registersToSave.push(argRegister);
             });
+
+            // ... any any explicitly clobberable registers.
+            registersClobberedBySyscall.forEach(r => {
+                registersToSave.push(r);
+            });
+
             // TODO: Allow a "replacements" feature, to convert complex/unsupported RTL instructions into supported ones
             const syscallNumber = syscallNumbers[tas.name];
             if (syscallNumber === undefined) debug(`missing syscall number for (${tas.name})`);

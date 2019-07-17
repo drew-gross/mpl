@@ -116,6 +116,7 @@ type RtlToTargetInput<TargetRegister> = {
     registers: RegisterDescription<TargetRegister>;
     syscallNumbers: any;
     instructionTranslator: (t: TargetThreeAddressStatement<TargetRegister>) => string[];
+    registersClobberedBySyscall: TargetRegister[];
 };
 export const rtlToTarget = <TargetRegister>({
     threeAddressFunction,
@@ -124,6 +125,7 @@ export const rtlToTarget = <TargetRegister>({
     instructionTranslator,
     makePrologue,
     makeEpilogue,
+    registersClobberedBySyscall,
 }: RtlToTargetInput<TargetRegister>): string => {
     const { assignment, newFunction } = assignRegisters(threeAddressFunction, registers.generalPurpose);
 
@@ -140,8 +142,13 @@ export const rtlToTarget = <TargetRegister>({
 
     const statements: TargetThreeAddressStatement<TargetRegister>[] = flatten(
         newFunction.instructions.map((instruction, index) =>
-            threeAddressCodeToTarget(instruction, stackOffsetPerInstruction[index], syscallNumbers, registers, r =>
-                getRegisterFromAssignment(assignment, registers, r)
+            threeAddressCodeToTarget(
+                instruction,
+                stackOffsetPerInstruction[index],
+                syscallNumbers,
+                registers,
+                r => getRegisterFromAssignment(assignment, registers, r),
+                registersClobberedBySyscall
             )
         )
     );
