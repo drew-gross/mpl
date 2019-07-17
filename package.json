@@ -49,12 +49,12 @@
         "node": "12.6.0",
         "omit-deep": "0.3.0",
         "parallelshell": "3.0.2",
-        "prettier": "1.17.1",
+        "prettier": "1.18.2",
         "rimraf": "2.6.3",
         "tmp-promise": "2.0.2",
-        "tslint": "5.16.0",
+        "tslint": "5.18.0",
         "tslint-config-prettier": "1.18.0",
-        "typescript": "3.5.1"
+        "typescript": "3.5.3"
     },
     "prettier": {
         "printWidth": 120,
