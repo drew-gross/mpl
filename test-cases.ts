@@ -218,7 +218,6 @@ return isFive(5) ? 1 : 0`,
             return length(myStr);
         `,
         exitCode: 0,
-        only: true,
     },
 ];
 
