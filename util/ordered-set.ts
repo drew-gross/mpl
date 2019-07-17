@@ -402,8 +402,8 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                     }
 
                     // Add an invinisble egde from lower to higher to convince graphvis to put lower on the left
-                    dotText += `${lowerNode} -> ${higherNode} [style="invis"]`;
-                    dotText += `{rank=same; ${lowerNode}; ${higherNode};}`;
+                    dotText += `${lowerNode} -> ${higherNode} [style="invis"]\n`;
+                    dotText += `{rank=same; ${lowerNode}; ${higherNode};}\n`;
                 }, head);
 
                 // Add rank enforcement
