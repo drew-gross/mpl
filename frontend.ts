@@ -20,14 +20,8 @@ import {
     builtinFunctions,
     TypeDeclaration,
 } from './types.js';
-import {
-    VariableDeclaration,
-    Function,
-    UninferredFunction,
-    FrontendOutput,
-    TypeError,
-    StringLiteralData,
-} from './api.js';
+import { VariableDeclaration, Function, UninferredFunction, FrontendOutput, StringLiteralData } from './api.js';
+import { TypeError } from './TypeError.js';
 import SourceLocation from './parser-lib/sourceLocation.js';
 import * as Ast from './ast.js';
 
@@ -574,12 +568,12 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): TO
                 if (!innerType) {
                     innerType = result.type;
                 } else if (!typesAreEqual(innerType, result.type, availableTypes)) {
-                    return [{ kind: 'nonhomogenousList' }];
+                    return [{ kind: 'nonhomogenousList', sourceLocation: ast.sourceLocation }];
                 }
                 extractedFunctions.push(...result.extractedFunctions);
             }
             if (!innerType) {
-                return [{ kind: 'nonhomogenousList' }]; // TODO infer from target
+                return [{ kind: 'nonhomogenousList', sourceLocation: ast.sourceLocation }]; // TODO infer from target
             }
             return { type: { kind: 'List', of: innerType }, extractedFunctions };
         case 'indexAccess':

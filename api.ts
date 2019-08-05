@@ -1,7 +1,6 @@
 import { UninferredStatement, Statement } from './ast.js';
 import { ThreeAddressFunction, TargetInfo } from './threeAddressCode/generator.js';
 import { Type, TypeDeclaration } from './types.js';
-import SourceLocation from './parser-lib/sourceLocation.js';
 import { FileResult } from 'fs-extra';
 import { ThreeAddressProgram } from './threeAddressCode/generator.js';
 
@@ -41,54 +40,6 @@ export type ExecutionResult =
     | {
           error: string;
       };
-
-export type TypeError =
-    | {
-          kind: 'unknownIdentifier';
-          name: string;
-          sourceLocation: SourceLocation;
-      }
-    | {
-          kind: 'wrongTypeForOperator';
-          found: Type;
-          expected: string;
-          operator: string;
-          side: 'left' | 'right';
-          sourceLocation: SourceLocation;
-      }
-    | { kind: 'assignUndeclaredIdentifer'; destinationName: string; sourceLocation: SourceLocation }
-    | { kind: 'wrongTypeReturn'; expressionType: Type; sourceLocation: SourceLocation }
-    | {
-          kind: 'wrongArgumentType';
-          targetFunction: string;
-          passedType: Type;
-          expectedType: Type;
-          sourceLocation: SourceLocation;
-      }
-    | { kind: 'calledNonFunction'; identifierName: string; actualType: Type; sourceLocation: SourceLocation }
-    | {
-          kind: 'wrongNumberOfArguments';
-          targetFunction: string;
-          passedArgumentCount: number;
-          expectedArgumentCount: number;
-          sourceLocation: SourceLocation;
-      }
-    | { kind: 'unknownTypeForIdentifier'; identifierName: string; sourceLocation: SourceLocation }
-    | { kind: 'ternaryBranchMismatch'; trueBranchType: Type; falseBranchType: Type; sourceLocation: SourceLocation }
-    | {
-          kind: 'typeMismatchForOperator';
-          leftType: Type;
-          rightType: Type;
-          operator: string;
-          sourceLocation: SourceLocation;
-      }
-    | { kind: 'assignWrongType'; lhsName: string; lhsType: Type; rhsType: Type; sourceLocation: SourceLocation }
-    | { kind: 'invalidMemberAccess'; found: Type; sourceLocation: SourceLocation }
-    | { kind: 'objectDoesNotHaveMember'; lhsType: Type; member: string; sourceLocation: SourceLocation }
-    | { kind: 'couldNotFindType'; name: string; sourceLocation: SourceLocation }
-    | { kind: 'nonhomogenousList' } // TODO infer nonhomogenousList as sum type so this isn't an error
-    | { kind: 'nonIntegerIndex'; index: Type; sourceLocation: SourceLocation }
-    | { kind: 'indexAccessNonList'; accessed: Type; sourceLocation: SourceLocation };
 
 export type CompilationResult =
     | {

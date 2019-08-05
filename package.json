@@ -21,7 +21,7 @@
         "build+install": "tsc && npm link",
         "test-debug": "tsc && node --inspect --inspect-brk node_modules/ava/profile.js built/test.js",
         "debug-test-case": "tsc && node ./built/debug-test-case.js",
-        "debug-test-case-gen": "tsc && inspect ./built/debug-test-case.js",
+        "debug-test-case-gen": "tsc && node --inspect --inspect-brk ./built/debug-test-case.js",
         "profile-test-case-gen": "tsc && node_modules/.bin/0x ./built/debug-test-case.js",
         "cloc": "cloc --exclude-dir=node_modules,built --not-match-f='npm-shrinkwrap.json|package.json|tsconfig.json|prettier-config.json|test.ts|test-utils.ts' .",
         "cloc-all": "cloc --exclude-dir=node_modules,built . --not-match-f='npm-shrinkwrap.json'",

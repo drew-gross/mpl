@@ -1,7 +1,8 @@
 import * as clone from 'clone';
 import * as omitDeep from 'omit-deep';
 import { exec } from 'child-process-promise';
-import { Backend, TypeError } from './api.js';
+import { Backend } from './api.js';
+import { TypeError, toString as typeErrorToString } from './TypeError.js';
 import { Ast } from './ast.js';
 import { compile } from './frontend.js';
 import { file as tmpFile } from 'tmp-promise';
@@ -32,8 +33,6 @@ type TestOptions = {
     name?: string;
     stdin?: string;
 };
-
-const typeErrorToString = (e: TypeError): string => JSON.stringify(e, null, 2);
 
 export const mplTest = async (
     t,

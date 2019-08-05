@@ -220,6 +220,16 @@ return isFive(5) ? 1 : 0`,
         `,
         exitCode: 0,
     },
+    {
+        name: 'Seven Argument Function',
+        source: `
+            foo := (a: Integer, b: Integer, c: Integer, d: Integer, e: Integer, f: Integer, g: Integer) => {
+                return a + b + c + d + e + f + g;
+            };
+            return foo(1, 2, 3, 4, 5, 6, 7);
+        `,
+        exitCode: 28,
+    },
 ];
 
 export default testCases;

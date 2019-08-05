@@ -9,6 +9,7 @@ import { prompt } from 'inquirer';
 import * as dot from 'graphlib-dot';
 import { toDotFile } from './parser-lib/parse.js';
 import parseErrorToString from './parser-lib/parseErrorToString.js';
+import { toString as typeErrorToString } from './TypeError.js';
 import { programToString } from './threeAddressCode/programToString.js';
 import chalk from 'chalk';
 import * as commander from 'commander';
@@ -62,7 +63,11 @@ import annotateSource from './annotateSource.js';
     }
 
     if ('typeErrors' in programInfo) {
-        console.log('Failed to type check');
+        let errorString: string = '';
+        programInfo.typeErrors.forEach(e => {
+            errorString += annotateSource(testCase.source, (e as any).sourceLocation, typeErrorToString(e as any));
+        });
+        console.log(errorString);
         return;
     }
 
