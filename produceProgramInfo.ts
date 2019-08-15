@@ -24,7 +24,7 @@ type BackendResult = {
 };
 
 type ProgramInfo = {
-    tokens: Token<MplToken>[];
+    tokens: Token<MplToken, string | number | null>[];
     ast: MplAst;
     threeAddressCode: string;
     threeAddressRoundTrip: ThreeAddressProgram | LexError | ParseError[];

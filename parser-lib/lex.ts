@@ -1,17 +1,17 @@
 import debug from '../util/debug.js';
 import SourceLocation from './sourceLocation.js';
 
-export type TokenSpec<TokenType> = {
+export type TokenSpec<TokenType, ActionResult> = {
     token: string;
     type: TokenType;
-    action?: (x: string) => string | number | null;
+    action?: (x: string) => ActionResult;
     toString: (x: any) => string;
 };
 
-export type Token<TokenType> = {
+export type Token<TokenType, ActionResult> = {
     type: TokenType;
     string: string;
-    value?: string | number | null;
+    value?: ActionResult;
     sourceLocation: SourceLocation;
 };
 
@@ -20,7 +20,10 @@ export type LexError = {
     error: string;
 };
 
-export const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string): Token<TokenType>[] | LexError => {
+export const lex = <TokenType, ActionResult>(
+    tokenSpecs: TokenSpec<TokenType, ActionResult>[],
+    input: string
+): Token<TokenType, ActionResult>[] | LexError => {
     // Source location tracking
     let currentSourceLine = 1;
     let currentSourceColumn = 1;
@@ -44,7 +47,7 @@ export const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string
     input = input.slice(initialWhitespace.length);
 
     // consume input reading tokens
-    const tokens: Token<TokenType>[] = [];
+    const tokens: Token<TokenType, ActionResult>[] = [];
     while (input.length > 0) {
         // This results in runnng match twice. Once to find if there is a match, and once to extract it. TODO: optimize!
         const matchingSpec = tokenSpecs.find(spec => !!input.match(RegExp(`^(${spec.token})[ \\t\\n]*`)));
@@ -59,7 +62,7 @@ export const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string
             const value = action(match[1]);
             tokens.push({
                 type: matchingSpec.type,
-                value,
+                value: value != null ? value : undefined,
                 string: matchingSpec.toString(value),
                 sourceLocation: { line: currentSourceLine, column: currentSourceColumn },
             });

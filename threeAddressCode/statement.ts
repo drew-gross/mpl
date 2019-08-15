@@ -127,7 +127,7 @@ const toStringWithoutComment = (tas: Statement): string => {
 
 export const toString = (tas: Statement): string => `${toStringWithoutComment(tas)}; ${tas.why}`;
 
-export const reads = (tas: Statement): Register[] => {
+export const reads = (tas: Statement): (Register | 'AllArgumentRegisters')[] => {
     switch (tas.kind) {
         case 'empty':
             return [];
@@ -164,13 +164,14 @@ export const reads = (tas: Statement): Register[] => {
         case 'loadSymbolAddress':
             return [];
         case 'callByRegister':
-            return [tas.function, 'arg1', 'arg2', 'arg3'];
+            return [tas.function, 'AllArgumentRegisters'];
         case 'label':
         case 'callByName':
         case 'functionLabel':
         case 'returnToCaller':
         case 'goto':
-            return ['arg1', 'arg2', 'arg3'];
+            // TODO: Why does goto read all arguments?????
+            return ['AllArgumentRegisters'];
         case 'gotoIfEqual':
         case 'gotoIfNotEqual':
         case 'gotoIfGreater':

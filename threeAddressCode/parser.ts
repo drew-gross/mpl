@@ -2,7 +2,7 @@ import debug from '../util/debug.js';
 import flatten from '../util/list/flatten.js';
 import join from '../util/join.js';
 import { TokenSpec, lex, LexError } from '../parser-lib/lex.js';
-import { specialRegisterNames, Register } from '../register.js';
+import { Register, Argument } from '../register.js';
 import { ThreeAddressProgram, ThreeAddressFunction } from './generator.js';
 import { Statement } from './statement.js';
 import {
@@ -32,6 +32,7 @@ type TacToken =
     | 'alloca'
     | 'register'
     | 'specialRegister'
+    | 'argumentRegister'
     | 'star'
     | 'plusplus'
     | 'lessThan'
@@ -47,7 +48,9 @@ type TacToken =
     | 'unspillInstruction'
     | 'statementSeparator';
 
-const tokenSpecs: TokenSpec<TacToken>[] = [
+type TacActionResult = Argument | string | number | null;
+
+const tokenSpecs: TokenSpec<TacToken, TacActionResult>[] = [
     {
         token: '\\(global\\)',
         type: 'global',
@@ -93,10 +96,16 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         action: x => x,
     },
     {
-        token: `\\$(${join(specialRegisterNames, '|')})`,
+        token: '\\$result|arg\\d*',
         type: 'specialRegister',
         toString: x => x,
         action: x => x,
+    },
+    {
+        token: '\\$arg\\d+',
+        type: 'argumentRegister',
+        toString: x => x,
+        action: s => ({ argIndex: parseInt(s.slice(4), 10) }),
     },
     {
         token: 'syscall',
@@ -240,6 +249,7 @@ const rightBracket = tacTerminal('rightBracket');
 const number = tacTerminal('number');
 const normalRegister = tacTerminal('register');
 const specialRegister = tacTerminal('specialRegister');
+const argumentRegister = tacTerminal('argumentRegister');
 const colon = tacTerminal('colon');
 const global_ = tacTerminal('global');
 const function_ = tacTerminal('function');
@@ -271,7 +281,7 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     functions: OneOf([Sequence('functions', ['function', 'functions']), 'function']),
     function: Sequence('function', [function_, tacOptional(spillSpec), identifier, colon, 'instructions']),
 
-    register: OneOf([normalRegister, specialRegister]),
+    register: OneOf([normalRegister, specialRegister, argumentRegister]),
 
     // TODO: make it possible to have function with no instructions
     instructions: OneOf([Sequence('instructions', ['instruction', 'instructions']), 'instruction']),
@@ -364,12 +374,14 @@ const mergeParseResults = (
     };
 };
 
-const parseSyscallArgs = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | number)[] => {
+const parseSyscallArgs = (ast: AstWithIndex<TacAstNode, TacToken, TacActionResult>): (Register | number)[] => {
     const a = ast as any;
     switch (ast.type) {
         case 'register':
         case 'specialRegister':
             return [parseRegister(a.value)];
+        case 'argumentRegister':
+            return [a.value];
         case 'number':
             return [a.value];
         case 'syscallArgs':
@@ -383,29 +395,37 @@ const stripComment = (str: string): string => {
     return str.substring(2, str.length - 1);
 };
 
-const isRegister = (data: string): boolean => {
-    if (data.startsWith('$') && specialRegisterNames.includes(data.slice(1))) {
+const isRegister = (data: string | Register): boolean => {
+    if (typeof data != 'string' && 'argIndex' in data) {
         return true;
     }
-    if (data.startsWith('r:')) {
+    if (typeof data == 'string' && data.startsWith('arg')) {
+        return true;
+    }
+    if (typeof data == 'string' && data.startsWith('r:')) {
         return true;
     }
     return false;
 };
 
-const parseRegister = (data: string): Register => {
+const parseRegister = (data: string | Register): Register => {
+    if (typeof data != 'string' && 'argIndex' in data) {
+        return data;
+    }
+    if (typeof data != 'string') throw debug('no data');
     if (data.startsWith('$')) {
         const sliced = data.substring(1);
-        if (!specialRegisterNames.includes(sliced)) debug('invalid special register');
         return sliced as Register;
     } else if (data.startsWith('r:')) {
         const sliced = data.substring(2);
         return { name: sliced };
+    } else if (data.startsWith('arg')) {
+        return { argIndex: parseInt(data.slice(3), 10) };
     }
     throw debug('invalid register name');
 };
 
-const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Statement => {
+const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken, TacActionResult>): Statement => {
     const a = ast as any;
     switch (ast.type) {
         case 'assign': {
@@ -658,7 +678,7 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
     }
 };
 
-const instructionsFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Statement[] => {
+const instructionsFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken, TacActionResult>): Statement[] => {
     if (ast.type == 'instructions') {
         const a = ast as any;
         return [instructionFromParseResult(a.children[0]), ...instructionsFromParseResult(a.children[1])];
@@ -668,7 +688,9 @@ const instructionsFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): S
     }
 };
 
-const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressFunction | ParseError[] => {
+const functionFromParseResult = (
+    ast: AstWithIndex<TacAstNode, TacToken, TacActionResult>
+): ThreeAddressFunction | ParseError[] => {
     if (ast.type != 'function') {
         return ['Need a function'];
     }
@@ -707,10 +729,12 @@ const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Three
         instructions = [instructionFromParseResult(ast.children[childIndex])];
         childIndex++;
     }
-    return { name, instructions, spills };
+    return { name, instructions, spills, parameters: [] };
 };
 
-const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {
+const tacFromParseResult = (
+    ast: AstWithIndex<TacAstNode, TacToken, TacActionResult>
+): ThreeAddressProgram | ParseError[] => {
     if (!ast) debug('no type');
     switch (ast.type) {
         case 'program':

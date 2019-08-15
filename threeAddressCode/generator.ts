@@ -30,6 +30,7 @@ import { parseInstructionsOrDie as ins } from './parser.js';
 
 export type ThreeAddressFunction = {
     instructions: Statement[];
+    parameters: VariableDeclaration[];
     spills: number;
     name: string;
 };
@@ -238,13 +239,13 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 let register: Register;
                 switch (index) {
                     case 0:
-                        register = 'arg1';
+                        register = { argIndex: 0 };
                         break;
                     case 1:
-                        register = 'arg2';
+                        register = { argIndex: 1 };
                         break;
                     case 2:
-                        register = 'arg3';
+                        register = { argIndex: 2 };
                         break;
                     default:
                         throw debug('todo');
@@ -277,11 +278,11 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 // Put left in s0 and right in s1 for passing to string equality function
                 const storeLeftInstructions = recurse({
                     ast: ast.lhs,
-                    destination: 'arg1',
+                    destination: { argIndex: 0 },
                 });
                 const storeRightInstructions = recurse({
                     ast: ast.rhs,
-                    destination: 'arg2',
+                    destination: { argIndex: 1 },
                 });
                 return compileExpression<Statement>([storeLeftInstructions, storeRightInstructions], ([e1, e2]) => [
                     { kind: 'empty', why: 'Store left side in s0' },
@@ -478,7 +479,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 {
                                     kind: 'move',
                                     from: oldData,
-                                    to: 'arg1',
+                                    to: { argIndex: 0 },
                                     why: 'Move global to argument 1 of free',
                                 },
                                 {
@@ -493,14 +494,14 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             {
                                 kind: 'move',
                                 from: reassignmentRhs,
-                                to: 'arg1',
+                                to: { argIndex: 0 },
                                 why: 'Move from temporary to argument 1',
                             },
                             { kind: 'callByName', function: 'length', why: 'Get length of new string' },
                             {
                                 kind: 'move',
                                 from: 'result',
-                                to: 'arg1',
+                                to: { argIndex: 0 },
                                 why: 'Move length of new string to argument of malloc',
                             },
                             { kind: 'callByName', function: 'my_malloc', why: 'Allocate space for new string' },
@@ -513,13 +514,13 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             {
                                 kind: 'move',
                                 from: 'result',
-                                to: 'arg2',
+                                to: { argIndex: 1 },
                                 why: 'Move output pointer to argument 2 of string_copy',
                             },
                             {
                                 kind: 'move',
                                 from: reassignmentRhs,
-                                to: 'arg1',
+                                to: { argIndex: 0 },
                                 why: 'move destination to argument 1 of string_copy',
                             },
                             { kind: 'callByName', function: 'string_copy', why: 'Copy new string to destination' },
@@ -557,7 +558,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     {
                         kind: 'move',
                         from: mallocResultTemporary,
-                        to: 'arg1',
+                        to: { argIndex: 0 },
                         why: 'Move pointer to new string to argument1',
                     },
                     // TODO: maybe not valid? This destination may have been reused for something else by the time we get to cleanup
@@ -578,7 +579,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     {
                         kind: 'move',
                         from: leftSideDestination,
-                        to: 'arg1',
+                        to: { argIndex: 0 },
                         why: 'Move lhs to argument1',
                     },
                     { kind: 'callByName', function: 'length', why: 'Compute the length of lhs' },
@@ -592,7 +593,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     {
                         kind: 'move',
                         from: rightSideDestination,
-                        to: 'arg1',
+                        to: { argIndex: 0 },
                         why: 'Move rhs to argument1',
                     },
                     { kind: 'callByName', function: 'length', why: 'Compute the length of lhs' },
@@ -606,7 +607,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     {
                         kind: 'move',
                         from: newStringLengthTemporary,
-                        to: 'arg1',
+                        to: { argIndex: 0 },
                         why: 'Move new string length to argument1',
                     },
                     { kind: 'callByName', function: 'my_malloc', why: 'Malloc that much space' },
@@ -619,19 +620,19 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     {
                         kind: 'move',
                         from: leftSideDestination,
-                        to: 'arg1',
+                        to: { argIndex: 0 },
                         why: 'Move lhs to argument1',
                     },
                     {
                         kind: 'move',
                         from: rightSideDestination,
-                        to: 'arg2',
+                        to: { argIndex: 1 },
                         why: 'Move rhs to argument2',
                     },
                     {
                         kind: 'move',
                         from: mallocResultTemporary,
-                        to: 'arg3',
+                        to: { argIndex: 2 },
                         why: 'Move destintion to argument3',
                     },
                     {
@@ -763,12 +764,12 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     {
                         kind: 'loadImmediate' as 'loadImmediate',
                         value: ast.items.length * typeSize(targetInfo, ast.type, types),
-                        destination: 'arg1',
+                        destination: { argIndex: 0 },
                         why: 'num bytes for list',
                     },
                     {
                         kind: 'addImmediate',
-                        register: 'arg1',
+                        register: { argIndex: 0 },
                         amount: targetInfo.bytesInWord,
                         why: 'add room for length',
                     },
@@ -780,7 +781,12 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 ],
                 execute: [],
                 cleanup: [
-                    { kind: 'move', from: dataPointer, to: 'arg1', why: 'prepare to free temp list' },
+                    {
+                        kind: 'move',
+                        from: dataPointer,
+                        to: { argIndex: 0 },
+                        why: 'prepare to free temp list',
+                    },
                     { kind: 'callByName', function: 'my_free', why: 'free temporary list' },
                 ],
             };
@@ -862,12 +868,10 @@ export const constructFunction = (
     types: TypeDeclaration[],
     targetInfo: TargetInfo
 ): ThreeAddressFunction => {
-    const argumentRegisters: Register[] = ['arg1', 'arg2', 'arg3'];
     if (f.parameters.length > 3) throw debug('todo'); // Don't want to deal with this yet.
-    if (argumentRegisters.length < 3) throw debug('todo');
     const variablesInScope: { [key: string]: Register } = {};
     f.parameters.forEach((parameter, index) => {
-        variablesInScope[parameter.name] = argumentRegisters[index];
+        variablesInScope[parameter.name] = { argIndex: index };
     });
 
     f.statements.forEach(statement => {
@@ -895,7 +899,7 @@ export const constructFunction = (
                 .map(v => {
                     const variable: Register = variablesInScope[v.name];
                     return [
-                        { kind: 'move', from: variable, to: 'arg1' },
+                        { kind: 'move', from: variable, to: { argIndex: 0 } },
                         { kind: 'callByName', function: 'my_free', why: 'Free Stack String at end of scope' },
                     ];
                 });
@@ -908,7 +912,7 @@ export const constructFunction = (
             ];
         })
     );
-    return { name: f.name, instructions: functionCode, spills: 0 };
+    return { name: f.name, instructions: functionCode, spills: 0, parameters: f.parameters };
 };
 
 export const threeAddressCodeToTarget = <TargetRegister>(
@@ -1142,7 +1146,7 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
                 {
                     kind: 'loadGlobal',
                     from: globalNameMap[declaration.name].newName,
-                    to: 'arg1',
+                    to: { argIndex: 1 },
                     why: 'Load global string so we can free it',
                 } as Statement,
                 {

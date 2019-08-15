@@ -56,16 +56,16 @@ test('lexer', t => {
     ]);
     t.deepEqual(lex(tokenSpecs, '&&&&&'), { kind: 'lexError', error: 'Invalid token: &&&&&' });
     t.deepEqual(lex(tokenSpecs, '(1)'), [
-        { type: 'leftBracket', value: null, string: '(', sourceLocation: { line: 1, column: 1 } },
+        { type: 'leftBracket', value: undefined, string: '(', sourceLocation: { line: 1, column: 1 } },
         { type: 'number', value: 1, string: '1', sourceLocation: { line: 1, column: 2 } },
-        { type: 'rightBracket', value: null, string: ')', sourceLocation: { line: 1, column: 3 } },
+        { type: 'rightBracket', value: undefined, string: ')', sourceLocation: { line: 1, column: 3 } },
     ]);
     t.deepEqual(lex(tokenSpecs, 'return 100'), [
-        { type: 'return', value: null, string: 'return', sourceLocation: { line: 1, column: 1 } },
+        { type: 'return', value: undefined, string: 'return', sourceLocation: { line: 1, column: 1 } },
         { type: 'number', value: 100, string: '100', sourceLocation: { line: 1, column: 8 } },
     ]);
     t.deepEqual(lex(tokenSpecs, 'return "test string"'), [
-        { type: 'return', value: null, string: 'return', sourceLocation: { line: 1, column: 1 } },
+        { type: 'return', value: undefined, string: 'return', sourceLocation: { line: 1, column: 1 } },
         { type: 'stringLiteral', value: 'test string', string: 'test string', sourceLocation: { line: 1, column: 8 } },
     ]);
 });
@@ -77,7 +77,7 @@ test('lex with initial whitespace', t => {
 });
 
 test('ast for single number', t => {
-    const tokens = lex(tokenSpecs, 'return 7;') as Token<MplToken>[];
+    const tokens = lex(tokenSpecs, 'return 7;') as Token<MplToken, string | number | null>[];
     const parseResult = stripResultIndexes(parse(grammar, 'program', tokens));
     if (parseResultIsError(parseResult)) {
         t.fail('Parse Failed');
@@ -92,7 +92,7 @@ test('ast for single number', t => {
                 children: [
                     {
                         type: 'return',
-                        value: null,
+                        value: undefined,
                         sourceLocation: { line: 1, column: 1 },
                     },
                     {
@@ -102,7 +102,7 @@ test('ast for single number', t => {
                     },
                     {
                         type: 'statementSeparator',
-                        value: null,
+                        value: undefined,
                         sourceLocation: { line: 1, column: 9 },
                     },
                 ],
@@ -116,7 +116,9 @@ test('ast for single number', t => {
 test('ast for number in brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(
-            stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, ' return (5);') as Token<MplToken>[]))
+            stripResultIndexes(
+                parse(grammar, 'program', lex(tokenSpecs, ' return (5);') as Token<MplToken, string | number | null>[])
+            )
         ),
         {
             type: 'program',
@@ -128,7 +130,7 @@ test('ast for number in brackets', t => {
                     children: [
                         {
                             type: 'return',
-                            value: null,
+                            value: undefined,
                             sourceLocation: { line: 1, column: 2 },
                         },
                         {
@@ -138,7 +140,7 @@ test('ast for number in brackets', t => {
                         },
                         {
                             type: 'statementSeparator',
-                            value: null,
+                            value: undefined,
                             sourceLocation: { line: 1, column: 12 },
                         },
                     ],
@@ -151,7 +153,12 @@ test('ast for number in brackets', t => {
 test('ast for number in double brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(
-            stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'return ((20));') as Token<MplToken>[]))
+            stripResultIndexes(
+                parse(grammar, 'program', lex(tokenSpecs, 'return ((20));') as Token<
+                    MplToken,
+                    string | number | null
+                >[])
+            )
         ),
         {
             type: 'program',
@@ -163,7 +170,7 @@ test('ast for number in double brackets', t => {
                     children: [
                         {
                             type: 'return',
-                            value: null,
+                            value: undefined,
                             sourceLocation: { line: 1, column: 1 },
                         },
                         {
@@ -173,7 +180,7 @@ test('ast for number in double brackets', t => {
                         },
                         {
                             type: 'statementSeparator',
-                            value: null,
+                            value: undefined,
                             sourceLocation: { line: 1, column: 14 },
                         },
                     ],
@@ -186,7 +193,12 @@ test('ast for number in double brackets', t => {
 test('ast for product with brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(
-            stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'return 3 * (4 * 5);') as Token<MplToken>[]))
+            stripResultIndexes(
+                parse(grammar, 'program', lex(tokenSpecs, 'return 3 * (4 * 5);') as Token<
+                    MplToken,
+                    string | number | null
+                >[])
+            )
         ),
         {
             type: 'program',
@@ -199,7 +211,7 @@ test('ast for product with brackets', t => {
                         {
                             type: 'return',
                             sourceLocation: { line: 1, column: 1 },
-                            value: null,
+                            value: undefined,
                         },
                         {
                             type: 'product',
@@ -212,7 +224,7 @@ test('ast for product with brackets', t => {
                                 },
                                 {
                                     type: 'product',
-                                    value: null,
+                                    value: undefined,
                                     sourceLocation: { line: 1, column: 10 },
                                 },
                                 {
@@ -226,7 +238,7 @@ test('ast for product with brackets', t => {
                                         },
                                         {
                                             type: 'product',
-                                            value: null,
+                                            value: undefined,
                                             sourceLocation: { line: 1, column: 15 },
                                         },
                                         {
@@ -240,7 +252,7 @@ test('ast for product with brackets', t => {
                         },
                         {
                             type: 'statementSeparator',
-                            value: null,
+                            value: undefined,
                             sourceLocation: { line: 1, column: 19 },
                         },
                     ],
@@ -266,11 +278,11 @@ test('ast for assignment then return', t => {
                             },
                             {
                                 type: 'colon',
-                                value: null,
+                                value: undefined,
                             },
                             {
                                 type: 'assignment',
-                                value: null,
+                                value: undefined,
                             },
                             {
                                 type: 'function',
@@ -284,7 +296,7 @@ test('ast for assignment then return', t => {
                                             },
                                             {
                                                 type: 'colon',
-                                                value: null,
+                                                value: undefined,
                                             },
                                             {
                                                 type: 'typeWithoutArgs',
@@ -299,7 +311,7 @@ test('ast for assignment then return', t => {
                                     },
                                     {
                                         type: 'fatArrow',
-                                        value: null,
+                                        value: undefined,
                                     },
                                     {
                                         type: 'number',
@@ -311,14 +323,14 @@ test('ast for assignment then return', t => {
                     },
                     {
                         type: 'statementSeparator',
-                        value: null,
+                        value: undefined,
                     },
                     {
                         type: 'returnStatement',
                         children: [
                             {
                                 type: 'return',
-                                value: null,
+                                value: undefined,
                             },
                             {
                                 type: 'number',
@@ -326,7 +338,7 @@ test('ast for assignment then return', t => {
                             },
                             {
                                 type: 'statementSeparator',
-                                value: null,
+                                value: undefined,
                             },
                         ],
                     },
@@ -338,7 +350,8 @@ test('ast for assignment then return', t => {
         removeBracketsFromAst(
             stripResultIndexes(
                 parse(grammar, 'program', lex(tokenSpecs, 'constThree := a: Integer => 3; return 10;') as Token<
-                    MplToken
+                    MplToken,
+                    string | number | null
                 >[])
             )
         )
@@ -347,7 +360,7 @@ test('ast for assignment then return', t => {
 });
 
 test('lowering of bracketedExpressions', t => {
-    const lexResult = lex(tokenSpecs, 'return (8 * ((7)))') as Token<MplToken>[];
+    const lexResult = lex(tokenSpecs, 'return (8 * ((7)))') as Token<MplToken, string | number | null>[];
     t.deepEqual(stripSourceLocation(parseMpl(lexResult)), {
         type: 'program',
         children: [
@@ -356,7 +369,7 @@ test('lowering of bracketedExpressions', t => {
                 children: [
                     {
                         type: 'return',
-                        value: null,
+                        value: undefined,
                     },
                     {
                         type: 'product',
@@ -367,7 +380,7 @@ test('lowering of bracketedExpressions', t => {
                             },
                             {
                                 type: 'product',
-                                value: null,
+                                value: undefined,
                             },
                             {
                                 type: 'number',
@@ -384,7 +397,8 @@ test('lowering of bracketedExpressions', t => {
 test('correct inferred type for function', t => {
     const functionSource = 'a: Integer => 11';
     const parseResult: MplParseResult = parse(grammar, 'function', lex(tokenSpecs, functionSource) as Token<
-        MplToken
+        MplToken,
+        string | number | null
     >[]);
     const ast: Ast.UninferredExpression = astFromParseResult(parseResult as MplAst) as Ast.UninferredExpression;
     t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
@@ -420,7 +434,7 @@ test('double product with brackets', mplTest, {
             {
                 type: 'returnStatement',
                 children: [
-                    { type: 'return', value: null },
+                    { type: 'return', value: undefined },
                     {
                         type: 'product',
                         children: [
@@ -428,18 +442,18 @@ test('double product with brackets', mplTest, {
                                 type: 'product',
                                 children: [
                                     { type: 'number', value: 2 },
-                                    { type: 'product', value: null },
+                                    { type: 'product', value: undefined },
                                     {
                                         type: 'product',
                                         children: [
                                             { type: 'number', value: 3 },
-                                            { type: 'product', value: null },
+                                            { type: 'product', value: undefined },
                                             { type: 'number', value: 4 },
                                         ],
                                     },
                                 ],
                             },
-                            { type: 'product', value: null },
+                            { type: 'product', value: undefined },
                             { type: 'number', value: 5 },
                         ],
                     },
@@ -465,7 +479,7 @@ test('double product', mplTest, {
                 children: [
                     {
                         type: 'return',
-                        value: null,
+                        value: undefined,
                     },
                     {
                         type: 'product',
@@ -479,7 +493,7 @@ test('double product', mplTest, {
                                     },
                                     {
                                         type: 'product',
-                                        value: null,
+                                        value: undefined,
                                     },
                                     {
                                         type: 'number',
@@ -489,7 +503,7 @@ test('double product', mplTest, {
                             },
                             {
                                 type: 'product',
-                                value: null,
+                                value: undefined,
                             },
                             {
                                 type: 'number',
@@ -514,7 +528,7 @@ test('brackets product', mplTest, {
                 children: [
                     {
                         type: 'return',
-                        value: null,
+                        value: undefined,
                     },
                     {
                         type: 'product',
@@ -528,7 +542,7 @@ test('brackets product', mplTest, {
                                     },
                                     {
                                         type: 'product',
-                                        value: null,
+                                        value: undefined,
                                     },
                                     {
                                         type: 'number',
@@ -538,7 +552,7 @@ test('brackets product', mplTest, {
                             },
                             {
                                 type: 'product',
-                                value: null,
+                                value: undefined,
                             },
                             {
                                 type: 'number',
@@ -1216,7 +1230,7 @@ test('computeBlockLiveness basic test', t => {
             r:v = r:r;
         `) as Statement[],
     };
-    const liveness = computeBlockLiveness(block).map(l => l.toList().sort());
+    const liveness = computeBlockLiveness(block, []).map(l => l.toList().sort());
     const expected = [
         [{ name: 'l' }, { name: 'l2' }, { name: 'r' }],
         [{ name: 'l' }, { name: 'l2' }, { name: 'd' }],
@@ -1246,7 +1260,7 @@ test('computeBlockLiveness read and write in one', t => {
             },
         ],
     };
-    const liveness = computeBlockLiveness(block);
+    const liveness = computeBlockLiveness(block, []);
     const expected = [[{ name: 'r' }, { name: 'd' }], [{ name: 'r' }], []];
     t.deepEqual(liveness.length, expected.length);
     expected.forEach((e, i) => {
@@ -1258,6 +1272,11 @@ test('liveness analysis basic test', t => {
     const testFunction: ThreeAddressFunction = {
         name: 'test',
         spills: 0,
+        parameters: [
+            { name: 'arg1', type: { kind: 'String' } },
+            { name: 'arg2', type: { kind: 'String' } },
+            { name: 'arg3', type: { kind: 'String' } },
+        ],
         instructions: [
             {
                 kind: 'add',
@@ -1288,10 +1307,35 @@ test('liveness analysis basic test', t => {
     };
     const testFunctionLiveness = tafLiveness(testFunction).map(s => s.toList());
     const expectedLiveness = [
-        [{ name: 'add_l' }, { name: 'add_r' }, { name: 'sub_l' }, { name: 'sub_r' }, 'arg1', 'arg2', 'arg3'],
-        [{ name: 'add_d' }, { name: 'sub_l' }, { name: 'sub_r' }, 'arg1', 'arg2', 'arg3'],
-        [{ name: 'sub_l' }, { name: 'sub_r' }, 'arg1', 'arg2', 'arg3'],
-        ['arg1', 'arg2', 'arg3'],
+        [
+            { name: 'add_l' },
+            { name: 'add_r' },
+            { name: 'sub_l' },
+            { name: 'sub_r' },
+            { name: 'arg1', type: { kind: 'String' } },
+            { name: 'arg2', type: { kind: 'String' } },
+            { name: 'arg3', type: { kind: 'String' } },
+        ],
+        [
+            { name: 'add_d' },
+            { name: 'sub_l' },
+            { name: 'sub_r' },
+            { name: 'arg1', type: { kind: 'String' } },
+            { name: 'arg2', type: { kind: 'String' } },
+            { name: 'arg3', type: { kind: 'String' } },
+        ],
+        [
+            { name: 'sub_l' },
+            { name: 'sub_r' },
+            { name: 'arg1', type: { kind: 'String' } },
+            { name: 'arg2', type: { kind: 'String' } },
+            { name: 'arg3', type: { kind: 'String' } },
+        ],
+        [
+            { name: 'arg1', type: { kind: 'String' } },
+            { name: 'arg2', type: { kind: 'String' } },
+            { name: 'arg3', type: { kind: 'String' } },
+        ],
         [],
     ];
     t.deepEqual(testFunctionLiveness, expectedLiveness);
@@ -1301,6 +1345,11 @@ test('4 block graph (length)', t => {
     const lengthRTLF: ThreeAddressFunction = {
         name: 'length',
         spills: 0,
+        parameters: [
+            { name: 'arg1', type: { kind: 'String' } },
+            { name: 'arg2', type: { kind: 'String' } },
+            { name: 'arg3', type: { kind: 'String' } },
+        ],
         instructions: [
             {
                 kind: 'loadImmediate',
@@ -1311,7 +1360,7 @@ test('4 block graph (length)', t => {
             { kind: 'label', name: 'length_loop', why: 'Count another charachter' },
             {
                 kind: 'loadMemoryByte',
-                address: 'arg1',
+                address: { argIndex: 0 },
                 to: { name: 'currentChar' },
                 why: 'currentChar = *arg1',
             },
@@ -1322,14 +1371,14 @@ test('4 block graph (length)', t => {
                 why: 'if currentChar == 0 goto length_return',
             },
             { kind: 'increment', register: 'result', why: 'result++' },
-            { kind: 'increment', register: 'arg1', why: 'arg1++' },
+            { kind: 'increment', register: { argIndex: 0 }, why: 'arg1++' },
             { kind: 'goto', label: 'length_loop', why: 'goto length_loop' },
             { kind: 'label', name: 'length_return', why: 'length_return:' },
             {
                 kind: 'subtract',
-                lhs: 'arg1',
+                lhs: { argIndex: 0 },
                 rhs: 'result',
-                destination: 'arg1',
+                destination: { argIndex: 0 },
                 why: 'arg1 = result - arg1',
             },
         ],
@@ -1339,20 +1388,21 @@ test('4 block graph (length)', t => {
             .toList()
             .map(r => {
                 if (typeof r == 'string') return r;
+                if ('argIndex' in r) return `arg${r.argIndex}`;
                 return r.name;
             })
             .sort()
     );
     const expectedLiveness = [
-        ['arg1', 'arg2', 'arg3'],
-        ['arg1', 'arg2', 'arg3', 'result'],
-        ['arg1', 'arg2', 'arg3', 'result'],
-        ['arg1', 'arg2', 'arg3', 'currentChar', 'result'],
-        ['arg1', 'arg2', 'arg3', 'result'],
-        ['arg1', 'arg2', 'arg3', 'result'],
-        ['arg1', 'arg2', 'arg3', 'result'],
-        ['arg1', 'arg2', 'arg3', 'result'],
-        ['arg1', 'result'],
+        ['arg0', 'arg1', 'arg2', 'arg3'],
+        ['arg0', 'arg1', 'arg2', 'arg3', 'result'],
+        ['arg0', 'arg1', 'arg2', 'arg3', 'result'],
+        ['arg0', 'arg1', 'arg2', 'arg3', 'currentChar', 'result'],
+        ['arg0', 'arg1', 'arg2', 'arg3', 'result'],
+        ['arg0', 'arg1', 'arg2', 'arg3', 'result'],
+        ['arg0', 'arg1', 'arg2', 'arg3', 'result'],
+        ['arg0', 'arg1', 'arg2', 'arg3', 'result'],
+        ['arg0', 'result'],
         [],
     ];
     t.deepEqual(lengthLiveness, expectedLiveness);
@@ -1362,6 +1412,7 @@ test('liveness of stringEquality', t => {
     const complexFunction: ThreeAddressFunction = {
         name: 'complexFunction',
         spills: 0,
+        parameters: [{ name: 'str', type: { kind: 'String' } }],
         instructions: [
             {
                 kind: 'loadImmediate',
@@ -1427,22 +1478,23 @@ test('liveness of stringEquality', t => {
             .toList()
             .map(r => {
                 if (typeof r == 'string') return r;
+                if ('argIndex' in r) return `arg${r.argIndex}`;
                 return r.name;
             })
             .sort()
     );
 
     const expectedLiveness = [
-        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
-        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
-        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
-        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
-        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
-        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
-        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
-        ['arg1', 'arg2', 'arg3'],
-        ['arg1', 'arg2', 'arg3'],
-        ['arg1', 'arg2', 'arg3'],
+        ['leftByte', 'rightByte', 'str'],
+        ['leftByte', 'rightByte', 'str'],
+        ['leftByte', 'rightByte', 'str'],
+        ['leftByte', 'rightByte', 'str'],
+        ['leftByte', 'rightByte', 'str'],
+        ['leftByte', 'rightByte', 'str'],
+        ['leftByte', 'rightByte', 'str'],
+        ['str'],
+        ['str'],
+        ['str'],
         [],
     ];
     t.deepEqual(liveness, expectedLiveness);
@@ -1846,7 +1898,7 @@ test('Parse instructions with no comment', t => {
     ]);
 });
 
-test('Assign registers for syscall-only functions', t => {
+test.only('Assign registers for syscall-only functions', t => {
     const f = threeAddressCodeRuntime.printWithPrintRuntimeFunction(0);
     const assigned = assignRegisters(f, []);
     // Print function should new need any registers, should spill nothing,

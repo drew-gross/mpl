@@ -7,7 +7,7 @@ import idMaker from './util/idMaker.js';
 import last from './util/list/last.js';
 import debug from './util/debug.js';
 import { lex, Token, LexError } from './parser-lib/lex.js';
-import { tokenSpecs, grammar, MplAst, MplParseResult, MplToken } from './grammar.js';
+import { tokenSpecs, grammar, MplAst, MplParseResult, MplToken, MplActionResult } from './grammar.js';
 import { ParseResult, parseResultIsError, parse, stripResultIndexes, Leaf as AstLeaf } from './parser-lib/parse.js';
 import ParseError from './parser-lib/ParseError.js';
 import {
@@ -224,12 +224,12 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
 
 const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[1], ast, true);
 
-const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
+const parseMpl = (tokens: Token<MplToken, MplActionResult>[]): MplAst | ParseError[] => {
     const parseResult: MplParseResult = stripResultIndexes(parse(grammar, 'program', tokens));
 
     if (parseResultIsError(parseResult)) {
         // TODO: Just get the parser to give us good errors directly instead of taking the first
-        return [parseResult.errors[0]];
+        return [parseResult.errors[0] as ParseError];
     }
     let ast = parseResult;
 
@@ -991,7 +991,7 @@ const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
         if (ast.children[2].type == 'typeWithoutArgs') {
             return [
                 {
-                    name: (ast.children[0] as AstLeaf<MplToken>).value as string,
+                    name: (ast.children[0] as AstLeaf<MplToken, MplActionResult>).value as string,
                     type: parseType(ast.children[2]),
                 },
             ];
@@ -1312,7 +1312,7 @@ const compile = (
     | { typeErrors: TypeError[] }
     | LexError
     | { internalError: string } => {
-    const tokens = lex<MplToken>(tokenSpecs, source);
+    const tokens = lex<MplToken, string | number | null>(tokenSpecs, source);
     if ('kind' in tokens) {
         return tokens;
     }

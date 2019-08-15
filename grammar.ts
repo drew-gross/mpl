@@ -31,7 +31,7 @@ export type MplToken =
     | 'greaterThan'
     | 'memberAccess';
 
-export const tokenSpecs: TokenSpec<MplToken>[] = [
+export const tokenSpecs: TokenSpec<MplToken, string | number | null>[] = [
     {
         token: '"[^"]*"',
         type: 'stringLiteral',
@@ -213,8 +213,9 @@ export type MplAstNode =
     | 'indexAccess'
     | 'paramList';
 
-export type MplAst = Ast<MplAstNode, MplToken>;
-export type MplParseResult = ParseResult<MplAstNode, MplToken>;
+export type MplActionResult = string | number | null;
+export type MplAst = Ast<MplAstNode, MplToken, MplActionResult>;
+export type MplParseResult = ParseResult<MplAstNode, MplToken, MplActionResult>;
 
 const mplTerminal = token => Terminal<MplAstNode, MplToken>(token);
 const mplOptional = parser => Optional<MplAstNode, MplToken>(parser);

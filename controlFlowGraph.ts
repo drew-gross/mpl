@@ -218,7 +218,7 @@ export const controlFlowGraph = (rtl: Statement[]): ControlFlowGraph => {
     };
 };
 
-export const computeBlockLiveness = (block: BasicBlock): Set<Register>[] => {
+export const computeBlockLiveness = (block: BasicBlock, allArgumentRegister: Register[]): Set<Register>[] => {
     return block.instructions
         .slice()
         .reverse()
@@ -231,7 +231,11 @@ export const computeBlockLiveness = (block: BasicBlock): Set<Register>[] => {
                     newLiveness.remove(item);
                 });
                 newlyLive.forEach(item => {
-                    newLiveness.add(item);
+                    if (item == 'AllArgumentRegisters') {
+                        allArgumentRegister.forEach(register => newLiveness.add(register));
+                    } else {
+                        newLiveness.add(item);
+                    }
                 });
                 return [newLiveness, ...liveness];
             },
@@ -283,7 +287,7 @@ const verifyingOverlappingJoin = (blocks: Set<Register>[][]): Set<Register>[] =>
 // TODO: Maybe treat function resuls specially somehow? Its kinda always live but that feels too special-casey.
 export const tafLiveness = (taf: ThreeAddressFunction): Set<Register>[] => {
     const cfg = controlFlowGraph(taf.instructions);
-    const blockLiveness = cfg.blocks.map(computeBlockLiveness);
+    const blockLiveness = cfg.blocks.map(block => computeBlockLiveness(block, taf.parameters));
     const remainingToPropagate: { entryLiveness: Set<Register>; index: number }[] = blockLiveness.map((b, i) => ({
         entryLiveness: b[0],
         index: i,
@@ -370,13 +374,21 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
     if (typeof registerToSpill == 'string') throw debug("Can't spill special registers");
     const currentSpillIndex = taf.spills + 1;
     const registerName = idAppender();
-    const newFunction: ThreeAddressFunction = { instructions: [], spills: currentSpillIndex, name: taf.name };
+    const newFunction: ThreeAddressFunction = {
+        parameters: taf.parameters,
+        instructions: [],
+        spills: currentSpillIndex,
+        name: taf.name,
+    };
 
     // When we spill a register, we replace every read of that register with an unspill to a new register that
     // exists only as long as that read, and replace every write the write followed by a spill, so that the
     // lifetime of the spilled register is very short. Each read or write needs to create a new register to spill
     // from or to (we call that register a fragment) and this function creates a new fragment for each read/write.
-    const makeFragment = () => ({ name: registerName(`${registerToSpill.name}_spill`) });
+    const makeFragment = () => {
+        if ('argIndex' in registerToSpill) throw debug('spilled arg');
+        return { name: registerName(`${registerToSpill.name}_spill`) };
+    };
 
     taf.instructions.forEach(instruction => {
         switch (instruction.kind) {
@@ -535,9 +547,9 @@ const removeDeadStores = (taf: ThreeAddressFunction, liveness: Set<Register>[]):
         if (
             targets.length == 0 ||
             registerIsEqual(targets[0], 'result') ||
-            registerIsEqual(targets[0], 'arg1') ||
-            registerIsEqual(targets[0], 'arg2') ||
-            registerIsEqual(targets[0], 'arg3')
+            registerIsEqual(targets[0], { argIndex: 0 }) ||
+            registerIsEqual(targets[0], { argIndex: 1 }) ||
+            registerIsEqual(targets[0], { argIndex: 2 })
         ) {
             newFunction.instructions.push(taf.instructions[i]);
         } else if (targets.length == 1) {
