@@ -231,6 +231,25 @@ return isFive(5) ? 1 : 0`,
         exitCode: 28,
         failing: true,
     },
+    {
+        name: 'Id Function',
+        source: `
+            id := a: Integer => a; return id(5)
+        `,
+        exitCode: 5,
+    },
+    {
+        name: 'Reassign String',
+        source: `
+            a := "Hello";
+            dummy := print(a);
+            a = "World!!!!!";
+            dummy = print(a);
+            return dummy - dummy;
+        `,
+        exitCode: 0,
+        stdout: 'HelloWorld!!!!!',
+    },
 ];
 
 export default testCases;

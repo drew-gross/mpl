@@ -379,6 +379,7 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
     const makeFragment = () => ({ name: registerName(`${registerToSpill.name}_spill`) });
 
     taf.instructions.forEach(instruction => {
+        // TODO: Come up with some way to do this generically without unpacking the instruction. A refactor that required the implementation of spilling for callByName/callByRegister was hard to debug due to this not being generic.
         switch (instruction.kind) {
             case 'empty': {
                 newFunction.instructions.push(instruction);
@@ -487,10 +488,31 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
                 if (registerIsEqual(instruction.register, registerToSpill)) {
                     throw debug('repsill');
                 }
+                newFunction.instructions.push(instruction);
+                break;
             case 'syscallWithResult':
             case 'syscallWithoutResult':
             case 'callByName': {
-                newFunction.instructions.push(instruction);
+                // TODO-NEXT: Implement proper spilling for callByName and callByRegister (and probs syscalls)
+                let newArguments: (Register | number | string)[] = [];
+                instruction.arguments.forEach(arg => {
+                    if (typeof arg != 'string' && typeof arg != 'number' && registerIsEqual(arg, registerToSpill)) {
+                        let newSource = makeFragment();
+                        newArguments.push(newSource);
+                        newFunction.instructions.push({
+                            kind: 'unspill',
+                            register: newSource,
+                            offset: currentSpillIndex,
+                            why: 'unspill arg',
+                        });
+                    } else {
+                        newArguments.push(arg);
+                    }
+                });
+                newFunction.instructions.push({
+                    ...instruction,
+                    arguments: newArguments,
+                } as any);
                 break;
             }
             case 'loadSymbolAddress':
@@ -649,6 +671,7 @@ export const assignRegisters = <TargetRegister>(
     });
 
     if (needToSpill) {
+        debugger;
         const spilled = spill(taf, needToSpill);
         return assignRegisters(spilled, colors);
     }
