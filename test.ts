@@ -566,11 +566,6 @@ test('brackets product', mplTest, {
     },
 });
 
-test('id function', mplTest, {
-    source: 'id := a: Integer => a; return id(5)',
-    exitCode: 5,
-});
-
 test('double function', mplTest, {
     source: 'doubleIt := a: Integer => 2 * a; return doubleIt(100)',
     exitCode: 200,
@@ -1066,17 +1061,6 @@ return a;`,
             sourceLocation: { line: 3, column: 1 },
         },
     ],
-});
-
-test('reassign string', mplTest, {
-    source: `
-a := "Hello";
-dummy := print(a);
-a = "World!!!!!";
-dummy = print(a);
-return dummy - dummy;`,
-    exitCode: 0,
-    expectedStdOut: 'HelloWorld!!!!!',
 });
 
 test('reassign to a using expression including a', mplTest, {

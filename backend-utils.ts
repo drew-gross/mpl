@@ -146,10 +146,8 @@ export const rtlToTarget = <TargetRegister>({
         )
     );
 
-    return join(
-        flatten([...makePrologue(assignment), ...statements, ...makeEpilogue(assignment)].map(instructionTranslator)),
-        '\n'
-    );
+    const wholeFunction = [...makePrologue(assignment), ...statements, ...makeEpilogue(assignment)];
+    return join(flatten(wholeFunction.map(instructionTranslator)), '\n');
 };
 
 export const backends: Backend[] = [mipsBackend, jsBackend, cBackend, x64Backend];

@@ -1,5 +1,7 @@
 import { toString as registerToString, Register } from '../register.js';
 import { filter, FilterPredicate } from '../util/list/filter.js';
+import join from '../util/join.js';
+import debug from '../util/debug.js';
 
 type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 
@@ -40,8 +42,8 @@ export type Statement = { why: string } & (
     // Function calls
     | { kind: 'syscallWithResult'; name: SyscallName; arguments: (Register | number)[]; destination: Register }
     | { kind: 'syscallWithoutResult'; name: SyscallName; arguments: (Register | number)[] }
-    | { kind: 'callByName'; function: string }
-    | { kind: 'callByRegister'; function: Register }
+    | { kind: 'callByName'; function: string; arguments: (Register | number)[] }
+    | { kind: 'callByRegister'; function: Register; arguments: (Register | number)[] }
     | { kind: 'returnToCaller' });
 
 const syscallArgToString = (regOrNumber: number | Register): string => {
@@ -110,10 +112,16 @@ const toStringWithoutComment = (tas: Statement): string => {
             return `${registerToString(tas.to)} = *(${registerToString(tas.from)} + ${tas.offset})`;
         case 'loadMemoryByte':
             return `${registerToString(tas.to)} = *${registerToString(tas.address)}`;
-        case 'callByRegister':
-            return `${registerToString(tas.function)}()`;
-        case 'callByName':
-            return `${tas.function}()`;
+        case 'callByRegister': {
+            if (!tas.arguments) throw debug('bad argumnets');
+            const args = join(tas.arguments.map(registerToString), ', ');
+            return `${registerToString(tas.function)}(${args})`;
+        }
+        case 'callByName': {
+            if (!tas.arguments) throw debug('bad argumnets');
+            const args = join(tas.arguments.map(registerToString), ', ');
+            return `${tas.function}(${args})`;
+        }
         case 'returnToCaller':
             return `return`;
         case 'stackAllocateAndStorePointer':
@@ -132,10 +140,11 @@ export const reads = (tas: Statement): (Register | 'AllArgumentRegisters')[] => 
         case 'empty':
             return [];
         case 'syscallWithResult':
-        case 'syscallWithoutResult':
+        case 'syscallWithoutResult': {
             const predicate: FilterPredicate<Register | number, Register> = (arg: Register | number): arg is Register =>
                 typeof arg !== 'number';
             return filter<Register | number, Register>(tas.arguments, predicate);
+        }
         case 'move':
             return [tas.from];
         case 'loadImmediate':
@@ -163,10 +172,17 @@ export const reads = (tas: Statement): (Register | 'AllArgumentRegisters')[] => 
             return [tas.address];
         case 'loadSymbolAddress':
             return [];
-        case 'callByRegister':
-            return [tas.function, 'AllArgumentRegisters'];
+        case 'callByRegister': {
+            const predicate: FilterPredicate<Register | number, Register> = (arg: Register | number): arg is Register =>
+                typeof arg !== 'number';
+            return [tas.function, ...filter(tas.arguments, predicate)];
+        }
+        case 'callByName': {
+            const predicate: FilterPredicate<Register | number, Register> = (arg: Register | number): arg is Register =>
+                typeof arg !== 'number';
+            return filter(tas.arguments, predicate);
+        }
         case 'label':
-        case 'callByName':
         case 'functionLabel':
         case 'returnToCaller':
         case 'goto':

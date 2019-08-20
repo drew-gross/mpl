@@ -1,5 +1,6 @@
 import debug from '../util/debug.js';
 import flatten from '../util/list/flatten.js';
+import last from '../util/list/last.js';
 import join from '../util/join.js';
 import { TokenSpec, lex, LexError } from '../parser-lib/lex.js';
 import { Register, Argument } from '../register.js';
@@ -24,6 +25,7 @@ type TacToken =
     | 'if'
     | 'doubleEqual'
     | 'colon'
+    | 'comma'
     | 'number'
     | 'leftBracket'
     | 'rightBracket'
@@ -122,6 +124,11 @@ const tokenSpecs: TokenSpec<TacToken, TacActionResult>[] = [
         token: '\\:',
         type: 'colon',
         toString: _ => ':',
+    },
+    {
+        token: '\\,',
+        type: 'comma',
+        toString: _ => ',',
     },
     {
         token: '-?\\d+',
@@ -227,6 +234,7 @@ type TacAstNode =
     | 'store'
     | 'syscallWithResult'
     | 'syscallWithoutResult'
+    | 'argList'
     | 'syscallArgs'
     | 'offsetStore'
     | 'offsetLoad'
@@ -251,6 +259,7 @@ const normalRegister = tacTerminal('register');
 const specialRegister = tacTerminal('specialRegister');
 const argumentRegister = tacTerminal('argumentRegister');
 const colon = tacTerminal('colon');
+const comma = tacTerminal('comma');
 const global_ = tacTerminal('global');
 const function_ = tacTerminal('function');
 const spillSpec = tacTerminal('spillSpec');
@@ -338,9 +347,12 @@ const grammar: Grammar<TacAstNode, TacToken> = {
             rightBracket,
             statementSeparator,
         ]),
-        Sequence('callByRegister', ['register', leftBracket, rightBracket, statementSeparator]),
-        Sequence('callByName', [identifier, leftBracket, rightBracket, statementSeparator]),
+        Sequence('callByRegister', ['register', leftBracket, tacOptional('argList'), rightBracket, statementSeparator]),
+        Sequence('callByName', [identifier, leftBracket, tacOptional('argList'), rightBracket, statementSeparator]),
     ]),
+
+    argList: OneOf([Sequence('argList', ['arg', comma, 'argList']), 'arg']),
+    arg: OneOf([number, 'register']),
 
     syscallArgs: OneOf([Sequence('syscallArgs', [tacOptional(identifier), 'syscallArg', 'syscallArgs']), 'syscallArg']),
     syscallArg: OneOf([number, 'register']),
@@ -388,6 +400,19 @@ const parseSyscallArgs = (ast: AstWithIndex<TacAstNode, TacToken, TacActionResul
             return flatten(a.children.map(parseSyscallArgs));
         default:
             return debug(`unhandled case in parseSyscallArgs: ${a.type}`);
+    }
+};
+
+const parseArgList = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | number)[] => {
+    const a = ast as any;
+    switch (ast.type) {
+        case 'register':
+        case 'specialRegister':
+            return [parseRegister(a.value)];
+        case 'argList':
+            return [...parseArgList(a.children[0]), ...parseArgList(a.children[2])];
+        default:
+            return debug(`unhandled case in parseArgList: ${a.type}`);
     }
 };
 
@@ -505,14 +530,16 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken, TacA
             return {
                 kind: 'callByRegister',
                 function: parseRegister(a.children[0].value),
-                why: stripComment(a.children[3].value),
+                arguments: a.children.length == 5 ? parseArgList(a.children[2]) : [],
+                why: stripComment((last(a.children) as any).value),
             };
         }
         case 'callByName': {
             return {
                 kind: 'callByName',
                 function: a.children[0].value,
-                why: stripComment(a.children[3].value),
+                arguments: a.children.length == 5 ? parseArgList(a.children[2]) : [],
+                why: stripComment((last(a.children) as any).value),
             };
         }
         case 'difference': {
