@@ -403,7 +403,7 @@ const parseSyscallArgs = (ast: AstWithIndex<TacAstNode, TacToken, TacActionResul
     }
 };
 
-const parseArgList = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | number)[] => {
+const parseArgList = (ast: AstWithIndex<TacAstNode, TacToken, TacActionResult>): (Register | number)[] => {
     const a = ast as any;
     switch (ast.type) {
         case 'register':
