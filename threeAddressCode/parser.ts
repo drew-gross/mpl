@@ -230,7 +230,7 @@ type TacAstNode =
     | 'offsetStore'
     | 'offsetLoad'
     | 'callByName'
-    | 'stackAllocateAndStorePointer'
+    | 'alloca'
     | 'product'
     | 'callByRegister'
     | 'load'
@@ -328,15 +328,7 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('increment', ['register', plusplus, statementSeparator]),
         Sequence('unspill', [unspillInstruction, 'register', statementSeparator]),
         Sequence('spill', [spillInstruction, 'register', statementSeparator]),
-        Sequence('stackAllocateAndStorePointer', [
-            'register',
-            assign,
-            alloca,
-            leftBracket,
-            number,
-            rightBracket,
-            statementSeparator,
-        ]),
+        Sequence('alloca', ['register', assign, alloca, leftBracket, number, rightBracket, statementSeparator]),
         Sequence('callByRegister', ['register', leftBracket, tacOptional('argList'), rightBracket, statementSeparator]),
         Sequence('callByName', [identifier, leftBracket, tacOptional('argList'), rightBracket, statementSeparator]),
     ]),
@@ -658,9 +650,9 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
                 why: stripComment(a.children[5].value),
             };
         }
-        case 'stackAllocateAndStorePointer':
+        case 'alloca':
             return {
-                kind: 'stackAllocateAndStorePointer',
+                kind: 'alloca',
                 register: parseRegister(a.children[0].value),
                 bytes: a.children[4].value,
                 why: stripComment(a.children[6].value),

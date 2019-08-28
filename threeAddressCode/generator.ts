@@ -382,7 +382,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         return compileExpression<Statement>([computeRhs], ([e1]) => [
                             ...e1,
                             {
-                                kind: 'stackAllocateAndStorePointer',
+                                kind: 'alloca',
                                 bytes: typeSize(targetInfo, ast.type, types),
                                 register: destination,
                                 why: 'make stack space for lhs',
@@ -684,7 +684,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             });
             return compileExpression<Statement>(createObjectMembers, members => [
                 {
-                    kind: 'stackAllocateAndStorePointer',
+                    kind: 'alloca',
                     bytes: typeSize(targetInfo, ast.type, types),
                     register: destination,
                     why: 'Make space for object literal',
@@ -1053,7 +1053,7 @@ export const threeAddressCodeToTarget = <TargetRegister>(
             );
             return [...moveArgsIntoPlace, { ...tas, function: getRegister(tas.function) }];
         }
-        case 'stackAllocateAndStorePointer':
+        case 'alloca':
             return [
                 {
                     kind: 'loadStackOffset',

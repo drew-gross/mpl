@@ -53,7 +53,7 @@ const blockBehaviour = (tas: Statement): 'endBlock' | 'beginBlock' | 'midBlock' 
         case 'loadSymbolAddress':
         case 'callByName':
         case 'callByRegister':
-        case 'stackAllocateAndStorePointer':
+        case 'alloca':
         case 'spill':
         case 'unspill':
             return 'midBlock';

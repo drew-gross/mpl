@@ -132,7 +132,7 @@ export const rtlToTarget = <TargetRegister>({
     const stackOffsetPerInstruction: number[] = [];
     let totalStackBytes: number = 0;
     newFunction.instructions.forEach(i => {
-        if (i.kind == 'stackAllocateAndStorePointer') {
+        if (i.kind == 'alloca') {
             totalStackBytes += i.bytes;
             stackOffsetPerInstruction.push(i.bytes);
         } else {

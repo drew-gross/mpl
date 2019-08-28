@@ -19,7 +19,7 @@ export type Statement = { why: string } & (
     | { kind: 'label'; name: string }
     | { kind: 'functionLabel'; name: string }
     // Stack management
-    | { kind: 'stackAllocateAndStorePointer'; bytes: number; register: Register }
+    | { kind: 'alloca'; bytes: number; register: Register }
     // Spilling
     | { kind: 'spill'; register: Register; offset: number }
     | { kind: 'unspill'; register: Register; offset: number }
@@ -124,7 +124,7 @@ const toStringWithoutComment = (tas: Statement): string => {
         }
         case 'returnToCaller':
             return `return`;
-        case 'stackAllocateAndStorePointer':
+        case 'alloca':
             return `${registerToString(tas.register)} = alloca(${tas.bytes})`;
         case 'spill':
             return `spill:${tas.offset} ${registerToString(tas.register)}`;
@@ -197,7 +197,7 @@ export const reads = (tas: Statement): Register[] => {
             return result;
         case 'gotoIfZero':
             return [tas.register];
-        case 'stackAllocateAndStorePointer':
+        case 'alloca':
             return [];
         case 'unspill':
             return [];
@@ -255,7 +255,7 @@ export const writes = (tas: Statement): Register[] => {
             return [];
         case 'gotoIfZero':
             return [];
-        case 'stackAllocateAndStorePointer':
+        case 'alloca':
             return [tas.register];
         case 'unspill':
             return [tas.register];
