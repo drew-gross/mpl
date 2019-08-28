@@ -222,7 +222,7 @@ ${join(
 
 start:
 ${rtlToTarget({
-    threeAddressFunction: { instructions: main, name: 'unused', spills: 0 },
+    threeAddressFunction: { instructions: main, arguments: [], name: 'unused', spills: 0 },
     makePrologue: () => [],
     makeEpilogue: () => [],
     registers: x64RegisterTypes,

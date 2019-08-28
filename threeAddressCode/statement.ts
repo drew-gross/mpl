@@ -135,7 +135,7 @@ const toStringWithoutComment = (tas: Statement): string => {
 
 export const toString = (tas: Statement): string => `${toStringWithoutComment(tas)}; ${tas.why}`;
 
-export const reads = (tas: Statement): Register[] => {
+export const reads = (tas: Statement, args: Register[]): Register[] => {
     switch (tas.kind) {
         case 'empty':
             return [];
@@ -186,7 +186,8 @@ export const reads = (tas: Statement): Register[] => {
         case 'functionLabel':
         case 'returnToCaller':
         case 'goto':
-            return ['arg1', 'arg2', 'arg3'];
+            // TODO: args should not be reads; these instructions should have no reads
+            return args;
         case 'gotoIfEqual':
         case 'gotoIfNotEqual':
         case 'gotoIfGreater':

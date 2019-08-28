@@ -218,14 +218,15 @@ export const controlFlowGraph = (rtl: Statement[]): ControlFlowGraph => {
     };
 };
 
-export const computeBlockLiveness = (block: BasicBlock): Set<Register>[] => {
+// TODO: Args should not be necessary
+export const computeBlockLiveness = (block: BasicBlock, args: Register[]): Set<Register>[] => {
     return block.instructions
         .slice()
         .reverse()
         .reduce(
             (liveness, next) => {
                 const newLiveness = liveness[0].copy();
-                const newlyLive = reads(next);
+                const newlyLive = reads(next, args);
                 const newlyDead = writes(next);
                 newlyDead.forEach(item => {
                     newLiveness.remove(item);
@@ -283,7 +284,7 @@ const verifyingOverlappingJoin = (blocks: Set<Register>[][]): Set<Register>[] =>
 // TODO: Maybe treat function resuls specially somehow? Its kinda always live but that feels too special-casey.
 export const tafLiveness = (taf: ThreeAddressFunction): Set<Register>[] => {
     const cfg = controlFlowGraph(taf.instructions);
-    const blockLiveness = cfg.blocks.map(computeBlockLiveness);
+    const blockLiveness = cfg.blocks.map(block => computeBlockLiveness(block, taf.arguments));
     const remainingToPropagate: { entryLiveness: Set<Register>; index: number }[] = blockLiveness.map((b, i) => ({
         entryLiveness: b[0],
         index: i,
@@ -370,7 +371,12 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
     if (typeof registerToSpill == 'string') throw debug("Can't spill special registers");
     const currentSpillIndex = taf.spills + 1;
     const registerName = idAppender();
-    const newFunction: ThreeAddressFunction = { instructions: [], spills: currentSpillIndex, name: taf.name };
+    const newFunction: ThreeAddressFunction = {
+        instructions: [],
+        arguments: taf.arguments,
+        spills: currentSpillIndex,
+        name: taf.name,
+    };
 
     // When we spill a register, we replace every read of that register with an unspill to a new register that
     // exists only as long as that read, and replace every write the write followed by a spill, so that the
@@ -533,7 +539,10 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
                 }
                 break;
             default:
-                if (reads(instruction).includes(registerToSpill) || writes(instruction).includes(registerToSpill)) {
+                if (
+                    reads(instruction, taf.arguments).includes(registerToSpill) ||
+                    writes(instruction).includes(registerToSpill)
+                ) {
                     throw debug(`${instruction.kind} unhandled in spill`);
                 } else {
                     newFunction.instructions.push(instruction);
@@ -553,13 +562,12 @@ const removeDeadStores = (taf: ThreeAddressFunction, liveness: Set<Register>[]):
         const targets = writes(taf.instructions[i]);
         // If there are written registers and none of them are live, omit the write. This
         // will fail if the instruction doing the writing also has side effects, e.g. syscall. TODO:
-        // Implement something that takes this into account. TODO: Treat function result and arguments less special-casey somehow. Maybe put it into liveness computing. NOTE: Writes to arguments are not dead because length is implemented in a way where the arguments are destroyed and repaired.
+        // Implement something that takes this into account. TODO: Treat function result and arguments less special-casey somehow. Maybe put it into liveness computing. NOTE: Writes to arguments are not dead because length is implemented in a way where the arguments are destroyed and repaired. TODO: probably should check if any target is a register?
+
         if (
             targets.length == 0 ||
             registerIsEqual(targets[0], 'result') ||
-            registerIsEqual(targets[0], 'arg1') ||
-            registerIsEqual(targets[0], 'arg2') ||
-            registerIsEqual(targets[0], 'arg3')
+            taf.arguments.some(arg => registerIsEqual(targets[0], arg))
         ) {
             newFunction.instructions.push(taf.instructions[i]);
         } else if (targets.length == 1) {

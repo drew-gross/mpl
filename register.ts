@@ -1,9 +1,9 @@
 import ComparisonResult from './util/comparisonResult.js';
 import compareString from './string/compare.js';
 
-export const specialRegisterNames = ['arg1', 'arg2', 'arg3', 'result'];
+export const specialRegisterNames = ['result'];
 
-export type Register = 'arg1' | 'arg2' | 'arg3' | 'result' | { name: string };
+export type Register = 'result' | { name: string };
 
 export const isEqual = (lhs: Register, rhs: Register): boolean => {
     if (typeof lhs == 'string' && typeof rhs == 'string') {

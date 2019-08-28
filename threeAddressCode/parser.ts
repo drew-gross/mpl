@@ -726,7 +726,7 @@ const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Three
         instructions = [instructionFromParseResult(ast.children[childIndex])];
         childIndex++;
     }
-    return { name, instructions, spills };
+    return { name, instructions, spills, arguments: args };
 };
 
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {

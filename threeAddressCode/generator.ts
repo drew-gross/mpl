@@ -30,6 +30,7 @@ import { parseInstructionsOrDie as ins } from './parser.js';
 
 export type ThreeAddressFunction = {
     instructions: Statement[];
+    arguments: Register[];
     spills: number;
     name: string;
 };
@@ -821,12 +822,12 @@ export const constructFunction = (
     types: TypeDeclaration[],
     targetInfo: TargetInfo
 ): ThreeAddressFunction => {
-    const argumentRegisters: Register[] = ['arg1', 'arg2', 'arg3'];
-    if (f.parameters.length > 3) throw debug('todo'); // Don't want to deal with this yet.
-    if (argumentRegisters.length < 3) throw debug('todo');
     const variablesInScope: { [key: string]: Register } = {};
+    const args: Register[] = [];
     f.parameters.forEach((parameter, index) => {
-        variablesInScope[parameter.name] = argumentRegisters[index];
+        const param = makeTemporary(parameter.name);
+        args.push(param);
+        variablesInScope[parameter.name] = param;
     });
 
     f.statements.forEach(statement => {
@@ -867,7 +868,7 @@ export const constructFunction = (
             ];
         })
     );
-    return { name: f.name, instructions: functionCode, spills: 0 };
+    return { name: f.name, instructions: functionCode, spills: 0, arguments: args };
 };
 
 export const threeAddressCodeToTarget = <TargetRegister>(

@@ -86,16 +86,8 @@ export const getRegisterFromAssignment = <TargetRegister>(
     r: Register
 ): TargetRegister => {
     if (typeof r == 'string') {
-        switch (r) {
-            case 'arg1':
-                return specialRegisters.functionArgument[0];
-            case 'arg2':
-                return specialRegisters.functionArgument[1];
-            case 'arg3':
-                return specialRegisters.functionArgument[2];
-            case 'result':
-                return specialRegisters.functionResult;
-        }
+        if (r != 'result') debug('bad register');
+        return specialRegisters.functionResult;
     } else {
         if (!(r.name in registerAssignment.registerMap)) {
             throw debug(

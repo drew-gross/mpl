@@ -1200,7 +1200,7 @@ test('computeBlockLiveness basic test', t => {
             r:v = r:r;
         `) as Statement[],
     };
-    const liveness = computeBlockLiveness(block).map(l => l.toList().sort());
+    const liveness = computeBlockLiveness(block, []).map(l => l.toList().sort());
     const expected = [
         [{ name: 'l' }, { name: 'l2' }, { name: 'r' }],
         [{ name: 'l' }, { name: 'l2' }, { name: 'd' }],
@@ -1230,7 +1230,7 @@ test('computeBlockLiveness read and write in one', t => {
             },
         ],
     };
-    const liveness = computeBlockLiveness(block);
+    const liveness = computeBlockLiveness(block, []);
     const expected = [[{ name: 'r' }, { name: 'd' }], [{ name: 'r' }], []];
     t.deepEqual(liveness.length, expected.length);
     expected.forEach((e, i) => {
@@ -1242,6 +1242,7 @@ test('liveness analysis basic test', t => {
     const testFunction: ThreeAddressFunction = {
         name: 'test',
         spills: 0,
+        arguments: [],
         instructions: [
             {
                 kind: 'add',
@@ -1285,6 +1286,7 @@ test('4 block graph (length)', t => {
     const lengthRTLF: ThreeAddressFunction = {
         name: 'length',
         spills: 0,
+        arguments: [{ name: 'strPtr' }],
         instructions: [
             {
                 kind: 'loadImmediate',
@@ -1295,9 +1297,9 @@ test('4 block graph (length)', t => {
             { kind: 'label', name: 'length_loop', why: 'Count another charachter' },
             {
                 kind: 'loadMemoryByte',
-                address: 'arg1',
+                address: { name: 'strPtr' },
                 to: { name: 'currentChar' },
-                why: 'currentChar = *arg1',
+                why: 'currentChar = *ptr',
             },
             {
                 kind: 'gotoIfZero',
@@ -1306,14 +1308,14 @@ test('4 block graph (length)', t => {
                 why: 'if currentChar == 0 goto length_return',
             },
             { kind: 'increment', register: 'result', why: 'result++' },
-            { kind: 'increment', register: 'arg1', why: 'arg1++' },
+            { kind: 'increment', register: { name: 'strPtr' }, why: 'arg1++' },
             { kind: 'goto', label: 'length_loop', why: 'goto length_loop' },
             { kind: 'label', name: 'length_return', why: 'length_return:' },
             {
                 kind: 'subtract',
-                lhs: 'arg1',
+                lhs: { name: 'strPtr' },
                 rhs: 'result',
-                destination: 'arg1',
+                destination: { name: 'strPtr' },
                 why: 'arg1 = result - arg1',
             },
         ],
@@ -1346,6 +1348,7 @@ test('liveness of stringEquality', t => {
     const complexFunction: ThreeAddressFunction = {
         name: 'complexFunction',
         spills: 0,
+        arguments: [],
         instructions: [
             {
                 kind: 'loadImmediate',

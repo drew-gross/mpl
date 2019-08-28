@@ -221,7 +221,7 @@ ${join(
 
 main:
 ${rtlToTarget({
-    threeAddressFunction: { name: 'unused', instructions: main, spills: 0 },
+    threeAddressFunction: { name: 'unused', arguments: [], instructions: main, spills: 0 },
     makePrologue: () => [],
     makeEpilogue: () => [],
     registers: mipsRegisterTypes,
