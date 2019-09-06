@@ -40,6 +40,7 @@ import {
 import debug from './util/debug.js';
 import { backends, rtlToTarget } from './backend-utils.js';
 import { orderedSet } from './util/ordered-set.js';
+import { set, Set } from './util/set.js';
 import { shuffle } from 'shuffle-seed';
 
 test('double flatten', t => {
@@ -1242,7 +1243,7 @@ test('liveness analysis basic test', t => {
     const testFunction: ThreeAddressFunction = {
         name: 'test',
         spills: 0,
-        arguments: [],
+        arguments: [{ name: 'some_arg' }],
         instructions: [
             {
                 kind: 'add',
@@ -1273,10 +1274,10 @@ test('liveness analysis basic test', t => {
     };
     const testFunctionLiveness = tafLiveness(testFunction).map(s => s.toList());
     const expectedLiveness = [
-        [{ name: 'add_l' }, { name: 'add_r' }, { name: 'sub_l' }, { name: 'sub_r' }, 'arg1', 'arg2', 'arg3'],
-        [{ name: 'add_d' }, { name: 'sub_l' }, { name: 'sub_r' }, 'arg1', 'arg2', 'arg3'],
-        [{ name: 'sub_l' }, { name: 'sub_r' }, 'arg1', 'arg2', 'arg3'],
-        ['arg1', 'arg2', 'arg3'],
+        [{ name: 'add_l' }, { name: 'add_r' }, { name: 'sub_l' }, { name: 'sub_r' }, { name: 'some_arg' }],
+        [{ name: 'add_d' }, { name: 'sub_l' }, { name: 'sub_r' }, { name: 'some_arg' }],
+        [{ name: 'sub_l' }, { name: 'sub_r' }, { name: 'some_arg' }],
+        [{ name: 'some_arg' }],
         [],
     ];
     t.deepEqual(testFunctionLiveness, expectedLiveness);
@@ -1330,15 +1331,15 @@ test('4 block graph (length)', t => {
             .sort()
     );
     const expectedLiveness = [
-        ['arg1', 'arg2', 'arg3'],
-        ['arg1', 'arg2', 'arg3', 'result'],
-        ['arg1', 'arg2', 'arg3', 'result'],
-        ['arg1', 'arg2', 'arg3', 'currentChar', 'result'],
-        ['arg1', 'arg2', 'arg3', 'result'],
-        ['arg1', 'arg2', 'arg3', 'result'],
-        ['arg1', 'arg2', 'arg3', 'result'],
-        ['arg1', 'arg2', 'arg3', 'result'],
-        ['arg1', 'result'],
+        ['strPtr'],
+        ['result', 'strPtr'],
+        ['result', 'strPtr'],
+        ['currentChar', 'result', 'strPtr'],
+        ['result', 'strPtr'],
+        ['result', 'strPtr'],
+        ['result', 'strPtr'],
+        ['result', 'strPtr'],
+        ['result', 'strPtr'],
         [],
     ];
     t.deepEqual(lengthLiveness, expectedLiveness);
@@ -1420,16 +1421,16 @@ test('liveness of stringEquality', t => {
     );
 
     const expectedLiveness = [
-        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
-        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
-        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
-        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
-        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
-        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
-        ['arg1', 'arg2', 'arg3', 'leftByte', 'rightByte'],
-        ['arg1', 'arg2', 'arg3'],
-        ['arg1', 'arg2', 'arg3'],
-        ['arg1', 'arg2', 'arg3'],
+        ['leftByte', 'rightByte'],
+        ['leftByte', 'rightByte'],
+        ['leftByte', 'rightByte'],
+        ['leftByte', 'rightByte'],
+        ['leftByte', 'rightByte'],
+        ['leftByte', 'rightByte'],
+        ['leftByte', 'rightByte'],
+        [],
+        [],
+        [],
         [],
     ];
     t.deepEqual(liveness, expectedLiveness);
@@ -1550,9 +1551,9 @@ test('pretty-parse-error', t => {
 test('tac parser regression', t => {
     const source = `(global) id: id_1 17
 (global) id: id_1 17
-(function) length:
+(function) length():
 $result = 0; Set length count to 0
-(function) stringEquality:
+(function) stringEquality():
 $result = 1; Assume equal. Write true to result. Overwrite if difference found.
 `;
 
@@ -1578,7 +1579,7 @@ $result = 1; Assume equal. Write true to result. Overwrite if difference found.
 
 test('Add Numbers in ThreeAddressCode', tacTest, {
     source: `
-(function) main:
+(function) main():
 r:a = 1; a = 1
 r:b = 2; b = 2
 r:sum = r:a + r:b; Add the things
@@ -1589,7 +1590,7 @@ $result = r:sum; Result = sum
 
 test('Stack Offset Load and Store', tacTest, {
     source: `
-(function) (spill:2) main:
+(function) (spill:2) main():
 r:temp = 1; Something to spill
 spill:1 r:temp; Spill it
 r:temp = 2; Use it for something else
@@ -1835,6 +1836,7 @@ test('Parse instructions with no comment', t => {
 
 test('Assign registers for syscall-only functions', t => {
     const f = threeAddressCodeRuntime.printWithPrintRuntimeFunction(0);
+    debugger;
     const assigned = assignRegisters(f, []);
     // Print function should new need any registers, should spill nothing,
     // and should not change the function.
@@ -1849,6 +1851,13 @@ test('Assign registers for syscall-only functions', t => {
 
 test('Range', t => {
     t.deepEqual(range(6, 9), [6, 7, 8]);
+});
+
+test('Unordered Set - Remove Only Element', t => {
+    const s = set<number>((lhs, rhs) => lhs == rhs);
+    s.add(1);
+    s.removeWithPredicate(_ => true);
+    t.deepEqual(s.toList(), []);
 });
 
 test('Ordered Set Insertion', t => {

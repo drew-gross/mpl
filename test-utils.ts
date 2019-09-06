@@ -119,19 +119,19 @@ export const mplTest = async (
     });
 
     if (Array.isArray(programInfo.threeAddressRoundTrip)) {
-        t.fail(
-            join(
-                programInfo.threeAddressRoundTrip.map((e: any) => {
-                    if (typeof e === 'string') {
-                        return e;
-                    } else {
-                        // TODO: get the source and do pretty parse errors
-                        return JSON.stringify(e, null, 2);
-                    }
-                }),
-                '\n\n'
-            )
-        );
+        t.fail(`
+three address code:${programInfo.threeAddressCode}
+ast:${join(
+            programInfo.threeAddressRoundTrip.map((e: any) => {
+                if (typeof e === 'string') {
+                    return e;
+                } else {
+                    // TODO: get the source and do pretty parse errors
+                    return JSON.stringify(e, null, 2);
+                }
+            }),
+            '\n\n'
+        )}`);
         return;
     }
 

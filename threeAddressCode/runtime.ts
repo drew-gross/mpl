@@ -18,7 +18,7 @@ const switchableMallocImpl = (
     instructions: [
         ...ins(`
             r:zero = 0;
-            goto my_malloc_zero_size_check_passed if $arg1 > r:zero;
+            goto my_malloc_zero_size_check_passed if r:numBytes > r:zero;
             ; Error if zero bytes requested
             r:err = &${errors.allocatedZero.name};
             syscall print r:err; TODO probably need to use a function since syscall isn't portable
@@ -45,7 +45,7 @@ const switchableMallocImpl = (
             r:currentBlockIsFree = *(r:currentBlockPointer + ${2 * bytesInWord});
             goto advance_pointers if r:currentBlockIsFree == 0; Current block not free
             r:currentBlockSize = *(r:currentBlockPointer + 0);
-            goto advance_pointers if $arg1 > r:currentBlockSize; Current block too small
+            goto advance_pointers if r:numBytes > r:currentBlockSize; Current block too small
             goto found_large_enough_block;
         advance_pointers:;
             r:previousBlockPointer = r:currentBlockPointer;
@@ -58,11 +58,11 @@ const switchableMallocImpl = (
             $result += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
             goto my_malloc_return;
         sbrk_more_space:;
-            $arg1 += ${3 * bytesInWord}; sbrk enough space for management block too
+            r:numBytes += ${3 * bytesInWord}; sbrk enough space for management block too
         `),
-        makeSyscall('arg1', 'result'),
+        makeSyscall({ name: 'numBytes' }, 'result'),
         ...ins(`
-            $arg1 += ${-3 * bytesInWord}; Repair arg1
+            r:numBytes += ${-3 * bytesInWord}; Repair arg1
             goto alloc_exit_check_passed if $result != -1;
             r:err = &${errors.allocationFailed.name};
             syscall print r:err;
@@ -78,7 +78,7 @@ const switchableMallocImpl = (
             goto set_up_new_space if r:previousBlockPointer == 0;
             *(r:previousBlockPointer + 0) = $result; prev->next = new
         set_up_new_space:;
-            *($result + 0) = $arg1; new->size = requested_size
+            *($result + 0) = r:numBytes; new->size = requested_size
             *($result + ${1 * bytesInWord}) = 0; new->next = null
             *($result + ${2 * bytesInWord}) = 0; new->free = false
             $result += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
@@ -114,63 +114,62 @@ export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord =>
 
 export const length: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
-    (function) length:
+    (function) length(r:str):
             $result = 0;
         length_loop:; Count another charachter
-            r:currentChar = *$arg1; Load next byte
+            r:currentChar = *r:str; Load next byte
             goto length_return if r:currentChar == 0; If it's null, we are done
             $result++; Bump string index
-            $arg1++; Bump length counter
+            r:str++; Bump length counter
             goto length_loop; Go count another char
         length_return:; Done
-            $arg1 = $arg1 - $result; Repair input pointer
+            r:str = r:str - $result; Repair input pointer
     `);
 
 export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
-    (function) string_copy:; Copy string pointer to by first argument to second argument
+    (function) string_copy(r:source, r:destination):; Copy string pointer to by first argument to second argument
         string_copy_loop:; Copy a byte
-            r:currentChar = *$arg1; Load next char from string
-            *$arg2 = r:currentChar; Write char to output
+            r:currentChar = *r:source; Load next char from string
+            *r:destination = r:currentChar; Write char to output
             goto string_copy_return if r:currentChar == 0; If at end, return
-            $arg1++; Else increment to next char
-            $arg2++; Increment output too
+            r:source++; Else increment to next char
+            r:destination++; Increment output too
             goto string_copy_loop; and go keep copying
         string_copy_return:; Done
     `);
 
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
-    (function) print:
-        $result = syscall print $arg1;
+    (function) print(r:str):
+        $result = syscall print r:str;
     `);
 
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
-    (function) print:
-        length(); Call length on argument (Arugment is already in argument register)
-        $result = syscall print 1 $arg1 $result; 1: fd of stdout. $arg1: ptr to data to write. $result: length to write
+    (function) print(r:str):
+        length(r:str); Get str length
+        $result = syscall print 1 r:str $result; 1: fd of stdout. r:str: ptr to data to write. $result: length to write
    `);
 
 export const readIntDirect: RuntimeFunctionGenerator = bytesInWord =>
+    // TODO: Allow syscalls that don't have any arguments, cause this shouldn't have arguments
     parseFunctionOrDie(`
-        (function) readInt:
-              $result = syscall readInt $arg1;
+        (function) readInt(r:str):
+              $result = syscall readInt r:str;
     `);
 
 export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
     const stdinFd = 0;
     const bufferSize = 10;
     return parseFunctionOrDie(`
-        (function) readInt:
-            $arg1 = ${bufferSize}; 10 byte buffer because why not TODO
-            my_malloc(); malloc
+        (function) readInt():
+            my_malloc(${bufferSize}); malloc 10 byte buffer because why not TODO
             r:buffer = $result; rename
             r:readResult = syscall read ${stdinFd} r:buffer ${bufferSize};
             r:negativeOne = -1; goto does not support literals
             goto read_failed if r:readResult == r:negativeOne; syscall failed
-            $arg1 = r:buffer; prep to parse int
-            intFromString(); parse int and return
+            intFromString(r:buffer); parse int and return
             my_free(); Free the buffer
             goto readIntExit; result already in result
         read_failed:; label
@@ -184,7 +183,7 @@ export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
 // TODO: figure out a way to verify that this is working
 export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
-    (function) verify_no_leaks:
+    (function) verify_no_leaks():
         r:currentBlockPointer = &first_block; Load first block address
         r:currentBlockPointer = *(r:currentBlockPointer + ${0 * bytesInWord}); Load first block pointer
     verify_no_leaks_loop:; verify_no_leaks_loop
@@ -203,35 +202,35 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord =>
 
 export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
-    (function) string_concatenate:
+    (function) string_concatenate(r:lhs, r:rhs, r:dest):
         write_left_loop:; Append left string
-            r:currentChar = *$arg1; Load byte from left
+            r:currentChar = *r:lhs; Load byte from left
             goto copy_from_right if r:currentChar == 0; If end of left, start copying right
-            *$arg3 = r:currentChar; Write byte from left
-            $arg1++; Bump left pointer
-            $arg3++; Bump out pointer
+            *r:dest = r:currentChar; Write byte from left
+            r:lhs++; Bump left pointer
+            r:dest++; Bump out pointer
             goto write_left_loop; Loop to next char
         copy_from_right:; Append right string
-            r:currentChar = *$arg2; Load byte from right
-            *$arg3 = r:currentChar; Copy right byte (incl. null)
+            r:currentChar = *r:rhs; Load byte from right
+            *r:dest = r:currentChar; Copy right byte (incl. null)
             goto concatenate_return if r:currentChar == 0; If we just wrote null, we are done
-            $arg2++; Bump right pointer
-            $arg3++; Bump out pointer
+            r:rhs++; Bump right pointer
+            r:dest++; Bump out pointer
             goto copy_from_right; Go copy next char
         concatenate_return:; Exit. TODO: repair input pointers?
     `);
 
 export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
-    (function) stringEquality:
-            $result = 1; Result = true (willl write false if diff found)
+    (function) stringEquality(r:lsh, r:rhs):
+            $result = 1; Result = true (will write false if diff found)
         stringEquality_loop:; Check a char
-            r:leftByte = *$arg1; Load left char into temporary
-            r:rightByte = *$arg2; Load right char into temporary
+            r:leftByte = *r:lhs; Load left char into temporary
+            r:rightByte = *r:rhs; Load right char into temporary
             goto stringEquality_return_false if r:leftByte != r:rightByte; Inequal: return false
             goto stringEquality_return if r:leftByte == 0; Both side are equal. If both sides are null, return.
-            $arg1++; Bump lhs to next char
-            $arg2++; Bump rhs to next char
+            r:lhs++; Bump lhs to next char
+            r:rhs++; Bump rhs to next char
             goto stringEquality_loop; Check next char
         stringEquality_return_false:; stringEquality_return_false
             $result = 0; Set result to false
@@ -242,25 +241,25 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
 // TOOD: check if already free
 export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
-    (function) my_free:
+    (function) my_free(r:ptr):
             r:zero = 0; Need a zero
-            goto free_null_check_passed if $arg1 != r:zero; Not freeing null check passed
+            goto free_null_check_passed if r:ptr != r:zero; Not freeing null check passed
             r:err = &${errors.freeNull.name}; Error to print
             syscall print r:err; Print
             syscall exit -1; Exit
         free_null_check_passed:; Not attempting to free null
             r:one = 1; Need a 1
             r:managementBlockSize = ${3 * bytesInWord}; 3 words for management
-            $arg1 = $arg1 - r:managementBlockSize; Get management block ptr
-            *($arg1 + ${2 * bytesInWord}) = r:one; block->free = true
+            r:ptr = r:ptr - r:managementBlockSize; Get management block ptr
+            *(r:ptr + ${2 * bytesInWord}) = r:one; block->free = true
     `);
 
 // TODO: return error if string doesn't contain an int
 export const intFromString: RuntimeFunctionGenerator = bytesInWord => {
     return parseFunctionOrDie(`
-    (function) intFromString:
+    (function) intFromString(r:in):
         $result = 0; Accumulate into here
-        r:input = $arg1; Make a copy so we can modify it
+        r:input = r:in; Make a copy so we can modify it TODO is this necessary?
     add_char:; comment
         r:currentChar = *r:input; load a char
         goto exit if r:currentChar == 0; Found the null terminator; done

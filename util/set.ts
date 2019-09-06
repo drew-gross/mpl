@@ -48,7 +48,7 @@ export const set = <T>(isEqual: SetComparator<T>): Set<T> => {
             }
         },
         removeWithPredicate: (predicate: (item: T) => boolean): void => {
-            data = data.filter(predicate);
+            data = data.filter(x => !predicate(x));
         },
         // Check if an item is in the set
         has: item => data.some(existing => isEqual(existing, item)),

@@ -278,7 +278,16 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     global: Sequence('global', [global_, identifier, colon, identifier, number]),
 
     functions: OneOf([Sequence('functions', ['function', 'functions']), 'function']),
-    function: Sequence('function', [function_, tacOptional(spillSpec), identifier, colon, 'instructions']),
+    function: Sequence('function', [
+        function_,
+        tacOptional(spillSpec),
+        identifier,
+        leftBracket,
+        tacOptional('argList'),
+        rightBracket,
+        colon,
+        'instructions',
+    ]),
 
     register: OneOf([normalRegister, specialRegister]),
 
@@ -391,6 +400,8 @@ const parseArgList = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | numb
             return [parseRegister(a.value)];
         case 'argList':
             return [...parseArgList(a.children[0]), ...parseArgList(a.children[2])];
+        case 'number':
+            return [a.value];
         default:
             return debug(`unhandled case in parseArgList: ${a.type}`);
     }
@@ -713,6 +724,28 @@ const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Three
     }
     const name = (ast.children[childIndex] as any).value;
     childIndex++;
+    if (ast.children[childIndex].type != 'leftBracket') {
+        debug('wrong shape ast');
+        return ['WrongShapeAst'];
+    }
+    childIndex++;
+    let args: Register[] = [];
+    if (['argList', 'register', 'specialRegister'].includes(ast.children[childIndex].type)) {
+        const numArgs = parseArgList(ast.children[childIndex]);
+        numArgs.forEach(a => {
+            if (typeof a == 'number') {
+                debug("arg can't be a number");
+            }
+        });
+        args = numArgs as Register[];
+        childIndex++;
+    }
+
+    if (ast.children[childIndex].type != 'rightBracket') {
+        debug('wrong shape ast');
+        return ['WrongShapeAst'];
+    }
+    childIndex++;
     if (ast.children[childIndex].type != 'colon') {
         debug('wrong shape ast');
         return ['WrongShapeAst'];
@@ -844,7 +877,7 @@ export const parseInstructionsOrDie = (tacString: string): Statement[] => {
     if ('kind' in parsed) {
         debugger;
         parseInstructions(tacString);
-        throw debug(`error in parseInstructionsOrDie: ${parsed.kind}. ${JSON.stringify(parse, null, 2)}`);
+        throw debug(`error in parseInstructionsOrDie: ${parsed.kind}. ${JSON.stringify(parsed, null, 2)}`);
     }
     if (Array.isArray(parsed)) {
         if (parsed.length == 0) debug('empty instructions');

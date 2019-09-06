@@ -405,8 +405,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                                 ${s(itemSize)} = ${targetInfo.bytesInWord}; For multiplying
                                 ${s(remainingCount)} = ${s(remainingCount)} * ${s(itemSize)}; Count = count * size
                                 ${s(remainingCount)} += ${targetInfo.bytesInWord}; Add place to store length of list
-                                $arg1 = ${s(remainingCount)}; Prepare to malloc
-                                my_malloc(); Malloc
+                                my_malloc(${s(remainingCount)}); Malloc
                                 ${s(destination)} = $result; Destination pointer
                                 ${s(targetAddress)} = ${s(destination)}; Local copy of dest data pointer
                             ${copyLoop}:; Copy loop

@@ -95,6 +95,7 @@ export default async (
     });
 
     // Do a roundtrip on three address code to string and back to check the parser for that
+    debugger;
     const stringForm = programToString(threeAddressCode);
     const roundTripParsed = parseTacProgram(stringForm);
 

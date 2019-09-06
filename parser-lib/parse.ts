@@ -177,6 +177,7 @@ const parseSequence = <NodeType extends string, TokenType>(
         } else if (typeof p === 'string') {
             result = parseRule(grammar, p as NodeType, tokens, index);
         } else if (p.kind == 'optional') {
+            // TODO: Possibly they wanted the optional but had syntac error. If this is the case, we should get an error and do something useful with it (display it)
             const maybeResult = parseOptional(grammar, p, tokens, index);
             if (!maybeResult) {
                 continue; // Skip to the next non-optional

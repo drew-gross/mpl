@@ -309,7 +309,7 @@ export const tafLiveness = (taf: ThreeAddressFunction): Set<Register>[] => {
 type RegisterInterference = { r1: Register; r2: Register };
 
 export type RegisterInterferenceGraph = {
-    nonSpecialRegisters: OrderedSet<Register>;
+    localRegisters: OrderedSet<Register>;
     interferences: OrderedSet<RegisterInterference>;
 };
 
@@ -344,22 +344,32 @@ const otherRegister = (interference: RegisterInterference, r: Register): Registe
     return undefined;
 };
 
-export const registerInterferenceGraph = (liveness: Set<Register>[]): RegisterInterferenceGraph => {
-    const nonSpecialRegisters = setJoin(registerIsEqual, liveness);
-    nonSpecialRegisters.removeWithPredicate(item => typeof item == 'string');
+export const registerInterferenceGraph = (
+    liveness: Set<Register>[],
+    argumentRegisters: Register[]
+): RegisterInterferenceGraph => {
+    const registerIsArgument = register => argumentRegisters.some(arg => registerIsEqual(arg, register));
+    const localRegisters = setJoin(registerIsEqual, liveness);
+    localRegisters.removeWithPredicate(local => typeof local == 'string' || registerIsArgument(local));
     const result: RegisterInterferenceGraph = {
-        nonSpecialRegisters: orderedSet(registerCompare),
+        localRegisters: orderedSet(registerCompare),
         interferences: orderedSet(interferenceCompare),
     };
     liveness.forEach(registers => {
         registers.forEach(i => {
             registers.forEach(j => {
                 if (typeof i != 'string' && typeof j != 'string') {
-                    result.nonSpecialRegisters.add(i);
-                    result.nonSpecialRegisters.add(j);
-                    if (!registerIsEqual(i, j)) {
-                        result.interferences.add({ r1: i, r2: j });
+                    // We don't reuse arguments right now even if we could
+                    if (registerIsArgument(i) || registerIsArgument(j)) {
+                        return;
                     }
+                    result.localRegisters.add(i);
+                    result.localRegisters.add(j);
+                    // Register always interfere with themselves, this doesn't need to be tracked
+                    if (registerIsEqual(i, j)) {
+                        return;
+                    }
+                    result.interferences.add({ r1: i, r2: j });
                 }
             });
         });
@@ -599,8 +609,8 @@ export const assignRegisters = <TargetRegister>(
     }
 
     // http://web.cecs.pdx.edu/~mperkows/temp/register-allocation.pdf
-    const rig = registerInterferenceGraph(liveness);
-    const registersToAssign = rig.nonSpecialRegisters.copy();
+    const rig = registerInterferenceGraph(liveness, taf.arguments);
+    const registersToAssign = rig.localRegisters.copy();
     const interferences = rig.interferences.copy();
     const colorableStack: Register[] = [];
     while (registersToAssign.size() > 0) {
