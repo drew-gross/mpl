@@ -25,6 +25,7 @@
         "profile-test-case-gen": "tsc && node_modules/.bin/0x ./built/debug-test-case.js",
         "cloc": "cloc --exclude-dir=node_modules,built --not-match-f='npm-shrinkwrap.json|package.json|tsconfig.json|prettier-config.json|test.ts|test-utils.ts' .",
         "cloc-all": "cloc --exclude-dir=node_modules,built . --not-match-f='npm-shrinkwrap.json'",
+        "cloc-test": "cloc  ./test.ts ./test-cases.ts",
         "prettier-check": "prettier --config package.json --list-different '**/*.ts'"
     },
     "bin": {
@@ -45,7 +46,7 @@
         "graphlib-dot": "0.6.2",
         "inquirer": "7.0.0",
         "lodash": "4.17.15",
-        "node": "12.8.1",
+        "node": "12.9.1",
         "omit-deep": "0.3.0",
         "parallelshell": "3.0.2",
         "prettier": "1.18.2",
