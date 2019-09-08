@@ -531,7 +531,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 prepare: [],
                 execute: [],
                 cleanup: [
-                    // TODO: maybe not valid? This destination may have been reused for something else by the time we get to cleanup
+                    // TODO: ~~~maybe not valid? This destination may have been reused for something else by the time we get to cleanup~~~ Definitely not valid. Will currently do the cleanup even if this concatenation happens in a ternary that isn't executed.
                     {
                         kind: 'callByName',
                         function: 'my_free',
@@ -543,64 +543,21 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             return compileExpression<Statement>(
                 [storeLeftInstructions, storeRightInstructions, cleanup],
                 ([e1, e2, _]) => [
-                    {
-                        kind: 'loadImmediate',
-                        value: 1,
-                        destination: newStringLengthTemporary,
-                        why: 'Create a temporary to store new string length. Start with 1 for null terminator.',
-                    },
+                    ...ins(`${s(newStringLengthTemporary)} = 1; Combined length. Start with 1 for null terminator.`),
                     ...e1,
                     ...e2,
-                    {
-                        kind: 'callByName',
-                        function: 'length',
-                        arguments: [leftSideDestination],
-                        why: 'Compute the length of lhs',
-                    },
-                    {
-                        kind: 'add',
-                        lhs: 'result',
-                        rhs: newStringLengthTemporary,
-                        destination: newStringLengthTemporary,
-                        why: 'add lhs length to length temporary',
-                    },
-                    {
-                        kind: 'callByName',
-                        function: 'length',
-                        arguments: [rightSideDestination],
-                        why: 'Compute the length of lhs',
-                    },
-                    {
-                        kind: 'add',
-                        lhs: 'result',
-                        rhs: newStringLengthTemporary,
-                        destination: newStringLengthTemporary,
-                        why: 'add rhs length to length temporary',
-                    },
-                    {
-                        kind: 'callByName',
-                        function: 'my_malloc',
-                        arguments: [newStringLengthTemporary],
-                        why: 'Malloc that much space',
-                    },
-                    {
-                        kind: 'move',
-                        from: 'result',
-                        to: mallocResultTemporary,
-                        why: 'Move malloc result to temporaryg',
-                    },
-                    {
-                        kind: 'callByName',
-                        function: 'string_concatenate',
-                        arguments: [leftSideDestination, rightSideDestination, mallocResultTemporary],
-                        why: 'Concatenate the strings and write to malloced space',
-                    },
-                    {
-                        kind: 'move',
-                        from: mallocResultTemporary,
-                        to: destination,
-                        why: 'Move new string pointer to final destination',
-                    },
+                    ...ins(`
+                        length(${s(leftSideDestination)}); Compute lhs length
+                        ${s(newStringLengthTemporary)} = ${s(newStringLengthTemporary)} + $result; Accumulate it
+                        length(${s(rightSideDestination)}); Compute rhs length
+                        ${s(newStringLengthTemporary)} = ${s(newStringLengthTemporary)} + $result; Accumulate it
+                        my_malloc(${s(newStringLengthTemporary)}); Allocate space for new string
+                        ${s(mallocResultTemporary)} = $result; And put in temporary
+                        string_concatenate(${s(leftSideDestination)}, ${s(rightSideDestination)}, ${s(
+                        mallocResultTemporary
+                    )}); Concatenate and put in new space
+                        ${s(destination)} = ${s(mallocResultTemporary)}; Move new ptr to final destination
+                    `),
                 ]
             );
         }
