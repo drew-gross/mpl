@@ -513,6 +513,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             }
         }
         case 'concatenation': {
+            // TODO: suspicion is that this is that thing that is double-freeing
             const leftSideDestination = makeTemporary('concat_lhs');
             const rightSideDestination = makeTemporary('concat_rhs');
             const newStringLengthTemporary = makeTemporary('concat_result_length');

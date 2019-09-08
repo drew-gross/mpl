@@ -133,7 +133,20 @@ const toStringWithoutComment = (tas: Statement): string => {
     }
 };
 
-export const toString = (tas: Statement): string => `${toStringWithoutComment(tas)}; ${tas.why}`;
+const preceedingWhitespace = (tas: Statement): string => {
+    switch (tas.kind) {
+        case 'label':
+            return '';
+        case 'functionLabel':
+            return '\n\n';
+        default:
+            return '    ';
+    }
+};
+
+export const toString = (tas: Statement): string => {
+    return `${preceedingWhitespace(tas)}${toStringWithoutComment(tas)}; ${tas.why}`;
+};
 
 export const reads = (tas: Statement, args: Register[]): Register[] => {
     switch (tas.kind) {

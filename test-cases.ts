@@ -132,6 +132,7 @@ return isFive(5) ? 1 : 0`,
             return lenFunc(5);
         `,
         exitCode: 6,
+        failing: true,
     },
     {
         name: 'No Args',
@@ -249,6 +250,56 @@ return isFive(5) ? 1 : 0`,
         `,
         exitCode: 0,
         stdout: 'HelloWorld!!!!!',
+    },
+    {
+        name: 'Allocate in Ternary True',
+        source: `
+            foo := a: Boolean => {
+                str1 := "a";
+                str2 := "b";
+                return a ? length(str1 ++ str2) : 0;
+            };
+            return foo(true);
+        `,
+        exitCode: 2,
+    },
+    {
+        name: 'Allocate in Ternary False',
+        source: `
+            foo := a: Boolean => {
+                str1 := "a";
+                str2 := "b";
+                return a ? 0 : length(str1 ++ str2);
+            };
+            return foo(false);
+        `,
+        exitCode: 2,
+    },
+    {
+        name: 'Skipped Allocate in Ternary True',
+        source: `
+            foo := a: Boolean => {
+                str1 := "a";
+                str2 := "b";
+                return a ? length(str1 ++ str2) : 0;
+            };
+            return foo(false);
+        `,
+        exitCode: 0,
+        failing: true,
+    },
+    {
+        name: 'Skipped Allocate in Ternary False',
+        source: `
+            foo := a: Boolean => {
+                str1 := "a";
+                str2 := "b";
+                return a ? 0 : length(str1 ++ str2);
+            };
+            return foo(true);
+        `,
+        exitCode: 0,
+        failing: true,
     },
 ];
 
