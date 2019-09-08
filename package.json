@@ -33,12 +33,12 @@
     "author": "Drew Gross",
     "dependencies": {
         "0x": "4.8.2",
-        "@types/node": "12.7.2",
+        "@types/node": "12.7.4",
         "ava": "2.3.0",
         "chalk": "2.4.2",
         "child-process-promise": "2.2.1",
         "clone": "2.1.2",
-        "commander": "3.0.0",
+        "commander": "3.0.1",
         "deepcopy": "2.0.0",
         "fs-extra": "8.1.0",
         "graphlib": "2.1.7",
@@ -51,7 +51,7 @@
         "prettier": "1.18.2",
         "rimraf": "3.0.0",
         "tmp-promise": "2.0.2",
-        "tslint": "5.18.0",
+        "tslint": "5.19.0",
         "tslint-config-prettier": "1.18.0",
         "typescript": "3.5.3"
     },
