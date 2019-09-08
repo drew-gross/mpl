@@ -2,11 +2,8 @@ import join from './util/join.js';
 import debug from './util/debug.js';
 import { VariableDeclaration, ExecutionResult, Function, StringLiteralData, Backend } from './api.js';
 import flatten from './util/list/flatten.js';
-import {
-    TargetThreeAddressStatement,
-    ThreeAddressFunction,
-    threeAddressCodeToTarget,
-} from './threeAddressCode/generator.js';
+import { TargetThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
+import tacToTarget from './threeAddressCode/toTarget.js';
 import { Statement } from './threeAddressCode/statement.js';
 import { Register, isEqual } from './register.js';
 import { assignRegisters, controlFlowGraph } from './controlFlowGraph.js';
@@ -80,7 +77,7 @@ export type RegisterDescription<TargetRegister> = {
     syscallSelectAndResult: TargetRegister;
 };
 
-export const getRegisterFromAssignment = <TargetRegister>(
+const getRegisterFromAssignment = <TargetRegister>(
     registerAssignment: RegisterAssignment<TargetRegister>,
     argumentRegisters: Register[], // TODO Maybe put the info about whether the register is an argument directly into the register?
     specialRegisters: RegisterDescription<TargetRegister>,
@@ -144,7 +141,7 @@ export const rtlToTarget = <TargetRegister>({
 
     const statements: TargetThreeAddressStatement<TargetRegister>[] = flatten(
         newFunction.instructions.map((instruction, index) =>
-            threeAddressCodeToTarget(
+            tacToTarget(
                 instruction,
                 stackOffsetPerInstruction[index],
                 syscallNumbers,
