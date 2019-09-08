@@ -177,21 +177,28 @@ export default <TargetRegister>(
             // TODO: Compress with callByRegister
             const moveArgsIntoPlace: TargetThreeAddressStatement<TargetRegister>[] = tas.arguments.map(
                 (register, index) => {
-                    if (typeof register == 'number') {
-                        return {
-                            kind: 'loadImmediate',
-                            value: register,
-                            destination: registers.functionArgument[index],
-                            why: 'Rearrange Args',
-                        };
-                    } else {
-                        return {
-                            kind: 'move',
-                            from: getRegister(register),
-                            to: registers.functionArgument[index],
-                            why: 'Rearrange Args',
-                        };
+                    if (index < registers.functionArgument.length) {
+                        if (typeof register == 'number') {
+                            return {
+                                kind: 'loadImmediate',
+                                value: register,
+                                destination: registers.functionArgument[index],
+                                why: 'Rearrange Args',
+                            };
+                        } else {
+                            return {
+                                kind: 'move',
+                                from: getRegister(register),
+                                to: registers.functionArgument[index],
+                                why: 'Rearrange Args',
+                            };
+                        }
                     }
+                    return {
+                        kind: 'push',
+                        register: getRegister(register),
+                        why: 'Rearrange Args',
+                    };
                 }
             );
             return [...moveArgsIntoPlace, tas];
@@ -201,21 +208,28 @@ export default <TargetRegister>(
             // TODO: Add some type check to ensure we have the right number of arguments
             const moveArgsIntoPlace: TargetThreeAddressStatement<TargetRegister>[] = tas.arguments.map(
                 (register, index) => {
-                    if (typeof register == 'number') {
-                        return {
-                            kind: 'loadImmediate',
-                            value: register,
-                            destination: registers.functionArgument[index],
-                            why: 'Rearrange Args',
-                        };
-                    } else {
-                        return {
-                            kind: 'move',
-                            from: getRegister(register),
-                            to: registers.functionArgument[index],
-                            why: 'Rearrange Args',
-                        };
+                    if (index < registers.functionArgument.length) {
+                        if (typeof register == 'number') {
+                            return {
+                                kind: 'loadImmediate',
+                                value: register,
+                                destination: registers.functionArgument[index],
+                                why: 'Rearrange Args',
+                            };
+                        } else {
+                            return {
+                                kind: 'move',
+                                from: getRegister(register),
+                                to: registers.functionArgument[index],
+                                why: 'Rearrange Args',
+                            };
+                        }
                     }
+                    return {
+                        kind: 'push',
+                        register: getRegister(register),
+                        why: 'Rearrange Args',
+                    };
                 }
             );
             return [...moveArgsIntoPlace, { ...tas, function: getRegister(tas.function) }];

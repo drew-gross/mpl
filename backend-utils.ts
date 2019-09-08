@@ -1,11 +1,12 @@
+import idAppender from './util/idAppender.js';
 import join from './util/join.js';
 import debug from './util/debug.js';
 import { VariableDeclaration, ExecutionResult, Function, StringLiteralData, Backend } from './api.js';
 import flatten from './util/list/flatten.js';
 import { TargetThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
 import tacToTarget from './threeAddressCode/toTarget.js';
-import { Statement } from './threeAddressCode/statement.js';
-import { Register } from './register.js';
+import { Statement, reads, writes } from './threeAddressCode/statement.js';
+import { Register, isEqual, toString as registerToString } from './register.js';
 import { assignRegisters, controlFlowGraph } from './controlFlowGraph.js';
 
 import mipsBackend from './backends/mips.js';
@@ -95,11 +96,88 @@ export const rtlToTarget = <TargetRegister>({
     makeEpilogue,
     registersClobberedBySyscall,
 }: RtlToTargetInput<TargetRegister>): string => {
-    const { assignment, newFunction } = assignRegisters(threeAddressFunction, registers.generalPurpose);
+    const temporaryNameMaker = idAppender();
+    const makeTemporary = name => ({ name: temporaryNameMaker(name) });
+    const argumentStackOffset = r => {
+        const argIndex = threeAddressFunction.arguments.findIndex(arg => isEqual(arg, r));
+        if (argIndex < registers.functionArgument.length) {
+            return undefined;
+        }
+        return argIndex - registers.functionArgument.length;
+    };
+
+    const instructionsWithArgsFromStack: Statement[] = flatten(
+        threeAddressFunction.instructions.map(tas => {
+            if (writes(tas).some(r => argumentStackOffset(r) !== undefined)) {
+                debug('tried to write to an arg');
+            }
+            const result: Statement[] = [];
+            // TODO: Throughout: once Restister always has .name, remove "as any". Only "result" doesn't have a name, and that can't be an arg.
+            switch (tas.kind) {
+                case 'move':
+                    let from = tas.from;
+                    const fromOffset = argumentStackOffset(tas.from);
+                    if (fromOffset !== undefined) {
+                        from = makeTemporary(`load_arg_${(from as any).name}`);
+                        if (!from) debug('!from');
+                        result.push({
+                            kind: 'unspill',
+                            register: from,
+                            offset: fromOffset,
+                            why: 'Load arg from stack',
+                        });
+                    }
+                    const toOffset = argumentStackOffset(tas.to);
+                    if (toOffset !== undefined) debug('writing to args is not allowed');
+                    result.push({ ...tas, from });
+                    break;
+                case 'add':
+                    let lhs = tas.lhs;
+                    const lhsOffset = argumentStackOffset(tas.lhs);
+                    if (lhsOffset !== undefined) {
+                        lhs = makeTemporary(`load_arg_${(lhs as any).name}`);
+                        result.push({
+                            kind: 'unspill',
+                            register: lhs,
+                            offset: lhsOffset,
+                            why: 'Load arg from stack',
+                        });
+                    }
+                    let rhs = tas.rhs;
+                    const rhsOffset = argumentStackOffset(tas.rhs);
+                    if (rhsOffset !== undefined) {
+                        rhs = makeTemporary(`load_arg_${(rhs as any).name}`);
+                        result.push({
+                            kind: 'unspill',
+                            register: rhs,
+                            offset: rhsOffset,
+                            why: 'Load arg from stack',
+                        });
+                    }
+                    result.push({ ...tas, lhs, rhs });
+                    break;
+                default:
+                    if (reads(tas, threeAddressFunction.arguments).some(r => argumentStackOffset(r) !== undefined)) {
+                        throw debug(
+                            `not sure how to convert args to stack loads for ${tas.kind}. ${JSON.stringify(tas)}`
+                        );
+                    }
+                    return [tas];
+            }
+            return result;
+        })
+    );
+
+    const functonWithArgsFromStack = { ...threeAddressFunction, instructions: instructionsWithArgsFromStack };
+
+    const { assignment, newFunction: tafWithAssignment } = assignRegisters(
+        functonWithArgsFromStack,
+        registers.generalPurpose
+    );
 
     const stackOffsetPerInstruction: number[] = [];
-    let totalStackBytes: number = 0;
-    newFunction.instructions.forEach(i => {
+    let totalStackBytes: number = threeAddressFunction.arguments.length - registers.functionArgument.length;
+    tafWithAssignment.instructions.forEach(i => {
         if (i.kind == 'alloca') {
             totalStackBytes += i.bytes;
             stackOffsetPerInstruction.push(i.bytes);
@@ -109,7 +187,7 @@ export const rtlToTarget = <TargetRegister>({
     });
 
     const statements: TargetThreeAddressStatement<TargetRegister>[] = flatten(
-        newFunction.instructions.map((instruction, index) =>
+        instructionsWithArgsFromStack.map((instruction, index) =>
             tacToTarget(
                 instruction,
                 stackOffsetPerInstruction[index],
