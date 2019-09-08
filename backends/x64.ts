@@ -12,7 +12,6 @@ import {
     saveRegistersCode,
     restoreRegistersCode,
     RegisterDescription,
-    getRegisterFromAssignment,
     rtlToTarget,
 } from '../backend-utils.js';
 import { Register } from '../register.js';
