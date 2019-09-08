@@ -516,7 +516,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const lhs = makeTemporary('concat_lhs');
             const rhs = makeTemporary('concat_rhs');
             const combinedLength = makeTemporary('concat_result_length');
-            const result = makeTemporary('concat_destination_storage');
+            const resultString = makeTemporary('concat_destination_storage');
 
             const makeLhs = recurse({ ast: ast.lhs, destination: lhs });
             const makeRhs = recurse({ ast: ast.rhs, destination: rhs });
@@ -528,7 +528,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     {
                         kind: 'callByName',
                         function: 'my_free',
-                        arguments: [result],
+                        arguments: [resultString],
                         why: 'Freeing temporary from concat',
                     },
                 ],
@@ -543,9 +543,9 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         length(${s(rhs)}); Compute rhs length
                         ${s(combinedLength)} = ${s(combinedLength)} + $result; Accumulate it
                         my_malloc(${s(combinedLength)}); Allocate space for new string
-                        ${s(result)} = $result; And put in temporary
-                        string_concatenate(${s(lhs)}, ${s(rhs)}, ${s(result)}); Concatenate and put in new space
-                        ${s(destination)} = ${s(result)}; Move new ptr to final destination
+                        ${s(resultString)} = $result; And put in temporary
+                        string_concatenate(${s(lhs)}, ${s(rhs)}, ${s(resultString)}); Concatenate and put in new space
+                        ${s(destination)} = ${s(resultString)}; Move new ptr to final destination
                     `),
             ]);
         }

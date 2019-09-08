@@ -5,7 +5,7 @@ import flatten from './util/list/flatten.js';
 import { TargetThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
 import tacToTarget from './threeAddressCode/toTarget.js';
 import { Statement } from './threeAddressCode/statement.js';
-import { Register, isEqual } from './register.js';
+import { Register } from './register.js';
 import { assignRegisters, controlFlowGraph } from './controlFlowGraph.js';
 
 import mipsBackend from './backends/mips.js';
@@ -77,37 +77,6 @@ export type RegisterDescription<TargetRegister> = {
     syscallSelectAndResult: TargetRegister;
 };
 
-const getRegisterFromAssignment = <TargetRegister>(
-    registerAssignment: RegisterAssignment<TargetRegister>,
-    argumentRegisters: Register[], // TODO Maybe put the info about whether the register is an argument directly into the register?
-    specialRegisters: RegisterDescription<TargetRegister>,
-    r: Register
-): TargetRegister => {
-    let argIndex = argumentRegisters.findIndex(arg => isEqual(arg, r));
-    if (typeof r == 'string') {
-        // TODO: remove "result" hack register
-        if (r != 'result') debug('bad register');
-        return specialRegisters.functionResult;
-    } else if (argIndex > -1) {
-        // It's an argument!
-        if (argIndex < specialRegisters.functionArgument.length) {
-            return specialRegisters.functionArgument[argIndex];
-        } else {
-            throw debug('Need to load from stack I guess?');
-        }
-    } else {
-        if (!(r.name in registerAssignment.registerMap)) {
-            throw debug(
-                `couldnt find an assignment for register: ${r.name}. Map: ${JSON.stringify(
-                    registerAssignment.registerMap
-                )}`
-            );
-        }
-        return registerAssignment.registerMap[r.name];
-    }
-    throw debug('should not get here');
-};
-
 type RtlToTargetInput<TargetRegister> = {
     threeAddressFunction: ThreeAddressFunction;
     makePrologue: (a: RegisterAssignment<TargetRegister>) => TargetThreeAddressStatement<TargetRegister>[];
@@ -146,7 +115,8 @@ export const rtlToTarget = <TargetRegister>({
                 stackOffsetPerInstruction[index],
                 syscallNumbers,
                 registers,
-                r => getRegisterFromAssignment(assignment, threeAddressFunction.arguments, registers, r),
+                threeAddressFunction.arguments,
+                assignment,
                 registersClobberedBySyscall
             )
         )

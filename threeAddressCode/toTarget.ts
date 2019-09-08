@@ -1,17 +1,50 @@
 import debug from '../util/debug.js';
 import { Statement } from './statement.js';
-import { Register } from '../register.js';
-import { RegisterDescription } from '../backend-utils.js';
+import { Register, isEqual } from '../register.js';
+import { RegisterDescription, RegisterAssignment } from '../backend-utils.js';
 import { TargetThreeAddressStatement } from './generator.js';
+
+const getRegisterFromAssignment = <TargetRegister>(
+    registerAssignment: RegisterAssignment<TargetRegister>,
+    functionArguments: Register[], // TODO Maybe put the info about whether the register is an argument directly into the register?
+    specialRegisters: RegisterDescription<TargetRegister>,
+    r: Register
+): TargetRegister => {
+    const argIndex = functionArguments.findIndex(arg => isEqual(arg, r));
+    if (typeof r == 'string') {
+        // TODO: remove "result" hack register
+        if (r != 'result') debug('bad register');
+        return specialRegisters.functionResult;
+    } else if (argIndex > -1) {
+        // It's an argument!
+        if (argIndex < specialRegisters.functionArgument.length) {
+            return specialRegisters.functionArgument[argIndex];
+        } else {
+            throw debug('Need to load from stack I guess?');
+        }
+    } else {
+        if (!(r.name in registerAssignment.registerMap)) {
+            throw debug(
+                `couldnt find an assignment for register: ${r.name}. Map: ${JSON.stringify(
+                    registerAssignment.registerMap
+                )}`
+            );
+        }
+        return registerAssignment.registerMap[r.name];
+    }
+    throw debug('should not get here');
+};
 
 export default <TargetRegister>(
     tas: Statement,
     stackOffset: number,
     syscallNumbers,
-    registerTypes: RegisterDescription<TargetRegister>,
-    getRegister: (r: Register) => TargetRegister,
+    registers: RegisterDescription<TargetRegister>,
+    functionArguments: Register[],
+    registerAssignment: RegisterAssignment<TargetRegister>,
     registersClobberedBySyscall: TargetRegister[] // TDDO: accept a backend info?
 ): TargetThreeAddressStatement<TargetRegister>[] => {
+    const getRegister = r => getRegisterFromAssignment(registerAssignment, functionArguments, registers, r);
     switch (tas.kind) {
         case 'empty':
             return [];
@@ -24,20 +57,20 @@ export default <TargetRegister>(
         case 'syscallWithoutResult':
             // TOOD: DRY with syscall impl in mips
             // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
-            if (tas.arguments.length > registerTypes.syscallArgument.length)
-                throw debug(`this backend only supports ${registerTypes.syscallArgument.length} syscall args`);
+            if (tas.arguments.length > registers.syscallArgument.length)
+                throw debug(`this backend only supports ${registers.syscallArgument.length} syscall args`);
 
             // We need to save some registers that the kernel is allowed to clobber during syscalls, ...
             const registersToSave: TargetRegister[] = [];
 
             // ... spcifically the place where the syscall stores the result ...
-            if ('destination' in tas && getRegister(tas.destination) != registerTypes.syscallSelectAndResult) {
-                registersToSave.push(registerTypes.syscallSelectAndResult);
+            if ('destination' in tas && getRegister(tas.destination) != registers.syscallSelectAndResult) {
+                registersToSave.push(registers.syscallSelectAndResult);
             }
 
             // ... the registers used for arguments to the syscall ...
             tas.arguments.forEach((_, index) => {
-                const argRegister = registerTypes.syscallArgument[index];
+                const argRegister = registers.syscallArgument[index];
                 if ('destination' in tas && getRegister(tas.destination) == argRegister) {
                     return;
                 }
@@ -63,20 +96,20 @@ export default <TargetRegister>(
                         ? {
                               kind: 'loadImmediate' as 'loadImmediate',
                               value: arg,
-                              destination: registerTypes.syscallArgument[index],
+                              destination: registers.syscallArgument[index],
                               why: 'syscallArg = immediate',
                           }
                         : {
                               kind: 'move' as 'move',
                               from: getRegister(arg),
-                              to: registerTypes.syscallArgument[index],
+                              to: registers.syscallArgument[index],
                               why: 'syscallArg = register',
                           }
                 ),
                 {
                     kind: 'loadImmediate',
                     value: syscallNumber,
-                    destination: registerTypes.syscallSelectAndResult,
+                    destination: registers.syscallSelectAndResult,
                     why: `syscall select (${tas.name})`,
                 },
                 { kind: 'syscall', why: 'syscall' },
@@ -84,7 +117,7 @@ export default <TargetRegister>(
                     ? ([
                           {
                               kind: 'move',
-                              from: registerTypes.syscallSelectAndResult,
+                              from: registers.syscallSelectAndResult,
                               to: getRegister(tas.destination),
                               why: 'destination = syscallResult',
                           },
@@ -148,14 +181,14 @@ export default <TargetRegister>(
                         return {
                             kind: 'loadImmediate',
                             value: register,
-                            destination: registerTypes.functionArgument[index],
+                            destination: registers.functionArgument[index],
                             why: 'Rearrange Args',
                         };
                     } else {
                         return {
                             kind: 'move',
                             from: getRegister(register),
-                            to: registerTypes.functionArgument[index],
+                            to: registers.functionArgument[index],
                             why: 'Rearrange Args',
                         };
                     }
@@ -172,14 +205,14 @@ export default <TargetRegister>(
                         return {
                             kind: 'loadImmediate',
                             value: register,
-                            destination: registerTypes.functionArgument[index],
+                            destination: registers.functionArgument[index],
                             why: 'Rearrange Args',
                         };
                     } else {
                         return {
                             kind: 'move',
                             from: getRegister(register),
-                            to: registerTypes.functionArgument[index],
+                            to: registers.functionArgument[index],
                             why: 'Rearrange Args',
                         };
                     }
