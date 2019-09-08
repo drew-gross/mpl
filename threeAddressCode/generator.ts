@@ -513,53 +513,41 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             }
         }
         case 'concatenation': {
-            // TODO: suspicion is that this is that thing that is double-freeing
-            const leftSideDestination = makeTemporary('concat_lhs');
-            const rightSideDestination = makeTemporary('concat_rhs');
-            const newStringLengthTemporary = makeTemporary('concat_result_length');
-            const mallocResultTemporary = makeTemporary('concat_destination_storage');
+            const lhs = makeTemporary('concat_lhs');
+            const rhs = makeTemporary('concat_rhs');
+            const combinedLength = makeTemporary('concat_result_length');
+            const result = makeTemporary('concat_destination_storage');
 
-            const storeLeftInstructions = recurse({
-                ast: ast.lhs,
-                destination: leftSideDestination,
-            });
-            const storeRightInstructions = recurse({
-                ast: ast.rhs,
-                destination: rightSideDestination,
-            });
+            const makeLhs = recurse({ ast: ast.lhs, destination: lhs });
+            const makeRhs = recurse({ ast: ast.rhs, destination: rhs });
             const cleanup: CompiledExpression<Statement> = {
                 prepare: [],
                 execute: [],
                 cleanup: [
-                    // TODO: ~~~maybe not valid? This destination may have been reused for something else by the time we get to cleanup~~~ Definitely not valid. Will currently do the cleanup even if this concatenation happens in a ternary that isn't executed.
+                    // TODO: This is not valid. It may attempt to free the string even if it was never created, e.g. due to being in the unexecuted branch of a ternary.
                     {
                         kind: 'callByName',
                         function: 'my_free',
-                        arguments: [mallocResultTemporary],
+                        arguments: [result],
                         why: 'Freeing temporary from concat',
                     },
                 ],
             };
-            return compileExpression<Statement>(
-                [storeLeftInstructions, storeRightInstructions, cleanup],
-                ([e1, e2, _]) => [
-                    ...ins(`${s(newStringLengthTemporary)} = 1; Combined length. Start with 1 for null terminator.`),
-                    ...e1,
-                    ...e2,
-                    ...ins(`
-                        length(${s(leftSideDestination)}); Compute lhs length
-                        ${s(newStringLengthTemporary)} = ${s(newStringLengthTemporary)} + $result; Accumulate it
-                        length(${s(rightSideDestination)}); Compute rhs length
-                        ${s(newStringLengthTemporary)} = ${s(newStringLengthTemporary)} + $result; Accumulate it
-                        my_malloc(${s(newStringLengthTemporary)}); Allocate space for new string
-                        ${s(mallocResultTemporary)} = $result; And put in temporary
-                        string_concatenate(${s(leftSideDestination)}, ${s(rightSideDestination)}, ${s(
-                        mallocResultTemporary
-                    )}); Concatenate and put in new space
-                        ${s(destination)} = ${s(mallocResultTemporary)}; Move new ptr to final destination
+            return compileExpression<Statement>([makeLhs, makeRhs, cleanup], ([e1, e2, _]) => [
+                ...ins(`${s(combinedLength)} = 1; Combined length. Start with 1 for null terminator.`),
+                ...e1,
+                ...e2,
+                ...ins(`
+                        length(${s(lhs)}); Compute lhs length
+                        ${s(combinedLength)} = ${s(combinedLength)} + $result; Accumulate it
+                        length(${s(rhs)}); Compute rhs length
+                        ${s(combinedLength)} = ${s(combinedLength)} + $result; Accumulate it
+                        my_malloc(${s(combinedLength)}); Allocate space for new string
+                        ${s(result)} = $result; And put in temporary
+                        string_concatenate(${s(lhs)}, ${s(rhs)}, ${s(result)}); Concatenate and put in new space
+                        ${s(destination)} = ${s(result)}; Move new ptr to final destination
                     `),
-                ]
-            );
+            ]);
         }
         case 'identifier': {
             // TODO: Better handle identifiers here. Also just better storage/scope chains?
