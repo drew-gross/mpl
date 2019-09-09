@@ -39,7 +39,7 @@ import {
 } from './controlFlowGraph.js';
 import debug from './util/debug.js';
 import { backends, rtlToTarget } from './backend-utils.js';
-import { orderedSet } from './util/ordered-set.js';
+import { orderedSet, operatorCompare } from './util/ordered-set.js';
 import { set, Set } from './util/set.js';
 import { shuffle } from 'shuffle-seed';
 
@@ -1153,26 +1153,6 @@ return ip.first * ip.second;
     exitCode: 21,
 });
 
-test('int pair in function', mplTest, {
-    source: `
-IntPair := {
-    first: Integer;
-    second: Integer;
-};
-
-foo := () => {
-    ip := IntPair {
-        first: 12,
-        second: 34,
-    };
-
-    return ip.second - ip.first;
-};
-
-return foo();`,
-    exitCode: 34 - 12,
-});
-
 test('controlFlowGraph basic test', t => {
     const rtl: Statement[] = [
         {
@@ -1861,11 +1841,7 @@ test('Unordered Set - Remove Only Element', t => {
 });
 
 test('Ordered Set Insertion', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
     s.add(1);
     s.add(2);
     s.add(3);
@@ -1898,11 +1874,7 @@ test('Ordered Set Insertion Fuzz', t => {
 });
 
 test('Ordered Set Removal', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
     s.add(1);
     s.add(2);
     s.add(3);
@@ -1913,22 +1885,14 @@ test('Ordered Set Removal', t => {
 });
 
 test('Ordered Set Remove Only Element', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
     s.add(1);
     s.remove(1);
     t.deepEqual(s.toList(), []);
 });
 
 test('Ordered Set Remove Lower Inner Element', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     const inserted = [1, 3, 2, 4];
     const removed = [3];
@@ -1939,11 +1903,7 @@ test('Ordered Set Remove Lower Inner Element', t => {
 });
 
 test('Ordered Set Remove Central Leaf', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     const inserted = [3, 1, 2, 0];
     const removed = [2];
@@ -1954,11 +1914,7 @@ test('Ordered Set Remove Central Leaf', t => {
 });
 
 test('Ordered Set Remove Higher Inner Element', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     const inserted = [3, 1, 2, 0];
     const removed = [1];
@@ -1969,11 +1925,7 @@ test('Ordered Set Remove Higher Inner Element', t => {
 });
 
 test('Ordered Set Remove With Deep Tree', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     const inserted = [1, 3, 2, 5, 4];
     const removed = [3];
@@ -1984,11 +1936,7 @@ test('Ordered Set Remove With Deep Tree', t => {
 });
 
 test('Ordered Set Remove - regression', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     const inserted = [88, 35, 52, 72, 63, 81, 45, 57];
     const removed = [52, 57];
@@ -2000,11 +1948,7 @@ test('Ordered Set Remove - regression', t => {
 });
 
 test('Ordered Set Remove - Least Upper Bound has Higher Elements', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     const inserted = [1, 0, 4, 2, 3];
     inserted.forEach(x => s.add(x));
@@ -2013,11 +1957,7 @@ test('Ordered Set Remove - Least Upper Bound has Higher Elements', t => {
 });
 
 test('Ordered Set To List After Removing', async t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     const inserted = [88, 97, 93, 99, 34, 94];
     const removed = [99, 88, 97, 60, 91];
@@ -2028,11 +1968,7 @@ test('Ordered Set To List After Removing', async t => {
 });
 
 test('Ordered Set Remove Top of Left Leaning Tree', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     s.add(2);
     s.add(3);
@@ -2044,11 +1980,7 @@ test('Ordered Set Remove Top of Left Leaning Tree', t => {
 });
 
 test('Ordered Set Remove Upside Down Nike Symbol', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     const inserted = [88, 90, 77, 70];
     const removed = [78, 88, 77];
@@ -2060,11 +1992,7 @@ test('Ordered Set Remove Upside Down Nike Symbol', t => {
 });
 
 test('Ordered Set Remove Last Item Regression', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     const inserted = [3, 2, 0, 1, 4];
     const removed = [2, 3, 4];
@@ -2076,11 +2004,7 @@ test('Ordered Set Remove Last Item Regression', t => {
 });
 
 test('Ordered Set Remove All Regression', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     const inserted = [3, 2, 4];
     const removed = [2, 3, 4];
@@ -2092,11 +2016,7 @@ test('Ordered Set Remove All Regression', t => {
 });
 
 test('Ordered Set Remove Fuzz', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     const inserted = range(0, 100);
     const removed = range(50, 100);
@@ -2118,11 +2038,7 @@ test('Ordered Set Remove Fuzz', t => {
 });
 
 test('Oredered Set Remove With Predicate Fuzz', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     const inserted = range(0, 100);
     const remaining = range(0, 51);
@@ -2143,11 +2059,7 @@ test('Oredered Set Remove With Predicate Fuzz', t => {
 });
 
 test('Ordered Set Size', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     t.deepEqual(s.size(), 0);
     s.add(1);
@@ -2161,11 +2073,7 @@ test('Ordered Set Size', t => {
 });
 
 test('Ordered Set Extract One', t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     s.add(1);
     s.add(2);
@@ -2184,11 +2092,7 @@ test('Ordered Set Extract One', t => {
 
 // TODO: Turn this into a screenshot test somehow.
 test('Ordered Set Dotfile', async t => {
-    const s = orderedSet<number>((x, y) => {
-        if (x < y) return -1;
-        if (x > y) return 1;
-        return 0;
-    });
+    const s = orderedSet<number>(operatorCompare);
 
     const inserted = [88, 35, 52, 72, 63, 81, 45, 57];
     const removed = [52, 57];

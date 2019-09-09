@@ -4,6 +4,12 @@ import ComparisonResult from './comparisonResult';
 
 type SetComparator<T> = (lhs: T, rhs: T) => ComparisonResult;
 
+export const operatorCompare = <T>(x: T, y: T) => {
+    if (x < y) return -1;
+    if (x > y) return 1;
+    return 0;
+};
+
 // TODO: Unify with set.ts maybe?
 type SetForEachPredicate<T> = (item: T) => void;
 type SetExtractPredicate<T> = (item: T) => boolean;

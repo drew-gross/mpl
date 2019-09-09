@@ -192,6 +192,27 @@ return isFive(5) ? 1 : 0`,
         exitCode: 11,
     },
     {
+        name: 'Int Pair in Function',
+        source: `
+        IntPair := {
+            first: Integer;
+            second: Integer;
+        };
+
+        foo := () => {
+            ip := IntPair {
+                first: 12,
+                second: 34,
+            };
+
+            return ip.second - ip.first;
+        };
+
+        return foo();
+    `,
+        exitCode: 34 - 12,
+    },
+    {
         name: 'Multiple Int Pairs in Function',
         source: `
             IntPair := {
