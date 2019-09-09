@@ -35,46 +35,45 @@ const fmtNum = num =>
 if (!before) {
     (async () => {
         const results = await Promise.all(
-            testCases
-                .map(async ({ name, source, failing }) => {
-                    if (failing) {
-                        return;
-                    }
-                    const frontendOutput = compile(source);
-                    if (
-                        'parseErrors' in frontendOutput ||
-                        'typeErrors' in frontendOutput ||
-                        'kind' in frontendOutput ||
-                        'internalError' in frontendOutput
-                    ) {
-                        console.log(`Failed to compile ${name}`);
-                        return;
-                    }
-                    const backends: Backend[] = [jsBackend, cBackend, mipsBackend, x64Backend];
-                    const [jsSize, cSize, mipsSize, x64Size] = await Promise.all(
-                        backends.map(async (backend: Backend) => {
-                            const compilationResult = await backend.compile(frontendOutput);
-                            if ('error' in compilationResult) {
-                                throw `Failed to compile ${name} to ${backend.name}: ${compilationResult.error}`;
-                            }
-                            return (await stat(compilationResult.binaryFile.path)).size;
-                        })
-                    );
+            testCases.map(async ({ name, source, failing }) => {
+                if (failing) {
+                    return;
+                }
+                const frontendOutput = compile(source);
+                if (
+                    'parseErrors' in frontendOutput ||
+                    'typeErrors' in frontendOutput ||
+                    'kind' in frontendOutput ||
+                    'internalError' in frontendOutput
+                ) {
+                    console.log(`Failed to compile ${name}`);
+                    return;
+                }
+                const backends: Backend[] = [jsBackend, cBackend, mipsBackend, x64Backend];
+                const [jsSize, cSize, mipsSize, x64Size] = await Promise.all(
+                    backends.map(async (backend: Backend) => {
+                        const compilationResult = await backend.compile(frontendOutput);
+                        if ('error' in compilationResult) {
+                            throw `Failed to compile ${name} to ${backend.name}: ${compilationResult.error}`;
+                        }
+                        return (await stat(compilationResult.binaryFile.path)).size;
+                    })
+                );
 
-                    return {
-                        name,
-                        'JS Binary Size (bytes)': jsSize,
-                        'C Binary Size (bytes)': cSize,
-                        'Mips Binary Size (bytes)': mipsSize,
-                        'x64 Binary Size (bytes)': x64Size,
-                    };
-                })
-                .filter(x => x !== undefined)
+                return {
+                    name,
+                    'JS Binary Size (bytes)': jsSize,
+                    'C Binary Size (bytes)': cSize,
+                    'Mips Binary Size (bytes)': mipsSize,
+                    'x64 Binary Size (bytes)': x64Size,
+                };
+            })
         );
+        const successfulResults = results.filter(Boolean);
         if (out) {
-            await writeFile(out, JSON.stringify(results));
+            await writeFile(out, JSON.stringify(successfulResults));
         } else {
-            console.table(results);
+            console.table(successfulResults);
         }
     })();
 } else {
