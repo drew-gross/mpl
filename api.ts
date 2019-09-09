@@ -1,5 +1,5 @@
 import { UninferredStatement, Statement } from './ast.js';
-import { ThreeAddressFunction, TargetInfo } from './threeAddressCode/generator.js';
+import { TargetInfo } from './threeAddressCode/generator.js';
 import { Type, TypeDeclaration } from './types.js';
 import { FileResult } from 'fs-extra';
 import { ThreeAddressProgram } from './threeAddressCode/generator.js';

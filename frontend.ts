@@ -1,18 +1,14 @@
 import flatten from './util/list/flatten.js';
-import unique from './util/list/unique.js';
 import uniqueBy from './util/list/uniqueBy.js';
-import sum from './util/list/sum.js';
-import join from './util/join.js';
 import idMaker from './util/idMaker.js';
 import last from './util/list/last.js';
 import debug from './util/debug.js';
 import { lex, Token, LexError } from './parser-lib/lex.js';
 import { tokenSpecs, grammar, MplAst, MplParseResult, MplToken } from './grammar.js';
-import { ParseResult, parseResultIsError, parse, stripResultIndexes, Leaf as AstLeaf } from './parser-lib/parse.js';
+import { parseResultIsError, parse, stripResultIndexes, Leaf as AstLeaf } from './parser-lib/parse.js';
 import ParseError from './parser-lib/ParseError.js';
 import {
     Type,
-    Product,
     ProductComponent,
     equal as typesAreEqual,
     resolve as resolveType,
@@ -24,8 +20,6 @@ import { VariableDeclaration, Function, UninferredFunction, FrontendOutput, Stri
 import { TypeError } from './TypeError.js';
 import SourceLocation from './parser-lib/sourceLocation.js';
 import * as Ast from './ast.js';
-
-const tokensToString = tokens => tokens.map(token => token.string).join('');
 
 const repairAssociativity = (nodeType, ast) => {
     // Let this slide because TokenType overlaps InteriorNodeType right now
@@ -97,7 +91,6 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
 };
 
 const extractVariable = (ctx: WithContext<Ast.UninferredStatement>): VariableDeclaration | undefined => {
-    const result: VariableDeclaration[] = [];
     switch (ctx.w.kind) {
         case 'reassignment':
         case 'declarationAssignment':
@@ -105,17 +98,6 @@ const extractVariable = (ctx: WithContext<Ast.UninferredStatement>): VariableDec
             // Recursive functions can refer to the left side on the right side, so to extract
             // the left side, we need to know about the right side. Probably, this just shouldn't return
             // a type. TODO: allow more types of recursive functions than just single int...
-            const variablesIncludingSelf = mergeDeclarations(ctx.availableVariables, [
-                {
-                    name: ctx.w.destination,
-                    type: {
-                        kind: 'Function',
-                        arguments: [{ kind: 'Integer' }],
-                        permissions: [],
-                        returnType: { kind: 'Integer' },
-                    },
-                },
-            ]);
             return {
                 name: ctx.w.destination,
                 type: (typeOfExpression({ ...ctx, w: ctx.w.expression }) as TOEResult).type,
@@ -737,17 +719,6 @@ const typeCheckFunction = (ctx: WithContext<UninferredFunction>) => {
     return { typeErrors: allErrors, identifiers: availableVariables };
 };
 
-const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaration[] =>
-    functions.map(({ name, parameters }) => {
-        const args = parameters.map(p => p.type);
-        const returnType = args.shift();
-        return {
-            name,
-            type: { kind: 'Function' as 'Function', arguments: args, permissions: [], returnType: returnType as any },
-            location: 'Global' as 'Global',
-        };
-    });
-
 const assignmentToGlobalDeclaration = (ctx: WithContext<Ast.UninferredDeclarationAssignment>): VariableDeclaration => {
     const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
@@ -1367,8 +1338,6 @@ const compile = (
     if (flatTypeErrors.length > 0) {
         return { typeErrors: flatTypeErrors };
     }
-
-    const typedProgramStatements = program.statements.map(s => infer({ w: s, availableVariables, availableTypes }));
 
     const typedFunctions: Function[] = [];
     functions.forEach(f => {

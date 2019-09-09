@@ -1,5 +1,4 @@
 import { file as tmpFile } from 'tmp-promise';
-import { writeFile } from 'fs-extra';
 import testCases from './test-cases.js';
 import { passed } from './test-case.js';
 import produceProgramInfo from './produceProgramInfo.js';
@@ -10,7 +9,6 @@ import * as dot from 'graphlib-dot';
 import { toDotFile } from './parser-lib/parse.js';
 import parseErrorToString from './parser-lib/parseErrorToString.js';
 import { toString as typeErrorToString } from './TypeError.js';
-import { programToString } from './threeAddressCode/programToString.js';
 import chalk from 'chalk';
 import * as commander from 'commander';
 import annotateSource from './annotateSource.js';

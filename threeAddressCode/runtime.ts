@@ -1,9 +1,6 @@
 import { errors } from '../runtime-strings.js';
-import debug from '../util/debug.js';
-import { Register, toString as s } from '../register.js';
 import { ThreeAddressFunction } from './generator.js';
-import { programToString, functionToString } from './programToString.js';
-import { parseProgram as parseTac, parseFunctionOrDie, parseInstructionsOrDie as ins } from './parser.js';
+import { parseFunctionOrDie, parseInstructionsOrDie as ins } from './parser.js';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => ThreeAddressFunction;
 

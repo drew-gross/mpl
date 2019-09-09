@@ -1,13 +1,13 @@
 import idAppender from './util/idAppender.js';
 import join from './util/join.js';
 import debug from './util/debug.js';
-import { VariableDeclaration, ExecutionResult, Function, StringLiteralData, Backend } from './api.js';
+import { StringLiteralData, Backend } from './api.js';
 import flatten from './util/list/flatten.js';
 import { TargetThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
 import tacToTarget from './threeAddressCode/toTarget.js';
 import { Statement, reads, writes } from './threeAddressCode/statement.js';
-import { Register, isEqual, toString as registerToString, compare } from './register.js';
-import { assignRegisters, controlFlowGraph } from './controlFlowGraph.js';
+import { isEqual } from './register.js';
+import { assignRegisters } from './controlFlowGraph.js';
 import { orderedSet, operatorCompare } from './util/ordered-set.js';
 
 import mipsBackend from './backends/mips.js';
@@ -188,10 +188,8 @@ export const rtlToTarget = <TargetRegister>({
     );
 
     const stackOffsetPerInstruction: number[] = [];
-    let totalStackBytes: number = threeAddressFunction.arguments.length - registers.functionArgument.length;
     tafWithAssignment.instructions.forEach(i => {
         if (i.kind == 'alloca') {
-            totalStackBytes += i.bytes;
             stackOffsetPerInstruction.push(i.bytes);
         } else {
             stackOffsetPerInstruction.push(0);

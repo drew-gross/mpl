@@ -1,6 +1,4 @@
 import writeTempFile from '../util/writeTempFile.js';
-import { exec } from 'child-process-promise';
-import { stat } from 'fs-extra';
 import flatten from '../util/list/flatten.js';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { FrontendOutput, ExecutionResult, CompilationResult, Backend, VariableDeclaration } from '../api.js';

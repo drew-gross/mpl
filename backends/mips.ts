@@ -1,26 +1,18 @@
 import writeTempFile from '../util/writeTempFile.js';
-import { stat } from 'fs-extra';
 import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
-import flatten from '../util/list/flatten.js';
-import { FrontendOutput, ExecutionResult, Function, StringLiteralData, Backend, CompilationResult } from '../api.js';
-import * as Ast from '../ast.js';
+import { FrontendOutput, ExecutionResult, StringLiteralData, Backend, CompilationResult } from '../api.js';
 import debug from '../util/debug.js';
-import { Register } from '../register.js';
 import join from '../util/join.js';
-import { RegisterAssignment, stringLiteralName, RegisterDescription, rtlToTarget } from '../backend-utils.js';
+import { stringLiteralName, RegisterDescription, rtlToTarget } from '../backend-utils.js';
 import {
-    astToThreeAddressCode,
     TargetThreeAddressStatement,
-    GlobalInfo,
     makeTargetProgram,
     TargetInfo,
     ThreeAddressProgram,
 } from '../threeAddressCode/generator.js';
 import { programToString } from '../threeAddressCode/programToString.js';
-import { Statement } from '../threeAddressCode/statement.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction, readIntDirect } from '../threeAddressCode/runtime.js';
-import { builtinFunctions, Type, TypeDeclaration, typeSize } from '../types.js';
 
 type MipsRegister =
     // s

@@ -2,33 +2,19 @@ import { programToString } from '../threeAddressCode/programToString.js';
 import writeTempFile from '../util/writeTempFile.js';
 import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
-import flatten from '../util/list/flatten.js';
-import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { RegisterAssignment, stringLiteralName, RegisterDescription, rtlToTarget } from '../backend-utils.js';
-import { Register } from '../register.js';
+import { stringLiteralName, RegisterDescription, rtlToTarget } from '../backend-utils.js';
 import {
-    astToThreeAddressCode,
     TargetThreeAddressStatement,
-    GlobalInfo,
     makeTargetProgram,
     TargetInfo,
     ThreeAddressProgram,
 } from '../threeAddressCode/generator.js';
-import { Statement } from '../threeAddressCode/statement.js';
 import { mallocWithMmap, printWithWriteRuntimeFunction, readIntThroughSyscall } from '../threeAddressCode/runtime.js';
-import {
-    ExecutionResult,
-    VariableDeclaration,
-    FrontendOutput,
-    StringLiteralData,
-    Backend,
-    CompilationResult,
-} from '../api.js';
+import { ExecutionResult, FrontendOutput, StringLiteralData, Backend, CompilationResult } from '../api.js';
 import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
-import { execSync } from 'child_process';
 
 type X64Register =
     // function args

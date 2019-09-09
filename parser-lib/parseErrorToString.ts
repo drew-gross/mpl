@@ -1,5 +1,4 @@
 import ParseError from './ParseError.js';
-import join from '../util/join.js';
 
 export default ({ expected, found, sourceLocation }: ParseError): string => {
     const line = sourceLocation.line;

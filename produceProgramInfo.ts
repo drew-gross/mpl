@@ -1,13 +1,10 @@
-import debug from './util/debug.js';
 import { parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
 import { programToString } from './threeAddressCode/programToString.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction, readIntDirect } from './threeAddressCode/runtime.js';
-import { tokenSpecs, MplToken, MplAst, grammar } from './grammar.js';
+import { tokenSpecs, MplToken, MplAst } from './grammar.js';
 import writeTempFile from './util/writeTempFile.js';
-import { writeFile } from 'fs-extra';
 import { lex, Token, LexError } from './parser-lib/lex.js';
 import { parseMpl, compile } from './frontend.js';
-import { parse, stripResultIndexes, toDotFile, parseResultIsError, stripSourceLocation } from './parser-lib/parse.js';
 import { FrontendOutput, ExecutionResult, CompilationResult } from './api.js';
 import ParseError from './parser-lib/ParseError.js';
 import join from './util/join.js';
@@ -103,7 +100,6 @@ export default async (
     const backendResults = await Promise.all(
         backends.map(async ({ name, compile: compileFn, execute }) => {
             const compilationResult = await compileFn(frontendOutput);
-            const result = { name, compilationResult };
 
             if ('error' in compilationResult) {
                 return { name, compilationResult, executionResult: { error: 'Compilation failed' } };

@@ -1,18 +1,14 @@
 import * as Ast from '../ast.js';
-import { stat } from 'fs-extra';
 import { file as tmpFile } from 'tmp-promise';
 import {
     VariableDeclaration,
     FrontendOutput,
-    Function,
     ExecutionResult,
     StringLiteralData,
     Backend,
     CompilationResult,
 } from '../api.js';
 import { Type, equal as typesAreEqual, builtinTypes } from '../types.js';
-import flatten from '../util/list/flatten.js';
-import last from '../util/list/last.js';
 import { exec } from 'child-process-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import debug from '../util/debug.js';
@@ -22,7 +18,6 @@ import { errors } from '../runtime-strings.js';
 import { mergeDeclarations } from '../frontend.js';
 import idAppender from '../util/idAppender.js';
 import writeTempFile from '../util/writeTempFile.js';
-import { FileResult } from 'fs-extra';
 
 // Beginnings of experiment with tracing code from source to target
 const callFree = (target: string, reason: string) => `my_free(${target}); // ${reason}`;

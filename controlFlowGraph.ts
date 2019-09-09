@@ -1,19 +1,14 @@
 import ComparisonResult from './util/comparisonResult.js';
 import debug from './util/debug.js';
 import last from './util/list/last.js';
-import sum from './util/list/sum.js';
-import flatten from './util/list/flatten.js';
 import { set, Set, join as setJoin, fromList as setFromList } from './util/set.js';
 import { orderedSet, OrderedSet } from './util/ordered-set.js';
 import join from './util/join.js';
-import grid from './util/grid.js';
 import idAppender from './util/idAppender.js';
 import { RegisterAssignment } from './backend-utils.js';
 import { Register, isEqual as registerIsEqual, compare as registerCompare } from './register.js';
 import { ThreeAddressFunction } from './threeAddressCode/generator.js';
 import { Statement, toString as tasToString, reads, writes } from './threeAddressCode/statement.js';
-import { Graph } from 'graphlib';
-import { functionToString } from './threeAddressCode/programToString.js';
 
 export type BasicBlock = {
     name: string;
@@ -262,18 +257,11 @@ const propagateBlockLiveness = (block: BasicBlock, liveness: Set<Register>[], li
 
 const verifyingOverlappingJoin = (blocks: Set<Register>[][]): Set<Register>[] => {
     const result: Set<Register>[] = [];
-    // TODO: what is this forEach even doing?
-    blocks.forEach((block, index) => {
-        if (index == blocks.length - 1) return;
-        const nextBlock = blocks[index + 1];
-        const lastOfCurrent = last(block);
-        if (!lastOfCurrent) throw debug('empty block');
-        const firstOfNext = nextBlock[0];
-    });
     // Block building results in the end of each block having the same last element as the first
     // item of the next block. Put the blocks together in a way that accounts for this. TODO: maybe
     // refactor the code so this isn't necessary?
     blocks.forEach((block, index) => {
+        if (block.length == 0) debug('empty block');
         result.push(...block);
         if (index == blocks.length - 1) return;
         result.pop();
@@ -311,16 +299,6 @@ type RegisterInterference = { r1: Register; r2: Register };
 export type RegisterInterferenceGraph = {
     localRegisters: OrderedSet<Register>;
     interferences: OrderedSet<RegisterInterference>;
-};
-
-const interferenceIsEqual = (lhs: RegisterInterference, rhs: RegisterInterference): boolean => {
-    if (registerIsEqual(lhs.r1, rhs.r1) && registerIsEqual(lhs.r2, rhs.r2)) {
-        return true;
-    }
-    if (registerIsEqual(lhs.r1, rhs.r2) && registerIsEqual(lhs.r2, rhs.r1)) {
-        return true;
-    }
-    return false;
 };
 
 const interferenceCompare = (lhs: RegisterInterference, rhs: RegisterInterference): ComparisonResult => {

@@ -1,6 +1,4 @@
 import { Token } from './lex.js';
-import unique from '../util/list/unique.js';
-import flatten from '../util/list/flatten.js';
 import last from '../util/list/last.js';
 import debug from '../util/debug.js';
 import { Graph } from 'graphlib';
@@ -217,7 +215,6 @@ const parseAlternative = <NodeType extends string, TokenType>(
     tokens: Token<TokenType>[],
     index: number
 ): ParseResultWithIndex<NodeType, TokenType> => {
-    const alternativeIndex: number = 0;
     const progressCache: ParserProgress<NodeType, TokenType>[] = alternatives.parsers.map(
         _ =>
             ({
@@ -233,7 +230,6 @@ const parseAlternative = <NodeType extends string, TokenType>(
         let alternativeNeedsSubtracting = false;
         let currentParser = alternatives.parsers[alternativeIndex];
         let currentResult: ParseResultWithIndex<NodeType, TokenType> | 'missingOptional';
-        const currentResultIsMissingOptional = false;
         let currentIndex: number;
         const currentProgress = progressCache[alternativeIndex];
 

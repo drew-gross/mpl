@@ -1,8 +1,5 @@
-import writeSvg from './util/graph/writeSvg.js';
-import { file as tmpFile } from 'tmp-promise';
-import { writeFile } from 'fs-extra';
 import testCases from './test-cases.js';
-import { parseFunction, parseProgram as parseTacProgram, parseInstructions } from './threeAddressCode/parser.js';
+import { parseProgram as parseTacProgram, parseInstructions } from './threeAddressCode/parser.js';
 import annontateSource from './annotateSource.js';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
 import { ThreeAddressFunction } from './threeAddressCode/generator.js';
@@ -13,34 +10,21 @@ import flatten from './util/list/flatten.js';
 import join from './util/join.js';
 import range from './util/list/range.js';
 import { lex, Token } from './parser-lib/lex.js';
-import { parseMpl, compile, typeCheckStatement, astFromParseResult, typeOfExpression } from './frontend.js';
+import { parseMpl, compile, astFromParseResult, typeOfExpression } from './frontend.js';
 import { mplTest, tacTest } from './test-utils.js';
 import { grammar, tokenSpecs, MplParseResult, MplAst, MplToken } from './grammar.js';
-import {
-    stripResultIndexes,
-    parse,
-    parseResultIsError,
-    stripSourceLocation,
-    Grammar,
-    Sequence,
-    OneOf,
-    Terminal,
-    Optional,
-} from './parser-lib/parse.js';
+import { stripResultIndexes, parse, parseResultIsError, stripSourceLocation, Terminal } from './parser-lib/parse.js';
 import * as Ast from './ast.js';
 import { removeBracketsFromAst } from './frontend.js';
 import {
     assignRegisters,
     controlFlowGraph,
-    toDotFile,
     BasicBlock,
     computeBlockLiveness,
     tafLiveness,
 } from './controlFlowGraph.js';
-import debug from './util/debug.js';
-import { backends, rtlToTarget } from './backend-utils.js';
 import { orderedSet, operatorCompare } from './util/ordered-set.js';
-import { set, Set } from './util/set.js';
+import { set } from './util/set.js';
 import { shuffle } from 'shuffle-seed';
 
 test('double flatten', t => {
@@ -1740,7 +1724,6 @@ test('Parse grammar from multiple entry points', t => {
     type TestNode = 'a' | 'b';
 
     const tacTerminal = token => Terminal<TestNode, TestToken>(token);
-    const tacOptional = parser => Optional<TestNode, TestToken>(parser);
 
     const testGrammar = {
         a: tacTerminal('a'),

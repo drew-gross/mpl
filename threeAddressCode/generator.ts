@@ -6,23 +6,13 @@ import {
     stringConcatenateRuntimeFunction,
     stringEqualityRuntimeFunction,
     myFreeRuntimeFunction,
-    RuntimeFunctionGenerator,
 } from './runtime.js';
 import idAppender from '../util/idAppender.js';
 import * as Ast from '../ast.js';
 import flatten from '../util/list/flatten.js';
-import sum from '../util/list/sum.js';
 import { builtinFunctions, Type, TypeDeclaration, resolve, typeSize } from '../types.js';
-import { isEqual } from 'lodash';
 import debug from '../util/debug.js';
-import {
-    CompiledExpression,
-    compileExpression,
-    stringLiteralName,
-    saveRegistersCode,
-    restoreRegistersCode,
-    RegisterDescription,
-} from '../backend-utils.js';
+import { CompiledExpression, compileExpression, stringLiteralName } from '../backend-utils.js';
 import { Register, toString as s } from '../register.js';
 import { Function, VariableDeclaration, StringLiteralData } from '../api.js';
 import { Statement } from './statement.js';
@@ -794,6 +784,7 @@ export const constructFunction = (
                 types,
                 targetInfo,
             });
+            // tslint:disable-next-line
             const freeLocals = f.variables
                 // TODO: Make a better memory model for frees.
                 .filter(v => v.type.kind == 'String')

@@ -1,6 +1,5 @@
 import { stat } from 'fs-extra';
 import { writeFile, readFile } from 'fs-extra';
-import { file as tmpFile } from 'tmp-promise';
 import testCases from './test-cases.js';
 import { compile } from './frontend.js';
 import { Backend } from './api.js';

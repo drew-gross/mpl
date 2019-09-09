@@ -1,6 +1,5 @@
-import { Terminal, Grammar, Ast, Leaf as AstLeaf, ParseResult, Sequence, OneOf, Optional } from './parser-lib/parse.js';
+import { Terminal, Grammar, Ast, ParseResult, Sequence, OneOf, Optional } from './parser-lib/parse.js';
 import { TokenSpec } from './parser-lib/lex.js';
-import debug from './util/debug.js';
 
 export type MplToken =
     | 'return'
@@ -10,7 +9,6 @@ export type MplToken =
     | 'typeIdentifier'
     | 'statementSeparator'
     | 'fatArrow'
-    | 'thinArrow'
     | 'equality'
     | 'assignment'
     | 'number'
@@ -79,11 +77,6 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
         token: '=>',
         type: 'fatArrow',
         toString: _ => '=>',
-    },
-    {
-        token: '->',
-        type: 'thinArrow',
-        toString: _ => '->',
     },
     {
         token: '==',
@@ -233,7 +226,6 @@ const assignment = mplTerminal('assignment');
 const _return = mplTerminal('return');
 const statementSeparator = mplTerminal('statementSeparator');
 const fatArrow = mplTerminal('fatArrow');
-const thinArrow = mplTerminal('thinArrow');
 const leftCurlyBrace = mplTerminal('leftCurlyBrace');
 const rightCurlyBrace = mplTerminal('rightCurlyBrace');
 const leftSquareBracket = mplTerminal('leftSquareBracket');
