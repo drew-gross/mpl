@@ -154,7 +154,7 @@ const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X6
         case 'pop':
             return [`pop ${tas.register}`];
         case 'loadStackOffset':
-            return [`mov ${tas.register}, rsp`, `add ${tas.register}, ${tas.offset}`];
+            return [`mov ${tas.register}, rsp`, `add ${tas.register}, -${tas.offset}`];
         case 'stackLoad':
             // TODO: Be consistent about where bytes in word gets multiplied
             return [`mov ${tas.register}, [rsp+${tas.offset * bytesInWord}]`];
