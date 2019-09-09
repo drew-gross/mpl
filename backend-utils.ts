@@ -94,8 +94,6 @@ export type RegisterDescription<TargetRegister> = {
 
 type RtlToTargetInput<TargetRegister> = {
     threeAddressFunction: ThreeAddressFunction;
-    makePrologue: (a: RegisterAssignment<TargetRegister>) => TargetThreeAddressStatement<TargetRegister>[];
-    makeEpilogue: (a: RegisterAssignment<TargetRegister>) => TargetThreeAddressStatement<TargetRegister>[];
     extraSavedRegisters: TargetRegister[];
     registers: RegisterDescription<TargetRegister>;
     syscallNumbers: any;
@@ -108,8 +106,6 @@ export const rtlToTarget = <TargetRegister>({
     syscallNumbers,
     instructionTranslator,
     extraSavedRegisters,
-    makePrologue,
-    makeEpilogue,
     registersClobberedBySyscall,
 }: RtlToTargetInput<TargetRegister>): string => {
     const temporaryNameMaker = idAppender();
@@ -218,9 +214,9 @@ export const rtlToTarget = <TargetRegister>({
 
     const wholeFunction = [
         ...extraSavedRegisters.map(r => ({ kind: 'push', register: r, why: 'save to stack' })),
-        ...makePrologue(assignment),
+        ...saveRegistersCode(assignment),
         ...statements,
-        ...makeEpilogue(assignment),
+        ...restoreRegistersCode(assignment),
         ...extraSavedRegisters.reverse().map(r => ({ kind: 'pop', register: r, why: 'restore from stack' })),
         { kind: 'returnToCaller', why: 'Done' },
     ];

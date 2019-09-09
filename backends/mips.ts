@@ -8,14 +8,7 @@ import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import { Register } from '../register.js';
 import join from '../util/join.js';
-import {
-    RegisterAssignment,
-    stringLiteralName,
-    saveRegistersCode,
-    restoreRegistersCode,
-    RegisterDescription,
-    rtlToTarget,
-} from '../backend-utils.js';
+import { RegisterAssignment, stringLiteralName, RegisterDescription, rtlToTarget } from '../backend-utils.js';
 import {
     astToThreeAddressCode,
     TargetThreeAddressStatement,
@@ -200,10 +193,6 @@ ${join(
             ': # Funtion entry\n' +
             rtlToTarget({
                 threeAddressFunction: f,
-                makePrologue: (assignment: RegisterAssignment<MipsRegister>) =>
-                    saveRegistersCode<MipsRegister>(assignment),
-                makeEpilogue: (assignment: RegisterAssignment<MipsRegister>) =>
-                    restoreRegistersCode<MipsRegister>(assignment),
                 extraSavedRegisters: ['$ra'], // Save retrun address
                 registers: mipsRegisterTypes,
                 syscallNumbers,
@@ -217,8 +206,6 @@ ${join(
 main:
 ${rtlToTarget({
     threeAddressFunction: { name: 'unused', arguments: [], instructions: main, spills: 0 },
-    makePrologue: () => [],
-    makeEpilogue: () => [],
     extraSavedRegisters: [],
     registers: mipsRegisterTypes,
     syscallNumbers,

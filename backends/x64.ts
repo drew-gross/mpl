@@ -6,14 +6,7 @@ import flatten from '../util/list/flatten.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import {
-    RegisterAssignment,
-    stringLiteralName,
-    saveRegistersCode,
-    restoreRegistersCode,
-    RegisterDescription,
-    rtlToTarget,
-} from '../backend-utils.js';
+import { RegisterAssignment, stringLiteralName, RegisterDescription, rtlToTarget } from '../backend-utils.js';
 import { Register } from '../register.js';
 import {
     astToThreeAddressCode,
@@ -205,8 +198,6 @@ ${join(
             ': ;Function entry\n' +
             rtlToTarget({
                 threeAddressFunction: f,
-                makePrologue: assignment => saveRegistersCode<X64Register>(assignment),
-                makeEpilogue: assignment => restoreRegistersCode<X64Register>(assignment),
                 extraSavedRegisters: [], // Unlike mips, return address is saved automatically by call instruction
                 registers: x64RegisterTypes,
                 syscallNumbers,
@@ -220,8 +211,6 @@ ${join(
 start:
 ${rtlToTarget({
     threeAddressFunction: { instructions: main, arguments: [], name: 'unused', spills: 0 },
-    makePrologue: () => [],
-    makeEpilogue: () => [],
     extraSavedRegisters: [],
     registers: x64RegisterTypes,
     syscallNumbers,
