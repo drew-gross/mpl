@@ -157,8 +157,8 @@ export const toDotFile = ({ blocks, connections, labelToIndexMap, exits }: Contr
 };
 
 export const controlFlowGraph = (rtl: Statement[]): ControlFlowGraph => {
-    let blocks: BasicBlock[] = [];
-    var currentBlock: Statement[] = [];
+    const blocks: BasicBlock[] = [];
+    let currentBlock: Statement[] = [];
     rtl.forEach(rtx => {
         const change = blockBehaviour(rtx);
         if (change == 'midBlock') {
@@ -187,7 +187,7 @@ export const controlFlowGraph = (rtl: Statement[]): ControlFlowGraph => {
         });
     }
 
-    let labelToIndexMap = {};
+    const labelToIndexMap = {};
     blocks.forEach((block, index) => {
         const firstRtx = block.instructions[0];
         if (firstRtx.kind == 'label' || firstRtx.kind == 'functionLabel') {
@@ -195,12 +195,12 @@ export const controlFlowGraph = (rtl: Statement[]): ControlFlowGraph => {
         }
     });
 
-    let connections: { from: number; to: number }[] = [];
-    let exits: number[] = [];
+    const connections: { from: number; to: number }[] = [];
+    const exits: number[] = [];
     blocks.forEach((block, index) => {
-        const { blockName, next, exit } = blockExits(block.instructions);
-        if (blockName) {
-            connections.push({ from: index, to: labelToIndexMap[blockName] });
+        const { blockName: exitedName, next, exit } = blockExits(block.instructions);
+        if (exitedName) {
+            connections.push({ from: index, to: labelToIndexMap[exitedName] });
         }
         if (next) {
             connections.push({ from: index, to: index + 1 });
@@ -292,10 +292,10 @@ export const tafLiveness = (taf: ThreeAddressFunction): Set<Register>[] => {
     while (remainingToPropagate.length > 0) {
         const { entryLiveness, index } = remainingToPropagate.shift() as any;
         const preceedingNodeIndices = cfg.connections.filter(({ to }) => to == index).map(n => n.from);
-        preceedingNodeIndices.forEach(index => {
-            const changed = propagateBlockLiveness(cfg.blocks[index], blockLiveness[index], entryLiveness);
+        preceedingNodeIndices.forEach(idx => {
+            const changed = propagateBlockLiveness(cfg.blocks[idx], blockLiveness[idx], entryLiveness);
             if (changed) {
-                remainingToPropagate.push({ entryLiveness: blockLiveness[index][0], index });
+                remainingToPropagate.push({ entryLiveness: blockLiveness[idx][0], index: idx });
             }
         });
     }
@@ -479,7 +479,7 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
                     });
                 }
                 if (registerIsEqual(instruction.to, registerToSpill)) {
-                    let newDestination = makeFragment();
+                    const newDestination = makeFragment();
                     newFunction.instructions.push({
                         ...instruction,
                         to: newDestination,
@@ -510,10 +510,10 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
             case 'syscallWithoutResult':
             case 'callByName': {
                 // TODO-NEXT: Implement proper spilling for callByName and callByRegister (and probs syscalls)
-                let newArguments: (Register | number | string)[] = [];
+                const newArguments: (Register | number | string)[] = [];
                 instruction.arguments.forEach(arg => {
                     if (typeof arg != 'string' && typeof arg != 'number' && registerIsEqual(arg, registerToSpill)) {
-                        let newSource = makeFragment();
+                        const newSource = makeFragment();
                         newArguments.push(newSource);
                         newFunction.instructions.push({
                             kind: 'unspill',
@@ -533,7 +533,7 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
             }
             case 'loadSymbolAddress':
                 if (registerIsEqual(instruction.to, registerToSpill)) {
-                    let newDestination = makeFragment();
+                    const newDestination = makeFragment();
                     newFunction.instructions.push({
                         ...instruction,
                         to: newDestination,
@@ -602,10 +602,11 @@ export const assignRegisters = <TargetRegister>(
     colors: TargetRegister[]
 ): { assignment: RegisterAssignment<TargetRegister>; newFunction: ThreeAddressFunction } => {
     let liveness = tafLiveness(taf);
-    let newFunction: undefined | ThreeAddressFunction = undefined;
-    while ((newFunction = removeDeadStores(taf, liveness))) {
+    let newFunction = removeDeadStores(taf, liveness);
+    while (newFunction) {
         taf = newFunction;
         liveness = tafLiveness(taf);
+        newFunction = removeDeadStores(taf, liveness);
     }
 
     // http://web.cecs.pdx.edu/~mperkows/temp/register-allocation.pdf
@@ -614,7 +615,6 @@ export const assignRegisters = <TargetRegister>(
     const interferences = rig.interferences.copy();
     const colorableStack: Register[] = [];
     while (registersToAssign.size() > 0) {
-        let stackGrew = false;
         // We are looking for one node ...
         let colorableRegister = registersToAssign.extractOne(register => {
             // ... that we haven't already colored ...
@@ -665,14 +665,14 @@ export const assignRegisters = <TargetRegister>(
     colorableStack.reverse().forEach(register => {
         if (needToSpill) return;
         // Try each color in order
-        const color = colors.find(color => {
+        const color = colors.find(c => {
             // Check we if have a neighbour with this color already
             return rig.interferences.toList().every(interference => {
                 const other = otherRegister(interference, register);
                 if (!other) {
                     return true;
                 }
-                if (result.registerMap[(other as { name: string }).name] == color) {
+                if (result.registerMap[(other as { name: string }).name] == c) {
                     return false;
                 }
                 return true;

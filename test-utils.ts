@@ -142,18 +142,17 @@ ast:${join(
     t.deepEqual(programInfo.threeAddressRoundTrip.functions, programInfo.threeAddressRoundTrip.functions);
     t.deepEqual(programInfo.threeAddressRoundTrip.globals, programInfo.threeAddressRoundTrip.globals);
 
-    for (let i = 0; i < programInfo.backendResults.length; i++) {
-        const { name, executionResult } = programInfo.backendResults[i];
+    for (const { name: backendName, executionResult } of programInfo.backendResults) {
         if (exitCode === undefined) {
             t.fail('Exit code mandatory');
             return;
         }
         const testPassed = passed(
-            { exitCode, stdout: expectedStdOut, name: name ? name : 'unnamed', source: source },
+            { exitCode, stdout: expectedStdOut, name: backendName ? backendName : 'unnamed', source },
             executionResult
         );
 
-        if (!failing.includes(name)) {
+        if (!failing.includes(backendName)) {
             if (!testPassed) {
                 error();
             }
@@ -161,7 +160,7 @@ ast:${join(
             const verbose = false;
             if (verbose) {
                 console.log('');
-                console.log(`Name: ${name}`);
+                console.log(`Name: ${backendName}`);
                 console.log(`Exit code: ${(executionResult as any).exitCode}`);
                 console.log(`Expected exit code: ${exitCode}`);
                 console.log(`Stdout: ${(executionResult as any).stdout}`);

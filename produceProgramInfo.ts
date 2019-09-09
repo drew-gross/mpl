@@ -95,15 +95,14 @@ export default async (
     });
 
     // Do a roundtrip on three address code to string and back to check the parser for that
-    debugger;
     const stringForm = programToString(threeAddressCode);
     const roundTripParsed = parseTacProgram(stringForm);
 
     const stdinFile = await writeTempFile(stdin, '.txt');
 
     const backendResults = await Promise.all(
-        backends.map(async ({ name, compile, execute }) => {
-            const compilationResult = await compile(frontendOutput);
+        backends.map(async ({ name, compile: compileFn, execute }) => {
+            const compilationResult = await compileFn(frontendOutput);
             const result = { name, compilationResult };
 
             if ('error' in compilationResult) {

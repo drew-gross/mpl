@@ -54,7 +54,7 @@ import annotateSource from './annotateSource.js';
         programInfo.parseErrors.forEach(e => {
             // The semicolor the user forgot probably should go one space after where
             // the error is.
-            let adjustedSourceLocation = e.sourceLocation;
+            const adjustedSourceLocation = e.sourceLocation;
             adjustedSourceLocation.column += 1;
             errorString += annotateSource(testCase.source, adjustedSourceLocation, parseErrorToString(e));
         });
@@ -96,8 +96,7 @@ import annotateSource from './annotateSource.js';
     }
 
     console.log('\nBackends:');
-    for (let i = 0; i < programInfo.backendResults.length; i++) {
-        const { name, compilationResult, executionResult } = programInfo.backendResults[i];
+    programInfo.backendResults.forEach(({ name, compilationResult, executionResult }) => {
         const testPassed = passed(testCase, executionResult);
 
         if (testPassed) {
@@ -139,7 +138,7 @@ import annotateSource from './annotateSource.js';
                 console.log('');
             }
         }
-    }
+    });
 
     await prompt({
         type: 'confirm',

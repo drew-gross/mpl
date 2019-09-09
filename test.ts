@@ -1742,7 +1742,7 @@ test('Parse grammar from multiple entry points', t => {
     const tacTerminal = token => Terminal<TestNode, TestToken>(token);
     const tacOptional = parser => Optional<TestNode, TestToken>(parser);
 
-    const grammar = {
+    const testGrammar = {
         a: tacTerminal('a'),
         b: tacTerminal('b'),
     };
@@ -1750,7 +1750,7 @@ test('Parse grammar from multiple entry points', t => {
     const dummySourceLocation = { line: 0, column: 0 };
 
     // Try parsing from an a
-    const aresult = parse(grammar, 'a', [{ type: 'a', string: 'anything', sourceLocation: dummySourceLocation }]);
+    const aresult = parse(testGrammar, 'a', [{ type: 'a', string: 'anything', sourceLocation: dummySourceLocation }]);
     t.deepEqual(aresult, {
         newIndex: 1,
         sourceLocation: dummySourceLocation,
@@ -1760,7 +1760,7 @@ test('Parse grammar from multiple entry points', t => {
     });
 
     // Try parsing from a b
-    const bresult = parse(grammar, 'b', [{ type: 'b', string: 'anything', sourceLocation: dummySourceLocation }]);
+    const bresult = parse(testGrammar, 'b', [{ type: 'b', string: 'anything', sourceLocation: dummySourceLocation }]);
     t.deepEqual(bresult, {
         newIndex: 1,
         sourceLocation: dummySourceLocation,
@@ -1770,7 +1770,7 @@ test('Parse grammar from multiple entry points', t => {
     });
 
     // Try parsing from a when there are extra tokens
-    const afail = parse(grammar, 'a', [
+    const afail = parse(testGrammar, 'a', [
         { type: 'a', string: 'anything', sourceLocation: dummySourceLocation },
         { type: 'a', string: 'anything', sourceLocation: dummySourceLocation },
     ]);
@@ -1859,11 +1859,7 @@ test('Ordered Set Insertion Fuzz', t => {
     const doubleAdd = range(20, 50);
     for (let seed = 0; seed < 100; seed++) {
         const shuffled = shuffle(expected, seed);
-        const s = orderedSet<number>((x, y) => {
-            if (x < y) return -1;
-            if (x > y) return 1;
-            return 0;
-        });
+        const s = orderedSet<number>(operatorCompare);
 
         shuffled.forEach(x => s.add(x));
         doubleAdd.forEach(x => s.add(x));
@@ -2016,17 +2012,11 @@ test('Ordered Set Remove All Regression', t => {
 });
 
 test('Ordered Set Remove Fuzz', t => {
-    const s = orderedSet<number>(operatorCompare);
-
     const inserted = range(0, 100);
     const removed = range(50, 100);
     const remaining = range(0, 50);
     for (let seed = 0; seed < 100; seed++) {
-        const s = orderedSet<number>((x, y) => {
-            if (x < y) return -1;
-            if (x > y) return 1;
-            return 0;
-        });
+        const s = orderedSet<number>(operatorCompare);
 
         shuffle(inserted, seed).forEach(x => s.add(x));
         shuffle(removed, seed).forEach(x => s.remove(x));
@@ -2038,16 +2028,10 @@ test('Ordered Set Remove Fuzz', t => {
 });
 
 test('Oredered Set Remove With Predicate Fuzz', t => {
-    const s = orderedSet<number>(operatorCompare);
-
     const inserted = range(0, 100);
     const remaining = range(0, 51);
     for (let seed = 0; seed < 100; seed++) {
-        const s = orderedSet<number>((x, y) => {
-            if (x < y) return -1;
-            if (x > y) return 1;
-            return 0;
-        });
+        const s = orderedSet<number>(operatorCompare);
 
         shuffle(inserted, seed).forEach(x => s.add(x));
         s.removeWithPredicate(item => item > 50);

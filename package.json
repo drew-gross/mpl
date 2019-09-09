@@ -13,7 +13,8 @@
     "scripts": {
         "benchmark": "rimraf built && tsc && node ./built/benchmark.js",
         "benchmark-debug": "rimraf built && tsc && node --inspect --inspect-brk ./built/benchmark.js",
-        "test": "rimraf built && tsc && ava --verbose && tslint --project ./package.json  ./**/*.ts && npm run prettier-check",
+        "test": "rimraf built && tsc && ava --verbose && npm run lint && npm run prettier-check",
+        "lint": "tslint --project ./package.json",
         "test-fast": "tsc && ava --verbose",
         "test-all": "npm run test && npm run benchmark",
         "test-watch": "parallelshell 'ava --watch --no-color' 'tsc --watch'",

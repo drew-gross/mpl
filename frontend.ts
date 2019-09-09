@@ -25,7 +25,7 @@ import { TypeError } from './TypeError.js';
 import SourceLocation from './parser-lib/sourceLocation.js';
 import * as Ast from './ast.js';
 
-let tokensToString = tokens => tokens.map(token => token.string).join('');
+const tokensToString = tokens => tokens.map(token => token.string).join('');
 
 const repairAssociativity = (nodeType, ast) => {
     // Let this slide because TokenType overlaps InteriorNodeType right now
@@ -173,7 +173,7 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
     nodeKinds: string[],
     extractItem: (item: NodeType) => ReturnType
 ): ReturnType[] => {
-    const recurse = ast => walkAst(ast, nodeKinds, extractItem);
+    const recurse = ast2 => walkAst(ast2, nodeKinds, extractItem);
     let result: ReturnType[] = [];
     if (nodeKinds.includes(ast.kind)) {
         result = [extractItem(ast as NodeType)];
@@ -260,7 +260,7 @@ type TOEResult = { type: Type; extractedFunctions: Function[] };
 
 // TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer() maybe?
 export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): TOEResult | TypeError[] => {
-    const recurse = ast => typeOfExpression({ ...ctx, w: ast });
+    const recurse = ast2 => typeOfExpression({ ...ctx, w: ast2 });
     const { w, availableVariables, availableTypes } = ctx;
     const ast = w;
     switch (ast.kind) {
@@ -742,7 +742,7 @@ const getFunctionTypeMap = (functions: UninferredFunction[]): VariableDeclaratio
         const args = parameters.map(p => p.type);
         const returnType = args.shift();
         return {
-            name: name,
+            name,
             type: { kind: 'Function' as 'Function', arguments: args, permissions: [], returnType: returnType as any },
             location: 'Global' as 'Global',
         };
@@ -757,8 +757,8 @@ const assignmentToGlobalDeclaration = (ctx: WithContext<Ast.UninferredDeclaratio
 type WithContext<T> = { w: T; availableTypes: TypeDeclaration[]; availableVariables: VariableDeclaration[] };
 
 const inferFunction = (ctx: WithContext<UninferredFunction>): Function | TypeError[] => {
-    let variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
-    let statements: Ast.Statement[] = [];
+    const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
+    const statements: Ast.Statement[] = [];
     ctx.w.statements.forEach(statement => {
         const statementContext: WithContext<Ast.UninferredStatement> = {
             w: statement,
@@ -795,7 +795,7 @@ const inferFunction = (ctx: WithContext<UninferredFunction>): Function | TypeErr
 
 // TODO: merge this with typecheck maybe?
 const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
-    const recurse = ast => infer({ ...ctx, w: ast });
+    const recurse = ast2 => infer({ ...ctx, w: ast2 });
     const { w, availableVariables, availableTypes } = ctx;
     const ast = w;
     switch (ast.kind) {
@@ -1134,7 +1134,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'paramList':
-            throw debug('paramList in astFromParseResult'); //Should have been caught in "callExpression"
+            throw debug('paramList in astFromParseResult'); // Should have been caught in "callExpression"
         case 'callExpression':
             const args =
                 ast.children[2].type == 'rightBracket'
@@ -1347,7 +1347,7 @@ const compile = (
         functionObjectFromAst({ w: astNode, availableVariables, availableTypes })
     );
 
-    let stringLiteralIdMaker = idMaker();
+    const stringLiteralIdMaker = idMaker();
     const nonUniqueStringLiterals = walkAst<StringLiteralData, Ast.StringLiteral>(
         ast,
         ['stringLiteral'],
@@ -1358,7 +1358,7 @@ const compile = (
     const programTypeCheck = typeCheckFunction({ w: program, availableVariables, availableTypes });
     availableVariables = mergeDeclarations(availableVariables, programTypeCheck.identifiers);
 
-    let typeErrors: TypeError[][] = functions.map(
+    const typeErrors: TypeError[][] = functions.map(
         f => typeCheckFunction({ w: f, availableVariables, availableTypes }).typeErrors
     );
     typeErrors.push(programTypeCheck.typeErrors);
