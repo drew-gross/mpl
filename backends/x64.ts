@@ -206,10 +206,7 @@ ${join(
             rtlToTarget({
                 threeAddressFunction: f,
                 makePrologue: assignment => saveRegistersCode<X64Register>(assignment),
-                makeEpilogue: assignment => [
-                    ...restoreRegistersCode<X64Register>(assignment),
-                    { kind: 'returnToCaller' as 'returnToCaller', why: 'Done' },
-                ],
+                makeEpilogue: assignment => restoreRegistersCode<X64Register>(assignment),
                 registers: x64RegisterTypes,
                 syscallNumbers,
                 instructionTranslator: threeAddressCodeToX64,

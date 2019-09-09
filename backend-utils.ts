@@ -214,7 +214,12 @@ export const rtlToTarget = <TargetRegister>({
         )
     );
 
-    const wholeFunction = [...makePrologue(assignment), ...statements, ...makeEpilogue(assignment)];
+    const wholeFunction = [
+        ...makePrologue(assignment),
+        ...statements,
+        ...makeEpilogue(assignment),
+        { kind: 'returnToCaller', why: 'Done' },
+    ];
     return join(flatten(wholeFunction.map(instructionTranslator)), '\n');
 };
 

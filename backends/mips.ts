@@ -207,7 +207,6 @@ ${join(
                 makeEpilogue: assignment => [
                     ...restoreRegistersCode<MipsRegister>(assignment),
                     { kind: 'pop', register: '$ra', why: 'Always restore return address' } as any,
-                    { kind: 'returnToCaller', why: 'Done' } as any,
                 ],
                 registers: mipsRegisterTypes,
                 syscallNumbers,
