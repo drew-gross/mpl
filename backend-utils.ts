@@ -103,7 +103,7 @@ export const rtlToTarget = <TargetRegister>({
         if (argIndex < registers.functionArgument.length) {
             return undefined;
         }
-        return threeAddressFunction.arguments.length - argIndex - registers.functionArgument.length;
+        return argIndex - registers.functionArgument.length;
     };
 
     const instructionsWithArgsFromStack: Statement[] = flatten(
@@ -112,7 +112,7 @@ export const rtlToTarget = <TargetRegister>({
                 debug('tried to write to an arg');
             }
             const result: Statement[] = [];
-            // TODO: Throughout: once Register always has .name, remove "as any". Only "result" doesn't have a name, and that can't be an arg.
+            // TODO: Throughout: once Restister always has .name, remove "as any". Only "result" doesn't have a name, and that can't be an arg.
             switch (tas.kind) {
                 case 'move':
                     let from = tas.from;
