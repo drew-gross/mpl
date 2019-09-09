@@ -6,8 +6,9 @@ import flatten from './util/list/flatten.js';
 import { TargetThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
 import tacToTarget from './threeAddressCode/toTarget.js';
 import { Statement, reads, writes } from './threeAddressCode/statement.js';
-import { Register, isEqual, toString as registerToString } from './register.js';
+import { Register, isEqual, toString as registerToString, compare } from './register.js';
 import { assignRegisters, controlFlowGraph } from './controlFlowGraph.js';
+import { orderedSet, operatorCompare } from './util/ordered-set.js';
 
 import mipsBackend from './backends/mips.js';
 import jsBackend from './backends/js.js';
@@ -52,23 +53,36 @@ export type RegisterAssignment<TargetRegister> = {
 
 export const saveRegistersCode = <TargetRegister>(
     registerAssignment: RegisterAssignment<TargetRegister>
-): TargetThreeAddressStatement<TargetRegister>[] =>
-    Object.values(registerAssignment.registerMap).map(targetRegister => ({
-        kind: 'push' as 'push',
-        register: targetRegister,
-        why: 'Push register to preserve it',
-    }));
+): TargetThreeAddressStatement<TargetRegister>[] => {
+    const usedRegisters = orderedSet<TargetRegister>(operatorCompare);
+    Object.values(registerAssignment.registerMap).forEach(usedRegisters.add);
+    const result: TargetThreeAddressStatement<TargetRegister>[] = [];
+    usedRegisters.forEach(targetRegister => {
+        result.push({
+            kind: 'push' as 'push',
+            register: targetRegister,
+            why: 'Push register to preserve it',
+        });
+    });
+    return result;
+};
 
 export const restoreRegistersCode = <TargetRegister>(
     registerAssignment: RegisterAssignment<TargetRegister>
-): TargetThreeAddressStatement<TargetRegister>[] =>
-    Object.values(registerAssignment.registerMap)
-        .map(targetRegister => ({
+): TargetThreeAddressStatement<TargetRegister>[] => {
+    const usedRegisters = orderedSet<TargetRegister>(operatorCompare);
+    Object.values(registerAssignment.registerMap).forEach(usedRegisters.add);
+    let result: TargetThreeAddressStatement<TargetRegister>[] = [];
+    usedRegisters.forEach(targetRegister => {
+        result.push({
             kind: 'pop' as 'pop',
             register: targetRegister,
             why: 'Restore preserved registers',
-        }))
-        .reverse();
+        });
+    });
+    result = result.reverse();
+    return result;
+};
 
 export type RegisterDescription<TargetRegister> = {
     generalPurpose: TargetRegister[];
