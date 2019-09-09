@@ -36,7 +36,10 @@ if (!before) {
     (async () => {
         const results = await Promise.all(
             testCases
-                .map(async ({ name, source }) => {
+                .map(async ({ name, source, failing }) => {
+                    if (failing) {
+                        return;
+                    }
                     const frontendOutput = compile(source);
                     if (
                         'parseErrors' in frontendOutput ||

@@ -55,9 +55,7 @@ export const mplTest = async (
     const error = (msg: string | undefined = undefined) => {
         const userMessage = msg === undefined ? '' : ` (${msg})`;
         t.fail(
-            name
-                ? `Test failed${userMessage}. Run $ npm run debug-test-case "${name}" for more info.`
-                : 'Unnamed test failed'
+            name ? `Test failed${userMessage}. Run $ npm run test-case "${name}" for more info.` : 'Unnamed test failed'
         );
     };
 
