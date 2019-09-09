@@ -200,14 +200,11 @@ ${join(
             ': # Funtion entry\n' +
             rtlToTarget({
                 threeAddressFunction: f,
-                makePrologue: assignment => [
-                    { kind: 'push', register: '$ra', why: 'Always save return address' } as any,
-                    ...saveRegistersCode<MipsRegister>(assignment),
-                ],
-                makeEpilogue: assignment => [
-                    ...restoreRegistersCode<MipsRegister>(assignment),
-                    { kind: 'pop', register: '$ra', why: 'Always restore return address' } as any,
-                ],
+                makePrologue: (assignment: RegisterAssignment<MipsRegister>) =>
+                    saveRegistersCode<MipsRegister>(assignment),
+                makeEpilogue: (assignment: RegisterAssignment<MipsRegister>) =>
+                    restoreRegistersCode<MipsRegister>(assignment),
+                extraSavedRegisters: ['$ra'], // Save retrun address
                 registers: mipsRegisterTypes,
                 syscallNumbers,
                 instructionTranslator: threeAddressCodeToMips,
@@ -222,6 +219,7 @@ ${rtlToTarget({
     threeAddressFunction: { name: 'unused', arguments: [], instructions: main, spills: 0 },
     makePrologue: () => [],
     makeEpilogue: () => [],
+    extraSavedRegisters: [],
     registers: mipsRegisterTypes,
     syscallNumbers,
     instructionTranslator: threeAddressCodeToMips,

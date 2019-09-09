@@ -207,6 +207,7 @@ ${join(
                 threeAddressFunction: f,
                 makePrologue: assignment => saveRegistersCode<X64Register>(assignment),
                 makeEpilogue: assignment => restoreRegistersCode<X64Register>(assignment),
+                extraSavedRegisters: [], // Unlike mips, return address is saved automatically by call instruction
                 registers: x64RegisterTypes,
                 syscallNumbers,
                 instructionTranslator: threeAddressCodeToX64,
@@ -221,6 +222,7 @@ ${rtlToTarget({
     threeAddressFunction: { instructions: main, arguments: [], name: 'unused', spills: 0 },
     makePrologue: () => [],
     makeEpilogue: () => [],
+    extraSavedRegisters: [],
     registers: x64RegisterTypes,
     syscallNumbers,
     instructionTranslator: threeAddressCodeToX64,
