@@ -164,6 +164,7 @@ const registersClobberedBySyscall: MipsRegister[] = [];
 
 const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram) => {
     if (!main) throw debug('need a main');
+    const allFunctions = [...functions, { name: 'main', arguments: [], instructions: main, spills: 0 }];
     return `
 .data
 ${Object.values(globals)
@@ -179,7 +180,7 @@ first_block: .word 0
 
 .text
 ${join(
-    functions.map(
+    allFunctions.map(
         f =>
             f.name +
             ': # Funtion entry\n' +
@@ -192,18 +193,8 @@ ${join(
                 registersClobberedBySyscall,
             })
     ),
-    '\n\n\n'
-)}
-
-main:
-${rtlToTarget({
-    threeAddressFunction: { name: 'unused', arguments: [], instructions: main, spills: 0 },
-    extraSavedRegisters: [],
-    registers: mipsRegisterTypes,
-    syscallNumbers,
-    instructionTranslator: threeAddressCodeToMips,
-    registersClobberedBySyscall,
-})}`;
+    '\n\n'
+)}`;
 };
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
     compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget }));

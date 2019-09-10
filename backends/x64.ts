@@ -173,15 +173,16 @@ const registersClobberedBySyscall: X64Register[] = ['r11'];
 
 const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram) => {
     if (!main) throw debug('need an entry point');
+    const allFunctions = [...functions, { name: 'start', arguments: [], instructions: main, spills: 0 }];
     return `
 global start
 
 section .text
 ${join(
-    functions.map(
+    allFunctions.map(
         f =>
             f.name +
-            ': ;Function entry\n' +
+            ':\n' +
             rtlToTarget({
                 threeAddressFunction: f,
                 extraSavedRegisters: [], // Unlike mips, return address is saved automatically by call instruction
@@ -191,18 +192,8 @@ ${join(
                 registersClobberedBySyscall,
             })
     ),
-    '\n\n\n'
+    '\n\n'
 )}
-
-start:
-${rtlToTarget({
-    threeAddressFunction: { instructions: main, arguments: [], name: 'unused', spills: 0 },
-    extraSavedRegisters: [],
-    registers: x64RegisterTypes,
-    syscallNumbers,
-    instructionTranslator: threeAddressCodeToX64,
-    registersClobberedBySyscall,
-})}
 section .data
 first_block: dq 0
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
