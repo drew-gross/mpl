@@ -1,10 +1,11 @@
+import flatten from '../util/list/flatten.js';
 import { programToString } from '../threeAddressCode/programToString.js';
 import writeTempFile from '../util/writeTempFile.js';
 import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { stringLiteralName, RegisterDescription, rtlToTarget } from '../backend-utils.js';
+import { stringLiteralName, RegisterDescription, tacToTargetFunction } from '../backend-utils.js';
 import {
     TargetThreeAddressStatement,
     makeTargetProgram,
@@ -173,27 +174,28 @@ const registersClobberedBySyscall: X64Register[] = ['r11'];
 
 const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram) => {
     if (!main) throw debug('need an entry point');
-    const allFunctions = [...functions, { name: 'start', arguments: [], instructions: main, spills: 0 }];
+    const x64Functions = [...functions, { name: 'start', arguments: [], instructions: main, spills: 0 }].map(f =>
+        tacToTargetFunction({
+            threeAddressFunction: f,
+            extraSavedRegisters: [], // Unlike mips, return address is saved automatically by call instruction
+            registers: x64RegisterTypes,
+            syscallNumbers,
+            registersClobberedBySyscall,
+        })
+    );
+
+    const x64FunctionString = x64Functions.map(
+        ({ name, instructions }) => `
+${name}:
+${join(flatten(instructions.map(threeAddressCodeToX64)), '\n')}
+    `
+    );
+
     return `
 global start
 
 section .text
-${join(
-    allFunctions.map(
-        f =>
-            f.name +
-            ':\n' +
-            rtlToTarget({
-                threeAddressFunction: f,
-                extraSavedRegisters: [], // Unlike mips, return address is saved automatically by call instruction
-                registers: x64RegisterTypes,
-                syscallNumbers,
-                instructionTranslator: threeAddressCodeToX64,
-                registersClobberedBySyscall,
-            })
-    ),
-    '\n\n'
-)}
+${join(x64FunctionString, '\n')}
 section .data
 first_block: dq 0
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}

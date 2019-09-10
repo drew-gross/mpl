@@ -1,5 +1,4 @@
 import idAppender from './util/idAppender.js';
-import join from './util/join.js';
 import debug from './util/debug.js';
 import { StringLiteralData, Backend } from './api.js';
 import flatten from './util/list/flatten.js';
@@ -92,22 +91,24 @@ export type RegisterDescription<TargetRegister> = {
     syscallSelectAndResult: TargetRegister;
 };
 
-type RtlToTargetInput<TargetRegister> = {
+type TacToTargetInput<TargetRegister> = {
     threeAddressFunction: ThreeAddressFunction;
     extraSavedRegisters: TargetRegister[];
     registers: RegisterDescription<TargetRegister>;
     syscallNumbers: any;
-    instructionTranslator: (t: TargetThreeAddressStatement<TargetRegister>) => string[];
     registersClobberedBySyscall: TargetRegister[];
 };
-export const rtlToTarget = <TargetRegister>({
+type TargetFunction<TargetRegister> = {
+    name: string;
+    instructions: TargetThreeAddressStatement<TargetRegister>[];
+};
+export const tacToTargetFunction = <TargetRegister>({
     threeAddressFunction,
     registers,
     syscallNumbers,
-    instructionTranslator,
     extraSavedRegisters,
     registersClobberedBySyscall,
-}: RtlToTargetInput<TargetRegister>): string => {
+}: TacToTargetInput<TargetRegister>): TargetFunction<TargetRegister> => {
     const temporaryNameMaker = idAppender();
     const makeTemporary = name => ({ name: temporaryNameMaker(name) });
     const argumentStackOffset = r => {
@@ -210,15 +211,17 @@ export const rtlToTarget = <TargetRegister>({
         )
     );
 
-    const wholeFunction = [
-        ...extraSavedRegisters.map(r => ({ kind: 'push', register: r, why: 'save to stack' })),
-        ...saveRegistersCode(assignment),
-        ...statements,
-        ...restoreRegistersCode(assignment),
-        ...extraSavedRegisters.reverse().map(r => ({ kind: 'pop', register: r, why: 'restore from stack' })),
-        { kind: 'returnToCaller', why: 'Done' },
-    ];
-    return join(flatten(wholeFunction.map(instructionTranslator)), '\n');
+    return {
+        name: threeAddressFunction.name,
+        instructions: [
+            ...extraSavedRegisters.map(r => ({ kind: 'push' as any, register: r, why: 'save to stack' })),
+            ...saveRegistersCode(assignment),
+            ...statements,
+            ...restoreRegistersCode(assignment),
+            ...extraSavedRegisters.reverse().map(r => ({ kind: 'pop', register: r, why: 'restore from stack' })),
+            { kind: 'returnToCaller', why: 'Done' },
+        ],
+    };
 };
 
 export const backends: Backend[] = [mipsBackend, jsBackend, cBackend, x64Backend];

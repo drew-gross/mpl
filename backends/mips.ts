@@ -1,10 +1,11 @@
+import flatten from '../util/list/flatten.js';
 import writeTempFile from '../util/writeTempFile.js';
 import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import { FrontendOutput, ExecutionResult, StringLiteralData, Backend, CompilationResult } from '../api.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { stringLiteralName, RegisterDescription, rtlToTarget } from '../backend-utils.js';
+import { stringLiteralName, RegisterDescription, tacToTargetFunction } from '../backend-utils.js';
 import {
     TargetThreeAddressStatement,
     makeTargetProgram,
@@ -164,7 +165,21 @@ const registersClobberedBySyscall: MipsRegister[] = [];
 
 const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram) => {
     if (!main) throw debug('need a main');
-    const allFunctions = [...functions, { name: 'main', arguments: [], instructions: main, spills: 0 }];
+    const mipsFunctions = [...functions, { name: 'main', arguments: [], instructions: main, spills: 0 }].map(f =>
+        tacToTargetFunction({
+            threeAddressFunction: f,
+            extraSavedRegisters: ['$ra'], // Save retrun address
+            registers: mipsRegisterTypes,
+            syscallNumbers,
+            registersClobberedBySyscall,
+        })
+    );
+    const mipsFunctionStrings: string[] = mipsFunctions.map(
+        ({ name, instructions }) => `
+${name}:
+${join(flatten(instructions.map(threeAddressCodeToMips)), '\n')}
+    `
+    );
     return `
 .data
 ${Object.values(globals)
@@ -179,22 +194,7 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join(
-    allFunctions.map(
-        f =>
-            f.name +
-            ': # Funtion entry\n' +
-            rtlToTarget({
-                threeAddressFunction: f,
-                extraSavedRegisters: ['$ra'], // Save retrun address
-                registers: mipsRegisterTypes,
-                syscallNumbers,
-                instructionTranslator: threeAddressCodeToMips,
-                registersClobberedBySyscall,
-            })
-    ),
-    '\n\n'
-)}`;
+${join(mipsFunctionStrings, '\n')}`;
 };
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
     compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget }));
