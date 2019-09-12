@@ -218,6 +218,7 @@ export const reads = (tas: Statement, args: Register[]): Register[] => {
         case 'spill':
             return [tas.register];
     }
+    throw debug(`kind ${(tas as any).kind} missing in reads`);
 };
 
 export const writes = (tas: Statement): Register[] => {
@@ -274,4 +275,5 @@ export const writes = (tas: Statement): Register[] => {
         case 'spill':
             return [];
     }
+    throw debug(`kind ${(tas as any).kind} missing in writes`);
 };

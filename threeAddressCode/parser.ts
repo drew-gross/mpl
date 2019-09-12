@@ -204,7 +204,7 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
     },
 ];
 
-type TacAstNode =
+type TacAstNode = 
     | 'program'
     | 'addressOf'
     | 'global'
@@ -221,8 +221,6 @@ type TacAstNode =
     | 'gotoIfGreater'
     | 'instruction'
     | 'store'
-    | 'syscallWithResult'
-    | 'syscallWithoutResult'
     | 'argList'
     | 'syscallArgs'
     | 'offsetStore'
@@ -429,6 +427,7 @@ const stripComment = (str: string): string => {
 };
 
 const isRegister = (data: string): boolean => {
+    if (!data.startsWith) debug('no startsWith');
     if (data.startsWith('r:')) {
         return true;
     }
@@ -436,6 +435,7 @@ const isRegister = (data: string): boolean => {
 };
 
 const parseRegister = (data: string): Register => {
+    if (!data.startsWith) debug('no startsWith');
     if (data.startsWith('r:')) {
         const sliced = data.substring(2);
         return { name: sliced };
@@ -617,15 +617,17 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
             };
         }
         case 'callByName': {
-            if (a.children[0].type == 'assign') {
+            if (a.children[1].type == 'assign') {
+                if (![6, 7].includes(a.children.length)) debug('wrong children lenght');
                 return {
                     kind: 'callByName',
                     function: a.children[2].value,
                     arguments: a.children.length == 5 ? parseArgList(a.children[4]) : [],
-                    destination: parseRegister(a.children[0]),
+                    destination: parseRegister(a.children[0].value),
                     why: stripComment((last(a.children) as any).value),
                 };
             } else {
+                if (![4, 5].includes(a.children.length)) debug('wrong children lenght');
                 return {
                     kind: 'callByName',
                     function: a.children[0].value,

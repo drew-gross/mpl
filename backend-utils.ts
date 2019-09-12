@@ -185,6 +185,7 @@ export const tacToTargetFunction = <TargetRegister>({
         })
     );
 
+    debugger;
     const functonWithArgsFromStack = { ...threeAddressFunction, instructions: instructionsWithArgsFromStack };
 
     const { assignment, newFunction: tafWithAssignment } = assignRegisters(

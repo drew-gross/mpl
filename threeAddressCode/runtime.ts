@@ -86,7 +86,7 @@ const switchableMallocImpl = (
 
 export const mallocWithSbrk: RuntimeFunctionGenerator = bytesInWord =>
     switchableMallocImpl(bytesInWord, 'dont include curr = *curr', (amount, destination) => ({
-        kind: 'syscallWithResult',
+        kind: 'syscall',
         name: 'sbrk',
         arguments: [amount],
         why: 'sbrk',
@@ -95,7 +95,7 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = bytesInWord =>
 
 export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord =>
     switchableMallocImpl(bytesInWord, 'include curr = *curr', (amount, destination) => ({
-        kind: 'syscallWithResult',
+        kind: 'syscall',
         name: 'mmap',
         arguments: [
             0, // addr, use null

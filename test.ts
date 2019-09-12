@@ -1533,6 +1533,7 @@ test('Stack Offset Load and Store', tacTest, {
     unspill:1 r:one; Load
     unspill:2 r:two; Load
     r:result = r:one + r:two; Add the things
+    return r:result; ret
 `,
     exitCode: 3,
     spills: 2,
