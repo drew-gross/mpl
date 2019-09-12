@@ -51,16 +51,15 @@ const switchableMallocImpl = (
         found_large_enough_block:;
             goto sbrk_more_space if r:currentBlockPointer == 0; JK need to syscall lol
             *(r:currentBlockPointer + ${2 * bytesInWord}) = 0; block->free = false
-            $result = r:currentBlockPointer;
-            $result += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
+            r:currentBlockPointer += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
             goto my_malloc_return;
         sbrk_more_space:;
             r:numBytes += ${3 * bytesInWord}; sbrk enough space for management block too
         `),
-        makeSyscall({ name: 'numBytes' }, 'result'),
+        makeSyscall({ name: 'numBytes' }, { name: 'currentBlockPointer' }),
         ...ins(`
             r:numBytes += ${-3 * bytesInWord}; Repair arg1
-            goto alloc_exit_check_passed if $result != -1;
+            goto alloc_exit_check_passed if r:currentBlockPointer != -1;
             r:err = &${errors.allocationFailed.name};
             syscall print r:err;
             syscall exit -1;
@@ -69,17 +68,18 @@ const switchableMallocImpl = (
             r:firstBlockPointerAddress = &first_block;
             goto assign_previous if r:firstBlockPointerAddress != 0;
             ; if no existing blocks, mark this as the first block
-            *first_block = $result;
+            *first_block = r:currentBlockPointer;
             goto set_up_new_space;
         assign_previous:;
             goto set_up_new_space if r:previousBlockPointer == 0;
-            *(r:previousBlockPointer + 0) = $result; prev->next = new
+            *(r:previousBlockPointer + 0) = r:currentBlockPointer; prev->next = new
         set_up_new_space:;
-            *($result + 0) = r:numBytes; new->size = requested_size
-            *($result + ${1 * bytesInWord}) = 0; new->next = null
-            *($result + ${2 * bytesInWord}) = 0; new->free = false
-            $result += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
+            *(r:currentBlockPointer + 0) = r:numBytes; new->size = requested_size
+            *(r:currentBlockPointer + ${1 * bytesInWord}) = 0; new->next = null
+            *(r:currentBlockPointer + ${2 * bytesInWord}) = 0; new->free = false
+            r:currentBlockPointer += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
         my_malloc_return:;
+            return r:currentBlockPointer;
         `),
     ],
 });
@@ -112,15 +112,15 @@ export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord =>
 export const length: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) length(r:str):
-            $result = 0;
+            r:len = 0;
         length_loop:; Count another charachter
             r:currentChar = *r:str; Load next byte
             goto length_return if r:currentChar == 0; If it's null, we are done
-            $result++; Bump string index
+            r:len++; Bump string index
             r:str++; Bump length counter
             goto length_loop; Go count another char
         length_return:; Done
-            r:str = r:str - $result; Repair input pointer
+            return r:len;
     `);
 
 export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
@@ -139,21 +139,24 @@ export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) print(r:str):
-        $result = syscall print r:str;
+        r:result = syscall print r:str;
+        return r:result;
     `);
 
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) print(r:str):
-        length(r:str); Get str length
-        $result = syscall print 1 r:str $result; 1: fd of stdout. r:str: ptr to data to write. $result: length to write
+        r:len = length(r:str); Get str length
+        r:result = syscall print 1 r:str r:len; 1: fd of stdout. r:str: ptr to data to write. r:len: length to write
+        return r:result;
    `);
 
 export const readIntDirect: RuntimeFunctionGenerator = bytesInWord =>
     // TODO: Allow syscalls that don't have any arguments, cause this shouldn't have arguments
     parseFunctionOrDie(`
         (function) readInt(r:str):
-              $result = syscall readInt r:str;
+              r:result = syscall readInt r:str;
+              return r:result;
     `);
 
 export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
@@ -161,8 +164,7 @@ export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
     const bufferSize = 10;
     return parseFunctionOrDie(`
         (function) readInt():
-            my_malloc(${bufferSize}); malloc 10 byte buffer because why not TODO
-            r:buffer = $result; rename
+            r:buffer = my_malloc(${bufferSize}); malloc 10 byte buffer because why not TODO
             r:readResult = syscall read ${stdinFd} r:buffer ${bufferSize};
             r:negativeOne = -1; goto does not support literals
             goto read_failed if r:readResult == r:negativeOne; syscall failed
@@ -220,7 +222,7 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesI
 export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) stringEquality(r:lsh, r:rhs):
-            $result = 1; Result = true (will write false if diff found)
+            r:result = 1; Result = true (will write false if diff found)
         stringEquality_loop:; Check a char
             r:leftByte = *r:lhs; Load left char into temporary
             r:rightByte = *r:rhs; Load right char into temporary
@@ -230,8 +232,9 @@ export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
             r:rhs++; Bump rhs to next char
             goto stringEquality_loop; Check next char
         stringEquality_return_false:; stringEquality_return_false
-            $result = 0; Set result to false
+            r:result = 0; Set result to false
         stringEquality_return:; Exit
+            return r:result;
     `);
 
 // TODO: merge adjacent free blocks
@@ -255,7 +258,7 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
 export const intFromString: RuntimeFunctionGenerator = bytesInWord => {
     return parseFunctionOrDie(`
     (function) intFromString(r:in):
-        $result = 0; Accumulate into here
+        r:int = 0; Accumulate into here
         r:input = r:in; Make a copy so we can modify it TODO is this necessary?
     add_char:; comment
         r:currentChar = *r:input; load a char
@@ -263,11 +266,12 @@ export const intFromString: RuntimeFunctionGenerator = bytesInWord => {
         r:fortyEight = 48; forty eight
         r:currentNum = r:currentChar - r:fortyEight; Subtract '0' to get actual number
         r:ten = 10; ten
-        $result = $result * r:ten; Previous digit was 10x
-        $result = $result + r:currentNum; Add the num
+        r:result = r:result * r:ten; Previous digit was 10x
+        r:result = r:result + r:currentNum; Add the num
         r:input++; Get next char in next loop iteration
         goto add_char; comment
     exit:; comment
+        return r:int;
     `);
 };
 

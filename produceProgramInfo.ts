@@ -84,7 +84,7 @@ export default async (
         backendInputs: frontendOutput,
         targetInfo: {
             bytesInWord: 13,
-            cleanupCode: [],
+            cleanupCode: () => [],
             mallocImpl: mallocWithSbrk(7),
             printImpl: printWithPrintRuntimeFunction(11),
             readIntImpl: readIntDirect(5),

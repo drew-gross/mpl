@@ -125,7 +125,7 @@ const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X6
             return [`call ${tas.function}`];
         case 'callByName':
             return [`call ${tas.function}`];
-        case 'returnToCaller':
+        case 'return':
             return [`ret`];
         case 'syscall':
             return ['syscall'];
@@ -157,11 +157,12 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 const x64Target: TargetInfo = {
     bytesInWord,
     // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
-    cleanupCode: [
+    cleanupCode: exitCodeRegister => [
         {
-            kind: 'syscallWithoutResult',
+            kind: 'syscall',
             name: 'exit',
-            arguments: ['result'],
+            arguments: [exitCodeRegister],
+            destination: null,
             why: 'Whole program is done',
         },
     ],
@@ -174,28 +175,62 @@ const registersClobberedBySyscall: X64Register[] = ['r11'];
 
 const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram) => {
     if (!main) throw debug('need an entry point');
-    const x64Functions = [...functions, { name: 'start', arguments: [], instructions: main, spills: 0 }].map(f =>
+    const x64Functions = functions.map(f =>
         tacToTargetFunction({
             threeAddressFunction: f,
             extraSavedRegisters: [], // Unlike mips, return address is saved automatically by call instruction
             registers: x64RegisterTypes,
             syscallNumbers,
             registersClobberedBySyscall,
+            finalCleanup: [{ kind: 'return', why: 'ret' }],
+            isMain: false, // TODO split main and use exit code
         })
     );
+    const mainFunction = tacToTargetFunction({
+        threeAddressFunction: { name: 'start', arguments: [], instructions: main, spills: 0 },
+        extraSavedRegisters: [], // Unlike mips, return address is saved automatically by call instruction
+        registers: x64RegisterTypes,
+        syscallNumbers,
+        registersClobberedBySyscall,
+        finalCleanup: [
+            { kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' },
+            {
+                kind: 'move' as 'move',
+                from: x64RegisterTypes.functionResult,
+                to: x64RegisterTypes.syscallArgument[0],
+                why: 'prepare to exit',
+            },
+            {
+                kind: 'loadImmediate',
+                destination: x64RegisterTypes.syscallSelectAndResult,
+                value: syscallNumbers.exit,
+                why: 'Whole program is done',
+            },
+            {
+                kind: 'syscall' as 'syscall',
+                why: 'Exit',
+            },
+        ],
+        isMain: true, // TODO split main and use exit code
+    });
 
-    const x64FunctionString = x64Functions.map(
+    const x64FunctionStrings = x64Functions.map(
         ({ name, instructions }) => `
 ${name}:
 ${join(flatten(instructions.map(threeAddressCodeToX64)), '\n')}
     `
     );
 
+    const mainFunctionString = `
+${mainFunction.name}
+${join(flatten(mainFunction.instructions.map(threeAddressCodeToX64)), '\n')}`;
+
     return `
 global start
 
 section .text
-${join(x64FunctionString, '\n')}
+${join(x64FunctionStrings, '\n')}
+${mainFunctionString}
 section .data
 first_block: dq 0
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}

@@ -40,7 +40,6 @@ export const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string
     if (!initialWhitespaceMatch) throw debug('Initial whitespace didnt match in lex');
     const initialWhitespace = initialWhitespaceMatch[0];
     updateSourceLocation(initialWhitespace);
-
     input = input.slice(initialWhitespace.length);
 
     // consume input reading tokens

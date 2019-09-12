@@ -29,8 +29,7 @@ export type ControlFlowGraph = {
 const blockBehaviour = (tas: Statement): 'endBlock' | 'beginBlock' | 'midBlock' => {
     switch (tas.kind) {
         case 'empty':
-        case 'syscallWithResult':
-        case 'syscallWithoutResult':
+        case 'syscall':
         case 'move':
         case 'loadImmediate':
         case 'addImmediate':
@@ -55,7 +54,7 @@ const blockBehaviour = (tas: Statement): 'endBlock' | 'beginBlock' | 'midBlock' 
         case 'label':
         case 'functionLabel':
             return 'beginBlock';
-        case 'returnToCaller':
+        case 'return':
         case 'goto':
         case 'gotoIfEqual':
         case 'gotoIfNotEqual':
@@ -98,11 +97,10 @@ const blockExits = (rtl: Statement[]): Exits => {
         case 'gotoIfZero':
         case 'gotoIfGreater':
             return { blockName: rtx.label, next: true, exit: false };
-        case 'returnToCaller':
+        case 'return':
             return { blockName: false, next: false, exit: true };
         case 'empty':
-        case 'syscallWithResult':
-        case 'syscallWithoutResult':
+        case 'syscall':
         case 'move':
         case 'loadImmediate':
         case 'addImmediate':
@@ -484,8 +482,7 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
                 }
                 newFunction.instructions.push(instruction);
                 break;
-            case 'syscallWithResult':
-            case 'syscallWithoutResult':
+            case 'syscall':
             case 'callByName': {
                 // TODO-NEXT: Implement proper spilling for callByName and callByRegister (and probs syscalls)
                 const newArguments: (Register | number | string)[] = [];
@@ -550,13 +547,9 @@ const removeDeadStores = (taf: ThreeAddressFunction, liveness: Set<Register>[]):
         const targets = writes(taf.instructions[i]);
         // If there are written registers and none of them are live, omit the write. This
         // will fail if the instruction doing the writing also has side effects, e.g. syscall. TODO:
-        // Implement something that takes this into account. TODO: Treat function result and arguments less special-casey somehow. Maybe put it into liveness computing. NOTE: Writes to arguments are not dead because length is implemented in a way where the arguments are destroyed and repaired. TODO: probably should check if any target is a register?
+        // Implement something that takes this into account. TODO: Treat function result and arguments less special-casey somehow. Maybe put it into liveness computing. NOTE: Writes to arguments are not dead because length is implemented in a way where the arguments are destroyed and repaired (TODO: verify this). TODO: probably should check if any target is a register?
 
-        if (
-            targets.length == 0 ||
-            registerIsEqual(targets[0], 'result') ||
-            taf.arguments.some(arg => registerIsEqual(targets[0], arg))
-        ) {
+        if (targets.length == 0 || taf.arguments.some(arg => registerIsEqual(targets[0], arg))) {
             newFunction.instructions.push(taf.instructions[i]);
         } else if (targets.length == 1) {
             const isLiveWrite = liveness[i + 1].has(targets[0]);

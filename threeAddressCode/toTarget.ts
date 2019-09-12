@@ -23,6 +23,7 @@ const getRegisterFromAssignment = <TargetRegister>(
             throw debug('Need to load from stack I guess?');
         }
     } else {
+        if (!r) debug('bad register');
         if (!(r.name in registerAssignment.registerMap)) {
             throw debug(
                 `couldnt find an assignment for register: ${r.name}. Map: ${JSON.stringify(
@@ -42,20 +43,28 @@ export default <TargetRegister>(
     registers: RegisterDescription<TargetRegister>,
     functionArguments: Register[],
     registerAssignment: RegisterAssignment<TargetRegister>,
+    exitLabel: string,
     registersClobberedBySyscall: TargetRegister[] // TDDO: accept a backend info?
 ): TargetThreeAddressStatement<TargetRegister>[] => {
     const getRegister = r => getRegisterFromAssignment(registerAssignment, functionArguments, registers, r);
     switch (tas.kind) {
         case 'empty':
             return [];
+        case 'return':
+            return [
+                {
+                    kind: 'move',
+                    from: getRegister(tas.register),
+                    to: registers.functionResult,
+                    why: 'Set return value',
+                },
+                { kind: 'goto', label: exitLabel, why: 'done' },
+            ];
         case 'functionLabel':
-        case 'returnToCaller':
         case 'goto':
         case 'label':
             return [tas];
-        case 'syscallWithResult':
-        case 'syscallWithoutResult':
-            // TOOD: DRY with syscall impl in mips
+        case 'syscall':
             // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
             if (tas.arguments.length > registers.syscallArgument.length)
                 throw debug(`this backend only supports ${registers.syscallArgument.length} syscall args`);
@@ -64,14 +73,14 @@ export default <TargetRegister>(
             const registersToSave: TargetRegister[] = [];
 
             // ... spcifically the place where the syscall stores the result ...
-            if ('destination' in tas && getRegister(tas.destination) != registers.syscallSelectAndResult) {
+            if (tas.destination && getRegister(tas.destination) != registers.syscallSelectAndResult) {
                 registersToSave.push(registers.syscallSelectAndResult);
             }
 
             // ... the registers used for arguments to the syscall ...
             tas.arguments.forEach((_, index) => {
                 const argRegister = registers.syscallArgument[index];
-                if ('destination' in tas && getRegister(tas.destination) == argRegister) {
+                if (tas.destination && getRegister(tas.destination) == argRegister) {
                     return;
                 }
                 registersToSave.push(argRegister);
@@ -113,7 +122,7 @@ export default <TargetRegister>(
                     why: `syscall select (${tas.name})`,
                 },
                 { kind: 'syscall', why: 'syscall' },
-                ...('destination' in tas
+                ...(tas.destination
                     ? ([
                           {
                               kind: 'move',
@@ -201,7 +210,21 @@ export default <TargetRegister>(
                     };
                 }
             );
-            return [...moveArgsIntoPlace, tas];
+            const saveResult: TargetThreeAddressStatement<TargetRegister>[] = tas.destination
+                ? [
+                      {
+                          kind: 'move',
+                          from: registers.functionResult,
+                          to: getRegister(tas.destination),
+                          why: 'save result',
+                      },
+                  ]
+                : [];
+            return [
+                ...moveArgsIntoPlace,
+                { kind: 'callByName', function: tas.function, why: 'actually call' },
+                ...saveResult,
+            ];
         }
         case 'callByRegister': {
             // Add moves to get all the arguments into place
@@ -232,7 +255,21 @@ export default <TargetRegister>(
                     };
                 }
             );
-            return [...moveArgsIntoPlace, { ...tas, function: getRegister(tas.function) }];
+            const saveResult: TargetThreeAddressStatement<TargetRegister>[] = tas.destination
+                ? [
+                      {
+                          kind: 'move',
+                          from: registers.functionResult,
+                          to: getRegister(tas.destination),
+                          why: 'save result',
+                      },
+                  ]
+                : [];
+            return [
+                ...moveArgsIntoPlace,
+                { kind: 'callByRegister', function: getRegister(tas.function), why: 'actually call' },
+                ...saveResult,
+            ];
         }
         case 'alloca':
             return [

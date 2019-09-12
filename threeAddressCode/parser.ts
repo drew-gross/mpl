@@ -1,9 +1,8 @@
 import debug from '../util/debug.js';
 import flatten from '../util/list/flatten.js';
 import last from '../util/list/last.js';
-import join from '../util/join.js';
 import { TokenSpec, lex, LexError } from '../parser-lib/lex.js';
-import { specialRegisterNames, Register } from '../register.js';
+import { Register } from '../register.js';
 import { ThreeAddressProgram, ThreeAddressFunction } from './generator.js';
 import { Statement } from './statement.js';
 import {
@@ -21,6 +20,7 @@ import {
 type TacToken =
     | 'global'
     | 'function'
+    | 'return'
     | 'goto'
     | 'if'
     | 'doubleEqual'
@@ -33,7 +33,6 @@ type TacToken =
     | 'assign'
     | 'alloca'
     | 'register'
-    | 'specialRegister'
     | 'star'
     | 'plusplus'
     | 'lessThan'
@@ -79,6 +78,11 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         action: s => parseInt(s.slice(8), 10),
     },
     {
+        token: 'return',
+        type: 'return',
+        toString: x => x,
+    },
+    {
         token: 'goto',
         type: 'goto',
         toString: x => x,
@@ -91,12 +95,6 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
     {
         token: 'r:[a-z]\\w*',
         type: 'register',
-        toString: x => x,
-        action: x => x,
-    },
-    {
-        token: `\\$(${join(specialRegisterNames, '|')})`,
-        type: 'specialRegister',
         toString: x => x,
         action: x => x,
     },
@@ -230,9 +228,9 @@ type TacAstNode =
     | 'offsetStore'
     | 'offsetLoad'
     | 'callByName'
+    | 'callByRegister'
     | 'alloca'
     | 'product'
-    | 'callByRegister'
     | 'load'
     | 'spill'
     | 'unspill'
@@ -246,8 +244,7 @@ const identifier = tacTerminal('identifier');
 const leftBracket = tacTerminal('leftBracket');
 const rightBracket = tacTerminal('rightBracket');
 const number = tacTerminal('number');
-const normalRegister = tacTerminal('register');
-const specialRegister = tacTerminal('specialRegister');
+const register = tacTerminal('register');
 const colon = tacTerminal('colon');
 const comma = tacTerminal('comma');
 const global_ = tacTerminal('global');
@@ -267,6 +264,7 @@ const minus = tacTerminal('minus');
 const plus = tacTerminal('plus');
 const and = tacTerminal('and');
 const syscall = tacTerminal('syscall');
+const return_ = tacTerminal('return');
 const spillInstruction = tacTerminal('spillInstruction');
 const unspillInstruction = tacTerminal('unspillInstruction');
 const greaterThan = tacTerminal('greaterThan');
@@ -289,24 +287,27 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         'instructions',
     ]),
 
-    register: OneOf([normalRegister, specialRegister]),
-
     // TODO: make it possible to have function with no instructions
     instructions: OneOf([Sequence('instructions', ['instruction', 'instructions']), 'instruction']),
     instruction: OneOf([
         Sequence('statementSeparator', [statementSeparator]),
         Sequence('label', [identifier, colon, statementSeparator]),
-        // TODO: probably need separate syntax for syscall with result
-        Sequence('syscallWithoutResult', [syscall, identifier, 'syscallArgs', statementSeparator]),
-        Sequence('syscallWithResult', ['register', assign, syscall, identifier, 'syscallArgs', statementSeparator]),
-        Sequence('loadImmediate', ['register', assign, number, statementSeparator]),
-        Sequence('assign', ['register', assign, 'data', statementSeparator]),
-        Sequence('load', ['register', assign, star, 'data', statementSeparator]),
+        Sequence('syscall', [
+            tacOptional(register),
+            tacOptional(assign),
+            syscall,
+            identifier,
+            'syscallArgs',
+            statementSeparator,
+        ]),
+        Sequence('loadImmediate', [register, assign, number, statementSeparator]),
+        Sequence('assign', [register, assign, 'data', statementSeparator]),
+        Sequence('load', [register, assign, star, 'data', statementSeparator]),
         Sequence('store', [star, 'data', assign, 'data', statementSeparator]),
         Sequence('offsetStore', [
             star,
             leftBracket,
-            'register',
+            register,
             plus,
             number,
             rightBracket,
@@ -315,40 +316,57 @@ const grammar: Grammar<TacAstNode, TacToken> = {
             statementSeparator,
         ]),
         Sequence('offsetLoad', [
-            'register',
+            register,
             assign,
             star,
             leftBracket,
-            'register',
+            register,
             plus,
             number,
             rightBracket,
             statementSeparator,
         ]),
-        Sequence('difference', ['register', assign, 'data', minus, 'data', statementSeparator]),
-        Sequence('product', ['register', assign, 'data', star, 'data', statementSeparator]),
-        Sequence('sum', ['register', assign, 'data', plus, 'data', statementSeparator]),
-        Sequence('addressOf', ['register', assign, and, 'data', statementSeparator]),
+        Sequence('difference', [register, assign, 'data', minus, 'data', statementSeparator]),
+        Sequence('product', [register, assign, 'data', star, 'data', statementSeparator]),
+        Sequence('sum', [register, assign, 'data', plus, 'data', statementSeparator]),
+        Sequence('addressOf', [register, assign, and, 'data', statementSeparator]),
         Sequence('gotoIfEqual', [goto, identifier, if_, 'data', doubleEqual, 'data', statementSeparator]),
         Sequence('gotoIfNotEqual', [goto, identifier, if_, 'data', notEqual, 'data', statementSeparator]),
         Sequence('gotoIfGreater', [goto, identifier, if_, 'data', greaterThan, 'data', statementSeparator]),
-        Sequence('plusEqual', ['register', plusEqual, 'data', statementSeparator]),
+        Sequence('plusEqual', [register, plusEqual, 'data', statementSeparator]),
         Sequence('goto', [goto, identifier, statementSeparator]),
-        Sequence('increment', ['register', plusplus, statementSeparator]),
-        Sequence('unspill', [unspillInstruction, 'register', statementSeparator]),
-        Sequence('spill', [spillInstruction, 'register', statementSeparator]),
-        Sequence('alloca', ['register', assign, alloca, leftBracket, number, rightBracket, statementSeparator]),
-        Sequence('callByRegister', ['register', leftBracket, tacOptional('argList'), rightBracket, statementSeparator]),
-        Sequence('callByName', [identifier, leftBracket, tacOptional('argList'), rightBracket, statementSeparator]),
+        Sequence('increment', [register, plusplus, statementSeparator]),
+        Sequence('unspill', [unspillInstruction, register, statementSeparator]),
+        Sequence('spill', [spillInstruction, register, statementSeparator]),
+        Sequence('alloca', [register, assign, alloca, leftBracket, number, rightBracket, statementSeparator]),
+        Sequence('callByRegister', [
+            tacOptional(register),
+            tacOptional(assign),
+            register,
+            leftBracket,
+            tacOptional('argList'),
+            rightBracket,
+            statementSeparator,
+        ]),
+        Sequence('callByName', [
+            tacOptional(register),
+            tacOptional(assign),
+            identifier,
+            leftBracket,
+            tacOptional('argList'),
+            rightBracket,
+            statementSeparator,
+        ]),
+        Sequence('return', [return_, register, statementSeparator]),
     ]),
 
     argList: OneOf([Sequence('argList', ['arg', comma, 'argList']), 'arg']),
-    arg: OneOf([number, 'register']),
+    arg: OneOf([number, register]),
 
     syscallArgs: OneOf([Sequence('syscallArgs', [tacOptional(identifier), 'syscallArg', 'syscallArgs']), 'syscallArg']),
-    syscallArg: OneOf([number, 'register']),
+    syscallArg: OneOf([number, register]),
 
-    data: OneOf([identifier, 'register', number]),
+    data: OneOf([identifier, register, number]),
 };
 
 const mergeParseResults = (
@@ -379,9 +397,9 @@ const mergeParseResults = (
 
 const parseSyscallArgs = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | number)[] => {
     const a = ast as any;
+    if (!ast) debug('no ast');
     switch (ast.type) {
         case 'register':
-        case 'specialRegister':
             return [parseRegister(a.value)];
         case 'number':
             return [a.value];
@@ -396,7 +414,6 @@ const parseArgList = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | numb
     const a = ast as any;
     switch (ast.type) {
         case 'register':
-        case 'specialRegister':
             return [parseRegister(a.value)];
         case 'argList':
             return [...parseArgList(a.children[0]), ...parseArgList(a.children[2])];
@@ -412,9 +429,6 @@ const stripComment = (str: string): string => {
 };
 
 const isRegister = (data: string): boolean => {
-    if (data.startsWith('$') && specialRegisterNames.includes(data.slice(1))) {
-        return true;
-    }
     if (data.startsWith('r:')) {
         return true;
     }
@@ -422,11 +436,7 @@ const isRegister = (data: string): boolean => {
 };
 
 const parseRegister = (data: string): Register => {
-    if (data.startsWith('$')) {
-        const sliced = data.substring(1);
-        if (!specialRegisterNames.includes(sliced)) debug('invalid special register');
-        return sliced as Register;
-    } else if (data.startsWith('r:')) {
+    if (data.startsWith('r:')) {
         const sliced = data.substring(2);
         return { name: sliced };
     }
@@ -509,22 +519,6 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
                 value: a.children[2].value,
                 why: stripComment(a.children[3].value),
             };
-        case 'callByRegister': {
-            return {
-                kind: 'callByRegister',
-                function: parseRegister(a.children[0].value),
-                arguments: a.children.length == 5 ? parseArgList(a.children[2]) : [],
-                why: stripComment((last(a.children) as any).value),
-            };
-        }
-        case 'callByName': {
-            return {
-                kind: 'callByName',
-                function: a.children[0].value,
-                arguments: a.children.length == 5 ? parseArgList(a.children[2]) : [],
-                why: stripComment((last(a.children) as any).value),
-            };
-        }
         case 'difference': {
             return {
                 kind: 'subtract',
@@ -612,22 +606,53 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
                 why: stripComment(a.children[4].value),
             };
         }
-        case 'syscallWithoutResult': {
+        case 'callByRegister': {
+            debug('implement parsing of callByRegister destination');
             return {
-                kind: 'syscallWithoutResult',
-                name: a.children[1].value,
-                arguments: parseSyscallArgs(a.children[2]),
-                why: stripComment(a.children[3].value),
+                kind: 'callByRegister',
+                function: parseRegister(a.children[0].value),
+                arguments: a.children.length == 5 ? parseArgList(a.children[2]) : [],
+                destination: 0 as any, // TODO
+                why: stripComment((last(a.children) as any).value),
             };
         }
-        case 'syscallWithResult': {
-            return {
-                kind: 'syscallWithResult',
-                name: a.children[3].value,
-                arguments: parseSyscallArgs(a.children[4]),
-                destination: parseRegister(a.children[0].value),
-                why: stripComment(a.children[3].value),
-            };
+        case 'callByName': {
+            if (a.children[0].type == 'assign') {
+                return {
+                    kind: 'callByName',
+                    function: a.children[2].value,
+                    arguments: a.children.length == 5 ? parseArgList(a.children[4]) : [],
+                    destination: parseRegister(a.children[0]),
+                    why: stripComment((last(a.children) as any).value),
+                };
+            } else {
+                return {
+                    kind: 'callByName',
+                    function: a.children[0].value,
+                    arguments: a.children.length == 5 ? parseArgList(a.children[2]) : [],
+                    destination: null,
+                    why: stripComment((last(a.children) as any).value),
+                };
+            }
+        }
+        case 'syscall': {
+            if (a.children[1].type == 'assign') {
+                return {
+                    kind: 'syscall',
+                    name: a.children[3].value,
+                    arguments: parseSyscallArgs(a.children[4]),
+                    destination: parseRegister(a.children[0].value),
+                    why: stripComment(a.children[3].value),
+                };
+            } else {
+                return {
+                    kind: 'syscall',
+                    name: a.children[1].value,
+                    arguments: parseSyscallArgs(a.children[2]),
+                    destination: null,
+                    why: stripComment(a.children[3].value),
+                };
+            }
         }
         case 'plusEqual': {
             return {
@@ -683,6 +708,14 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
                 offset: a.children[0].value,
                 why: stripComment(a.children[2].value),
             };
+        case 'return':
+            if (a.children.length < 2) debug('short in lengh');
+            if (!a.children || !a.children[2]) debug('bad shape');
+            return {
+                kind: 'return',
+                register: parseRegister(a.children[1].value),
+                why: stripComment(a.children[2].value),
+            };
         default:
             throw debug(`${ast.type} unhandled in instructionFromParseResult`);
     }
@@ -730,7 +763,7 @@ const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Three
     }
     childIndex++;
     let args: Register[] = [];
-    if (['argList', 'register', 'specialRegister'].includes(ast.children[childIndex].type)) {
+    if (['argList', 'register'].includes(ast.children[childIndex].type)) {
         const numArgs = parseArgList(ast.children[childIndex]);
         numArgs.forEach(a => {
             if (typeof a == 'number') {

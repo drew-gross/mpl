@@ -396,47 +396,17 @@ test('correct inferred type for function', t => {
     });
 });
 
-test('double product with brackets', mplTest, {
-    source: 'return 2 * (3 * 4) * 5',
-    exitCode: 120,
-    expectedAst: {
-        type: 'program',
-        children: [
-            {
-                type: 'returnStatement',
-                children: [
-                    { type: 'return', value: null },
-                    {
-                        type: 'product',
-                        children: [
-                            {
-                                type: 'product',
-                                children: [
-                                    { type: 'number', value: 2 },
-                                    { type: 'product', value: null },
-                                    {
-                                        type: 'product',
-                                        children: [
-                                            { type: 'number', value: 3 },
-                                            { type: 'product', value: null },
-                                            { type: 'number', value: 4 },
-                                        ],
-                                    },
-                                ],
-                            },
-                            { type: 'product', value: null },
-                            { type: 'number', value: 5 },
-                        ],
-                    },
-                ],
-            },
-        ],
-    },
-});
-
-testCases.forEach(({ name, source, exitCode, stdin, stdout, parseErrors, failing, only }) => {
+testCases.forEach(({ name, source, exitCode, stdin, stdout, ast, parseErrors, failing, only }) => {
     const runner = failing ? test.failing : only ? test.only : test;
-    runner(name, mplTest, { source, exitCode, name, stdin, expectedStdOut: stdout, expectedParseErrors: parseErrors });
+    runner(name, mplTest, {
+        source,
+        exitCode,
+        name,
+        stdin,
+        expectedStdOut: stdout,
+        expectedParseErrors: parseErrors,
+        expectedAst: ast,
+    });
 });
 
 test('double product', mplTest, {
@@ -1145,7 +1115,8 @@ test('controlFlowGraph basic test', t => {
             why: 'test',
         },
         {
-            kind: 'returnToCaller',
+            kind: 'return',
+            register: { name: 'result' },
             why: 'test',
         },
     ];
@@ -1255,7 +1226,7 @@ test('4 block graph (length)', t => {
         instructions: [
             {
                 kind: 'loadImmediate',
-                destination: 'result',
+                destination: { name: 'result' },
                 value: 0,
                 why: 'result = 0',
             },
@@ -1272,14 +1243,14 @@ test('4 block graph (length)', t => {
                 label: 'length_return',
                 why: 'if currentChar == 0 goto length_return',
             },
-            { kind: 'increment', register: 'result', why: 'result++' },
+            { kind: 'increment', register: { name: 'result' }, why: 'result++' },
             { kind: 'increment', register: { name: 'strPtr' }, why: 'arg1++' },
             { kind: 'goto', label: 'length_loop', why: 'goto length_loop' },
             { kind: 'label', name: 'length_return', why: 'length_return:' },
             {
                 kind: 'subtract',
                 lhs: { name: 'strPtr' },
-                rhs: 'result',
+                rhs: { name: 'result' },
                 destination: { name: 'strPtr' },
                 why: 'arg1 = result - arg1',
             },
@@ -1317,7 +1288,7 @@ test('liveness of stringEquality', t => {
         instructions: [
             {
                 kind: 'loadImmediate',
-                destination: 'result',
+                destination: { name: 'result' },
                 value: 1,
                 why: '',
             },
@@ -1328,7 +1299,7 @@ test('liveness of stringEquality', t => {
             },
             {
                 kind: 'loadImmediate',
-                destination: 'result',
+                destination: { name: 'result' },
                 value: 1,
                 why: '',
             },
@@ -1347,7 +1318,7 @@ test('liveness of stringEquality', t => {
             },
             {
                 kind: 'loadImmediate',
-                destination: 'result',
+                destination: { name: 'result' },
                 value: 1,
                 why: '',
             },
@@ -1363,7 +1334,7 @@ test('liveness of stringEquality', t => {
             },
             {
                 kind: 'loadImmediate',
-                destination: 'result',
+                destination: { name: 'result' },
                 value: 1,
                 why: '',
             },
@@ -1516,9 +1487,9 @@ test('tac parser regression', t => {
     const source = `(global) id: id_1 17
 (global) id: id_1 17
 (function) length():
-$result = 0; Set length count to 0
+    r:result = 0; Comment
 (function) stringEquality():
-$result = 1; Assume equal. Write true to result. Overwrite if difference found.
+    r:result = 1; Comment
 `;
 
     const result = parseTacProgram(source);
@@ -1541,13 +1512,13 @@ $result = 1; Assume equal. Write true to result. Overwrite if difference found.
     t.deepEqual(Array.isArray(result), false);
 });
 
-test('Add Numbers in ThreeAddressCode', tacTest, {
+test.only('Add Numbers in ThreeAddressCode', tacTest, {
     source: `
 (function) main():
-r:a = 1; a = 1
-r:b = 2; b = 2
-r:sum = r:a + r:b; Add the things
-$result = r:sum; Result = sum
+    r:a = 1; a = 1
+    r:b = 2; b = 2
+    r:sum = r:a + r:b; Add the things
+    r:result = r:sum; Result = sum
 `,
     exitCode: 3,
 });
@@ -1555,13 +1526,13 @@ $result = r:sum; Result = sum
 test('Stack Offset Load and Store', tacTest, {
     source: `
 (function) (spill:2) main():
-r:temp = 1; Something to spill
-spill:1 r:temp; Spill it
-r:temp = 2; Use it for something else
-spill:2 r:temp; Spill this one too
-unspill:1 r:one; Load
-unspill:2 r:two; Load
-$result = r:one + r:two; Add the things
+    r:temp = 1; Something to spill
+    spill:1 r:temp; Spill it
+    r:temp = 2; Use it for something else
+    spill:2 r:temp; Spill this one too
+    unspill:1 r:one; Load
+    unspill:2 r:two; Load
+    r:result = r:one + r:two; Add the things
 `,
     exitCode: 3,
     spills: 2,

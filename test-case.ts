@@ -11,6 +11,7 @@ export type TestCase = {
     exitCode?: number;
     stdout?: string;
     parseErrors?: any[];
+    ast?: any;
 
     // Runtime inputs to test
     stdin?: string;

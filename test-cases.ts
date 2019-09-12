@@ -36,6 +36,44 @@ const testCases: TestCase[] = [
         exitCode: 3,
     },
     {
+        name: 'Double Product with Brackets',
+        source: 'return 2 * (3 * 4) * 5',
+        exitCode: 120,
+        ast: {
+            type: 'program',
+            children: [
+                {
+                    type: 'returnStatement',
+                    children: [
+                        { type: 'return', value: null },
+                        {
+                            type: 'product',
+                            children: [
+                                {
+                                    type: 'product',
+                                    children: [
+                                        { type: 'number', value: 2 },
+                                        { type: 'product', value: null },
+                                        {
+                                            type: 'product',
+                                            children: [
+                                                { type: 'number', value: 3 },
+                                                { type: 'product', value: null },
+                                                { type: 'number', value: 4 },
+                                            ],
+                                        },
+                                    ],
+                                },
+                                { type: 'product', value: null },
+                                { type: 'number', value: 5 },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+    {
         name: 'Unused Function',
         source: 'constThree := a: Integer => 3; return 10',
         exitCode: 10,

@@ -97,6 +97,8 @@ type TacToTargetInput<TargetRegister> = {
     registers: RegisterDescription<TargetRegister>;
     syscallNumbers: any;
     registersClobberedBySyscall: TargetRegister[];
+    finalCleanup: TargetThreeAddressStatement<TargetRegister>[];
+    isMain: boolean; // Controls whether to save/restore registers
 };
 type TargetFunction<TargetRegister> = {
     name: string;
@@ -108,6 +110,8 @@ export const tacToTargetFunction = <TargetRegister>({
     syscallNumbers,
     extraSavedRegisters,
     registersClobberedBySyscall,
+    finalCleanup,
+    isMain,
 }: TacToTargetInput<TargetRegister>): TargetFunction<TargetRegister> => {
     const temporaryNameMaker = idAppender();
     const makeTemporary = name => ({ name: temporaryNameMaker(name) });
@@ -197,6 +201,7 @@ export const tacToTargetFunction = <TargetRegister>({
         }
     });
 
+    const exitLabel = `${threeAddressFunction.name}_cleanup`;
     const statements: TargetThreeAddressStatement<TargetRegister>[] = flatten(
         instructionsWithArgsFromStack.map((instruction, index) =>
             tacToTarget(
@@ -206,22 +211,31 @@ export const tacToTargetFunction = <TargetRegister>({
                 registers,
                 threeAddressFunction.arguments,
                 assignment,
+                exitLabel,
                 registersClobberedBySyscall
             )
         )
     );
 
-    return {
-        name: threeAddressFunction.name,
-        instructions: [
-            ...extraSavedRegisters.map(r => ({ kind: 'push' as any, register: r, why: 'save to stack' })),
-            ...saveRegistersCode(assignment),
-            ...statements,
-            ...restoreRegistersCode(assignment),
-            ...extraSavedRegisters.reverse().map(r => ({ kind: 'pop', register: r, why: 'restore from stack' })),
-            { kind: 'returnToCaller', why: 'Done' },
-        ],
-    };
+    const instructions: TargetThreeAddressStatement<TargetRegister>[] = [];
+    if (!isMain) {
+        instructions.push(
+            ...extraSavedRegisters.map(r => ({ kind: 'push' as any, register: r, why: 'save to stack' }))
+        );
+        instructions.push(...saveRegistersCode(assignment));
+    }
+    instructions.push(...statements);
+    instructions.push({ kind: 'label', name: exitLabel, why: 'cleanup' });
+    if (!isMain) {
+        instructions.push(...restoreRegistersCode(assignment));
+        instructions.push(
+            ...extraSavedRegisters
+                .reverse()
+                .map(r => ({ kind: 'pop' as 'pop', register: r, why: 'restore from stack' }))
+        );
+    }
+    instructions.push(...finalCleanup);
+    return { name: threeAddressFunction.name, instructions };
 };
 
 export const backends: Backend[] = [mipsBackend, jsBackend, cBackend, x64Backend];

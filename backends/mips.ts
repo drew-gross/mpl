@@ -112,7 +112,7 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
             return [`jal ${tas.function}`];
         case 'callByName':
             return [`jal ${tas.function}`];
-        case 'returnToCaller':
+        case 'return':
             return [`jr $ra`];
         case 'push':
             return [`sw ${tas.register}, ($sp)`, `addiu, $sp, $sp, -4`];
@@ -141,17 +141,19 @@ const globalDeclaration = (name: string, bytes: number): string => `${name}: .sp
 const mipsTarget: TargetInfo = {
     bytesInWord: 4,
     // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
-    cleanupCode: [
+    cleanupCode: exitCodeRegister => [
         {
-            kind: 'syscallWithoutResult',
+            kind: 'syscall',
             name: 'printInt',
-            arguments: ['result'],
+            arguments: [exitCodeRegister],
+            destination: null,
             why: 'print "exit code" and exit',
         },
         {
-            kind: 'syscallWithoutResult',
+            kind: 'syscall',
             name: 'exit',
-            arguments: ['result'],
+            arguments: [exitCodeRegister],
+            destination: null,
             why: 'Whole program is done',
         },
     ],
@@ -165,21 +167,52 @@ const registersClobberedBySyscall: MipsRegister[] = [];
 
 const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram) => {
     if (!main) throw debug('need a main');
-    const mipsFunctions = [...functions, { name: 'main', arguments: [], instructions: main, spills: 0 }].map(f =>
+    const mipsFunctions = functions.map(f =>
         tacToTargetFunction({
             threeAddressFunction: f,
-            extraSavedRegisters: ['$ra'], // Save retrun address
+            extraSavedRegisters: ['$ra'], // Save return address
             registers: mipsRegisterTypes,
             syscallNumbers,
             registersClobberedBySyscall,
+            finalCleanup: [{ kind: 'return', why: 'Done' }],
+            isMain: false,
         })
     );
+    const mainFunction = tacToTargetFunction({
+        threeAddressFunction: { name: 'main', arguments: [], instructions: main, spills: 0 },
+        extraSavedRegisters: [], // No need to save registers in main
+        registers: mipsRegisterTypes,
+        syscallNumbers,
+        registersClobberedBySyscall,
+        finalCleanup: [
+            { kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' },
+            // No need to move from return location to syscall arg because they happen to be the same
+            {
+                kind: 'loadImmediate' as 'loadImmediate',
+                destination: mipsRegisterTypes.syscallSelectAndResult,
+                value: syscallNumbers.printInt,
+                why: 'prepare to print exit code',
+            },
+            { kind: 'syscall' as 'syscall', why: 'print exit code' },
+            {
+                kind: 'loadImmediate' as 'loadImmediate',
+                destination: mipsRegisterTypes.syscallSelectAndResult,
+                value: syscallNumbers.exit,
+                why: 'prepare to exit',
+            },
+            { kind: 'syscall' as 'syscall', why: 'exit' },
+        ],
+        isMain: true,
+    });
     const mipsFunctionStrings: string[] = mipsFunctions.map(
         ({ name, instructions }) => `
 ${name}:
-${join(flatten(instructions.map(threeAddressCodeToMips)), '\n')}
-    `
+${join(flatten(instructions.map(threeAddressCodeToMips)), '\n')}`
     );
+    const mainFunctionString: string = `
+${mainFunction.name}:
+${join(flatten(mainFunction.instructions.map(threeAddressCodeToMips)), '\n')}
+    `;
     return `
 .data
 ${Object.values(globals)
@@ -194,8 +227,10 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join(mipsFunctionStrings, '\n')}`;
+${join(mipsFunctionStrings, '\n')}
+${mainFunctionString}`;
 };
+
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
     compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget }));
 

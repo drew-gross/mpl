@@ -127,7 +127,12 @@ ast:${join(
     }
 
     if ('kind' in programInfo.threeAddressRoundTrip) {
-        t.fail('lex error');
+        t.fail(`
+lex error:
+    ${JSON.stringify(programInfo.threeAddressRoundTrip)}
+generated source:
+    ${programInfo.threeAddressCode}
+`);
         return;
     }
 
@@ -188,7 +193,11 @@ export const tacTest = async (
 
                 // TODO: This is pure jank. Should move responsibility for adding cleanup code to some place that makes actual sense.
                 if (!backend.targetInfo) throw debug('onoz');
-                newSource.instructions.push(...backend.targetInfo.cleanupCode);
+                newSource.instructions.push(
+                    ...backend.targetInfo.cleanupCode(() => {
+                        throw debug('TODO: figure out how to fix tacTest');
+                    })
+                );
 
                 const compilationResult = await backend.compileTac({
                     globals: {},
