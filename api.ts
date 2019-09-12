@@ -53,7 +53,10 @@ export type CompilationResult =
 export type Backend = {
     name: string;
     compile: (input: FrontendOutput) => Promise<CompilationResult | { error: string }>;
-    compileTac?: (input: ThreeAddressProgram) => Promise<CompilationResult | { error: string }>;
+    compileTac?: (
+        input: ThreeAddressProgram,
+        includeLeakCheck: boolean
+    ) => Promise<CompilationResult | { error: string }>;
     targetInfo?: TargetInfo;
     execute: (exePath: string, stdinPath: string) => Promise<ExecutionResult>;
 };

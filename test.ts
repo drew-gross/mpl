@@ -1512,13 +1512,13 @@ test('tac parser regression', t => {
     t.deepEqual(Array.isArray(result), false);
 });
 
-test.only('Add Numbers in ThreeAddressCode', tacTest, {
+test('Add Numbers in ThreeAddressCode', tacTest, {
     source: `
 (function) main():
     r:a = 1; a = 1
     r:b = 2; b = 2
     r:sum = r:a + r:b; Add the things
-    r:result = r:sum; Result = sum
+    return r:sum; ret
 `,
     exitCode: 3,
 });

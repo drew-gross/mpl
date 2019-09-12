@@ -140,23 +140,6 @@ const globalDeclaration = (name: string, bytes: number): string => `${name}: .sp
 
 const mipsTarget: TargetInfo = {
     bytesInWord: 4,
-    // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
-    cleanupCode: exitCodeRegister => [
-        {
-            kind: 'syscall',
-            name: 'printInt',
-            arguments: [exitCodeRegister],
-            destination: null,
-            why: 'print "exit code" and exit',
-        },
-        {
-            kind: 'syscall',
-            name: 'exit',
-            arguments: [exitCodeRegister],
-            destination: null,
-            why: 'Whole program is done',
-        },
-    ],
     mallocImpl: mallocWithSbrk(bytesInWord),
     printImpl: printWithPrintRuntimeFunction(bytesInWord),
     readIntImpl: readIntDirect(bytesInWord),
@@ -165,7 +148,10 @@ const mipsTarget: TargetInfo = {
 // TODO: put this in TargetInfo
 const registersClobberedBySyscall: MipsRegister[] = [];
 
-const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram) => {
+const tacToExecutable = (
+    { globals, functions, main, stringLiterals }: ThreeAddressProgram,
+    includeLeakCheck: boolean
+) => {
     if (!main) throw debug('need a main');
     const mipsFunctions = functions.map(f =>
         tacToTargetFunction({
@@ -185,8 +171,11 @@ const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddr
         syscallNumbers,
         registersClobberedBySyscall,
         finalCleanup: [
-            { kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' },
+            ...(includeLeakCheck
+                ? [{ kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' }]
+                : []),
             // No need to move from return location to syscall arg because they happen to be the same
+            // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
             {
                 kind: 'loadImmediate' as 'loadImmediate',
                 destination: mipsRegisterTypes.syscallSelectAndResult,
@@ -232,13 +221,16 @@ ${mainFunctionString}`;
 };
 
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
-    compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget }));
+    compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget }), true);
 
-const compileTac = async (tac: ThreeAddressProgram): Promise<CompilationResult | { error: string }> => {
+const compileTac = async (
+    tac: ThreeAddressProgram,
+    includeLeakCheck: boolean
+): Promise<CompilationResult | { error: string }> => {
     const threeAddressString = programToString(tac);
     const threeAddressCodeFile = await writeTempFile(threeAddressString, '.txt');
 
-    const mipsString = tacToExecutable(tac);
+    const mipsString = tacToExecutable(tac, includeLeakCheck);
     const sourceFile = await writeTempFile(mipsString, '.mips');
     const binaryFile = sourceFile;
 

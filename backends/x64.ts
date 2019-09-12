@@ -156,16 +156,6 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 
 const x64Target: TargetInfo = {
     bytesInWord,
-    // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
-    cleanupCode: exitCodeRegister => [
-        {
-            kind: 'syscall',
-            name: 'exit',
-            arguments: [exitCodeRegister],
-            destination: null,
-            why: 'Whole program is done',
-        },
-    ],
     mallocImpl: mallocWithMmap(bytesInWord),
     readIntImpl: readIntThroughSyscall(bytesInWord),
     printImpl: printWithWriteRuntimeFunction(bytesInWord),
@@ -173,7 +163,7 @@ const x64Target: TargetInfo = {
 
 const registersClobberedBySyscall: X64Register[] = ['r11'];
 
-const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram) => {
+const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram, verifyNoLeaks: boolean) => {
     if (!main) throw debug('need an entry point');
     const x64Functions = functions.map(f =>
         tacToTargetFunction({
@@ -193,7 +183,10 @@ const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddr
         syscallNumbers,
         registersClobberedBySyscall,
         finalCleanup: [
-            { kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' },
+            ...(verifyNoLeaks
+                ? [{ kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' }]
+                : []),
+            // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
             {
                 kind: 'move' as 'move',
                 from: x64RegisterTypes.functionResult,
@@ -222,7 +215,7 @@ ${join(flatten(instructions.map(threeAddressCodeToX64)), '\n')}
     );
 
     const mainFunctionString = `
-${mainFunction.name}
+${mainFunction.name}:
 ${join(flatten(mainFunction.instructions.map(threeAddressCodeToX64)), '\n')}`;
 
     return `
@@ -244,13 +237,13 @@ ${Object.keys(errors)
 };
 
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
-    compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target }));
+    compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target }), true);
 
-const compileTac = async (tac: ThreeAddressProgram): Promise<CompilationResult | { error: string }> => {
+const compileTac = async (tac: ThreeAddressProgram, verifyNoLeaks): Promise<CompilationResult | { error: string }> => {
     const threeAddressString = programToString(tac);
     const threeAddressCodeFile = await writeTempFile(threeAddressString, '.txt');
 
-    const x64String = tacToExecutable(tac);
+    const x64String = tacToExecutable(tac, verifyNoLeaks);
     const sourceFile = await writeTempFile(x64String, '.x64');
 
     const linkerInputPath = await tmpFile({ postfix: '.o' });

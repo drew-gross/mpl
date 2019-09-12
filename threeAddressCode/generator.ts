@@ -82,7 +82,6 @@ export type BackendOptions = {
 
 export type TargetInfo = {
     bytesInWord: number;
-    cleanupCode: (exitCodeRegister: Register) => Statement[];
     // These functions tend to have platform specific implementations. Put your platforms implementation here.
     mallocImpl: ThreeAddressFunction;
     printImpl: ThreeAddressFunction;
@@ -873,18 +872,7 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
             })
     );
 
-    const mainProgram: Statement[] = [
-        ...mainProgramInstructions,
-        ...freeGlobalsInstructions,
-        {
-            kind: 'callByName',
-            function: 'verify_no_leaks',
-            arguments: [],
-            destination: null,
-            why: 'Not a real call, just prevents the otimizer from removing the function',
-        },
-    ];
-
+    const mainProgram: Statement[] = [...mainProgramInstructions, ...freeGlobalsInstructions];
     const runtimeFunctions = [
         length,
         stringEqualityRuntimeFunction,
@@ -894,7 +882,6 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
         verifyNoLeaks,
         intFromString,
     ].map(f => f(targetInfo.bytesInWord));
-
     const nonMainFunctions = [
         ...runtimeFunctions,
         targetInfo.mallocImpl,

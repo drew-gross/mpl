@@ -190,21 +190,15 @@ export const tacTest = async (
         backends.map(async backend => {
             if (backend.compileTac && !failing.includes(backend.name)) {
                 const newSource = clone(parsed);
-
-                // TODO: This is pure jank. Should move responsibility for adding cleanup code to some place that makes actual sense.
-                if (!backend.targetInfo) throw debug('onoz');
-                newSource.instructions.push(
-                    ...backend.targetInfo.cleanupCode(() => {
-                        throw debug('TODO: figure out how to fix tacTest');
-                    })
+                const compilationResult = await backend.compileTac(
+                    {
+                        globals: {},
+                        functions: [],
+                        main: newSource.instructions,
+                        stringLiterals: [],
+                    },
+                    false
                 );
-
-                const compilationResult = await backend.compileTac({
-                    globals: {},
-                    functions: [],
-                    main: newSource.instructions,
-                    stringLiterals: [],
-                });
 
                 if ('error' in compilationResult) {
                     t.fail(`${backend.name} compilation failed: ${compilationResult.error}`);
