@@ -204,7 +204,7 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
     },
 ];
 
-type TacAstNode = 
+type TacAstNode =
     | 'program'
     | 'addressOf'
     | 'global'
@@ -622,7 +622,7 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
                 return {
                     kind: 'callByName',
                     function: a.children[2].value,
-                    arguments: a.children.length == 5 ? parseArgList(a.children[4]) : [],
+                    arguments: a.children.length == 7 ? parseArgList(a.children[4]) : [],
                     destination: parseRegister(a.children[0].value),
                     why: stripComment((last(a.children) as any).value),
                 };
