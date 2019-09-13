@@ -879,7 +879,6 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
         stringConcatenateRuntimeFunction,
         stringCopy,
         myFreeRuntimeFunction,
-        verifyNoLeaks,
         intFromString,
     ].map(f => f(targetInfo.bytesInWord));
     const nonMainFunctions = [
@@ -928,5 +927,7 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
 
     // Remove dummy main function we added at start
     closedSet.shift();
+    // Always include verify_no_leaks because we always call it even though it's not in any function calls.
+    closedSet.push(verifyNoLeaks(targetInfo.bytesInWord));
     return { globals, functions: closedSet, main: mainProgram, stringLiterals: backendInputs.stringLiterals };
 };
