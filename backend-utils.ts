@@ -14,6 +14,17 @@ import jsBackend from './backends/js.js';
 import cBackend from './backends/c.js';
 import x64Backend from './backends/x64.js';
 
+export const preceedingWhitespace = <TargetRegister>(tas: TargetThreeAddressStatement<TargetRegister>): string => {
+    switch (tas.kind) {
+        case 'label':
+            return '';
+        case 'functionLabel':
+            return '\n\n';
+        default:
+            return '    ';
+    }
+};
+
 export type CompiledExpression<T> = {
     prepare: T[];
     execute: T[];

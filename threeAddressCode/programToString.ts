@@ -15,7 +15,7 @@ export const programToString = ({ globals, functions, main }: ThreeAddressProgra
         mainStr = `(function) main():\n${join(main.map(statementToString), '\n')}`;
     }
     return `
-${join(globalStrings, '\n')}
-${join(functions.map(functionToString), '\n')}
+${join(globalStrings, '\n\n')}
+${join(functions.map(functionToString), '\n\n')}
 ${mainStr}`;
 };

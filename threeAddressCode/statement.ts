@@ -145,7 +145,7 @@ const preceedingWhitespace = (tas: Statement): string => {
 };
 
 export const toString = (tas: Statement): string => {
-    return `${preceedingWhitespace(tas)}${toStringWithoutComment(tas)}; ${tas.why}`;
+    return `${preceedingWhitespace(tas)}${toStringWithoutComment(tas)}; ${tas.why.trim()}`;
 };
 
 export const reads = (tas: Statement, args: Register[]): Register[] => {

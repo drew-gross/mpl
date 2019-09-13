@@ -5,7 +5,7 @@ import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { stringLiteralName, RegisterDescription, tacToTargetFunction } from '../backend-utils.js';
+import { stringLiteralName, RegisterDescription, tacToTargetFunction, preceedingWhitespace } from '../backend-utils.js';
 import {
     TargetThreeAddressStatement,
     makeTargetProgram,
@@ -147,7 +147,7 @@ const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X6
 };
 
 const threeAddressCodeToX64 = (tas: TargetThreeAddressStatement<X64Register>): string[] =>
-    threeAddressCodeToX64WithoutComment(tas).map(asm => `${asm}; ${tas.why}`);
+    threeAddressCodeToX64WithoutComment(tas).map(asm => `${preceedingWhitespace(tas)}${asm}; ${tas.why.trim()}`);
 
 const bytesInWord = 8;
 

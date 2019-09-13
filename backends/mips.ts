@@ -5,7 +5,7 @@ import { errors } from '../runtime-strings.js';
 import { FrontendOutput, ExecutionResult, StringLiteralData, Backend, CompilationResult } from '../api.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { stringLiteralName, RegisterDescription, tacToTargetFunction } from '../backend-utils.js';
+import { stringLiteralName, RegisterDescription, tacToTargetFunction, preceedingWhitespace } from '../backend-utils.js';
 import {
     TargetThreeAddressStatement,
     makeTargetProgram,
@@ -131,7 +131,7 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
 };
 
 const threeAddressCodeToMips = (tas: TargetThreeAddressStatement<MipsRegister>): string[] =>
-    threeAddressCodeToMipsWithoutComment(tas).map(asm => `${asm} # ${tas.why}`);
+    threeAddressCodeToMipsWithoutComment(tas).map(asm => `${preceedingWhitespace(tas)}${asm} # ${tas.why.trim()}`); // TODO: trim shouldn't be necessarary, the comment should just not have trailing newlines
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
