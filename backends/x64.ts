@@ -177,7 +177,7 @@ const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddr
         })
     );
     const mainFunction = tacToTargetFunction({
-        threeAddressFunction: { name: 'start', arguments: [], instructions: main, spills: 0 },
+        threeAddressFunction: main,
         extraSavedRegisters: [], // Unlike mips, return address is saved automatically by call instruction
         registers: x64RegisterTypes,
         syscallNumbers,

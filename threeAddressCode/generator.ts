@@ -21,6 +21,7 @@ import { parseInstructionsOrDie as ins } from './parser.js';
 export type ThreeAddressFunction = {
     instructions: Statement[];
     arguments: Register[];
+    liveAtExit: Register[];
     spills: number;
     name: string;
 };
@@ -756,7 +757,8 @@ export const constructFunction = (
     makeLabel,
     makeTemporary,
     types: TypeDeclaration[],
-    targetInfo: TargetInfo
+    targetInfo: TargetInfo,
+    liveAtExit: Register[]
 ): ThreeAddressFunction => {
     const variablesInScope: { [key: string]: Register } = {};
     const args: Register[] = [];
@@ -794,13 +796,13 @@ export const constructFunction = (
             ];
         })
     );
-    return { name: f.name, instructions: functionCode, spills: 0, arguments: args };
+    return { name: f.name, instructions: functionCode, liveAtExit, spills: 0, arguments: args };
 };
 
 export type ThreeAddressProgram = {
     globals: { [key: string]: { mangledName: string; bytes: number } };
     functions: ThreeAddressFunction[];
-    main: Statement[] | undefined;
+    main: ThreeAddressFunction | undefined;
     stringLiterals: StringLiteralData[];
 };
 
@@ -829,7 +831,9 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
     });
 
     const userFunctions: ThreeAddressFunction[] = functions.map(f =>
-        constructFunction(f, globalNameMap, stringLiterals, labelMaker, makeTemporary, types, targetInfo)
+        constructFunction(f, globalNameMap, stringLiterals, labelMaker, makeTemporary, types, targetInfo, [
+            exitCodeRegister,
+        ])
     );
 
     const mainProgramInstructions: Statement[] = flatten(
@@ -872,7 +876,13 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
             })
     );
 
-    const mainProgram: Statement[] = [...mainProgramInstructions, ...freeGlobalsInstructions];
+    const mainFunction: ThreeAddressFunction = {
+        name: 'main',
+        instructions: [...mainProgramInstructions, ...freeGlobalsInstructions],
+        liveAtExit: [exitCodeRegister],
+        arguments: [],
+        spills: 0,
+    };
     const runtimeFunctions = [
         length,
         stringEqualityRuntimeFunction,
@@ -892,11 +902,11 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
     // Omit unused functions
     const closedSet: ThreeAddressFunction[] = [];
     // Seed open set with dummy function consisting of the one function we are guaranteed to use (main)
-    const openSet = [{ name: 'main', instructions: mainProgram }];
-    while (openSet.length > 0) {
-        const f = openSet.shift() as ThreeAddressFunction;
-        closedSet.push(f);
-        f.instructions.forEach(statement => {
+    const openSet: ThreeAddressFunction[] = [mainFunction];
+    let currentFunction: ThreeAddressFunction | undefined = undefined;
+    while ((currentFunction = openSet.shift())) {
+        closedSet.push(currentFunction);
+        currentFunction.instructions.forEach(statement => {
             if (statement.kind == 'callByName') {
                 const usedFunction = nonMainFunctions.find(f2 => f2.name == statement.function);
                 if (usedFunction) {
@@ -925,9 +935,10 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
         });
     }
 
-    // Remove dummy main function we added at start
-    closedSet.shift();
+    // Remove main function we added at start
+    const main = closedSet.shift();
+    if (!main) throw debug('no main');
     // Always include verify_no_leaks because we always call it even though it's not in any function calls.
     closedSet.push(verifyNoLeaks(targetInfo.bytesInWord));
-    return { globals, functions: closedSet, main: mainProgram, stringLiterals: backendInputs.stringLiterals };
+    return { globals, functions: closedSet, main, stringLiterals: backendInputs.stringLiterals };
 };

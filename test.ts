@@ -1095,18 +1095,6 @@ return bp.first ? 10 : 20;
     exitCode: 10,
 });
 
-test('int pair', mplTest, {
-    source: `
-IntPair := {
-    first: Integer;
-    second: Integer;
-};
-ip: IntPair = IntPair { first: 3, second: 7, };
-return ip.first * ip.second;
-`,
-    exitCode: 21,
-});
-
 test('controlFlowGraph basic test', t => {
     const rtl: Statement[] = [
         {
@@ -1178,6 +1166,7 @@ test('liveness analysis basic test', t => {
     const testFunction: ThreeAddressFunction = {
         name: 'test',
         spills: 0,
+        liveAtExit: [],
         arguments: [{ name: 'some_arg' }],
         instructions: [
             {
@@ -1222,6 +1211,7 @@ test('4 block graph (length)', t => {
     const lengthRTLF: ThreeAddressFunction = {
         name: 'length',
         spills: 0,
+        liveAtExit: [],
         arguments: [{ name: 'strPtr' }],
         instructions: [
             {
@@ -1284,6 +1274,7 @@ test('liveness of stringEquality', t => {
     const complexFunction: ThreeAddressFunction = {
         name: 'complexFunction',
         spills: 0,
+        liveAtExit: [],
         arguments: [],
         instructions: [
             {

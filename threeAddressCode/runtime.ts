@@ -11,6 +11,7 @@ const switchableMallocImpl = (
 ): ThreeAddressFunction => ({
     name: 'my_malloc',
     spills: 0,
+    liveAtExit: [],
     arguments: [{ name: 'numBytes' }],
     instructions: [
         ...ins(`

@@ -12,7 +12,7 @@ export const programToString = ({ globals, functions, main }: ThreeAddressProgra
     );
     let mainStr = '';
     if (main) {
-        mainStr = `(function) main():\n${join(main.map(statementToString), '\n')}`;
+        mainStr = functionToString(main);
     }
     return `
 ${join(globalStrings, '\n\n')}

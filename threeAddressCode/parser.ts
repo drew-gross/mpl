@@ -794,7 +794,7 @@ const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Three
         instructions = [instructionFromParseResult(ast.children[childIndex])];
         childIndex++;
     }
-    return { name, instructions, spills, arguments: args };
+    return { name, instructions, liveAtExit: [], spills, arguments: args };
 };
 
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {
@@ -831,7 +831,7 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
                 {
                     globals: {},
                     functions: f.name == 'main' ? [] : [f],
-                    main: f.name == 'main' ? f.instructions : undefined,
+                    main: f,
                     stringLiterals: [],
                 },
                 remainder
@@ -845,7 +845,7 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
             return {
                 globals: {},
                 functions: f.name == 'main' ? [] : [f],
-                main: f.name == 'main' ? f.instructions : undefined,
+                main: f,
                 stringLiterals: [],
             };
         }

@@ -165,7 +165,7 @@ const tacToExecutable = (
         })
     );
     const mainFunction = tacToTargetFunction({
-        threeAddressFunction: { name: 'main', arguments: [], instructions: main, spills: 0 },
+        threeAddressFunction: main,
         extraSavedRegisters: [], // No need to save registers in main
         registers: mipsRegisterTypes,
         syscallNumbers,

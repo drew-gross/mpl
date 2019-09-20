@@ -271,6 +271,15 @@ const verifyingOverlappingJoin = (blocks: Set<Register>[][]): Set<Register>[] =>
 export const tafLiveness = (taf: ThreeAddressFunction): Set<Register>[] => {
     const cfg = controlFlowGraph(taf.instructions);
     const blockLiveness = cfg.blocks.map(block => computeBlockLiveness(block, taf.arguments));
+    const lastBlock = last(blockLiveness);
+    if (lastBlock) {
+        const lastStatementLiveness = last(lastBlock);
+        if (lastStatementLiveness) {
+            taf.liveAtExit.forEach(r => {
+                lastStatementLiveness.add(r);
+            });
+        }
+    }
     const remainingToPropagate: { entryLiveness: Set<Register>; index: number }[] = blockLiveness.map((b, i) => ({
         entryLiveness: b[0],
         index: i,
@@ -360,6 +369,7 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
     const newFunction: ThreeAddressFunction = {
         instructions: [],
         arguments: taf.arguments,
+        liveAtExit: taf.liveAtExit,
         spills: currentSpillIndex,
         name: taf.name,
     };

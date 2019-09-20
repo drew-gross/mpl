@@ -230,24 +230,36 @@ return isFive(5) ? 1 : 0`,
         exitCode: 11,
     },
     {
+        name: 'Int Pair',
+        source: `
+            IntPair := {
+                first: Integer;
+                second: Integer;
+            };
+            ip: IntPair = IntPair { first: 3, second: 7, };
+            return ip.first * ip.second;
+        `,
+        exitCode: 21,
+    },
+    {
         name: 'Int Pair in Function',
         source: `
-        IntPair := {
-            first: Integer;
-            second: Integer;
-        };
-
-        foo := () => {
-            ip := IntPair {
-                first: 12,
-                second: 34,
+            IntPair := {
+                first: Integer;
+                second: Integer;
             };
 
-            return ip.second - ip.first;
-        };
+            foo := () => {
+                ip := IntPair {
+                    first: 12,
+                    second: 34,
+                };
 
-        return foo();
-    `,
+                return ip.second - ip.first;
+            };
+
+            return foo();
+        `,
         exitCode: 34 - 12,
     },
     {
