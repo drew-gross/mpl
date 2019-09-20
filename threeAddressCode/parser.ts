@@ -831,7 +831,7 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
                 {
                     globals: {},
                     functions: f.name == 'main' ? [] : [f],
-                    main: f,
+                    main: f.name == 'main' ? f : undefined,
                     stringLiterals: [],
                 },
                 remainder
@@ -845,7 +845,7 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
             return {
                 globals: {},
                 functions: f.name == 'main' ? [] : [f],
-                main: f,
+                main: f.name == 'main' ? f : undefined,
                 stringLiterals: [],
             };
         }
