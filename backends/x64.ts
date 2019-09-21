@@ -165,6 +165,7 @@ const registersClobberedBySyscall: X64Register[] = ['r11'];
 
 const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram, verifyNoLeaks: boolean) => {
     if (!main) throw debug('need an entry point');
+    main.name = 'start'; // TODO: this is jank. Mutabiliy :(:(
     const x64Functions = functions.map(f =>
         tacToTargetFunction({
             threeAddressFunction: f,
