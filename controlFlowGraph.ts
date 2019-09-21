@@ -391,10 +391,7 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
                 // TODO: seems weird to spill in this case? Could just reload instead. Oh well, will fix later.
                 if (registerIsEqual(instruction.destination, registerToSpill)) {
                     const fragment = makeFragment();
-                    newFunction.instructions.push({
-                        ...instruction,
-                        destination: fragment,
-                    });
+                    newFunction.instructions.push({ ...instruction, destination: fragment });
                     newFunction.instructions.push({
                         kind: 'spill',
                         register: fragment,
@@ -444,11 +441,7 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
                         why: 'spill',
                     });
                 } else {
-                    newFunction.instructions.push({
-                        ...instruction,
-                        lhs: newLhs,
-                        rhs: newRhs,
-                    });
+                    newFunction.instructions.push({ ...instruction, lhs: newLhs, rhs: newRhs });
                 }
                 break;
             }
@@ -466,11 +459,7 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
                 }
                 if (registerIsEqual(instruction.to, registerToSpill)) {
                     const newDestination = makeFragment();
-                    newFunction.instructions.push({
-                        ...instruction,
-                        to: newDestination,
-                        from: newSource,
-                    });
+                    newFunction.instructions.push({ ...instruction, to: newDestination, from: newSource });
                     newFunction.instructions.push({
                         kind: 'spill',
                         register: newDestination,
@@ -478,10 +467,7 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
                         why: 'spill',
                     });
                 } else {
-                    newFunction.instructions.push({
-                        ...instruction,
-                        from: newSource,
-                    });
+                    newFunction.instructions.push({ ...instruction, from: newSource });
                 }
                 break;
             }
@@ -519,16 +505,27 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
             case 'loadSymbolAddress':
                 if (registerIsEqual(instruction.to, registerToSpill)) {
                     const newDestination = makeFragment();
-                    newFunction.instructions.push({
-                        ...instruction,
-                        to: newDestination,
-                    });
+                    newFunction.instructions.push({ ...instruction, to: newDestination });
                     newFunction.instructions.push({
                         kind: 'spill',
                         register: newDestination,
                         offset: currentSpillIndex,
                         why: 'spill',
                     });
+                } else {
+                    newFunction.instructions.push(instruction);
+                }
+                break;
+            case 'return':
+                if (registerIsEqual(instruction.register, registerToSpill)) {
+                    const newReturnVal = makeFragment();
+                    newFunction.instructions.push({
+                        kind: 'unspill',
+                        register: newReturnVal,
+                        offset: currentSpillIndex,
+                        why: 'unspill ret val',
+                    });
+                    newFunction.instructions.push({ ...instruction, register: newReturnVal });
                 } else {
                     newFunction.instructions.push(instruction);
                 }

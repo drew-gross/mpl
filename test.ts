@@ -1760,15 +1760,14 @@ test('Parse instructions with no comment', t => {
     ]);
 });
 
-test('Assign registers for syscall-only functions', t => {
+test.only('Assign registers for syscall-only functions', t => {
     const f = threeAddressCodeRuntime.printWithPrintRuntimeFunction(0);
-    debugger;
-    const assigned = assignRegisters(f, []);
+    const assigned = assignRegisters(f, [{ name: 'someRegister' }]);
     // Print function should new need any registers, should spill nothing,
     // and should not change the function.
     t.deepEqual(assigned, {
         assignment: {
-            registerMap: {},
+            registerMap: { result: { name: 'someRegister' } },
             spilled: [],
         },
         newFunction: f,
