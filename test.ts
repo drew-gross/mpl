@@ -1503,7 +1503,7 @@ test('tac parser regression', t => {
     t.deepEqual(Array.isArray(result), false);
 });
 
-test('Add Numbers in ThreeAddressCode', tacTest, {
+test.only('Add Numbers in ThreeAddressCode', tacTest, {
     source: `
 (function) main():
     r:a = 1; a = 1

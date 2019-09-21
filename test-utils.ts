@@ -1,8 +1,6 @@
-import * as clone from 'clone';
 import * as omitDeep from 'omit-deep';
 import { toString as typeErrorToString } from './TypeError.js';
 import writeTempFile from './util/writeTempFile.js';
-import debug from './util/debug.js';
 import join from './util/join.js';
 import { stripSourceLocation } from './parser-lib/parse.js';
 import { parseFunction } from './threeAddressCode/parser.js';
@@ -189,14 +187,8 @@ export const tacTest = async (
     await Promise.all(
         backends.map(async backend => {
             if (backend.compileTac && !failing.includes(backend.name)) {
-                const newSource = clone(parsed);
                 const compilationResult = await backend.compileTac(
-                    {
-                        globals: {},
-                        functions: [],
-                        main: newSource.instructions,
-                        stringLiterals: [],
-                    },
+                    { globals: {}, functions: [], main: parsed, stringLiterals: [] },
                     false
                 );
 

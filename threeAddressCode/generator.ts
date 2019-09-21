@@ -904,7 +904,11 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
     // Seed open set with dummy function consisting of the one function we are guaranteed to use (main)
     const openSet: ThreeAddressFunction[] = [mainFunction];
     let currentFunction: ThreeAddressFunction | undefined = undefined;
-    while ((currentFunction = openSet.shift())) {
+    while (currentFunction) {
+        currentFunction = openSet.shift();
+        if (!currentFunction) {
+            break;
+        }
         closedSet.push(currentFunction);
         currentFunction.instructions.forEach(statement => {
             if (statement.kind == 'callByName') {
