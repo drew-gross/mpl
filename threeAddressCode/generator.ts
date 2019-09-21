@@ -10,6 +10,7 @@ import {
 import idAppender from '../util/idAppender.js';
 import * as Ast from '../ast.js';
 import flatten from '../util/list/flatten.js';
+import drain from '../util/list/drain.js';
 import { builtinFunctions, Type, TypeDeclaration, resolve, typeSize } from '../types.js';
 import debug from '../util/debug.js';
 import { CompiledExpression, compileExpression, stringLiteralName } from '../backend-utils.js';
@@ -903,12 +904,7 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
     const closedSet: ThreeAddressFunction[] = [];
     // Seed open set with dummy function consisting of the one function we are guaranteed to use (main)
     const openSet: ThreeAddressFunction[] = [mainFunction];
-    let currentFunction: ThreeAddressFunction | undefined = undefined;
-    while (currentFunction) {
-        currentFunction = openSet.shift();
-        if (!currentFunction) {
-            break;
-        }
+    drain(openSet, currentFunction => {
         closedSet.push(currentFunction);
         currentFunction.instructions.forEach(statement => {
             if (statement.kind == 'callByName') {
@@ -937,7 +933,7 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
                 }
             }
         });
-    }
+    });
 
     // Remove main function we added at start
     const main = closedSet.shift();

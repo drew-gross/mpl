@@ -2,6 +2,7 @@ import * as omitDeep from 'omit-deep';
 import { toString as typeErrorToString } from './TypeError.js';
 import writeTempFile from './util/writeTempFile.js';
 import join from './util/join.js';
+import drain from './util/list/drain.js';
 import { stripSourceLocation } from './parser-lib/parse.js';
 import { parseFunction } from './threeAddressCode/parser.js';
 import { backends } from './backend-utils.js';
