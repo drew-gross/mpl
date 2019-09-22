@@ -171,6 +171,11 @@ const tacToExecutable = (
         syscallNumbers,
         registersClobberedBySyscall,
         finalCleanup: [
+            {
+                kind: 'callByName' as 'callByName',
+                function: 'free_globals',
+                why: 'free_globals',
+            },
             ...(includeLeakCheck
                 ? [{ kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' }]
                 : []),

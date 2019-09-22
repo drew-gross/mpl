@@ -13,9 +13,9 @@ import flatten from '../util/list/flatten.js';
 import drain from '../util/list/drain.js';
 import { builtinFunctions, Type, TypeDeclaration, resolve, typeSize } from '../types.js';
 import debug from '../util/debug.js';
-import { CompiledExpression, compileExpression, stringLiteralName } from '../backend-utils.js';
+import { CompiledExpression, compileExpression, stringLiteralName, freeGlobalsInstructions } from '../backend-utils.js';
 import { Register, toString as s } from '../register.js';
-import { Function, VariableDeclaration, StringLiteralData } from '../api.js';
+import { FrontendOutput, Function, VariableDeclaration, StringLiteralData } from '../api.js';
 import { Statement } from './statement.js';
 import { parseInstructionsOrDie as ins } from './parser.js';
 
@@ -808,7 +808,7 @@ export type ThreeAddressProgram = {
 };
 
 export type MakeAllFunctionsInput = {
-    backendInputs;
+    backendInputs: FrontendOutput;
     targetInfo: TargetInfo;
 };
 
@@ -855,32 +855,17 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
         })
     );
 
-    const freeGlobalsInstructions: Statement[] = flatten(
-        globalDeclarations
-            .filter(declaration => ['String', 'List'].includes(declaration.type.kind))
-            .map(declaration => {
-                const globalStringAddress = makeTemporary('gobalStringAddress');
-                return [
-                    {
-                        kind: 'loadGlobal',
-                        from: globalNameMap[declaration.name].newName,
-                        to: globalStringAddress,
-                        why: 'Load global string so we can free it',
-                    },
-                    {
-                        kind: 'callByName',
-                        function: 'my_free',
-                        arguments: [globalStringAddress],
-                        why: 'Free global string at end of program',
-                    },
-                ];
-            })
-    );
-
     const mainFunction: ThreeAddressFunction = {
         name: 'main',
-        instructions: [...mainProgramInstructions, ...freeGlobalsInstructions],
+        instructions: mainProgramInstructions,
         liveAtExit: [exitCodeRegister],
+        arguments: [],
+        spills: 0,
+    };
+    const freeGlobals = {
+        name: 'free_globals',
+        instructions: freeGlobalsInstructions(globalDeclarations, makeTemporary, globalNameMap),
+        liveAtExit: [],
         arguments: [],
         spills: 0,
     };
@@ -902,8 +887,12 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
 
     // Omit unused functions
     const closedSet: ThreeAddressFunction[] = [];
-    // Seed open set with dummy function consisting of the one function we are guaranteed to use (main)
-    const openSet: ThreeAddressFunction[] = [mainFunction];
+    // Seed open set with the functions we are guaranteed to use:
+    //  - main: entry point
+    //  - verify_no_leaks: currently always called as a sanity check
+    //  - free_globals: freeing globals is done externally to main
+    // Always include verify_no_leaks and free_globals because we always call them, from the external cleanup
+    const openSet: ThreeAddressFunction[] = [mainFunction, verifyNoLeaks(targetInfo.bytesInWord), freeGlobals];
     drain(openSet, currentFunction => {
         closedSet.push(currentFunction);
         currentFunction.instructions.forEach(statement => {
@@ -935,10 +924,8 @@ export const makeTargetProgram = ({ backendInputs, targetInfo }: MakeAllFunction
         });
     });
 
-    // Remove main function we added at start
+    // Main is reported sepeartely, so we remove it (it's guaranteed to be at the front becuase we put it in openSet at the front)
     const main = closedSet.shift();
     if (!main) throw debug('no main');
-    // Always include verify_no_leaks because we always call it even though it's not in any function calls.
-    closedSet.push(verifyNoLeaks(targetInfo.bytesInWord));
     return { globals, functions: closedSet, main, stringLiterals: backendInputs.stringLiterals };
 };

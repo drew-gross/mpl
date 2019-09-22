@@ -184,6 +184,11 @@ const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddr
         syscallNumbers,
         registersClobberedBySyscall,
         finalCleanup: [
+            {
+                kind: 'callByName' as 'callByName',
+                function: 'free_globals',
+                why: 'free_globals',
+            },
             ...(verifyNoLeaks
                 ? [{ kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' }]
                 : []),

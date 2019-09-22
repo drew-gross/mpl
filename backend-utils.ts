@@ -1,6 +1,6 @@
 import idAppender from './util/idAppender.js';
 import debug from './util/debug.js';
-import { StringLiteralData, Backend } from './api.js';
+import { StringLiteralData, Backend, VariableDeclaration } from './api.js';
 import flatten from './util/list/flatten.js';
 import { TargetThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
 import tacToTarget from './threeAddressCode/toTarget.js';
@@ -247,6 +247,32 @@ export const tacToTargetFunction = <TargetRegister>({
     }
     instructions.push(...finalCleanup);
     return { name: threeAddressFunction.name, instructions };
+};
+
+// TODO: Move map to outside.
+export const freeGlobalsInstructions = (globals: VariableDeclaration[], makeTemporary, globalNameMap): Statement[] => {
+    return flatten(
+        globals
+            .filter(declaration => ['String', 'List'].includes(declaration.type.kind))
+            .map(declaration => {
+                const globalStringAddress = makeTemporary('gobalStringAddress');
+                return [
+                    {
+                        kind: 'loadGlobal',
+                        from: globalNameMap[declaration.name].newName,
+                        to: globalStringAddress,
+                        why: 'Load global string so we can free it',
+                    },
+                    {
+                        kind: 'callByName',
+                        function: 'my_free',
+                        arguments: [globalStringAddress],
+                        destination: null,
+                        why: 'Free global string at end of program',
+                    },
+                ];
+            })
+    );
 };
 
 export const backends: Backend[] = [mipsBackend, jsBackend, cBackend, x64Backend];
