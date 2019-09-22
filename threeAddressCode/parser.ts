@@ -338,9 +338,9 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('spill', [spillInstruction, register, statementSeparator]),
         Sequence('alloca', [register, assign, alloca, leftBracket, number, rightBracket, statementSeparator]),
         Sequence('callByRegister', [
-            tacOptional(register),
-            tacOptional(assign),
             register,
+            tacOptional(assign),
+            tacOptional(register), // TODO: a) combine assignment and register b) once optional parsing is refactored, put the optional on the first register
             leftBracket,
             tacOptional('argList'),
             rightBracket,
@@ -607,14 +607,18 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
             };
         }
         case 'callByRegister': {
-            debug('implement parsing of callByRegister destination');
-            return {
-                kind: 'callByRegister',
-                function: parseRegister(a.children[0].value),
-                arguments: a.children.length == 5 ? parseArgList(a.children[2]) : [],
-                destination: 0 as any, // TODO
-                why: stripComment((last(a.children) as any).value),
-            };
+            if (a.children[1].type == 'assign') {
+                throw debug('implement callByRegister with destination');
+            } else {
+                if (a.children[1].type != 'leftBracket') throw debug('expecting left bracket');
+                return {
+                    kind: 'callByRegister',
+                    function: parseRegister(a.children[0].value),
+                    arguments: a.children.length == 5 ? parseArgList(a.children[2]) : [],
+                    destination: null,
+                    why: stripComment((last(a.children) as any).value),
+                };
+            }
         }
         case 'callByName': {
             if (a.children[1].type == 'assign') {

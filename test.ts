@@ -13,7 +13,16 @@ import { lex, Token } from './parser-lib/lex.js';
 import { parseMpl, compile, astFromParseResult, typeOfExpression } from './frontend.js';
 import { mplTest, tacTest } from './test-utils.js';
 import { grammar, tokenSpecs, MplParseResult, MplAst, MplToken } from './grammar.js';
-import { stripResultIndexes, parse, parseResultIsError, stripSourceLocation, Terminal } from './parser-lib/parse.js';
+import {
+    stripResultIndexes,
+    parse,
+    parseResultIsError,
+    stripSourceLocation,
+    Terminal,
+    Optional,
+    Grammar,
+    Sequence,
+} from './parser-lib/parse.js';
 import * as Ast from './ast.js';
 import { removeBracketsFromAst } from './frontend.js';
 import {
@@ -1760,7 +1769,42 @@ test('Parse instructions with no comment', t => {
     ]);
 });
 
-test.only('Assign registers for syscall-only functions', t => {
+test('Parse function call', t => {
+    const result = parseInstructions(`
+        r:fn(r:arg);
+    `);
+    t.deepEqual(result, [
+        {
+            kind: 'callByRegister',
+            function: { name: 'fn' },
+            arguments: [{ name: 'arg' }],
+            destination: null,
+            why: '\n',
+        },
+    ]);
+});
+
+// TODO: need to refactor parser lib for better parsing of optionals
+test.failing('Parse "x" with "x?x"', t => {
+    type TestNode = 'xNode';
+    type TestToken = 'xToken';
+
+    const opt = parser => Optional<TestNode, TestToken>(parser);
+    const term = parser => Terminal<TestNode, TestToken>(parser);
+
+    const testGrammar: Grammar<TestNode, TestToken> = {
+        x: Sequence('x?x', [opt(term('xToken')), term('xToken')]),
+    };
+
+    const tokens: Token<TestToken>[] = [{ type: 'xToken', string: 'xToken', sourceLocation: { line: 0, column: 0 } }];
+    const ast = parse(testGrammar, 'x', tokens);
+    t.deepEqual(stripSourceLocation(stripResultIndexes(ast)), {
+        children: [{ type: 'xToken', value: undefined }],
+        type: 'x?x',
+    });
+});
+
+test('Assign registers for syscall-only functions', t => {
     const f = threeAddressCodeRuntime.printWithPrintRuntimeFunction(0);
     const assigned = assignRegisters(f, [{ name: 'someRegister' }]);
     // Print function should new need any registers, should spill nothing,
