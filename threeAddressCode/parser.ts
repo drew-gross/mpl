@@ -608,7 +608,13 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
         }
         case 'callByRegister': {
             if (a.children[1].type == 'assign') {
-                throw debug('implement callByRegister with destination');
+                return {
+                    kind: 'callByRegister',
+                    function: parseRegister(a.children[2].value),
+                    arguments: a.children.length == 7 ? parseArgList(a.children[4]) : [],
+                    destination: parseRegister(a.children[0].value),
+                    why: stripComment((last(a.children) as any).value),
+                };
             } else {
                 if (a.children[1].type != 'leftBracket') throw debug('expecting left bracket');
                 return {

@@ -1769,16 +1769,28 @@ test('Parse instructions with no comment', t => {
     ]);
 });
 
-test('Parse function call', t => {
-    const result = parseInstructions(`
+test.only('Parse function call', t => {
+    const noResult = parseInstructions(`
         r:fn(r:arg);
+    `);
+    t.deepEqual(noResult, [
+        {
+            kind: 'callByRegister',
+            function: { name: 'fn' },
+            arguments: [{ name: 'arg' }],
+            destination: null,
+            why: '\n',
+        },
+    ]);
+    const result = parseInstructions(`
+        r:result = r:fn(r:arg);
     `);
     t.deepEqual(result, [
         {
             kind: 'callByRegister',
             function: { name: 'fn' },
             arguments: [{ name: 'arg' }],
-            destination: null,
+            destination: { name: 'result' },
             why: '\n',
         },
     ]);
