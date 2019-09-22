@@ -115,12 +115,20 @@ const toStringWithoutComment = (tas: Statement): string => {
         case 'callByRegister': {
             if (!tas.arguments) throw debug('bad argumnets');
             const args = join(tas.arguments.map(rToS), ', ');
-            return `${rToS(tas.function)}(${args})`;
+            if (tas.destination) {
+                return `${rToS(tas.destination)} = ${rToS(tas.function)}(${args})`;
+            } else {
+                return `${rToS(tas.function)}(${args})`;
+            }
         }
         case 'callByName': {
             if (!tas.arguments) throw debug('bad argumnets');
             const args = join(tas.arguments.map(rToS), ', ');
-            return `${tas.function}(${args})`;
+            if (tas.destination) {
+                return `${rToS(tas.destination)} = ${tas.function}(${args})`;
+            } else {
+                return `${tas.function}(${args})`;
+            }
         }
         case 'return':
             return `return ${rToS(tas.register)};`;

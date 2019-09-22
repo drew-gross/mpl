@@ -1769,7 +1769,7 @@ test('Parse instructions with no comment', t => {
     ]);
 });
 
-test.only('Parse function call', t => {
+test('Parse function call', t => {
     const noResult = parseInstructions(`
         r:fn(r:arg);
     `);
