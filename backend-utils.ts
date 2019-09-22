@@ -249,9 +249,9 @@ export const tacToTargetFunction = <TargetRegister>({
     return { name: threeAddressFunction.name, instructions };
 };
 
-// TODO: Move map to outside.
+// TODO: Move map to outside?
 export const freeGlobalsInstructions = (globals: VariableDeclaration[], makeTemporary, globalNameMap): Statement[] => {
-    return flatten(
+    const instructions: Statement[] = flatten(
         globals
             .filter(declaration => ['String', 'List'].includes(declaration.type.kind))
             .map(declaration => {
@@ -273,6 +273,12 @@ export const freeGlobalsInstructions = (globals: VariableDeclaration[], makeTemp
                 ];
             })
     );
+    instructions.push({
+        kind: 'return' as 'return',
+        register: { name: 'dummyReturn' },
+        why: 'Need to not have an empty function, otherwise verifyingOverlappingJoin fails. TODO: fix that.',
+    });
+    return instructions;
 };
 
 export const backends: Backend[] = [mipsBackend, jsBackend, cBackend, x64Backend];
