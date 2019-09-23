@@ -163,7 +163,10 @@ const x64Target: TargetInfo = {
 
 const registersClobberedBySyscall: X64Register[] = ['r11'];
 
-const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddressProgram, verifyNoLeaks: boolean) => {
+const tacToExecutable = (
+    { globals, functions, main, stringLiterals }: ThreeAddressProgram,
+    includeCleanup: boolean
+) => {
     if (!main) throw debug('need an entry point');
     main.name = 'start'; // TODO: this is jank. Mutabiliy :(:(
     const x64Functions = functions.map(f =>
@@ -190,12 +193,16 @@ const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddr
                 register: x64RegisterTypes.functionResult,
                 why: "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
             },
-            {
-                kind: 'callByName' as 'callByName',
-                function: 'free_globals',
-                why: 'free_globals',
-            },
-            ...(verifyNoLeaks
+            ...(includeCleanup
+                ? [
+                      {
+                          kind: 'callByName' as 'callByName',
+                          function: 'free_globals',
+                          why: 'free_globals',
+                      },
+                  ]
+                : []),
+            ...(includeCleanup
                 ? [{ kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' }]
                 : []),
             {
@@ -250,11 +257,11 @@ ${Object.keys(errors)
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
     compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target }), true);
 
-const compileTac = async (tac: ThreeAddressProgram, verifyNoLeaks): Promise<CompilationResult | { error: string }> => {
+const compileTac = async (tac: ThreeAddressProgram, includeCleanup): Promise<CompilationResult | { error: string }> => {
     const threeAddressString = programToString(tac);
     const threeAddressCodeFile = await writeTempFile(threeAddressString, '.txt');
 
-    const x64String = tacToExecutable(tac, verifyNoLeaks);
+    const x64String = tacToExecutable(tac, includeCleanup);
     const sourceFile = await writeTempFile(x64String, '.x64');
 
     const linkerInputPath = await tmpFile({ postfix: '.o' });

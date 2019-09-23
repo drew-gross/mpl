@@ -150,7 +150,7 @@ const registersClobberedBySyscall: MipsRegister[] = [];
 
 const tacToExecutable = (
     { globals, functions, main, stringLiterals }: ThreeAddressProgram,
-    includeLeakCheck: boolean
+    includeCleanup: boolean
 ) => {
     if (!main) throw debug('need a main');
     const mipsFunctions = functions.map(f =>
@@ -177,16 +177,20 @@ const tacToExecutable = (
                 register: mipsRegisterTypes.functionResult,
                 why: "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
             },
-            {
-                kind: 'callByName' as 'callByName',
-                function: 'free_globals',
-                why: 'free_globals',
-            },
-            ...(includeLeakCheck
+            ...(includeCleanup
+                ? [
+                      {
+                          kind: 'callByName' as 'callByName',
+                          function: 'free_globals',
+                          why: 'free_globals',
+                      },
+                  ]
+                : []),
+            ...(includeCleanup
                 ? [{ kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' }]
                 : []),
             {
-                kind: 'pop',
+                kind: 'pop' as 'pop',
                 register: mipsRegisterTypes.syscallArgument[0],
                 why: 'restore exit code',
             },
@@ -240,12 +244,12 @@ const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { er
 
 const compileTac = async (
     tac: ThreeAddressProgram,
-    includeLeakCheck: boolean
+    includeCleanup: boolean
 ): Promise<CompilationResult | { error: string }> => {
     const threeAddressString = programToString(tac);
     const threeAddressCodeFile = await writeTempFile(threeAddressString, '.txt');
 
-    const mipsString = tacToExecutable(tac, includeLeakCheck);
+    const mipsString = tacToExecutable(tac, includeCleanup);
     const sourceFile = await writeTempFile(mipsString, '.mips');
     const binaryFile = sourceFile;
 
