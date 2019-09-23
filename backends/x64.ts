@@ -184,6 +184,12 @@ const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddr
         syscallNumbers,
         registersClobberedBySyscall,
         finalCleanup: [
+            // TODO: push/pop exit code is jank and should be removed.
+            {
+                kind: 'push',
+                register: x64RegisterTypes.functionResult,
+                why: "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
+            },
             {
                 kind: 'callByName' as 'callByName',
                 function: 'free_globals',
@@ -192,13 +198,12 @@ const tacToExecutable = ({ globals, functions, main, stringLiterals }: ThreeAddr
             ...(verifyNoLeaks
                 ? [{ kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' }]
                 : []),
-            // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
             {
-                kind: 'move' as 'move',
-                from: x64RegisterTypes.functionResult,
-                to: x64RegisterTypes.syscallArgument[0],
-                why: 'prepare to exit',
+                kind: 'pop',
+                register: x64RegisterTypes.syscallArgument[0],
+                why: 'restore exit code',
             },
+            // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
             {
                 kind: 'loadImmediate',
                 destination: x64RegisterTypes.syscallSelectAndResult,

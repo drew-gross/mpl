@@ -171,6 +171,12 @@ const tacToExecutable = (
         syscallNumbers,
         registersClobberedBySyscall,
         finalCleanup: [
+            // TODO: push/pop exit code is jank and should be removed.
+            {
+                kind: 'push',
+                register: mipsRegisterTypes.functionResult,
+                why: "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
+            },
             {
                 kind: 'callByName' as 'callByName',
                 function: 'free_globals',
@@ -179,7 +185,11 @@ const tacToExecutable = (
             ...(includeLeakCheck
                 ? [{ kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' }]
                 : []),
-            // No need to move from return location to syscall arg because they happen to be the same
+            {
+                kind: 'pop',
+                register: mipsRegisterTypes.syscallArgument[0],
+                why: 'restore exit code',
+            },
             // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
             {
                 kind: 'loadImmediate' as 'loadImmediate',
