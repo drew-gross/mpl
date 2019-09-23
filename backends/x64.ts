@@ -5,12 +5,14 @@ import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { stringLiteralName, RegisterDescription, tacToTargetFunction, preceedingWhitespace } from '../backend-utils.js';
+import { stringLiteralName, tacToTargetFunction, preceedingWhitespace, makeExecutable } from '../backend-utils.js';
 import {
     TargetThreeAddressStatement,
     makeTargetProgram,
     TargetInfo,
+    TargetRegisterInfo,
     ThreeAddressProgram,
+    RegisterDescription,
 } from '../threeAddressCode/generator.js';
 import { mallocWithMmap, printWithWriteRuntimeFunction, readIntThroughSyscall } from '../threeAddressCode/runtime.js';
 import { ExecutionResult, FrontendOutput, StringLiteralData, Backend, CompilationResult } from '../api.js';
@@ -35,23 +37,6 @@ type X64Register =
     | 'rbx'
     // Syscall arg or other non-general-purpose
     | 'rdx';
-
-const x64RegisterTypes: RegisterDescription<X64Register> = {
-    generalPurpose: ['r11', 'r12', 'r13', 'r14', 'r15', 'rdi', 'rsi', 'rbx'],
-    functionArgument: ['r8', 'r9', 'r10'],
-    functionResult: 'rax',
-    syscallArgument: ['rdi', 'rsi', 'rdx', 'r10', 'r8', 'r9'],
-    syscallSelectAndResult: 'rax',
-};
-
-const syscallNumbers = {
-    // printInt: XXX, // Should be unused on x64
-    print: 0x02000004,
-    sbrk: 0x02000045,
-    exit: 0x02000001,
-    mmap: 0x020000c5,
-    read: 0x02000003,
-};
 
 const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X64Register>): string[] => {
     switch (tas.kind) {
@@ -156,97 +141,56 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 
 const x64Target: TargetInfo = {
     bytesInWord,
+    mainName: 'start',
+    syscallNumbers: {
+        // printInt: XXX, // Should be unused on x64
+        print: 0x02000004,
+        sbrk: 0x02000045,
+        exit: 0x02000001,
+        mmap: 0x020000c5,
+        read: 0x02000003,
+    },
     mallocImpl: mallocWithMmap(bytesInWord),
     readIntImpl: readIntThroughSyscall(bytesInWord),
     printImpl: printWithWriteRuntimeFunction(bytesInWord),
 };
 
-const registersClobberedBySyscall: X64Register[] = ['r11'];
+const x64RegisterInfo: TargetRegisterInfo<X64Register> = {
+    extraSavedRegisters: [],
+    registersClobberedBySyscall: ['r11'],
+    registerDescription: {
+        generalPurpose: ['r11', 'r12', 'r13', 'r14', 'r15', 'rdi', 'rsi', 'rbx'],
+        functionArgument: ['r8', 'r9', 'r10'],
+        functionResult: 'rax',
+        syscallArgument: ['rdi', 'rsi', 'rdx', 'r10', 'r8', 'r9'],
+        syscallSelectAndResult: 'rax',
+    },
+    translator: threeAddressCodeToX64,
+};
 
-const tacToExecutable = (
-    { globals, functions, main, stringLiterals }: ThreeAddressProgram,
-    includeCleanup: boolean
-) => {
-    if (!main) throw debug('need an entry point');
-    main.name = 'start'; // TODO: this is jank. Mutabiliy :(:(
-    const x64Functions = functions.map(f =>
-        tacToTargetFunction({
-            threeAddressFunction: f,
-            extraSavedRegisters: [], // Unlike mips, return address is saved automatically by call instruction
-            registers: x64RegisterTypes,
-            syscallNumbers,
-            registersClobberedBySyscall,
-            finalCleanup: [{ kind: 'return', why: 'ret' }],
-            isMain: false, // TODO split main and use exit code
-        })
-    );
-    const mainFunction = tacToTargetFunction({
-        threeAddressFunction: main,
-        extraSavedRegisters: [], // Unlike mips, return address is saved automatically by call instruction
-        registers: x64RegisterTypes,
-        syscallNumbers,
-        registersClobberedBySyscall,
-        finalCleanup: [
-            // TODO: push/pop exit code is jank and should be removed.
-            {
-                kind: 'push',
-                register: x64RegisterTypes.functionResult,
-                why: "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
-            },
-            ...(includeCleanup
-                ? [
-                      {
-                          kind: 'callByName' as 'callByName',
-                          function: 'free_globals',
-                          why: 'free_globals',
-                      },
-                  ]
-                : []),
-            ...(includeCleanup
-                ? [{ kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' }]
-                : []),
-            {
-                kind: 'pop',
-                register: x64RegisterTypes.syscallArgument[0],
-                why: 'restore exit code',
-            },
-            // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
-            {
-                kind: 'loadImmediate',
-                destination: x64RegisterTypes.syscallSelectAndResult,
-                value: syscallNumbers.exit,
-                why: 'Whole program is done',
-            },
-            {
-                kind: 'syscall' as 'syscall',
-                why: 'Exit',
-            },
-        ],
-        isMain: true, // TODO split main and use exit code
-    });
-
-    const x64FunctionStrings = x64Functions.map(
-        ({ name, instructions }) => `
-${name}:
-${join(flatten(instructions.map(threeAddressCodeToX64)), '\n')}
-    `
-    );
-
-    const mainFunctionString = `
-${mainFunction.name}:
-${join(flatten(mainFunction.instructions.map(threeAddressCodeToX64)), '\n')}`;
+const tacToExecutable = (tac: ThreeAddressProgram, includeCleanup: boolean) => {
+    const program = makeExecutable(tac, x64Target, x64RegisterInfo, includeCleanup, [
+        // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
+        // TODO: switch mips to MARS then unify exit mechanisms
+        {
+            kind: 'loadImmediate',
+            destination: x64RegisterInfo.registerDescription.syscallSelectAndResult,
+            value: x64Target.syscallNumbers.exit,
+            why: 'Whole program is done',
+        },
+        { kind: 'syscall' as 'syscall', why: 'Exit' },
+    ]);
 
     return `
 global start
 
 section .text
-${join(x64FunctionStrings, '\n')}
-${mainFunctionString}
+${program}
 section .data
 first_block: dq 0
-${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
+${join(tac.stringLiterals.map(stringLiteralDeclaration), '\n')}
 section .bss
-${Object.values(globals)
+${Object.values(tac.globals)
     .map(({ mangledName, bytes }) => `${mangledName}: resq ${bytes / bytesInWord}`)
     .join('\n')}
 ${Object.keys(errors)

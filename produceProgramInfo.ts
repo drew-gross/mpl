@@ -84,6 +84,8 @@ export default async (
         backendInputs: frontendOutput,
         targetInfo: {
             bytesInWord: 13,
+            mainName: 'main',
+            syscallNumbers: {},
             mallocImpl: mallocWithSbrk(7),
             printImpl: printWithPrintRuntimeFunction(11),
             readIntImpl: readIntDirect(5),

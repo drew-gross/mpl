@@ -2,12 +2,20 @@ import idAppender from './util/idAppender.js';
 import debug from './util/debug.js';
 import { StringLiteralData, Backend, VariableDeclaration } from './api.js';
 import flatten from './util/list/flatten.js';
-import { TargetThreeAddressStatement, ThreeAddressFunction } from './threeAddressCode/generator.js';
+import {
+    TargetThreeAddressStatement,
+    ThreeAddressFunction,
+    ThreeAddressProgram,
+    TargetInfo,
+    TargetRegisterInfo,
+    RegisterDescription,
+} from './threeAddressCode/generator.js';
 import tacToTarget from './threeAddressCode/toTarget.js';
 import { Statement, reads, writes } from './threeAddressCode/statement.js';
 import { isEqual } from './register.js';
 import { assignRegisters } from './controlFlowGraph.js';
 import { orderedSet, operatorCompare } from './util/ordered-set.js';
+import join from './util/join.js';
 
 import mipsBackend from './backends/mips.js';
 import jsBackend from './backends/js.js';
@@ -92,14 +100,6 @@ export const restoreRegistersCode = <TargetRegister>(
     });
     result = result.reverse();
     return result;
-};
-
-export type RegisterDescription<TargetRegister> = {
-    generalPurpose: TargetRegister[];
-    functionArgument: TargetRegister[];
-    functionResult: TargetRegister;
-    syscallArgument: TargetRegister[];
-    syscallSelectAndResult: TargetRegister;
 };
 
 type TacToTargetInput<TargetRegister> = {
@@ -247,6 +247,72 @@ export const tacToTargetFunction = <TargetRegister>({
     }
     instructions.push(...finalCleanup);
     return { name: threeAddressFunction.name, instructions };
+};
+
+export const makeExecutable = <TargetRegister>(
+    { globals, functions, main, stringLiterals }: ThreeAddressProgram,
+    { syscallNumbers, mainName }: TargetInfo,
+    {
+        extraSavedRegisters,
+        registersClobberedBySyscall,
+        registerDescription,
+        translator,
+    }: TargetRegisterInfo<TargetRegister>,
+    includeCleanup: boolean,
+    howToExit: TargetThreeAddressStatement<TargetRegister>[]
+) => {
+    if (!main) throw debug('need a maim');
+    const targetFunctions = functions.map(f =>
+        tacToTargetFunction({
+            threeAddressFunction: f,
+            extraSavedRegisters,
+            registers: registerDescription,
+            syscallNumbers,
+            registersClobberedBySyscall,
+            finalCleanup: [{ kind: 'return', why: 'The Final Return!' }],
+            isMain: false,
+        })
+    );
+
+    const targetMain = tacToTargetFunction({
+        threeAddressFunction: { ...main, name: mainName },
+        extraSavedRegisters: [], // No need to save registers in main
+        registers: registerDescription,
+        syscallNumbers,
+        registersClobberedBySyscall,
+        finalCleanup: [
+            // TODO: push/pop exit code is jank and should be removed.
+            {
+                kind: 'push',
+                register: registerDescription.functionResult,
+                why: "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
+            },
+            ...(includeCleanup
+                ? [
+                      { kind: 'callByName' as 'callByName', function: 'free_globals', why: 'free_globals' },
+                      { kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' },
+                  ]
+                : []),
+            { kind: 'pop' as 'pop', register: registerDescription.syscallArgument[0], why: 'restore exit code' },
+            ...howToExit,
+        ],
+        isMain: true,
+    });
+
+    const functionStrings = targetFunctions.map(
+        ({ name, instructions }) => `
+${name}:
+${join(flatten(instructions.map(translator)), '\n')}`
+    );
+
+    const mainString = `
+${targetMain.name}:
+${join(flatten(targetMain.instructions.map(translator)), '\n')}`;
+
+    return `
+${join(functionStrings, '\n')}
+${mainString}
+`;
 };
 
 // TODO: Move map to outside?

@@ -1,8 +1,8 @@
 import debug from '../util/debug.js';
 import { Statement } from './statement.js';
 import { Register, isEqual } from '../register.js';
-import { RegisterDescription, RegisterAssignment } from '../backend-utils.js';
-import { TargetThreeAddressStatement } from './generator.js';
+import { RegisterAssignment } from '../backend-utils.js';
+import { RegisterDescription, TargetThreeAddressStatement } from './generator.js';
 
 const getRegisterFromAssignment = <TargetRegister>(
     registerAssignment: RegisterAssignment<TargetRegister>,

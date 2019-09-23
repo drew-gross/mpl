@@ -5,12 +5,14 @@ import { errors } from '../runtime-strings.js';
 import { FrontendOutput, ExecutionResult, StringLiteralData, Backend, CompilationResult } from '../api.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { stringLiteralName, RegisterDescription, tacToTargetFunction, preceedingWhitespace } from '../backend-utils.js';
+import { stringLiteralName, tacToTargetFunction, preceedingWhitespace, makeExecutable } from '../backend-utils.js';
 import {
     TargetThreeAddressStatement,
     makeTargetProgram,
     TargetInfo,
     ThreeAddressProgram,
+    TargetRegisterInfo,
+    RegisterDescription,
 } from '../threeAddressCode/generator.js';
 import { programToString } from '../threeAddressCode/programToString.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction, readIntDirect } from '../threeAddressCode/runtime.js';
@@ -38,23 +40,6 @@ type MipsRegister =
     | '$v0'
     // ra
     | '$ra';
-
-const mipsRegisterTypes: RegisterDescription<MipsRegister> = {
-    generalPurpose: ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'],
-    functionArgument: ['$s0', '$s1', '$s2'],
-    functionResult: '$a0',
-    syscallArgument: ['$a0', '$a1'],
-    syscallSelectAndResult: '$v0',
-};
-
-const syscallNumbers = {
-    printInt: 1,
-    readInt: 5,
-    print: 4,
-    sbrk: 9,
-    // mmap: 0, // There is no mmap. Should be unused on mips.
-    exit: 10,
-};
 
 const bytesInWord = 4;
 
@@ -140,93 +125,58 @@ const globalDeclaration = (name: string, bytes: number): string => `${name}: .sp
 
 const mipsTarget: TargetInfo = {
     bytesInWord: 4,
+    mainName: 'main',
+    syscallNumbers: {
+        printInt: 1,
+        readInt: 5,
+        print: 4,
+        sbrk: 9,
+        // mmap: 0, // There is no mmap. Should be unused on mips.
+        exit: 10,
+    },
     mallocImpl: mallocWithSbrk(bytesInWord),
     printImpl: printWithPrintRuntimeFunction(bytesInWord),
     readIntImpl: readIntDirect(bytesInWord),
 };
 
-// TODO: put this in TargetInfo
-const registersClobberedBySyscall: MipsRegister[] = [];
+const mipsRegisters: TargetRegisterInfo<MipsRegister> = {
+    extraSavedRegisters: ['$ra'],
+    registersClobberedBySyscall: [],
+    registerDescription: {
+        generalPurpose: ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'],
+        functionArgument: ['$s0', '$s1', '$s2'],
+        functionResult: '$a0',
+        syscallArgument: ['$a0', '$a1'],
+        syscallSelectAndResult: '$v0',
+    },
+    translator: threeAddressCodeToMips,
+};
 
-const tacToExecutable = (
-    { globals, functions, main, stringLiterals }: ThreeAddressProgram,
-    includeCleanup: boolean
-) => {
-    if (!main) throw debug('need a main');
-    const mipsFunctions = functions.map(f =>
-        tacToTargetFunction({
-            threeAddressFunction: f,
-            extraSavedRegisters: ['$ra'], // Save return address
-            registers: mipsRegisterTypes,
-            syscallNumbers,
-            registersClobberedBySyscall,
-            finalCleanup: [{ kind: 'return', why: 'Done' }],
-            isMain: false,
-        })
-    );
-    const mainFunction = tacToTargetFunction({
-        threeAddressFunction: main,
-        extraSavedRegisters: [], // No need to save registers in main
-        registers: mipsRegisterTypes,
-        syscallNumbers,
-        registersClobberedBySyscall,
-        finalCleanup: [
-            // TODO: push/pop exit code is jank and should be removed.
-            {
-                kind: 'push',
-                register: mipsRegisterTypes.functionResult,
-                why: "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
-            },
-            ...(includeCleanup
-                ? [
-                      {
-                          kind: 'callByName' as 'callByName',
-                          function: 'free_globals',
-                          why: 'free_globals',
-                      },
-                  ]
-                : []),
-            ...(includeCleanup
-                ? [{ kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' }]
-                : []),
-            {
-                kind: 'pop' as 'pop',
-                register: mipsRegisterTypes.syscallArgument[0],
-                why: 'restore exit code',
-            },
-            // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
-            {
-                kind: 'loadImmediate' as 'loadImmediate',
-                destination: mipsRegisterTypes.syscallSelectAndResult,
-                value: syscallNumbers.printInt,
-                why: 'prepare to print exit code',
-            },
-            { kind: 'syscall' as 'syscall', why: 'print exit code' },
-            {
-                kind: 'loadImmediate' as 'loadImmediate',
-                destination: mipsRegisterTypes.syscallSelectAndResult,
-                value: syscallNumbers.exit,
-                why: 'prepare to exit',
-            },
-            { kind: 'syscall' as 'syscall', why: 'exit' },
-        ],
-        isMain: true,
-    });
-    const mipsFunctionStrings: string[] = mipsFunctions.map(
-        ({ name, instructions }) => `
-${name}:
-${join(flatten(instructions.map(threeAddressCodeToMips)), '\n')}`
-    );
-    const mainFunctionString: string = `
-${mainFunction.name}:
-${join(flatten(mainFunction.instructions.map(threeAddressCodeToMips)), '\n')}
-    `;
+const tacToExecutable = (tac: ThreeAddressProgram, includeCleanup: boolean) => {
+    const program = makeExecutable(tac, mipsTarget, mipsRegisters, includeCleanup, [
+        // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
+        // TODO: switch to MARS which has a real exit instruction
+        {
+            kind: 'loadImmediate' as 'loadImmediate',
+            destination: mipsRegisters.registerDescription.syscallSelectAndResult,
+            value: mipsTarget.syscallNumbers.printInt,
+            why: 'prepare to print exit code',
+        },
+        { kind: 'syscall' as 'syscall', why: 'print exit code' },
+        {
+            kind: 'loadImmediate' as 'loadImmediate',
+            destination: mipsRegisters.registerDescription.syscallSelectAndResult,
+            value: mipsTarget.syscallNumbers.exit,
+            why: 'prepare to exit',
+        },
+        { kind: 'syscall' as 'syscall', why: 'exit' },
+    ]);
     return `
 .data
-${Object.values(globals)
+${Object.values(tac.globals)
     .map(({ mangledName, bytes }) => globalDeclaration(mangledName, bytes))
     .join('\n')}
-${stringLiterals.map(stringLiteralDeclaration).join('\n')}
+${tac.stringLiterals.map(stringLiteralDeclaration).join('\n')}
 ${Object.keys(errors)
     .map(key => `${errors[key].name}: .asciiz "${errors[key].value}"`)
     .join('\n')}
@@ -235,8 +185,7 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${join(mipsFunctionStrings, '\n')}
-${mainFunctionString}`;
+${program}`;
 };
 
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>

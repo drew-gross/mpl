@@ -84,10 +84,28 @@ export type BackendOptions = {
 
 export type TargetInfo = {
     bytesInWord: number;
+    mainName: string;
+    syscallNumbers: any;
     // These functions tend to have platform specific implementations. Put your platforms implementation here.
     mallocImpl: ThreeAddressFunction;
     printImpl: ThreeAddressFunction;
     readIntImpl: ThreeAddressFunction;
+};
+
+// TODO: maybe merge RegisterDescription and TargetRegisterInfo?
+export type RegisterDescription<TargetRegister> = {
+    generalPurpose: TargetRegister[];
+    functionArgument: TargetRegister[];
+    functionResult: TargetRegister;
+    syscallArgument: TargetRegister[];
+    syscallSelectAndResult: TargetRegister;
+};
+
+export type TargetRegisterInfo<TargetRegister> = {
+    extraSavedRegisters: TargetRegister[];
+    registersClobberedBySyscall: TargetRegister[];
+    registerDescription: RegisterDescription<TargetRegister>;
+    translator: (tas: TargetThreeAddressStatement<TargetRegister>) => string[];
 };
 
 const memberOffset = (type: Type, memberName: string, targetInfo: TargetInfo): number => {
