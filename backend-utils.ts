@@ -258,8 +258,7 @@ export const makeExecutable = <TargetRegister>(
         registerDescription,
         translator,
     }: TargetRegisterInfo<TargetRegister>,
-    includeCleanup: boolean,
-    howToExit: TargetThreeAddressStatement<TargetRegister>[]
+    includeCleanup: boolean
 ) => {
     if (!main) throw debug('need a maim');
     const targetFunctions = functions.map(f =>
@@ -294,7 +293,13 @@ export const makeExecutable = <TargetRegister>(
                   ]
                 : []),
             { kind: 'pop' as 'pop', register: registerDescription.syscallArgument[0], why: 'restore exit code' },
-            ...howToExit,
+            {
+                kind: 'loadImmediate' as 'loadImmediate',
+                destination: registerDescription.syscallSelectAndResult,
+                value: syscallNumbers.exit,
+                why: 'prepare to exit',
+            },
+            { kind: 'syscall' as 'syscall', why: 'exit' },
         ],
         isMain: true,
     });

@@ -168,24 +168,11 @@ const x64RegisterInfo: TargetRegisterInfo<X64Register> = {
     translator: threeAddressCodeToX64,
 };
 
-const tacToExecutable = (tac: ThreeAddressProgram, includeCleanup: boolean) => {
-    const program = makeExecutable(tac, x64Target, x64RegisterInfo, includeCleanup, [
-        // Cleanup for x64 just calls exit syscall with the whole program result as the exit code
-        // TODO: switch mips to MARS then unify exit mechanisms
-        {
-            kind: 'loadImmediate',
-            destination: x64RegisterInfo.registerDescription.syscallSelectAndResult,
-            value: x64Target.syscallNumbers.exit,
-            why: 'Whole program is done',
-        },
-        { kind: 'syscall' as 'syscall', why: 'Exit' },
-    ]);
-
-    return `
+const tacToExecutable = (tac: ThreeAddressProgram, includeCleanup: boolean) => `
 global start
 
 section .text
-${program}
+${makeExecutable(tac, x64Target, x64RegisterInfo, includeCleanup)}
 section .data
 first_block: dq 0
 ${join(tac.stringLiterals.map(stringLiteralDeclaration), '\n')}
@@ -195,8 +182,8 @@ ${Object.values(tac.globals)
     .join('\n')}
 ${Object.keys(errors)
     .map(key => `${errors[key].name}: db "${errors[key].value}", 0`)
-    .join('\n')}`;
-};
+    .join('\n')}
+`;
 
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
     compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target }), true);

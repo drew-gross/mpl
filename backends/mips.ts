@@ -152,19 +152,7 @@ const mipsRegisters: TargetRegisterInfo<MipsRegister> = {
     translator: threeAddressCodeToMips,
 };
 
-const tacToExecutable = (tac: ThreeAddressProgram, includeCleanup: boolean) => {
-    const program = makeExecutable(tac, mipsTarget, mipsRegisters, includeCleanup, [
-        // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
-        // TODO: switch to MARS which has a real exit instruction
-        {
-            kind: 'loadImmediate' as 'loadImmediate',
-            destination: mipsRegisters.registerDescription.syscallSelectAndResult,
-            value: mipsTarget.syscallNumbers.exit,
-            why: 'prepare to exit',
-        },
-        { kind: 'syscall' as 'syscall', why: 'exit' },
-    ]);
-    return `
+const tacToExecutable = (tac: ThreeAddressProgram, includeCleanup: boolean) => `
 .data
 ${Object.values(tac.globals)
     .map(({ mangledName, bytes }) => globalDeclaration(mangledName, bytes))
@@ -178,8 +166,8 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${program}`;
-};
+${makeExecutable(tac, mipsTarget, mipsRegisters, includeCleanup)}
+`;
 
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
     compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget }), true);
@@ -196,7 +184,7 @@ const compileTac = async (
 };
 
 const spimExecutor = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
-    // This string is always printed with spim starts. Strip it from stdout. TODO: Look in to MARS, maybe it doesn't do this?
+    // This string is always printed with spim starts. Strip it from stdout.
     const exceptionsLoadedPreamble = 'Loaded: /usr/local/Cellar/spim/9.1.17/share/exceptions.s\n';
     try {
         const result = await execAndGetResult(`spim -file ${executablePath} < ${stdinPath}`);
