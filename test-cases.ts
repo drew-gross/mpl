@@ -34,7 +34,6 @@ const testCases: TestCase[] = [
         name: 'Brackets',
         source: 'return (3)',
         exitCode: 3,
-        only: true,
     },
     {
         name: 'Double Product with Brackets',

@@ -53,7 +53,7 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
         case 'multiply':
             return [`mult ${tas.lhs}, ${tas.rhs}`, `mflo ${tas.destination}`];
         case 'addImmediate':
-            return [`addiu ${tas.register}, ${tas.amount}`];
+            return [`addiu ${tas.register}, ${tas.register}, ${tas.amount}`];
         case 'add':
             return [`add ${tas.destination}, ${tas.lhs}, ${tas.rhs}`];
         case 'subtract':
@@ -91,7 +91,7 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
         case 'storeMemoryByte':
             return [`sb ${tas.contents}, (${tas.address})`];
         case 'callByRegister':
-            return [`jal ${tas.function}`];
+            return [`jalr ${tas.function}`];
         case 'callByName':
             return [`jal ${tas.function}`];
         case 'return':
@@ -101,7 +101,7 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
         case 'pop':
             return [`addiu $sp, $sp, 4`, `lw ${tas.register}, ($sp)`];
         case 'loadStackOffset':
-            return [`move ${tas.register}, $sp`, `addiu ${tas.register}, -${tas.offset}`];
+            return [`move ${tas.register}, $sp`, `addiu ${tas.register}, ${tas.register}, -${tas.offset}`];
         case 'stackStore':
             return [`sw ${tas.register}, ${tas.offset * bytesInWord}($sp)`];
         case 'stackLoad':

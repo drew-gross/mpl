@@ -140,13 +140,12 @@ const tacToTargetFunction = <TargetRegister>({
                 debug('tried to write to an arg');
             }
             const result: Statement[] = [];
-            // TODO: Throughout: once Restister always has .name, remove "as any". Only "result" doesn't have a name, and that can't be an arg.
             switch (tas.kind) {
                 case 'move':
                     let from = tas.from;
                     const fromOffset = argumentStackOffset(tas.from);
                     if (fromOffset !== undefined) {
-                        from = makeTemporary(`load_arg_${(from as any).name}`);
+                        from = makeTemporary(`load_arg_${from.name}`);
                         if (!from) debug('!from');
                         result.push({
                             kind: 'unspill',
@@ -163,7 +162,7 @@ const tacToTargetFunction = <TargetRegister>({
                     let lhs = tas.lhs;
                     const lhsOffset = argumentStackOffset(tas.lhs);
                     if (lhsOffset !== undefined) {
-                        lhs = makeTemporary(`load_arg_${(lhs as any).name}`);
+                        lhs = makeTemporary(`load_arg_${lhs.name}`);
                         result.push({
                             kind: 'unspill',
                             register: lhs,
@@ -174,7 +173,7 @@ const tacToTargetFunction = <TargetRegister>({
                     let rhs = tas.rhs;
                     const rhsOffset = argumentStackOffset(tas.rhs);
                     if (rhsOffset !== undefined) {
-                        rhs = makeTemporary(`load_arg_${(rhs as any).name}`);
+                        rhs = makeTemporary(`load_arg_${rhs.name}`);
                         result.push({
                             kind: 'unspill',
                             register: rhs,
