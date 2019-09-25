@@ -199,16 +199,8 @@ const compileTac = async (
     const threeAddressString = programToString(tac);
     const threeAddressCodeFile = await writeTempFile(threeAddressString, '.txt');
 
-    const mipsString = tacToExecutable(tac, includeCleanup);
-    const sourceFile = await writeTempFile(mipsString, '.mips');
-    const binaryFile = sourceFile;
-
-    return {
-        sourceFile,
-        binaryFile,
-        threeAddressCodeFile,
-        debugInstructions: `./QtSpim.app/Contents/MacOS/QtSpim ${binaryFile.path}`,
-    };
+    const sourceFile = await writeTempFile(tacToExecutable(tac, includeCleanup), '.mips');
+    return { sourceFile, binaryFile: sourceFile, threeAddressCodeFile };
 };
 
 const spimExecutor = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
@@ -226,6 +218,7 @@ const spimExecutor = async (executablePath: string, stdinPath: string): Promise<
             exitCode: mipsExitCode,
             stdout: trimmedStdout.slice(0, trimmedStdout.length - mipsExitCode.toString().length),
             executorName: 'spim',
+            debugInstructions: `./QtSpim.app/Contents/MacOS/QtSpim ${executablePath}`,
         };
     } catch (e) {
         return { error: `Exception: ${e.message}`, executorName: 'spim' };
@@ -234,7 +227,11 @@ const spimExecutor = async (executablePath: string, stdinPath: string): Promise<
 
 const marsExecutor = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
     try {
-        return await execAndGetResult('mars', `java -jar Mars4_5.jar ns ${executablePath} < ${stdinPath}`);
+        return {
+            ...(await execAndGetResult(`java -jar Mars4_5.jar ns ${executablePath} < ${stdinPath}`)),
+            executorName: 'mars',
+            debugInstructions: `cp ${executablePath} /tmp; java -jar Mars4_5.jar`,
+        };
     } catch (e) {
         return { error: `Exception: ${e.message}`, executorName: 'mars' };
     }

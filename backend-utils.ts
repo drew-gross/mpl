@@ -309,9 +309,10 @@ ${join(flatten(instructions.map(translator)), '\n')}`
 ${targetMain.name}:
 ${join(flatten(targetMain.instructions.map(translator)), '\n')}`;
 
+    // Main needs to go first for mars, because mars just starts executing at the top of the file
     return `
-${join(functionStrings, '\n')}
 ${mainString}
+${join(functionStrings, '\n')}
 `;
 };
 

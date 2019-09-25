@@ -37,6 +37,7 @@ export type ExecutionResult =
           exitCode: number;
           stdout: string;
           executorName: string;
+          debugInstructions: string;
       }
     | {
           error: string;
@@ -48,7 +49,6 @@ export type CompilationResult =
           sourceFile: FileResult;
           binaryFile: FileResult;
           threeAddressCodeFile: FileResult | undefined;
-          debugInstructions: string;
       }
     | { error: string; intermediateFile?: FileResult };
 

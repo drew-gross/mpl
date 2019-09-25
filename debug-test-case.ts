@@ -114,7 +114,6 @@ import annotateSource from './annotateSource.js';
             if (compilationResult.threeAddressCodeFile) {
                 console.log(`        Three Address Code: ${compilationResult.threeAddressCodeFile.path}`);
             }
-            console.log(`        Debug: ${compilationResult.debugInstructions}`);
 
             executionResults.forEach(r => {
                 console.log(`        Executor: ${r.executorName}`);
@@ -130,6 +129,7 @@ import annotateSource from './annotateSource.js';
                         log(`            Expected stdout: ${testCase.stdout}`);
                         log(`            Actual stdout: ${r.stdout}`);
                     }
+                    console.log(`            Debug: ${r.debugInstructions}`);
                     console.log('');
                 }
             });

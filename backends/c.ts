@@ -600,13 +600,16 @@ ${Cprogram}
         sourceFile,
         binaryFile,
         threeAddressCodeFile: undefined,
-        debugInstructions: 'No debug instructions for C yet. Try one of the online GDB things.',
     };
 };
 
 const execute = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
     try {
-        return execAndGetResult('clang', `${executablePath} < ${stdinPath}`);
+        return {
+            ...(await execAndGetResult(`${executablePath} < ${stdinPath}`)),
+            executorName: 'clang',
+            debugInstructions: 'No debug instructions for C yet. Try one of the online GDB things.',
+        };
     } catch (e) {
         return { error: e, executorName: 'clang' };
     }

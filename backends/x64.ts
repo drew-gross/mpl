@@ -219,15 +219,19 @@ const compileTac = async (tac: ThreeAddressProgram, includeCleanup): Promise<Com
             sourceFile,
             binaryFile,
             threeAddressCodeFile,
-            debugInstructions: `lldb ${binaryFile.path}; break set -n start; run`,
         };
     } catch (e) {
         return { error: `Exception: ${e.message}` };
     }
 };
 
-const execute = async (exePath: string, stdinPath: string): Promise<ExecutionResult> =>
-    execAndGetResult('local', `${exePath} < ${stdinPath}`);
+const execute = async (exePath: string, stdinPath: string): Promise<ExecutionResult> => {
+    return {
+        ...(await execAndGetResult(`${exePath} < ${stdinPath}`)),
+        executorName: 'local',
+        debugInstructions: `lldb ${exePath}; break set -n start; run`,
+    };
+};
 
 const x64Backend: Backend = {
     name: 'x64',

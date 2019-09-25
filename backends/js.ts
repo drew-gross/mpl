@@ -128,13 +128,16 @@ const readInt = async () => {
         sourceFile,
         binaryFile,
         threeAddressCodeFile: undefined,
-        debugInstructions: `./node_modules/.bin/node --inspect --inspect-brk ${binaryFile.path}`,
     };
 };
 
 const execute = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
     try {
-        return execAndGetResult('node', `node ${executablePath} < ${stdinPath}`);
+        return {
+            ...(await execAndGetResult(`node ${executablePath} < ${stdinPath}`)),
+            executorName: 'node',
+            debugInstructions: `./node_modules/.bin/node --inspect --inspect-brk ${executablePath}`,
+        };
     } catch (e) {
         return { error: e.msg, executorName: 'node' };
     }
