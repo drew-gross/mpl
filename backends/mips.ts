@@ -1,6 +1,5 @@
 import flatten from '../util/list/flatten.js';
 import writeTempFile from '../util/writeTempFile.js';
-import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import { FrontendOutput, ExecutionResult, StringLiteralData, Backend, CompilationResult } from '../api.js';
 import debug from '../util/debug.js';
@@ -133,7 +132,7 @@ const mipsTarget: TargetInfo = {
         print: 4,
         sbrk: 9,
         // mmap: 0, // There is no mmap. Should be unused on mips.
-        exit: 10,
+        exit: 17,
     },
     mallocImpl: mallocWithSbrk(bytesInWord),
     printImpl: printWithPrintRuntimeFunction(bytesInWord),
@@ -157,13 +156,6 @@ const tacToExecutable = (tac: ThreeAddressProgram, includeCleanup: boolean) => {
     const program = makeExecutable(tac, mipsTarget, mipsRegisters, includeCleanup, [
         // Cleanup code for mips prints the "exit code" because thats the best way to communicate that through spim.
         // TODO: switch to MARS which has a real exit instruction
-        {
-            kind: 'loadImmediate' as 'loadImmediate',
-            destination: mipsRegisters.registerDescription.syscallSelectAndResult,
-            value: mipsTarget.syscallNumbers.printInt,
-            why: 'prepare to print exit code',
-        },
-        { kind: 'syscall' as 'syscall', why: 'print exit code' },
         {
             kind: 'loadImmediate' as 'loadImmediate',
             destination: mipsRegisters.registerDescription.syscallSelectAndResult,
@@ -207,16 +199,18 @@ const spimExecutor = async (executablePath: string, stdinPath: string): Promise<
     // This string is always printed with spim starts. Strip it from stdout. TODO: Look in to MARS, maybe it doesn't do this?
     const exceptionsLoadedPreamble = 'Loaded: /usr/local/Cellar/spim/9.1.17/share/exceptions.s\n';
     try {
-        const result = await exec(`spim -file ${executablePath} < ${stdinPath}`);
+        const result = await execAndGetResult(`spim -file ${executablePath} < ${stdinPath}`);
+        if ('error' in result) {
+            return { error: `Spim error: ${result.error}`, executorName: 'spim' };
+        }
         if (result.stderr !== '') {
             return { error: `Spim error: ${result.stderr}`, executorName: 'spim' };
         }
         const trimmedStdout = result.stdout.slice(exceptionsLoadedPreamble.length);
         const lines = trimmedStdout.split('\n');
-        const mipsExitCode = parseInt(lines[lines.length - 1].match(/[0-9]*$/)[0], 10);
         return {
-            exitCode: mipsExitCode,
-            stdout: trimmedStdout.slice(0, trimmedStdout.length - mipsExitCode.toString().length),
+            exitCode: result.exitCode,
+            stdout: trimmedStdout,
             executorName: 'spim',
             debugInstructions: `./QtSpim.app/Contents/MacOS/QtSpim ${executablePath}`,
         };
@@ -228,7 +222,7 @@ const spimExecutor = async (executablePath: string, stdinPath: string): Promise<
 const marsExecutor = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
     try {
         return {
-            ...(await execAndGetResult(`java -jar Mars4_5.jar ns ${executablePath} < ${stdinPath}`)),
+            ...(await execAndGetResult(`java -jar Mars4_5.jar nc ${executablePath} < ${stdinPath}`)),
             executorName: 'mars',
             debugInstructions: `cp ${executablePath} /tmp; java -jar Mars4_5.jar`,
         };
