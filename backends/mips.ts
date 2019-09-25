@@ -4,6 +4,7 @@ import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import { FrontendOutput, ExecutionResult, StringLiteralData, Backend, CompilationResult } from '../api.js';
 import debug from '../util/debug.js';
+import execAndGetResult from '../util/execAndGetResult.js';
 import join from '../util/join.js';
 import { stringLiteralName, preceedingWhitespace, makeExecutable } from '../backend-utils.js';
 import {
@@ -210,7 +211,7 @@ const compileTac = async (
     };
 };
 
-const execute = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
+const spimExecutor = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
     // This string is always printed with spim starts. Strip it from stdout. TODO: Look in to MARS, maybe it doesn't do this?
     const exceptionsLoadedPreamble = 'Loaded: /usr/local/Cellar/spim/9.1.17/share/exceptions.s\n';
     try {
@@ -231,11 +232,19 @@ const execute = async (executablePath: string, stdinPath: string): Promise<Execu
     }
 };
 
+const marsExecutor = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
+    try {
+        return await execAndGetResult('mars', `java -jar Mars4_5.jar ns ${executablePath} < ${stdinPath}`);
+    } catch (e) {
+        return { error: `Exception: ${e.message}`, executorName: 'mars' };
+    }
+};
+
 const mipsBackend: Backend = {
     name: 'mips',
     compile,
     compileTac,
     targetInfo: mipsTarget,
-    executors: [{ execute, name: 'spim' }],
+    executors: [{ execute: spimExecutor, name: 'spim' }, { execute: marsExecutor, name: 'mars' }],
 };
 export default mipsBackend;
