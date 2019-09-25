@@ -1,22 +1,14 @@
 import { exec } from 'child-process-promise';
 import { ExecutionResult } from '../api.js';
-export default async (command: string): Promise<ExecutionResult> => {
+export default async (executorName: string, command: string): Promise<ExecutionResult> => {
     try {
         const result = await exec(command);
-        return {
-            exitCode: 0,
-            stdout: result.stdout as string,
-        };
+        return { exitCode: 0, stdout: result.stdout as string, executorName };
     } catch (e) {
         if (typeof e.code === 'number') {
-            return {
-                exitCode: e.code,
-                stdout: e.stdout,
-            };
+            return { exitCode: e.code, stdout: e.stdout, executorName };
         } else {
-            return {
-                error: `Couldn't get exit code: ${e}`,
-            };
+            return { error: `Couldn't get exit code: ${e}`, executorName };
         }
     }
 };

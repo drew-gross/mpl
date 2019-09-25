@@ -36,9 +36,11 @@ export type ExecutionResult =
     | {
           exitCode: number;
           stdout: string;
+          executorName: string;
       }
     | {
           error: string;
+          executorName: string;
       };
 
 export type CompilationResult =
@@ -50,6 +52,8 @@ export type CompilationResult =
       }
     | { error: string; intermediateFile?: FileResult };
 
+export type Executor = { name: string; execute: (exePath: string, stdinPath: string) => Promise<ExecutionResult> };
+
 export type Backend = {
     name: string;
     compile: (input: FrontendOutput) => Promise<CompilationResult | { error: string }>;
@@ -58,5 +62,5 @@ export type Backend = {
         includeLeakCheck: boolean
     ) => Promise<CompilationResult | { error: string }>;
     targetInfo?: TargetInfo;
-    execute: (exePath: string, stdinPath: string) => Promise<ExecutionResult>;
+    executors: Executor[];
 };

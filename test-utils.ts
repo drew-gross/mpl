@@ -138,14 +138,13 @@ generated source:
     t.deepEqual(programInfo.threeAddressRoundTrip.functions, programInfo.threeAddressRoundTrip.functions);
     t.deepEqual(programInfo.threeAddressRoundTrip.globals, programInfo.threeAddressRoundTrip.globals);
 
-    for (const { name: backendName, executionResult } of programInfo.backendResults) {
+    for (const { name: backendName, executionResults } of programInfo.backendResults) {
         if (exitCode === undefined) {
             t.fail('Exit code mandatory');
             return;
         }
-        const testPassed = passed(
-            { exitCode, stdout: expectedStdOut, name: backendName ? backendName : 'unnamed', source },
-            executionResult
+        const testPassed = executionResults.every(r =>
+            passed({ exitCode, stdout: expectedStdOut, name: backendName ? backendName : 'unnamed', source }, r)
         );
 
         if (!failing.includes(backendName)) {
@@ -157,10 +156,18 @@ generated source:
             if (verbose) {
                 console.log('');
                 console.log(`Name: ${backendName}`);
-                console.log(`Exit code: ${(executionResult as any).exitCode}`);
-                console.log(`Expected exit code: ${exitCode}`);
-                console.log(`Stdout: ${(executionResult as any).stdout}`);
-                console.log(`Expected Stdout: ${expectedStdOut}`);
+                executionResults.forEach(r => {
+                    console.log(`Executor: ${r.executorName}`);
+                    if ('exitCode' in r) {
+                        const { stdout, exitCode, executorName } = r;
+                        console.log(`Exit code: ${exitCode}`);
+                        console.log(`Expected exit code: ${exitCode}`);
+                        console.log(`Stdout: ${stdout}`);
+                        console.log(`Expected Stdout: ${expectedStdOut}`);
+                    } else {
+                        console.log(`Error: ${r.error}`);
+                    }
+                });
             }
         }
     }
@@ -199,16 +206,20 @@ export const tacTest = async (
 
                 const stdinFile = await writeTempFile(stdin, '.txt');
 
-                const result = await backend.execute(compilationResult.binaryFile.path, stdinFile.path);
-                if ('error' in result) {
-                    t.fail(`${backend.name} execution failed: ${result.error}`);
-                } else if (result.exitCode !== exitCode) {
-                    const errorMessage = `${backend.name} had unexpected output.
+                await Promise.all(
+                    backend.executors.map(async ({ name, execute }) => {
+                        const result = await execute(compilationResult.binaryFile.path, stdinFile.path);
+                        if ('error' in result) {
+                            t.fail(`${backend.name} execution with ${name} failed: ${result.error}`);
+                        } else if (result.exitCode !== exitCode) {
+                            const errorMessage = `${backend.name} had unexpected output.
     Exit code: ${result.exitCode}. Expected: ${exitCode}.`;
-                    t.fail(errorMessage);
-                } else {
-                    t.deepEqual(result.exitCode, exitCode);
-                }
+                            t.fail(errorMessage);
+                        } else {
+                            t.deepEqual(result.exitCode, exitCode);
+                        }
+                    })
+                );
             }
         })
     );

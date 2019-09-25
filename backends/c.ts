@@ -606,11 +606,11 @@ ${Cprogram}
 
 const execute = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
     try {
-        return execAndGetResult(`${executablePath} < ${stdinPath}`);
+        return execAndGetResult('clang', `${executablePath} < ${stdinPath}`);
     } catch (e) {
-        return { error: e };
+        return { error: e, executorName: 'clang' };
     }
 };
 
-const cBackend: Backend = { name: 'c', compile, execute };
+const cBackend: Backend = { name: 'c', compile, executors: [{ execute, name: 'clang' }] };
 export default cBackend;

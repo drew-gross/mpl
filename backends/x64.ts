@@ -5,7 +5,7 @@ import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { stringLiteralName, tacToTargetFunction, preceedingWhitespace, makeExecutable } from '../backend-utils.js';
+import { stringLiteralName, preceedingWhitespace, makeExecutable } from '../backend-utils.js';
 import {
     TargetThreeAddressStatement,
     makeTargetProgram,
@@ -227,7 +227,13 @@ const compileTac = async (tac: ThreeAddressProgram, includeCleanup): Promise<Com
 };
 
 const execute = async (exePath: string, stdinPath: string): Promise<ExecutionResult> =>
-    execAndGetResult(`${exePath} < ${stdinPath}`);
+    execAndGetResult('local', `${exePath} < ${stdinPath}`);
 
-const x64Backend: Backend = { name: 'x64', compile, compileTac, execute, targetInfo: x64Target };
+const x64Backend: Backend = {
+    name: 'x64',
+    compile,
+    compileTac,
+    executors: [{ execute, name: 'local' }],
+    targetInfo: x64Target,
+};
 export default x64Backend;

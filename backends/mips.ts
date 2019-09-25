@@ -5,7 +5,7 @@ import { errors } from '../runtime-strings.js';
 import { FrontendOutput, ExecutionResult, StringLiteralData, Backend, CompilationResult } from '../api.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { stringLiteralName, tacToTargetFunction, preceedingWhitespace, makeExecutable } from '../backend-utils.js';
+import { stringLiteralName, preceedingWhitespace, makeExecutable } from '../backend-utils.js';
 import {
     TargetThreeAddressStatement,
     makeTargetProgram,
@@ -216,7 +216,7 @@ const execute = async (executablePath: string, stdinPath: string): Promise<Execu
     try {
         const result = await exec(`spim -file ${executablePath} < ${stdinPath}`);
         if (result.stderr !== '') {
-            return { error: `Spim error: ${result.stderr}` };
+            return { error: `Spim error: ${result.stderr}`, executorName: 'spim' };
         }
         const trimmedStdout = result.stdout.slice(exceptionsLoadedPreamble.length);
         const lines = trimmedStdout.split('\n');
@@ -224,11 +224,18 @@ const execute = async (executablePath: string, stdinPath: string): Promise<Execu
         return {
             exitCode: mipsExitCode,
             stdout: trimmedStdout.slice(0, trimmedStdout.length - mipsExitCode.toString().length),
+            executorName: 'spim',
         };
     } catch (e) {
-        return { error: `Exception: ${e.message}` };
+        return { error: `Exception: ${e.message}`, executorName: 'spim' };
     }
 };
 
-const mipsBackend: Backend = { name: 'mips', compile, compileTac, targetInfo: mipsTarget, execute };
+const mipsBackend: Backend = {
+    name: 'mips',
+    compile,
+    compileTac,
+    targetInfo: mipsTarget,
+    executors: [{ execute, name: 'spim' }],
+};
 export default mipsBackend;

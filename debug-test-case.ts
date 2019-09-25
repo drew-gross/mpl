@@ -94,8 +94,8 @@ import annotateSource from './annotateSource.js';
     }
 
     console.log('\nBackends:');
-    programInfo.backendResults.forEach(({ name, compilationResult, executionResult }) => {
-        const testPassed = passed(testCase, executionResult);
+    programInfo.backendResults.forEach(({ name, compilationResult, executionResults }) => {
+        const testPassed = executionResults.every(r => passed(testCase, r));
 
         if (testPassed) {
             console.log(`    ${name}:`);
@@ -115,26 +115,24 @@ import annotateSource from './annotateSource.js';
                 console.log(`        Three Address Code: ${compilationResult.threeAddressCodeFile.path}`);
             }
             console.log(`        Debug: ${compilationResult.debugInstructions}`);
-            if ('error' in executionResult) {
-                console.log(chalk.red(`        Execution Failed: ${executionResult.error}`));
-            } else {
-                if (!testPassed) {
-                    let log =
-                        testCase.exitCode == executionResult.exitCode
-                            ? s => console.log(s)
-                            : s => console.log(chalk.red(s));
-                    log(`        Expected Exit Code: ${testCase.exitCode}`);
-                    log(`        Actual Exit Code: ${executionResult.exitCode}`);
 
-                    log =
-                        testCase.stdout == executionResult.stdout
-                            ? s => console.log(s)
-                            : s => console.log(chalk.red(s));
-                    log(`        Expected stdout: ${testCase.stdout}`);
-                    log(`        Actual stdout: ${executionResult.stdout}`);
+            executionResults.forEach(r => {
+                console.log(`        Executor: ${r.executorName}`);
+                if ('error' in r) {
+                    console.log(chalk.red(`            Execution Failed: ${r.error}`));
+                } else {
+                    let log = testCase.exitCode == r.exitCode ? s => console.log(s) : s => console.log(chalk.red(s));
+                    log(`            Expected Exit Code: ${testCase.exitCode}`);
+                    log(`            Actual Exit Code: ${r.exitCode}`);
+
+                    if (testCase.stdout) {
+                        log = testCase.stdout == r.stdout ? s => console.log(s) : s => console.log(chalk.red(s));
+                        log(`            Expected stdout: ${testCase.stdout}`);
+                        log(`            Actual stdout: ${r.stdout}`);
+                    }
+                    console.log('');
                 }
-                console.log('');
-            }
+            });
         }
     });
 

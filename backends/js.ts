@@ -134,11 +134,11 @@ const readInt = async () => {
 
 const execute = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
     try {
-        return execAndGetResult(`node ${executablePath} < ${stdinPath}`);
+        return execAndGetResult('node', `node ${executablePath} < ${stdinPath}`);
     } catch (e) {
-        return { error: e.msg };
+        return { error: e.msg, executorName: 'node' };
     }
 };
 
-const jsBackend: Backend = { name: 'js', compile, execute };
+const jsBackend: Backend = { name: 'js', compile, executors: [{ execute, name: 'node' }] };
 export default jsBackend;

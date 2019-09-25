@@ -17,7 +17,7 @@ import { backends } from './backend-utils.js';
 type BackendResult = {
     name: string;
     compilationResult: CompilationResult;
-    executionResult: ExecutionResult;
+    executionResults: ExecutionResult[];
 };
 
 type ProgramInfo = {
@@ -98,17 +98,26 @@ export default async (
 
     const stdinFile = await writeTempFile(stdin, '.txt');
 
-    const backendResults = await Promise.all(
-        backends.map(async ({ name, compile: compileFn, execute }) => {
+    const backendResults: BackendResult[] = await Promise.all(
+        backends.map(async ({ name, compile: compileFn, executors }) => {
             const compilationResult = await compileFn(frontendOutput);
 
+            // TODO: better way to report these specific errors. Probably muck with the type of ExecutionResult.
             if ('error' in compilationResult) {
-                return { name, compilationResult, executionResult: { error: 'Compilation failed' } };
+                return {
+                    name,
+                    compilationResult,
+                    executionResults: [{ error: 'Compilation failed', executorName: 'N/A' }],
+                };
             } else if (!includeExecutionResult || (skipBackends || []).includes(name)) {
-                return { name, compilationResult, executionResult: { error: 'Not requested' } };
+                return { name, compilationResult, executionResults: [{ error: 'Not requested', executorName: 'N/A' }] };
             } else {
-                const executionResult = await execute(compilationResult.binaryFile.path, stdinFile.path);
-                return { name, compilationResult, executionResult };
+                const executionResults = await Promise.all(
+                    executors.map(
+                        async ({ name, execute }) => await execute(compilationResult.binaryFile.path, stdinFile.path)
+                    )
+                );
+                return { name, compilationResult, executionResults };
             }
         })
     );

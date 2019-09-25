@@ -115,7 +115,7 @@ type TargetFunction<TargetRegister> = {
     name: string;
     instructions: TargetThreeAddressStatement<TargetRegister>[];
 };
-export const tacToTargetFunction = <TargetRegister>({
+const tacToTargetFunction = <TargetRegister>({
     threeAddressFunction,
     registers,
     syscallNumbers,
