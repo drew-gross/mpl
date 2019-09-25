@@ -1,10 +1,8 @@
-import flatten from '../util/list/flatten.js';
 import writeTempFile from '../util/writeTempFile.js';
 import { errors } from '../runtime-strings.js';
 import { FrontendOutput, ExecutionResult, StringLiteralData, Backend, CompilationResult } from '../api.js';
 import debug from '../util/debug.js';
 import execAndGetResult from '../util/execAndGetResult.js';
-import join from '../util/join.js';
 import { stringLiteralName, preceedingWhitespace, makeExecutable } from '../backend-utils.js';
 import {
     TargetThreeAddressStatement,
@@ -12,7 +10,6 @@ import {
     TargetInfo,
     ThreeAddressProgram,
     TargetRegisterInfo,
-    RegisterDescription,
 } from '../threeAddressCode/generator.js';
 import { programToString } from '../threeAddressCode/programToString.js';
 import { mallocWithSbrk, printWithPrintRuntimeFunction, readIntDirect } from '../threeAddressCode/runtime.js';
@@ -195,7 +192,6 @@ const spimExecutor = async (executablePath: string, stdinPath: string): Promise<
             return { error: `Spim error: ${result.stderr}`, executorName: 'spim' };
         }
         const trimmedStdout = result.stdout.slice(exceptionsLoadedPreamble.length);
-        const lines = trimmedStdout.split('\n');
         return {
             exitCode: result.exitCode,
             stdout: trimmedStdout,

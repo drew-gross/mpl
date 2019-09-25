@@ -114,7 +114,7 @@ export default async (
             } else {
                 const executionResults = await Promise.all(
                     executors.map(
-                        async ({ name, execute }) => await execute(compilationResult.binaryFile.path, stdinFile.path)
+                        async ({ execute }) => await execute(compilationResult.binaryFile.path, stdinFile.path)
                     )
                 );
                 return { name, compilationResult, executionResults };

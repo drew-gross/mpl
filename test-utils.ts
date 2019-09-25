@@ -32,7 +32,7 @@ export const mplTest = async (
         exitCode,
         expectedTypeErrors,
         expectedParseErrors,
-        expectedStdOut = '',
+        expectedStdOut,
         expectedAst,
         failing = [],
         name = undefined,
@@ -43,17 +43,16 @@ export const mplTest = async (
         failing = [failing];
     }
 
-    const error = (msg: string | undefined = undefined) => {
-        const userMessage = msg === undefined ? '' : ` (${msg})`;
+    const error = (stage: string) => {
         t.fail(
-            name ? `Test failed${userMessage}. Run $ npm run test-case "${name}" for more info.` : 'Unnamed test failed'
+            name ? `Test failed (${stage}). Run $ npm run test-case "${name}" for more info.` : 'Unnamed test failed'
         );
     };
 
     // Make sure it parses
     const programInfo = await produceProgramInfo(source, stdin, { includeExecutionResult: true });
     if ('kind' in programInfo) {
-        error();
+        error('failed to produce info');
         return;
     }
 
@@ -63,7 +62,7 @@ export const mplTest = async (
             const keysToOmit = ['whileParsing', 'foundTokenText'];
             t.deepEqual(expectedParseErrors, omitDeep(programInfo.parseErrors, keysToOmit));
         } else {
-            error('unexpected parse error');
+            error('parse error');
         }
         return;
     }
@@ -149,7 +148,7 @@ generated source:
 
         if (!failing.includes(backendName)) {
             if (!testPassed) {
-                error();
+                error('wrong behaviour');
             }
             // TODO: share this code with some of the code in debug-test-case.ts
             const verbose = false;
@@ -159,11 +158,13 @@ generated source:
                 executionResults.forEach(r => {
                     console.log(`Executor: ${r.executorName}`);
                     if ('exitCode' in r) {
-                        const { stdout, exitCode, executorName } = r;
+                        const { stdout, exitCode: actualExitCode } = r;
                         console.log(`Exit code: ${exitCode}`);
-                        console.log(`Expected exit code: ${exitCode}`);
-                        console.log(`Stdout: ${stdout}`);
-                        console.log(`Expected Stdout: ${expectedStdOut}`);
+                        console.log(`Expected exit code: ${actualExitCode}`);
+                        if (expectedStdOut !== undefined) {
+                            console.log(`Stdout: ${stdout}`);
+                            console.log(`Expected Stdout: ${expectedStdOut}`);
+                        }
                     } else {
                         console.log(`Error: ${r.error}`);
                     }
@@ -177,7 +178,7 @@ generated source:
 
 export const tacTest = async (
     t,
-    { name, source, exitCode, printSubsteps = [], debugSubsteps = [], spills, failing = [], stdin = '' }: TestOptions
+    { source, exitCode, printSubsteps = [], debugSubsteps = [], spills, failing = [], stdin = '' }: TestOptions
 ) => {
     const parsed = parseFunction(source);
     if ('kind' in parsed) {

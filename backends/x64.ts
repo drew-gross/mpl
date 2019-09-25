@@ -1,4 +1,3 @@
-import flatten from '../util/list/flatten.js';
 import { programToString } from '../threeAddressCode/programToString.js';
 import writeTempFile from '../util/writeTempFile.js';
 import { exec } from 'child-process-promise';
@@ -12,7 +11,6 @@ import {
     TargetInfo,
     TargetRegisterInfo,
     ThreeAddressProgram,
-    RegisterDescription,
 } from '../threeAddressCode/generator.js';
 import { mallocWithMmap, printWithWriteRuntimeFunction, readIntThroughSyscall } from '../threeAddressCode/runtime.js';
 import { ExecutionResult, FrontendOutput, StringLiteralData, Backend, CompilationResult } from '../api.js';
