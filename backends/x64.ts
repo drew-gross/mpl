@@ -214,7 +214,7 @@ const execute = async (exePath: string, stdinPath: string): Promise<ExecutionRes
     return {
         ...(await execAndGetResult(`${exePath} < ${stdinPath}`)),
         executorName: 'local',
-        debugInstructions: `lldb ${exePath}; break set -n start; run`,
+        debugInstructions: `lldb ${exePath}; break set -n start; settings set target.input-path ${stdinPath}; run; gui`,
     };
 };
 

@@ -259,7 +259,7 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
 export const intFromString: RuntimeFunctionGenerator = bytesInWord => {
     return parseFunctionOrDie(`
     (function) intFromString(r:in):
-        r:int = 0; Accumulate into here
+        r:result = 0; Accumulate into here
         r:input = r:in; Make a copy so we can modify it TODO is this necessary?
     add_char:; comment
         r:currentChar = *r:input; load a char
@@ -272,7 +272,7 @@ export const intFromString: RuntimeFunctionGenerator = bytesInWord => {
         r:input++; Get next char in next loop iteration
         goto add_char; comment
     exit:; comment
-        return r:int;
+        return r:result;
     `);
 };
 
