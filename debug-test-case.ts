@@ -69,21 +69,24 @@ import annotateSource from './annotateSource.js';
         return;
     }
 
-    console.log(`Mpl: ${(await writeTempFile(testCase.source, '.mpl')).path}`);
-    console.log(`Tokens: ${(await writeTempFile(JSON.stringify(programInfo.tokens, null, 2), '.json')).path}`);
-    console.log(`Ast: ${(await writeTempFile(JSON.stringify(programInfo.ast, null, 2), '.json')).path}`);
+    console.log(`Mpl: ${(await writeTempFile(testCase.source, 'mpl', 'mpl')).path}`);
+    console.log(`Tokens: ${(await writeTempFile(JSON.stringify(programInfo.tokens, null, 2), 'tokens', 'json')).path}`);
+    console.log(`Ast: ${(await writeTempFile(JSON.stringify(programInfo.ast, null, 2), 'ast', 'json')).path}`);
 
     const dotText = dot.write(toDotFile(programInfo.ast));
-    const svgFile = await tmpFile({ postfix: '.svg' });
+    const svgFile = await tmpFile({ template: 'ast-XXXXXX.svg', dir: '/tmp' });
     await writeSvg(dotText, svgFile.path);
     console.log(`Ast SVG: ${svgFile.path}`);
 
-    console.log(`Structure: ${(await writeTempFile(programInfo.structure, '.txt')).path}`);
+    console.log(`Structure: ${(await writeTempFile(programInfo.structure, 'structure', 'txt')).path}`);
 
-    console.log(`Three Address Code: ${(await writeTempFile(programInfo.threeAddressCode, '.txt')).path}`);
+    console.log(
+        `Three Address Code: ${(await writeTempFile(programInfo.threeAddressCode, 'three-address-code', 'txt')).path}`
+    );
     const roundTripParsedPath = (await writeTempFile(
         JSON.stringify(programInfo.threeAddressRoundTrip, null, 2),
-        '.txt'
+        'round-trip-parsed',
+        'txt'
     )).path;
     const roundTripSuccess =
         !Array.isArray(programInfo.threeAddressRoundTrip) && !('kind' in programInfo.threeAddressRoundTrip);
@@ -129,6 +132,7 @@ import annotateSource from './annotateSource.js';
                         log(`            Expected stdout: ${testCase.stdout}`);
                         log(`            Actual stdout: ${r.stdout}`);
                     }
+                    console.log(`            Run: ${r.runInstructions}`);
                     console.log(`            Debug: ${r.debugInstructions}`);
                     console.log('');
                 }

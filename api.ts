@@ -37,6 +37,7 @@ export type ExecutionResult =
           exitCode: number;
           stdout: string;
           executorName: string;
+          runInstructions: string;
           debugInstructions: string;
       }
     | {

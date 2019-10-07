@@ -174,9 +174,9 @@ const compileTac = async (
     includeCleanup: boolean
 ): Promise<CompilationResult | { error: string }> => {
     const threeAddressString = programToString(tac);
-    const threeAddressCodeFile = await writeTempFile(threeAddressString, '.txt');
+    const threeAddressCodeFile = await writeTempFile(threeAddressString, 'three-address-code-mips', 'txt');
 
-    const sourceFile = await writeTempFile(tacToExecutable(tac, includeCleanup), '.mips');
+    const sourceFile = await writeTempFile(tacToExecutable(tac, includeCleanup), 'program', 'mips');
     return { sourceFile, binaryFile: sourceFile, threeAddressCodeFile };
 };
 
@@ -196,6 +196,7 @@ const spimExecutor = async (executablePath: string, stdinPath: string): Promise<
             exitCode: result.exitCode,
             stdout: trimmedStdout,
             executorName: 'spim',
+            runInstructions: `spim -file ${executablePath} < ${stdinPath}`,
             debugInstructions: `./QtSpim.app/Contents/MacOS/QtSpim ${executablePath}`,
         };
     } catch (e) {
@@ -208,6 +209,7 @@ const marsExecutor = async (executablePath: string, stdinPath: string): Promise<
         return {
             ...(await execAndGetResult(`java -jar Mars4_5.jar nc ${executablePath} < ${stdinPath}`)),
             executorName: 'mars',
+            runInstructions: `java -jar Mars4_5.jar nc ${executablePath} < ${stdinPath}`,
             debugInstructions: `cp ${executablePath} /tmp; java -jar Mars4_5.jar`,
         };
     } catch (e) {

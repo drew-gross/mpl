@@ -122,7 +122,7 @@ const readInt = async () => {
     ${join(JS, '\n')}
 })();`;
 
-    const sourceFile = await writeTempFile(jsSource, '.js');
+    const sourceFile = await writeTempFile(jsSource, 'program', 'js');
     const binaryFile = sourceFile;
     return {
         sourceFile,
@@ -133,9 +133,11 @@ const readInt = async () => {
 
 const execute = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
     try {
+        const runInstructions = `node ${executablePath} < ${stdinPath}`;
         return {
-            ...(await execAndGetResult(`node ${executablePath} < ${stdinPath}`)),
+            ...(await execAndGetResult(runInstructions)),
             executorName: 'node',
+            runInstructions,
             debugInstructions: `./node_modules/.bin/node --inspect --inspect-brk ${executablePath}`,
         };
     } catch (e) {

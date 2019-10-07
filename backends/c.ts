@@ -588,7 +588,7 @@ ${join(Cfunctions, '\n')}
 ${Cprogram}
 `;
 
-    const sourceFile = await writeTempFile(cSource, '.c');
+    const sourceFile = await writeTempFile(cSource, 'program', 'c');
     const binaryFile = await tmpFile();
     try {
         // TODO: Don't emit unused variables
@@ -608,6 +608,7 @@ const execute = async (executablePath: string, stdinPath: string): Promise<Execu
         return {
             ...(await execAndGetResult(`${executablePath} < ${stdinPath}`)),
             executorName: 'clang',
+            runInstructions: `${executablePath} < ${stdinPath}`,
             debugInstructions: 'No debug instructions for C yet. Try one of the online GDB things.',
         };
     } catch (e) {

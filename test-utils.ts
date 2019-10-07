@@ -205,7 +205,7 @@ export const tacTest = async (
                     return;
                 }
 
-                const stdinFile = await writeTempFile(stdin, '.txt');
+                const stdinFile = await writeTempFile(stdin, 'stdin', 'txt');
 
                 await Promise.all(
                     backend.executors.map(async ({ name, execute }) => {

@@ -96,7 +96,7 @@ export default async (
     const stringForm = programToString(threeAddressCode);
     const roundTripParsed = parseTacProgram(stringForm);
 
-    const stdinFile = await writeTempFile(stdin, '.txt');
+    const stdinFile = await writeTempFile(stdin, 'stdin', 'txt');
 
     const backendResults: BackendResult[] = await Promise.all(
         backends.map(async ({ name, compile: compileFn, executors }) => {

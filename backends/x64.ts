@@ -188,14 +188,14 @@ const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { er
 
 const compileTac = async (tac: ThreeAddressProgram, includeCleanup): Promise<CompilationResult | { error: string }> => {
     const threeAddressString = programToString(tac);
-    const threeAddressCodeFile = await writeTempFile(threeAddressString, '.txt');
+    const threeAddressCodeFile = await writeTempFile(threeAddressString, 'three-address-core-x64', 'txt');
 
     const x64String = tacToExecutable(tac, includeCleanup);
-    const sourceFile = await writeTempFile(x64String, '.x64');
+    const sourceFile = await writeTempFile(x64String, 'program', 'x64');
 
-    const linkerInputPath = await tmpFile({ postfix: '.o' });
+    const linkerInputPath = await tmpFile({ template: 'object-XXXXXX.o', dir: '/tmp' });
 
-    const binaryFile = await tmpFile({ postfix: '.out' });
+    const binaryFile = await tmpFile({ template: 'binary-XXXXXX.out', dir: '/tmp' });
     try {
         await exec(`nasm -fmacho64 -o ${linkerInputPath.path} ${sourceFile.path}`);
         // TODO: Cross compiling or something? IDK. Dependency on system linker sucks.
@@ -211,9 +211,11 @@ const compileTac = async (tac: ThreeAddressProgram, includeCleanup): Promise<Com
 };
 
 const execute = async (exePath: string, stdinPath: string): Promise<ExecutionResult> => {
+    const runInstructions = `${exePath} < ${stdinPath}`;
     return {
-        ...(await execAndGetResult(`${exePath} < ${stdinPath}`)),
+        ...(await execAndGetResult(runInstructions)),
         executorName: 'local',
+        runInstructions,
         debugInstructions: `lldb ${exePath}; break set -n start; settings set target.input-path ${stdinPath}; run; gui`,
     };
 };
