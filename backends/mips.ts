@@ -206,8 +206,16 @@ const spimExecutor = async (executablePath: string, stdinPath: string): Promise<
 
 const marsExecutor = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
     try {
+        const result = await execAndGetResult(`java -jar Mars4_5.jar nc ${executablePath} < ${stdinPath}`);
+        if ('error' in result) {
+            return { error: `MARS error: ${result.error}`, executorName: 'mars' };
+        }
+        // MARS adds an extra trailing newline that we don't expect. Remove it.
+        const trimmedStdout = result.stdout.slice(0, result.stdout.length - 1);
+
         return {
-            ...(await execAndGetResult(`java -jar Mars4_5.jar nc ${executablePath} < ${stdinPath}`)),
+            exitCode: result.exitCode,
+            stdout: trimmedStdout,
             executorName: 'mars',
             runInstructions: `java -jar Mars4_5.jar nc ${executablePath} < ${stdinPath}`,
             debugInstructions: `cp ${executablePath} /tmp; java -jar Mars4_5.jar`,
