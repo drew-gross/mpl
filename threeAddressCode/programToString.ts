@@ -22,6 +22,8 @@ export const programToString = ({ globals, functions, main }: ThreeAddressProgra
     }
     return `
 ${join(globalStrings, '\n\n')}
+${mainStr}
+
 ${join(functions.map(functionToString), '\n\n')}
-${mainStr}`;
+`;
 };

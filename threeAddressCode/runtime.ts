@@ -113,12 +113,13 @@ export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord =>
 export const length: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) length(r:str):
+            r:currentCharPtr = r:str; Make a copy of the arg that we can modify (TODO: disallow modifying arg)
             r:len = 0;
         length_loop:; Count another charachter
-            r:currentChar = *r:str; Load next byte
+            r:currentChar = *r:currentCharPtr; Load next byte
             goto length_return if r:currentChar == 0; If it's null, we are done
             r:len++; Bump string index
-            r:str++; Bump length counter
+            r:currentCharPtr++; Bump length counter
             goto length_loop; Go count another char
         length_return:; Done
             return r:len;
