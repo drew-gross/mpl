@@ -357,7 +357,6 @@ return isFive(5) ? 1 : 0`,
             return foo(false);
         `,
         exitCode: 0,
-        failing: true,
     },
     {
         name: 'Skipped Allocate in Ternary False',
@@ -370,7 +369,6 @@ return isFive(5) ? 1 : 0`,
             return foo(true);
         `,
         exitCode: 0,
-        failing: true,
     },
     {
         name: 'String Equality: Equal',

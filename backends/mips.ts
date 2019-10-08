@@ -218,7 +218,7 @@ const marsExecutor = async (executablePath: string, stdinPath: string): Promise<
             stdout: trimmedStdout,
             executorName: 'mars',
             runInstructions: `java -jar Mars4_5.jar nc ${executablePath} < ${stdinPath}`,
-            debugInstructions: `cp ${executablePath} /tmp; java -jar Mars4_5.jar`,
+            debugInstructions: `java -jar Mars4_5.jar # then open ${executablePath}`,
         };
     } catch (e) {
         return { error: `Exception: ${e.message}`, executorName: 'mars' };

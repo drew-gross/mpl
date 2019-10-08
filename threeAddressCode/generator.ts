@@ -150,14 +150,13 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             );
         case 'returnStatement':
             const result = makeTemporary('result');
-            const subExpression = recurse({
-                ast: ast.expression,
-                destination: result,
-            });
-            return compileExpression<Statement>([subExpression], ([e1]) => [
-                ...e1,
-                ...ins(`return ${s(result)}; Return previous expression`),
-            ]);
+            const subExpression = recurse({ ast: ast.expression, destination: result });
+            const cleanupAndReturn = {
+                prepare: [],
+                execute: [],
+                cleanup: ins(`return ${s(result)}; Return previous expression`),
+            };
+            return compileExpression<Statement>([cleanupAndReturn, subExpression], ([_, e1]) => e1);
         case 'subtraction': {
             const lhs = makeTemporary('addition_lhs');
             const rhs = makeTemporary('addition_rhs');
@@ -213,7 +212,6 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             ast.arguments.map((argument, index) => {
                 const argumentRegister = makeTemporary(`argument${index}`);
                 const argumentComputer = recurse({ ast: argument, destination: argumentRegister });
-                argumentComputer.prepare.unshift({ kind: 'empty', why: `Put argument ${index} in register` });
                 argumentRegisters.push(argumentRegister);
                 argumentComputers.push(argumentComputer);
             });
@@ -320,10 +318,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const lhs: string = ast.destination;
             if (lhs in globalNameMap) {
                 const rhs = makeTemporary('assignment_rhs');
-                const computeRhs = recurse({
-                    ast: ast.expression,
-                    destination: rhs,
-                });
+                const computeRhs = recurse({ ast: ast.expression, destination: rhs });
                 const lhsInfo = globalNameMap[lhs];
                 const lhsType = lhsInfo.originalDeclaration.type;
                 switch (lhsType.kind) {
@@ -423,10 +418,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         throw debug(`${unhandled} unhandled in typedDeclarationAssignment`);
                 }
             } else if (lhs in variablesInScope) {
-                return recurse({
-                    ast: ast.expression,
-                    destination: variablesInScope[lhs],
-                });
+                return recurse({ ast: ast.expression, destination: variablesInScope[lhs] });
             } else {
                 throw debug('Declared variable was neither global nor local');
             }
@@ -435,10 +427,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const lhs: string = ast.destination;
             if (lhs in globalNameMap) {
                 const reassignmentRhs = makeTemporary('reassignment_rhs');
-                const rhs: CompiledExpression<Statement> = recurse({
-                    ast: ast.expression,
-                    destination: reassignmentRhs,
-                });
+                const rhs = recurse({ ast: ast.expression, destination: reassignmentRhs });
                 const declaration = globalNameMap[lhs];
                 switch (declaration.originalDeclaration.type.kind) {
                     case 'Function':
@@ -510,10 +499,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         throw debug('todo');
                 }
             } else if (lhs in variablesInScope) {
-                return recurse({
-                    ast: ast.expression,
-                    destination: variablesInScope[lhs],
-                });
+                return recurse({ ast: ast.expression, destination: variablesInScope[lhs] });
             } else {
                 throw debug('Reassigned variable was neither global nor local');
             }
@@ -522,25 +508,21 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const lhs = makeTemporary('concat_lhs');
             const rhs = makeTemporary('concat_rhs');
             const combinedLength = makeTemporary('concat_result_length');
-            const resultString = makeTemporary('concat_destination_storage');
+            const doneFree = makeLabel('doneFree');
+            const allocated = makeTemporary('allocated');
 
             const makeLhs = recurse({ ast: ast.lhs, destination: lhs });
             const makeRhs = recurse({ ast: ast.rhs, destination: rhs });
-            const cleanup: CompiledExpression<Statement> = {
-                prepare: [],
+            const reqs: CompiledExpression<Statement> = {
+                prepare: ins(`${s(allocated)} = 0; Will set to true if we need to clean up`),
                 execute: [],
-                cleanup: [
-                    // TODO: This is not valid. It may attempt to free the string even if it was never created, e.g. due to being in the unexecuted branch of a ternary.
-                    {
-                        kind: 'callByName',
-                        function: 'my_free',
-                        arguments: [resultString],
-                        destination: null,
-                        why: 'Freeing temporary from concat',
-                    },
-                ],
+                cleanup: ins(`
+                    goto ${doneFree} if ${s(allocated)} == 0; If we never allocated, we should never free
+                    my_free(${s(destination)}); Free destination of concat (TODO: are we sure we aren't using it?)
+                ${doneFree}:; Done free
+                `),
             };
-            return compileExpression<Statement>([makeLhs, makeRhs, cleanup], ([e1, e2, _]) => [
+            return compileExpression<Statement>([makeLhs, makeRhs, reqs], ([e1, e2, _]) => [
                 ...ins(`${s(combinedLength)} = 1; Combined length. Start with 1 for null terminator.`),
                 ...e1,
                 ...e2,
@@ -550,6 +532,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         r:rhsLength = length(${s(rhs)}); Compute rhs length
                         ${s(combinedLength)} = ${s(combinedLength)} + r:rhsLength; Accumulate it
                         ${s(destination)} = my_malloc(${s(combinedLength)}); Allocate space for new string
+                        ${s(allocated)} = 1; Remind ourselves to decallocate
                         string_concatenate(${s(lhs)}, ${s(rhs)}, ${s(destination)}); Concatenate and put in new space
                     `),
             ]);
@@ -593,14 +576,8 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const leftSideDestination = makeTemporary('product_lhs');
             const rightSideDestination = makeTemporary('product_rhs');
 
-            const storeLeftInstructions = recurse({
-                ast: ast.lhs,
-                destination: leftSideDestination,
-            });
-            const storeRightInstructions = recurse({
-                ast: ast.rhs,
-                destination: rightSideDestination,
-            });
+            const storeLeftInstructions = recurse({ ast: ast.lhs, destination: leftSideDestination });
+            const storeRightInstructions = recurse({ ast: ast.rhs, destination: rightSideDestination });
             return compileExpression<Statement>(
                 [storeLeftInstructions, storeRightInstructions],
                 ([storeLeft, storeRight]) => [
