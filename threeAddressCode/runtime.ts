@@ -222,7 +222,7 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesI
 
 export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
-    (function) stringEquality(r:lsh, r:rhs):
+    (function) stringEquality(r:lhs, r:rhs):
             r:result = 1; Result = true (will write false if diff found)
         stringEquality_loop:; Check a char
             r:leftByte = *r:lhs; Load left char into temporary

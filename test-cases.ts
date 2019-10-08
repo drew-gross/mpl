@@ -372,6 +372,14 @@ return isFive(5) ? 1 : 0`,
         exitCode: 0,
         failing: true,
     },
+    {
+        name: 'String Equality: Equal',
+        source: `str1 := "a";
+            str2 := "a";
+            return str1 == str2 ? 1 : 2;
+        `,
+        exitCode: 1,
+    },
 ];
 
 export default testCases;

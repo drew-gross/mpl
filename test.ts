@@ -800,14 +800,6 @@ test('structure is equal for inferred string type', t => {
     t.deepEqual(inferredStructure, suppliedStructure);
 });
 
-test('string equality: equal', mplTest, {
-    source: `str1 := "a";
-str2 := "a";
-return str1 == str2 ? 1 : 2;
-`,
-    exitCode: 1,
-});
-
 test('string equality: inequal same length', mplTest, {
     source: `str1 := "a";
 str2 := "b";
