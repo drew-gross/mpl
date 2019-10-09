@@ -148,6 +148,21 @@ return isFive(5) ? 1 : 0`,
         exitCode: 7,
     },
     {
+        name: 'String assignment inside function',
+        source: `
+            foo := () => {
+                a := "Hello";
+                dummy := print(a);
+                a = "World!!!!!";
+                dummy = print(a);
+                return dummy - dummy;
+            };
+            return foo();
+        `,
+        exitCode: 0,
+        stdout: 'HelloWorld!!!!!',
+    },
+    {
         name: 'Print',
         // TODO: print() maybe shouldn't return anything? Or return on error?
         source: `

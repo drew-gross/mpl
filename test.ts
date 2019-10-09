@@ -1062,21 +1062,6 @@ return foo();`,
     ],
 });
 
-test('reassign string inside function', mplTest, {
-    source: `
-foo := () => {
-    a := "Hello";
-    dummy := print(a);
-    a = "World!!!!!";
-    dummy = print(a);
-    return dummy - dummy;
-};
-return foo();
-`,
-    exitCode: 0,
-    expectedStdOut: 'HelloWorld!!!!!',
-});
-
 test('variable named b', mplTest, {
     source: `
 b := 2;
