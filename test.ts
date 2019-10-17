@@ -1807,6 +1807,91 @@ test('Assign registers for syscall-only functions', t => {
     });
 });
 
+test.only('Assign registers for arguments', t => {
+    const f: ThreeAddressFunction = {
+        name: 'anonymous_1',
+        instructions: [
+            {
+                kind: 'loadSymbolAddress',
+                symbolName: 'string_literal_1_Hello',
+                to: { name: 'local_a_2' },
+                why: 'Load string literal addres',
+            },
+            {
+                kind: 'move',
+                from: { name: 'local_a_2' },
+                to: { name: 'argument0_6' },
+                why: 'Move from a into destination',
+            },
+            { kind: 'empty', why: 'call print' },
+            {
+                kind: 'loadSymbolAddress',
+                symbolName: 'print',
+                to: { name: 'function_pointer_7' },
+                why: 'Load runtime function',
+            },
+            {
+                kind: 'callByRegister' as 'callByRegister',
+                function: { name: 'function_pointer_7' },
+                arguments: [{ name: 'argument0_6' }],
+                destination: { name: 'local_dummy_3' },
+                why: 'Call runtime print',
+            },
+            {
+                kind: 'loadSymbolAddress',
+                symbolName: 'string_literal_2_World',
+                to: { name: 'local_a_2' },
+                why: 'Load string literal addres',
+            },
+            {
+                kind: 'move',
+                from: { name: 'local_a_2' },
+                to: { name: 'argument0_10' },
+                why: 'Move from a into destination',
+            },
+            { kind: 'empty', why: 'call print' },
+            {
+                kind: 'loadSymbolAddress',
+                symbolName: 'print',
+                to: { name: 'function_pointer_11' },
+                why: 'Load runtime function',
+            },
+            {
+                kind: 'callByRegister' as 'callByRegister',
+                function: { name: 'function_pointer_11' },
+                arguments: [{ name: 'argument0_10' }],
+                destination: { name: 'local_dummy_3' },
+                why: 'Call runtime print',
+            },
+            {
+                kind: 'move',
+                from: { name: 'local_dummy_3' },
+                to: { name: 'addition_lhs_14' },
+                why: 'Move from dummy into destination',
+            },
+            {
+                kind: 'move',
+                from: { name: 'local_dummy_3' },
+                to: { name: 'addition_rhs_15' },
+                why: 'Move from dummy into destination',
+            },
+            {
+                kind: 'subtract',
+                destination: { name: 'result_13' },
+                lhs: { name: 'addition_lhs_14' },
+                rhs: { name: 'addition_rhs_15' },
+                why: 'Evaluate subtractio',
+            },
+            { kind: 'return', register: { name: 'result_13' }, why: 'Return previous expressio' },
+        ],
+        liveAtExit: [{ name: 'exitCodeRegister_1' }],
+        spills: 0,
+        arguments: [],
+    };
+    const assigned = assignRegisters(f, [{ name: 'r1' }, { name: 'r2' }, { name: 'r3' }]);
+    t.assert('argument0_6' in assigned.assignment.registerMap);
+});
+
 test('Range', t => {
     t.deepEqual(range(6, 9), [6, 7, 8]);
 });

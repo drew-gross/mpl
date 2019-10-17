@@ -579,6 +579,7 @@ export const assignRegisters = <TargetRegister>(
     taf: ThreeAddressFunction,
     colors: TargetRegister[]
 ): { assignment: RegisterAssignment<TargetRegister>; newFunction: ThreeAddressFunction } => {
+    debugger;
     let liveness = tafLiveness(taf);
     let newFunction = removeDeadStores(taf, liveness);
     while (newFunction) {
