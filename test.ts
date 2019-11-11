@@ -405,8 +405,8 @@ test('correct inferred type for function', t => {
     });
 });
 
-testCases.forEach(({ name, source, exitCode, stdin, stdout, ast, parseErrors, failing, only }) => {
-    const runner = failing ? test.failing : only ? test.only : test;
+testCases.forEach(({ name, source, exitCode, stdin, stdout, ast, parseErrors, failing }) => {
+    const runner = failing ? test.failing : test;
     runner(name, mplTest, {
         source,
         exitCode,
@@ -1848,7 +1848,7 @@ test("Functions calls with side effects don't get removed for being dead", t => 
 });
 
 // Regression test for when I accidentally removes all control flow bucause control flow doesn't change registers.
-test.only("Control flow instructions don't get removed for having no writes", t => {
+test("Control flow instructions don't get removed for having no writes", t => {
     const f: ThreeAddressFunction = {
         name: 'verify_no_leaks',
         instructions: [

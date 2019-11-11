@@ -18,7 +18,6 @@ export type TestCase = {
 
     // Control test runner
     failing?: boolean;
-    only?: boolean;
 };
 
 export const passed = (testCase: TestCase, result: ExecutionResult) => {
