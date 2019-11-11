@@ -9,7 +9,7 @@ import * as dot from 'graphlib-dot';
 import { toDotFile } from './parser-lib/parse.js';
 import parseErrorToString from './parser-lib/parseErrorToString.js';
 import { toString as typeErrorToString } from './TypeError.js';
-import chalk from 'chalk';
+import * as chalk from 'chalk';
 import * as commander from 'commander';
 import annotateSource from './annotateSource.js';
 
