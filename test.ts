@@ -1847,6 +1847,45 @@ test("Functions calls with side effects don't get removed for being dead", t => 
     t.assert('argument0_6' in assigned.assignment.registerMap);
 });
 
+// Regression test for when I accidentally removes all control flow bucause control flow doesn't change registers.
+test.only("Control flow instructions don't get removed for having no writes", t => {
+    const f: ThreeAddressFunction = {
+        name: 'verify_no_leaks',
+        instructions: [
+            {
+                kind: 'loadImmediate',
+                destination: { name: 'one' },
+                value: 1,
+                why: 'Need for comparison',
+            },
+            {
+                kind: 'loadImmediate',
+                destination: { name: 'two' },
+                value: 2,
+                why: 'Need for comparison',
+            },
+            {
+                kind: 'gotoIfEqual',
+                label: 'L',
+                lhs: { name: 'two' },
+                rhs: { name: 'one' },
+                why: 'comparison',
+            },
+            {
+                kind: 'label',
+                name: 'L',
+                why: 'L',
+            },
+        ],
+        liveAtExit: [],
+        spills: 0,
+        arguments: [],
+    };
+    const assigned = assignRegisters(f, [{ name: 'r1' }, { name: 'r2' }, { name: 'r3' }]);
+    t.assert('one' in assigned.assignment.registerMap);
+    t.assert('two' in assigned.assignment.registerMap);
+});
+
 test('Range', t => {
     t.deepEqual(range(6, 9), [6, 7, 8]);
 });

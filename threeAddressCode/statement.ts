@@ -286,23 +286,37 @@ export const writes = (tas: Statement): Register[] => {
     throw debug(`kind ${(tas as any).kind} missing in writes`);
 };
 
-// An instruction has side effects if it does anything other than change the registers in it's write()s.
-
+// An instruction has side effects if it does anything other than change the registers in it's write()s. Basically exists to prevent removal of functions for having only dead stores where their stores are to things other than registers.
 export const hasSideEffects = (tas: Statement): boolean => {
     switch (tas.kind) {
+        // Syscalls ultimately cause all user-visible effects
         case 'syscall':
+        // Writes to memory are not captured by "writes" but are side effects
         case 'storeGlobal':
         case 'storeMemory':
         case 'storeZeroToMemory':
         case 'storeMemoryByte':
+        // These write to the stack
         case 'alloca':
         case 'spill':
+        // Labels act as a side effect in that it can't be removed for having no side effects
+        case 'label':
+        case 'functionLabel':
+        case 'return':
+        // Control flow affects the "instruction pointer" which is technically a register but we usually don't treat it as one.
+        case 'goto':
+        case 'gotoIfEqual':
+        case 'gotoIfNotEqual':
+        case 'gotoIfGreater':
+        case 'gotoIfZero':
             return true;
         // TODO: Maybe putting callByRegister and callByNmae here is too restrictive? Part of the point of this language is to ensure that the compiler knows which functions have side effects, so we should be able to say here whether a function call has side effects or not. That said, maybe that optimization should go at a higher level, and this function should assume that any function thats still here has side effects.
         case 'callByRegister':
         case 'callByName':
             return true;
+        // Empty instructions are really just comments
         case 'empty':
+        // These all change registers so they only have real effects, not side effects.
         case 'move':
         case 'loadImmediate':
         case 'addImmediate':
@@ -314,14 +328,6 @@ export const hasSideEffects = (tas: Statement): boolean => {
         case 'loadGlobal':
         case 'loadMemory':
         case 'loadMemoryByte':
-        case 'label':
-        case 'functionLabel':
-        case 'return':
-        case 'goto':
-        case 'gotoIfEqual':
-        case 'gotoIfNotEqual':
-        case 'gotoIfGreater':
-        case 'gotoIfZero':
         case 'unspill':
             return false;
     }
