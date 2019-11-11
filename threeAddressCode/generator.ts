@@ -66,7 +66,8 @@ export type TargetThreeAddressStatement<TargetRegister> = { why: string } & (
     | { kind: 'stackStore'; register: TargetRegister; offset: number }
     | { kind: 'stackLoad'; register: TargetRegister; offset: number }
     | { kind: 'push'; register: TargetRegister }
-    | { kind: 'pop'; register: TargetRegister });
+    | { kind: 'pop'; register: TargetRegister }
+);
 
 export type GlobalInfo = { newName: string; originalDeclaration: VariableDeclaration };
 

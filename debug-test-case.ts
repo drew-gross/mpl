@@ -83,11 +83,9 @@ import annotateSource from './annotateSource.js';
     console.log(
         `Three Address Code: ${(await writeTempFile(programInfo.threeAddressCode, 'three-address-code', 'txt')).path}`
     );
-    const roundTripParsedPath = (await writeTempFile(
-        JSON.stringify(programInfo.threeAddressRoundTrip, null, 2),
-        'round-trip-parsed',
-        'txt'
-    )).path;
+    const roundTripParsedPath = (
+        await writeTempFile(JSON.stringify(programInfo.threeAddressRoundTrip, null, 2), 'round-trip-parsed', 'txt')
+    ).path;
     const roundTripSuccess =
         !Array.isArray(programInfo.threeAddressRoundTrip) && !('kind' in programInfo.threeAddressRoundTrip);
     if (roundTripSuccess) {

@@ -48,7 +48,14 @@ const astToJS = ({
                 functionDecl.type.kind == 'Function' &&
                 functionDecl.type.permissions.includes('stdout');
             const awaitStr = needsAwait ? 'await' : '';
-            return [awaitStr + ` ${ast.name}(`, join(jsArguments.map(argument => join(argument, ' ')), ', '), `)`];
+            return [
+                awaitStr + ` ${ast.name}(`,
+                join(
+                    jsArguments.map(argument => join(argument, ' ')),
+                    ', '
+                ),
+                `)`,
+            ];
         case 'identifier':
             return [ast.value];
         case 'ternary':
@@ -85,7 +92,10 @@ const compile = async ({
     globalDeclarations,
 }: FrontendOutput): Promise<CompilationResult | { error: string }> => {
     const JSfunctions = functions.map(({ name, parameters, statements }) => {
-        const prefix = `${name} = (${join(parameters.map(parameter => parameter.name), ', ')}) => {`;
+        const prefix = `${name} = (${join(
+            parameters.map(parameter => parameter.name),
+            ', '
+        )}) => {`;
         const suffix = `}`;
 
         const body = statements.map(statement => {

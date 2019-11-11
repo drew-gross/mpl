@@ -12,5 +12,8 @@ export default (source: string, { line, column }: SourceLocation, message: strin
     const mainLine = lines[line - 1];
     if (column <= 0) return null;
     const pointerLine = ' '.repeat(column - 1) + `^ ${message}`;
-    return join([contextBefore, mainLine, pointerLine, contextAfter].filter(l => l !== undefined), '\n');
+    return join(
+        [contextBefore, mainLine, pointerLine, contextAfter].filter(l => l !== undefined),
+        '\n'
+    );
 };

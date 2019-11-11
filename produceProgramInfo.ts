@@ -64,7 +64,10 @@ export default async (
     let structure = '';
     structure += 'Functions:\n';
     frontendOutput.functions.forEach(f => {
-        structure += `-> ${f.name}(${join(f.parameters.map(p => typeToString(p.type)), ', ')})\n`;
+        structure += `-> ${f.name}(${join(
+            f.parameters.map(p => typeToString(p.type)),
+            ', '
+        )})\n`;
         f.statements.forEach(statement => {
             structure += `---> ${astToString(statement)}\n`;
         });

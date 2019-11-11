@@ -43,7 +43,8 @@ export type Statement = { why: string } & (
     | { kind: 'syscall'; name: SyscallName; arguments: (Register | number)[]; destination: Register | null }
     | { kind: 'callByName'; function: string; arguments: (Register | number)[]; destination: Register | null }
     | { kind: 'callByRegister'; function: Register; arguments: (Register | number)[]; destination: Register | null }
-    | { kind: 'return'; register: Register });
+    | { kind: 'return'; register: Register }
+);
 
 const syscallArgToString = (regOrNumber: number | Register): string => {
     if (typeof regOrNumber == 'number') {

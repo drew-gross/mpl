@@ -331,9 +331,11 @@ test('ast for assignment then return', t => {
     const astWithSemicolon = stripSourceLocation(
         removeBracketsFromAst(
             stripResultIndexes(
-                parse(grammar, 'program', lex(tokenSpecs, 'constThree := a: Integer => 3; return 10;') as Token<
-                    MplToken
-                >[])
+                parse(
+                    grammar,
+                    'program',
+                    lex(tokenSpecs, 'constThree := a: Integer => 3; return 10;') as Token<MplToken>[]
+                )
             )
         )
     );
@@ -377,9 +379,11 @@ test('lowering of bracketedExpressions', t => {
 
 test('correct inferred type for function', t => {
     const functionSource = 'a: Integer => 11';
-    const parseResult: MplParseResult = parse(grammar, 'function', lex(tokenSpecs, functionSource) as Token<
-        MplToken
-    >[]);
+    const parseResult: MplParseResult = parse(
+        grammar,
+        'function',
+        lex(tokenSpecs, functionSource) as Token<MplToken>[]
+    );
     const ast: Ast.UninferredExpression = astFromParseResult(parseResult as MplAst) as Ast.UninferredExpression;
     t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
         type: { kind: 'Function', arguments: [{ kind: 'Integer' }], permissions: [], returnType: { kind: 'Integer' } },
@@ -1405,7 +1409,10 @@ test('type of objectLiteral', t => {
         type: {
             kind: 'Product',
             name: 'BoolPair',
-            members: [{ name: 'first', type: { kind: 'Boolean' } }, { name: 'second', type: { kind: 'Boolean' } }],
+            members: [
+                { name: 'first', type: { kind: 'Boolean' } },
+                { name: 'second', type: { kind: 'Boolean' } },
+            ],
         },
         extractedFunctions: [],
     };
@@ -1416,7 +1423,10 @@ test('type equality via name lookup', t => {
     const leftType: Type = {
         kind: 'Product',
         name: 'BoolPair',
-        members: [{ name: 'first', type: { kind: 'Boolean' } }, { name: 'second', type: { kind: 'Boolean' } }],
+        members: [
+            { name: 'first', type: { kind: 'Boolean' } },
+            { name: 'second', type: { kind: 'Boolean' } },
+        ],
     };
     const rightType: Type = {
         kind: 'NameRef',

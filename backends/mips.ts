@@ -230,6 +230,9 @@ const mipsBackend: Backend = {
     compile,
     compileTac,
     targetInfo: mipsTarget,
-    executors: [{ execute: spimExecutor, name: 'spim' }, { execute: marsExecutor, name: 'mars' }],
+    executors: [
+        { execute: spimExecutor, name: 'spim' },
+        { execute: marsExecutor, name: 'mars' },
+    ],
 };
 export default mipsBackend;

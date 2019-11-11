@@ -207,7 +207,10 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             const argumentsC = ast.arguments.map(argument => recurse(argument));
             return compileExpression(argumentsC, argCode => [
                 `(*${ast.name})(`,
-                join(argCode.map(code => registerTransferLangaugeToC(code, ' ')), ', '),
+                join(
+                    argCode.map(code => registerTransferLangaugeToC(code, ' ')),
+                    ', '
+                ),
                 ')',
             ]);
         }
