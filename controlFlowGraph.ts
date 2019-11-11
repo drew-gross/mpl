@@ -563,15 +563,13 @@ const removeDeadStores = (taf: ThreeAddressFunction, liveness: Set<Register>[]):
 
         if (targets.length == 0) {
             newFunction.instructions.push(taf.instructions[i]);
-        } else if (targets.length == 1) {
-            const isLiveWrite = liveness[i + 1].has(targets[0]);
+        } else {
+            const isLiveWrite = targets.some(target => liveness[i + 1].has(target));
             if (isLiveWrite) {
                 newFunction.instructions.push(taf.instructions[i]);
             } else {
                 anythingChanged = true;
             }
-        } else {
-            throw debug('instructions with more than one target not supported');
         }
     }
     if (!anythingChanged) {
