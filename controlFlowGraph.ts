@@ -8,7 +8,7 @@ import idAppender from './util/idAppender.js';
 import { RegisterAssignment } from './backend-utils.js';
 import { Register, isEqual as registerIsEqual, compare as registerCompare } from './register.js';
 import { ThreeAddressFunction } from './threeAddressCode/generator.js';
-import { Statement, toString as tasToString, reads, writes } from './threeAddressCode/statement.js';
+import { Statement, toString as tasToString, reads, writes, hasSideEffects } from './threeAddressCode/statement.js';
 
 export type BasicBlock = {
     name: string;
@@ -551,10 +551,15 @@ const removeDeadStores = (taf: ThreeAddressFunction, liveness: Set<Register>[]):
     let anythingChanged: boolean = false;
     if (taf.instructions.length + 1 != liveness.length) throw debug('Liveness length != taf length + 1');
     for (let i = 0; i < taf.instructions.length; i++) {
-        const targets = writes(taf.instructions[i]);
-        // If there are written registers and none of them are live, omit the write. This
-        // will fail if the instruction doing the writing also has side effects, e.g. syscall. TODO:
-        // Implement something that takes this into account. TODO: Treat function result and arguments less special-casey somehow. Maybe put it into liveness computing. NOTE: Writes to arguments are not dead because length is implemented in a way where the arguments are destroyed and repaired (TODO: verify this). TODO: probably should check if any target is a register?
+        const currentInstruction = taf.instructions[i];
+        // Any instruction with side effects needs to stay until we can prove that the side effects don't matter.
+        if (hasSideEffects(currentInstruction)) {
+            newFunction.instructions.push(currentInstruction);
+            continue;
+        }
+        const targets = writes(currentInstruction);
+        // If there are written registers and none of them are live, omit the write.
+        // TODO: Treat function result and arguments less special-casey somehow. Maybe put it into liveness computing. NOTE: Writes to arguments are not dead because length is implemented in a way where the arguments are destroyed and repaired (TODO: verify this). TODO: probably should check if any target is a register?
 
         if (targets.length == 0 || taf.arguments.some(arg => registerIsEqual(targets[0], arg))) {
             newFunction.instructions.push(taf.instructions[i]);
@@ -579,7 +584,6 @@ export const assignRegisters = <TargetRegister>(
     taf: ThreeAddressFunction,
     colors: TargetRegister[]
 ): { assignment: RegisterAssignment<TargetRegister>; newFunction: ThreeAddressFunction } => {
-    debugger;
     let liveness = tafLiveness(taf);
     let newFunction = removeDeadStores(taf, liveness);
     while (newFunction) {

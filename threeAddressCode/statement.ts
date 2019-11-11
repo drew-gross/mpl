@@ -285,3 +285,45 @@ export const writes = (tas: Statement): Register[] => {
     }
     throw debug(`kind ${(tas as any).kind} missing in writes`);
 };
+
+// An instruction has side effects if it does anything other than change the registers in it's write()s.
+
+export const hasSideEffects = (tas: Statement): boolean => {
+    switch (tas.kind) {
+        case 'syscall':
+        case 'storeGlobal':
+        case 'storeMemory':
+        case 'storeZeroToMemory':
+        case 'storeMemoryByte':
+        case 'alloca':
+        case 'spill':
+            return true;
+        // TODO: Maybe putting callByRegister and callByNmae here is too restrictive? Part of the point of this language is to ensure that the compiler knows which functions have side effects, so we should be able to say here whether a function call has side effects or not. That said, maybe that optimization should go at a higher level, and this function should assume that any function thats still here has side effects.
+        case 'callByRegister':
+        case 'callByName':
+            return true;
+        case 'empty':
+        case 'move':
+        case 'loadImmediate':
+        case 'addImmediate':
+        case 'increment':
+        case 'subtract':
+        case 'add':
+        case 'multiply':
+        case 'loadSymbolAddress':
+        case 'loadGlobal':
+        case 'loadMemory':
+        case 'loadMemoryByte':
+        case 'label':
+        case 'functionLabel':
+        case 'return':
+        case 'goto':
+        case 'gotoIfEqual':
+        case 'gotoIfNotEqual':
+        case 'gotoIfGreater':
+        case 'gotoIfZero':
+        case 'unspill':
+            return false;
+    }
+    throw debug(`kind ${(tas as any).kind} missing in hasSideEffects`);
+};

@@ -1807,7 +1807,8 @@ test('Assign registers for syscall-only functions', t => {
     });
 });
 
-test.only('Assign registers for arguments', t => {
+// Regression test from before we used hasSideEffects and used shitty heuristics for determining whether an instruction had side effects.
+test("Functions calls with side effects don't get removed for being dead", t => {
     const f: ThreeAddressFunction = {
         name: 'anonymous_1',
         instructions: [
@@ -1837,52 +1838,6 @@ test.only('Assign registers for arguments', t => {
                 destination: { name: 'local_dummy_3' },
                 why: 'Call runtime print',
             },
-            {
-                kind: 'loadSymbolAddress',
-                symbolName: 'string_literal_2_World',
-                to: { name: 'local_a_2' },
-                why: 'Load string literal addres',
-            },
-            {
-                kind: 'move',
-                from: { name: 'local_a_2' },
-                to: { name: 'argument0_10' },
-                why: 'Move from a into destination',
-            },
-            { kind: 'empty', why: 'call print' },
-            {
-                kind: 'loadSymbolAddress',
-                symbolName: 'print',
-                to: { name: 'function_pointer_11' },
-                why: 'Load runtime function',
-            },
-            {
-                kind: 'callByRegister' as 'callByRegister',
-                function: { name: 'function_pointer_11' },
-                arguments: [{ name: 'argument0_10' }],
-                destination: { name: 'local_dummy_3' },
-                why: 'Call runtime print',
-            },
-            {
-                kind: 'move',
-                from: { name: 'local_dummy_3' },
-                to: { name: 'addition_lhs_14' },
-                why: 'Move from dummy into destination',
-            },
-            {
-                kind: 'move',
-                from: { name: 'local_dummy_3' },
-                to: { name: 'addition_rhs_15' },
-                why: 'Move from dummy into destination',
-            },
-            {
-                kind: 'subtract',
-                destination: { name: 'result_13' },
-                lhs: { name: 'addition_lhs_14' },
-                rhs: { name: 'addition_rhs_15' },
-                why: 'Evaluate subtractio',
-            },
-            { kind: 'return', register: { name: 'result_13' }, why: 'Return previous expressio' },
         ],
         liveAtExit: [{ name: 'exitCodeRegister_1' }],
         spills: 0,
