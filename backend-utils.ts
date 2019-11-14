@@ -14,7 +14,7 @@ import tacToTarget from './threeAddressCode/toTarget.js';
 import { Statement, reads, writes } from './threeAddressCode/statement.js';
 import { isEqual } from './register.js';
 import { assignRegisters } from './controlFlowGraph.js';
-import { orderedSet, operatorCompare } from './util/ordered-set.js';
+import { orderedSet, OrderedSet, operatorCompare } from './util/ordered-set.js';
 import join from './util/join.js';
 
 import mipsBackend from './backends/mips.js';
@@ -69,34 +69,34 @@ export type RegisterAssignment<TargetRegister> = {
     spilled: string[];
 };
 
-export const saveRegistersCode = <TargetRegister>(
-    registerAssignment: RegisterAssignment<TargetRegister>
+const saveRegistersCode = <TargetRegister>(
+    usedRegisters: OrderedSet<TargetRegister>
 ): TargetThreeAddressStatement<TargetRegister>[] => {
-    const usedRegisters = orderedSet<TargetRegister>(operatorCompare);
-    Object.values(registerAssignment.registerMap).forEach(usedRegisters.add);
     const result: TargetThreeAddressStatement<TargetRegister>[] = [];
+    let index = 0;
     usedRegisters.forEach(targetRegister => {
         result.push({
             kind: 'push' as 'push',
             register: targetRegister,
             why: 'Push register to preserve it',
         });
+        index++;
     });
     return result;
 };
 
-export const restoreRegistersCode = <TargetRegister>(
-    registerAssignment: RegisterAssignment<TargetRegister>
+const restoreRegistersCode = <TargetRegister>(
+    usedRegisters: OrderedSet<TargetRegister>
 ): TargetThreeAddressStatement<TargetRegister>[] => {
-    const usedRegisters = orderedSet<TargetRegister>(operatorCompare);
-    Object.values(registerAssignment.registerMap).forEach(usedRegisters.add);
     let result: TargetThreeAddressStatement<TargetRegister>[] = [];
+    let index = 0;
     usedRegisters.forEach(targetRegister => {
         result.push({
             kind: 'pop' as 'pop',
             register: targetRegister,
-            why: 'Restore preserved registers',
+            why: 'Restore preserved register',
         });
+        index++;
     });
     result = result.reverse();
     return result;
@@ -111,10 +111,18 @@ type TacToTargetInput<TargetRegister> = {
     finalCleanup: TargetThreeAddressStatement<TargetRegister>[];
     isMain: boolean; // Controls whether to save/restore registers
 };
+
+type StackUsage = {
+    arguments: number;
+    savedRegisters: number;
+};
+
 type TargetFunction<TargetRegister> = {
     name: string;
     instructions: TargetThreeAddressStatement<TargetRegister>[];
+    stackUsage: StackUsage;
 };
+
 const tacToTargetFunction = <TargetRegister>({
     threeAddressFunction,
     registers,
@@ -133,6 +141,8 @@ const tacToTargetFunction = <TargetRegister>({
         }
         return argIndex - registers.functionArgument.length;
     };
+
+    const stackSlotsForArguments = threeAddressFunction.arguments.length - registers.functionArgument.length;
 
     const instructionsWithArgsFromStack: Statement[] = flatten(
         threeAddressFunction.instructions.map(tas => {
@@ -227,17 +237,20 @@ const tacToTargetFunction = <TargetRegister>({
         )
     );
 
+    const usedRegisters = orderedSet<TargetRegister>(operatorCompare);
+    Object.values(assignment.registerMap).forEach(usedRegisters.add);
+
     const instructions: TargetThreeAddressStatement<TargetRegister>[] = [];
     if (!isMain) {
         instructions.push(
             ...extraSavedRegisters.map(r => ({ kind: 'push' as any, register: r, why: 'save to stack' }))
         );
-        instructions.push(...saveRegistersCode(assignment));
+        instructions.push(...saveRegistersCode(usedRegisters));
     }
     instructions.push(...statements);
     instructions.push({ kind: 'label', name: exitLabel, why: 'cleanup' });
     if (!isMain) {
-        instructions.push(...restoreRegistersCode(assignment));
+        instructions.push(...restoreRegistersCode(usedRegisters));
         instructions.push(
             ...extraSavedRegisters
                 .reverse()
@@ -245,7 +258,14 @@ const tacToTargetFunction = <TargetRegister>({
         );
     }
     instructions.push(...finalCleanup);
-    return { name: threeAddressFunction.name, instructions };
+    return {
+        name: threeAddressFunction.name,
+        instructions,
+        stackUsage: {
+            arguments: stackSlotsForArguments,
+            savedRegisters: extraSavedRegisters.length + usedRegisters.size(),
+        },
+    };
 };
 
 export const makeExecutable = <TargetRegister>(
