@@ -14,7 +14,7 @@ import tacToTarget from './threeAddressCode/toTarget.js';
 import { Statement, reads, writes } from './threeAddressCode/statement.js';
 import { isEqual } from './register.js';
 import { assignRegisters } from './controlFlowGraph.js';
-import { orderedSet, OrderedSet, operatorCompare } from './util/ordered-set.js';
+import { orderedSet, operatorCompare } from './util/ordered-set.js';
 import join from './util/join.js';
 
 import mipsBackend from './backends/mips.js';
@@ -67,39 +67,6 @@ export const stringLiteralName = ({ id, value }: StringLiteralData) =>
 export type RegisterAssignment<TargetRegister> = {
     registerMap: { [key: string]: TargetRegister };
     spilled: string[];
-};
-
-const saveRegistersCode = <TargetRegister>(
-    usedRegisters: OrderedSet<TargetRegister>
-): TargetThreeAddressStatement<TargetRegister>[] => {
-    const result: TargetThreeAddressStatement<TargetRegister>[] = [];
-    let index = 0;
-    usedRegisters.forEach(targetRegister => {
-        result.push({
-            kind: 'push' as 'push',
-            register: targetRegister,
-            why: 'Push register to preserve it',
-        });
-        index++;
-    });
-    return result;
-};
-
-const restoreRegistersCode = <TargetRegister>(
-    usedRegisters: OrderedSet<TargetRegister>
-): TargetThreeAddressStatement<TargetRegister>[] => {
-    let result: TargetThreeAddressStatement<TargetRegister>[] = [];
-    let index = 0;
-    usedRegisters.forEach(targetRegister => {
-        result.push({
-            kind: 'pop' as 'pop',
-            register: targetRegister,
-            why: 'Restore preserved register',
-        });
-        index++;
-    });
-    result = result.reverse();
-    return result;
 };
 
 type TacToTargetInput<TargetRegister> = {
@@ -243,18 +210,39 @@ const tacToTargetFunction = <TargetRegister>({
     const instructions: TargetThreeAddressStatement<TargetRegister>[] = [];
     if (!isMain) {
         instructions.push(
-            ...extraSavedRegisters.map(r => ({ kind: 'push' as any, register: r, why: 'save to stack' }))
+            ...extraSavedRegisters.map(r => ({
+                kind: 'push' as any,
+                register: r,
+                why: 'save extra register',
+            }))
         );
-        instructions.push(...saveRegistersCode(usedRegisters));
+        instructions.push(
+            ...usedRegisters.toList().map(r => ({
+                kind: 'push' as 'push',
+                register: r,
+                why: 'save used register',
+            }))
+        );
     }
     instructions.push(...statements);
     instructions.push({ kind: 'label', name: exitLabel, why: 'cleanup' });
     if (!isMain) {
-        instructions.push(...restoreRegistersCode(usedRegisters));
         instructions.push(
-            ...extraSavedRegisters
+            ...usedRegisters
+                .toList()
                 .reverse()
-                .map(r => ({ kind: 'pop' as 'pop', register: r, why: 'restore from stack' }))
+                .map(r => ({
+                    kind: 'pop' as 'pop',
+                    register: r,
+                    why: 'restore used register',
+                }))
+        );
+        instructions.push(
+            ...extraSavedRegisters.reverse().map(r => ({
+                kind: 'pop' as 'pop',
+                register: r,
+                why: 'restore extra register',
+            }))
         );
     }
     instructions.push(...finalCleanup);
