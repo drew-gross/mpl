@@ -35,31 +35,14 @@ const testCases: TestCase[] = [
         exitCode: 7,
     },
     {
-        name: 'Brackets',
-        source: 'return (3)',
-        exitCode: 3,
-    },
-    {
         name: 'Single Product',
         source: 'return 2 * 2',
         exitCode: 4,
     },
     {
-        name: 'Used Function',
-        source: 'takeItToEleven := a: Integer => 11; return takeItToEleven(0)',
-        exitCode: 11,
-    },
-    {
-        name: 'Call stack depth 5',
-        source: `
-            five := a: Integer => a + 1;
-            four := a: Integer => five(a) + 1;
-            three := a: Integer => four(a) + 1;
-            two := a: Integer => three(a) + 1;
-            one := a: Integer => two(a) + 1;
-            return one(0);
-        `,
-        exitCode: 5,
+        name: 'Brackets',
+        source: 'return (3)',
+        exitCode: 3,
     },
     {
         name: 'Double Product with Brackets',
@@ -103,6 +86,11 @@ const testCases: TestCase[] = [
         name: 'Unused Function',
         source: 'constThree := a: Integer => 3; return 10',
         exitCode: 10,
+    },
+    {
+        name: 'Used Function',
+        source: 'takeItToEleven := a: Integer => 11; return takeItToEleven(0)',
+        exitCode: 11,
     },
     {
         name: 'Recursive Function',
