@@ -97,9 +97,9 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
         case 'return':
             return [`jr $ra`];
         case 'push':
-            return [`sw ${tas.register}, ($sp)`, `addiu, $sp, $sp, -4`];
+            return [`addiu, $sp, $sp, -4`, `sw ${tas.register}, ($sp)`];
         case 'pop':
-            return [`addiu $sp, $sp, 4`, `lw ${tas.register}, ($sp)`];
+            return [`lw ${tas.register}, ($sp)`, `addiu $sp, $sp, 4`];
         case 'loadStackOffset':
             return [`move ${tas.register}, $sp`, `addiu ${tas.register}, ${tas.register}, -${tas.offset}`];
         case 'stackStore':

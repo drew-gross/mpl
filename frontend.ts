@@ -390,6 +390,7 @@ export const typeOfExpression = (ctx: WithContext<Ast.UninferredExpression>): TO
                 ];
             }
             const functionType = declaration.type;
+            if (!functionType) throw debug('bad function! This should be a better error.');
             if (functionType.kind !== 'Function') {
                 return [
                     {

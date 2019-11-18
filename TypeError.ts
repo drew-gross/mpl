@@ -39,8 +39,9 @@ export const toString = (e: TypeError): string => {
     switch (e.kind) {
         case 'assignUndeclaredIdentifer':
             return `Unknown identifier ${e.destinationName}`;
-            break;
+        case 'unknownIdentifier':
+            return `Unknown identifier ${e.name}`;
         default:
-            throw debug('need string for this error');
+            throw debug(`need string for error: ${e.kind}`);
     }
 };
