@@ -207,43 +207,74 @@ const tacToTargetFunction = <TargetRegister>({
     const usedRegisters = orderedSet<TargetRegister>(operatorCompare);
     Object.values(assignment.registerMap).forEach(usedRegisters.add);
 
+    const totalStackSlotsUsed = extraSavedRegisters.length + usedRegisters.size();
     const instructions: TargetThreeAddressStatement<TargetRegister>[] = [];
     if (!isMain) {
+        let stackSlotIndex = 0;
+        instructions.push({
+            kind: 'stackReserve',
+            words: totalStackSlotsUsed,
+            why: `Preamble: ${extraSavedRegisters.length} extra + ${usedRegisters.size()} used`,
+        });
         instructions.push(
-            ...extraSavedRegisters.map(r => ({
-                kind: 'push' as any,
-                register: r,
-                why: 'save extra register',
-            }))
+            ...extraSavedRegisters.map(r => {
+                const result = {
+                    kind: 'stackStore' as 'stackStore',
+                    register: r,
+                    offset: stackSlotIndex,
+                    why: 'Preamble: save extra register',
+                };
+                stackSlotIndex++;
+                return result;
+            })
         );
         instructions.push(
-            ...usedRegisters.toList().map(r => ({
-                kind: 'push' as 'push',
-                register: r,
-                why: 'save used register',
-            }))
+            ...usedRegisters.toList().map(r => {
+                const result = {
+                    kind: 'stackStore' as 'stackStore',
+                    register: r,
+                    offset: stackSlotIndex,
+                    why: 'Preamble: save used register',
+                };
+                stackSlotIndex++;
+                return result;
+            })
         );
     }
     instructions.push(...statements);
     instructions.push({ kind: 'label', name: exitLabel, why: 'cleanup' });
     if (!isMain) {
+        let stackSlotIndex = totalStackSlotsUsed;
         instructions.push(
             ...usedRegisters
                 .toList()
                 .reverse()
-                .map(r => ({
-                    kind: 'pop' as 'pop',
-                    register: r,
-                    why: 'restore used register',
-                }))
+                .map(r => {
+                    stackSlotIndex--;
+                    return {
+                        kind: 'stackLoad' as 'stackLoad',
+                        register: r,
+                        offset: stackSlotIndex,
+                        why: 'Cleanup: restore used register',
+                    };
+                })
         );
         instructions.push(
-            ...extraSavedRegisters.reverse().map(r => ({
-                kind: 'pop' as 'pop',
-                register: r,
-                why: 'restore extra register',
-            }))
+            ...extraSavedRegisters.reverse().map(r => {
+                stackSlotIndex--;
+                return {
+                    kind: 'stackLoad' as 'stackLoad',
+                    register: r,
+                    offset: stackSlotIndex,
+                    why: 'Cleanup: restore used register',
+                };
+            })
         );
+        instructions.push({
+            kind: 'stackRelease',
+            words: totalStackSlotsUsed,
+            why: `Cleanup: ${extraSavedRegisters.length} extra + ${usedRegisters.size()} used`,
+        });
     }
     instructions.push(...finalCleanup);
     return {

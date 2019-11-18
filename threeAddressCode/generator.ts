@@ -65,8 +65,8 @@ export type TargetThreeAddressStatement<TargetRegister> = { why: string } & (
     | { kind: 'loadStackOffset'; register: TargetRegister; offset: number } // TODO: This should be fused with stackLoad probably, currently this offsets by bytes and stackLoad offsets by works.
     | { kind: 'stackStore'; register: TargetRegister; offset: number }
     | { kind: 'stackLoad'; register: TargetRegister; offset: number }
-    //| { kind: 'stackReserve'; words: number }
-    //| { kind: 'stackRelease'; words: number }
+    | { kind: 'stackReserve'; words: number }
+    | { kind: 'stackRelease'; words: number }
     | { kind: 'push'; register: TargetRegister }
     | { kind: 'pop'; register: TargetRegister }
 );

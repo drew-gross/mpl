@@ -107,6 +107,10 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
         case 'stackLoad':
             if (Number.isNaN(tas.offset * bytesInWord)) throw debug('nan!');
             return [`lw ${tas.register}, ${tas.offset * bytesInWord}($sp)`];
+        case 'stackReserve':
+            return [`addiu $sp, $sp, -${tas.words * bytesInWord}`];
+        case 'stackRelease':
+            return [`addiu $sp, $sp, ${tas.words * bytesInWord}`];
         default:
             throw debug(`${(tas as any).kind} unhandled in threeAddressCodeToMipsWithoutComment`);
     }
