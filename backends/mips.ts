@@ -1,6 +1,12 @@
 import writeTempFile from '../util/writeTempFile.js';
 import { errors } from '../runtime-strings.js';
-import { FrontendOutput, ExecutionResult, StringLiteralData, Backend, CompilationResult } from '../api.js';
+import {
+    FrontendOutput,
+    ExecutionResult,
+    StringLiteralData,
+    Backend,
+    CompilationResult,
+} from '../api.js';
 import debug from '../util/debug.js';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { stringLiteralName, preceedingWhitespace, makeExecutable } from '../backend-utils.js';
@@ -12,7 +18,11 @@ import {
     TargetRegisterInfo,
 } from '../threeAddressCode/generator.js';
 import { programToString } from '../threeAddressCode/programToString.js';
-import { mallocWithSbrk, printWithPrintRuntimeFunction, readIntDirect } from '../threeAddressCode/runtime.js';
+import {
+    mallocWithSbrk,
+    printWithPrintRuntimeFunction,
+    readIntDirect,
+} from '../threeAddressCode/runtime.js';
 
 type MipsRegister =
     // s
@@ -40,7 +50,9 @@ type MipsRegister =
 
 const bytesInWord = 4;
 
-const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<MipsRegister>): string[] => {
+const threeAddressCodeToMipsWithoutComment = (
+    tas: TargetThreeAddressStatement<MipsRegister>
+): string[] => {
     switch (tas.kind) {
         case 'comment':
             return [''];
@@ -101,7 +113,10 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
         case 'pop':
             return [`lw ${tas.register}, ($sp)`, `addiu $sp, $sp, 4`];
         case 'loadStackOffset':
-            return [`move ${tas.register}, $sp`, `addiu ${tas.register}, ${tas.register}, -${tas.offset}`];
+            return [
+                `move ${tas.register}, $sp`,
+                `addiu ${tas.register}, ${tas.register}, -${tas.offset}`,
+            ];
         case 'stackStore':
             return [`sw ${tas.register}, ${tas.offset * bytesInWord}($sp)`];
         case 'stackLoad':
@@ -117,7 +132,9 @@ const threeAddressCodeToMipsWithoutComment = (tas: TargetThreeAddressStatement<M
 };
 
 const threeAddressCodeToMips = (tas: TargetThreeAddressStatement<MipsRegister>): string[] =>
-    threeAddressCodeToMipsWithoutComment(tas).map(asm => `${preceedingWhitespace(tas)}${asm} # ${tas.why.trim()}`); // TODO: trim shouldn't be necessarary, the comment should just not have trailing newlines
+    threeAddressCodeToMipsWithoutComment(tas).map(
+        asm => `${preceedingWhitespace(tas)}${asm} # ${tas.why.trim()}`
+    ); // TODO: trim shouldn't be necessarary, the comment should just not have trailing newlines
 
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: .asciiz "${literal.value}"`;
@@ -178,13 +195,24 @@ const compileTac = async (
     includeCleanup: boolean
 ): Promise<CompilationResult | { error: string }> => {
     const threeAddressString = programToString(tac);
-    const threeAddressCodeFile = await writeTempFile(threeAddressString, 'three-address-code-mips', 'txt');
+    const threeAddressCodeFile = await writeTempFile(
+        threeAddressString,
+        'three-address-code-mips',
+        'txt'
+    );
 
-    const sourceFile = await writeTempFile(tacToExecutable(tac, includeCleanup), 'program', 'mips');
+    const sourceFile = await writeTempFile(
+        tacToExecutable(tac, includeCleanup),
+        'program',
+        'mips'
+    );
     return { sourceFile, binaryFile: sourceFile, threeAddressCodeFile };
 };
 
-const spimExecutor = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
+const spimExecutor = async (
+    executablePath: string,
+    stdinPath: string
+): Promise<ExecutionResult> => {
     // This string is always printed with spim starts. Strip it from stdout.
     const exceptionsLoadedPreamble = 'Loaded: /usr/local/Cellar/spim/9.1.17/share/exceptions.s\n';
     try {
@@ -208,9 +236,14 @@ const spimExecutor = async (executablePath: string, stdinPath: string): Promise<
     }
 };
 
-const marsExecutor = async (executablePath: string, stdinPath: string): Promise<ExecutionResult> => {
+const marsExecutor = async (
+    executablePath: string,
+    stdinPath: string
+): Promise<ExecutionResult> => {
     try {
-        const result = await execAndGetResult(`java -jar Mars4_5.jar nc ${executablePath} < ${stdinPath}`);
+        const result = await execAndGetResult(
+            `java -jar Mars4_5.jar nc ${executablePath} < ${stdinPath}`
+        );
         if ('error' in result) {
             return { error: `MARS error: ${result.error}`, executorName: 'mars' };
         }

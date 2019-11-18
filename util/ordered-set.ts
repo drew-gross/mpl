@@ -368,7 +368,9 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                     const label = JSON.stringify(x.data, null, 2).replace('"', '\\"');
                     const [xpos, ypos] = objectToPositionMap.get(x);
                     // xpos/ypos only used for neato and fdp layout engines. Doesn't look good though.
-                    dotText += `node_${idMap.get(x)} [shape="box", label="${label}" pos="${xpos},${ypos}!"]\n`;
+                    dotText += `node_${idMap.get(
+                        x
+                    )} [shape="box", label="${label}" pos="${xpos},${ypos}!"]\n`;
                 }, head);
 
                 // Add edges
@@ -382,7 +384,9 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                             )} [constraint=false label="p"]\n`;
                         } else {
                             dotText += `null_${nullId} [shape="point"]\n`;
-                            dotText += `node_${idMap.get(x)} -> null_${nullId} [constraint=false label="p"]\n`;
+                            dotText += `node_${idMap.get(
+                                x
+                            )} -> null_${nullId} [constraint=false label="p"]\n`;
                             nullId++;
                         }
                     }

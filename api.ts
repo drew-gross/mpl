@@ -53,7 +53,10 @@ export type CompilationResult =
       }
     | { error: string; intermediateFile?: FileResult };
 
-export type Executor = { name: string; execute: (exePath: string, stdinPath: string) => Promise<ExecutionResult> };
+export type Executor = {
+    name: string;
+    execute: (exePath: string, stdinPath: string) => Promise<ExecutionResult>;
+};
 
 export type Backend = {
     name: string;

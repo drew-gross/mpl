@@ -46,7 +46,8 @@ export default <TargetRegister>(
     exitLabel: string,
     registersClobberedBySyscall: TargetRegister[] // TDDO: accept a backend info?
 ): TargetThreeAddressStatement<TargetRegister>[] => {
-    const getRegister = r => getRegisterFromAssignment(registerAssignment, functionArguments, registers, r);
+    const getRegister = r =>
+        getRegisterFromAssignment(registerAssignment, functionArguments, registers, r);
     switch (tas.kind) {
         case 'empty':
             return [];
@@ -67,13 +68,18 @@ export default <TargetRegister>(
         case 'syscall':
             // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
             if (tas.arguments.length > registers.syscallArgument.length)
-                throw debug(`this backend only supports ${registers.syscallArgument.length} syscall args`);
+                throw debug(
+                    `this backend only supports ${registers.syscallArgument.length} syscall args`
+                );
 
             // We need to save some registers that the kernel is allowed to clobber during syscalls, ...
             const registersToSave: TargetRegister[] = [];
 
             // ... spcifically the place where the syscall stores the result ...
-            if (tas.destination && getRegister(tas.destination) != registers.syscallSelectAndResult) {
+            if (
+                tas.destination &&
+                getRegister(tas.destination) != registers.syscallSelectAndResult
+            ) {
                 registersToSave.push(registers.syscallSelectAndResult);
             }
 
@@ -179,37 +185,39 @@ export default <TargetRegister>(
         case 'storeZeroToMemory':
             return [{ ...tas, address: getRegister(tas.address) }];
         case 'storeMemoryByte':
-            return [{ ...tas, address: getRegister(tas.address), contents: getRegister(tas.contents) }];
+            return [
+                { ...tas, address: getRegister(tas.address), contents: getRegister(tas.contents) },
+            ];
         case 'callByName': {
             // Add moves to get all the arguments into place
             // TODO: Add some type check to ensure we have the right number of arguments
             // TODO: Compress with callByRegister
-            const moveArgsIntoPlace: TargetThreeAddressStatement<TargetRegister>[] = tas.arguments.map(
-                (register, index) => {
-                    if (index < registers.functionArgument.length) {
-                        if (typeof register == 'number') {
-                            return {
-                                kind: 'loadImmediate',
-                                value: register,
-                                destination: registers.functionArgument[index],
-                                why: 'Rearrange Args',
-                            };
-                        } else {
-                            return {
-                                kind: 'move',
-                                from: getRegister(register),
-                                to: registers.functionArgument[index],
-                                why: 'Rearrange Args',
-                            };
-                        }
+            const moveArgsIntoPlace: TargetThreeAddressStatement<
+                TargetRegister
+            >[] = tas.arguments.map((register, index) => {
+                if (index < registers.functionArgument.length) {
+                    if (typeof register == 'number') {
+                        return {
+                            kind: 'loadImmediate',
+                            value: register,
+                            destination: registers.functionArgument[index],
+                            why: 'Rearrange Args',
+                        };
+                    } else {
+                        return {
+                            kind: 'move',
+                            from: getRegister(register),
+                            to: registers.functionArgument[index],
+                            why: 'Rearrange Args',
+                        };
                     }
-                    return {
-                        kind: 'push',
-                        register: getRegister(register),
-                        why: 'Rearrange Args',
-                    };
                 }
-            );
+                return {
+                    kind: 'push',
+                    register: getRegister(register),
+                    why: 'Rearrange Args',
+                };
+            });
             const saveResult: TargetThreeAddressStatement<TargetRegister>[] = tas.destination
                 ? [
                       {
@@ -229,32 +237,32 @@ export default <TargetRegister>(
         case 'callByRegister': {
             // Add moves to get all the arguments into place
             // TODO: Add some type check to ensure we have the right number of arguments
-            const moveArgsIntoPlace: TargetThreeAddressStatement<TargetRegister>[] = tas.arguments.map(
-                (register, index) => {
-                    if (index < registers.functionArgument.length) {
-                        if (typeof register == 'number') {
-                            return {
-                                kind: 'loadImmediate',
-                                value: register,
-                                destination: registers.functionArgument[index],
-                                why: 'Rearrange Args',
-                            };
-                        } else {
-                            return {
-                                kind: 'move',
-                                from: getRegister(register),
-                                to: registers.functionArgument[index],
-                                why: 'Rearrange Args',
-                            };
-                        }
+            const moveArgsIntoPlace: TargetThreeAddressStatement<
+                TargetRegister
+            >[] = tas.arguments.map((register, index) => {
+                if (index < registers.functionArgument.length) {
+                    if (typeof register == 'number') {
+                        return {
+                            kind: 'loadImmediate',
+                            value: register,
+                            destination: registers.functionArgument[index],
+                            why: 'Rearrange Args',
+                        };
+                    } else {
+                        return {
+                            kind: 'move',
+                            from: getRegister(register),
+                            to: registers.functionArgument[index],
+                            why: 'Rearrange Args',
+                        };
                     }
-                    return {
-                        kind: 'push',
-                        register: getRegister(register),
-                        why: 'Rearrange Args',
-                    };
                 }
-            );
+                return {
+                    kind: 'push',
+                    register: getRegister(register),
+                    why: 'Rearrange Args',
+                };
+            });
             const saveResult: TargetThreeAddressStatement<TargetRegister>[] = tas.destination
                 ? [
                       {
@@ -267,7 +275,11 @@ export default <TargetRegister>(
                 : [];
             return [
                 ...moveArgsIntoPlace,
-                { kind: 'callByRegister', function: getRegister(tas.function), why: 'actually call' },
+                {
+                    kind: 'callByRegister',
+                    function: getRegister(tas.function),
+                    why: 'actually call',
+                },
                 ...saveResult,
             ];
         }

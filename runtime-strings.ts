@@ -5,5 +5,8 @@ export const errors = {
     leaksDetected: { name: 'leaks_found_error', value: 'Leaks detected! Exiting.' },
     allocatedZero: { name: 'zero_memory_malloc_error', value: 'Zero memory requested! Exiting.' },
     printFailed: { name: 'print_failed', value: 'Print Failed! Exiting.' },
-    readIntFailed: { name: 'read_int_failed', value: 'Reading Integer from stdin failed! Exiting.' },
+    readIntFailed: {
+        name: 'read_int_failed',
+        value: 'Reading Integer from stdin failed! Exiting.',
+    },
 };

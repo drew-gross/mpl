@@ -1,6 +1,10 @@
 import { parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
 import { programToString } from './threeAddressCode/programToString.js';
-import { mallocWithSbrk, printWithPrintRuntimeFunction, readIntDirect } from './threeAddressCode/runtime.js';
+import {
+    mallocWithSbrk,
+    printWithPrintRuntimeFunction,
+    readIntDirect,
+} from './threeAddressCode/runtime.js';
 import { tokenSpecs, MplToken, MplAst } from './grammar.js';
 import writeTempFile from './util/writeTempFile.js';
 import { lex, Token, LexError } from './parser-lib/lex.js';
@@ -39,7 +43,9 @@ export default async (
     source: string,
     stdin: string,
     { includeExecutionResult, skipBackends }: RequestedInfo
-): Promise<ProgramInfo | LexError | { parseErrors: ParseError[] } | { typeErrors: TypeError[] }> => {
+): Promise<
+    ProgramInfo | LexError | { parseErrors: ParseError[] } | { typeErrors: TypeError[] }
+> => {
     const tokens = lex(tokenSpecs, source);
     if ('kind' in tokens) {
         return tokens;
@@ -113,11 +119,16 @@ export default async (
                     executionResults: [{ error: 'Compilation failed', executorName: 'N/A' }],
                 };
             } else if (!includeExecutionResult || (skipBackends || []).includes(name)) {
-                return { name, compilationResult, executionResults: [{ error: 'Not requested', executorName: 'N/A' }] };
+                return {
+                    name,
+                    compilationResult,
+                    executionResults: [{ error: 'Not requested', executorName: 'N/A' }],
+                };
             } else {
                 const executionResults = await Promise.all(
                     executors.map(
-                        async ({ execute }) => await execute(compilationResult.binaryFile.path, stdinFile.path)
+                        async ({ execute }) =>
+                            await execute(compilationResult.binaryFile.path, stdinFile.path)
                     )
                 );
                 return { name, compilationResult, executionResults };

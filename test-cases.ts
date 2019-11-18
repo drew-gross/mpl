@@ -254,7 +254,13 @@ return isFive(5) ? 1 : 0`,
             }
             return foo();
         `,
-        parseErrors: [{ expected: 'statementSeparator', found: 'return', sourceLocation: { line: 4, column: 13 } }],
+        parseErrors: [
+            {
+                expected: 'statementSeparator',
+                found: 'return',
+                sourceLocation: { line: 4, column: 13 },
+            },
+        ],
     },
     manyGlobalsMultiply(),
     {

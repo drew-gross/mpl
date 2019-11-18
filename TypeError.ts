@@ -4,7 +4,13 @@ import { Type } from './types.js';
 
 export type TypeError = { sourceLocation: SourceLocation } & (
     | { kind: 'unknownIdentifier'; name: string }
-    | { kind: 'wrongTypeForOperator'; found: Type; expected: string; operator: string; side: 'left' | 'right' }
+    | {
+          kind: 'wrongTypeForOperator';
+          found: Type;
+          expected: string;
+          operator: string;
+          side: 'left' | 'right';
+      }
     | { kind: 'assignUndeclaredIdentifer'; destinationName: string }
     | { kind: 'wrongTypeReturn'; expressionType: Type }
     | { kind: 'wrongArgumentType'; targetFunction: string; passedType: Type; expectedType: Type }

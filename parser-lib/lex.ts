@@ -20,7 +20,10 @@ export type LexError = {
     error: string;
 };
 
-export const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string): Token<TokenType>[] | LexError => {
+export const lex = <TokenType>(
+    tokenSpecs: TokenSpec<TokenType>[],
+    input: string
+): Token<TokenType>[] | LexError => {
     // Source location tracking
     let currentSourceLine = 1;
     let currentSourceColumn = 1;
@@ -46,7 +49,9 @@ export const lex = <TokenType>(tokenSpecs: TokenSpec<TokenType>[], input: string
     const tokens: Token<TokenType>[] = [];
     while (input.length > 0) {
         // This results in runnng match twice. Once to find if there is a match, and once to extract it. TODO: optimize!
-        const matchingSpec = tokenSpecs.find(spec => !!input.match(RegExp(`^(${spec.token})[ \\t\\n]*`)));
+        const matchingSpec = tokenSpecs.find(
+            spec => !!input.match(RegExp(`^(${spec.token})[ \\t\\n]*`))
+        );
         if (!matchingSpec) {
             return { kind: 'lexError', error: `Invalid token: ${input}` };
         } else {

@@ -286,7 +286,10 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     ]),
 
     // TODO: make it possible to have function with no instructions
-    instructions: OneOf([Sequence('instructions', ['instruction', 'instructions']), 'instruction']),
+    instructions: OneOf([
+        Sequence('instructions', ['instruction', 'instructions']),
+        'instruction',
+    ]),
     instruction: OneOf([
         Sequence('statementSeparator', [statementSeparator]),
         Sequence('label', [identifier, colon, statementSeparator]),
@@ -328,15 +331,47 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('product', [register, assign, 'data', star, 'data', statementSeparator]),
         Sequence('sum', [register, assign, 'data', plus, 'data', statementSeparator]),
         Sequence('addressOf', [register, assign, and, 'data', statementSeparator]),
-        Sequence('gotoIfEqual', [goto, identifier, if_, 'data', doubleEqual, 'data', statementSeparator]),
-        Sequence('gotoIfNotEqual', [goto, identifier, if_, 'data', notEqual, 'data', statementSeparator]),
-        Sequence('gotoIfGreater', [goto, identifier, if_, 'data', greaterThan, 'data', statementSeparator]),
+        Sequence('gotoIfEqual', [
+            goto,
+            identifier,
+            if_,
+            'data',
+            doubleEqual,
+            'data',
+            statementSeparator,
+        ]),
+        Sequence('gotoIfNotEqual', [
+            goto,
+            identifier,
+            if_,
+            'data',
+            notEqual,
+            'data',
+            statementSeparator,
+        ]),
+        Sequence('gotoIfGreater', [
+            goto,
+            identifier,
+            if_,
+            'data',
+            greaterThan,
+            'data',
+            statementSeparator,
+        ]),
         Sequence('plusEqual', [register, plusEqual, 'data', statementSeparator]),
         Sequence('goto', [goto, identifier, statementSeparator]),
         Sequence('increment', [register, plusplus, statementSeparator]),
         Sequence('unspill', [unspillInstruction, register, statementSeparator]),
         Sequence('spill', [spillInstruction, register, statementSeparator]),
-        Sequence('alloca', [register, assign, alloca, leftBracket, number, rightBracket, statementSeparator]),
+        Sequence('alloca', [
+            register,
+            assign,
+            alloca,
+            leftBracket,
+            number,
+            rightBracket,
+            statementSeparator,
+        ]),
         Sequence('callByRegister', [
             register,
             tacOptional(assign),
@@ -361,7 +396,10 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     argList: OneOf([Sequence('argList', ['arg', comma, 'argList']), 'arg']),
     arg: OneOf([number, register]),
 
-    syscallArgs: OneOf([Sequence('syscallArgs', [tacOptional(identifier), 'syscallArg', 'syscallArgs']), 'syscallArg']),
+    syscallArgs: OneOf([
+        Sequence('syscallArgs', [tacOptional(identifier), 'syscallArg', 'syscallArgs']),
+        'syscallArg',
+    ]),
     syscallArg: OneOf([number, register]),
 
     data: OneOf([identifier, register, number]),
@@ -457,7 +495,11 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
             }
         }
         case 'label':
-            return { kind: 'label', name: a.children[0].value, why: stripComment(a.children[2].value) };
+            return {
+                kind: 'label',
+                name: a.children[0].value,
+                why: stripComment(a.children[2].value),
+            };
         case 'load':
             return {
                 kind: 'loadMemoryByte',
@@ -529,7 +571,10 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
             };
         }
         case 'gotoIfNotEqual': {
-            const rhs = a.children[5].type == 'number' ? a.children[5].value : parseRegister(a.children[5].value);
+            const rhs =
+                a.children[5].type == 'number'
+                    ? a.children[5].value
+                    : parseRegister(a.children[5].value);
             return {
                 kind: 'gotoIfNotEqual',
                 label: a.children[1].value,
@@ -736,14 +781,19 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
 const instructionsFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Statement[] => {
     if (ast.type == 'instructions') {
         const a = ast as any;
-        return [instructionFromParseResult(a.children[0]), ...instructionsFromParseResult(a.children[1])];
+        return [
+            instructionFromParseResult(a.children[0]),
+            ...instructionsFromParseResult(a.children[1]),
+        ];
     } else {
         const a = ast as any;
         return [instructionFromParseResult(a)];
     }
 };
 
-const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressFunction | ParseError[] => {
+const functionFromParseResult = (
+    ast: AstWithIndex<TacAstNode, TacToken>
+): ThreeAddressFunction | ParseError[] => {
     if (ast.type != 'function') {
         return ['Need a function'];
     }
@@ -807,21 +857,29 @@ const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Three
     return { name, instructions, liveAtExit: [], spills, arguments: args };
 };
 
-const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddressProgram | ParseError[] => {
+const tacFromParseResult = (
+    ast: AstWithIndex<TacAstNode, TacToken>
+): ThreeAddressProgram | ParseError[] => {
     if (!ast) debug('no type');
     switch (ast.type) {
         case 'program':
-            return ast.children.reduce((results, child) => mergeParseResults(results, tacFromParseResult(child)), {
-                globals: {},
-                functions: [],
-                main: undefined,
-                stringLiterals: [],
-            });
+            return ast.children.reduce(
+                (results, child) => mergeParseResults(results, tacFromParseResult(child)),
+                {
+                    globals: {},
+                    functions: [],
+                    main: undefined,
+                    stringLiterals: [],
+                }
+            );
         case 'global': {
             const a = ast as any;
             return {
                 globals: {
-                    [a.children[1].value]: { mangledName: a.children[3].value, bytes: a.children[4].value },
+                    [a.children[1].value]: {
+                        mangledName: a.children[3].value,
+                        bytes: a.children[4].value,
+                    },
                 },
                 functions: [],
                 main: undefined,
@@ -829,7 +887,10 @@ const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): ThreeAddre
             };
         }
         case 'globals': {
-            return mergeParseResults(tacFromParseResult(ast.children[0]), tacFromParseResult(ast.children[1]));
+            return mergeParseResults(
+                tacFromParseResult(ast.children[0]),
+                tacFromParseResult(ast.children[1])
+            );
         }
         case 'functions': {
             const f = functionFromParseResult(ast.children[0]);
@@ -922,7 +983,9 @@ export const parseInstructionsOrDie = (tacString: string): Statement[] => {
     if ('kind' in parsed) {
         debugger;
         parseInstructions(tacString);
-        throw debug(`error in parseInstructionsOrDie: ${parsed.kind}. ${JSON.stringify(parsed, null, 2)}`);
+        throw debug(
+            `error in parseInstructionsOrDie: ${parsed.kind}. ${JSON.stringify(parsed, null, 2)}`
+        );
     }
     if (Array.isArray(parsed)) {
         if (parsed.length == 0) debug('empty instructions');

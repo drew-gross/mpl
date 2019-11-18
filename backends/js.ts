@@ -1,7 +1,13 @@
 import writeTempFile from '../util/writeTempFile.js';
 import flatten from '../util/list/flatten.js';
 import execAndGetResult from '../util/execAndGetResult.js';
-import { FrontendOutput, ExecutionResult, CompilationResult, Backend, VariableDeclaration } from '../api.js';
+import {
+    FrontendOutput,
+    ExecutionResult,
+    CompilationResult,
+    Backend,
+    VariableDeclaration,
+} from '../api.js';
 import * as Ast from '../ast.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
@@ -59,7 +65,13 @@ const astToJS = ({
         case 'identifier':
             return [ast.value];
         case 'ternary':
-            return [...recurse(ast.condition), '?', ...recurse(ast.ifTrue), ':', ...recurse(ast.ifFalse)];
+            return [
+                ...recurse(ast.condition),
+                '?',
+                ...recurse(ast.ifTrue),
+                ':',
+                ...recurse(ast.ifFalse),
+            ];
         case 'equality':
             return [...recurse(ast.lhs), '==', ...recurse(ast.rhs)];
         case 'booleanLiteral':
@@ -71,7 +83,9 @@ const astToJS = ({
         case 'typeDeclaration':
             return [''];
         case 'objectLiteral':
-            const members = ast.members.map(({ name, expression }) => `${name}: ${recurse(expression)}`);
+            const members = ast.members.map(
+                ({ name, expression }) => `${name}: ${recurse(expression)}`
+            );
             return ['{', join(members, ','), '}'];
         case 'memberAccess':
             return ['(', ...recurse(ast.lhs), ').', ast.rhs];
@@ -99,14 +113,19 @@ const compile = async ({
         const suffix = `}`;
 
         const body = statements.map(statement => {
-            return join(astToJS({ ast: statement, exitInsteadOfReturn: false, builtinFunctions }), ' ');
+            return join(
+                astToJS({ ast: statement, exitInsteadOfReturn: false, builtinFunctions }),
+                ' '
+            );
         });
 
         return [prefix, ...body, suffix].join(' ');
     });
 
     const JS: string[] = flatten(
-        program.statements.map(child => astToJS({ ast: child, builtinFunctions, exitInsteadOfReturn: true }))
+        program.statements.map(child =>
+            astToJS({ ast: child, builtinFunctions, exitInsteadOfReturn: true })
+        )
     );
     const jsSource = `
 const readline = require('readline');

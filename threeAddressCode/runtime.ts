@@ -52,7 +52,8 @@ const switchableMallocImpl = (
         found_large_enough_block:;
             goto sbrk_more_space if r:currentBlockPointer == 0; JK need to syscall lol
             *(r:currentBlockPointer + ${2 * bytesInWord}) = 0; block->free = false
-            r:currentBlockPointer += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
+            r:currentBlockPointer += ${3 *
+                bytesInWord}; Adjust pointer to point to actual space, not control block
             goto my_malloc_return;
         sbrk_more_space:;
             r:numBytes += ${3 * bytesInWord}; sbrk enough space for management block too
@@ -78,7 +79,8 @@ const switchableMallocImpl = (
             *(r:currentBlockPointer + 0) = r:numBytes; new->size = requested_size
             *(r:currentBlockPointer + ${1 * bytesInWord}) = 0; new->next = null
             *(r:currentBlockPointer + ${2 * bytesInWord}) = 0; new->free = false
-            r:currentBlockPointer += ${3 * bytesInWord}; Adjust pointer to point to actual space, not control block
+            r:currentBlockPointer += ${3 *
+                bytesInWord}; Adjust pointer to point to actual space, not control block
         my_malloc_return:;
             return r:currentBlockPointer;
         `),
@@ -186,7 +188,8 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) verify_no_leaks():
         r:currentBlockPointer = &first_block; Load first block address
-        r:currentBlockPointer = *(r:currentBlockPointer + ${0 * bytesInWord}); Load first block pointer
+        r:currentBlockPointer = *(r:currentBlockPointer + ${0 *
+            bytesInWord}); Load first block pointer
     verify_no_leaks_loop:; verify_no_leaks_loop
         goto verify_no_leaks_return if r:currentBlockPointer == 0; Last block, can return now
         r:currentData = *(r:currentBlockPointer + ${2 * bytesInWord}); data = block->free

@@ -330,7 +330,9 @@ export const astToString = (ast: Ast) => {
         case 'returnStatement':
             return `return ${astToString(ast.expression)}`;
         case 'ternary':
-            return `${astToString(ast.condition)} ? ${astToString(ast.ifTrue)} : ${astToString(ast.ifFalse)}`;
+            return `${astToString(ast.condition)} ? ${astToString(ast.ifTrue)} : ${astToString(
+                ast.ifFalse
+            )}`;
         case 'equality':
             return `${astToString(ast.lhs)} == ${astToString(ast.rhs)}`;
         case 'identifier':
@@ -361,7 +363,9 @@ export const astToString = (ast: Ast) => {
         case 'reassignment':
             return `${ast.destination} = ${astToString(ast.expression)};`;
         case 'objectLiteral':
-            const members = ast.members.map(({ name, expression }) => `${name}: ${astToString(expression)}`);
+            const members = ast.members.map(
+                ({ name, expression }) => `${name}: ${astToString(expression)}`
+            );
             return `{ ${join(members, ', ')} }`;
         case 'memberAccess':
             return `(${astToString(ast.lhs)}).${ast.rhs}`;

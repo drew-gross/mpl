@@ -22,7 +22,9 @@ import jsBackend from './backends/js.js';
 import cBackend from './backends/c.js';
 import x64Backend from './backends/x64.js';
 
-export const preceedingWhitespace = <TargetRegister>(tas: TargetThreeAddressStatement<TargetRegister>): string => {
+export const preceedingWhitespace = <TargetRegister>(
+    tas: TargetThreeAddressStatement<TargetRegister>
+): string => {
     switch (tas.kind) {
         case 'label':
             return '';
@@ -109,7 +111,8 @@ const tacToTargetFunction = <TargetRegister>({
         return argIndex - registers.functionArgument.length;
     };
 
-    const stackSlotsForArguments = threeAddressFunction.arguments.length - registers.functionArgument.length;
+    const stackSlotsForArguments =
+        threeAddressFunction.arguments.length - registers.functionArgument.length;
 
     const instructionsWithArgsFromStack: Statement[] = flatten(
         threeAddressFunction.instructions.map(tas => {
@@ -161,9 +164,15 @@ const tacToTargetFunction = <TargetRegister>({
                     result.push({ ...tas, lhs, rhs });
                     break;
                 default:
-                    if (reads(tas, threeAddressFunction.arguments).some(r => argumentStackOffset(r) !== undefined)) {
+                    if (
+                        reads(tas, threeAddressFunction.arguments).some(
+                            r => argumentStackOffset(r) !== undefined
+                        )
+                    ) {
                         throw debug(
-                            `not sure how to convert args to stack loads for ${tas.kind}. ${JSON.stringify(tas)}`
+                            `not sure how to convert args to stack loads for ${
+                                tas.kind
+                            }. ${JSON.stringify(tas)}`
                         );
                     }
                     return [tas];
@@ -172,7 +181,10 @@ const tacToTargetFunction = <TargetRegister>({
         })
     );
 
-    const functonWithArgsFromStack = { ...threeAddressFunction, instructions: instructionsWithArgsFromStack };
+    const functonWithArgsFromStack = {
+        ...threeAddressFunction,
+        instructions: instructionsWithArgsFromStack,
+    };
 
     const { assignment, newFunction: tafWithAssignment } = assignRegisters(
         functonWithArgsFromStack,
@@ -326,11 +338,23 @@ export const makeExecutable = <TargetRegister>(
             },
             ...(includeCleanup
                 ? [
-                      { kind: 'callByName' as 'callByName', function: 'free_globals', why: 'free_globals' },
-                      { kind: 'callByName' as 'callByName', function: 'verify_no_leaks', why: 'verify_no_leaks' },
+                      {
+                          kind: 'callByName' as 'callByName',
+                          function: 'free_globals',
+                          why: 'free_globals',
+                      },
+                      {
+                          kind: 'callByName' as 'callByName',
+                          function: 'verify_no_leaks',
+                          why: 'verify_no_leaks',
+                      },
                   ]
                 : []),
-            { kind: 'pop' as 'pop', register: registerDescription.syscallArgument[0], why: 'restore exit code' },
+            {
+                kind: 'pop' as 'pop',
+                register: registerDescription.syscallArgument[0],
+                why: 'restore exit code',
+            },
             {
                 kind: 'loadImmediate' as 'loadImmediate',
                 destination: registerDescription.syscallSelectAndResult,
@@ -360,7 +384,11 @@ ${join(functionStrings, '\n')}
 };
 
 // TODO: Move map to outside?
-export const freeGlobalsInstructions = (globals: VariableDeclaration[], makeTemporary, globalNameMap): Statement[] => {
+export const freeGlobalsInstructions = (
+    globals: VariableDeclaration[],
+    makeTemporary,
+    globalNameMap
+): Statement[] => {
     const instructions: Statement[] = flatten(
         globals
             .filter(declaration => ['String', 'List'].includes(declaration.type.kind))
@@ -386,7 +414,8 @@ export const freeGlobalsInstructions = (globals: VariableDeclaration[], makeTemp
     instructions.push({
         kind: 'return' as 'return',
         register: { name: 'dummyReturn' },
-        why: 'Need to not have an empty function, otherwise verifyingOverlappingJoin fails. TODO: fix that.',
+        why:
+            'Need to not have an empty function, otherwise verifyingOverlappingJoin fails. TODO: fix that.',
     });
     return instructions;
 };

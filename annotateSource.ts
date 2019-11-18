@@ -4,7 +4,11 @@ import join from './util/join.js';
 // Return a pretty representation of the source with the source location highlighted.
 // Subject to change. Returns null if you provide bad input (e.g. source location
 // outside of provided source)
-export default (source: string, { line, column }: SourceLocation, message: string): string | null => {
+export default (
+    source: string,
+    { line, column }: SourceLocation,
+    message: string
+): string | null => {
     const lines = source.split('\n');
     if (line <= 0 || line >= lines.length + 1) return null;
     const contextBefore = lines[line - 2];

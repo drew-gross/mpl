@@ -29,7 +29,9 @@ if ((before && !after) || (after && !before)) {
 const fmtNum = num =>
     (num <= 0
         ? num.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })
-        : '+' + num.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })) + '%';
+        : '+' +
+          num.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })) +
+    '%';
 
 if (!before) {
     (async () => {
@@ -53,7 +55,9 @@ if (!before) {
                     backends.map(async (backend: Backend) => {
                         const compilationResult = await backend.compile(frontendOutput);
                         if ('error' in compilationResult) {
-                            throw new Error(`Failed to compile ${name} to ${backend.name}: ${compilationResult.error}`);
+                            throw new Error(
+                                `Failed to compile ${name} to ${backend.name}: ${compilationResult.error}`
+                            );
                         }
                         return (await stat(compilationResult.binaryFile.path)).size;
                     })
@@ -82,22 +86,44 @@ if (!before) {
         const jsons = zip(beforeJson, afterJson);
         const comparisons = jsons.map(([beforeStat, afterStat]) => {
             if (beforeStat.name != afterStat.name) {
-                console.log('Name mismatch! Make sure to generate before and after using the same test cases');
+                console.log(
+                    'Name mismatch! Make sure to generate before and after using the same test cases'
+                );
                 process.exit(-1);
             }
             return {
                 name: beforeStat.name,
                 'JS Binary Size': fmtNum(
-                    100 * -(1 - afterStat['JS Binary Size (bytes)'] / beforeStat['JS Binary Size (bytes)'])
+                    100 *
+                        -(
+                            1 -
+                            afterStat['JS Binary Size (bytes)'] /
+                                beforeStat['JS Binary Size (bytes)']
+                        )
                 ),
                 'C Binary Size': fmtNum(
-                    100 * -(1 - afterStat['C Binary Size (bytes)'] / beforeStat['C Binary Size (bytes)'])
+                    100 *
+                        -(
+                            1 -
+                            afterStat['C Binary Size (bytes)'] /
+                                beforeStat['C Binary Size (bytes)']
+                        )
                 ),
                 'Mips Binary Size': fmtNum(
-                    100 * -(1 - afterStat['Mips Binary Size (bytes)'] / beforeStat['Mips Binary Size (bytes)'])
+                    100 *
+                        -(
+                            1 -
+                            afterStat['Mips Binary Size (bytes)'] /
+                                beforeStat['Mips Binary Size (bytes)']
+                        )
                 ),
                 'x64 Binary Size': fmtNum(
-                    100 * -(1 - afterStat['x64 Binary Size (bytes)'] / beforeStat['x64 Binary Size (bytes)'])
+                    100 *
+                        -(
+                            1 -
+                            afterStat['x64 Binary Size (bytes)'] /
+                                beforeStat['x64 Binary Size (bytes)']
+                        )
                 ),
             };
         });

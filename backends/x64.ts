@@ -12,8 +12,18 @@ import {
     TargetRegisterInfo,
     ThreeAddressProgram,
 } from '../threeAddressCode/generator.js';
-import { mallocWithMmap, printWithWriteRuntimeFunction, readIntThroughSyscall } from '../threeAddressCode/runtime.js';
-import { ExecutionResult, FrontendOutput, StringLiteralData, Backend, CompilationResult } from '../api.js';
+import {
+    mallocWithMmap,
+    printWithWriteRuntimeFunction,
+    readIntThroughSyscall,
+} from '../threeAddressCode/runtime.js';
+import {
+    ExecutionResult,
+    FrontendOutput,
+    StringLiteralData,
+    Backend,
+    CompilationResult,
+} from '../api.js';
 import { file as tmpFile } from 'tmp-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 
@@ -36,7 +46,9 @@ type X64Register =
     // Syscall arg or other non-general-purpose
     | 'rdx';
 
-const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X64Register>): string[] => {
+const threeAddressCodeToX64WithoutComment = (
+    tas: TargetThreeAddressStatement<X64Register>
+): string[] => {
     switch (tas.kind) {
         case 'comment':
             return [''];
@@ -134,7 +146,9 @@ const threeAddressCodeToX64WithoutComment = (tas: TargetThreeAddressStatement<X6
 };
 
 const threeAddressCodeToX64 = (tas: TargetThreeAddressStatement<X64Register>): string[] =>
-    threeAddressCodeToX64WithoutComment(tas).map(asm => `${preceedingWhitespace(tas)}${asm}; ${tas.why.trim()}`);
+    threeAddressCodeToX64WithoutComment(tas).map(
+        asm => `${preceedingWhitespace(tas)}${asm}; ${tas.why.trim()}`
+    );
 
 const bytesInWord = 8;
 
@@ -190,9 +204,16 @@ ${Object.keys(errors)
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
     compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target }), true);
 
-const compileTac = async (tac: ThreeAddressProgram, includeCleanup): Promise<CompilationResult | { error: string }> => {
+const compileTac = async (
+    tac: ThreeAddressProgram,
+    includeCleanup
+): Promise<CompilationResult | { error: string }> => {
     const threeAddressString = programToString(tac);
-    const threeAddressCodeFile = await writeTempFile(threeAddressString, 'three-address-core-x64', 'txt');
+    const threeAddressCodeFile = await writeTempFile(
+        threeAddressString,
+        'three-address-core-x64',
+        'txt'
+    );
 
     const x64String = tacToExecutable(tac, includeCleanup);
     const sourceFile = await writeTempFile(x64String, 'program', 'x64');
@@ -203,7 +224,9 @@ const compileTac = async (tac: ThreeAddressProgram, includeCleanup): Promise<Com
     try {
         await exec(`nasm -fmacho64 -o ${linkerInputPath.path} ${sourceFile.path}`);
         // TODO: Cross compiling or something? IDK. Dependency on system linker sucks.
-        await exec(`ld ${linkerInputPath.path} -o ${binaryFile.path} -macosx_version_min 10.6 -lSystem`);
+        await exec(
+            `ld ${linkerInputPath.path} -o ${binaryFile.path} -macosx_version_min 10.6 -lSystem`
+        );
         return {
             sourceFile,
             binaryFile,

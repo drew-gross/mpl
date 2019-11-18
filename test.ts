@@ -60,7 +60,12 @@ test('lexer', t => {
     ]);
     t.deepEqual(lex(tokenSpecs, 'return "test string"'), [
         { type: 'return', value: null, string: 'return', sourceLocation: { line: 1, column: 1 } },
-        { type: 'stringLiteral', value: 'test string', string: 'test string', sourceLocation: { line: 1, column: 8 } },
+        {
+            type: 'stringLiteral',
+            value: 'test string',
+            string: 'test string',
+            sourceLocation: { line: 1, column: 8 },
+        },
     ]);
 });
 
@@ -110,7 +115,9 @@ test('ast for single number', t => {
 test('ast for number in brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(
-            stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, ' return (5);') as Token<MplToken>[]))
+            stripResultIndexes(
+                parse(grammar, 'program', lex(tokenSpecs, ' return (5);') as Token<MplToken>[])
+            )
         ),
         {
             type: 'program',
@@ -145,7 +152,9 @@ test('ast for number in brackets', t => {
 test('ast for number in double brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(
-            stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'return ((20));') as Token<MplToken>[]))
+            stripResultIndexes(
+                parse(grammar, 'program', lex(tokenSpecs, 'return ((20));') as Token<MplToken>[])
+            )
         ),
         {
             type: 'program',
@@ -180,7 +189,13 @@ test('ast for number in double brackets', t => {
 test('ast for product with brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(
-            stripResultIndexes(parse(grammar, 'program', lex(tokenSpecs, 'return 3 * (4 * 5);') as Token<MplToken>[]))
+            stripResultIndexes(
+                parse(
+                    grammar,
+                    'program',
+                    lex(tokenSpecs, 'return 3 * (4 * 5);') as Token<MplToken>[]
+                )
+            )
         ),
         {
             type: 'program',
@@ -334,7 +349,9 @@ test('ast for assignment then return', t => {
                 parse(
                     grammar,
                     'program',
-                    lex(tokenSpecs, 'constThree := a: Integer => 3; return 10;') as Token<MplToken>[]
+                    lex(tokenSpecs, 'constThree := a: Integer => 3; return 10;') as Token<
+                        MplToken
+                    >[]
                 )
             )
         )
@@ -384,9 +401,16 @@ test('correct inferred type for function', t => {
         'function',
         lex(tokenSpecs, functionSource) as Token<MplToken>[]
     );
-    const ast: Ast.UninferredExpression = astFromParseResult(parseResult as MplAst) as Ast.UninferredExpression;
+    const ast: Ast.UninferredExpression = astFromParseResult(
+        parseResult as MplAst
+    ) as Ast.UninferredExpression;
     t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
-        type: { kind: 'Function', arguments: [{ kind: 'Integer' }], permissions: [], returnType: { kind: 'Integer' } },
+        type: {
+            kind: 'Function',
+            arguments: [{ kind: 'Integer' }],
+            permissions: [],
+            returnType: { kind: 'Integer' },
+        },
         extractedFunctions: [
             {
                 name: 'anonymous_1', // TODO: Make this not dependent on test order
@@ -547,7 +571,9 @@ test('ternary true', mplTest, {
 
 test('parse error', mplTest, {
     source: '=>',
-    expectedParseErrors: [{ expected: 'identifier', found: 'fatArrow', sourceLocation: { column: 0, line: 0 } }],
+    expectedParseErrors: [
+        { expected: 'identifier', found: 'fatArrow', sourceLocation: { column: 0, line: 0 } },
+    ],
 });
 
 test('ternary in function false', mplTest, {
@@ -673,7 +699,12 @@ return 0;`,
                 arguments: [builtinTypes.Integer],
                 returnType: builtinTypes.Integer,
             },
-            rhsType: { kind: 'Function', arguments: [], permissions: [], returnType: builtinTypes.Integer },
+            rhsType: {
+                kind: 'Function',
+                arguments: [],
+                permissions: [],
+                returnType: builtinTypes.Integer,
+            },
             sourceLocation: { line: 2, column: 1 },
         },
     ],
@@ -740,7 +771,8 @@ test('return local integer', mplTest, {
 });
 
 test.failing('many temporaries, spill to ram', mplTest, {
-    source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
+    source:
+        'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
     exitCode: 1,
 });
 
@@ -989,7 +1021,11 @@ a := 1;
 b = 2;
 return a + b;`,
     expectedTypeErrors: [
-        { kind: 'assignUndeclaredIdentifer', destinationName: 'b', sourceLocation: { line: 3, column: 1 } },
+        {
+            kind: 'assignUndeclaredIdentifer',
+            destinationName: 'b',
+            sourceLocation: { line: 3, column: 1 },
+        },
     ],
 });
 
@@ -1188,7 +1224,13 @@ test('liveness analysis basic test', t => {
     };
     const testFunctionLiveness = tafLiveness(testFunction).map(s => s.toList());
     const expectedLiveness = [
-        [{ name: 'add_l' }, { name: 'add_r' }, { name: 'sub_l' }, { name: 'sub_r' }, { name: 'some_arg' }],
+        [
+            { name: 'add_l' },
+            { name: 'add_r' },
+            { name: 'sub_l' },
+            { name: 'sub_r' },
+            { name: 'some_arg' },
+        ],
         [{ name: 'add_d' }, { name: 'sub_l' }, { name: 'sub_r' }, { name: 'some_arg' }],
         [{ name: 'sub_l' }, { name: 'sub_r' }, { name: 'some_arg' }],
         [{ name: 'some_arg' }],
@@ -1379,11 +1421,19 @@ test('type of objectLiteral', t => {
         members: [
             {
                 name: 'first',
-                expression: { kind: 'booleanLiteral', value: true, sourceLocation: { line: 6, column: 34 } },
+                expression: {
+                    kind: 'booleanLiteral',
+                    value: true,
+                    sourceLocation: { line: 6, column: 34 },
+                },
             },
             {
                 name: 'second',
-                expression: { kind: 'booleanLiteral', value: false, sourceLocation: { line: 6, column: 48 } },
+                expression: {
+                    kind: 'booleanLiteral',
+                    value: false,
+                    sourceLocation: { line: 6, column: 48 },
+                },
             },
         ],
         sourceLocation: { line: 6, column: 16 },
@@ -1439,16 +1489,29 @@ test('type equality via name lookup', t => {
 test('pretty-parse-error', t => {
     // nominal test
     t.deepEqual(
-        annontateSource('contextBefore\n123456789\ncontextAfter', { line: 2, column: 4 }, 'message'),
+        annontateSource(
+            'contextBefore\n123456789\ncontextAfter',
+            { line: 2, column: 4 },
+            'message'
+        ),
         'contextBefore\n123456789\n   ^ message\ncontextAfter'
     );
 
     // line out of range too low
-    t.deepEqual(annontateSource('contextBefore\n123456789\ncontextAfter', { line: 0, column: 4 }, ''), null);
+    t.deepEqual(
+        annontateSource('contextBefore\n123456789\ncontextAfter', { line: 0, column: 4 }, ''),
+        null
+    );
     // line out of range too high
-    t.deepEqual(annontateSource('contextBefore\n123456789\ncontextAfter', { line: 4, column: 4 }, ''), null);
+    t.deepEqual(
+        annontateSource('contextBefore\n123456789\ncontextAfter', { line: 4, column: 4 }, ''),
+        null
+    );
     // column out of range too low
-    t.deepEqual(annontateSource('contextBefore\n123456789\ncontextAfter', { line: 2, column: 0 }, ''), null);
+    t.deepEqual(
+        annontateSource('contextBefore\n123456789\ncontextAfter', { line: 2, column: 0 }, ''),
+        null
+    );
 
     // annotation is past line length
     t.deepEqual(
@@ -1488,7 +1551,11 @@ test('tac parser regression', t => {
                         return e;
                     } else {
                         return (
-                            annontateSource(source, e.sourceLocation, `found ${e.found}, expected ${e.expected}`) || ''
+                            annontateSource(
+                                source,
+                                e.sourceLocation,
+                                `found ${e.found}, expected ${e.expected}`
+                            ) || ''
                         );
                     }
                 }),
@@ -1692,7 +1759,9 @@ test('Parse grammar from multiple entry points', t => {
     const dummySourceLocation = { line: 0, column: 0 };
 
     // Try parsing from an a
-    const aresult = parse(testGrammar, 'a', [{ type: 'a', string: 'anything', sourceLocation: dummySourceLocation }]);
+    const aresult = parse(testGrammar, 'a', [
+        { type: 'a', string: 'anything', sourceLocation: dummySourceLocation },
+    ]);
     t.deepEqual(aresult, {
         newIndex: 1,
         sourceLocation: dummySourceLocation,
@@ -1702,7 +1771,9 @@ test('Parse grammar from multiple entry points', t => {
     });
 
     // Try parsing from a b
-    const bresult = parse(testGrammar, 'b', [{ type: 'b', string: 'anything', sourceLocation: dummySourceLocation }]);
+    const bresult = parse(testGrammar, 'b', [
+        { type: 'b', string: 'anything', sourceLocation: dummySourceLocation },
+    ]);
     t.deepEqual(bresult, {
         newIndex: 1,
         sourceLocation: dummySourceLocation,
@@ -1795,7 +1866,9 @@ test.failing('Parse "x" with "x?x"', t => {
         x: Sequence('x?x', [opt(term('xToken')), term('xToken')]),
     };
 
-    const tokens: Token<TestToken>[] = [{ type: 'xToken', string: 'xToken', sourceLocation: { line: 0, column: 0 } }];
+    const tokens: Token<TestToken>[] = [
+        { type: 'xToken', string: 'xToken', sourceLocation: { line: 0, column: 0 } },
+    ];
     const ast = parse(testGrammar, 'x', tokens);
     t.deepEqual(stripSourceLocation(stripResultIndexes(ast)), {
         children: [{ type: 'xToken', value: undefined }],

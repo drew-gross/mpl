@@ -14,7 +14,12 @@ type Permission = 'stdout';
 export type String = { kind: 'String' };
 export type Integer = { kind: 'Integer' };
 export type Boolean = { kind: 'Boolean' };
-export type Function = { kind: 'Function'; permissions: Permission[]; arguments: Type[]; returnType: Type };
+export type Function = {
+    kind: 'Function';
+    permissions: Permission[];
+    arguments: Type[];
+    returnType: Type;
+};
 export type List = { kind: 'List'; of: Type };
 export type Product = { kind: 'Product'; name: string; members: ProductComponent[] };
 export type NameRef = { kind: 'NameRef'; namedType: string };
@@ -30,7 +35,9 @@ export const toString = (type: Type): string => {
         case 'Function':
             return type.kind + '<' + join(type.arguments.map(toString), ', ') + '>';
         case 'Product':
-            return '{' + type.members.map(member => `${member.name}: ${toString(member.type)}`) + '}';
+            return (
+                '{' + type.members.map(member => `${member.name}: ${toString(member.type)}`) + '}'
+            );
         default:
             throw debug('Unhandled kind in type toString');
     }
@@ -75,12 +82,16 @@ export const equal = (a: Type, b: Type, typeDeclarations: TypeDeclaration[]): bo
     if (resolvedA.kind == 'Product' && resolvedB.kind == 'Product') {
         const allInLeftPresentInRight = resolvedA.members.every(memberA =>
             (resolvedB as any).members.some(
-                memberB => memberA.name == memberB.name && equal(memberA.type, memberB.type, typeDeclarations)
+                memberB =>
+                    memberA.name == memberB.name &&
+                    equal(memberA.type, memberB.type, typeDeclarations)
             )
         );
         const allInRightPresentInLeft = resolvedB.members.every(memberB =>
             (resolvedA as any).members.some(
-                memberA => memberA.name == memberB.name && equal(memberA.type, memberB.type, typeDeclarations)
+                memberA =>
+                    memberA.name == memberB.name &&
+                    equal(memberA.type, memberB.type, typeDeclarations)
             )
         );
         return allInLeftPresentInRight && allInRightPresentInLeft;
@@ -125,7 +136,11 @@ export const builtinFunctions: VariableDeclaration[] = [
     },
 ];
 
-export const typeSize = (targetInfo: TargetInfo, type: Type, typeDeclarations: TypeDeclaration[]): number => {
+export const typeSize = (
+    targetInfo: TargetInfo,
+    type: Type,
+    typeDeclarations: TypeDeclaration[]
+): number => {
     switch (type.kind) {
         case 'List':
             // Pointer + size

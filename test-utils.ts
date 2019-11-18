@@ -45,7 +45,9 @@ export const mplTest = async (
 
     const error = (stage: string) => {
         t.fail(
-            name ? `Test failed (${stage}). Run $ npm run test-case "${name}" for more info.` : 'Unnamed test failed'
+            name
+                ? `Test failed (${stage}). Run $ npm run test-case "${name}" for more info.`
+                : 'Unnamed test failed'
         );
     };
 
@@ -134,8 +136,14 @@ generated source:
     }
 
     // TODO: check the whole struct. Currently we don't check string literals because I haven't implemented that in the parser/generator
-    t.deepEqual(programInfo.threeAddressRoundTrip.functions, programInfo.threeAddressRoundTrip.functions);
-    t.deepEqual(programInfo.threeAddressRoundTrip.globals, programInfo.threeAddressRoundTrip.globals);
+    t.deepEqual(
+        programInfo.threeAddressRoundTrip.functions,
+        programInfo.threeAddressRoundTrip.functions
+    );
+    t.deepEqual(
+        programInfo.threeAddressRoundTrip.globals,
+        programInfo.threeAddressRoundTrip.globals
+    );
 
     for (const { name: backendName, executionResults } of programInfo.backendResults) {
         if (exitCode === undefined) {
@@ -143,7 +151,15 @@ generated source:
             return;
         }
         const testPassed = executionResults.every(r =>
-            passed({ exitCode, stdout: expectedStdOut, name: backendName ? backendName : 'unnamed', source }, r)
+            passed(
+                {
+                    exitCode,
+                    stdout: expectedStdOut,
+                    name: backendName ? backendName : 'unnamed',
+                    source,
+                },
+                r
+            )
         );
 
         if (!failing.includes(backendName)) {
@@ -178,7 +194,15 @@ generated source:
 
 export const tacTest = async (
     t,
-    { source, exitCode, printSubsteps = [], debugSubsteps = [], spills, failing = [], stdin = '' }: TestOptions
+    {
+        source,
+        exitCode,
+        printSubsteps = [],
+        debugSubsteps = [],
+        spills,
+        failing = [],
+        stdin = '',
+    }: TestOptions
 ) => {
     const parsed = parseFunction(source);
     if ('kind' in parsed) {
@@ -209,9 +233,14 @@ export const tacTest = async (
 
                 await Promise.all(
                     backend.executors.map(async ({ name, execute }) => {
-                        const result = await execute(compilationResult.binaryFile.path, stdinFile.path);
+                        const result = await execute(
+                            compilationResult.binaryFile.path,
+                            stdinFile.path
+                        );
                         if ('error' in result) {
-                            t.fail(`${backend.name} execution with ${name} failed: ${result.error}`);
+                            t.fail(
+                                `${backend.name} execution with ${name} failed: ${result.error}`
+                            );
                         } else if (result.exitCode !== exitCode) {
                             const errorMessage = `${backend.name} had unexpected output.
     Exit code: ${result.exitCode}. Expected: ${exitCode}.`;

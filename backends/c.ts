@@ -13,7 +13,12 @@ import { exec } from 'child-process-promise';
 import execAndGetResult from '../util/execAndGetResult.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { CompiledProgram, CompiledExpression, compileExpression, CompiledAssignment } from '../backend-utils.js';
+import {
+    CompiledProgram,
+    CompiledExpression,
+    compileExpression,
+    CompiledAssignment,
+} from '../backend-utils.js';
 import { errors } from '../runtime-strings.js';
 import { mergeDeclarations } from '../frontend.js';
 import idAppender from '../util/idAppender.js';
@@ -56,7 +61,10 @@ type BackendInput = {
     predeclaredVariables: string[];
 };
 
-const compileAssignment = (destination: string, rhs: CompiledExpression<string>): CompiledAssignment<string> => {
+const compileAssignment = (
+    destination: string,
+    rhs: CompiledExpression<string>
+): CompiledAssignment<string> => {
     return {
         prepare: rhs.prepare,
         execute: [`${destination} = `, ...rhs.execute, ';'],
@@ -126,7 +134,9 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                 execute: [],
                 cleanup: [callFree(temporaryName, 'Free temporary from concatenation')],
             };
-            return compileExpression([lhs, rhs, prepAndCleanup], ([_1, _2, _3]) => [temporaryName]);
+            return compileExpression([lhs, rhs, prepAndCleanup], ([_1, _2, _3]) => [
+                temporaryName,
+            ]);
         }
         // TODO: Unify these somehow typedDeclarationAssignment and reassignment
         case 'typedDeclarationAssignment': {
@@ -141,7 +151,10 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                     if (predeclaredVariables.includes(declaration.name)) {
                         return compileAssignment(declaration.name, rhs);
                     } else {
-                        return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
+                        return compileAssignment(
+                            mplTypeToCDeclaration(declaration.type, lhs),
+                            rhs
+                        );
                     }
                 case 'String':
                     const rhsWillAlloc = compileExpression([rhs], ([e1]) => [
@@ -154,17 +167,25 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                     if (predeclaredVariables.includes(declaration.name)) {
                         return compileAssignment(declaration.name, rhsWillAlloc);
                     } else {
-                        return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhsWillAlloc);
+                        return compileAssignment(
+                            mplTypeToCDeclaration(declaration.type, lhs),
+                            rhsWillAlloc
+                        );
                     }
                 case 'List':
                     // TODO: Pretty sure I need to copy the list
                     if (predeclaredVariables.includes(declaration.name)) {
                         return compileAssignment(declaration.name, rhs);
                     } else {
-                        return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
+                        return compileAssignment(
+                            mplTypeToCDeclaration(declaration.type, lhs),
+                            rhs
+                        );
                     }
                 default:
-                    throw debug(`${declaration.type.kind} unhandled in typedDeclarationAssignment`);
+                    throw debug(
+                        `${declaration.type.kind} unhandled in typedDeclarationAssignment`
+                    );
             }
         }
         case 'reassignment': {
@@ -183,7 +204,10 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                     const assign = {
                         prepare: [
                             `char *${savedOldValue} = ${declaration.name};`,
-                            `char *${temporaryName} = ${registerTransferLangaugeToC(rhs.execute, ' ')};`,
+                            `char *${temporaryName} = ${registerTransferLangaugeToC(
+                                rhs.execute,
+                                ' '
+                            )};`,
                         ],
                         execute: [`my_malloc(length(${temporaryName}))`],
                         cleanup: [
@@ -220,19 +244,22 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             const comparatorC = recurse(ast.condition);
             const ifTrueC = recurse(ast.ifTrue);
             const ifFalseC = recurse(ast.ifFalse);
-            return compileExpression([comparatorC, ifTrueC, ifFalseC], ([compare, ifTrue, ifFalse]) => [
-                ...compare,
-                '?',
-                ...ifTrue,
-                ':',
-                ...ifFalse,
-            ]);
+            return compileExpression(
+                [comparatorC, ifTrueC, ifFalseC],
+                ([compare, ifTrue, ifFalse]) => [...compare, '?', ...ifTrue, ':', ...ifFalse]
+            );
         }
         case 'equality': {
             const lhs = recurse(ast.lhs);
             const rhs = recurse(ast.rhs);
             if (ast.type.kind == 'String') {
-                return compileExpression([lhs, rhs], ([e1, e2]) => ['string_compare(', ...e1, ',', ...e2, ')']);
+                return compileExpression([lhs, rhs], ([e1, e2]) => [
+                    'string_compare(',
+                    ...e1,
+                    ',',
+                    ...e2,
+                    ')',
+                ]);
             } else {
                 return compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '==', ...e2]);
             }
@@ -267,10 +294,18 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             ];
             const buildItems = ast.items.map(recurse);
             const assignItems = compileExpression(buildItems, buildItemCodes =>
-                buildItemCodes.map((buildItem, index) => `((uint8_t*)${listLiteral}.data)[${index}] = ${buildItem};`)
+                buildItemCodes.map(
+                    (buildItem, index) =>
+                        `((uint8_t*)${listLiteral}.data)[${index}] = ${buildItem};`
+                )
             );
             const buildLiteral: CompiledExpression<string> = {
-                prepare: [...allocate, ...assignItems.prepare, ...assignItems.execute, ...assignItems.cleanup],
+                prepare: [
+                    ...allocate,
+                    ...assignItems.prepare,
+                    ...assignItems.execute,
+                    ...assignItems.cleanup,
+                ],
                 execute: [],
                 cleanup: [],
             };
@@ -358,7 +393,10 @@ const makeCfunctionBody = ({
             '{',
             ...body,
             ...returnCode.prepare,
-            `${mplTypeToCDeclaration(returnType, 'result')} = ${registerTransferLangaugeToC(returnCode.execute, ' ')};`,
+            `${mplTypeToCDeclaration(returnType, 'result')} = ${registerTransferLangaugeToC(
+                returnCode.execute,
+                ' '
+            )};`,
             ...returnCode.cleanup,
             ...endOfFunctionFrees,
             ...beforeExit,
@@ -369,7 +407,8 @@ const makeCfunctionBody = ({
     );
 };
 
-const productTypeMemberToCStructMember = ({ name, type }) => `${mplTypeToCDeclaration(type, '')} ${name};`;
+const productTypeMemberToCStructMember = ({ name, type }) =>
+    `${mplTypeToCDeclaration(type, '')} ${name};`;
 
 const compile = async ({
     functions,
@@ -380,7 +419,13 @@ const compile = async ({
 }: FrontendOutput): Promise<CompilationResult | { error: string }> => {
     const CtypeDeclarations = types
         .filter(t => t.type.kind == 'Product')
-        .map(t => `struct ${t.name} {${join((t.type as any).members.map(productTypeMemberToCStructMember), '\n')}};`);
+        .map(
+            t =>
+                `struct ${t.name} {${join(
+                    (t.type as any).members.map(productTypeMemberToCStructMember),
+                    '\n'
+                )}};`
+        );
 
     const Cfunctions = functions.map(({ name, parameters, statements, variables, returnType }) =>
         makeCfunctionBody({
@@ -391,7 +436,9 @@ const compile = async ({
             globalDeclarations,
             stringLiterals,
             buildSignature: (functionName, params) => {
-                const parameterDeclarations = params.map(p => mplTypeToCDeclaration(p.type, p.name));
+                const parameterDeclarations = params.map(p =>
+                    mplTypeToCDeclaration(p.type, p.name)
+                );
                 const cReturnType = mplTypeToCType(returnType)('');
                 return `${cReturnType} ${functionName}(${join(parameterDeclarations, ', ')})`;
             },
@@ -595,9 +642,14 @@ ${Cprogram}
     const binaryFile = await tmpFile();
     try {
         // TODO: Don't emit unused variables
-        await exec(`clang -Wall -Werror -Wno-error=unused-variable ${sourceFile.path} -o ${binaryFile.path}`);
+        await exec(
+            `clang -Wall -Werror -Wno-error=unused-variable ${sourceFile.path} -o ${binaryFile.path}`
+        );
     } catch (e) {
-        return { error: `Failed to compile generated C code:\n${e.stderr}`, intermediateFile: sourceFile };
+        return {
+            error: `Failed to compile generated C code:\n${e.stderr}`,
+            intermediateFile: sourceFile,
+        };
     }
     return {
         sourceFile,
@@ -612,7 +664,8 @@ const execute = async (executablePath: string, stdinPath: string): Promise<Execu
             ...(await execAndGetResult(`${executablePath} < ${stdinPath}`)),
             executorName: 'clang',
             runInstructions: `${executablePath} < ${stdinPath}`,
-            debugInstructions: 'No debug instructions for C yet. Try one of the online GDB things.',
+            debugInstructions:
+                'No debug instructions for C yet. Try one of the online GDB things.',
         };
     } catch (e) {
         return { error: e, executorName: 'clang' };

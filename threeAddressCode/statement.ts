@@ -40,9 +40,24 @@ export type Statement = { why: string } & (
     | { kind: 'loadMemoryByte'; address: Register; to: Register }
     | { kind: 'loadSymbolAddress'; to: Register; symbolName: string }
     // Function calls
-    | { kind: 'syscall'; name: SyscallName; arguments: (Register | number)[]; destination: Register | null }
-    | { kind: 'callByName'; function: string; arguments: (Register | number)[]; destination: Register | null }
-    | { kind: 'callByRegister'; function: Register; arguments: (Register | number)[]; destination: Register | null }
+    | {
+          kind: 'syscall';
+          name: SyscallName;
+          arguments: (Register | number)[];
+          destination: Register | null;
+      }
+    | {
+          kind: 'callByName';
+          function: string;
+          arguments: (Register | number)[];
+          destination: Register | null;
+      }
+    | {
+          kind: 'callByRegister';
+          function: Register;
+          arguments: (Register | number)[];
+          destination: Register | null;
+      }
     | { kind: 'return'; register: Register }
 );
 
@@ -162,8 +177,9 @@ export const reads = (tas: Statement, args: Register[]): Register[] => {
         case 'empty':
             return [];
         case 'syscall': {
-            const predicate: FilterPredicate<Register | number, Register> = (arg: Register | number): arg is Register =>
-                typeof arg !== 'number';
+            const predicate: FilterPredicate<Register | number, Register> = (
+                arg: Register | number
+            ): arg is Register => typeof arg !== 'number';
             return filter<Register | number, Register>(tas.arguments, predicate);
         }
         case 'move':
@@ -194,13 +210,15 @@ export const reads = (tas: Statement, args: Register[]): Register[] => {
         case 'loadSymbolAddress':
             return [];
         case 'callByRegister': {
-            const predicate: FilterPredicate<Register | number, Register> = (arg: Register | number): arg is Register =>
-                typeof arg !== 'number';
+            const predicate: FilterPredicate<Register | number, Register> = (
+                arg: Register | number
+            ): arg is Register => typeof arg !== 'number';
             return [tas.function, ...filter(tas.arguments, predicate)];
         }
         case 'callByName': {
-            const predicate: FilterPredicate<Register | number, Register> = (arg: Register | number): arg is Register =>
-                typeof arg !== 'number';
+            const predicate: FilterPredicate<Register | number, Register> = (
+                arg: Register | number
+            ): arg is Register => typeof arg !== 'number';
             return filter(tas.arguments, predicate);
         }
         case 'return':

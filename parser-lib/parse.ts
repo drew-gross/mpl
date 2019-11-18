@@ -34,7 +34,9 @@ interface NodeWithIndex<NodeType, LeafType> {
     sourceLocation: SourceLocation;
 }
 
-export type AstWithIndex<NodeType, TokenType> = NodeWithIndex<NodeType, TokenType> | LeafWithIndex<TokenType>;
+export type AstWithIndex<NodeType, TokenType> =
+    | NodeWithIndex<NodeType, TokenType>
+    | LeafWithIndex<TokenType>;
 
 // TODO: just put the actual token in here instead of most of it's members
 export interface ParseFailureInfo<TokenType> {
@@ -47,7 +49,9 @@ export interface ParseFailureInfo<TokenType> {
 
 export type ParseError<TokenType> = { kind: 'parseError'; errors: ParseFailureInfo<TokenType>[] };
 
-export type ParseResultWithIndex<NodeType, TokenType> = ParseError<TokenType> | AstWithIndex<NodeType, TokenType>;
+export type ParseResultWithIndex<NodeType, TokenType> =
+    | ParseError<TokenType>
+    | AstWithIndex<NodeType, TokenType>;
 export type ParseResult<NodeType, TokenType> = ParseError<TokenType> | Ast<NodeType, TokenType>;
 
 export const parseResultIsError = <NodeType, LeafType, TokenType>(
@@ -56,7 +60,8 @@ export const parseResultIsError = <NodeType, LeafType, TokenType>(
         | ParseResultWithIndex<NodeType, TokenType>
         | AstWithIndex<NodeType, LeafType>[]
         | 'missingOptional'
-): result is ParseError<TokenType> => result != 'missingOptional' && 'kind' in result && result.kind == 'parseError';
+): result is ParseError<TokenType> =>
+    result != 'missingOptional' && 'kind' in result && result.kind == 'parseError';
 
 const parseResultWithIndexIsLeaf = <NodeType, TokenType>(
     r: ParseResultWithIndex<NodeType, TokenType>
@@ -107,7 +112,11 @@ export const stripSourceLocation = ast => {
 
 type Terminal<NodeType, TokenType> = { kind: 'terminal'; tokenType: TokenType };
 type BaseParser<NodeType, TokenType> = string | Terminal<NodeType, TokenType>;
-type Sequence<NodeType, TokenType> = { kind: 'sequence'; name: string; parsers: Parser<NodeType, TokenType>[] };
+type Sequence<NodeType, TokenType> = {
+    kind: 'sequence';
+    name: string;
+    parsers: Parser<NodeType, TokenType>[];
+};
 type Alternative<NodeType, TokenType> = { kind: 'oneOf'; parsers: Parser<NodeType, TokenType>[] };
 type Optional<NodeType, TokenType> = { kind: 'optional'; parser: Parser<NodeType, TokenType> };
 
@@ -133,7 +142,9 @@ export const OneOf = <NodeType, TokenType>(
     parsers,
 });
 
-export const Optional = <NodeType, TokenType>(parser: Parser<NodeType, TokenType>): Optional<NodeType, TokenType> => ({
+export const Optional = <NodeType, TokenType>(
+    parser: Parser<NodeType, TokenType>
+): Optional<NodeType, TokenType> => ({
     kind: 'optional',
     parser,
 });
@@ -143,7 +154,10 @@ export interface Grammar<NodeType, TokenType> {
     [index: string]: Parser<NodeType, TokenType>;
 }
 
-const getSourceLocation = <TokenType>(tokens: Token<TokenType>[], index: number): SourceLocation => {
+const getSourceLocation = <TokenType>(
+    tokens: Token<TokenType>[],
+    index: number
+): SourceLocation => {
     if (index >= tokens.length) {
         const lastToken: Token<TokenType> = last(tokens) as Token<TokenType>;
         return {
@@ -157,7 +171,9 @@ const getSourceLocation = <TokenType>(tokens: Token<TokenType>[], index: number)
     }
 };
 
-const isTerminalParser = <NodeType, TokenType>(p: Parser<NodeType, TokenType>): p is Terminal<NodeType, TokenType> =>
+const isTerminalParser = <NodeType, TokenType>(
+    p: Parser<NodeType, TokenType>
+): p is Terminal<NodeType, TokenType> =>
     typeof p == 'object' && 'kind' in p && p.kind === 'terminal';
 
 const parseSequence = <NodeType extends string, TokenType>(
@@ -208,7 +224,11 @@ const parseSequence = <NodeType extends string, TokenType>(
 
 type ParserProgress<NodeType, TokenType> =
     | { kind: 'failed'; error: ParseError<TokenType> }
-    | { kind: 'progress'; parseResults: AstWithIndex<NodeType, TokenType>[]; subParserIndex: number };
+    | {
+          kind: 'progress';
+          parseResults: AstWithIndex<NodeType, TokenType>[];
+          subParserIndex: number;
+      };
 
 const parseAlternative = <NodeType extends string, TokenType>(
     grammar: Grammar<NodeType, TokenType>,
@@ -227,7 +247,11 @@ const parseAlternative = <NodeType extends string, TokenType>(
 
     // TODO: fix this linter error
     // tslint:disable-next-line
-    for (let alternativeIndex = 0; alternativeIndex < alternatives.parsers.length; alternativeIndex++) {
+    for (
+        let alternativeIndex = 0;
+        alternativeIndex < alternatives.parsers.length;
+        alternativeIndex++
+    ) {
         let alternativeNeedsSubtracting = false;
         let currentParser = alternatives.parsers[alternativeIndex];
         let currentResult: ParseResultWithIndex<NodeType, TokenType> | 'missingOptional';
@@ -279,9 +303,13 @@ const parseAlternative = <NodeType extends string, TokenType>(
             currentParser = currentParser.parsers[currentProgress.subParserIndex];
 
             const currentProgressLastItem = last(currentProgress.parseResults);
-            const tokenIndex = currentProgressLastItem !== null ? currentProgressLastItem.newIndex : index;
+            const tokenIndex =
+                currentProgressLastItem !== null ? currentProgressLastItem.newIndex : index;
             // Check if this parser has been completed due to being a successful prefix of a previous alternative
-            if (currentProgressLastItem !== null && currentProgress.subParserIndex === sequenceParser.parsers.length) {
+            if (
+                currentProgressLastItem !== null &&
+                currentProgress.subParserIndex === sequenceParser.parsers.length
+            ) {
                 return {
                     newIndex: currentProgressLastItem.newIndex,
                     success: true,
@@ -360,14 +388,20 @@ const parseAlternative = <NodeType extends string, TokenType>(
             if (progressRef.kind != 'failed' && progressRef.subParserIndex == currentIndex) {
                 if (typeof parser === 'string' && currentParser == parser) {
                     if (parseResultIsError(currentResult)) {
-                        progressCache[progressCacheIndex] = { kind: 'failed', error: currentResult };
+                        progressCache[progressCacheIndex] = {
+                            kind: 'failed',
+                            error: currentResult,
+                        };
                     } else if (currentResult != 'missingOptional') {
                         progressRef.parseResults.push(currentResult);
                         progressRef.subParserIndex++;
                     }
                 } else if (typeof parser === 'function' && currentParser == parser) {
                     if (parseResultIsError(currentResult)) {
-                        progressCache[progressCacheIndex] = { kind: 'failed', error: currentResult };
+                        progressCache[progressCacheIndex] = {
+                            kind: 'failed',
+                            error: currentResult,
+                        };
                     } else if (currentResult != 'missingOptional') {
                         progressRef.parseResults.push(currentResult);
                         progressRef.subParserIndex++;
@@ -379,7 +413,10 @@ const parseAlternative = <NodeType extends string, TokenType>(
                     currentParser === parser.parsers[currentIndex]
                 ) {
                     if (parseResultIsError(currentResult)) {
-                        progressCache[progressCacheIndex] = { kind: 'failed', error: currentResult };
+                        progressCache[progressCacheIndex] = {
+                            kind: 'failed',
+                            error: currentResult,
+                        };
                     } else if (currentResult != 'missingOptional') {
                         progressRef.parseResults.push(currentResult);
                         progressRef.subParserIndex++;
@@ -391,7 +428,9 @@ const parseAlternative = <NodeType extends string, TokenType>(
                     currentParser == parser.parser
                 ) {
                     if (currentResult != 'missingOptional' && !parseResultIsError(currentResult)) {
-                        (progressCache[progressCacheIndex] as any).parseResults.push(currentResult);
+                        (progressCache[progressCacheIndex] as any).parseResults.push(
+                            currentResult
+                        );
                     }
                     (progressCache[progressCacheIndex] as any).subParserIndex++;
                 }
@@ -498,7 +537,9 @@ const parseTerminal = <NodeType, TokenType>(
     };
 };
 
-export const Terminal = <NodeType, TokenType>(token: TokenType): Terminal<NodeType, TokenType> => ({
+export const Terminal = <NodeType, TokenType>(
+    token: TokenType
+): Terminal<NodeType, TokenType> => ({
     kind: 'terminal',
     tokenType: token,
 });
@@ -509,7 +550,8 @@ export const toDotFile = <NodeType, TokenType>(ast: Ast<NodeType, TokenType>) =>
     const traverse = (node: Ast<NodeType, TokenType>): number => {
         const myId = id;
         id++;
-        const nodeString = 'children' in node ? node.type : `${node.type}\n${node.value ? node.value : ''}`;
+        const nodeString =
+            'children' in node ? node.type : `${node.type}\n${node.value ? node.value : ''}`;
         digraph.setNode(myId, { label: nodeString });
         if ('children' in node) {
             const childIds = node.children.map(traverse);

@@ -8,7 +8,13 @@ import idAppender from './util/idAppender.js';
 import { RegisterAssignment } from './backend-utils.js';
 import { Register, isEqual as registerIsEqual, compare as registerCompare } from './register.js';
 import { ThreeAddressFunction } from './threeAddressCode/generator.js';
-import { Statement, toString as tasToString, reads, writes, hasSideEffects } from './threeAddressCode/statement.js';
+import {
+    Statement,
+    toString as tasToString,
+    reads,
+    writes,
+    hasSideEffects,
+} from './threeAddressCode/statement.js';
 
 export type BasicBlock = {
     name: string;
@@ -126,7 +132,12 @@ const blockExits = (rtl: Statement[]): Exits => {
     }
 };
 
-export const toDotFile = ({ blocks, connections, labelToIndexMap, exits }: ControlFlowGraph): string => {
+export const toDotFile = ({
+    blocks,
+    connections,
+    labelToIndexMap,
+    exits,
+}: ControlFlowGraph): string => {
     let dotText = 'digraph {\n';
     dotText += `Entry [style="invis"]\n`;
     dotText += `Entry -> node_0\n`;
@@ -234,7 +245,11 @@ export const computeBlockLiveness = (block: BasicBlock, args: Register[]): Set<R
 };
 
 // Returns whether entry liveness changed
-const propagateBlockLiveness = (block: BasicBlock, liveness: Set<Register>[], liveAtExit: Set<Register>): boolean => {
+const propagateBlockLiveness = (
+    block: BasicBlock,
+    liveness: Set<Register>[],
+    liveAtExit: Set<Register>
+): boolean => {
     let changeEntry = false;
     liveAtExit.forEach(item => {
         for (let i = liveness.length - 1; i >= 0; i--) {
@@ -280,15 +295,24 @@ export const tafLiveness = (taf: ThreeAddressFunction): Set<Register>[] => {
             });
         }
     }
-    const remainingToPropagate: { entryLiveness: Set<Register>; index: number }[] = blockLiveness.map((b, i) => ({
+    const remainingToPropagate: {
+        entryLiveness: Set<Register>;
+        index: number;
+    }[] = blockLiveness.map((b, i) => ({
         entryLiveness: b[0],
         index: i,
     }));
     while (remainingToPropagate.length > 0) {
         const { entryLiveness, index } = remainingToPropagate.shift() as any;
-        const preceedingNodeIndices = cfg.connections.filter(({ to }) => to == index).map(n => n.from);
+        const preceedingNodeIndices = cfg.connections
+            .filter(({ to }) => to == index)
+            .map(n => n.from);
         preceedingNodeIndices.forEach(idx => {
-            const changed = propagateBlockLiveness(cfg.blocks[idx], blockLiveness[idx], entryLiveness);
+            const changed = propagateBlockLiveness(
+                cfg.blocks[idx],
+                blockLiveness[idx],
+                entryLiveness
+            );
             if (changed) {
                 remainingToPropagate.push({ entryLiveness: blockLiveness[idx][0], index: idx });
             }
@@ -308,7 +332,10 @@ export type RegisterInterferenceGraph = {
     interferences: OrderedSet<RegisterInterference>;
 };
 
-const interferenceCompare = (lhs: RegisterInterference, rhs: RegisterInterference): ComparisonResult => {
+const interferenceCompare = (
+    lhs: RegisterInterference,
+    rhs: RegisterInterference
+): ComparisonResult => {
     const r1Comparison = registerCompare(lhs.r1, rhs.r1);
     if (r1Comparison != ComparisonResult.EQ) {
         return r1Comparison;
@@ -333,9 +360,12 @@ export const registerInterferenceGraph = (
     liveness: Set<Register>[],
     argumentRegisters: Register[]
 ): RegisterInterferenceGraph => {
-    const registerIsArgument = register => argumentRegisters.some(arg => registerIsEqual(arg, register));
+    const registerIsArgument = register =>
+        argumentRegisters.some(arg => registerIsEqual(arg, register));
     const localRegisters = setJoin(registerIsEqual, liveness);
-    localRegisters.removeWithPredicate(local => typeof local == 'string' || registerIsArgument(local));
+    localRegisters.removeWithPredicate(
+        local => typeof local == 'string' || registerIsArgument(local)
+    );
     const result: RegisterInterferenceGraph = {
         localRegisters: orderedSet(registerCompare),
         interferences: orderedSet(interferenceCompare),
@@ -362,7 +392,10 @@ export const registerInterferenceGraph = (
     return result;
 };
 
-export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): ThreeAddressFunction => {
+export const spill = (
+    taf: ThreeAddressFunction,
+    registerToSpill: Register
+): ThreeAddressFunction => {
     if (typeof registerToSpill == 'string') throw debug("Can't spill special registers");
     const currentSpillIndex = taf.spills + 1;
     const registerName = idAppender();
@@ -459,7 +492,11 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
                 }
                 if (registerIsEqual(instruction.to, registerToSpill)) {
                     const newDestination = makeFragment();
-                    newFunction.instructions.push({ ...instruction, to: newDestination, from: newSource });
+                    newFunction.instructions.push({
+                        ...instruction,
+                        to: newDestination,
+                        from: newSource,
+                    });
                     newFunction.instructions.push({
                         kind: 'spill',
                         register: newDestination,
@@ -483,7 +520,11 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
                 // TODO-NEXT: Implement proper spilling for callByName and callByRegister (and probs syscalls)
                 const newArguments: (Register | number | string)[] = [];
                 instruction.arguments.forEach(arg => {
-                    if (typeof arg != 'string' && typeof arg != 'number' && registerIsEqual(arg, registerToSpill)) {
+                    if (
+                        typeof arg != 'string' &&
+                        typeof arg != 'number' &&
+                        registerIsEqual(arg, registerToSpill)
+                    ) {
                         const newSource = makeFragment();
                         newArguments.push(newSource);
                         newFunction.instructions.push({
@@ -546,10 +587,14 @@ export const spill = (taf: ThreeAddressFunction, registerToSpill: Register): Thr
 };
 
 // Returns a new function if anything changed
-const removeDeadStores = (taf: ThreeAddressFunction, liveness: Set<Register>[]): ThreeAddressFunction | undefined => {
+const removeDeadStores = (
+    taf: ThreeAddressFunction,
+    liveness: Set<Register>[]
+): ThreeAddressFunction | undefined => {
     const newFunction: ThreeAddressFunction = { ...taf, instructions: [] };
     let anythingChanged: boolean = false;
-    if (taf.instructions.length + 1 != liveness.length) throw debug('Liveness length != taf length + 1');
+    if (taf.instructions.length + 1 != liveness.length)
+        throw debug('Liveness length != taf length + 1');
     for (let i = 0; i < taf.instructions.length; i++) {
         const currentInstruction = taf.instructions[i];
         // Any instruction with side effects needs to stay until we can prove that the side effects don't matter.
@@ -595,7 +640,9 @@ export const assignRegisters = <TargetRegister>(
         // We are looking for one node ...
         let colorableRegister = registersToAssign.extractOne(register => {
             // ... that we haven't already colored ...
-            if (!colorableStack.every(alreadyColored => !registerIsEqual(register, alreadyColored))) {
+            if (
+                !colorableStack.every(alreadyColored => !registerIsEqual(register, alreadyColored))
+            ) {
                 return false;
             }
 

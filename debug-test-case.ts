@@ -35,10 +35,14 @@ import annotateSource from './annotateSource.js';
         return;
     }
 
-    const programInfo = await produceProgramInfo(testCase.source, testCase.stdin ? testCase.stdin : '', {
-        includeExecutionResult: commander.execute,
-        skipBackends: commander.skipBackends,
-    });
+    const programInfo = await produceProgramInfo(
+        testCase.source,
+        testCase.stdin ? testCase.stdin : '',
+        {
+            includeExecutionResult: commander.execute,
+            skipBackends: commander.skipBackends,
+        }
+    );
 
     // TODO: Unify and improve error printing logic with test-utils and produceProgramInfo
     if ('kind' in programInfo) {
@@ -54,7 +58,11 @@ import annotateSource from './annotateSource.js';
             // the error is.
             const adjustedSourceLocation = e.sourceLocation;
             adjustedSourceLocation.column += 1;
-            errorString += annotateSource(testCase.source, adjustedSourceLocation, parseErrorToString(e));
+            errorString += annotateSource(
+                testCase.source,
+                adjustedSourceLocation,
+                parseErrorToString(e)
+            );
         });
         console.log(errorString);
         return;
@@ -63,31 +71,53 @@ import annotateSource from './annotateSource.js';
     if ('typeErrors' in programInfo) {
         let errorString: string = '';
         programInfo.typeErrors.forEach(e => {
-            errorString += annotateSource(testCase.source, (e as any).sourceLocation, typeErrorToString(e as any));
+            errorString += annotateSource(
+                testCase.source,
+                (e as any).sourceLocation,
+                typeErrorToString(e as any)
+            );
         });
         console.log(errorString);
         return;
     }
 
     console.log(`Mpl: ${(await writeTempFile(testCase.source, 'mpl', 'mpl')).path}`);
-    console.log(`Tokens: ${(await writeTempFile(JSON.stringify(programInfo.tokens, null, 2), 'tokens', 'json')).path}`);
-    console.log(`Ast: ${(await writeTempFile(JSON.stringify(programInfo.ast, null, 2), 'ast', 'json')).path}`);
+    console.log(
+        `Tokens: ${
+            (await writeTempFile(JSON.stringify(programInfo.tokens, null, 2), 'tokens', 'json'))
+                .path
+        }`
+    );
+    console.log(
+        `Ast: ${
+            (await writeTempFile(JSON.stringify(programInfo.ast, null, 2), 'ast', 'json')).path
+        }`
+    );
 
     const dotText = dot.write(toDotFile(programInfo.ast));
     const svgFile = await tmpFile({ template: 'ast-XXXXXX.svg', dir: '/tmp' });
     await writeSvg(dotText, svgFile.path);
     console.log(`Ast SVG: ${svgFile.path}`);
 
-    console.log(`Structure: ${(await writeTempFile(programInfo.structure, 'structure', 'txt')).path}`);
+    console.log(
+        `Structure: ${(await writeTempFile(programInfo.structure, 'structure', 'txt')).path}`
+    );
 
     console.log(
-        `Three Address Code: ${(await writeTempFile(programInfo.threeAddressCode, 'three-address-code', 'txt')).path}`
+        `Three Address Code: ${
+            (await writeTempFile(programInfo.threeAddressCode, 'three-address-code', 'txt')).path
+        }`
     );
     const roundTripParsedPath = (
-        await writeTempFile(JSON.stringify(programInfo.threeAddressRoundTrip, null, 2), 'round-trip-parsed', 'txt')
+        await writeTempFile(
+            JSON.stringify(programInfo.threeAddressRoundTrip, null, 2),
+            'round-trip-parsed',
+            'txt'
+        )
     ).path;
     const roundTripSuccess =
-        !Array.isArray(programInfo.threeAddressRoundTrip) && !('kind' in programInfo.threeAddressRoundTrip);
+        !Array.isArray(programInfo.threeAddressRoundTrip) &&
+        !('kind' in programInfo.threeAddressRoundTrip);
     if (roundTripSuccess) {
         console.log(`Three Address Code Round Trip Parse: ${roundTripParsedPath}`);
     } else {
@@ -107,13 +137,19 @@ import annotateSource from './annotateSource.js';
         if ('error' in compilationResult) {
             console.log(chalk.red(`        Compilation Failed: ${compilationResult.error}`));
             if ('intermediateFile' in compilationResult) {
-                console.log(chalk.red(`        Intermediate File:: ${compilationResult.intermediateFile.path}`));
+                console.log(
+                    chalk.red(
+                        `        Intermediate File:: ${compilationResult.intermediateFile.path}`
+                    )
+                );
             }
         } else {
             console.log(`        Source: ${compilationResult.sourceFile.path}`);
             console.log(`        Binary: ${compilationResult.binaryFile.path}`);
             if (compilationResult.threeAddressCodeFile) {
-                console.log(`        Three Address Code: ${compilationResult.threeAddressCodeFile.path}`);
+                console.log(
+                    `        Three Address Code: ${compilationResult.threeAddressCodeFile.path}`
+                );
             }
 
             executionResults.forEach(r => {
@@ -121,12 +157,18 @@ import annotateSource from './annotateSource.js';
                 if ('error' in r) {
                     console.log(chalk.red(`            Execution Failed: ${r.error}`));
                 } else {
-                    let log = testCase.exitCode == r.exitCode ? s => console.log(s) : s => console.log(chalk.red(s));
+                    let log =
+                        testCase.exitCode == r.exitCode
+                            ? s => console.log(s)
+                            : s => console.log(chalk.red(s));
                     log(`            Expected Exit Code: ${testCase.exitCode}`);
                     log(`            Actual Exit Code: ${r.exitCode}`);
 
                     if (testCase.stdout) {
-                        log = testCase.stdout == r.stdout ? s => console.log(s) : s => console.log(chalk.red(s));
+                        log =
+                            testCase.stdout == r.stdout
+                                ? s => console.log(s)
+                                : s => console.log(chalk.red(s));
                         log(`            Expected stdout: ${testCase.stdout}`);
                         log(`            Actual stdout: ${r.stdout}`);
                     }
@@ -140,7 +182,8 @@ import annotateSource from './annotateSource.js';
 
     await prompt({
         type: 'confirm',
-        message: 'Holding temporary files. Press Enter when you are done to exit. Temporary files may be removed.',
+        message:
+            'Holding temporary files. Press Enter when you are done to exit. Temporary files may be removed.',
         name: 'unused',
     });
 })();
