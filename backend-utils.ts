@@ -12,7 +12,7 @@ import {
 } from './threeAddressCode/generator.js';
 import tacToTarget from './threeAddressCode/toTarget.js';
 import { Statement, reads, writes } from './threeAddressCode/statement.js';
-import { isEqual } from './register.js';
+import { Register, isEqual } from './register.js';
 import { assignRegisters } from './controlFlowGraph.js';
 import { orderedSet, operatorCompare } from './util/ordered-set.js';
 import join from './util/join.js';
@@ -90,6 +90,28 @@ type TargetFunction<TargetRegister> = {
     name: string;
     instructions: TargetThreeAddressStatement<TargetRegister>[];
     stackUsage: StackUsage;
+};
+
+export const arrangeArgumentsForFunctionCall = () => {
+    //
+};
+
+export const saveFunctionCallResult = <TargetRegister>(
+    destination: Register | null,
+    getRegister: (r: Register) => TargetRegister,
+    registers: RegisterDescription<TargetRegister>
+): TargetThreeAddressStatement<TargetRegister>[] => {
+    if (!destination) {
+        return [];
+    }
+    return [
+        {
+            kind: 'move',
+            from: registers.functionResult,
+            to: getRegister(destination),
+            why: 'save result',
+        },
+    ];
 };
 
 const tacToTargetFunction = <TargetRegister>({

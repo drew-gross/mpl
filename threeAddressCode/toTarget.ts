@@ -1,7 +1,7 @@
 import debug from '../util/debug.js';
 import { Statement } from './statement.js';
 import { Register, isEqual } from '../register.js';
-import { RegisterAssignment } from '../backend-utils.js';
+import { RegisterAssignment, saveFunctionCallResult } from '../backend-utils.js';
 import { RegisterDescription, TargetThreeAddressStatement } from './generator.js';
 
 const getRegisterFromAssignment = <TargetRegister>(
@@ -222,20 +222,10 @@ export default <TargetRegister>(
                     why: 'Rearrange Args',
                 };
             });
-            const saveResult: TargetThreeAddressStatement<TargetRegister>[] = tas.destination
-                ? [
-                      {
-                          kind: 'move',
-                          from: registers.functionResult,
-                          to: getRegister(tas.destination),
-                          why: 'save result',
-                      },
-                  ]
-                : [];
             return [
                 ...moveArgsIntoPlace,
                 { kind: 'callByName', function: tas.function, why: 'actually call' },
-                ...saveResult,
+                ...saveFunctionCallResult(tas.destination, getRegister, registers),
             ];
         }
         case 'callByRegister': {
@@ -267,16 +257,7 @@ export default <TargetRegister>(
                     why: 'Rearrange Args',
                 };
             });
-            const saveResult: TargetThreeAddressStatement<TargetRegister>[] = tas.destination
-                ? [
-                      {
-                          kind: 'move',
-                          from: registers.functionResult,
-                          to: getRegister(tas.destination),
-                          why: 'save result',
-                      },
-                  ]
-                : [];
+
             return [
                 ...moveArgsIntoPlace,
                 {
@@ -284,7 +265,7 @@ export default <TargetRegister>(
                     function: getRegister(tas.function),
                     why: 'actually call',
                 },
-                ...saveResult,
+                ...saveFunctionCallResult(tas.destination, getRegister, registers),
             ];
         }
         case 'alloca':
