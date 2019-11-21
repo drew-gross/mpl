@@ -92,8 +92,36 @@ type TargetFunction<TargetRegister> = {
     stackUsage: StackUsage;
 };
 
-export const arrangeArgumentsForFunctionCall = () => {
-    //
+export const arrangeArgumentsForFunctionCall = <TargetRegister>(
+    args: (Register | Number)[],
+    getRegister: (r: Register) => TargetRegister,
+    registers: RegisterDescription<TargetRegister>
+): TargetThreeAddressStatement<TargetRegister>[] => {
+    // TODO: Add some type check to ensure we have the right number of arguments
+    return args.map((register: any, index) => {
+        if (index < registers.functionArgument.length) {
+            if (typeof register == 'number') {
+                return {
+                    kind: 'loadImmediate',
+                    value: register,
+                    destination: registers.functionArgument[index],
+                    why: 'Rearrange Args',
+                };
+            } else {
+                return {
+                    kind: 'move',
+                    from: getRegister(register),
+                    to: registers.functionArgument[index],
+                    why: 'Rearrange Args',
+                };
+            }
+        }
+        return {
+            kind: 'push',
+            register: getRegister(register),
+            why: 'Rearrange Args',
+        };
+    });
 };
 
 export const saveFunctionCallResult = <TargetRegister>(

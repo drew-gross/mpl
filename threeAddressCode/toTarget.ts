@@ -1,7 +1,11 @@
 import debug from '../util/debug.js';
 import { Statement } from './statement.js';
 import { Register, isEqual } from '../register.js';
-import { RegisterAssignment, saveFunctionCallResult } from '../backend-utils.js';
+import {
+    RegisterAssignment,
+    arrangeArgumentsForFunctionCall,
+    saveFunctionCallResult,
+} from '../backend-utils.js';
 import { RegisterDescription, TargetThreeAddressStatement } from './generator.js';
 
 const getRegisterFromAssignment = <TargetRegister>(
@@ -193,73 +197,15 @@ export default <TargetRegister>(
                 },
             ];
         case 'callByName': {
-            // Add moves to get all the arguments into place
-            // TODO: Add some type check to ensure we have the right number of arguments
-            // TODO: Compress with callByRegister
-            const moveArgsIntoPlace: TargetThreeAddressStatement<
-                TargetRegister
-            >[] = tas.arguments.map((register, index) => {
-                if (index < registers.functionArgument.length) {
-                    if (typeof register == 'number') {
-                        return {
-                            kind: 'loadImmediate',
-                            value: register,
-                            destination: registers.functionArgument[index],
-                            why: 'Rearrange Args',
-                        };
-                    } else {
-                        return {
-                            kind: 'move',
-                            from: getRegister(register),
-                            to: registers.functionArgument[index],
-                            why: 'Rearrange Args',
-                        };
-                    }
-                }
-                return {
-                    kind: 'push',
-                    register: getRegister(register),
-                    why: 'Rearrange Args',
-                };
-            });
             return [
-                ...moveArgsIntoPlace,
+                ...arrangeArgumentsForFunctionCall(tas.arguments, getRegister, registers),
                 { kind: 'callByName', function: tas.function, why: 'actually call' },
                 ...saveFunctionCallResult(tas.destination, getRegister, registers),
             ];
         }
         case 'callByRegister': {
-            // Add moves to get all the arguments into place
-            // TODO: Add some type check to ensure we have the right number of arguments
-            const moveArgsIntoPlace: TargetThreeAddressStatement<
-                TargetRegister
-            >[] = tas.arguments.map((register, index) => {
-                if (index < registers.functionArgument.length) {
-                    if (typeof register == 'number') {
-                        return {
-                            kind: 'loadImmediate',
-                            value: register,
-                            destination: registers.functionArgument[index],
-                            why: 'Rearrange Args',
-                        };
-                    } else {
-                        return {
-                            kind: 'move',
-                            from: getRegister(register),
-                            to: registers.functionArgument[index],
-                            why: 'Rearrange Args',
-                        };
-                    }
-                }
-                return {
-                    kind: 'push',
-                    register: getRegister(register),
-                    why: 'Rearrange Args',
-                };
-            });
-
             return [
-                ...moveArgsIntoPlace,
+                ...arrangeArgumentsForFunctionCall(tas.arguments, getRegister, registers),
                 {
                     kind: 'callByRegister',
                     function: getRegister(tas.function),
