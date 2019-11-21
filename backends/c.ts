@@ -212,7 +212,10 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                         execute: [`my_malloc(length(${temporaryName}))`],
                         cleanup: [
                             `string_copy(${temporaryName}, ${declaration.name});`,
-                            callFree(savedOldValue, 'free inaccessible value after reassignment'),
+                            callFree(
+                                savedOldValue,
+                                'free inaccessible value after reassignment'
+                            ),
                         ],
                     };
                     const expression = compileExpression(

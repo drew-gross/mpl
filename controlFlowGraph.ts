@@ -343,10 +343,15 @@ const interferenceCompare = (
     return registerCompare(lhs.r2, rhs.r2);
 };
 
-const interferenceInvolvesRegister = (interference: RegisterInterference, r: Register): boolean =>
-    registerIsEqual(interference.r1, r) || registerIsEqual(interference.r2, r);
+const interferenceInvolvesRegister = (
+    interference: RegisterInterference,
+    r: Register
+): boolean => registerIsEqual(interference.r1, r) || registerIsEqual(interference.r2, r);
 
-const otherRegister = (interference: RegisterInterference, r: Register): Register | undefined => {
+const otherRegister = (
+    interference: RegisterInterference,
+    r: Register
+): Register | undefined => {
     if (registerIsEqual(interference.r1, r)) {
         return interference.r2;
     }
@@ -641,7 +646,9 @@ export const assignRegisters = <TargetRegister>(
         let colorableRegister = registersToAssign.extractOne(register => {
             // ... that we haven't already colored ...
             if (
-                !colorableStack.every(alreadyColored => !registerIsEqual(register, alreadyColored))
+                !colorableStack.every(
+                    alreadyColored => !registerIsEqual(register, alreadyColored)
+                )
             ) {
                 return false;
             }

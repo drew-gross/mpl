@@ -22,7 +22,8 @@ const astToJS = ({
     builtinFunctions: VariableDeclaration[];
 }): string[] => {
     if (!ast) debugger;
-    const recurse = newInput => astToJS({ ast: newInput, exitInsteadOfReturn, builtinFunctions });
+    const recurse = newInput =>
+        astToJS({ ast: newInput, exitInsteadOfReturn, builtinFunctions });
     switch (ast.kind) {
         case 'returnStatement': {
             if (exitInsteadOfReturn) {

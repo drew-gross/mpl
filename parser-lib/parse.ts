@@ -47,7 +47,10 @@ export interface ParseFailureInfo<TokenType> {
     sourceLocation: SourceLocation;
 }
 
-export type ParseError<TokenType> = { kind: 'parseError'; errors: ParseFailureInfo<TokenType>[] };
+export type ParseError<TokenType> = {
+    kind: 'parseError';
+    errors: ParseFailureInfo<TokenType>[];
+};
 
 export type ParseResultWithIndex<NodeType, TokenType> =
     | ParseError<TokenType>
@@ -117,7 +120,10 @@ type Sequence<NodeType, TokenType> = {
     name: string;
     parsers: Parser<NodeType, TokenType>[];
 };
-type Alternative<NodeType, TokenType> = { kind: 'oneOf'; parsers: Parser<NodeType, TokenType>[] };
+type Alternative<NodeType, TokenType> = {
+    kind: 'oneOf';
+    parsers: Parser<NodeType, TokenType>[];
+};
 type Optional<NodeType, TokenType> = { kind: 'optional'; parser: Parser<NodeType, TokenType> };
 
 type Parser<NodeType, TokenType> =
@@ -324,7 +330,12 @@ const parseAlternative = <NodeType extends string, TokenType>(
                 currentResult = parseTerminal(currentParser, tokens, tokenIndex);
                 currentIndex = currentProgress.subParserIndex;
             } else if (typeof currentParser == 'string') {
-                currentResult = parseRule(grammar, currentParser as NodeType, tokens, tokenIndex);
+                currentResult = parseRule(
+                    grammar,
+                    currentParser as NodeType,
+                    tokens,
+                    tokenIndex
+                );
                 currentIndex = currentProgress.subParserIndex;
             } else if (currentParser.kind == 'optional') {
                 const optionalResult = parseOptional(grammar, currentParser, tokens, tokenIndex);
@@ -344,7 +355,9 @@ const parseAlternative = <NodeType extends string, TokenType>(
             } else {
                 if (progressCache[alternativeIndex].kind != 'failed') {
                     if (currentResult !== 'missingOptional') {
-                        (progressCache[alternativeIndex] as any).parseResults.push(currentResult);
+                        (progressCache[alternativeIndex] as any).parseResults.push(
+                            currentResult
+                        );
                     }
                     (progressCache[alternativeIndex] as any).subParserIndex++;
                 }
@@ -427,7 +440,10 @@ const parseAlternative = <NodeType extends string, TokenType>(
                     parser.kind == 'optional' &&
                     currentParser == parser.parser
                 ) {
-                    if (currentResult != 'missingOptional' && !parseResultIsError(currentResult)) {
+                    if (
+                        currentResult != 'missingOptional' &&
+                        !parseResultIsError(currentResult)
+                    ) {
                         (progressCache[progressCacheIndex] as any).parseResults.push(
                             currentResult
                         );

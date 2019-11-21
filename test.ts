@@ -1,5 +1,8 @@
 import testCases from './test-cases.js';
-import { parseProgram as parseTacProgram, parseInstructions } from './threeAddressCode/parser.js';
+import {
+    parseProgram as parseTacProgram,
+    parseInstructions,
+} from './threeAddressCode/parser.js';
 import annontateSource from './annotateSource.js';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
 import { ThreeAddressFunction } from './threeAddressCode/generator.js';
@@ -50,16 +53,36 @@ test('lexer', t => {
     ]);
     t.deepEqual(lex(tokenSpecs, '&&&&&'), { kind: 'lexError', error: 'Invalid token: &&&&&' });
     t.deepEqual(lex(tokenSpecs, '(1)'), [
-        { type: 'leftBracket', value: null, string: '(', sourceLocation: { line: 1, column: 1 } },
+        {
+            type: 'leftBracket',
+            value: null,
+            string: '(',
+            sourceLocation: { line: 1, column: 1 },
+        },
         { type: 'number', value: 1, string: '1', sourceLocation: { line: 1, column: 2 } },
-        { type: 'rightBracket', value: null, string: ')', sourceLocation: { line: 1, column: 3 } },
+        {
+            type: 'rightBracket',
+            value: null,
+            string: ')',
+            sourceLocation: { line: 1, column: 3 },
+        },
     ]);
     t.deepEqual(lex(tokenSpecs, 'return 100'), [
-        { type: 'return', value: null, string: 'return', sourceLocation: { line: 1, column: 1 } },
+        {
+            type: 'return',
+            value: null,
+            string: 'return',
+            sourceLocation: { line: 1, column: 1 },
+        },
         { type: 'number', value: 100, string: '100', sourceLocation: { line: 1, column: 8 } },
     ]);
     t.deepEqual(lex(tokenSpecs, 'return "test string"'), [
-        { type: 'return', value: null, string: 'return', sourceLocation: { line: 1, column: 1 } },
+        {
+            type: 'return',
+            value: null,
+            string: 'return',
+            sourceLocation: { line: 1, column: 1 },
+        },
         {
             type: 'stringLiteral',
             value: 'test string',

@@ -61,7 +61,7 @@
         "typescript": "3.7.2"
     },
     "prettier": {
-        "printWidth": 99,
+        "printWidth": 97,
         "singleQuote": true,
         "trailingComma": "es5",
         "tabWidth": 4

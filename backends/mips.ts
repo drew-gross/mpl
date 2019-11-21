@@ -127,7 +127,9 @@ const threeAddressCodeToMipsWithoutComment = (
         case 'stackRelease':
             return [`addiu $sp, $sp, ${tas.words * bytesInWord}`];
         default:
-            throw debug(`${(tas as any).kind} unhandled in threeAddressCodeToMipsWithoutComment`);
+            throw debug(
+                `${(tas as any).kind} unhandled in threeAddressCodeToMipsWithoutComment`
+            );
     }
 };
 
@@ -214,7 +216,8 @@ const spimExecutor = async (
     stdinPath: string
 ): Promise<ExecutionResult> => {
     // This string is always printed with spim starts. Strip it from stdout.
-    const exceptionsLoadedPreamble = 'Loaded: /usr/local/Cellar/spim/9.1.17/share/exceptions.s\n';
+    const exceptionsLoadedPreamble =
+        'Loaded: /usr/local/Cellar/spim/9.1.17/share/exceptions.s\n';
     try {
         const result = await execAndGetResult(`spim -file ${executablePath} < ${stdinPath}`);
         if ('error' in result) {

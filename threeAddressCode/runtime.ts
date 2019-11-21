@@ -199,7 +199,8 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord =>
         syscall print r:err; syscall
         syscall exit -1; syscall
     verify_no_leaks_advance_pointers:; verify_no_leaks_advance_pointers
-        r:currentBlockPointer = *(r:currentBlockPointer + ${1 * bytesInWord}); block = block->next
+        r:currentBlockPointer = *(r:currentBlockPointer + ${1 *
+            bytesInWord}); block = block->next
         goto verify_no_leaks_loop; Check next block
     verify_no_leaks_return:; All done
     `);

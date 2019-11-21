@@ -48,7 +48,12 @@ export type TargetThreeAddressStatement<TargetRegister> = { why: string } & (
     // Branches
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: TargetRegister; rhs: TargetRegister; label: string }
-    | { kind: 'gotoIfNotEqual'; lhs: TargetRegister; rhs: TargetRegister | number; label: string }
+    | {
+          kind: 'gotoIfNotEqual';
+          lhs: TargetRegister;
+          rhs: TargetRegister | number;
+          label: string;
+      }
     | { kind: 'gotoIfZero'; register: TargetRegister; label: string }
     | { kind: 'gotoIfGreater'; lhs: TargetRegister; rhs: TargetRegister; label: string }
     // Memory Writes
@@ -232,7 +237,10 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const argumentComputers: CompiledExpression<Statement>[] = [];
             ast.arguments.map((argument, index) => {
                 const argumentRegister = makeTemporary(`argument${index}`);
-                const argumentComputer = recurse({ ast: argument, destination: argumentRegister });
+                const argumentComputer = recurse({
+                    ast: argument,
+                    destination: argumentRegister,
+                });
                 argumentRegisters.push(argumentRegister);
                 argumentComputers.push(argumentComputer);
             });
@@ -335,7 +343,12 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             label: equalLabel,
                             why: 'Goto set 1 if equal',
                         },
-                        { kind: 'loadImmediate', value: 0, destination, why: 'Not equal, set 0' },
+                        {
+                            kind: 'loadImmediate',
+                            value: 0,
+                            destination,
+                            why: 'Not equal, set 0',
+                        },
                         { kind: 'goto', label: endOfConditionLabel, why: 'And goto exit' },
                         { kind: 'label', name: equalLabel, why: 'Sides are equal' },
                         { kind: 'loadImmediate', value: 1, destination, why: 'Set 1' },
@@ -427,7 +440,9 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             ...e1,
                             ...ins(`
                                 ${s(remainingCount)} = *(${s(rhs)} + 0); Get length of list
-                                ${s(sourceAddress)} = ${s(rhs)}; Local copy of source data pointer
+                                ${s(sourceAddress)} = ${s(
+                                rhs
+                            )}; Local copy of source data pointer
                                 ${s(itemSize)} = ${targetInfo.bytesInWord}; For multiplying
                                 ${s(remainingCount)} = ${s(remainingCount)} * ${s(
                                 itemSize
@@ -566,7 +581,9 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             };
             return compileExpression<Statement>([makeLhs, makeRhs, reqs], ([e1, e2, _]) => [
                 ...ins(
-                    `${s(combinedLength)} = 1; Combined length. Start with 1 for null terminator.`
+                    `${s(
+                        combinedLength
+                    )} = 1; Combined length. Start with 1 for null terminator.`
                 ),
                 ...e1,
                 ...e2,
@@ -1011,7 +1028,9 @@ export const makeTargetProgram = ({
                     }
                 }
             } else if (statement.kind == 'loadSymbolAddress') {
-                const usedFunction = nonMainFunctions.find(f2 => f2.name == statement.symbolName);
+                const usedFunction = nonMainFunctions.find(
+                    f2 => f2.name == statement.symbolName
+                );
                 if (usedFunction) {
                     if (
                         closedSet.find(f2 => f2.name == usedFunction.name) ||

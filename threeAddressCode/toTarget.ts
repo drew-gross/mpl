@@ -186,7 +186,11 @@ export default <TargetRegister>(
             return [{ ...tas, address: getRegister(tas.address) }];
         case 'storeMemoryByte':
             return [
-                { ...tas, address: getRegister(tas.address), contents: getRegister(tas.contents) },
+                {
+                    ...tas,
+                    address: getRegister(tas.address),
+                    contents: getRegister(tas.contents),
+                },
             ];
         case 'callByName': {
             // Add moves to get all the arguments into place

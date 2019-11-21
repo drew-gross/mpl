@@ -36,7 +36,9 @@ export const toString = (type: Type): string => {
             return type.kind + '<' + join(type.arguments.map(toString), ', ') + '>';
         case 'Product':
             return (
-                '{' + type.members.map(member => `${member.name}: ${toString(member.type)}`) + '}'
+                '{' +
+                type.members.map(member => `${member.name}: ${toString(member.type)}`) +
+                '}'
             );
         default:
             throw debug('Unhandled kind in type toString');

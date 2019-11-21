@@ -125,7 +125,9 @@ const extractVariable = (
     }
 };
 
-const extractVariables = (ctx: WithContext<Ast.UninferredStatement[]>): VariableDeclaration[] => {
+const extractVariables = (
+    ctx: WithContext<Ast.UninferredStatement[]>
+): VariableDeclaration[] => {
     const variables: VariableDeclaration[] = [];
     ctx.w.forEach((statement: Ast.UninferredStatement) => {
         switch (statement.kind) {
@@ -203,7 +205,10 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
         case 'functionLiteral':
             return [...result, ...flatten(ast.body.map(recurse))];
         case 'objectLiteral':
-            return [...result, ...flatten(ast.members.map(member => recurse(member.expression)))];
+            return [
+                ...result,
+                ...flatten(ast.members.map(member => recurse(member.expression))),
+            ];
         case 'memberAccess':
             return [...result, ...recurse(ast.lhs)];
         case 'number':
@@ -477,7 +482,11 @@ export const typeOfExpression = (
             const conditionType = recurse(ast.condition);
             const trueBranchType = recurse(ast.ifTrue);
             const falseBranchType = recurse(ast.ifFalse);
-            const combinedErrors = combineErrors([conditionType, trueBranchType, falseBranchType]);
+            const combinedErrors = combineErrors([
+                conditionType,
+                trueBranchType,
+                falseBranchType,
+            ]);
             if (
                 combinedErrors ||
                 isTypeError(trueBranchType) ||
@@ -665,7 +674,10 @@ const typeCheckStatement = (
                 return { errors: rightType, newVariables: [] };
             }
             // Left type is inferred as right type
-            return { errors: [], newVariables: [{ name: ast.destination, type: rightType.type }] };
+            return {
+                errors: [],
+                newVariables: [{ name: ast.destination, type: rightType.type }],
+            };
         }
         case 'reassignment': {
             const rightType = typeOfExpression({ ...ctx, w: ast.expression });
@@ -1410,7 +1422,11 @@ const compile = (
     );
 
     const stringLiterals: StringLiteralData[] = uniqueBy(s => s.value, nonUniqueStringLiterals);
-    const programTypeCheck = typeCheckFunction({ w: program, availableVariables, availableTypes });
+    const programTypeCheck = typeCheckFunction({
+        w: program,
+        availableVariables,
+        availableTypes,
+    });
     availableVariables = mergeDeclarations(availableVariables, programTypeCheck.identifiers);
 
     const typeErrors: TypeError[][] = functions.map(
@@ -1449,7 +1465,9 @@ const compile = (
     }
 
     const globalDeclarations: VariableDeclaration[] = program.statements
-        .filter(s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment')
+        .filter(
+            s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment'
+        )
         .map(assignment =>
             assignmentToGlobalDeclaration({
                 w: assignment as any,

@@ -334,7 +334,8 @@ export const makeExecutable = <TargetRegister>(
             {
                 kind: 'push',
                 register: registerDescription.functionResult,
-                why: "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
+                why:
+                    "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
             },
             ...(includeCleanup
                 ? [

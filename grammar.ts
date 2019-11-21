@@ -309,7 +309,10 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         rightCurlyBrace,
     ]),
     objectLiteralComponents: OneOf([
-        Sequence('objectLiteralComponents', ['objectLiteralComponent', 'objectLiteralComponents']),
+        Sequence('objectLiteralComponents', [
+            'objectLiteralComponent',
+            'objectLiteralComponents',
+        ]),
         'objectLiteralComponent',
     ]),
     objectLiteralComponent: Sequence('objectLiteralComponent', [

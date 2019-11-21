@@ -52,7 +52,9 @@ export const mplTest = async (
     };
 
     // Make sure it parses
-    const programInfo = await produceProgramInfo(source, stdin, { includeExecutionResult: true });
+    const programInfo = await produceProgramInfo(source, stdin, {
+        includeExecutionResult: true,
+    });
     if ('kind' in programInfo) {
         error('failed to produce info');
         return;

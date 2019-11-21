@@ -30,8 +30,10 @@ const fmtNum = num =>
     (num <= 0
         ? num.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })
         : '+' +
-          num.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })) +
-    '%';
+          num.toLocaleString(undefined, {
+              maximumFractionDigits: 2,
+              minimumFractionDigits: 2,
+          })) + '%';
 
 if (!before) {
     (async () => {
