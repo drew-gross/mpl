@@ -98,29 +98,40 @@ export const arrangeArgumentsForFunctionCall = <TargetRegister>(
     registers: RegisterDescription<TargetRegister>
 ): TargetThreeAddressStatement<TargetRegister>[] => {
     // TODO: Add some type check to ensure we have the right number of arguments
-    return args.map((register: any, index) => {
+    return args.map((arg, index) => {
         if (index < registers.functionArgument.length) {
-            if (typeof register == 'number') {
+            // Registers that fix in arguments go in arguments
+            if (typeof arg == 'number') {
                 return {
                     kind: 'loadImmediate',
-                    value: register,
+                    value: arg,
                     destination: registers.functionArgument[index],
-                    why: 'Rearrange Args',
+                    why: `Pass arg ${index} in register`,
                 };
             } else {
                 return {
                     kind: 'move',
-                    from: getRegister(register),
+                    from: getRegister(arg as Register),
                     to: registers.functionArgument[index],
-                    why: 'Rearrange Args',
+                    why: `Pass arg ${index} in register`,
+                };
+            }
+        } else {
+            // Registers that don't fit in arguments go on the stack, starting 1 space above the current stack pointer, going up
+            if (typeof arg == 'number') {
+                throw debug(
+                    "arrangeArgumentsForFunctionCall doesn't support literals on stack yet"
+                );
+            } else {
+                const stackSlot = index - registers.functionArgument.length;
+                return {
+                    kind: 'stackStore',
+                    register: getRegister(arg as Register),
+                    offset: -stackSlot,
+                    why: `Pass arg ${index} on stack (slot ${stackSlot})`,
                 };
             }
         }
-        return {
-            kind: 'push',
-            register: getRegister(register),
-            why: 'Rearrange Args',
-        };
     });
 };
 
@@ -151,6 +162,9 @@ const tacToTargetFunction = <TargetRegister>({
     finalCleanup,
     isMain,
 }: TacToTargetInput<TargetRegister>): TargetFunction<TargetRegister> => {
+    const stackSlotsForArguments =
+        threeAddressFunction.arguments.length - registers.functionArgument.length;
+
     const temporaryNameMaker = idAppender();
     const makeTemporary = name => ({ name: temporaryNameMaker(name) });
     const argumentStackOffset = r => {
@@ -160,9 +174,6 @@ const tacToTargetFunction = <TargetRegister>({
         }
         return argIndex - registers.functionArgument.length;
     };
-
-    const stackSlotsForArguments =
-        threeAddressFunction.arguments.length - registers.functionArgument.length;
 
     const instructionsWithArgsFromStack: Statement[] = flatten(
         threeAddressFunction.instructions.map(tas => {
@@ -181,7 +192,7 @@ const tacToTargetFunction = <TargetRegister>({
                             kind: 'unspill',
                             register: from,
                             offset: fromOffset,
-                            why: 'Load arg from stack',
+                            why: `Load arg ${from.name} from stack`,
                         });
                     }
                     const toOffset = argumentStackOffset(tas.to);
@@ -197,7 +208,7 @@ const tacToTargetFunction = <TargetRegister>({
                             kind: 'unspill',
                             register: lhs,
                             offset: lhsOffset,
-                            why: 'Load arg from stack',
+                            why: `Load arg from stack`,
                         });
                     }
                     let rhs = tas.rhs;
@@ -208,7 +219,7 @@ const tacToTargetFunction = <TargetRegister>({
                             kind: 'unspill',
                             register: rhs,
                             offset: rhsOffset,
-                            why: 'Load arg from stack',
+                            why: `Load arg from stack`,
                         });
                     }
                     result.push({ ...tas, lhs, rhs });
@@ -269,14 +280,17 @@ const tacToTargetFunction = <TargetRegister>({
     const usedRegisters = orderedSet<TargetRegister>(operatorCompare);
     Object.values(assignment.registerMap).forEach(usedRegisters.add);
 
-    const totalStackSlotsUsed = extraSavedRegisters.length + usedRegisters.size();
+    const totalStackSlotsUsed =
+        extraSavedRegisters.length + usedRegisters.size() + stackSlotsForArguments;
     const instructions: TargetThreeAddressStatement<TargetRegister>[] = [];
     if (!isMain) {
         let stackSlotIndex = 0;
         instructions.push({
             kind: 'stackReserve',
             words: totalStackSlotsUsed,
-            why: `Preamble: ${extraSavedRegisters.length} extra + ${usedRegisters.size()} used`,
+            why: `Preamble: ${
+                extraSavedRegisters.length
+            } extra + ${usedRegisters.size()} used + ${stackSlotsForArguments} args on stack`,
         });
         instructions.push(
             ...extraSavedRegisters.map(r => {
@@ -335,7 +349,9 @@ const tacToTargetFunction = <TargetRegister>({
         instructions.push({
             kind: 'stackRelease',
             words: totalStackSlotsUsed,
-            why: `Cleanup: ${extraSavedRegisters.length} extra + ${usedRegisters.size()} used`,
+            why: `Cleanup: ${
+                extraSavedRegisters.length
+            } extra + ${usedRegisters.size()} used + ${stackSlotsForArguments} args on stack`,
         });
     }
     instructions.push(...finalCleanup);

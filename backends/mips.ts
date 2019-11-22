@@ -115,7 +115,7 @@ const threeAddressCodeToMipsWithoutComment = (
         case 'loadStackOffset':
             return [
                 `move ${tas.register}, $sp`,
-                `addiu ${tas.register}, ${tas.register}, -${tas.offset}`,
+                `addiu ${tas.register}, ${tas.register}, ${-tas.offset}`,
             ];
         case 'stackStore':
             return [`sw ${tas.register}, ${tas.offset * bytesInWord}($sp)`];
@@ -123,7 +123,7 @@ const threeAddressCodeToMipsWithoutComment = (
             if (Number.isNaN(tas.offset * bytesInWord)) throw debug('nan!');
             return [`lw ${tas.register}, ${tas.offset * bytesInWord}($sp)`];
         case 'stackReserve':
-            return [`addiu $sp, $sp, -${tas.words * bytesInWord}`];
+            return [`addiu $sp, $sp, ${-(tas.words * bytesInWord)}`];
         case 'stackRelease':
             return [`addiu $sp, $sp, ${tas.words * bytesInWord}`];
         default:
