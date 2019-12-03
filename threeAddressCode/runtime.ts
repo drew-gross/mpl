@@ -1,14 +1,14 @@
 import { errors } from '../runtime-strings.js';
-import { ThreeAddressFunction } from './generator.js';
+import { Function } from './Function.js';
 import { parseFunctionOrDie, parseInstructionsOrDie as ins } from './parser.js';
 
-export type RuntimeFunctionGenerator = (bytesInWord: number) => ThreeAddressFunction;
+export type RuntimeFunctionGenerator = (bytesInWord: number) => Function;
 
 const switchableMallocImpl = (
     bytesInWord,
     include: 'include curr = *curr' | 'dont include curr = *curr',
     makeSyscall
-): ThreeAddressFunction => ({
+): Function => ({
     name: 'my_malloc',
     spills: 0,
     liveAtExit: [],

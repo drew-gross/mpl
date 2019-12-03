@@ -1,8 +1,8 @@
 import { UninferredStatement, Statement } from './ast.js';
-import { TargetInfo } from './threeAddressCode/generator.js';
+import { RegisterAgnosticTargetInfo } from './TargetInfo.js';
 import { Type, TypeDeclaration } from './types.js';
 import { FileResult } from 'fs-extra';
-import { ThreeAddressProgram } from './threeAddressCode/generator.js';
+import { Program } from './threeAddressCode/Program.js';
 
 export type VariableLocation = 'Global' | 'Parameter' | 'Stack';
 export type VariableDeclaration = {
@@ -62,9 +62,9 @@ export type Backend = {
     name: string;
     compile: (input: FrontendOutput) => Promise<CompilationResult | { error: string }>;
     compileTac?: (
-        input: ThreeAddressProgram,
+        input: Program,
         includeLeakCheck: boolean
     ) => Promise<CompilationResult | { error: string }>;
-    targetInfo?: TargetInfo;
+    targetInfo?: RegisterAgnosticTargetInfo;
     executors: Executor[];
 };

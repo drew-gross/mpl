@@ -5,7 +5,7 @@ import {
 } from './threeAddressCode/parser.js';
 import annontateSource from './annotateSource.js';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
-import { ThreeAddressFunction } from './threeAddressCode/generator.js';
+import { Function } from './threeAddressCode/Function.js';
 import { Statement } from './threeAddressCode/statement.js';
 import * as threeAddressCodeRuntime from './threeAddressCode/runtime.js';
 import test from 'ava';
@@ -1212,7 +1212,7 @@ test('computeBlockLiveness read and write in one', t => {
 });
 
 test('liveness analysis basic test', t => {
-    const testFunction: ThreeAddressFunction = {
+    const testFunction: Function = {
         name: 'test',
         spills: 0,
         liveAtExit: [],
@@ -1263,7 +1263,7 @@ test('liveness analysis basic test', t => {
 });
 
 test('4 block graph (length)', t => {
-    const lengthRTLF: ThreeAddressFunction = {
+    const lengthRTLF: Function = {
         name: 'length',
         spills: 0,
         liveAtExit: [],
@@ -1326,7 +1326,7 @@ test('4 block graph (length)', t => {
 });
 
 test('liveness of stringEquality', t => {
-    const complexFunction: ThreeAddressFunction = {
+    const complexFunction: Function = {
         name: 'complexFunction',
         spills: 0,
         liveAtExit: [],
@@ -1915,7 +1915,7 @@ test('Assign registers for syscall-only functions', t => {
 
 // Regression test from before we used hasSideEffects and used shitty heuristics for determining whether an instruction had side effects.
 test("Functions calls with side effects don't get removed for being dead", t => {
-    const f: ThreeAddressFunction = {
+    const f: Function = {
         name: 'anonymous_1',
         instructions: [
             {
@@ -1955,7 +1955,7 @@ test("Functions calls with side effects don't get removed for being dead", t => 
 
 // Regression test for when I accidentally removes all control flow bucause control flow doesn't change registers.
 test("Control flow instructions don't get removed for having no writes", t => {
-    const f: ThreeAddressFunction = {
+    const f: Function = {
         name: 'verify_no_leaks',
         instructions: [
             {

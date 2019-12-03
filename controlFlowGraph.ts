@@ -7,7 +7,7 @@ import join from './util/join.js';
 import idAppender from './util/idAppender.js';
 import { RegisterAssignment } from './backend-utils.js';
 import { Register, isEqual as registerIsEqual, compare as registerCompare } from './register.js';
-import { ThreeAddressFunction } from './threeAddressCode/generator.js';
+import { Function } from './threeAddressCode/Function.js';
 import {
     Statement,
     toString as tasToString,
@@ -283,7 +283,7 @@ const verifyingOverlappingJoin = (blocks: Set<Register>[][]): Set<Register>[] =>
 };
 
 // TODO: Maybe treat function resuls specially somehow? Its kinda always live but that feels too special-casey.
-export const tafLiveness = (taf: ThreeAddressFunction): Set<Register>[] => {
+export const tafLiveness = (taf: Function): Set<Register>[] => {
     const cfg = controlFlowGraph(taf.instructions);
     const blockLiveness = cfg.blocks.map(block => computeBlockLiveness(block, taf.arguments));
     const lastBlock = last(blockLiveness);
@@ -397,14 +397,11 @@ export const registerInterferenceGraph = (
     return result;
 };
 
-export const spill = (
-    taf: ThreeAddressFunction,
-    registerToSpill: Register
-): ThreeAddressFunction => {
+export const spill = (taf: Function, registerToSpill: Register): Function => {
     if (typeof registerToSpill == 'string') throw debug("Can't spill special registers");
     const currentSpillIndex = taf.spills + 1;
     const registerName = idAppender();
-    const newFunction: ThreeAddressFunction = {
+    const newFunction: Function = {
         instructions: [],
         arguments: taf.arguments,
         liveAtExit: taf.liveAtExit,
@@ -592,11 +589,8 @@ export const spill = (
 };
 
 // Returns a new function if anything changed
-const removeDeadStores = (
-    taf: ThreeAddressFunction,
-    liveness: Set<Register>[]
-): ThreeAddressFunction | undefined => {
-    const newFunction: ThreeAddressFunction = { ...taf, instructions: [] };
+const removeDeadStores = (taf: Function, liveness: Set<Register>[]): Function | undefined => {
+    const newFunction: Function = { ...taf, instructions: [] };
     let anythingChanged: boolean = false;
     if (taf.instructions.length + 1 != liveness.length)
         throw debug('Liveness length != taf length + 1');
@@ -625,9 +619,9 @@ const removeDeadStores = (
 };
 
 export const assignRegisters = <TargetRegister>(
-    taf: ThreeAddressFunction,
+    taf: Function,
     colors: TargetRegister[]
-): { assignment: RegisterAssignment<TargetRegister>; newFunction: ThreeAddressFunction } => {
+): { assignment: RegisterAssignment<TargetRegister>; newFunction: Function } => {
     let liveness = tafLiveness(taf);
     let newFunction = removeDeadStores(taf, liveness);
     while (newFunction) {

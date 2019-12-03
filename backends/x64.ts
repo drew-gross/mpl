@@ -1,17 +1,13 @@
-import { programToString } from '../threeAddressCode/programToString.js';
 import writeTempFile from '../util/writeTempFile.js';
 import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
 import { stringLiteralName, preceedingWhitespace, makeExecutable } from '../backend-utils.js';
-import {
-    TargetThreeAddressStatement,
-    makeTargetProgram,
-    TargetInfo,
-    TargetRegisterInfo,
-    ThreeAddressProgram,
-} from '../threeAddressCode/generator.js';
+import { makeTargetProgram } from '../threeAddressCode/generator.js';
+import { Statement } from '../targetCode/Statement.js';
+import { TargetInfo, RegisterAgnosticTargetInfo } from '../TargetInfo.js';
+import { Program, toString } from '../threeAddressCode/Program.js';
 import {
     mallocWithMmap,
     printWithWriteRuntimeFunction,
@@ -46,9 +42,7 @@ type X64Register =
     // Syscall arg or other non-general-purpose
     | 'rdx';
 
-const threeAddressCodeToX64WithoutComment = (
-    tas: TargetThreeAddressStatement<X64Register>
-): string[] => {
+const threeAddressCodeToX64WithoutComment = (tas: Statement<X64Register>): string[] => {
     switch (tas.kind) {
         case 'comment':
             return [''];
@@ -145,7 +139,7 @@ const threeAddressCodeToX64WithoutComment = (
     }
 };
 
-const threeAddressCodeToX64 = (tas: TargetThreeAddressStatement<X64Register>): string[] =>
+const threeAddressCodeToX64 = (tas: Statement<X64Register>): string[] =>
     threeAddressCodeToX64WithoutComment(tas).map(
         asm => `${preceedingWhitespace(tas)}${asm}; ${tas.why.trim()}`
     );
@@ -155,7 +149,7 @@ const bytesInWord = 8;
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `${stringLiteralName(literal)}: db "${literal.value}", 0;`;
 
-const x64Target: TargetInfo = {
+const x64Target: RegisterAgnosticTargetInfo = {
     bytesInWord,
     mainName: 'start',
     syscallNumbers: {
@@ -166,15 +160,17 @@ const x64Target: TargetInfo = {
         mmap: 0x020000c5,
         read: 0x02000003,
     },
-    mallocImpl: mallocWithMmap(bytesInWord),
-    readIntImpl: readIntThroughSyscall(bytesInWord),
-    printImpl: printWithWriteRuntimeFunction(bytesInWord),
+    functionImpls: {
+        mallocImpl: mallocWithMmap(bytesInWord),
+        readIntImpl: readIntThroughSyscall(bytesInWord),
+        printImpl: printWithWriteRuntimeFunction(bytesInWord),
+    },
 };
 
-const x64RegisterInfo: TargetRegisterInfo<X64Register> = {
+const x64RegisterInfo: TargetInfo<X64Register> = {
     extraSavedRegisters: [],
     registersClobberedBySyscall: ['r11'],
-    registerDescription: {
+    registers: {
         generalPurpose: ['r11', 'r12', 'r13', 'r14', 'r15', 'rdi', 'rsi', 'rbx'],
         functionArgument: ['r8', 'r9', 'r10'],
         functionResult: 'rax',
@@ -182,13 +178,14 @@ const x64RegisterInfo: TargetRegisterInfo<X64Register> = {
         syscallSelectAndResult: 'rax',
     },
     translator: threeAddressCodeToX64,
+    registerAgnosticInfo: x64Target,
 };
 
-const tacToExecutable = (tac: ThreeAddressProgram, includeCleanup: boolean) => `
+const tacToExecutable = (tac: Program, includeCleanup: boolean) => `
 global start
 
 section .text
-${makeExecutable(tac, x64Target, x64RegisterInfo, includeCleanup)}
+${makeExecutable(tac, x64Target, x64RegisterInfo, threeAddressCodeToX64, includeCleanup)}
 section .data
 first_block: dq 0
 ${join(tac.stringLiterals.map(stringLiteralDeclaration), '\n')}
@@ -205,12 +202,11 @@ const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { er
     compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target }), true);
 
 const compileTac = async (
-    tac: ThreeAddressProgram,
+    tac: Program,
     includeCleanup
 ): Promise<CompilationResult | { error: string }> => {
-    const threeAddressString = programToString(tac);
     const threeAddressCodeFile = await writeTempFile(
-        threeAddressString,
+        toString(tac),
         'three-address-core-x64',
         'txt'
     );

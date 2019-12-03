@@ -3,7 +3,8 @@ import flatten from '../util/list/flatten.js';
 import last from '../util/list/last.js';
 import { TokenSpec, lex, LexError } from '../parser-lib/lex.js';
 import { Register } from '../register.js';
-import { ThreeAddressProgram, ThreeAddressFunction } from './generator.js';
+import { Function } from './Function.js';
+import { Program } from './Program.js';
 import { Statement } from './statement.js';
 import {
     Grammar,
@@ -406,9 +407,9 @@ const grammar: Grammar<TacAstNode, TacToken> = {
 };
 
 const mergeParseResults = (
-    lhs: ThreeAddressProgram | ParseError[],
-    rhs: ThreeAddressProgram | ParseError[]
-): ThreeAddressProgram | ParseError[] => {
+    lhs: Program | ParseError[],
+    rhs: Program | ParseError[]
+): Program | ParseError[] => {
     let errors: ParseError[] = [];
     if (Array.isArray(lhs)) {
         errors = errors.concat(lhs);
@@ -419,7 +420,7 @@ const mergeParseResults = (
     if (errors.length > 0) {
         return errors;
     }
-    if ((lhs as ThreeAddressProgram).main && (rhs as ThreeAddressProgram).main) {
+    if ((lhs as Program).main && (rhs as Program).main) {
         return ['both functions had a main!'];
     }
 
@@ -793,7 +794,7 @@ const instructionsFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): S
 
 const functionFromParseResult = (
     ast: AstWithIndex<TacAstNode, TacToken>
-): ThreeAddressFunction | ParseError[] => {
+): Function | ParseError[] => {
     if (ast.type != 'function') {
         return ['Need a function'];
     }
@@ -857,9 +858,7 @@ const functionFromParseResult = (
     return { name, instructions, liveAtExit: [], spills, arguments: args };
 };
 
-const tacFromParseResult = (
-    ast: AstWithIndex<TacAstNode, TacToken>
-): ThreeAddressProgram | ParseError[] => {
+const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Program | ParseError[] => {
     if (!ast) debug('no type');
     switch (ast.type) {
         case 'program':
@@ -927,7 +926,7 @@ const tacFromParseResult = (
 
 type ParseError = string | ParseFailureInfo<TacToken>;
 
-export const parseProgram = (input: string): ThreeAddressProgram | LexError | ParseError[] => {
+export const parseProgram = (input: string): Program | LexError | ParseError[] => {
     const tokens = lex(tokenSpecs, input);
     if ('kind' in tokens) {
         return tokens;
@@ -939,7 +938,7 @@ export const parseProgram = (input: string): ThreeAddressProgram | LexError | Pa
     return tacFromParseResult(parseResult);
 };
 
-export const parseFunction = (input: string): ThreeAddressFunction | LexError | ParseError[] => {
+export const parseFunction = (input: string): Function | LexError | ParseError[] => {
     const tokens = lex(tokenSpecs, input);
     if ('kind' in tokens) {
         return tokens;
@@ -951,7 +950,7 @@ export const parseFunction = (input: string): ThreeAddressFunction | LexError | 
     return functionFromParseResult(parseResult);
 };
 
-export const parseFunctionOrDie = (tacString: string): ThreeAddressFunction => {
+export const parseFunctionOrDie = (tacString: string): Function => {
     const parsed = parseFunction(tacString);
     if ('kind' in parsed) {
         debugger;

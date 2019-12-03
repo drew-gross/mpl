@@ -2,7 +2,7 @@ import debug from './util/debug.js';
 import join from './util/join.js';
 import sum from './util/list/sum.js';
 import { VariableDeclaration } from './api.js';
-import { TargetInfo } from './threeAddressCode/generator.js';
+import { RegisterAgnosticTargetInfo } from './TargetInfo.js';
 
 export type ProductComponent = {
     name: string;
@@ -139,7 +139,7 @@ export const builtinFunctions: VariableDeclaration[] = [
 ];
 
 export const typeSize = (
-    targetInfo: TargetInfo,
+    targetInfo: RegisterAgnosticTargetInfo,
     type: Type,
     typeDeclarations: TypeDeclaration[]
 ): number => {

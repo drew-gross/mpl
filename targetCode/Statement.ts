@@ -1,28 +1,28 @@
 import debug from '../util/debug.js';
-import { Statement } from './statement.js';
+import { Statement as ThreeAddressStatement } from '../threeAddressCode/statement.js';
 import { Register, isEqual } from '../register.js';
 import {
     RegisterAssignment,
     arrangeArgumentsForFunctionCall,
     saveFunctionCallResult,
 } from '../backend-utils.js';
-import { RegisterDescription, TargetThreeAddressStatement } from './generator.js';
+import { TargetInfo, TargetRegisters } from '../TargetInfo.js';
 
 const getRegisterFromAssignment = <TargetRegister>(
     registerAssignment: RegisterAssignment<TargetRegister>,
     functionArguments: Register[], // TODO Maybe put the info about whether the register is an argument directly into the register?
-    specialRegisters: RegisterDescription<TargetRegister>,
+    registers: TargetRegisters<TargetRegister>,
     r: Register
 ): TargetRegister => {
     const argIndex = functionArguments.findIndex(arg => isEqual(arg, r));
     if (typeof r == 'string') {
         // TODO: remove "result" hack register
         if (r != 'result') debug('bad register');
-        return specialRegisters.functionResult;
+        return registers.functionResult;
     } else if (argIndex > -1) {
         // It's an argument!
-        if (argIndex < specialRegisters.functionArgument.length) {
-            return specialRegisters.functionArgument[argIndex];
+        if (argIndex < registers.functionArgument.length) {
+            return registers.functionArgument[argIndex];
         } else {
             throw debug('Need to load from stack I guess?');
         }
@@ -40,18 +40,79 @@ const getRegisterFromAssignment = <TargetRegister>(
     throw debug('should not get here');
 };
 
-export default <TargetRegister>(
-    tas: Statement,
-    stackOffset: number,
-    syscallNumbers,
-    registers: RegisterDescription<TargetRegister>,
-    functionArguments: Register[],
-    registerAssignment: RegisterAssignment<TargetRegister>,
-    exitLabel: string,
-    registersClobberedBySyscall: TargetRegister[] // TDDO: accept a backend info?
-): TargetThreeAddressStatement<TargetRegister>[] => {
-    const getRegister = r =>
-        getRegisterFromAssignment(registerAssignment, functionArguments, registers, r);
+export type Statement<TargetRegister> = { why: string } & (
+    | { kind: 'comment' }
+    // Arithmetic
+    | { kind: 'move'; from: TargetRegister; to: TargetRegister }
+    | { kind: 'loadImmediate'; value: number; destination: TargetRegister }
+    | { kind: 'addImmediate'; register: TargetRegister; amount: number }
+    | { kind: 'subtract'; lhs: TargetRegister; rhs: TargetRegister; destination: TargetRegister }
+    | { kind: 'add'; lhs: TargetRegister; rhs: TargetRegister; destination: TargetRegister }
+    | { kind: 'multiply'; lhs: TargetRegister; rhs: TargetRegister; destination: TargetRegister }
+    | { kind: 'increment'; register: TargetRegister }
+    // Labels
+    | { kind: 'label'; name: string }
+    | { kind: 'functionLabel'; name: string }
+    // Branches
+    | { kind: 'goto'; label: string }
+    | { kind: 'gotoIfEqual'; lhs: TargetRegister; rhs: TargetRegister; label: string }
+    | {
+          kind: 'gotoIfNotEqual';
+          lhs: TargetRegister;
+          rhs: TargetRegister | number;
+          label: string;
+      }
+    | { kind: 'gotoIfZero'; register: TargetRegister; label: string }
+    | { kind: 'gotoIfGreater'; lhs: TargetRegister; rhs: TargetRegister; label: string }
+    // Memory Writes
+    | { kind: 'storeGlobal'; from: TargetRegister; to: string }
+    | { kind: 'storeMemory'; from: TargetRegister; address: TargetRegister; offset: number }
+    | { kind: 'storeMemoryByte'; address: TargetRegister; contents: TargetRegister }
+    | { kind: 'storeZeroToMemory'; address: TargetRegister; offset: number }
+    // Memory Reads
+    | { kind: 'loadGlobal'; from: string; to: TargetRegister }
+    | { kind: 'loadMemory'; from: TargetRegister; to: TargetRegister; offset: number }
+    | { kind: 'loadMemoryByte'; address: TargetRegister; to: TargetRegister }
+    | { kind: 'loadSymbolAddress'; to: TargetRegister; symbolName: string }
+    // Function calls
+    | { kind: 'syscall' }
+    | { kind: 'callByName'; function: string }
+    | { kind: 'callByRegister'; function: TargetRegister }
+    | { kind: 'return' }
+    // Stack Management
+    | { kind: 'loadStackOffset'; register: TargetRegister; offset: number } // TODO: This should be fused with stackLoad probably, currently this offsets by bytes and stackLoad offsets by works.
+    | { kind: 'stackStore'; register: TargetRegister; offset: number }
+    | { kind: 'stackLoad'; register: TargetRegister; offset: number }
+    | { kind: 'stackReserve'; words: number }
+    | { kind: 'stackRelease'; words: number }
+    | { kind: 'push'; register: TargetRegister }
+    | { kind: 'pop'; register: TargetRegister }
+);
+
+export type ToTargetInput<TargetRegister> = {
+    tas: ThreeAddressStatement;
+    functionArguments: Register[];
+    targetInfo: TargetInfo<TargetRegister>;
+    stackOffset: number;
+    registerAssignment: RegisterAssignment<TargetRegister>;
+    exitLabel: string;
+};
+
+export const toTarget = <TargetRegister>({
+    tas,
+    functionArguments,
+    targetInfo,
+    stackOffset,
+    registerAssignment,
+    exitLabel,
+}: ToTargetInput<TargetRegister>): Statement<TargetRegister>[] => {
+    const getRegister = (r: Register): TargetRegister =>
+        getRegisterFromAssignment(
+            registerAssignment,
+            functionArguments,
+            targetInfo.registers,
+            r
+        );
     switch (tas.kind) {
         case 'empty':
             return [];
@@ -60,7 +121,7 @@ export default <TargetRegister>(
                 {
                     kind: 'move',
                     from: getRegister(tas.register),
-                    to: registers.functionResult,
+                    to: targetInfo.registers.functionResult,
                     why: 'Set return value',
                 },
                 { kind: 'goto', label: exitLabel, why: 'done' },
@@ -71,9 +132,9 @@ export default <TargetRegister>(
             return [tas];
         case 'syscall':
             // TODO: find a way to make this less opaque to register allocation so less spilling is necessary
-            if (tas.arguments.length > registers.syscallArgument.length)
+            if (tas.arguments.length > targetInfo.registers.syscallArgument.length)
                 throw debug(
-                    `this backend only supports ${registers.syscallArgument.length} syscall args`
+                    `this backend only supports ${targetInfo.registers.syscallArgument.length} syscall args`
                 );
 
             // We need to save some registers that the kernel is allowed to clobber during syscalls, ...
@@ -82,14 +143,14 @@ export default <TargetRegister>(
             // ... spcifically the place where the syscall stores the result ...
             if (
                 tas.destination &&
-                getRegister(tas.destination) != registers.syscallSelectAndResult
+                getRegister(tas.destination) != targetInfo.registers.syscallSelectAndResult
             ) {
-                registersToSave.push(registers.syscallSelectAndResult);
+                registersToSave.push(targetInfo.registers.syscallSelectAndResult);
             }
 
             // ... the registers used for arguments to the syscall ...
             tas.arguments.forEach((_, index) => {
-                const argRegister = registers.syscallArgument[index];
+                const argRegister = targetInfo.registers.syscallArgument[index];
                 if (tas.destination && getRegister(tas.destination) == argRegister) {
                     return;
                 }
@@ -97,14 +158,14 @@ export default <TargetRegister>(
             });
 
             // ... any any explicitly clobberable registers.
-            registersClobberedBySyscall.forEach(r => {
+            targetInfo.registersClobberedBySyscall.forEach(r => {
                 registersToSave.push(r);
             });
 
             // TODO: Allow a "replacements" feature, to convert complex/unsupported RTL instructions into supported ones
-            const syscallNumber = syscallNumbers[tas.name];
+            const syscallNumber = targetInfo.registerAgnosticInfo.syscallNumbers[tas.name];
             if (syscallNumber === undefined) debug(`missing syscall number for (${tas.name})`);
-            const result: TargetThreeAddressStatement<TargetRegister>[] = [
+            const result: Statement<TargetRegister>[] = [
                 ...registersToSave.map(r => ({
                     kind: 'push' as 'push',
                     register: r,
@@ -115,20 +176,20 @@ export default <TargetRegister>(
                         ? {
                               kind: 'loadImmediate' as 'loadImmediate',
                               value: arg,
-                              destination: registers.syscallArgument[index],
+                              destination: targetInfo.registers.syscallArgument[index],
                               why: 'syscallArg = immediate',
                           }
                         : {
                               kind: 'move' as 'move',
                               from: getRegister(arg),
-                              to: registers.syscallArgument[index],
+                              to: targetInfo.registers.syscallArgument[index],
                               why: 'syscallArg = register',
                           }
                 ),
                 {
                     kind: 'loadImmediate',
                     value: syscallNumber,
-                    destination: registers.syscallSelectAndResult,
+                    destination: targetInfo.registers.syscallSelectAndResult,
                     why: `syscall select (${tas.name})`,
                 },
                 { kind: 'syscall', why: 'syscall' },
@@ -136,11 +197,11 @@ export default <TargetRegister>(
                     ? ([
                           {
                               kind: 'move',
-                              from: registers.syscallSelectAndResult,
+                              from: targetInfo.registers.syscallSelectAndResult,
                               to: getRegister(tas.destination),
                               why: 'destination = syscallResult',
                           },
-                      ] as TargetThreeAddressStatement<TargetRegister>[])
+                      ] as Statement<TargetRegister>[])
                     : []),
                 ...registersToSave
                     .reverse()
@@ -198,20 +259,28 @@ export default <TargetRegister>(
             ];
         case 'callByName': {
             return [
-                ...arrangeArgumentsForFunctionCall(tas.arguments, getRegister, registers),
+                ...arrangeArgumentsForFunctionCall(
+                    tas.arguments,
+                    getRegister,
+                    targetInfo.registers
+                ),
                 { kind: 'callByName', function: tas.function, why: 'actually call' },
-                ...saveFunctionCallResult(tas.destination, getRegister, registers),
+                ...saveFunctionCallResult(tas.destination, getRegister, targetInfo.registers),
             ];
         }
         case 'callByRegister': {
             return [
-                ...arrangeArgumentsForFunctionCall(tas.arguments, getRegister, registers),
+                ...arrangeArgumentsForFunctionCall(
+                    tas.arguments,
+                    getRegister,
+                    targetInfo.registers
+                ),
                 {
                     kind: 'callByRegister',
                     function: getRegister(tas.function),
                     why: 'actually call',
                 },
-                ...saveFunctionCallResult(tas.destination, getRegister, registers),
+                ...saveFunctionCallResult(tas.destination, getRegister, targetInfo.registers),
             ];
         }
         case 'alloca':

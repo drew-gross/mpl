@@ -22,7 +22,7 @@
         "test-all": "npm run test && npm run benchmark",
         "test-watch": "parallelshell 'ava --watch --no-color' 'tsc --watch'",
         "compile": "tsc",
-        "compile-watch": "tsc --watch",
+        "compile-watch": "tsc --watch --preserveWatchOutput",
         "test-case": "tsc && node ./built/debug-test-case.js",
         "test-case-debug": "tsc && node --inspect --inspect-brk ./built/debug-test-case.js",
         "test-case-profile": "tsc && node_modules/.bin/0x ./built/debug-test-case.js",

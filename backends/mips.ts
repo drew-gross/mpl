@@ -10,14 +10,11 @@ import {
 import debug from '../util/debug.js';
 import execAndGetResult from '../util/execAndGetResult.js';
 import { stringLiteralName, preceedingWhitespace, makeExecutable } from '../backend-utils.js';
-import {
-    TargetThreeAddressStatement,
-    makeTargetProgram,
-    TargetInfo,
-    ThreeAddressProgram,
-    TargetRegisterInfo,
-} from '../threeAddressCode/generator.js';
-import { programToString } from '../threeAddressCode/programToString.js';
+import { makeTargetProgram } from '../threeAddressCode/generator.js';
+import { Statement } from '../targetCode/Statement.js';
+import { Program } from '../threeAddressCode/Program.js';
+import { TargetInfo, RegisterAgnosticTargetInfo } from '../TargetInfo.js';
+import { toString } from '../threeAddressCode/Program.js';
 import {
     mallocWithSbrk,
     printWithPrintRuntimeFunction,
@@ -50,9 +47,7 @@ type MipsRegister =
 
 const bytesInWord = 4;
 
-const threeAddressCodeToMipsWithoutComment = (
-    tas: TargetThreeAddressStatement<MipsRegister>
-): string[] => {
+const threeAddressCodeToMipsWithoutComment = (tas: Statement<MipsRegister>): string[] => {
     switch (tas.kind) {
         case 'comment':
             return [''];
@@ -133,7 +128,7 @@ const threeAddressCodeToMipsWithoutComment = (
     }
 };
 
-const threeAddressCodeToMips = (tas: TargetThreeAddressStatement<MipsRegister>): string[] =>
+const threeAddressCodeToMips = (tas: Statement<MipsRegister>): string[] =>
     threeAddressCodeToMipsWithoutComment(tas).map(
         asm => `${preceedingWhitespace(tas)}${asm} # ${tas.why.trim()}`
     ); // TODO: trim shouldn't be necessarary, the comment should just not have trailing newlines
@@ -143,7 +138,7 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 
 const globalDeclaration = (name: string, bytes: number): string => `${name}: .space ${bytes}`;
 
-const mipsTarget: TargetInfo = {
+const mipsTarget: RegisterAgnosticTargetInfo = {
     bytesInWord: 4,
     mainName: 'main',
     syscallNumbers: {
@@ -154,15 +149,17 @@ const mipsTarget: TargetInfo = {
         // mmap: 0, // There is no mmap. Should be unused on mips.
         exit: 17,
     },
-    mallocImpl: mallocWithSbrk(bytesInWord),
-    printImpl: printWithPrintRuntimeFunction(bytesInWord),
-    readIntImpl: readIntDirect(bytesInWord),
+    functionImpls: {
+        mallocImpl: mallocWithSbrk(bytesInWord),
+        printImpl: printWithPrintRuntimeFunction(bytesInWord),
+        readIntImpl: readIntDirect(bytesInWord),
+    },
 };
 
-const mipsRegisters: TargetRegisterInfo<MipsRegister> = {
+const mipsRegisters: TargetInfo<MipsRegister> = {
     extraSavedRegisters: ['$ra'],
     registersClobberedBySyscall: [],
-    registerDescription: {
+    registers: {
         generalPurpose: ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'],
         functionArgument: ['$s0', '$s1', '$s2'],
         functionResult: '$a0',
@@ -170,9 +167,10 @@ const mipsRegisters: TargetRegisterInfo<MipsRegister> = {
         syscallSelectAndResult: '$v0',
     },
     translator: threeAddressCodeToMips,
+    registerAgnosticInfo: mipsTarget,
 };
 
-const tacToExecutable = (tac: ThreeAddressProgram, includeCleanup: boolean) => `
+const tacToExecutable = (tac: Program, includeCleanup: boolean) => `
 .data
 ${Object.values(tac.globals)
     .map(({ mangledName, bytes }) => globalDeclaration(mangledName, bytes))
@@ -186,19 +184,18 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${makeExecutable(tac, mipsTarget, mipsRegisters, includeCleanup)}
+${makeExecutable(tac, mipsTarget, mipsRegisters, threeAddressCodeToMips, includeCleanup)}
 `;
 
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
     compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget }), true);
 
 const compileTac = async (
-    tac: ThreeAddressProgram,
+    tac: Program,
     includeCleanup: boolean
 ): Promise<CompilationResult | { error: string }> => {
-    const threeAddressString = programToString(tac);
     const threeAddressCodeFile = await writeTempFile(
-        threeAddressString,
+        toString(tac),
         'three-address-code-mips',
         'txt'
     );

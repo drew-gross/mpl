@@ -1,5 +1,4 @@
 import { parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
-import { programToString } from './threeAddressCode/programToString.js';
 import {
     mallocWithSbrk,
     printWithPrintRuntimeFunction,
@@ -14,7 +13,7 @@ import ParseError from './parser-lib/ParseError.js';
 import join from './util/join.js';
 import { toString as typeToString } from './types.js';
 import { astToString } from './ast.js';
-import { ThreeAddressProgram } from './threeAddressCode/generator.js';
+import { Program, toString as programToString } from './threeAddressCode/Program.js';
 import { makeTargetProgram } from './threeAddressCode/generator.js';
 import { backends } from './backend-utils.js';
 
@@ -28,7 +27,7 @@ type ProgramInfo = {
     tokens: Token<MplToken>[];
     ast: MplAst;
     threeAddressCode: string;
-    threeAddressRoundTrip: ThreeAddressProgram | LexError | ParseError[];
+    threeAddressRoundTrip: Program | LexError | ParseError[];
     frontendOutput: FrontendOutput;
     backendResults: BackendResult[];
     structure: string;
@@ -95,9 +94,11 @@ export default async (
             bytesInWord: 13,
             mainName: 'main',
             syscallNumbers: {},
-            mallocImpl: mallocWithSbrk(7),
-            printImpl: printWithPrintRuntimeFunction(11),
-            readIntImpl: readIntDirect(5),
+            functionImpls: {
+                mallocImpl: mallocWithSbrk(7),
+                printImpl: printWithPrintRuntimeFunction(11),
+                readIntImpl: readIntDirect(5),
+            },
         },
     });
 

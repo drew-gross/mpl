@@ -1,3 +1,6 @@
+import { RegisterAgnosticTargetInfo } from '../TargetInfo.js';
+import { Function } from './Function.js';
+import { Program } from './Program.js';
 import {
     length,
     intFromString,
@@ -20,66 +23,14 @@ import {
     freeGlobalsInstructions,
 } from '../backend-utils.js';
 import { Register, toString as s } from '../register.js';
-import { FrontendOutput, Function, VariableDeclaration, StringLiteralData } from '../api.js';
+import {
+    FrontendOutput,
+    Function as ApiFunction,
+    VariableDeclaration,
+    StringLiteralData,
+} from '../api.js';
 import { Statement } from './statement.js';
 import { parseInstructionsOrDie as ins } from './parser.js';
-
-export type ThreeAddressFunction = {
-    instructions: Statement[];
-    arguments: Register[];
-    liveAtExit: Register[];
-    spills: number;
-    name: string;
-};
-
-export type TargetThreeAddressStatement<TargetRegister> = { why: string } & (
-    | { kind: 'comment' }
-    // Arithmetic
-    | { kind: 'move'; from: TargetRegister; to: TargetRegister }
-    | { kind: 'loadImmediate'; value: number; destination: TargetRegister }
-    | { kind: 'addImmediate'; register: TargetRegister; amount: number }
-    | { kind: 'subtract'; lhs: TargetRegister; rhs: TargetRegister; destination: TargetRegister }
-    | { kind: 'add'; lhs: TargetRegister; rhs: TargetRegister; destination: TargetRegister }
-    | { kind: 'multiply'; lhs: TargetRegister; rhs: TargetRegister; destination: TargetRegister }
-    | { kind: 'increment'; register: TargetRegister }
-    // Labels
-    | { kind: 'label'; name: string }
-    | { kind: 'functionLabel'; name: string }
-    // Branches
-    | { kind: 'goto'; label: string }
-    | { kind: 'gotoIfEqual'; lhs: TargetRegister; rhs: TargetRegister; label: string }
-    | {
-          kind: 'gotoIfNotEqual';
-          lhs: TargetRegister;
-          rhs: TargetRegister | number;
-          label: string;
-      }
-    | { kind: 'gotoIfZero'; register: TargetRegister; label: string }
-    | { kind: 'gotoIfGreater'; lhs: TargetRegister; rhs: TargetRegister; label: string }
-    // Memory Writes
-    | { kind: 'storeGlobal'; from: TargetRegister; to: string }
-    | { kind: 'storeMemory'; from: TargetRegister; address: TargetRegister; offset: number }
-    | { kind: 'storeMemoryByte'; address: TargetRegister; contents: TargetRegister }
-    | { kind: 'storeZeroToMemory'; address: TargetRegister; offset: number }
-    // Memory Reads
-    | { kind: 'loadGlobal'; from: string; to: TargetRegister }
-    | { kind: 'loadMemory'; from: TargetRegister; to: TargetRegister; offset: number }
-    | { kind: 'loadMemoryByte'; address: TargetRegister; to: TargetRegister }
-    | { kind: 'loadSymbolAddress'; to: TargetRegister; symbolName: string }
-    // Function calls
-    | { kind: 'syscall' }
-    | { kind: 'callByName'; function: string }
-    | { kind: 'callByRegister'; function: TargetRegister }
-    | { kind: 'return' }
-    // Stack Management
-    | { kind: 'loadStackOffset'; register: TargetRegister; offset: number } // TODO: This should be fused with stackLoad probably, currently this offsets by bytes and stackLoad offsets by works.
-    | { kind: 'stackStore'; register: TargetRegister; offset: number }
-    | { kind: 'stackLoad'; register: TargetRegister; offset: number }
-    | { kind: 'stackReserve'; words: number }
-    | { kind: 'stackRelease'; words: number }
-    | { kind: 'push'; register: TargetRegister }
-    | { kind: 'pop'; register: TargetRegister }
-);
 
 export type GlobalInfo = { newName: string; originalDeclaration: VariableDeclaration };
 
@@ -92,40 +43,18 @@ export type BackendOptions = {
     makeTemporary: (name: string) => Register;
     makeLabel: (name: string) => string;
     types: TypeDeclaration[];
-    targetInfo: TargetInfo;
+    targetInfo: RegisterAgnosticTargetInfo;
 };
 
-export type TargetInfo = {
-    bytesInWord: number;
-    mainName: string;
-    syscallNumbers: any;
-    // These functions tend to have platform specific implementations. Put your platforms implementation here.
-    mallocImpl: ThreeAddressFunction;
-    printImpl: ThreeAddressFunction;
-    readIntImpl: ThreeAddressFunction;
-};
-
-// TODO: maybe merge RegisterDescription and TargetRegisterInfo?
-export type RegisterDescription<TargetRegister> = {
-    generalPurpose: TargetRegister[];
-    functionArgument: TargetRegister[];
-    functionResult: TargetRegister;
-    syscallArgument: TargetRegister[];
-    syscallSelectAndResult: TargetRegister;
-};
-
-export type TargetRegisterInfo<TargetRegister> = {
-    extraSavedRegisters: TargetRegister[];
-    registersClobberedBySyscall: TargetRegister[];
-    registerDescription: RegisterDescription<TargetRegister>;
-    translator: (tas: TargetThreeAddressStatement<TargetRegister>) => string[];
-};
-
-const memberOffset = (type: Type, memberName: string, targetInfo: TargetInfo): number => {
+const memberOffset = (
+    type: Type,
+    memberName: string,
+    { bytesInWord }: RegisterAgnosticTargetInfo
+): number => {
     if (type.kind != 'Product') throw debug('need a product here');
     const result = type.members.findIndex(m => m.name == memberName);
     if (result < 0) throw debug('coudnt find member');
-    return result * targetInfo.bytesInWord;
+    return result * bytesInWord;
 };
 
 export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression<Statement> => {
@@ -848,15 +777,15 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
 };
 
 export const constructFunction = (
-    f: Function,
+    f: ApiFunction,
     globalNameMap,
     stringLiterals,
     makeLabel,
     makeTemporary,
     types: TypeDeclaration[],
-    targetInfo: TargetInfo,
+    targetInfo: RegisterAgnosticTargetInfo,
     liveAtExit: Register[]
-): ThreeAddressFunction => {
+): Function => {
     const variablesInScope: { [key: string]: Register } = {};
     const args: Register[] = [];
     f.parameters.forEach((parameter, index) => {
@@ -891,29 +820,21 @@ export const constructFunction = (
                 ...compiledProgram.prepare,
                 ...compiledProgram.execute,
                 ...compiledProgram.cleanup,
-                // TODO: Freeing locals should be necessary...
             ];
         })
     );
     return { name: f.name, instructions: functionCode, liveAtExit, spills: 0, arguments: args };
 };
 
-export type ThreeAddressProgram = {
-    globals: { [key: string]: { mangledName: string; bytes: number } };
-    functions: ThreeAddressFunction[];
-    main: ThreeAddressFunction | undefined;
-    stringLiterals: StringLiteralData[];
-};
-
 export type MakeAllFunctionsInput = {
     backendInputs: FrontendOutput;
-    targetInfo: TargetInfo;
+    targetInfo: RegisterAgnosticTargetInfo;
 };
 
 export const makeTargetProgram = ({
     backendInputs,
     targetInfo,
-}: MakeAllFunctionsInput): ThreeAddressProgram => {
+}: MakeAllFunctionsInput): Program => {
     const { types, functions, program, globalDeclarations, stringLiterals } = backendInputs;
     const temporaryNameMaker = idAppender();
     const makeTemporary = name => ({ name: temporaryNameMaker(name) });
@@ -935,7 +856,7 @@ export const makeTargetProgram = ({
         };
     });
 
-    const userFunctions: ThreeAddressFunction[] = functions.map(f =>
+    const userFunctions: Function[] = functions.map(f =>
         constructFunction(
             f,
             globalNameMap,
@@ -970,7 +891,7 @@ export const makeTargetProgram = ({
         })
     );
 
-    const mainFunction: ThreeAddressFunction = {
+    const mainFunction: Function = {
         name: 'main',
         instructions: mainProgramInstructions,
         liveAtExit: [exitCodeRegister],
@@ -994,20 +915,20 @@ export const makeTargetProgram = ({
     ].map(f => f(targetInfo.bytesInWord));
     const nonMainFunctions = [
         ...runtimeFunctions,
-        targetInfo.mallocImpl,
-        targetInfo.printImpl,
-        targetInfo.readIntImpl,
+        targetInfo.functionImpls.mallocImpl,
+        targetInfo.functionImpls.printImpl,
+        targetInfo.functionImpls.readIntImpl,
         ...userFunctions,
     ];
 
     // Omit unused functions
-    const closedSet: ThreeAddressFunction[] = [];
+    const closedSet: Function[] = [];
     // Seed open set with the functions we are guaranteed to use:
     //  - main: entry point
     //  - verify_no_leaks: currently always called as a sanity check
     //  - free_globals: freeing globals is done externally to main
     // Always include verify_no_leaks and free_globals because we always call them, from the external cleanup
-    const openSet: ThreeAddressFunction[] = [
+    const openSet: Function[] = [
         mainFunction,
         verifyNoLeaks(targetInfo.bytesInWord),
         freeGlobals,
