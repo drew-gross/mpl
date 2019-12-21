@@ -132,24 +132,29 @@ export const makeExecutable = <TargetRegister>(
     includeCleanup: boolean
 ) => {
     if (!main) throw debug('no main');
-    const functionStrings = functions
-        .map(f =>
-            toTarget({
-                threeAddressFunction: f,
-                targetInfo: targetRegisterInfo,
-                finalCleanup: [],
-                isMain: false,
-            })
-        )
-        .map(
-            ({ name, instructions }) => `
+    const targetFunctions = functions.map(f =>
+        toTarget({
+            threeAddressFunction: f,
+            targetInfo: targetRegisterInfo,
+            finalCleanup: [],
+            isMain: false,
+        })
+    );
+    const targetMain = toTarget({
+        threeAddressFunction: main,
+        targetInfo: targetRegisterInfo,
+        finalCleanup: [],
+        isMain: true,
+    });
+    const functionStrings = targetFunctions.map(
+        ({ name, instructions }) => `
 ${name}:
 ${join(flatten(instructions.map(translator)), '\n')}`
-        );
+    );
 
     const mainString = `
 ${main.name}:
-${join(flatten(main.instructions.map(translator)), '\n')}`;
+${join(flatten(targetMain.instructions.map(translator)), '\n')}`;
 
     // Main needs to go first for mars, because mars just starts executing at the top of the file
     return `

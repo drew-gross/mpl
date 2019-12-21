@@ -56,6 +56,7 @@ const threeAddressCodeToMipsWithoutComment = (tas: Statement<MipsRegister>): str
         case 'move':
             return [`move ${tas.to}, ${tas.from}`];
         case 'loadImmediate':
+            if ((tas.destination as any).name == 'result_6') debug('seres');
             return [`li ${tas.destination}, ${tas.value}`];
         case 'multiply':
             return [`mult ${tas.lhs}, ${tas.rhs}`, `mflo ${tas.destination}`];

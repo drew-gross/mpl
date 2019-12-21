@@ -155,6 +155,7 @@ import annotateSource from './annotateSource.js';
             executionResults.forEach(r => {
                 console.log(`        Executor: ${r.executorName}`);
                 if ('error' in r) {
+                    // TODO: put debug instructions too
                     console.log(chalk.red(`            Execution Failed: ${r.error}`));
                 } else {
                     let log =

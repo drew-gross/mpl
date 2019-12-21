@@ -72,6 +72,9 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
     const recurse = newInput => astToThreeAddressCode({ ...input, ...newInput });
     switch (ast.kind) {
         case 'number':
+            console.log(destination);
+            console.log(`${s(destination)} = ${ast.value}; Load number literal`);
+
             return compileExpression<Statement>([], ([]) =>
                 ins(`${s(destination)} = ${ast.value}; Load number literal`)
             );

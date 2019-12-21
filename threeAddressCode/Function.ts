@@ -16,7 +16,7 @@ export const toString = ({ name, instructions, arguments: args }: Function): str
     if (!args) debug('no args');
     return join(
         [
-            `(function) ${name}(${join(args.map(toString), ', ')}):`,
+            `(function) ${name}(${join(args.map(rToS), ', ')}):`,
             ...instructions.map(statementToString),
         ],
         '\n'
