@@ -136,14 +136,14 @@ export const makeExecutable = <TargetRegister>(
         toTarget({
             threeAddressFunction: f,
             targetInfo: targetRegisterInfo,
-            finalCleanup: [],
+            finalCleanup: [{ kind: 'return', why: 'The Final Return!' }],
             isMain: false,
         })
     );
     const targetMain = toTarget({
         threeAddressFunction: main,
         targetInfo: targetRegisterInfo,
-        finalCleanup: [],
+        finalCleanup: [{ kind: 'return', why: 'The Final Return!' }],
         isMain: true,
     });
     const functionStrings = targetFunctions.map(
