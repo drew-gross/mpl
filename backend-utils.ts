@@ -187,7 +187,7 @@ ${join(flatten(instructions.map(translator)), '\n')}`
     );
 
     const mainString = `
-${main.name}:
+${targetRegisterInfo.registerAgnosticInfo.mainName}:
 ${join(flatten(targetMain.instructions.map(translator)), '\n')}`;
 
     // Main needs to go first for mars, because mars just starts executing at the top of the file
