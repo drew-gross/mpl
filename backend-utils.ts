@@ -143,7 +143,41 @@ export const makeExecutable = <TargetRegister>(
     const targetMain = toTarget({
         threeAddressFunction: main,
         targetInfo: targetRegisterInfo,
-        finalCleanup: [{ kind: 'return', why: 'The Final Return!' }],
+        finalCleanup: [
+            // TODO: push/pop exit code is jank and should be removed.
+            {
+                kind: 'push',
+                register: targetRegisterInfo.registers.functionResult,
+                why:
+                    "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
+            },
+            ...(includeCleanup
+                ? [
+                      {
+                          kind: 'callByName' as 'callByName',
+                          function: 'free_globals',
+                          why: 'free_globals',
+                      },
+                      {
+                          kind: 'callByName' as 'callByName',
+                          function: 'verify_no_leaks',
+                          why: 'verify_no_leaks',
+                      },
+                  ]
+                : []),
+            {
+                kind: 'pop' as 'pop',
+                register: targetRegisterInfo.registers.syscallArgument[0],
+                why: 'restore exit code',
+            },
+            {
+                kind: 'loadImmediate' as 'loadImmediate',
+                destination: targetRegisterInfo.registers.syscallSelectAndResult,
+                value: syscallNumbers.exit,
+                why: 'prepare to exit',
+            },
+            { kind: 'syscall' as 'syscall', why: 'exit' },
+        ],
         isMain: true,
     });
     const functionStrings = targetFunctions.map(
