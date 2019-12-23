@@ -45,10 +45,13 @@ export type ExecutionResult =
           executorName: string;
       };
 
+export type Assembly = {};
+
 export type CompilationResult =
     | {
           sourceFile: FileResult;
           binaryFile: FileResult;
+          threeAddressCode?: Assembly;
           threeAddressCodeFile: FileResult | undefined;
       }
     | { error: string; intermediateFile?: FileResult };

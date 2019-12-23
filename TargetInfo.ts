@@ -11,7 +11,6 @@ export type TargetFunctionImpls = {
 export type RegisterAgnosticTargetInfo = {
     functionImpls: TargetFunctionImpls;
     bytesInWord: number;
-    mainName: string;
     syscallNumbers: any;
 };
 

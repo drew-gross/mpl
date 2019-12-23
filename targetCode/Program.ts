@@ -1,6 +1,5 @@
 import debug from '../util/debug.js';
 import { toTarget as functionToTarget, Function } from './Function.js';
-import { StringLiteralData } from '../api.js';
 import { Function as ThreeAddressFunction } from '../threeAddressCode/Function.js';
 import { Program as ThreeAddressProgram } from '../threeAddressCode/Program.js';
 import { TargetInfo } from '../TargetInfo.js';
@@ -26,7 +25,7 @@ export const toTarget = <TargetRegister>({
 
     const mainFn: ThreeAddressFunction = {
         ...main,
-        name: targetInfo.registerAgnosticInfo.mainName,
+        name: 'unused', // TODO: make name optional here
     };
     return {
         functions: program.functions.map(f =>

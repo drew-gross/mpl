@@ -5,7 +5,7 @@ import {
     writes,
 } from '../threeAddressCode/Statement.js';
 import { Function as ThreeAddressFunction } from '../threeAddressCode/Function';
-import { Register, isEqual } from '../register.js';
+import { isEqual } from '../register.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
@@ -21,9 +21,7 @@ type ToTargetInput<TargetRegister> = {
     isMain: boolean; // Controls whether to save/restore registers
 };
 
-type ArgumentOnStack = { argName: string };
-
-type StackUsage = ArgumentOnStack[];
+type StackUsage = string[]; // For not just comment. TODO: structured data
 
 export type Function<TargetRegister> = {
     name: string;
@@ -40,7 +38,7 @@ export const toTarget = <TargetRegister>({
     const stackUsage: StackUsage = [];
     threeAddressFunction.arguments.map((arg, index) => {
         if (index > targetInfo.registers.functionArgument.length) {
-            stackUsage.push({ argName: arg.name });
+            stackUsage.push(`Argument: ${arg.name}`);
         }
     });
 
@@ -165,10 +163,7 @@ export const toTarget = <TargetRegister>({
         instructions.push({
             kind: 'stackReserve',
             words: totalStackSlotsUsed,
-            why: `Preamble: Stack Slots: ${join(
-                stackUsage.map(({ argName }) => argName),
-                ' '
-            )}`,
+            why: `Preamble: Stack Slots: [${join(stackUsage, ', ')}]`,
         });
         instructions.push(
             ...targetInfo.extraSavedRegisters.map(r => {

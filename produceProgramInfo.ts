@@ -92,7 +92,6 @@ export default async (
         backendInputs: frontendOutput,
         targetInfo: {
             bytesInWord: 13,
-            mainName: 'main',
             syscallNumbers: {},
             functionImpls: {
                 mallocImpl: mallocWithSbrk(7),

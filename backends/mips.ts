@@ -9,7 +9,12 @@ import {
 } from '../api.js';
 import debug from '../util/debug.js';
 import execAndGetResult from '../util/execAndGetResult.js';
-import { stringLiteralName, preceedingWhitespace, makeExecutable } from '../backend-utils.js';
+import {
+    stringLiteralName,
+    preceedingWhitespace,
+    makeExecutable,
+    executableToString,
+} from '../backend-utils.js';
 import { makeTargetProgram } from '../threeAddressCode/generator.js';
 import { Statement } from '../targetCode/Statement.js';
 import { Program } from '../threeAddressCode/Program.js';
@@ -141,7 +146,6 @@ const globalDeclaration = (name: string, bytes: number): string => `${name}: .sp
 
 const mipsTarget: RegisterAgnosticTargetInfo = {
     bytesInWord: 4,
-    mainName: 'main',
     syscallNumbers: {
         printInt: 1,
         readInt: 5,
@@ -171,7 +175,16 @@ const mipsRegisters: TargetInfo<MipsRegister> = {
     registerAgnosticInfo: mipsTarget,
 };
 
-const tacToExecutable = (tac: Program, includeCleanup: boolean) => `
+const tacToExecutable = (tac: Program, includeCleanup: boolean) => {
+    const executable = makeExecutable(
+        tac,
+        mipsTarget,
+        mipsRegisters,
+        threeAddressCodeToMips,
+        includeCleanup
+    );
+    executable.main.name = 'main';
+    return `
 .data
 ${Object.values(tac.globals)
     .map(({ mangledName, bytes }) => globalDeclaration(mangledName, bytes))
@@ -185,8 +198,9 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${makeExecutable(tac, mipsTarget, mipsRegisters, threeAddressCodeToMips, includeCleanup)}
+${executableToString(executable)}
 `;
+};
 
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
     compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget }), true);
@@ -206,7 +220,7 @@ const compileTac = async (
         'program',
         'mips'
     );
-    return { sourceFile, binaryFile: sourceFile, threeAddressCodeFile };
+    return { sourceFile, binaryFile: sourceFile, threeAddressCodeFile, threeAddressCode: {} };
 };
 
 const spimExecutor = async (

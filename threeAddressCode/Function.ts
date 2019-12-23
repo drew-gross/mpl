@@ -1,6 +1,5 @@
 import { toString as rToS, Register } from '../register.js';
 import { toString as statementToString, Statement } from './Statement.js';
-import { filter, FilterPredicate } from '../util/list/filter.js';
 import join from '../util/join.js';
 import debug from '../util/debug.js';
 
@@ -21,12 +20,4 @@ export const toString = ({ name, instructions, arguments: args }: Function): str
         ],
         '\n'
     );
-};
-
-const syscallArgToString = (regOrNumber: number | Register): string => {
-    if (typeof regOrNumber == 'number') {
-        return regOrNumber.toString();
-    } else {
-        return rToS(regOrNumber);
-    }
 };

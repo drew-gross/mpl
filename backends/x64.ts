@@ -3,7 +3,12 @@ import { exec } from 'child-process-promise';
 import { errors } from '../runtime-strings.js';
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { stringLiteralName, preceedingWhitespace, makeExecutable } from '../backend-utils.js';
+import {
+    stringLiteralName,
+    preceedingWhitespace,
+    makeExecutable,
+    executableToString,
+} from '../backend-utils.js';
 import { makeTargetProgram } from '../threeAddressCode/generator.js';
 import { Statement } from '../targetCode/Statement.js';
 import { TargetInfo, RegisterAgnosticTargetInfo } from '../TargetInfo.js';
@@ -151,7 +156,6 @@ const stringLiteralDeclaration = (literal: StringLiteralData) =>
 
 const x64Target: RegisterAgnosticTargetInfo = {
     bytesInWord,
-    mainName: 'start',
     syscallNumbers: {
         // printInt: XXX, // Should be unused on x64
         print: 0x02000004,
@@ -181,11 +185,20 @@ const x64RegisterInfo: TargetInfo<X64Register> = {
     registerAgnosticInfo: x64Target,
 };
 
-const tacToExecutable = (tac: Program, includeCleanup: boolean) => `
+const tacToExecutable = (tac: Program, includeCleanup: boolean) => {
+    const executable = makeExecutable(
+        tac,
+        x64Target,
+        x64RegisterInfo,
+        threeAddressCodeToX64,
+        includeCleanup
+    );
+    executable.main.name = 'start';
+    return `
 global start
 
 section .text
-${makeExecutable(tac, x64Target, x64RegisterInfo, threeAddressCodeToX64, includeCleanup)}
+${executableToString(executable)}
 section .data
 first_block: dq 0
 ${join(tac.stringLiterals.map(stringLiteralDeclaration), '\n')}
@@ -197,6 +210,7 @@ ${Object.keys(errors)
     .map(key => `${errors[key].name}: db "${errors[key].value}", 0`)
     .join('\n')}
 `;
+};
 
 const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
     compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target }), true);
@@ -227,6 +241,7 @@ const compileTac = async (
             sourceFile,
             binaryFile,
             threeAddressCodeFile,
+            threeAddressCode: {},
         };
     } catch (e) {
         return { error: `Exception: ${e.message}` };

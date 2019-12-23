@@ -1,7 +1,5 @@
 import { StringLiteralData } from '../api.js';
-import { toString as statementToString } from './statement.js';
 import { Function, toString as functionToString } from './Function.js';
-import debug from '../util/debug.js';
 import join from '../util/join.js';
 
 export type Program = {
