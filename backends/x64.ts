@@ -198,7 +198,7 @@ const tacToExecutable = (tac: Program, includeCleanup: boolean) => {
 global start
 
 section .text
-${executableToString(executable)}
+${executableToString(';', executable)}
 section .data
 first_block: dq 0
 ${join(tac.stringLiterals.map(stringLiteralDeclaration), '\n')}

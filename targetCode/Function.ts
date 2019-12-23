@@ -8,7 +8,6 @@ import { Function as ThreeAddressFunction } from '../threeAddressCode/Function';
 import { isEqual } from '../register.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 import debug from '../util/debug.js';
-import join from '../util/join.js';
 import { orderedSet, operatorCompare } from '../util/ordered-set.js';
 import flatten from '../util/list/flatten.js';
 import { Statement as TargetStatement, toTarget as statementToTarget } from './Statement.js';
@@ -21,7 +20,7 @@ type ToTargetInput<TargetRegister> = {
     isMain: boolean; // Controls whether to save/restore registers
 };
 
-type StackUsage = string[]; // For not just comment. TODO: structured data
+export type StackUsage = string[]; // For not just comment. TODO: structured data
 
 export type Function<TargetRegister> = {
     name: string;
@@ -163,7 +162,7 @@ export const toTarget = <TargetRegister>({
         instructions.push({
             kind: 'stackReserve',
             words: totalStackSlotsUsed,
-            why: `Preamble: Stack Slots: [${join(stackUsage, ', ')}]`,
+            why: `Preamble`,
         });
         instructions.push(
             ...targetInfo.extraSavedRegisters.map(r => {

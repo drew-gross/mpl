@@ -198,7 +198,7 @@ ${Object.keys(errors)
 first_block: .word 0
 
 .text
-${executableToString(executable)}
+${executableToString('#', executable)}
 `;
 };
 

@@ -5,7 +5,7 @@ import { Statement } from './threeAddressCode/Statement.js';
 import { Statement as TargetStatement } from './targetCode/Statement.js';
 import { Program } from './threeAddressCode/Program.js';
 import { RegisterAgnosticTargetInfo, TargetInfo, TargetRegisters } from './TargetInfo.js';
-import { toTarget } from './targetCode/Function.js';
+import { toTarget, StackUsage } from './targetCode/Function.js';
 import { Register } from './register.js';
 import join from './util/join.js';
 
@@ -127,6 +127,7 @@ export const saveFunctionCallResult = <TargetRegister>(
 export type TranslatedFunction = {
     name?: string; // Only main may not have a name
     instructions: string[];
+    stackUsage: StackUsage;
 };
 
 export type Executable = {
@@ -134,18 +135,27 @@ export type Executable = {
     functions: TranslatedFunction[];
 };
 
-const functionToString = ({ name, instructions }: TranslatedFunction): string => {
+const functionToString = (
+    commentChar: string,
+    { name, instructions, stackUsage }: TranslatedFunction
+): string => {
     if (!name) debug('no name here');
     return `
-${name}:
+${name}: ${commentChar} stack: [${join(stackUsage, ', ')}]
 ${join(instructions, '\n')}`;
 };
 
-export const executableToString = ({ main, functions }: Executable): string => {
+export const executableToString = (
+    commentChar: string,
+    { main, functions }: Executable
+): string => {
     // Main needs to be first for MARS, which just executes from the top of the file
     return `
-${functionToString(main)}
-${join(functions.map(functionToString), '\n')}`;
+${functionToString(commentChar, main)}
+${join(
+    functions.map(f => functionToString(commentChar, f)),
+    '\n'
+)}`;
 };
 
 export const makeExecutable = <TargetRegister>(
@@ -207,9 +217,11 @@ export const makeExecutable = <TargetRegister>(
     return {
         main: {
             instructions: flatten(targetMain.instructions.map(translator)),
+            stackUsage: targetMain.stackUsage,
         },
-        functions: targetFunctions.map(({ name, instructions }) => ({
+        functions: targetFunctions.map(({ name, instructions, stackUsage }) => ({
             name,
+            stackUsage,
             instructions: flatten(instructions.map(translator)),
         })),
     };
