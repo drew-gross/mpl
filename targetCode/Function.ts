@@ -188,26 +188,20 @@ export const toTarget = <TargetRegister>({
         why: `Preamble`,
     });
     instructions.push(
-        ...extraSavedRegisters.map(r => {
-            const result = {
-                kind: 'stackStore' as 'stackStore',
-                register: r,
-                offset: lookup(stackIndexLookup, `Saved extra: ${r}`),
-                why: 'Preamble: save extra register',
-            };
-            return result;
-        })
+        ...extraSavedRegisters.map(r => ({
+            kind: 'stackStore' as 'stackStore',
+            register: r,
+            offset: lookup(stackIndexLookup, `Saved extra: ${r}`),
+            why: 'Preamble: save extra register',
+        }))
     );
     instructions.push(
-        ...usedSavedRegisters.map(r => {
-            const result = {
-                kind: 'stackStore' as 'stackStore',
-                register: r,
-                offset: lookup(stackIndexLookup, `Saved used: ${r}`),
-                why: 'Preamble: save used register',
-            };
-            return result;
-        })
+        ...usedSavedRegisters.map(r => ({
+            kind: 'stackStore' as 'stackStore',
+            register: r,
+            offset: lookup(stackIndexLookup, `Saved used: ${r}`),
+            why: 'Preamble: save used register',
+        }))
     );
     instructions.push(...statements);
     instructions.push({ kind: 'label', name: exitLabel, why: 'cleanup' });
