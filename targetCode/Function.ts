@@ -179,55 +179,39 @@ export const toTarget = <TargetRegister>({
         stackIndexLookup[usage] = index;
     });
 
-    // Add preamble
-    const totalStackSlotsUsed = stackUsage.length;
-    const instructions: TargetStatement<TargetRegister>[] = [];
-    instructions.push({
-        kind: 'stackReserve',
-        words: totalStackSlotsUsed,
-        why: `Preamble`,
-    });
-    instructions.push(
-        ...extraSavedRegisters.map(r => ({
-            kind: 'stackStore' as 'stackStore',
-            register: r,
-            offset: lookup(stackIndexLookup, `Saved extra: ${r}`),
-            why: 'Preamble: save extra register',
-        }))
-    );
-    instructions.push(
-        ...usedSavedRegisters.map(r => ({
-            kind: 'stackStore' as 'stackStore',
-            register: r,
-            offset: lookup(stackIndexLookup, `Saved used: ${r}`),
-            why: 'Preamble: save used register',
-        }))
-    );
-    instructions.push(...statements);
-    instructions.push({ kind: 'label', name: exitLabel, why: 'cleanup' });
-
-    // Add cleanup
-    instructions.push(
-        ...usedSavedRegisters.map(r => ({
-            kind: 'stackLoad' as 'stackLoad',
-            register: r,
-            offset: lookup(stackIndexLookup, `Saved used: ${r}`),
-            why: 'Cleanup: restore used register',
-        }))
-    );
-    instructions.push(
-        ...extraSavedRegisters.map(r => ({
-            kind: 'stackLoad' as 'stackLoad',
-            register: r,
-            offset: lookup(stackIndexLookup, `Saved extra: ${r}`),
-            why: 'Cleanup: restore used register',
-        }))
-    );
-    instructions.push({
-        kind: 'stackRelease',
-        words: totalStackSlotsUsed,
-        why: `Cleanup: Restore stack pointer`,
-    });
-    instructions.push(...finalCleanup);
-    return { name: threeAddressFunction.name, instructions, stackUsage };
+    return {
+        name: threeAddressFunction.name,
+        instructions: [
+            { kind: 'stackReserve', words: stackUsage.length, why: `Reserve stack` },
+            ...extraSavedRegisters.map(r => ({
+                kind: 'stackStore' as 'stackStore',
+                register: r,
+                offset: lookup(stackIndexLookup, `Saved extra: ${r}`),
+                why: 'Preamble: save extra register',
+            })),
+            ...usedSavedRegisters.map(r => ({
+                kind: 'stackStore' as 'stackStore',
+                register: r,
+                offset: lookup(stackIndexLookup, `Saved used: ${r}`),
+                why: 'Preamble: save used register',
+            })),
+            ...statements,
+            { kind: 'label', name: exitLabel, why: 'cleanup' },
+            ...usedSavedRegisters.map(r => ({
+                kind: 'stackLoad' as 'stackLoad',
+                register: r,
+                offset: lookup(stackIndexLookup, `Saved used: ${r}`),
+                why: 'Cleanup: restore used register',
+            })),
+            ...extraSavedRegisters.map(r => ({
+                kind: 'stackLoad' as 'stackLoad',
+                register: r,
+                offset: lookup(stackIndexLookup, `Saved extra: ${r}`),
+                why: 'Cleanup: restore used register',
+            })),
+            { kind: 'stackRelease', words: stackUsage.length, why: `Restore stack` },
+            ...finalCleanup,
+        ],
+        stackUsage,
+    };
 };
