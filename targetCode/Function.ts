@@ -207,28 +207,21 @@ export const toTarget = <TargetRegister>({
     instructions.push({ kind: 'label', name: exitLabel, why: 'cleanup' });
 
     // Add cleanup
-    let stackSlotIndex = totalStackSlotsUsed;
     instructions.push(
-        ...usedSavedRegisters.reverse().map(r => {
-            stackSlotIndex--;
-            return {
-                kind: 'stackLoad' as 'stackLoad',
-                register: r,
-                offset: stackSlotIndex,
-                why: 'Cleanup: restore used register',
-            };
-        })
+        ...usedSavedRegisters.map(r => ({
+            kind: 'stackLoad' as 'stackLoad',
+            register: r,
+            offset: lookup(stackIndexLookup, `Saved used: ${r}`),
+            why: 'Cleanup: restore used register',
+        }))
     );
     instructions.push(
-        ...extraSavedRegisters.reverse().map(r => {
-            stackSlotIndex--;
-            return {
-                kind: 'stackLoad' as 'stackLoad',
-                register: r,
-                offset: stackSlotIndex,
-                why: 'Cleanup: restore used register',
-            };
-        })
+        ...extraSavedRegisters.map(r => ({
+            kind: 'stackLoad' as 'stackLoad',
+            register: r,
+            offset: lookup(stackIndexLookup, `Saved extra: ${r}`),
+            why: 'Cleanup: restore used register',
+        }))
     );
     instructions.push({
         kind: 'stackRelease',
