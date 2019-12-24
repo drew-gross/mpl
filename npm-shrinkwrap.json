@@ -2524,42 +2524,20 @@
             "integrity": "sha1-Dovf5NHduIVNZOBOp8AOKgJuVlg="
         },
         "graphlib": {
-            "version": "2.1.7",
-            "resolved": "https://registry.npmjs.org/graphlib/-/graphlib-2.1.7.tgz",
-            "integrity": "sha512-TyI9jIy2J4j0qgPmOOrHTCtpPqJGN/aurBwc6ZT+bRii+di1I+Wv3obRhVrmBEXet+qkMaEX67dXrwsd3QQM6w==",
+            "version": "2.1.8",
+            "resolved": "https://registry.npmjs.org/graphlib/-/graphlib-2.1.8.tgz",
+            "integrity": "sha512-jcLLfkpoVGmH7/InMC/1hIvOPSUh38oJtGhvrOFGzioE1DZ+0YW16RgmOJhHiuWTvGiJQ9Z1Ik43JvkRPRvE+A==",
             "requires": {
-                "lodash": "^4.17.5"
+                "lodash": "^4.17.15"
             }
         },
         "graphlib-dot": {
-            "version": "0.6.2",
-            "resolved": "https://registry.npmjs.org/graphlib-dot/-/graphlib-dot-0.6.2.tgz",
-            "integrity": "sha1-hy6TPQuzSUMMuBOiSRlD0cXx6VI=",
+            "version": "0.6.4",
+            "resolved": "https://registry.npmjs.org/graphlib-dot/-/graphlib-dot-0.6.4.tgz",
+            "integrity": "sha512-rdhDTu0mBlloTpFMfkQq+e3y4yL22OqP5MhQbkw6QUURqa+4YLgv3XZy2fA64wdEcJNZ+waI76URemVgdFtzng==",
             "requires": {
-                "graphlib": "^1.0.1",
-                "lodash": "^2.4.1"
-            },
-            "dependencies": {
-                "graphlib": {
-                    "version": "1.0.7",
-                    "resolved": "https://registry.npmjs.org/graphlib/-/graphlib-1.0.7.tgz",
-                    "integrity": "sha1-DKst8P/mq+BwsmJb+h7bbslnuLE=",
-                    "requires": {
-                        "lodash": "^3.10.0"
-                    },
-                    "dependencies": {
-                        "lodash": {
-                            "version": "3.10.1",
-                            "resolved": "https://registry.npmjs.org/lodash/-/lodash-3.10.1.tgz",
-                            "integrity": "sha1-W/Rejkm6QYnhfUgnid/RW9FAt7Y="
-                        }
-                    }
-                },
-                "lodash": {
-                    "version": "2.4.2",
-                    "resolved": "https://registry.npmjs.org/lodash/-/lodash-2.4.2.tgz",
-                    "integrity": "sha1-+t2DS5aDBz2hebPq5tnA0VBT9z4="
-                }
+                "graphlib": "^2.1.8",
+                "lodash": "^4.17.15"
             }
         },
         "has": {
@@ -2770,9 +2748,9 @@
             }
         },
         "inquirer": {
-            "version": "7.0.0",
-            "resolved": "https://registry.npmjs.org/inquirer/-/inquirer-7.0.0.tgz",
-            "integrity": "sha512-rSdC7zelHdRQFkWnhsMu2+2SO41mpv2oF2zy4tMhmiLWkcKbOAs87fWAJhVXttKVwhdZvymvnuM95EyEXg2/tQ==",
+            "version": "7.0.1",
+            "resolved": "https://registry.npmjs.org/inquirer/-/inquirer-7.0.1.tgz",
+            "integrity": "sha512-V1FFQ3TIO15det8PijPLFR9M9baSlnRs9nL7zWu1MNVA2T9YVl9ZbrHJhYs7e9X8jeMZ3lr2JH/rdHFgNCBdYw==",
             "requires": {
                 "ansi-escapes": "^4.2.1",
                 "chalk": "^2.4.2",
@@ -2783,7 +2761,7 @@
                 "lodash": "^4.17.15",
                 "mute-stream": "0.0.8",
                 "run-async": "^2.2.0",
-                "rxjs": "^6.4.0",
+                "rxjs": "^6.5.3",
                 "string-width": "^4.1.0",
                 "strip-ansi": "^5.1.0",
                 "through": "^2.3.6"
@@ -3586,9 +3564,9 @@
             }
         },
         "node": {
-            "version": "13.1.0",
-            "resolved": "https://registry.npmjs.org/node/-/node-13.1.0.tgz",
-            "integrity": "sha512-EAolY+/NT6s737S8VdlbcO0s6RXNoYtFBsQarcXrEFWindhzWiPi5H8V6Y+qmF2uESjz0+DvPej+UJ9zLZx6ig==",
+            "version": "13.5.0",
+            "resolved": "https://registry.npmjs.org/node/-/node-13.5.0.tgz",
+            "integrity": "sha512-LjtOaRZ4p06C9s01dgOmK8pW0SNtxIZIRy3FvItbsfadMbWgqwKn7OktppBmAuLsVJ/AnV29oR5m5rXejJTDNQ==",
             "requires": {
                 "node-bin-setup": "^1.0.0"
             }
@@ -5104,7 +5082,7 @@
         "tmp": {
             "version": "0.0.33",
             "resolved": "https://registry.npmjs.org/tmp/-/tmp-0.0.33.tgz",
-            "integrity": "sha1-bTQzWIl2jSGyvNoKonfO07G/rfk=",
+            "integrity": "sha512-jRCJlojKnZ3addtTOjdIqoRuPEKBvNXcGYqzO6zWZX8KfKEpnGY5jfggJQ3EjKuu8D4bJRr0y+cYJFmYbImXGw==",
             "requires": {
                 "os-tmpdir": "~1.0.2"
             }
