@@ -157,12 +157,18 @@ export const toTarget = <TargetRegister>({
         )
     );
 
-    const usedRegistersSet = orderedSet<TargetRegister>(operatorCompare);
-    Object.values(assignment.registerMap).forEach(usedRegistersSet.add);
-    const usedRegisters = usedRegistersSet.toList();
+    const usedSavedRegistersSet = orderedSet<TargetRegister>(operatorCompare);
+    if (!isMain) {
+        Object.values(assignment.registerMap).forEach(usedSavedRegistersSet.add);
+    }
+    const usedSavedRegisters = usedSavedRegistersSet.toList();
+
+    usedSavedRegisters.forEach(r => {
+        stackUsage.push(`Saved uses: ${r}`);
+    });
 
     // Add preamble
-    const totalStackSlotsUsed = usedRegisters.length + stackUsage.length;
+    const totalStackSlotsUsed = stackUsage.length;
     const instructions: TargetStatement<TargetRegister>[] = [];
     let stackSlotIndex = 0;
     instructions.push({
@@ -183,7 +189,7 @@ export const toTarget = <TargetRegister>({
         })
     );
     instructions.push(
-        ...usedRegisters.map(r => {
+        ...usedSavedRegisters.map(r => {
             const result = {
                 kind: 'stackStore' as 'stackStore',
                 register: r,
@@ -200,7 +206,7 @@ export const toTarget = <TargetRegister>({
     // Add cleanup
     stackSlotIndex = totalStackSlotsUsed;
     instructions.push(
-        ...usedRegisters.reverse().map(r => {
+        ...usedSavedRegisters.reverse().map(r => {
             stackSlotIndex--;
             return {
                 kind: 'stackLoad' as 'stackLoad',
