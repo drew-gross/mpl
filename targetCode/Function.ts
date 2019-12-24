@@ -21,6 +21,13 @@ type ToTargetInput<TargetRegister> = {
 };
 
 export type StackUsage = string[]; // For not just comment. TODO: structured data
+export type StackIndexLookup = { [key: string]: number };
+
+const lookup = (index: StackIndexLookup, key: string) => {
+    const result = index[key];
+    if (result === undefined) debug('bad stack lookup');
+    return result;
+};
 
 export type Function<TargetRegister> = {
     name: string;
@@ -167,6 +174,11 @@ export const toTarget = <TargetRegister>({
         stackUsage.push(`Saved uses: ${r}`);
     });
 
+    const stackIndexLookup: StackIndexLookup = {};
+    stackUsage.forEach((usage, index) => {
+        stackIndexLookup[usage] = index;
+    });
+
     // Add preamble
     const totalStackSlotsUsed = stackUsage.length;
     const instructions: TargetStatement<TargetRegister>[] = [];
@@ -181,7 +193,7 @@ export const toTarget = <TargetRegister>({
             const result = {
                 kind: 'stackStore' as 'stackStore',
                 register: r,
-                offset: stackSlotIndex,
+                offset: lookup(stackIndexLookup, `Saved extra: ${r}`),
                 why: 'Preamble: save extra register',
             };
             stackSlotIndex++;

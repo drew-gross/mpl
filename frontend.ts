@@ -1373,7 +1373,6 @@ const compile = (
     | { typeErrors: TypeError[] }
     | LexError
     | { internalError: string } => {
-    debugger;
     const tokens = lex<MplToken>(tokenSpecs, source);
     if ('kind' in tokens) {
         return tokens;
