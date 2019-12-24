@@ -141,6 +141,21 @@ export const toTarget = <TargetRegister>({
         targetInfo.registers.generalPurpose
     );
 
+    const usedSavedRegistersSet = orderedSet<TargetRegister>(operatorCompare);
+    if (!isMain) {
+        Object.values(assignment.registerMap).forEach(usedSavedRegistersSet.add);
+    }
+    const usedSavedRegisters = usedSavedRegistersSet.toList();
+
+    usedSavedRegisters.forEach(r => {
+        stackUsage.push(`Saved used: ${r}`);
+    });
+
+    const stackIndexLookup: StackIndexLookup = {};
+    stackUsage.forEach((usage, index) => {
+        stackIndexLookup[usage] = index;
+    });
+
     const stackOffsetPerInstruction: number[] = [];
     tafWithAssignment.instructions.forEach(i => {
         if (i.kind == 'alloca') {
@@ -163,21 +178,6 @@ export const toTarget = <TargetRegister>({
             })
         )
     );
-
-    const usedSavedRegistersSet = orderedSet<TargetRegister>(operatorCompare);
-    if (!isMain) {
-        Object.values(assignment.registerMap).forEach(usedSavedRegistersSet.add);
-    }
-    const usedSavedRegisters = usedSavedRegistersSet.toList();
-
-    usedSavedRegisters.forEach(r => {
-        stackUsage.push(`Saved used: ${r}`);
-    });
-
-    const stackIndexLookup: StackIndexLookup = {};
-    stackUsage.forEach((usage, index) => {
-        stackIndexLookup[usage] = index;
-    });
 
     return {
         name: threeAddressFunction.name,
