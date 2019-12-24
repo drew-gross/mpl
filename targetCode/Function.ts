@@ -171,7 +171,7 @@ export const toTarget = <TargetRegister>({
     const usedSavedRegisters = usedSavedRegistersSet.toList();
 
     usedSavedRegisters.forEach(r => {
-        stackUsage.push(`Saved uses: ${r}`);
+        stackUsage.push(`Saved used: ${r}`);
     });
 
     const stackIndexLookup: StackIndexLookup = {};
@@ -182,7 +182,6 @@ export const toTarget = <TargetRegister>({
     // Add preamble
     const totalStackSlotsUsed = stackUsage.length;
     const instructions: TargetStatement<TargetRegister>[] = [];
-    let stackSlotIndex = 0;
     instructions.push({
         kind: 'stackReserve',
         words: totalStackSlotsUsed,
@@ -196,7 +195,6 @@ export const toTarget = <TargetRegister>({
                 offset: lookup(stackIndexLookup, `Saved extra: ${r}`),
                 why: 'Preamble: save extra register',
             };
-            stackSlotIndex++;
             return result;
         })
     );
@@ -205,10 +203,9 @@ export const toTarget = <TargetRegister>({
             const result = {
                 kind: 'stackStore' as 'stackStore',
                 register: r,
-                offset: stackSlotIndex,
+                offset: lookup(stackIndexLookup, `Saved used: ${r}`),
                 why: 'Preamble: save used register',
             };
-            stackSlotIndex++;
             return result;
         })
     );
@@ -216,7 +213,7 @@ export const toTarget = <TargetRegister>({
     instructions.push({ kind: 'label', name: exitLabel, why: 'cleanup' });
 
     // Add cleanup
-    stackSlotIndex = totalStackSlotsUsed;
+    let stackSlotIndex = totalStackSlotsUsed;
     instructions.push(
         ...usedSavedRegisters.reverse().map(r => {
             stackSlotIndex--;
