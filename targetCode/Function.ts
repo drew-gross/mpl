@@ -157,11 +157,12 @@ export const toTarget = <TargetRegister>({
         )
     );
 
-    const usedRegisters = orderedSet<TargetRegister>(operatorCompare);
-    Object.values(assignment.registerMap).forEach(usedRegisters.add);
+    const usedRegistersSet = orderedSet<TargetRegister>(operatorCompare);
+    Object.values(assignment.registerMap).forEach(usedRegistersSet.add);
+    const usedRegisters = usedRegistersSet.toList();
 
     // Add preamble
-    const totalStackSlotsUsed = usedRegisters.size() + stackUsage.length;
+    const totalStackSlotsUsed = usedRegisters.length + stackUsage.length;
     const instructions: TargetStatement<TargetRegister>[] = [];
     let stackSlotIndex = 0;
     instructions.push({
@@ -182,7 +183,7 @@ export const toTarget = <TargetRegister>({
         })
     );
     instructions.push(
-        ...usedRegisters.toList().map(r => {
+        ...usedRegisters.map(r => {
             const result = {
                 kind: 'stackStore' as 'stackStore',
                 register: r,
@@ -199,18 +200,15 @@ export const toTarget = <TargetRegister>({
     // Add cleanup
     stackSlotIndex = totalStackSlotsUsed;
     instructions.push(
-        ...usedRegisters
-            .toList()
-            .reverse()
-            .map(r => {
-                stackSlotIndex--;
-                return {
-                    kind: 'stackLoad' as 'stackLoad',
-                    register: r,
-                    offset: stackSlotIndex,
-                    why: 'Cleanup: restore used register',
-                };
-            })
+        ...usedRegisters.reverse().map(r => {
+            stackSlotIndex--;
+            return {
+                kind: 'stackLoad' as 'stackLoad',
+                register: r,
+                offset: stackSlotIndex,
+                why: 'Cleanup: restore used register',
+            };
+        })
     );
     instructions.push(
         ...extraSavedRegisters.reverse().map(r => {
