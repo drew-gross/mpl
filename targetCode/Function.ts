@@ -1,11 +1,7 @@
 import idAppender from '../util/idAppender.js';
-import {
-    Statement as ThreeAddressStatement,
-    reads,
-    writes,
-} from '../threeAddressCode/Statement.js';
+import { Statement as ThreeAddressStatement, reads } from '../threeAddressCode/Statement.js';
 import { Function as ThreeAddressFunction } from '../threeAddressCode/Function';
-import { isEqual } from '../register.js';
+import { Register, isEqual } from '../register.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 import debug from '../util/debug.js';
 import { orderedSet, operatorCompare } from '../util/ordered-set.js';
@@ -35,6 +31,18 @@ export type Function<TargetRegister> = {
     stackUsage: StackUsage;
 };
 
+export const argumentStackOffset = <TargetRegister>(
+    targetInfo: TargetInfo<TargetRegister>,
+    functionArgs: Register[],
+    register: Register
+) => {
+    const argIndex = functionArgs.findIndex(arg => isEqual(arg, register));
+    if (argIndex < targetInfo.registers.functionArgument.length) {
+        return undefined;
+    }
+    return argIndex - targetInfo.registers.functionArgument.length;
+};
+
 export const toTarget = <TargetRegister>({
     threeAddressFunction,
     targetInfo,
@@ -56,24 +64,18 @@ export const toTarget = <TargetRegister>({
 
     const temporaryNameMaker = idAppender();
     const makeTemporary = name => ({ name: temporaryNameMaker(name) });
-    const argumentStackOffset = r => {
-        const argIndex = threeAddressFunction.arguments.findIndex(arg => isEqual(arg, r));
-        if (argIndex < targetInfo.registers.functionArgument.length) {
-            return undefined;
-        }
-        return argIndex - targetInfo.registers.functionArgument.length;
-    };
 
     const instructionsWithArgsFromStack: ThreeAddressStatement[] = flatten(
         threeAddressFunction.instructions.map(tas => {
-            if (writes(tas).some(r => argumentStackOffset(r) !== undefined)) {
-                debug('tried to write to an arg');
-            }
             const result: ThreeAddressStatement[] = [];
             switch (tas.kind) {
                 case 'move':
                     let from = tas.from;
-                    const fromOffset = argumentStackOffset(tas.from);
+                    const fromOffset = argumentStackOffset(
+                        targetInfo,
+                        threeAddressFunction.arguments,
+                        tas.from
+                    );
                     if (fromOffset !== undefined) {
                         from = makeTemporary(`load_arg_${from.name}`);
                         if (!from) debug('!from');
@@ -84,13 +86,21 @@ export const toTarget = <TargetRegister>({
                             why: `Load arg ${from.name} from stack`,
                         });
                     }
-                    const toOffset = argumentStackOffset(tas.to);
+                    const toOffset = argumentStackOffset(
+                        targetInfo,
+                        threeAddressFunction.arguments,
+                        tas.to
+                    );
                     if (toOffset !== undefined) debug('writing to args is not allowed');
                     result.push({ ...tas, from });
                     break;
                 case 'add':
                     let lhs = tas.lhs;
-                    const lhsOffset = argumentStackOffset(tas.lhs);
+                    const lhsOffset = argumentStackOffset(
+                        targetInfo,
+                        threeAddressFunction.arguments,
+                        tas.lhs
+                    );
                     if (lhsOffset !== undefined) {
                         lhs = makeTemporary(`load_arg_${lhs.name}`);
                         result.push({
@@ -101,7 +111,11 @@ export const toTarget = <TargetRegister>({
                         });
                     }
                     let rhs = tas.rhs;
-                    const rhsOffset = argumentStackOffset(tas.rhs);
+                    const rhsOffset = argumentStackOffset(
+                        targetInfo,
+                        threeAddressFunction.arguments,
+                        tas.rhs
+                    );
                     if (rhsOffset !== undefined) {
                         rhs = makeTemporary(`load_arg_${rhs.name}`);
                         result.push({
@@ -116,7 +130,12 @@ export const toTarget = <TargetRegister>({
                 default:
                     if (
                         reads(tas, threeAddressFunction.arguments).some(
-                            r => argumentStackOffset(r) !== undefined
+                            r =>
+                                argumentStackOffset(
+                                    targetInfo,
+                                    threeAddressFunction.arguments,
+                                    r
+                                ) !== undefined
                         )
                     ) {
                         throw debug(

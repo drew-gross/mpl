@@ -175,8 +175,9 @@ return isFive(5) ? 1 : 0`,
         name: 'Print',
         // TODO: print() maybe shouldn't return anything? Or return on error?
         source: `
-    dummy := print("sample_string");
-    return 1;`,
+            dummy := print("sample_string");
+            return 1;
+        `,
         exitCode: 1,
         stdout: 'sample_string',
     },
@@ -407,6 +408,18 @@ return isFive(5) ? 1 : 0`,
             return str1 == str2 ? 1 : 2;
         `,
         exitCode: 1,
+    },
+    {
+        name: 'Write to Argument',
+        source: `
+            foo := a: Boolean => {
+                a = False; // TODO: should error
+                return 0;
+            };
+            return foo(true);
+        `,
+        exitCode: 0,
+        failing: true,
     },
 ];
 
