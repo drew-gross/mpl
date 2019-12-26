@@ -8,42 +8,47 @@ import {
 } from '../backend-utils.js';
 import { TargetInfo, TargetRegisters } from '../TargetInfo.js';
 
+const getLocation = <TargetRegister>(
+    registerAssignment: RegisterAssignment<TargetRegister>,
+    functionArguments: Register[],
+    registers: TargetRegisters<TargetRegister>,
+    register: Register
+): { kind: 'register'; register: TargetRegister } | { kind: 'stack'; offset: number } => {
+    const argIndex = functionArguments.findIndex(arg => isEqual(arg, register));
+    if (argIndex > -1) {
+        // This is an argument
+        if (argIndex < registers.functionArgument.length) {
+            return { kind: 'register', register: registers.functionArgument[argIndex] };
+        } else {
+            return { kind: 'stack', offset: argIndex - registers.functionArgument.length };
+        }
+    } else {
+        // This is a temporary or local
+        if (!register) debug('bad register');
+        if (!(register.name in registerAssignment.registerMap)) {
+            throw debug(
+                `couldnt find an assignment for register: ${
+                    register.name
+                }. Map: ${JSON.stringify(registerAssignment.registerMap)}`
+            );
+        }
+        return { kind: 'register', register: registerAssignment.registerMap[register.name] };
+    }
+    debug('should not get here');
+};
+
 const getRegisterFromAssignment = <TargetRegister>(
     registerAssignment: RegisterAssignment<TargetRegister>,
     functionArguments: Register[], // TODO Maybe put the info about whether the register is an argument directly into the register?
     registers: TargetRegisters<TargetRegister>,
     r: Register
 ): TargetRegister => {
-    const argIndex = functionArguments.findIndex(arg => isEqual(arg, r));
-    if (argIndex > -1) {
-        // It's an argument!
-        if (argIndex < registers.functionArgument.length) {
-            return registers.functionArgument[argIndex];
-        } else {
-            throw debug('Need to load from stack I guess?');
-        }
-    } else {
-        if (!r) debug('bad register');
-        if (!(r.name in registerAssignment.registerMap)) {
-            throw debug(
-                `couldnt find an assignment for register: ${r.name}. Map: ${JSON.stringify(
-                    registerAssignment.registerMap
-                )}`
-            );
-        }
-        return registerAssignment.registerMap[r.name];
+    const location = getLocation(registerAssignment, functionArguments, registers, r);
+    if (location.kind !== 'register') {
+        throw debug('expected a register');
     }
-    throw debug('should not get here');
+    return location.register;
 };
-
-// const getRegisterOrStackOffset = <TargetRegister>(
-//     registerAssignment: RegisterAssignment<TargetRegister>,
-//     functionArguments: Register[],
-//     registers: TargetRegisters<TargetRegister>,
-//     register: Register
-// ):
-//     | { kind: 'register'; register: TargetRegister }
-//     | { kind: 'stackOffset'; offset: number } => {};
 
 export type Statement<TargetRegister> = { why: string } & (
     | { kind: 'comment' }
