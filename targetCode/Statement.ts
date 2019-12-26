@@ -15,11 +15,7 @@ const getRegisterFromAssignment = <TargetRegister>(
     r: Register
 ): TargetRegister => {
     const argIndex = functionArguments.findIndex(arg => isEqual(arg, r));
-    if (typeof r == 'string') {
-        // TODO: remove "result" hack register
-        if (r != 'result') debug('bad register');
-        return registers.functionResult;
-    } else if (argIndex > -1) {
+    if (argIndex > -1) {
         // It's an argument!
         if (argIndex < registers.functionArgument.length) {
             return registers.functionArgument[argIndex];
@@ -39,6 +35,15 @@ const getRegisterFromAssignment = <TargetRegister>(
     }
     throw debug('should not get here');
 };
+
+// const getRegisterOrStackOffset = <TargetRegister>(
+//     registerAssignment: RegisterAssignment<TargetRegister>,
+//     functionArguments: Register[],
+//     registers: TargetRegisters<TargetRegister>,
+//     register: Register
+// ):
+//     | { kind: 'register'; register: TargetRegister }
+//     | { kind: 'stackOffset'; offset: number } => {};
 
 export type Statement<TargetRegister> = { why: string } & (
     | { kind: 'comment' }
