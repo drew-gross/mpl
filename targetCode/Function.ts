@@ -7,7 +7,7 @@ import debug from '../util/debug.js';
 import { orderedSet, operatorCompare } from '../util/ordered-set.js';
 import flatten from '../util/list/flatten.js';
 import { Statement as TargetStatement, toTarget as statementToTarget } from './Statement.js';
-import { TargetInfo } from '../TargetInfo.js';
+import { TargetInfo, TargetRegisters } from '../TargetInfo.js';
 
 type ToTargetInput<TargetRegister> = {
     threeAddressFunction: ThreeAddressFunction;
@@ -32,15 +32,15 @@ export type Function<TargetRegister> = {
 };
 
 export const argumentStackOffset = <TargetRegister>(
-    targetInfo: TargetInfo<TargetRegister>,
+    targetRegisters: TargetRegisters<TargetRegister>,
     functionArgs: Register[],
     register: Register
 ) => {
     const argIndex = functionArgs.findIndex(arg => isEqual(arg, register));
-    if (argIndex < targetInfo.registers.functionArgument.length) {
+    if (argIndex < targetRegisters.functionArgument.length) {
         return undefined;
     }
-    return argIndex - targetInfo.registers.functionArgument.length;
+    return argIndex - targetRegisters.functionArgument.length;
 };
 
 export const toTarget = <TargetRegister>({
@@ -72,7 +72,7 @@ export const toTarget = <TargetRegister>({
                 case 'move':
                     let from = tas.from;
                     const fromOffset = argumentStackOffset(
-                        targetInfo,
+                        targetInfo.registers,
                         threeAddressFunction.arguments,
                         tas.from
                     );
@@ -87,7 +87,7 @@ export const toTarget = <TargetRegister>({
                         });
                     }
                     const toOffset = argumentStackOffset(
-                        targetInfo,
+                        targetInfo.registers,
                         threeAddressFunction.arguments,
                         tas.to
                     );
@@ -97,7 +97,7 @@ export const toTarget = <TargetRegister>({
                 case 'add':
                     let lhs = tas.lhs;
                     const lhsOffset = argumentStackOffset(
-                        targetInfo,
+                        targetInfo.registers,
                         threeAddressFunction.arguments,
                         tas.lhs
                     );
@@ -112,7 +112,7 @@ export const toTarget = <TargetRegister>({
                     }
                     let rhs = tas.rhs;
                     const rhsOffset = argumentStackOffset(
-                        targetInfo,
+                        targetInfo.registers,
                         threeAddressFunction.arguments,
                         tas.rhs
                     );
@@ -132,7 +132,7 @@ export const toTarget = <TargetRegister>({
                         reads(tas, threeAddressFunction.arguments).some(
                             r =>
                                 argumentStackOffset(
-                                    targetInfo,
+                                    targetInfo.registers,
                                     threeAddressFunction.arguments,
                                     r
                                 ) !== undefined
