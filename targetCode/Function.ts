@@ -35,6 +35,95 @@ export type Function<TargetRegister> = {
     stackUsage: StackUsage;
 };
 
+const translateStackArgumentsToStackReads = (
+    taf: ThreeAddressFunction,
+    targetInfo
+): ThreeAddressFunction => {
+    const temporaryNameMaker = idAppender();
+    const makeTemporary = name => ({ name: temporaryNameMaker(name) });
+    const instructions = flatten(
+        taf.instructions.map(tas => {
+            const result: ThreeAddressStatement[] = [];
+            switch (tas.kind) {
+                case 'move':
+                    let from = tas.from;
+                    const fromLocation = argumentLocation(
+                        targetInfo.registers,
+                        taf.arguments,
+                        tas.from
+                    );
+                    if (fromLocation.kind == 'stack') {
+                        from = makeTemporary(`load_arg_${from.name}`);
+                        if (!from) debug('!from');
+                        // TODO: Just load directly from the stack to the dest
+                        result.push({
+                            kind: 'unspill',
+                            register: from,
+                            offset: fromLocation.offset,
+                            why: `Load arg ${from.name} from stack`,
+                        });
+                    }
+                    result.push({ ...tas, from });
+                    break;
+                case 'add':
+                    let lhs = tas.lhs;
+                    const lhsLocation = argumentLocation(
+                        targetInfo.registers,
+                        taf.arguments,
+                        tas.lhs
+                    );
+                    if (lhsLocation.kind == 'stack') {
+                        // TODO: Can probably do this without an extra temp register
+                        lhs = makeTemporary(`load_arg_${lhs.name}`);
+                        result.push({
+                            kind: 'unspill',
+                            register: lhs,
+                            offset: lhsLocation.offset,
+                            why: `Load arg from stack`,
+                        });
+                    }
+                    let rhs = tas.rhs;
+                    const rhsLocation = argumentLocation(
+                        targetInfo.registers,
+                        taf.arguments,
+                        tas.rhs
+                    );
+                    if (rhsLocation.kind == 'stack') {
+                        rhs = makeTemporary(`load_arg_${rhs.name}`);
+                        result.push({
+                            kind: 'unspill',
+                            register: rhs,
+                            offset: rhsLocation.offset,
+                            why: `Load arg from stack`,
+                        });
+                    }
+                    result.push({ ...tas, lhs, rhs });
+                    break;
+                default:
+                    const registersRead = reads(tas, taf.arguments);
+                    const registerReadsStackArgument = (r: Register) => {
+                        const location = argumentLocation(
+                            targetInfo.registers,
+                            taf.arguments,
+                            r
+                        );
+                        return location.kind == 'stack';
+                    };
+                    if (registersRead.some(registerReadsStackArgument)) {
+                        throw debug(
+                            `not sure how to convert args to stack loads for ${
+                                tas.kind
+                            }. ${JSON.stringify(tas)}`
+                        );
+                    }
+                    return [tas];
+            }
+            return result;
+        })
+    );
+    return { ...taf, instructions };
+};
+
 export const toTarget = <TargetRegister>({
     threeAddressFunction,
     targetInfo,
@@ -59,96 +148,12 @@ export const toTarget = <TargetRegister>({
         stackUsage.push(`Saved extra: ${r}`);
     });
 
-    const temporaryNameMaker = idAppender();
-    const makeTemporary = name => ({ name: temporaryNameMaker(name) });
-
-    const instructionsWithArgsFromStack: ThreeAddressStatement[] = flatten(
-        threeAddressFunction.instructions.map(tas => {
-            const result: ThreeAddressStatement[] = [];
-            switch (tas.kind) {
-                case 'move':
-                    let from = tas.from;
-                    const fromLocation = argumentLocation(
-                        targetInfo.registers,
-                        threeAddressFunction.arguments,
-                        tas.from
-                    );
-                    if (fromLocation.kind == 'stack') {
-                        from = makeTemporary(`load_arg_${from.name}`);
-                        if (!from) debug('!from');
-                        // TODO: Just load directly from the stack to the dest
-                        result.push({
-                            kind: 'unspill',
-                            register: from,
-                            offset: fromLocation.offset,
-                            why: `Load arg ${from.name} from stack`,
-                        });
-                    }
-                    result.push({ ...tas, from });
-                    break;
-                case 'add':
-                    let lhs = tas.lhs;
-                    const lhsLocation = argumentLocation(
-                        targetInfo.registers,
-                        threeAddressFunction.arguments,
-                        tas.lhs
-                    );
-                    if (lhsLocation.kind == 'stack') {
-                        // TODO: Can probably do this without an extra temp register
-                        lhs = makeTemporary(`load_arg_${lhs.name}`);
-                        result.push({
-                            kind: 'unspill',
-                            register: lhs,
-                            offset: lhsLocation.offset,
-                            why: `Load arg from stack`,
-                        });
-                    }
-                    let rhs = tas.rhs;
-                    const rhsLocation = argumentLocation(
-                        targetInfo.registers,
-                        threeAddressFunction.arguments,
-                        tas.rhs
-                    );
-                    if (rhsLocation.kind == 'stack') {
-                        rhs = makeTemporary(`load_arg_${rhs.name}`);
-                        result.push({
-                            kind: 'unspill',
-                            register: rhs,
-                            offset: rhsLocation.offset,
-                            why: `Load arg from stack`,
-                        });
-                    }
-                    result.push({ ...tas, lhs, rhs });
-                    break;
-                default:
-                    const registersRead = reads(tas, threeAddressFunction.arguments);
-                    const registerReadsStackArgument = (r: Register) => {
-                        const location = argumentLocation(
-                            targetInfo.registers,
-                            threeAddressFunction.arguments,
-                            r
-                        );
-                        return location.kind == 'stack';
-                    };
-                    if (registersRead.some(registerReadsStackArgument)) {
-                        throw debug(
-                            `not sure how to convert args to stack loads for ${
-                                tas.kind
-                            }. ${JSON.stringify(tas)}`
-                        );
-                    }
-                    return [tas];
-            }
-            return result;
-        })
+    const functonWithArgsFromStack = translateStackArgumentsToStackReads(
+        threeAddressFunction,
+        targetInfo
     );
 
-    const functonWithArgsFromStack = {
-        ...threeAddressFunction,
-        instructions: instructionsWithArgsFromStack,
-    };
-
-    const { assignment, newFunction: tafWithAssignment } = assignRegisters(
+    const { assignment, newFunction: functionWithAssignment } = assignRegisters(
         functonWithArgsFromStack,
         targetInfo.registers.generalPurpose
     );
@@ -169,7 +174,7 @@ export const toTarget = <TargetRegister>({
     });
 
     const stackOffsetPerInstruction: number[] = [];
-    tafWithAssignment.instructions.forEach(i => {
+    functionWithAssignment.instructions.forEach(i => {
         if (i.kind == 'alloca') {
             stackOffsetPerInstruction.push(i.bytes);
         } else {
@@ -179,7 +184,7 @@ export const toTarget = <TargetRegister>({
 
     const exitLabel = `${threeAddressFunction.name}_cleanup`;
     const statements: TargetStatement<TargetRegister>[] = flatten(
-        instructionsWithArgsFromStack.map((instruction, index) =>
+        functonWithArgsFromStack.instructions.map((instruction, index) =>
             statementToTarget({
                 tas: instruction,
                 targetInfo,
@@ -219,7 +224,7 @@ export const toTarget = <TargetRegister>({
                 kind: 'stackLoad' as 'stackLoad',
                 register: r,
                 offset: lookup(stackIndexLookup, `Saved extra: ${r}`),
-                why: 'Cleanup: restore used register',
+                why: 'Cleanup: restore extra register',
             })),
             { kind: 'stackRelease', words: stackUsage.length, why: `Restore stack` },
             ...finalCleanup,
