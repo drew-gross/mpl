@@ -70,6 +70,7 @@ export const arrangeArgumentsForFunctionCall = <TargetRegister>(
 ): TargetStatement<TargetRegister>[] => {
     // TODO: Add some type check to ensure we have the right number of arguments
     return args.map((arg, index) => {
+        // TODO: Reuse the code in argumentLocation here
         if (index < registers.functionArgument.length) {
             // Registers that fix in arguments go in arguments
             if (typeof arg == 'number') {

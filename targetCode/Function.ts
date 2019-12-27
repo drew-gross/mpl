@@ -43,7 +43,12 @@ export const toTarget = <TargetRegister>({
 }: ToTargetInput<TargetRegister>): Function<TargetRegister> => {
     const stackUsage: StackUsage = [];
     threeAddressFunction.arguments.map((arg, index) => {
-        if (index > targetInfo.registers.functionArgument.length) {
+        const argLocation = argumentLocation(
+            targetInfo.registers,
+            threeAddressFunction.arguments,
+            arg
+        );
+        if (argLocation.kind == 'stack') {
             stackUsage.push(`Argument: ${arg.name}`);
         }
     });
