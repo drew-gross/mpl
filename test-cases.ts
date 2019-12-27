@@ -29,21 +29,9 @@ const manyGlobalsMultiply = () => {
 };
 
 const testCases: TestCase[] = [
-    {
-        name: 'Bare Return',
-        source: 'return 7',
-        exitCode: 7,
-    },
-    {
-        name: 'Single Product',
-        source: 'return 2 * 2',
-        exitCode: 4,
-    },
-    {
-        name: 'Brackets',
-        source: 'return (3)',
-        exitCode: 3,
-    },
+    { name: 'Bare Return', source: 'return 7', exitCode: 7 },
+    { name: 'Single Product', source: 'return 2 * 2', exitCode: 4 },
+    { name: 'Brackets', source: 'return (3)', exitCode: 3 },
     {
         name: 'Double Product with Brackets',
         source: 'return 2 * (3 * 4) * 5',
