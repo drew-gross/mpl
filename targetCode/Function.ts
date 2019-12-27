@@ -1,13 +1,17 @@
 import idAppender from '../util/idAppender.js';
 import { Statement as ThreeAddressStatement, reads } from '../threeAddressCode/Statement.js';
 import { Function as ThreeAddressFunction } from '../threeAddressCode/Function';
-import { Register, isEqual } from '../register.js';
+import { Register } from '../register.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 import debug from '../util/debug.js';
 import { orderedSet, operatorCompare } from '../util/ordered-set.js';
 import flatten from '../util/list/flatten.js';
-import { Statement as TargetStatement, toTarget as statementToTarget } from './Statement.js';
-import { TargetInfo, TargetRegisters } from '../TargetInfo.js';
+import {
+    Statement as TargetStatement,
+    toTarget as statementToTarget,
+    argumentLocation,
+} from './Statement.js';
+import { TargetInfo } from '../TargetInfo.js';
 
 type ToTargetInput<TargetRegister> = {
     threeAddressFunction: ThreeAddressFunction;
@@ -29,18 +33,6 @@ export type Function<TargetRegister> = {
     name: string;
     instructions: TargetStatement<TargetRegister>[];
     stackUsage: StackUsage;
-};
-
-export const argumentStackOffset = <TargetRegister>(
-    targetRegisters: TargetRegisters<TargetRegister>,
-    functionArgs: Register[],
-    register: Register
-) => {
-    const argIndex = functionArgs.findIndex(arg => isEqual(arg, register));
-    if (argIndex < targetRegisters.functionArgument.length) {
-        return undefined;
-    }
-    return argIndex - targetRegisters.functionArgument.length;
 };
 
 export const toTarget = <TargetRegister>({
@@ -71,73 +63,69 @@ export const toTarget = <TargetRegister>({
             switch (tas.kind) {
                 case 'move':
                     let from = tas.from;
-                    const fromOffset = argumentStackOffset(
+                    const fromLocation = argumentLocation(
                         targetInfo.registers,
                         threeAddressFunction.arguments,
                         tas.from
                     );
-                    if (fromOffset !== undefined) {
+                    if (fromLocation.kind == 'stack') {
                         from = makeTemporary(`load_arg_${from.name}`);
                         if (!from) debug('!from');
+                        // TODO: Just load directly from the stack to the dest
                         result.push({
                             kind: 'unspill',
                             register: from,
-                            offset: fromOffset,
+                            offset: fromLocation.offset,
                             why: `Load arg ${from.name} from stack`,
                         });
                     }
-                    const toOffset = argumentStackOffset(
-                        targetInfo.registers,
-                        threeAddressFunction.arguments,
-                        tas.to
-                    );
-                    if (toOffset !== undefined) debug('writing to args is not allowed');
                     result.push({ ...tas, from });
                     break;
                 case 'add':
                     let lhs = tas.lhs;
-                    const lhsOffset = argumentStackOffset(
+                    const lhsLocation = argumentLocation(
                         targetInfo.registers,
                         threeAddressFunction.arguments,
                         tas.lhs
                     );
-                    if (lhsOffset !== undefined) {
+                    if (lhsLocation.kind == 'stack') {
+                        // TODO: Can probably do this without an extra temp register
                         lhs = makeTemporary(`load_arg_${lhs.name}`);
                         result.push({
                             kind: 'unspill',
                             register: lhs,
-                            offset: lhsOffset,
+                            offset: lhsLocation.offset,
                             why: `Load arg from stack`,
                         });
                     }
                     let rhs = tas.rhs;
-                    const rhsOffset = argumentStackOffset(
+                    const rhsLocation = argumentLocation(
                         targetInfo.registers,
                         threeAddressFunction.arguments,
                         tas.rhs
                     );
-                    if (rhsOffset !== undefined) {
+                    if (rhsLocation.kind == 'stack') {
                         rhs = makeTemporary(`load_arg_${rhs.name}`);
                         result.push({
                             kind: 'unspill',
                             register: rhs,
-                            offset: rhsOffset,
+                            offset: rhsLocation.offset,
                             why: `Load arg from stack`,
                         });
                     }
                     result.push({ ...tas, lhs, rhs });
                     break;
                 default:
-                    if (
-                        reads(tas, threeAddressFunction.arguments).some(
-                            r =>
-                                argumentStackOffset(
-                                    targetInfo.registers,
-                                    threeAddressFunction.arguments,
-                                    r
-                                ) !== undefined
-                        )
-                    ) {
+                    const registersRead = reads(tas, threeAddressFunction.arguments);
+                    const registerReadsStackArgument = (r: Register) => {
+                        const location = argumentLocation(
+                            targetInfo.registers,
+                            threeAddressFunction.arguments,
+                            r
+                        );
+                        return location.kind == 'stack';
+                    };
+                    if (registersRead.some(registerReadsStackArgument)) {
                         throw debug(
                             `not sure how to convert args to stack loads for ${
                                 tas.kind
