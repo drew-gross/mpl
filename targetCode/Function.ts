@@ -148,6 +148,7 @@ export const toTarget = <TargetRegister>({
         stackUsage.push(`Saved extra: ${r}`);
     });
 
+    // When we call this we don't know the total stack frame size because we haven't assigned registers yet. statmentToTarget takes into account the total stack frame size and adjusts stack indexes accordingly.
     const functonWithArgsFromStack = translateStackArgumentsToStackReads(
         threeAddressFunction,
         targetInfo
@@ -192,6 +193,7 @@ export const toTarget = <TargetRegister>({
                 registerAssignment: assignment,
                 exitLabel,
                 stackOffset: stackOffsetPerInstruction[index],
+                stackFrameSize: stackUsage.length,
             })
         )
     );

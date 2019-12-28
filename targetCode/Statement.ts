@@ -125,6 +125,7 @@ export type ToTargetInput<TargetRegister> = {
     functionArguments: Register[];
     targetInfo: TargetInfo<TargetRegister>;
     stackOffset: number;
+    stackFrameSize: number;
     registerAssignment: RegisterAssignment<TargetRegister>;
     exitLabel: string;
 };
@@ -134,6 +135,7 @@ export const toTarget = <TargetRegister>({
     functionArguments,
     targetInfo,
     stackOffset,
+    stackFrameSize,
     registerAssignment,
     exitLabel,
 }: ToTargetInput<TargetRegister>): Statement<TargetRegister>[] => {
@@ -324,22 +326,24 @@ export const toTarget = <TargetRegister>({
                 },
             ];
         case 'spill': {
+            const adjustedStackOffset = -(stackOffset + tas.offset) + stackFrameSize;
             return [
                 {
                     kind: 'stackStore',
                     register: getRegister(tas.register),
-                    offset: stackOffset + tas.offset,
+                    offset: adjustedStackOffset,
                     why: tas.why,
                 },
             ];
         }
         case 'unspill': {
-            if (Number.isNaN(stackOffset + tas.offset)) debug('nan!');
+            const adjustedStackOffset = -(stackOffset + tas.offset) + stackFrameSize;
+            if (Number.isNaN(adjustedStackOffset)) debug('nan!');
             return [
                 {
                     kind: 'stackLoad',
                     register: getRegister(tas.register),
-                    offset: stackOffset + tas.offset,
+                    offset: adjustedStackOffset,
                     why: tas.why,
                 },
             ];
