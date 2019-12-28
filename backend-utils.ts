@@ -89,7 +89,7 @@ export const arrangeArgumentsForFunctionCall = <TargetRegister>(
                 };
             }
         } else {
-            // Registers that don't fit in arguments go on the stack, starting 1 space above the current stack pointer, going up
+            // Registers that don't fit in arguments go on the stack, starting 1 space above the current stack pointer, going up. TODO: This puts data above the top of the stack, which is not safe on some platforms, as that space may be used by interrupts or the kernel after an involuntary context switch. Some platforms have a "red zone", on those platforms this is safe, but we should only do it when we know it's safe. See https://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64.
             if (typeof arg == 'number') {
                 throw debug(
                     "arrangeArgumentsForFunctionCall doesn't support literals on stack yet"

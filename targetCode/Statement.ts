@@ -8,24 +8,27 @@ import {
 } from '../backend-utils.js';
 import { TargetInfo, TargetRegisters } from '../TargetInfo.js';
 
-export type DataLocation<TargetRegister> =
+export type DataLocation<TargetRegister> = 
     | { kind: 'register'; register: TargetRegister }
     | { kind: 'stack'; offset: number }
-    // Returned when input to argumentLocation isn't ar argument. TODO: we should know before calling argumentLocation whether it's an argument or not.
+    // Returned when input to argumentLocation isn't an argument. TODO: we should know before calling argumentLocation whether it's an argument or not.
     | { kind: 'not_argument' };
 
 export const argumentLocation = <TargetRegister>(
-    targetRegisters: TargetRegisters<TargetRegister>,
+    targetInfo: TargetInfo<TargetRegister>,
     functionArgs: Register[],
     register: Register
 ): DataLocation<TargetRegister> => {
     const argIndex = functionArgs.findIndex(arg => isEqual(arg, register));
     if (argIndex < 0) {
         return { kind: 'not_argument' };
-    } else if (argIndex < targetRegisters.functionArgument.length) {
-        return { kind: 'register', register: targetRegisters.functionArgument[argIndex] };
+    } else if (argIndex < targetInfo.registers.functionArgument.length) {
+        return { kind: 'register', register: targetInfo.registers.functionArgument[argIndex] };
     } else {
-        return { kind: 'stack', offset: argIndex - targetRegisters.functionArgument.length };
+        return {
+            kind: 'stack',
+            offset: argIndex - targetInfo.registers.functionArgument.length,
+        };
     }
 };
 

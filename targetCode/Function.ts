@@ -47,11 +47,7 @@ const translateStackArgumentsToStackReads = (
             switch (tas.kind) {
                 case 'move':
                     let from = tas.from;
-                    const fromLocation = argumentLocation(
-                        targetInfo.registers,
-                        taf.arguments,
-                        tas.from
-                    );
+                    const fromLocation = argumentLocation(targetInfo, taf.arguments, tas.from);
                     if (fromLocation.kind == 'stack') {
                         from = makeTemporary(`load_arg_${from.name}`);
                         if (!from) debug('!from');
@@ -67,11 +63,7 @@ const translateStackArgumentsToStackReads = (
                     break;
                 case 'add':
                     let lhs = tas.lhs;
-                    const lhsLocation = argumentLocation(
-                        targetInfo.registers,
-                        taf.arguments,
-                        tas.lhs
-                    );
+                    const lhsLocation = argumentLocation(targetInfo, taf.arguments, tas.lhs);
                     if (lhsLocation.kind == 'stack') {
                         // TODO: Can probably do this without an extra temp register
                         lhs = makeTemporary(`load_arg_${lhs.name}`);
@@ -83,11 +75,7 @@ const translateStackArgumentsToStackReads = (
                         });
                     }
                     let rhs = tas.rhs;
-                    const rhsLocation = argumentLocation(
-                        targetInfo.registers,
-                        taf.arguments,
-                        tas.rhs
-                    );
+                    const rhsLocation = argumentLocation(targetInfo, taf.arguments, tas.rhs);
                     if (rhsLocation.kind == 'stack') {
                         rhs = makeTemporary(`load_arg_${rhs.name}`);
                         result.push({
@@ -102,11 +90,7 @@ const translateStackArgumentsToStackReads = (
                 default:
                     const registersRead = reads(tas, taf.arguments);
                     const registerReadsStackArgument = (r: Register) => {
-                        const location = argumentLocation(
-                            targetInfo.registers,
-                            taf.arguments,
-                            r
-                        );
+                        const location = argumentLocation(targetInfo, taf.arguments, r);
                         return location.kind == 'stack';
                     };
                     if (registersRead.some(registerReadsStackArgument)) {
@@ -131,16 +115,18 @@ export const toTarget = <TargetRegister>({
     isMain,
 }: ToTargetInput<TargetRegister>): Function<TargetRegister> => {
     const stackUsage: StackUsage = [];
+
+    targetInfo.callerSavedRegisters.forEach(r => {
+        stackUsage.push(r);
+    });
+
     threeAddressFunction.arguments.map((arg, index) => {
-        const argLocation = argumentLocation(
-            targetInfo.registers,
-            threeAddressFunction.arguments,
-            arg
-        );
-        if (argLocation.kind == 'stack') {
+        if (argumentLocation(targetInfo, threeAddressFunction.arguments, arg).kind == 'stack') {
             stackUsage.push(`Argument: ${arg.name}`);
         }
     });
+
+    // TODO: on x64, call instruction implicitly pushes to the stack, we need to adjust for that
 
     const extraSavedRegisters = isMain ? [] : targetInfo.extraSavedRegisters;
 
@@ -171,7 +157,7 @@ export const toTarget = <TargetRegister>({
 
     const stackIndexLookup: StackIndexLookup = {};
     stackUsage.forEach((usage, index) => {
-        stackIndexLookup[usage] = index;
+        stackIndexLookup[usage] = index - targetInfo.callerSavedRegisters.length;
     });
 
     const stackOffsetPerInstruction: number[] = [];
@@ -183,6 +169,8 @@ export const toTarget = <TargetRegister>({
         }
     });
 
+    const stackFrameSize = stackUsage.length - targetInfo.callerSavedRegisters.length;
+
     const exitLabel = `${threeAddressFunction.name}_cleanup`;
     const statements: TargetStatement<TargetRegister>[] = flatten(
         functonWithArgsFromStack.instructions.map((instruction, index) =>
@@ -193,7 +181,7 @@ export const toTarget = <TargetRegister>({
                 registerAssignment: assignment,
                 exitLabel,
                 stackOffset: stackOffsetPerInstruction[index],
-                stackFrameSize: stackUsage.length,
+                stackFrameSize,
             })
         )
     );
@@ -201,7 +189,7 @@ export const toTarget = <TargetRegister>({
     return {
         name: threeAddressFunction.name,
         instructions: [
-            { kind: 'stackReserve', words: stackUsage.length, why: `Reserve stack` },
+            { kind: 'stackReserve', words: stackFrameSize, why: `Reserve stack` },
             ...extraSavedRegisters.map(r => ({
                 kind: 'stackStore' as 'stackStore',
                 register: r,
@@ -228,7 +216,7 @@ export const toTarget = <TargetRegister>({
                 offset: lookup(stackIndexLookup, `Saved extra: ${r}`),
                 why: 'Cleanup: restore extra register',
             })),
-            { kind: 'stackRelease', words: stackUsage.length, why: `Restore stack` },
+            { kind: 'stackRelease', words: stackFrameSize, why: `Restore stack` },
             ...finalCleanup,
         ],
         stackUsage,

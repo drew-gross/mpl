@@ -29,6 +29,7 @@ export type TargetInfo<TargetRegister> = {
     registerAgnosticInfo: RegisterAgnosticTargetInfo;
     registers: TargetRegisters<TargetRegister>;
     extraSavedRegisters: TargetRegister[];
+    callerSavedRegisters: string[];
     registersClobberedBySyscall: TargetRegister[];
     translator: ExeTranslator<TargetRegister>;
 };

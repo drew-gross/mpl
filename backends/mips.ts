@@ -162,6 +162,7 @@ const mipsTarget: RegisterAgnosticTargetInfo = {
 
 const mipsRegisters: TargetInfo<MipsRegister> = {
     extraSavedRegisters: ['$ra'],
+    callerSavedRegisters: [],
     registersClobberedBySyscall: [],
     registers: {
         generalPurpose: ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'],

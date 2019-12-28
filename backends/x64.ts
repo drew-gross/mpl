@@ -173,6 +173,7 @@ const x64Target: RegisterAgnosticTargetInfo = {
 
 const x64RegisterInfo: TargetInfo<X64Register> = {
     extraSavedRegisters: [],
+    callerSavedRegisters: ['implicit return address'],
     registersClobberedBySyscall: ['r11'],
     registers: {
         generalPurpose: ['r11', 'r12', 'r13', 'r14', 'r15', 'rdi', 'rsi', 'rbx'],
