@@ -71,7 +71,7 @@ export const mplTest = async (
     }
 
     if (expectedParseErrors) {
-        t.fail('Expected parse errors and none found');
+        error('expected parse errors and none found');
         return;
     }
 
@@ -80,8 +80,8 @@ export const mplTest = async (
             t.deepEqual(expectedTypeErrors, programInfo.typeErrors);
             return;
         } else {
-            t.fail(
-                `Found type errors when none expected: ${join(
+            error(
+                `found type errors when none expected: ${join(
                     programInfo.typeErrors.map(typeErrorToString as any),
                     ', '
                 )}`
@@ -91,7 +91,7 @@ export const mplTest = async (
     }
 
     if (expectedTypeErrors) {
-        t.fail('Expected type errors and none found');
+        error('expected type errors and none found');
         return;
     }
 
@@ -104,7 +104,7 @@ export const mplTest = async (
     programInfo.frontendOutput.functions.forEach(f => {
         f.variables.forEach(v => {
             if (!v.type.kind) {
-                t.fail(`Invalid frontend output: ${v.name} (in ${f.name}) had a bad type!`);
+                error(`invalid frontend output: ${v.name} (in ${f.name}) had a bad type!`);
             }
         });
     });

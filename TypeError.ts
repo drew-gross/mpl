@@ -47,6 +47,8 @@ export const toString = (e: TypeError): string => {
             return `Unknown identifier ${e.destinationName}`;
         case 'unknownIdentifier':
             return `Unknown identifier ${e.name}`;
+        case 'wrongNumberOfArguments':
+            return `Wrong number of arguments for ${e.targetFunction}. Expected ${e.expectedArgumentCount}, found ${e.passedArgumentCount}`;
         default:
             throw debug(`need string for error: ${e.kind}`);
     }

@@ -17,7 +17,8 @@ export type TestCase = {
     stdin?: string;
 
     // Control test runner
-    failing?: boolean;
+    failing?: boolean; // Expect this to fail
+    infiniteLooping?: boolean; // Don't even attempt to compile this, it will infinite loop
 };
 
 export const passed = (testCase: TestCase, result: ExecutionResult) => {

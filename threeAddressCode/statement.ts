@@ -22,7 +22,7 @@ export type Statement = { why: string } & (
     | { kind: 'alloca'; bytes: number; register: Register }
     // Spilling
     | { kind: 'spill'; register: Register }
-    | { kind: 'unspill'; register: Register }
+    | { kind: 'unspill'; register: Register; to: Register }
     // Branches
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: Register; rhs: Register; label: string }
@@ -240,10 +240,11 @@ export const reads = (tas: Statement, args: Register[]): Register[] => {
             return [tas.register];
         case 'alloca':
             return [];
+        // Spill/Unspill doesn't really fit into the reads/write paradigm correctly, because it _implements_ reads/writes. Semantics: After we spill something, it's not live anymore, so it's a "write" since writes kill a register. After we unspill something, we can kinda do whatever (whether it's live depends on whether future readers exist)TODO: handle it better somehow
         case 'unspill':
             return [];
         case 'spill':
-            return [tas.register];
+            return [];
     }
     throw debug(`kind ${(tas as any).kind} missing in reads`);
 };
@@ -298,9 +299,10 @@ export const writes = (tas: Statement): Register[] => {
         case 'alloca':
             return [tas.register];
         case 'unspill':
-            return [tas.register];
+            // Spill/Unspill doesn't really fit into the reads/write paradigm correctly, because it _implements_ reads/writes. Semantics: After we spill something, it's not live anymore, so it's a "write" since writes kill a register. After we unspill something, we can kinda do whatever (whether it's live depends on whether future readers exist)TODO: handle it better somehow
+            return [tas.register, tas.to];
         case 'spill':
-            return [];
+            return [tas.register];
     }
     throw debug(`kind ${(tas as any).kind} missing in writes`);
 };

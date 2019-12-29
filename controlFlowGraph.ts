@@ -421,7 +421,7 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                 break;
             }
             case 'loadImmediate': {
-                // TODO: seems weird to spill in this case? Could just reload instead. Oh well, will fix later.
+                // TODO: seems weird to spill a constant? Could just reload instead. Oh well, will fix later.
                 if (registerIsEqual(instruction.destination, registerToSpill)) {
                     const fragment = makeFragment();
                     newFunction.instructions.push({ ...instruction, destination: fragment });
@@ -443,7 +443,8 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                     newLhs = makeFragment();
                     newFunction.instructions.push({
                         kind: 'unspill',
-                        register: newLhs,
+                        register: instruction.lhs,
+                        to: newLhs,
                         why: 'unspill',
                     });
                 }
@@ -451,7 +452,8 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                     newRhs = makeFragment();
                     newFunction.instructions.push({
                         kind: 'unspill',
-                        register: newRhs,
+                        register: instruction.rhs,
+                        to: newRhs,
                         why: 'unspill',
                     });
                 }
@@ -481,7 +483,8 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                     newSource = makeFragment();
                     newFunction.instructions.push({
                         kind: 'unspill',
-                        register: newSource,
+                        register: instruction.from,
+                        to: newSource,
                         why: 'unspill',
                     });
                 }
@@ -511,7 +514,7 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                 break;
             case 'syscall':
             case 'callByName': {
-                // TODO-NEXT: Implement proper spilling for callByName and callByRegister (and probs syscalls)
+                // TODO: Implement proper spilling for callByName and callByRegister (and probs syscalls)
                 const newArguments: (Register | number | string)[] = [];
                 instruction.arguments.forEach(arg => {
                     if (
@@ -523,7 +526,8 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                         newArguments.push(newSource);
                         newFunction.instructions.push({
                             kind: 'unspill',
-                            register: newSource,
+                            register: arg,
+                            to: newSource,
                             why: 'unspill arg',
                         });
                     } else {
@@ -554,7 +558,8 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                     const newReturnVal = makeFragment();
                     newFunction.instructions.push({
                         kind: 'unspill',
-                        register: newReturnVal,
+                        register: instruction.register,
+                        to: newReturnVal,
                         why: 'unspill ret val',
                     });
                     newFunction.instructions.push({ ...instruction, register: newReturnVal });
@@ -636,7 +641,7 @@ export const assignRegisters = <TargetRegister>(
                 return false;
             }
 
-            // ... that interferces with a number of nodes ...
+            // ... that interferes with a number of nodes ...
             let interferenceCount = 0;
             interferences.forEach(interference => {
                 if (interferenceInvolvesRegister(interference, register)) {

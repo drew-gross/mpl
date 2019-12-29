@@ -33,54 +33,57 @@ export type Function<TargetRegister> = {
     stackUsage: StackUsage<TargetRegister>;
 };
 
+// TODO: this code is very similar to "spill" in controlFlowGraph.js, try to DRY this up
 const translateStackArgumentsToStackReads = (
     taf: ThreeAddressFunction,
     targetInfo
 ): ThreeAddressFunction => {
-    const temporaryNameMaker = idAppender();
-    const makeTemporary = name => ({ name: temporaryNameMaker(name) });
+    // TODO: don't load the argument if it happens to already be loaded due to a previous unspill
     const instructions = flatten(
         taf.instructions.map(tas => {
             const result: ThreeAddressStatement[] = [];
             switch (tas.kind) {
                 case 'move':
-                    let from = tas.from;
+                    // TODO: just load direclty into the destination
                     const fromLocation = argumentLocation(targetInfo, taf.arguments, tas.from);
                     if (fromLocation.kind == 'stack') {
-                        from = makeTemporary(`load_arg_${from.name}`);
-                        if (!from) debug('!from');
-                        // TODO: Just load directly from the stack to the dest
+                        const fromLoaded = { name: `${tas.from.name}_loaded` };
                         result.push({
                             kind: 'unspill',
-                            register: from,
-                            why: `Load arg ${from.name} from stack`,
+                            register: tas.from,
+                            to: fromLoaded,
+                            why: `Load arg ${tas.from.name} from stack`,
                         });
+                        result.push({ ...tas, from: fromLoaded });
+                    } else {
+                        result.push(tas);
                     }
-                    result.push({ ...tas, from });
                     break;
                 case 'add':
-                    let lhs = tas.lhs;
+                    let lhsLoaded = tas.lhs;
                     const lhsLocation = argumentLocation(targetInfo, taf.arguments, tas.lhs);
                     if (lhsLocation.kind == 'stack') {
                         // TODO: Can probably do this without an extra temp register
-                        lhs = makeTemporary(`load_arg_${lhs.name}`);
+                        lhsLoaded = { name: `${tas.lhs.name}_loaded` };
                         result.push({
                             kind: 'unspill',
-                            register: lhs,
+                            register: tas.lhs,
+                            to: lhsLoaded,
                             why: `Load arg from stack`,
                         });
                     }
-                    let rhs = tas.rhs;
+                    let rhsLoaded = tas.rhs;
                     const rhsLocation = argumentLocation(targetInfo, taf.arguments, tas.rhs);
                     if (rhsLocation.kind == 'stack') {
-                        rhs = makeTemporary(`load_arg_${rhs.name}`);
+                        rhsLoaded = { name: `${tas.rhs.name}_loaded` };
                         result.push({
                             kind: 'unspill',
-                            register: rhs,
+                            register: tas.rhs,
+                            to: rhsLoaded,
                             why: `Load arg from stack`,
                         });
                     }
-                    result.push({ ...tas, lhs, rhs });
+                    result.push({ ...tas, lhs: lhsLoaded, rhs: rhsLoaded });
                     break;
                 default:
                     const registersRead = reads(tas, taf.arguments);

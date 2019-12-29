@@ -183,6 +183,7 @@ return isFive(5) ? 1 : 0`,
             return lenFunc(5);
         `,
         exitCode: 6,
+        infiniteLooping: true,
         failing: true,
     },
     {
