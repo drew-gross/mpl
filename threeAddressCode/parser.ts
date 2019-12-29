@@ -248,7 +248,7 @@ const colon = tacTerminal('colon');
 const comma = tacTerminal('comma');
 const global_ = tacTerminal('global');
 const function_ = tacTerminal('function');
-const spillSpec = tacTerminal('spillSpec');
+const spillSpec = tacTerminal('spillSpec'); // TODO: remove spillspec
 const statementSeparator = tacTerminal('statementSeparator');
 const assign = tacTerminal('assign');
 const star = tacTerminal('star');
@@ -804,14 +804,12 @@ const functionFromParseResult = (
     }
 
     let childIndex = 0;
-    let spills = 0;
     if (ast.children[childIndex].type != 'function') {
         debug('wrong shape ast');
         return ['WrongShapeAst'];
     }
     childIndex++;
     if (ast.children[childIndex].type == 'spillSpec') {
-        spills = (ast.children[childIndex] as any).value;
         childIndex++;
     }
     if (ast.children[childIndex].type != 'identifier') {
@@ -855,7 +853,7 @@ const functionFromParseResult = (
         instructions = [instructionFromParseResult(ast.children[childIndex])];
         childIndex++;
     }
-    return { name, instructions, liveAtExit: [], spills, arguments: args };
+    return { name, instructions, liveAtExit: [], arguments: args };
 };
 
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Program | ParseError[] => {

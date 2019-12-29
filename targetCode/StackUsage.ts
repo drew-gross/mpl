@@ -1,4 +1,5 @@
 import join from '../util/join.js';
+import { Register } from '../register.js';
 
 // Order here matches argument on stack
 export type StackUsage = {
@@ -23,4 +24,8 @@ export const stackUsageToString = (usage: StackUsage): string => {
         descriptions.push(r);
     });
     return `[${join(descriptions, ', ')}]`;
+};
+
+export const offset = (usage: StackUsage, register: Register): number => {
+    return 0; // TODO: implement this
 };

@@ -7,11 +7,11 @@ import {
     saveFunctionCallResult,
 } from '../backend-utils.js';
 import { TargetInfo, TargetRegisters } from '../TargetInfo.js';
-import { StackUsage } from './StackUsage.js';
+import { StackUsage, offset } from './StackUsage.js';
 
 export type DataLocation<TargetRegister> =
     | { kind: 'register'; register: TargetRegister }
-    | { kind: 'stack'; offset: number }
+    | { kind: 'stack'; offset: number /* TODO: offset maybe in the wrong place? */ }
     // Returned when input to argumentLocation isn't an argument. TODO: we should know before calling argumentLocation whether it's an argument or not.
     | { kind: 'not_argument' };
 
@@ -141,6 +141,7 @@ export const toTarget = <TargetRegister>({
     targetInfo,
     stackOffset,
     stackFrameSize,
+    stackUsage,
     registerAssignment,
     exitLabel,
 }: ToTargetInput<TargetRegister>): Statement<TargetRegister>[] => {
@@ -331,28 +332,24 @@ export const toTarget = <TargetRegister>({
                 },
             ];
         case 'spill': {
-            const adjustedStackOffset = -(stackOffset + tas.offset) + stackFrameSize;
             return [
                 {
                     kind: 'stackStore',
                     register: getRegister(tas.register),
-                    offset: adjustedStackOffset,
+                    offset: offset(stackUsage, tas.register),
                     why: tas.why,
                 },
             ];
         }
-        case 'unspill': {
-            const adjustedStackOffset = -(stackOffset + tas.offset) + stackFrameSize;
-            if (Number.isNaN(adjustedStackOffset)) debug('nan!');
+        case 'unspill':
             return [
                 {
                     kind: 'stackLoad',
                     register: getRegister(tas.register),
-                    offset: adjustedStackOffset,
+                    offset: offset(stackUsage, tas.register),
                     why: tas.why,
                 },
             ];
-        }
         default:
             throw debug(`${(tas as any).kind} unhandled in threeAddressCodeToTarget`);
     }

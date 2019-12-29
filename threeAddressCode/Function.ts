@@ -7,7 +7,6 @@ export type Function = {
     instructions: Statement[];
     arguments: Register[];
     liveAtExit: Register[];
-    spills: number;
     name: string;
 };
 

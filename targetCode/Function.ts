@@ -67,7 +67,6 @@ const translateStackArgumentsToStackReads = (
                         result.push({
                             kind: 'unspill',
                             register: from,
-                            offset: fromLocation.offset,
                             why: `Load arg ${from.name} from stack`,
                         });
                     }
@@ -82,7 +81,6 @@ const translateStackArgumentsToStackReads = (
                         result.push({
                             kind: 'unspill',
                             register: lhs,
-                            offset: lhsLocation.offset,
                             why: `Load arg from stack`,
                         });
                     }
@@ -93,7 +91,6 @@ const translateStackArgumentsToStackReads = (
                         result.push({
                             kind: 'unspill',
                             register: rhs,
-                            offset: rhsLocation.offset,
                             why: `Load arg from stack`,
                         });
                     }

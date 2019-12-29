@@ -823,7 +823,7 @@ export const constructFunction = (
             ];
         })
     );
-    return { name: f.name, instructions: functionCode, liveAtExit, spills: 0, arguments: args };
+    return { name: f.name, instructions: functionCode, liveAtExit, arguments: args };
 };
 
 export type MakeAllFunctionsInput = {
@@ -896,7 +896,6 @@ export const makeTargetProgram = ({
         instructions: mainProgramInstructions,
         liveAtExit: [exitCodeRegister],
         arguments: [],
-        spills: 0,
     };
     const freeGlobals = {
         name: 'free_globals',

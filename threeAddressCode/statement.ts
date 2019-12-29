@@ -21,8 +21,8 @@ export type Statement = { why: string } & (
     // Stack management
     | { kind: 'alloca'; bytes: number; register: Register }
     // Spilling
-    | { kind: 'spill'; register: Register; offset: number }
-    | { kind: 'unspill'; register: Register; offset: number }
+    | { kind: 'spill'; register: Register }
+    | { kind: 'unspill'; register: Register }
     // Branches
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: Register; rhs: Register; label: string }
@@ -151,9 +151,9 @@ const toStringWithoutComment = (tas: Statement): string => {
         case 'alloca':
             return `${rToS(tas.register)} = alloca(${tas.bytes})`;
         case 'spill':
-            return `spill:${tas.offset} ${rToS(tas.register)}`;
+            return `spill:${rToS(tas.register)}`;
         case 'unspill':
-            return `unspill:${tas.offset} ${rToS(tas.register)}`;
+            return `unspill:${rToS(tas.register)}`;
     }
 };
 

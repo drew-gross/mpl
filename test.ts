@@ -1214,7 +1214,6 @@ test('computeBlockLiveness read and write in one', t => {
 test('liveness analysis basic test', t => {
     const testFunction: Function = {
         name: 'test',
-        spills: 0,
         liveAtExit: [],
         arguments: [{ name: 'some_arg' }],
         instructions: [
@@ -1265,7 +1264,6 @@ test('liveness analysis basic test', t => {
 test('4 block graph (length)', t => {
     const lengthRTLF: Function = {
         name: 'length',
-        spills: 0,
         liveAtExit: [],
         arguments: [{ name: 'strPtr' }],
         instructions: [
@@ -1328,7 +1326,6 @@ test('4 block graph (length)', t => {
 test('liveness of stringEquality', t => {
     const complexFunction: Function = {
         name: 'complexFunction',
-        spills: 0,
         liveAtExit: [],
         arguments: [],
         instructions: [
@@ -1600,6 +1597,7 @@ test('Add Numbers in ThreeAddressCode', tacTest, {
     exitCode: 3,
 });
 
+// TODO: change this test to test what a StackUsage looks like
 test('Stack Offset Load and Store', tacTest, {
     source: `
 (function) (spill:2) main():
@@ -1613,7 +1611,6 @@ test('Stack Offset Load and Store', tacTest, {
     return r:result; ret
 `,
     exitCode: 3,
-    spills: 2,
 });
 
 test('Spill With Local Variables', mplTest, {
@@ -1946,7 +1943,6 @@ test("Functions calls with side effects don't get removed for being dead", t => 
             },
         ],
         liveAtExit: [{ name: 'exitCodeRegister_1' }],
-        spills: 0,
         arguments: [],
     };
     const assigned = assignRegisters(f, [{ name: 'r1' }, { name: 'r2' }, { name: 'r3' }]);
@@ -1984,7 +1980,6 @@ test("Control flow instructions don't get removed for having no writes", t => {
             },
         ],
         liveAtExit: [],
-        spills: 0,
         arguments: [],
     };
     const assigned = assignRegisters(f, [{ name: 'r1' }, { name: 'r2' }, { name: 'r3' }]);

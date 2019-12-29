@@ -10,7 +10,6 @@ const switchableMallocImpl = (
     makeSyscall
 ): Function => ({
     name: 'my_malloc',
-    spills: 0,
     liveAtExit: [],
     arguments: [{ name: 'numBytes' }],
     instructions: [

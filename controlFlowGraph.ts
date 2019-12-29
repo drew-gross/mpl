@@ -399,13 +399,11 @@ export const registerInterferenceGraph = (
 
 export const spill = (taf: Function, registerToSpill: Register): Function => {
     if (typeof registerToSpill == 'string') throw debug("Can't spill special registers");
-    const currentSpillIndex = taf.spills + 1;
     const registerName = idAppender();
     const newFunction: Function = {
         instructions: [],
         arguments: taf.arguments,
         liveAtExit: taf.liveAtExit,
-        spills: currentSpillIndex,
         name: taf.name,
     };
 
@@ -430,7 +428,6 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                     newFunction.instructions.push({
                         kind: 'spill',
                         register: fragment,
-                        offset: currentSpillIndex,
                         why: 'spill',
                     });
                 } else {
@@ -447,7 +444,6 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                     newFunction.instructions.push({
                         kind: 'unspill',
                         register: newLhs,
-                        offset: currentSpillIndex,
                         why: 'unspill',
                     });
                 }
@@ -456,7 +452,6 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                     newFunction.instructions.push({
                         kind: 'unspill',
                         register: newRhs,
-                        offset: currentSpillIndex,
                         why: 'unspill',
                     });
                 }
@@ -472,7 +467,6 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                     newFunction.instructions.push({
                         kind: 'spill',
                         register: newDestination,
-                        offset: currentSpillIndex,
                         why: 'spill',
                     });
                 } else {
@@ -488,7 +482,6 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                     newFunction.instructions.push({
                         kind: 'unspill',
                         register: newSource,
-                        offset: currentSpillIndex,
                         why: 'unspill',
                     });
                 }
@@ -502,7 +495,6 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                     newFunction.instructions.push({
                         kind: 'spill',
                         register: newDestination,
-                        offset: currentSpillIndex,
                         why: 'spill',
                     });
                 } else {
@@ -532,7 +524,6 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                         newFunction.instructions.push({
                             kind: 'unspill',
                             register: newSource,
-                            offset: currentSpillIndex,
                             why: 'unspill arg',
                         });
                     } else {
@@ -552,7 +543,6 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                     newFunction.instructions.push({
                         kind: 'spill',
                         register: newDestination,
-                        offset: currentSpillIndex,
                         why: 'spill',
                     });
                 } else {
@@ -565,7 +555,6 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                     newFunction.instructions.push({
                         kind: 'unspill',
                         register: newReturnVal,
-                        offset: currentSpillIndex,
                         why: 'unspill ret val',
                     });
                     newFunction.instructions.push({ ...instruction, register: newReturnVal });

@@ -20,7 +20,6 @@ type TestOptions = {
     printSubsteps?: string[] | string;
     debugSubsteps?: string[] | string;
     failing?: string[] | string;
-    spills?: number;
     name?: string;
     stdin?: string;
 };
@@ -201,7 +200,6 @@ export const tacTest = async (
         exitCode,
         printSubsteps = [],
         debugSubsteps = [],
-        spills,
         failing = [],
         stdin = '',
     }: TestOptions
@@ -214,9 +212,6 @@ export const tacTest = async (
     if (Array.isArray(parsed)) {
         t.fail(`Parse error: ${JSON.stringify(parsed)}`);
         return;
-    }
-    if (spills) {
-        t.deepEqual(parsed.spills, spills);
     }
     await Promise.all(
         backends.map(async backend => {
