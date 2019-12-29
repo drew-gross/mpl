@@ -67,7 +67,7 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         action: s => parseInt(s.slice(7, -1), 10),
     },
     {
-        token: 'spill:\\d+',
+        token: 'spill:\\d+', // TODO: fix spill/unspill parsing
         type: 'spillInstruction',
         toString: x => x,
         action: s => parseInt(s.slice(6), 10),

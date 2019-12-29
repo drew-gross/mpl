@@ -1,9 +1,2 @@
-export default <T>(p: (T) => any, array: T[]): T[] => {
-    const result: T[] = [];
-    for (const item of array) {
-        if (result.every(existing => p(existing) !== p(item))) {
-            result.push(item);
-        }
-    }
-    return result;
-};
+import uniqueCmp from './uniqueCmp.js';
+export default <T>(p: (T) => any, array: T[]): T[] => uniqueCmp((x, y) => p(x) === p(y), array);

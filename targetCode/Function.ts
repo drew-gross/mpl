@@ -1,7 +1,8 @@
 import idAppender from '../util/idAppender.js';
+import uniqueCmp from '../util/list/uniqueCmp.js';
 import { Statement as ThreeAddressStatement, reads } from '../threeAddressCode/Statement.js';
 import { Function as ThreeAddressFunction } from '../threeAddressCode/Function';
-import { Register } from '../register.js';
+import { Register, isEqual } from '../register.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 import debug from '../util/debug.js';
 import { orderedSet, operatorCompare } from '../util/ordered-set.js';
@@ -11,7 +12,12 @@ import {
     toTarget as statementToTarget,
     argumentLocation,
 } from './Statement.js';
-import { StackUsage } from './StackUsage.js';
+import {
+    StackUsage,
+    calleeReserveCount,
+    savedExtraOffset,
+    savedUsedOffset,
+} from './StackUsage.js';
 import { TargetInfo } from '../TargetInfo.js';
 
 type ToTargetInput<TargetRegister> = {
@@ -21,30 +27,10 @@ type ToTargetInput<TargetRegister> = {
     isMain: boolean; // Controls whether to save/restore registers
 };
 
-const savedExtraOffset = (usage: StackUsage, saved: string): number => {
-    const offsetInSaved = usage.savedExtraRegisters.findIndex(s => s == saved);
-    if (offsetInSaved < 0) debug('no find');
-    return usage.arguments.length + offsetInSaved;
-};
-
-const savedUsedOffset = (usage: StackUsage, saved: string): number => {
-    const offsetInUsed = usage.savedUsedRegisters.findIndex(s => s == saved);
-    if (offsetInUsed < 0) debug('no find');
-    return usage.arguments.length + usage.savedExtraRegisters.length + offsetInUsed;
-};
-
-const calleeReserveCount = (usage: StackUsage): number => {
-    return (
-        usage.arguments.length +
-        usage.savedExtraRegisters.length +
-        usage.savedUsedRegisters.length
-    );
-};
-
 export type Function<TargetRegister> = {
     name: string;
     instructions: TargetStatement<TargetRegister>[];
-    stackUsage: StackUsage;
+    stackUsage: StackUsage<TargetRegister>;
 };
 
 const translateStackArgumentsToStackReads = (
@@ -117,37 +103,28 @@ const translateStackArgumentsToStackReads = (
     return { ...taf, instructions };
 };
 
+const spilledRegisters = (threeAddressFunction: ThreeAddressFunction): Register[] =>
+    uniqueCmp(
+        isEqual,
+        threeAddressFunction.instructions
+            .filter(i => ['spill', 'unspill'].includes(i.kind))
+            .map((i: any) => i.register)
+    );
+
+const stackArguments = <TargetRegister>(
+    targetInfo: TargetInfo<TargetRegister>,
+    threeAddressFunction: ThreeAddressFunction
+): Register[] =>
+    threeAddressFunction.arguments.filter(
+        arg => argumentLocation(targetInfo, threeAddressFunction.arguments, arg).kind == 'stack'
+    );
+
 export const toTarget = <TargetRegister>({
     threeAddressFunction,
     targetInfo,
     finalCleanup,
     isMain,
 }: ToTargetInput<TargetRegister>): Function<TargetRegister> => {
-    const stackUsage: StackUsage = {
-        arguments: [],
-        savedExtraRegisters: [],
-        savedUsedRegisters: [],
-        callerSavedRegisters: [],
-    };
-
-    targetInfo.callerSavedRegisters.forEach(r => {
-        stackUsage.callerSavedRegisters.push(r);
-    });
-
-    threeAddressFunction.arguments.map((arg, index) => {
-        if (argumentLocation(targetInfo, threeAddressFunction.arguments, arg).kind == 'stack') {
-            stackUsage.arguments.push(`Argument: ${arg.name}`);
-        }
-    });
-
-    // TODO: on x64, call instruction implicitly pushes to the stack, we need to adjust for that
-
-    const extraSavedRegisters = isMain ? [] : targetInfo.extraSavedRegisters;
-
-    extraSavedRegisters.forEach(r => {
-        stackUsage.savedExtraRegisters.push(`Saved extra: ${r}`);
-    });
-
     // When we call this we don't know the total stack frame size because we haven't assigned registers yet. statmentToTarget takes into account the total stack frame size and adjusts stack indexes accordingly.
     const functonWithArgsFromStack = translateStackArgumentsToStackReads(
         threeAddressFunction,
@@ -158,16 +135,18 @@ export const toTarget = <TargetRegister>({
         functonWithArgsFromStack,
         targetInfo.registers.generalPurpose
     );
-
     const usedSavedRegistersSet = orderedSet<TargetRegister>(operatorCompare);
     if (!isMain) {
         Object.values(assignment.registerMap).forEach(usedSavedRegistersSet.add);
     }
-    const usedSavedRegisters = usedSavedRegistersSet.toList();
 
-    usedSavedRegisters.forEach(r => {
-        stackUsage.savedUsedRegisters.push(`Saved used: ${r}`);
-    });
+    const stackUsage: StackUsage<TargetRegister> = {
+        arguments: stackArguments(targetInfo, threeAddressFunction),
+        spills: spilledRegisters(functionWithAssignment),
+        savedExtraRegisters: isMain ? [] : targetInfo.extraSavedRegisters,
+        savedUsedRegisters: usedSavedRegistersSet.toList(),
+        callerSavedRegisters: targetInfo.callerSavedRegisters,
+    };
 
     const stackOffsetPerInstruction: number[] = [];
     functionWithAssignment.instructions.forEach(i => {
@@ -202,30 +181,30 @@ export const toTarget = <TargetRegister>({
                 words: calleeReserveCount(stackUsage),
                 why: `Reserve stack`,
             },
-            ...extraSavedRegisters.map(r => ({
+            ...stackUsage.savedExtraRegisters.map(r => ({
                 kind: 'stackStore' as 'stackStore',
                 register: r,
-                offset: savedExtraOffset(stackUsage, `Saved extra: ${r}`),
+                offset: savedExtraOffset(stackUsage, r),
                 why: 'Preamble: save extra register',
             })),
-            ...usedSavedRegisters.map(r => ({
+            ...stackUsage.savedUsedRegisters.map(r => ({
                 kind: 'stackStore' as 'stackStore',
                 register: r,
-                offset: savedUsedOffset(stackUsage, `Saved used: ${r}`),
+                offset: savedUsedOffset(stackUsage, r),
                 why: 'Preamble: save used register',
             })),
             ...statements,
             { kind: 'label', name: exitLabel, why: 'cleanup' },
-            ...usedSavedRegisters.map(r => ({
+            ...stackUsage.savedUsedRegisters.map(r => ({
                 kind: 'stackLoad' as 'stackLoad',
                 register: r,
-                offset: savedUsedOffset(stackUsage, `Saved used: ${r}`),
+                offset: savedUsedOffset(stackUsage, r),
                 why: 'Cleanup: restore used register',
             })),
-            ...extraSavedRegisters.map(r => ({
+            ...stackUsage.savedExtraRegisters.map(r => ({
                 kind: 'stackLoad' as 'stackLoad',
                 register: r,
-                offset: savedExtraOffset(stackUsage, `Saved extra: ${r}`),
+                offset: savedExtraOffset(stackUsage, r),
                 why: 'Cleanup: restore extra register',
             })),
             {

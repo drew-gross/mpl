@@ -129,7 +129,7 @@ export const saveFunctionCallResult = <TargetRegister>(
 export type TranslatedFunction = {
     name?: string; // Only main may not have a name
     instructions: string[];
-    stackUsage: StackUsage;
+    stackUsage: StackUsage<string>; // Done because the whole point of TranslatedFunction is to not template on the register type. TODO: don't make register type a template
 };
 
 export type Executable = {
@@ -219,13 +219,13 @@ export const makeExecutable = <TargetRegister>(
     return {
         main: {
             instructions: flatten(targetMain.instructions.map(translator)),
-            stackUsage: targetMain.stackUsage,
+            stackUsage: targetMain.stackUsage as any,
         },
         functions: targetFunctions.map(({ name, instructions, stackUsage }) => ({
             name,
             stackUsage,
             instructions: flatten(instructions.map(translator)),
-        })),
+        })) as any,
     };
 };
 

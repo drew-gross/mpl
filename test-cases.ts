@@ -409,6 +409,14 @@ return isFive(5) ? 1 : 0`,
         exitCode: 0,
         failing: true,
     },
+    {
+        name: 'Return String',
+        source: `
+            isFive: Function<Integer, String> = a: Integer => a == 5 ? "isFive" : "isNotFive";
+            return length(isFive(5))
+        `,
+        exitCode: 6,
+    },
 ];
 
 export default testCases;

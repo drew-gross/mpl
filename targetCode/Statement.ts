@@ -130,7 +130,7 @@ export type ToTargetInput<TargetRegister> = {
     targetInfo: TargetInfo<TargetRegister>;
     stackOffset: number;
     stackFrameSize: number;
-    stackUsage: StackUsage;
+    stackUsage: StackUsage<TargetRegister>;
     registerAssignment: RegisterAssignment<TargetRegister>;
     exitLabel: string;
 };

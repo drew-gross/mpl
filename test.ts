@@ -1,3 +1,5 @@
+import uniqueCmp from './util/list/uniqueCmp.js';
+import uniqueBy from './util/list/uniqueBy.js';
 import testCases from './test-cases.js';
 import {
     parseProgram as parseTacProgram,
@@ -755,13 +757,6 @@ return myFunc("");`,
             sourceLocation: { line: 2, column: 1 },
         },
     ],
-});
-
-test('return string', mplTest, {
-    source: `
-isFive: Function<Integer, String> = a: Integer => a == 5 ? "isFive" : "isNotFive";
-return length(isFive(5))`,
-    exitCode: 6,
 });
 
 test('assign function to wrong return type', mplTest, {
@@ -1601,13 +1596,13 @@ test('Add Numbers in ThreeAddressCode', tacTest, {
 test('Stack Offset Load and Store', tacTest, {
     source: `
 (function) (spill:2) main():
-    r:temp = 1; Something to spill
-    spill:1 r:temp; Spill it
-    r:temp = 2; Use it for something else
-    spill:2 r:temp; Spill this one too
-    unspill:1 r:one; Load
-    unspill:2 r:two; Load
-    r:result = r:one + r:two; Add the things
+    r:temp1 = 1; Something to spill
+    spill:1 r:temp1; Spill it
+    r:temp2 = 2; Use it for something else
+    spill:2 r:temp2; Spill this one too
+    unspill:1 r:temp1; Load
+    unspill:2 r:temp2; Load
+    r:result = r:temp1 + r:temp2; Add the things
     return r:result; ret
 `,
     exitCode: 3,
@@ -2230,6 +2225,28 @@ test('Ordered Set Extract One', t => {
     t.deepEqual(s.toList(), [2, 4]);
     const extractedNothing = s.extractOne(x => x == 5);
     t.deepEqual(extractedNothing, null);
+});
+
+test('Unique Cmp', t => {
+    t.deepEqual(
+        uniqueCmp((a, b) => a == b, ['a', 'a', 'a']),
+        ['a']
+    );
+    t.deepEqual(
+        uniqueCmp((a, b) => a == b, ['a', 'b', 'a']),
+        ['a', 'b']
+    );
+});
+
+test('Unique By', t => {
+    t.deepEqual(
+        uniqueBy(a => a, ['a', 'a', 'a']),
+        ['a']
+    );
+    t.deepEqual(
+        uniqueBy(a => a, ['a', 'b', 'a']),
+        ['a', 'b']
+    );
 });
 
 // TODO: Turn this into a screenshot test somehow.
