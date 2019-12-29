@@ -114,7 +114,7 @@ export type Statement<TargetRegister> = { why: string } & (
     | { kind: 'callByRegister'; function: TargetRegister }
     | { kind: 'return' }
     // Stack Management
-    | { kind: 'loadStackOffset'; register: TargetRegister; offset: number } // TODO: This should be fused with stackLoad probably, currently this offsets by bytes and stackLoad offsets by works.
+    | { kind: 'loadStackOffset'; register: TargetRegister; offset: number } // TODO: This is alloca, gets the address of a stack object
     | { kind: 'stackStore'; register: TargetRegister; offset: number }
     | { kind: 'stackLoad'; register: TargetRegister; offset: number }
     | { kind: 'stackReserve'; words: number }

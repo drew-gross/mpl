@@ -5,7 +5,8 @@ import { Statement } from './threeAddressCode/Statement.js';
 import { Statement as TargetStatement } from './targetCode/Statement.js';
 import { Program } from './threeAddressCode/Program.js';
 import { RegisterAgnosticTargetInfo, TargetInfo, TargetRegisters } from './TargetInfo.js';
-import { toTarget, StackUsage } from './targetCode/Function.js';
+import { toTarget } from './targetCode/Function.js';
+import { StackUsage, stackUsageToString } from './targetCode/StackUsage.js';
 import { Register } from './register.js';
 import join from './util/join.js';
 
@@ -134,23 +135,6 @@ export type TranslatedFunction = {
 export type Executable = {
     main: TranslatedFunction;
     functions: TranslatedFunction[];
-};
-
-const stackUsageToString = (usage: StackUsage): string => {
-    const descriptions: string[] = [];
-    usage.callerSavedRegisters.forEach(r => {
-        descriptions.push(r);
-    });
-    usage.arguments.forEach(r => {
-        descriptions.push(r);
-    });
-    usage.savedExtraRegisters.forEach(r => {
-        descriptions.push(r);
-    });
-    usage.savedUsedRegisters.forEach(r => {
-        descriptions.push(r);
-    });
-    return `[${join(descriptions, ', ')}]`;
 };
 
 const functionToString = (

@@ -11,6 +11,7 @@ import {
     toTarget as statementToTarget,
     argumentLocation,
 } from './Statement.js';
+import { StackUsage } from './StackUsage.js';
 import { TargetInfo } from '../TargetInfo.js';
 
 type ToTargetInput<TargetRegister> = {
@@ -18,14 +19,6 @@ type ToTargetInput<TargetRegister> = {
     targetInfo: TargetInfo<TargetRegister>;
     finalCleanup: TargetStatement<TargetRegister>[];
     isMain: boolean; // Controls whether to save/restore registers
-};
-
-// Order here matches argument on stack
-export type StackUsage = {
-    callerSavedRegisters: string[];
-    arguments: string[];
-    savedExtraRegisters: string[];
-    savedUsedRegisters: string[];
 };
 
 const savedExtraOffset = (usage: StackUsage, saved: string): number => {
