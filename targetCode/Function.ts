@@ -1,4 +1,3 @@
-import idAppender from '../util/idAppender.js';
 import uniqueCmp from '../util/list/uniqueCmp.js';
 import { Statement as ThreeAddressStatement, reads } from '../threeAddressCode/Statement.js';
 import { Function as ThreeAddressFunction } from '../threeAddressCode/Function';

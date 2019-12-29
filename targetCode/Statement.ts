@@ -345,7 +345,7 @@ export const toTarget = <TargetRegister>({
             return [
                 {
                     kind: 'stackLoad',
-                    register: getRegister(tas.register),
+                    register: getRegister(tas.to),
                     offset: offset(stackUsage, tas.register),
                     why: tas.why,
                 },
