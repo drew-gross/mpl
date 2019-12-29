@@ -192,6 +192,7 @@ export const toTarget = <TargetRegister>({
                 exitLabel,
                 stackOffset: stackOffsetPerInstruction[index],
                 stackFrameSize: calleeReserveCount(stackUsage),
+                stackUsage,
             })
         )
     );

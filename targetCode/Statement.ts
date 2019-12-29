@@ -7,6 +7,7 @@ import {
     saveFunctionCallResult,
 } from '../backend-utils.js';
 import { TargetInfo, TargetRegisters } from '../TargetInfo.js';
+import { StackUsage } from './StackUsage.js';
 
 export type DataLocation<TargetRegister> =
     | { kind: 'register'; register: TargetRegister }
@@ -129,6 +130,7 @@ export type ToTargetInput<TargetRegister> = {
     targetInfo: TargetInfo<TargetRegister>;
     stackOffset: number;
     stackFrameSize: number;
+    stackUsage: StackUsage;
     registerAssignment: RegisterAssignment<TargetRegister>;
     exitLabel: string;
 };
