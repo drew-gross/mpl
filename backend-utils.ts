@@ -136,13 +136,30 @@ export type Executable = {
     functions: TranslatedFunction[];
 };
 
+const stackUsageToString = (usage: StackUsage): string => {
+    const descriptions: string[] = [];
+    usage.callerSavedRegisters.forEach(r => {
+        descriptions.push(r);
+    });
+    usage.arguments.forEach(r => {
+        descriptions.push(r);
+    });
+    usage.savedExtraRegisters.forEach(r => {
+        descriptions.push(r);
+    });
+    usage.savedUsedRegisters.forEach(r => {
+        descriptions.push(r);
+    });
+    return `[${join(descriptions, ', ')}]`;
+};
+
 const functionToString = (
     commentChar: string,
     { name, instructions, stackUsage }: TranslatedFunction
 ): string => {
     if (!name) debug('no name here');
     return `
-${name}: ${commentChar} stack: [${join(stackUsage, ', ')}]
+${name}: ${commentChar} stack: ${stackUsageToString(stackUsage)}
 ${join(instructions, '\n')}`;
 };
 

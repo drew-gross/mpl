@@ -20,13 +20,32 @@ type ToTargetInput<TargetRegister> = {
     isMain: boolean; // Controls whether to save/restore registers
 };
 
-export type StackUsage = string[]; // For not just comment. TODO: structured data
-export type StackIndexLookup = { [key: string]: number };
+// Order here matches argument on stack
+export type StackUsage = {
+    callerSavedRegisters: string[];
+    arguments: string[];
+    savedExtraRegisters: string[];
+    savedUsedRegisters: string[];
+};
 
-const lookup = (index: StackIndexLookup, key: string) => {
-    const result = index[key];
-    if (result === undefined) debug('bad stack lookup');
-    return result;
+const savedExtraOffset = (usage: StackUsage, saved: string): number => {
+    const offsetInSaved = usage.savedExtraRegisters.findIndex(s => s == saved);
+    if (offsetInSaved < 0) debug('no find');
+    return usage.arguments.length + offsetInSaved;
+};
+
+const savedUsedOffset = (usage: StackUsage, saved: string): number => {
+    const offsetInUsed = usage.savedUsedRegisters.findIndex(s => s == saved);
+    if (offsetInUsed < 0) debug('no find');
+    return usage.arguments.length + usage.savedExtraRegisters.length + offsetInUsed;
+};
+
+const calleeReserveCount = (usage: StackUsage): number => {
+    return (
+        usage.arguments.length +
+        usage.savedExtraRegisters.length +
+        usage.savedUsedRegisters.length
+    );
 };
 
 export type Function<TargetRegister> = {
@@ -114,15 +133,20 @@ export const toTarget = <TargetRegister>({
     finalCleanup,
     isMain,
 }: ToTargetInput<TargetRegister>): Function<TargetRegister> => {
-    const stackUsage: StackUsage = [];
+    const stackUsage: StackUsage = {
+        arguments: [],
+        savedExtraRegisters: [],
+        savedUsedRegisters: [],
+        callerSavedRegisters: [],
+    };
 
     targetInfo.callerSavedRegisters.forEach(r => {
-        stackUsage.push(r);
+        stackUsage.callerSavedRegisters.push(r);
     });
 
     threeAddressFunction.arguments.map((arg, index) => {
         if (argumentLocation(targetInfo, threeAddressFunction.arguments, arg).kind == 'stack') {
-            stackUsage.push(`Argument: ${arg.name}`);
+            stackUsage.arguments.push(`Argument: ${arg.name}`);
         }
     });
 
@@ -131,7 +155,7 @@ export const toTarget = <TargetRegister>({
     const extraSavedRegisters = isMain ? [] : targetInfo.extraSavedRegisters;
 
     extraSavedRegisters.forEach(r => {
-        stackUsage.push(`Saved extra: ${r}`);
+        stackUsage.savedExtraRegisters.push(`Saved extra: ${r}`);
     });
 
     // When we call this we don't know the total stack frame size because we haven't assigned registers yet. statmentToTarget takes into account the total stack frame size and adjusts stack indexes accordingly.
@@ -152,12 +176,7 @@ export const toTarget = <TargetRegister>({
     const usedSavedRegisters = usedSavedRegistersSet.toList();
 
     usedSavedRegisters.forEach(r => {
-        stackUsage.push(`Saved used: ${r}`);
-    });
-
-    const stackIndexLookup: StackIndexLookup = {};
-    stackUsage.forEach((usage, index) => {
-        stackIndexLookup[usage] = index - targetInfo.callerSavedRegisters.length;
+        stackUsage.savedUsedRegisters.push(`Saved used: ${r}`);
     });
 
     const stackOffsetPerInstruction: number[] = [];
@@ -169,8 +188,6 @@ export const toTarget = <TargetRegister>({
         }
     });
 
-    const stackFrameSize = stackUsage.length - targetInfo.callerSavedRegisters.length;
-
     const exitLabel = `${threeAddressFunction.name}_cleanup`;
     const statements: TargetStatement<TargetRegister>[] = flatten(
         functonWithArgsFromStack.instructions.map((instruction, index) =>
@@ -181,7 +198,7 @@ export const toTarget = <TargetRegister>({
                 registerAssignment: assignment,
                 exitLabel,
                 stackOffset: stackOffsetPerInstruction[index],
-                stackFrameSize,
+                stackFrameSize: calleeReserveCount(stackUsage),
             })
         )
     );
@@ -189,17 +206,21 @@ export const toTarget = <TargetRegister>({
     return {
         name: threeAddressFunction.name,
         instructions: [
-            { kind: 'stackReserve', words: stackFrameSize, why: `Reserve stack` },
+            {
+                kind: 'stackReserve',
+                words: calleeReserveCount(stackUsage),
+                why: `Reserve stack`,
+            },
             ...extraSavedRegisters.map(r => ({
                 kind: 'stackStore' as 'stackStore',
                 register: r,
-                offset: lookup(stackIndexLookup, `Saved extra: ${r}`),
+                offset: savedExtraOffset(stackUsage, `Saved extra: ${r}`),
                 why: 'Preamble: save extra register',
             })),
             ...usedSavedRegisters.map(r => ({
                 kind: 'stackStore' as 'stackStore',
                 register: r,
-                offset: lookup(stackIndexLookup, `Saved used: ${r}`),
+                offset: savedUsedOffset(stackUsage, `Saved used: ${r}`),
                 why: 'Preamble: save used register',
             })),
             ...statements,
@@ -207,16 +228,20 @@ export const toTarget = <TargetRegister>({
             ...usedSavedRegisters.map(r => ({
                 kind: 'stackLoad' as 'stackLoad',
                 register: r,
-                offset: lookup(stackIndexLookup, `Saved used: ${r}`),
+                offset: savedUsedOffset(stackUsage, `Saved used: ${r}`),
                 why: 'Cleanup: restore used register',
             })),
             ...extraSavedRegisters.map(r => ({
                 kind: 'stackLoad' as 'stackLoad',
                 register: r,
-                offset: lookup(stackIndexLookup, `Saved extra: ${r}`),
+                offset: savedExtraOffset(stackUsage, `Saved extra: ${r}`),
                 why: 'Cleanup: restore extra register',
             })),
-            { kind: 'stackRelease', words: stackFrameSize, why: `Restore stack` },
+            {
+                kind: 'stackRelease',
+                words: calleeReserveCount(stackUsage),
+                why: `Restore stack`,
+            },
             ...finalCleanup,
         ],
         stackUsage,

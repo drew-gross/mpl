@@ -8,7 +8,7 @@ import {
 } from '../backend-utils.js';
 import { TargetInfo, TargetRegisters } from '../TargetInfo.js';
 
-export type DataLocation<TargetRegister> = 
+export type DataLocation<TargetRegister> =
     | { kind: 'register'; register: TargetRegister }
     | { kind: 'stack'; offset: number }
     // Returned when input to argumentLocation isn't an argument. TODO: we should know before calling argumentLocation whether it's an argument or not.
