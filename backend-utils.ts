@@ -7,7 +7,7 @@ import { Program } from './threeAddressCode/Program.js';
 import { RegisterAgnosticTargetInfo, TargetInfo, TargetRegisters } from './TargetInfo.js';
 import { toTarget } from './targetCode/Function.js';
 import { StackUsage, stackUsageToString } from './targetCode/StackUsage.js';
-import { Register } from './register.js';
+import { Register } from './threeAddressCode/Register.js';
 import join from './util/join.js';
 
 import mipsBackend from './backends/mips.js';

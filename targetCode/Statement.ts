@@ -1,6 +1,6 @@
 import debug from '../util/debug.js';
 import { Statement as ThreeAddressStatement } from '../threeAddressCode/statement.js';
-import { Register, isEqual } from '../register.js';
+import { Register, isEqual } from '../threeAddressCode/Register.js';
 import {
     RegisterAssignment,
     arrangeArgumentsForFunctionCall,

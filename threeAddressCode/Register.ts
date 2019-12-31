@@ -1,5 +1,5 @@
-import ComparisonResult from './util/comparisonResult.js';
-import compareString from './string/compare.js';
+import ComparisonResult from '../util/comparisonResult.js';
+import compareString from '../string/compare.js';
 
 export type Register = { name: string };
 export const isEqual = (lhs: Register, rhs: Register): boolean => lhs.name == rhs.name;

@@ -1,4 +1,4 @@
-import { toString as rToS, Register } from '../register.js';
+import { toString as rToS, Register } from './Register.js';
 import { toString as statementToString, Statement } from './Statement.js';
 import join from '../util/join.js';
 import debug from '../util/debug.js';

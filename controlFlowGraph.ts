@@ -6,7 +6,11 @@ import { orderedSet, OrderedSet } from './util/ordered-set.js';
 import join from './util/join.js';
 import idAppender from './util/idAppender.js';
 import { RegisterAssignment } from './backend-utils.js';
-import { Register, isEqual as registerIsEqual, compare as registerCompare } from './register.js';
+import {
+    Register,
+    isEqual as registerIsEqual,
+    compare as registerCompare,
+} from './threeAddressCode/Register.js';
 import { Function } from './threeAddressCode/Function.js';
 import {
     Statement,

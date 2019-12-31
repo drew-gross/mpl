@@ -1,4 +1,4 @@
-import { toString as rToS, Register } from '../register.js';
+import { toString as rToS, Register } from './Register.js';
 import { filter, FilterPredicate } from '../util/list/filter.js';
 import join from '../util/join.js';
 import debug from '../util/debug.js';

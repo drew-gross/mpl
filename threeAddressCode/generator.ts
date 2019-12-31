@@ -22,7 +22,7 @@ import {
     stringLiteralName,
     freeGlobalsInstructions,
 } from '../backend-utils.js';
-import { Register, toString as s } from '../register.js';
+import { Register, toString as s } from './Register.js';
 import {
     FrontendOutput,
     Function as ApiFunction,

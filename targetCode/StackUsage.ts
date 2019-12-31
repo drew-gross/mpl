@@ -1,6 +1,6 @@
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { Register, toString, isEqual } from '../register.js';
+import { Register, toString, isEqual } from '../threeAddressCode/Register.js';
 
 // Order here matches argument on stack
 export type StackUsage<TargetRegister> = {

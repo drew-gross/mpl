@@ -1,7 +1,7 @@
 import uniqueCmp from '../util/list/uniqueCmp.js';
 import { Statement as ThreeAddressStatement, reads } from '../threeAddressCode/Statement.js';
 import { Function as ThreeAddressFunction } from '../threeAddressCode/Function';
-import { Register, isEqual } from '../register.js';
+import { Register, isEqual } from '../threeAddressCode/Register.js';
 import { assignRegisters } from '../controlFlowGraph.js';
 import debug from '../util/debug.js';
 import { orderedSet, operatorCompare } from '../util/ordered-set.js';
