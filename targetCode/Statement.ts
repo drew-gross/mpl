@@ -298,22 +298,14 @@ export const toTarget = <TargetRegister>({
             ];
         case 'callByName': {
             return [
-                ...arrangeArgumentsForFunctionCall(
-                    tas.arguments,
-                    getRegister,
-                    targetInfo.registers
-                ),
+                ...arrangeArgumentsForFunctionCall(tas.arguments, getRegister, targetInfo),
                 { kind: 'callByName', function: tas.function, why: 'actually call' },
                 ...saveFunctionCallResult(tas.destination, getRegister, targetInfo.registers),
             ];
         }
         case 'callByRegister': {
             return [
-                ...arrangeArgumentsForFunctionCall(
-                    tas.arguments,
-                    getRegister,
-                    targetInfo.registers
-                ),
+                ...arrangeArgumentsForFunctionCall(tas.arguments, getRegister, targetInfo),
                 {
                     kind: 'callByRegister',
                     function: getRegister(tas.function),

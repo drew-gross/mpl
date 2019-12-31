@@ -30,7 +30,9 @@ export const offset = <TargetRegister>(
 ): number => {
     const argIndex = usage.arguments.findIndex(r => isEqual(register, r));
     if (argIndex >= 0) {
-        return calleeReserveCount(usage) - argIndex;
+        // In x64, we add stack arguments on top of where the return address will endup. For some reason, x64 call instruction seems to push 2 words onto the stack, but we only need to offset by one. So I added a dummy value to the "caller saved registers" item and then divide the length by 2 here. It's super jank. TODO: Just use the normal calling convention with the return address on top of the stack arguments https://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64
+        const offsetForImplicitReturnAddress = usage.callerSavedRegisters.length / 2;
+        return calleeReserveCount(usage) - argIndex - offsetForImplicitReturnAddress;
     }
     const spillIndex = usage.spills.findIndex(r => isEqual(register, r));
     if (spillIndex >= 0) {

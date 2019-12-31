@@ -67,25 +67,25 @@ export type RegisterAssignment<TargetRegister> = {
 export const arrangeArgumentsForFunctionCall = <TargetRegister>(
     args: (Register | Number)[],
     getRegister: (r: Register) => TargetRegister,
-    registers: TargetRegisters<TargetRegister>
+    targetInfo: TargetInfo<TargetRegister>
 ): TargetStatement<TargetRegister>[] => {
     // TODO: Add some type check to ensure we have the right number of arguments
     return args.map((arg, index) => {
         // TODO: Reuse the code in argumentLocation here
-        if (index < registers.functionArgument.length) {
+        if (index < targetInfo.registers.functionArgument.length) {
             // Registers that fix in arguments go in arguments
             if (typeof arg == 'number') {
                 return {
                     kind: 'loadImmediate',
                     value: arg,
-                    destination: registers.functionArgument[index],
+                    destination: targetInfo.registers.functionArgument[index],
                     why: `Pass arg ${index} in register`,
                 };
             } else {
                 return {
                     kind: 'move',
                     from: getRegister(arg as Register),
-                    to: registers.functionArgument[index],
+                    to: targetInfo.registers.functionArgument[index],
                     why: `Pass arg ${index} in register`,
                 };
             }
@@ -96,7 +96,10 @@ export const arrangeArgumentsForFunctionCall = <TargetRegister>(
                     "arrangeArgumentsForFunctionCall doesn't support literals on stack yet"
                 );
             } else {
-                const stackSlot = index - registers.functionArgument.length;
+                const stackSlot =
+                    index -
+                    targetInfo.registers.functionArgument.length +
+                    targetInfo.callerSavedRegisters.length;
                 return {
                     kind: 'stackStore',
                     register: getRegister(arg as Register),
