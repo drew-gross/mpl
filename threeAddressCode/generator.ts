@@ -607,7 +607,9 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             ]);
         }
         case 'listLiteral': {
-            const bytesToAllocate = makeTemporary('bytesToAllocate');
+            const itemSize = typeSize(targetInfo, ast.type, types);
+            // Add a word for list length because we put that on the heap for now
+            const byteCount = ast.items.length * itemSize + targetInfo.bytesInWord;
             const dataPointer = makeTemporary('dataPointer');
             const listLength = makeTemporary('listLength');
             const createItems: CompiledExpression<Statement>[] = ast.items.map((m, index) => {
@@ -627,14 +629,11 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     ]
                 );
             });
+            const bytesInWord = targetInfo.bytesInWord;
             const prepAndCleanup: CompiledExpression<Statement> = {
                 prepare: ins(`
-                    ${bytesToAllocate} = ${ast.items.length *
-                    typeSize(targetInfo, ast.type, types)}; ${
-                    ast.items.length
-                } items * ${typeSize(targetInfo, ast.type, types)} bytes per item
-                    ${bytesToAllocate} += ${targetInfo.bytesInWord}; add room for length
-                    ${dataPointer} = my_malloc(${bytesToAllocate}); allocate
+                    ; ${bytesInWord}b for length, ${ast.items.length} ${itemSize}b items
+                    ${dataPointer} = my_malloc(${byteCount}); allocate
                     ${listLength} = ${ast.items.length}; save size
                     *(${dataPointer} + 0) = ${listLength}; save list length
                     ${destination} = ${dataPointer}; save memory for pointer

@@ -91,7 +91,7 @@ export default async (
     const threeAddressCode = makeTargetProgram({
         backendInputs: frontendOutput,
         targetInfo: {
-            bytesInWord: 13,
+            bytesInWord: 4,
             syscallNumbers: {},
             functionImpls: {
                 mallocImpl: mallocWithSbrk(7),
