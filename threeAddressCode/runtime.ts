@@ -1,6 +1,7 @@
 import { errors } from '../runtime-strings.js';
 import { Function } from './Function.js';
 import { parseFunctionOrDie, parseInstructionsOrDie as ins } from './parser.js';
+import { Register } from './Register.js';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => Function;
 
@@ -11,7 +12,7 @@ const switchableMallocImpl = (
 ): Function => ({
     name: 'my_malloc',
     liveAtExit: [],
-    arguments: [{ name: 'numBytes' }],
+    arguments: [new Register('numBytes')],
     instructions: [
         ...ins(`
             r:zero = 0;
@@ -28,8 +29,8 @@ const switchableMallocImpl = (
             ? [
                   {
                       kind: 'loadMemory',
-                      from: { name: 'currentBlockPointer' },
-                      to: { name: 'currentBlockPointer' },
+                      from: new Register('currentBlockPointer'),
+                      to: new Register('currentBlockPointer'),
                       offset: 0,
                       why: 'curr = *curr',
                   },
@@ -57,7 +58,7 @@ const switchableMallocImpl = (
         sbrk_more_space:;
             r:numBytes += ${3 * bytesInWord}; sbrk enough space for management block too
         `),
-        makeSyscall({ name: 'numBytes' }, { name: 'currentBlockPointer' }),
+        makeSyscall(new Register('numBytes'), new Register('currentBlockPointer')),
         ...ins(`
             r:numBytes += ${-3 * bytesInWord}; Repair arg1
             goto alloc_exit_check_passed if r:currentBlockPointer != -1;

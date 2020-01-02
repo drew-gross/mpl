@@ -215,7 +215,7 @@ export const freeGlobalsInstructions = (
     );
     instructions.push({
         kind: 'return' as 'return',
-        register: { name: 'dummyReturn' },
+        register: new Register('dummyReturn'),
         why:
             'Need to not have an empty function, otherwise verifyingOverlappingJoin fails. TODO: fix that.',
     });

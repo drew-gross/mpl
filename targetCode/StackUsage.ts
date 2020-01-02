@@ -1,6 +1,6 @@
 import debug from '../util/debug.js';
 import join from '../util/join.js';
-import { Register, toString, isEqual } from '../threeAddressCode/Register.js';
+import { Register, isEqual } from '../threeAddressCode/Register.js';
 
 // Order here matches argument on stack
 export type StackUsage<TargetRegister> = {
@@ -16,7 +16,7 @@ export const stackUsageToString = <TargetRegister>(
 ): string => {
     const descriptions: string[] = [
         ...usage.callerSavedRegisters,
-        ...usage.arguments.map(toString),
+        ...usage.arguments.map(r => r.toString()),
         ...((usage.savedExtraRegisters as unknown) as string[]),
         ...((usage.savedUsedRegisters as unknown) as string[]),
         ...usage.spills.map(toString),

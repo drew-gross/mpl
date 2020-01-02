@@ -476,8 +476,7 @@ const isRegister = (data: string): boolean => {
 const parseRegister = (data: string): Register => {
     if (!data.startsWith) debug('no startsWith');
     if (data.startsWith('r:')) {
-        const sliced = data.substring(2);
-        return { name: sliced };
+        return new Register(data.substring(2));
     }
     throw debug('invalid register name');
 };

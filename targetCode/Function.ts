@@ -46,7 +46,7 @@ const translateStackArgumentsToStackReads = (
                     // TODO: just load direclty into the destination
                     const fromLocation = argumentLocation(targetInfo, taf.arguments, tas.from);
                     if (fromLocation.kind == 'stack') {
-                        const fromLoaded = { name: `${tas.from.name}_loaded` };
+                        const fromLoaded = new Register(`${tas.from.name}_loaded`);
                         result.push({
                             kind: 'unspill',
                             register: tas.from,
@@ -63,7 +63,7 @@ const translateStackArgumentsToStackReads = (
                     const lhsLocation = argumentLocation(targetInfo, taf.arguments, tas.lhs);
                     if (lhsLocation.kind == 'stack') {
                         // TODO: Can probably do this without an extra temp register
-                        lhsLoaded = { name: `${tas.lhs.name}_loaded` };
+                        lhsLoaded = new Register(`${tas.lhs.name}_loaded`);
                         result.push({
                             kind: 'unspill',
                             register: tas.lhs,
@@ -74,7 +74,7 @@ const translateStackArgumentsToStackReads = (
                     let rhsLoaded = tas.rhs;
                     const rhsLocation = argumentLocation(targetInfo, taf.arguments, tas.rhs);
                     if (rhsLocation.kind == 'stack') {
-                        rhsLoaded = { name: `${tas.rhs.name}_loaded` };
+                        rhsLoaded = new Register(`${tas.rhs.name}_loaded`);
                         result.push({
                             kind: 'unspill',
                             register: tas.rhs,

@@ -8,6 +8,7 @@ import {
 import annontateSource from './annotateSource.js';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
 import { Function } from './threeAddressCode/Function.js';
+import { Register } from './threeAddressCode/Register.js';
 import { Statement } from './threeAddressCode/statement.js';
 import * as threeAddressCodeRuntime from './threeAddressCode/runtime.js';
 import test from 'ava';
@@ -1157,7 +1158,7 @@ test('controlFlowGraph basic test', t => {
         },
         {
             kind: 'return',
-            register: { name: 'result' },
+            register: new Register('result'),
             why: 'test',
         },
     ];
@@ -1179,10 +1180,10 @@ test('computeBlockLiveness basic test', t => {
     };
     const liveness = computeBlockLiveness(block, []).map(l => l.toList().sort());
     const expected = [
-        [{ name: 'l' }, { name: 'l2' }, { name: 'r' }],
-        [{ name: 'l' }, { name: 'l2' }, { name: 'd' }],
-        [{ name: 'r' }, { name: 'l' }],
-        [{ name: 'r' }],
+        [new Register('l'), new Register('l2'), new Register('r')],
+        [new Register('l'), new Register('l2'), new Register('d')],
+        [new Register('r'), new Register('l')],
+        [new Register('r')],
         [],
     ].map(e => e.sort());
     t.deepEqual(liveness, expected);
@@ -1194,21 +1195,21 @@ test('computeBlockLiveness read and write in one', t => {
         instructions: [
             {
                 kind: 'subtract',
-                lhs: { name: 'r' },
-                rhs: { name: 'd' },
-                destination: { name: 'r' },
+                lhs: new Register('r'),
+                rhs: new Register('d'),
+                destination: new Register('r'),
                 why: 'r = r - d',
             },
             {
                 kind: 'move',
-                from: { name: 'r' },
-                to: { name: 'v' },
+                from: new Register('r'),
+                to: new Register('v'),
                 why: 'v = r',
             },
         ],
     };
     const liveness = computeBlockLiveness(block, []);
-    const expected = [[{ name: 'r' }, { name: 'd' }], [{ name: 'r' }], []];
+    const expected = [[new Register('r'), new Register('d')], [new Register('r')], []];
     t.deepEqual(liveness.length, expected.length);
     expected.forEach((e, i) => {
         t.deepEqual(e.sort(), liveness[i].toList().sort());
@@ -1219,47 +1220,48 @@ test('liveness analysis basic test', t => {
     const testFunction: Function = {
         name: 'test',
         liveAtExit: [],
-        arguments: [{ name: 'some_arg' }],
+        arguments: [new Register('some_arg')],
         instructions: [
             {
                 kind: 'add',
-                lhs: { name: 'add_l' },
-                rhs: { name: 'add_r' },
-                destination: { name: 'add_d' },
+                lhs: new Register('add_l'),
+                rhs: new Register('add_r'),
+                destination: new Register('add_d'),
                 why: 'add_d = add_l + add_r',
             },
             {
                 kind: 'gotoIfZero',
-                register: { name: 'add_d' },
+                register: new Register('add_d'),
                 label: 'L',
                 why: 'if add_d == 0 goto L',
             },
             {
                 kind: 'subtract',
-                lhs: { name: 'sub_l' },
-                rhs: { name: 'sub_r' },
-                destination: { name: 'sub_d' },
+                lhs: new Register('sub_l'),
+                rhs: new Register('sub_r'),
+                destination: new Register('sub_d'),
                 why: 'sub_d = sub_l = sub_r',
             },
-            {
-                kind: 'label',
-                name: 'L',
-                why: 'L',
-            },
+            { kind: 'label', name: 'L', why: 'L' },
         ],
     };
     const testFunctionLiveness = tafLiveness(testFunction).map(s => s.toList());
     const expectedLiveness = [
         [
-            { name: 'add_l' },
-            { name: 'add_r' },
-            { name: 'sub_l' },
-            { name: 'sub_r' },
-            { name: 'some_arg' },
+            new Register('add_l'),
+            new Register('add_r'),
+            new Register('sub_l'),
+            new Register('sub_r'),
+            new Register('some_arg'),
         ],
-        [{ name: 'add_d' }, { name: 'sub_l' }, { name: 'sub_r' }, { name: 'some_arg' }],
-        [{ name: 'sub_l' }, { name: 'sub_r' }, { name: 'some_arg' }],
-        [{ name: 'some_arg' }],
+        [
+            new Register('add_d'),
+            new Register('sub_l'),
+            new Register('sub_r'),
+            new Register('some_arg'),
+        ],
+        [new Register('sub_l'), new Register('sub_r'), new Register('some_arg')],
+        [new Register('some_arg')],
         [],
     ];
     t.deepEqual(testFunctionLiveness, expectedLiveness);
@@ -1269,36 +1271,36 @@ test('4 block graph (length)', t => {
     const lengthRTLF: Function = {
         name: 'length',
         liveAtExit: [],
-        arguments: [{ name: 'strPtr' }],
+        arguments: [new Register('strPtr')],
         instructions: [
             {
                 kind: 'loadImmediate',
-                destination: { name: 'result' },
+                destination: new Register('result'),
                 value: 0,
                 why: 'result = 0',
             },
             { kind: 'label', name: 'length_loop', why: 'Count another charachter' },
             {
                 kind: 'loadMemoryByte',
-                address: { name: 'strPtr' },
-                to: { name: 'currentChar' },
+                address: new Register('strPtr'),
+                to: new Register('currentChar'),
                 why: 'currentChar = *ptr',
             },
             {
                 kind: 'gotoIfZero',
-                register: { name: 'currentChar' },
+                register: new Register('currentChar'),
                 label: 'length_return',
                 why: 'if currentChar == 0 goto length_return',
             },
-            { kind: 'increment', register: { name: 'result' }, why: 'result++' },
-            { kind: 'increment', register: { name: 'strPtr' }, why: 'arg1++' },
+            { kind: 'increment', register: new Register('result'), why: 'result++' },
+            { kind: 'increment', register: new Register('strPtr'), why: 'arg1++' },
             { kind: 'goto', label: 'length_loop', why: 'goto length_loop' },
             { kind: 'label', name: 'length_return', why: 'length_return:' },
             {
                 kind: 'subtract',
-                lhs: { name: 'strPtr' },
-                rhs: { name: 'result' },
-                destination: { name: 'strPtr' },
+                lhs: new Register('strPtr'),
+                rhs: new Register('result'),
+                destination: new Register('strPtr'),
                 why: 'arg1 = result - arg1',
             },
         ],
@@ -1335,7 +1337,7 @@ test('liveness of stringEquality', t => {
         instructions: [
             {
                 kind: 'loadImmediate',
-                destination: { name: 'result' },
+                destination: new Register('result'),
                 value: 1,
                 why: '',
             },
@@ -1346,26 +1348,26 @@ test('liveness of stringEquality', t => {
             },
             {
                 kind: 'loadImmediate',
-                destination: { name: 'result' },
+                destination: new Register('result'),
                 value: 1,
                 why: '',
             },
             {
                 kind: 'gotoIfNotEqual',
-                lhs: { name: 'leftByte' },
-                rhs: { name: 'rightByte' },
+                lhs: new Register('leftByte'),
+                rhs: new Register('rightByte'),
                 label: 'return_false',
                 why: '',
             },
             {
                 kind: 'gotoIfZero',
-                register: { name: 'leftByte' },
+                register: new Register('leftByte'),
                 label: 'return',
                 why: '',
             },
             {
                 kind: 'loadImmediate',
-                destination: { name: 'result' },
+                destination: new Register('result'),
                 value: 1,
                 why: '',
             },
@@ -1381,7 +1383,7 @@ test('liveness of stringEquality', t => {
             },
             {
                 kind: 'loadImmediate',
-                destination: { name: 'result' },
+                destination: new Register('result'),
                 value: 1,
                 why: '',
             },
@@ -1835,16 +1837,16 @@ test('Parse instructions with no comment', t => {
     `);
     t.deepEqual(result, [
         {
-            destination: { name: 'd' },
-            lhs: { name: 'l' },
-            rhs: { name: 'r' },
+            destination: new Register('d'),
+            lhs: new Register('l'),
+            rhs: new Register('r'),
             kind: 'add',
             why: '\n',
         },
         {
-            destination: { name: 'r' },
-            lhs: { name: 'l2' },
-            rhs: { name: 'd' },
+            destination: new Register('r'),
+            lhs: new Register('l2'),
+            rhs: new Register('d'),
             kind: 'subtract',
             why: '\n',
         },
@@ -1858,8 +1860,8 @@ test('Parse function call', t => {
     t.deepEqual(noResult, [
         {
             kind: 'callByRegister',
-            function: { name: 'fn' },
-            arguments: [{ name: 'arg' }],
+            function: new Register('fn'),
+            arguments: [new Register('arg')],
             destination: null,
             why: '\n',
         },
@@ -1870,9 +1872,9 @@ test('Parse function call', t => {
     t.deepEqual(result, [
         {
             kind: 'callByRegister',
-            function: { name: 'fn' },
-            arguments: [{ name: 'arg' }],
-            destination: { name: 'result' },
+            function: new Register('fn'),
+            arguments: [new Register('arg')],
+            destination: new Register('result'),
             why: '\n',
         },
     ]);
@@ -1922,35 +1924,39 @@ test("Functions calls with side effects don't get removed for being dead", t => 
             {
                 kind: 'loadSymbolAddress',
                 symbolName: 'string_literal_1_Hello',
-                to: { name: 'local_a_2' },
+                to: new Register('local_a'),
                 why: 'Load string literal addres',
             },
             {
                 kind: 'move',
-                from: { name: 'local_a_2' },
-                to: { name: 'argument0_6' },
+                from: new Register('local_a'),
+                to: new Register('argument0'),
                 why: 'Move from a into destination',
             },
             { kind: 'empty', why: 'call print' },
             {
                 kind: 'loadSymbolAddress',
                 symbolName: 'print',
-                to: { name: 'function_pointer_7' },
+                to: new Register('function_pointer_7'),
                 why: 'Load runtime function',
             },
             {
                 kind: 'callByRegister' as 'callByRegister',
-                function: { name: 'function_pointer_7' },
-                arguments: [{ name: 'argument0_6' }],
-                destination: { name: 'local_dummy_3' },
+                function: new Register('function_pointer_7'),
+                arguments: [new Register('argument0')],
+                destination: new Register('local_dummy_3'),
                 why: 'Call runtime print',
             },
         ],
-        liveAtExit: [{ name: 'exitCodeRegister_1' }],
+        liveAtExit: [new Register('exitCodeRegister_1')],
         arguments: [],
     };
-    const assigned = assignRegisters(f, [{ name: 'r1' }, { name: 'r2' }, { name: 'r3' }]);
-    t.assert('argument0_6' in assigned.assignment.registerMap);
+    const assigned = assignRegisters(f, [
+        new Register('r1'),
+        new Register('r2'),
+        new Register('r3'),
+    ]);
+    t.assert('argument0' in assigned.assignment.registerMap);
 });
 
 // Regression test for when I accidentally removes all control flow bucause control flow doesn't change registers.
@@ -1960,21 +1966,21 @@ test("Control flow instructions don't get removed for having no writes", t => {
         instructions: [
             {
                 kind: 'loadImmediate',
-                destination: { name: 'one' },
+                destination: new Register('one'),
                 value: 1,
                 why: 'Need for comparison',
             },
             {
                 kind: 'loadImmediate',
-                destination: { name: 'two' },
+                destination: new Register('two'),
                 value: 2,
                 why: 'Need for comparison',
             },
             {
                 kind: 'gotoIfEqual',
                 label: 'L',
-                lhs: { name: 'two' },
-                rhs: { name: 'one' },
+                lhs: new Register('two'),
+                rhs: new Register('one'),
                 why: 'comparison',
             },
             {

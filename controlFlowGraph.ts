@@ -415,7 +415,8 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
     // exists only as long as that read, and replace every write the write followed by a spill, so that the
     // lifetime of the spilled register is very short. Each read or write needs to create a new register to spill
     // from or to (we call that register a fragment) and this function creates a new fragment for each read/write.
-    const makeFragment = () => ({ name: registerName(`${registerToSpill.name}_spill`) });
+    const makeFragment = (): Register =>
+        new Register(registerName(`${registerToSpill.name}_spill`));
 
     taf.instructions.forEach(instruction => {
         // TODO: Come up with some way to do this generically without unpacking the instruction. A refactor that required the implementation of spilling for callByName/callByRegister was hard to debug due to this not being generic.
