@@ -662,47 +662,26 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
         }
         case 'indexAccess': {
             const index = makeTemporary('index');
-            const indexInstructions = recurse({ ast: ast.index, destination: index });
             const accessed = makeTemporary('accessed');
-            const accessedInstructions = recurse({ ast: ast.accessed, destination: accessed });
             const listLength = makeTemporary('length');
             const outOfRange = makeLabel('outOfRange');
             const itemAddress = makeTemporary('itemAddress');
+            const bytesInWord = targetInfo.bytesInWord;
             return compileExpression<Statement>(
-                [indexInstructions, accessedInstructions],
+                [
+                    recurse({ ast: ast.index, destination: index }),
+                    recurse({ ast: ast.accessed, destination: accessed }),
+                ],
                 ([makeIndex, makeAccess]) => [
                     ...makeIndex,
                     ...makeAccess,
-                    {
-                        kind: 'loadMemory',
-                        from: accessed,
-                        to: listLength,
-                        offset: 0,
-                        why: 'get the length of the list',
-                    },
-                    {
-                        kind: 'gotoIfGreater',
-                        label: outOfRange,
-                        lhs: index,
-                        rhs: listLength,
-                        why: 'check OOB',
-                    },
-                    {
-                        kind: 'add',
-                        destination: itemAddress,
-                        lhs: index,
-                        rhs: accessed,
-                        why: 'get address of item',
-                    },
-                    {
-                        kind: 'loadMemory',
-                        from: itemAddress,
-                        to: destination,
-                        offset: targetInfo.bytesInWord,
-                        why: 'add one word to adjust for length',
-                    },
-                    { kind: 'label', name: outOfRange, why: 'lol' },
-                    // TODO: exit on out of range
+                    ...ins(`
+                        ${listLength} = *(${accessed} + 0); get list length
+                        goto ${outOfRange} if ${index} > ${listLength}; check OOB
+                        ${itemAddress} = ${index} + ${accessed}; get item address
+                        ${destination} = *(${itemAddress} + ${bytesInWord}); add word to adjust for length
+                    ${outOfRange}:; TODO: exit on out of range
+                    `),
                 ]
             );
         }
