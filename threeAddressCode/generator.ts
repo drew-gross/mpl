@@ -62,7 +62,6 @@ const assignGlobal = (
     makeLabel,
     rhsRegister,
     rhsInstruction,
-    destination,
     targetInfo,
     types,
     lhsInfo
@@ -118,8 +117,8 @@ const assignGlobal = (
                     ${itemSize} = ${bytesInWord}; For multiplying
                     ${remainingCount} = ${remainingCount} * ${itemSize}; Count = count * size
                     ${remainingCount} += ${bytesInWord}; Add place to store length of list
-                    ${destination} = my_malloc(${remainingCount}); Malloc
-                    ${targetAddress} = ${destination}; Local copy of dest data pointer
+                    ${targetAddress} = my_malloc(${remainingCount}); Malloc
+                    *${lhsInfo.newName} = ${targetAddress}; Store to global
                 ${copyLoop}:; Copy loop
                     ${temp} = *(${sourceAddress} + 0); Copy a byte
                     *(${targetAddress} + 0) = ${temp}; Finish copy
@@ -127,7 +126,6 @@ const assignGlobal = (
                     ${sourceAddress} += ${bytesInWord}; Bump pointers
                     ${targetAddress} += ${bytesInWord}; Bump pointers
                     goto ${copyLoop} if ${remainingCount} != 0; Not done
-                    *${lhsInfo.newName} = ${destination}; Store to global
                 `),
             ]);
         default:
@@ -374,7 +372,6 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     makeLabel,
                     rhsRegister,
                     recurse({ ast: ast.expression, destination: rhsRegister }),
-                    destination,
                     targetInfo,
                     types,
                     globalNameMap[lhs]
