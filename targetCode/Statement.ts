@@ -1,11 +1,7 @@
 import debug from '../util/debug.js';
 import { Statement as ThreeAddressStatement } from '../threeAddressCode/statement.js';
 import { Register, isEqual } from '../threeAddressCode/Register.js';
-import {
-    RegisterAssignment,
-    arrangeArgumentsForFunctionCall,
-    saveFunctionCallResult,
-} from '../backend-utils.js';
+import { RegisterAssignment, saveFunctionCallResult } from '../backend-utils.js';
 import { TargetInfo, TargetRegisters } from '../TargetInfo.js';
 import { StackUsage, offset } from './StackUsage.js';
 
@@ -31,6 +27,53 @@ export const argumentLocation = <TargetRegister>(
             offset: argIndex - targetInfo.registers.functionArgument.length,
         };
     }
+};
+
+const arrangeArgumentsForFunctionCall = <TargetRegister>(
+    args: (Register | Number)[],
+    getRegister: (r: Register) => TargetRegister,
+    targetInfo: TargetInfo<TargetRegister>
+): Statement<TargetRegister>[] => {
+    // TODO: Add some type check to ensure we have the right number of arguments
+    return args.map((arg, index) => {
+        // TODO: Reuse the code in argumentLocation here
+        if (index < targetInfo.registers.functionArgument.length) {
+            // Registers that fix in arguments go in arguments
+            if (typeof arg == 'number') {
+                return {
+                    kind: 'loadImmediate',
+                    value: arg,
+                    destination: targetInfo.registers.functionArgument[index],
+                    why: `Pass arg ${index} in register`,
+                };
+            } else {
+                return {
+                    kind: 'move',
+                    from: getRegister(arg as Register),
+                    to: targetInfo.registers.functionArgument[index],
+                    why: `Pass arg ${index} in register`,
+                };
+            }
+        } else {
+            // Registers that don't fit in arguments go on the stack, starting 1 space above the current stack pointer, going up. TODO: This puts data above the top of the stack, which is not safe on some platforms, as that space may be used by interrupts or the kernel after an involuntary context switch. Some platforms have a "red zone", on those platforms this is safe, but we should only do it when we know it's safe. See https://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64.
+            if (typeof arg == 'number') {
+                throw debug(
+                    "arrangeArgumentsForFunctionCall doesn't support literals on stack yet"
+                );
+            } else {
+                const stackSlot =
+                    index -
+                    targetInfo.registers.functionArgument.length +
+                    targetInfo.callerSavedRegisters.length;
+                return {
+                    kind: 'stackStore',
+                    register: getRegister(arg as Register),
+                    offset: -stackSlot,
+                    why: `Pass arg ${index} on stack (slot ${stackSlot})`,
+                };
+            }
+        }
+    });
 };
 
 const dataLocation = <TargetRegister>(
