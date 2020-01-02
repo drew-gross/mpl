@@ -74,12 +74,7 @@ const assignGlobal = (
         case 'Integer':
             return compileExpression<Statement>([rhsInstruction], ([e1]) => [
                 ...e1,
-                {
-                    kind: 'storeGlobal',
-                    from: rhsRegister,
-                    to: lhsInfo.newName,
-                    why: `Put ${lhsType.kind} into global`,
-                },
+                ...ins(`*${lhsInfo.newName} = ${rhsRegister}; Put ${lhsType.kind} into global`),
             ]);
         case 'String':
             return compileExpression<Statement>([rhsInstruction], ([e1]) => [
@@ -87,52 +82,28 @@ const assignGlobal = (
                 ...ins(`
                     r:len = length(${rhsRegister}); Get string length
                     r:len++; Add one for null terminator
-                    r:space = my_malloc(r:len); Allocate that much space
-                    string_copy(${rhsRegister}, r:space); Copy string into allocated space
-                    *${lhsInfo.newName} = r:space; Store into global
+                    r:buffer = my_malloc(r:len); Allocate that much space
+                    string_copy(${rhsRegister}, r:buffer); Copy string into allocated space
+                    *${lhsInfo.newName} = r:buffer; Store into global
                 `),
             ]);
         case 'Product':
             const lhsAddress = makeTemporary('lhsAddress');
-            const copyStructInstructions: Statement[] = [
-                {
-                    kind: 'loadSymbolAddress',
-                    to: lhsAddress,
-                    symbolName: lhsInfo.newName,
-                    why: 'Get address of global struct so we can write to it',
-                },
-                ...(flatten(
-                    lhsType.members.map((m, i) => {
-                        const offset = i * targetInfo.bytesInWord; // TODO: Should add up sizes of preceeding members
-                        const memberTemporary = makeTemporary('member');
-                        return [
-                            {
-                                kind: 'loadMemory' as 'loadMemory',
-                                from: rhsRegister,
-                                to: memberTemporary,
-                                offset,
-                                why: `load member from rhs ${m.name}`,
-                            },
-                            {
-                                kind: 'storeMemory' as 'storeMemory',
-                                from: memberTemporary,
-                                address: lhsAddress,
-                                offset,
-                                why: `store member to lhs ${m.name}`,
-                            },
-                        ];
-                    })
-                ) as any),
-            ];
+            const copyMembers: Statement[][] = lhsType.members.map((m, i) => {
+                // TODO: Should add up sizes of preceeding members
+                const offset = i * targetInfo.bytesInWord;
+                const memberTemporary = makeTemporary('member');
+                return ins(`
+                    ${memberTemporary} = *(${rhsRegister} + ${offset}); load ${m.name}
+                    *(${lhsAddress} + ${offset}) = ${memberTemporary}; store ${m.name}
+                `);
+            });
+            const size = typeSize(targetInfo, ast.type, types);
             return compileExpression<Statement>([rhsInstruction], ([e1]) => [
                 ...e1,
-                {
-                    kind: 'alloca',
-                    bytes: typeSize(targetInfo, ast.type, types),
-                    register: destination,
-                    why: 'make stack space for lhs',
-                },
-                ...copyStructInstructions,
+                ...ins(`${destination} = alloca(${size}); lhs stack space`),
+                ...ins(`${lhsAddress} = &${lhsInfo.newName}; Get address of global`),
+                ...flatten(copyMembers),
             ]);
         case 'List':
             const remainingCount = makeTemporary('remainingCount');
