@@ -57,6 +57,117 @@ const memberOffset = (
     return result * bytesInWord;
 };
 
+const assignGlobal = (
+    makeTemporary,
+    makeLabel,
+    rhsRegister,
+    rhsInstruction,
+    ast,
+    destination,
+    targetInfo,
+    types,
+    lhsInfo
+) => {
+    const lhsType = lhsInfo.originalDeclaration.type;
+    switch (lhsType.kind) {
+        case 'Function':
+        case 'Integer':
+            return compileExpression<Statement>([rhsInstruction], ([e1]) => [
+                ...e1,
+                {
+                    kind: 'storeGlobal',
+                    from: rhsRegister,
+                    to: lhsInfo.newName,
+                    why: `Put ${lhsType.kind} into global`,
+                },
+            ]);
+        case 'String':
+            return compileExpression<Statement>([rhsInstruction], ([e1]) => [
+                ...e1,
+                ...ins(`
+                    r:len = length(${rhsRegister}); Get string length
+                    r:len++; Add one for null terminator
+                    r:space = my_malloc(r:len); Allocate that much space
+                    string_copy(${rhsRegister}, r:space); Copy string into allocated space
+                    *${lhsInfo.newName} = r:space; Store into global
+                `),
+            ]);
+        case 'Product':
+            const lhsAddress = makeTemporary('lhsAddress');
+            const copyStructInstructions: Statement[] = [
+                {
+                    kind: 'loadSymbolAddress',
+                    to: lhsAddress,
+                    symbolName: lhsInfo.newName,
+                    why: 'Get address of global struct so we can write to it',
+                },
+                ...(flatten(
+                    lhsType.members.map((m, i) => {
+                        const offset = i * targetInfo.bytesInWord; // TODO: Should add up sizes of preceeding members
+                        const memberTemporary = makeTemporary('member');
+                        return [
+                            {
+                                kind: 'loadMemory' as 'loadMemory',
+                                from: rhsRegister,
+                                to: memberTemporary,
+                                offset,
+                                why: `load member from rhs ${m.name}`,
+                            },
+                            {
+                                kind: 'storeMemory' as 'storeMemory',
+                                from: memberTemporary,
+                                address: lhsAddress,
+                                offset,
+                                why: `store member to lhs ${m.name}`,
+                            },
+                        ];
+                    })
+                ) as any),
+            ];
+            return compileExpression<Statement>([rhsInstruction], ([e1]) => [
+                ...e1,
+                {
+                    kind: 'alloca',
+                    bytes: typeSize(targetInfo, ast.type, types),
+                    register: destination,
+                    why: 'make stack space for lhs',
+                },
+                ...copyStructInstructions,
+            ]);
+        case 'List':
+            const remainingCount = makeTemporary('remainingCount');
+            const copyLoop = makeLabel('copyLoop');
+            const targetAddress = makeTemporary('targetAddress');
+            const itemSize = makeTemporary('itemSize');
+            const sourceAddress = makeTemporary('sourceAddress');
+            const temp = makeTemporary('temp');
+            const bytesInWord = targetInfo.bytesInWord;
+            return compileExpression<Statement>([rhsInstruction], ([e1]) => [
+                ...e1,
+                ...ins(`
+                    ${remainingCount} = *(${rhsRegister} + 0); Get length of list
+                    ${sourceAddress} = ${rhsRegister}; Local copy of source data pointer
+                    ${itemSize} = ${bytesInWord}; For multiplying
+                    ${remainingCount} = ${remainingCount} * ${itemSize}; Count = count * size
+                    ${remainingCount} += ${bytesInWord}; Add place to store length of list
+                    ${destination} = my_malloc(${remainingCount}); Malloc
+                    ${targetAddress} = ${destination}; Local copy of dest data pointer
+                ${copyLoop}:; Copy loop
+                    ${temp} = *(${sourceAddress} + 0); Copy a byte
+                    *(${targetAddress} + 0) = ${temp}; Finish copy
+                    ${remainingCount} += ${-bytesInWord}; Bump pointers
+                    ${sourceAddress} += ${bytesInWord}; Bump pointers
+                    ${targetAddress} += ${bytesInWord}; Bump pointers
+                    goto ${copyLoop} if ${remainingCount} != 0; Not done
+                    *${lhsInfo.newName} = ${destination}; Store to global
+                `),
+            ]);
+        default:
+            const unhandled = lhsInfo.originalDeclaration.type.kind;
+            throw debug(`${unhandled} unhandled in assignGlobal`);
+    }
+};
+
 export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression<Statement> => {
     const {
         ast,
@@ -289,107 +400,18 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
         case 'typedDeclarationAssignment': {
             const lhs: string = ast.destination;
             if (lhs in globalNameMap) {
-                const rhs = makeTemporary('assignment_rhs');
-                const computeRhs = recurse({ ast: ast.expression, destination: rhs });
-                const lhsInfo = globalNameMap[lhs];
-                const lhsType = lhsInfo.originalDeclaration.type;
-                switch (lhsType.kind) {
-                    case 'Function':
-                    case 'Integer':
-                        return compileExpression<Statement>([computeRhs], ([e1]) => [
-                            ...e1,
-                            {
-                                kind: 'storeGlobal',
-                                from: rhs,
-                                to: lhsInfo.newName,
-                                why: `Put ${lhsType.kind} into global`,
-                            },
-                        ]);
-                    case 'String':
-                        return compileExpression<Statement>([computeRhs], ([e1]) => [
-                            ...e1,
-                            ...ins(`
-                                r:len = length(${rhs}); Get string length
-                                r:len++; Add one for null terminator
-                                r:space = my_malloc(r:len); Allocate that much space
-                                string_copy(${rhs}, r:space); Copy string into allocated space
-                                *${lhsInfo.newName} = r:space; Store into global
-                            `),
-                        ]);
-                    case 'Product':
-                        const lhsAddress = makeTemporary('lhsAddress');
-                        const copyStructInstructions: Statement[] = [
-                            {
-                                kind: 'loadSymbolAddress',
-                                to: lhsAddress,
-                                symbolName: lhsInfo.newName,
-                                why: 'Get address of global struct so we can write to it',
-                            },
-                            ...flatten(
-                                lhsType.members.map((m, i) => {
-                                    const offset = i * targetInfo.bytesInWord; // TODO: Should add up sizes of preceeding members
-                                    const memberTemporary = makeTemporary('member');
-                                    return [
-                                        {
-                                            kind: 'loadMemory' as 'loadMemory',
-                                            from: rhs,
-                                            to: memberTemporary,
-                                            offset,
-                                            why: `load member from rhs ${m.name}`,
-                                        },
-                                        {
-                                            kind: 'storeMemory' as 'storeMemory',
-                                            from: memberTemporary,
-                                            address: lhsAddress,
-                                            offset,
-                                            why: `store member to lhs ${m.name}`,
-                                        },
-                                    ];
-                                })
-                            ),
-                        ];
-                        return compileExpression<Statement>([computeRhs], ([e1]) => [
-                            ...e1,
-                            {
-                                kind: 'alloca',
-                                bytes: typeSize(targetInfo, ast.type, types),
-                                register: destination,
-                                why: 'make stack space for lhs',
-                            },
-                            ...copyStructInstructions,
-                        ]);
-                    case 'List':
-                        const remainingCount = makeTemporary('remainingCount');
-                        const copyLoop = makeLabel('copyLoop');
-                        const targetAddress = makeTemporary('targetAddress');
-                        const itemSize = makeTemporary('itemSize');
-                        const sourceAddress = makeTemporary('sourceAddress');
-                        const temp = makeTemporary('temp');
-                        const bytesInWord = targetInfo.bytesInWord;
-                        return compileExpression<Statement>([computeRhs], ([e1]) => [
-                            ...e1,
-                            ...ins(`
-                                ${remainingCount} = *(${rhs} + 0); Get length of list
-                                ${sourceAddress} = ${rhs}; Local copy of source data pointer
-                                ${itemSize} = ${bytesInWord}; For multiplying
-                                ${remainingCount} = ${remainingCount} * ${itemSize}; Count = count * size
-                                ${remainingCount} += ${bytesInWord}; Add place to store length of list
-                                ${destination} = my_malloc(${remainingCount}); Malloc
-                                ${targetAddress} = ${destination}; Local copy of dest data pointer
-                            ${copyLoop}:; Copy loop
-                                ${temp} = *(${sourceAddress} + 0); Copy a byte
-                                *(${targetAddress} + 0) = ${temp}; Finish copy
-                                ${remainingCount} += ${-bytesInWord}; Bump pointers
-                                ${sourceAddress} += ${bytesInWord}; Bump pointers
-                                ${targetAddress} += ${bytesInWord}; Bump pointers
-                                goto ${copyLoop} if ${remainingCount} != 0; Not done
-                                *${lhsInfo.newName} = ${destination}; Store to destination
-                            `),
-                        ]);
-                    default:
-                        const unhandled = lhsInfo.originalDeclaration.type.kind;
-                        throw debug(`${unhandled} unhandled in typedDeclarationAssignment`);
-                }
+                const rhsRegister = makeTemporary('assignment_rhs');
+                return assignGlobal(
+                    makeTemporary,
+                    makeLabel,
+                    rhsRegister,
+                    recurse({ ast: ast.expression, destination: rhsRegister }),
+                    ast,
+                    destination,
+                    targetInfo,
+                    types,
+                    globalNameMap[lhs]
+                );
             } else if (lhs in variablesInScope) {
                 return recurse({ ast: ast.expression, destination: variablesInScope[lhs] });
             } else {
