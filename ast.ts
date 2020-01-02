@@ -148,6 +148,7 @@ export type IndexAccess = {
     sourceLocation: SourceLocation;
     accessed: Ast;
     index: Ast;
+    // TODO: add list item type here
 };
 
 export type Ast =

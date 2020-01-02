@@ -265,7 +265,6 @@ return isFive(5) ? 1 : 0`,
             return myList[0] + myList[1];
         `,
         exitCode: 33,
-        failing: true,
     },
     {
         name: 'List Out Of Bounds Access',

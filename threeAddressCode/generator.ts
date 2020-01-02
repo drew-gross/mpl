@@ -661,7 +661,8 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             ]);
         }
         case 'indexAccess': {
-            const index = makeTemporary('index');
+            const itemIndex = makeTemporary('itemIndex');
+            const itemSize = makeTemporary('itemSize');
             const accessed = makeTemporary('accessed');
             const listLength = makeTemporary('length');
             const outOfRange = makeLabel('outOfRange');
@@ -669,7 +670,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const bytesInWord = targetInfo.bytesInWord;
             return compileExpression<Statement>(
                 [
-                    recurse({ ast: ast.index, destination: index }),
+                    recurse({ ast: ast.index, destination: itemIndex }),
                     recurse({ ast: ast.accessed, destination: accessed }),
                 ],
                 ([makeIndex, makeAccess]) => [
@@ -677,8 +678,10 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     ...makeAccess,
                     ...ins(`
                         ${listLength} = *(${accessed} + 0); get list length
-                        goto ${outOfRange} if ${index} > ${listLength}; check OOB
-                        ${itemAddress} = ${index} + ${accessed}; get item address
+                        goto ${outOfRange} if ${itemIndex} > ${listLength}; check OOB
+                        ${itemSize} = ${bytesInWord}; TODO: should be type size
+                        ${itemAddress} = ${itemIndex} * ${itemSize}; account for item size
+                        ${itemAddress} = ${itemAddress} + ${accessed}; offset from list base
                         ${destination} = *(${itemAddress} + ${bytesInWord}); add word to adjust for length
                     ${outOfRange}:; TODO: exit on out of range
                     `),
