@@ -365,28 +365,25 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         const itemSize = makeTemporary('itemSize');
                         const sourceAddress = makeTemporary('sourceAddress');
                         const temp = makeTemporary('temp');
+                        const bytesInWord = targetInfo.bytesInWord;
                         return compileExpression<Statement>([computeRhs], ([e1]) => [
                             ...e1,
                             ...ins(`
                                 ${remainingCount} = *(${rhs} + 0); Get length of list
                                 ${sourceAddress} = ${rhs}; Local copy of source data pointer
-                                ${itemSize} = ${targetInfo.bytesInWord}; For multiplying
+                                ${itemSize} = ${bytesInWord}; For multiplying
                                 ${remainingCount} = ${remainingCount} * ${itemSize}; Count = count * size
-                                ${remainingCount} += ${
-                                targetInfo.bytesInWord
-                            }; Add place to store length of list
+                                ${remainingCount} += ${bytesInWord}; Add place to store length of list
                                 ${destination} = my_malloc(${remainingCount}); Malloc
                                 ${targetAddress} = ${destination}; Local copy of dest data pointer
                             ${copyLoop}:; Copy loop
                                 ${temp} = *(${sourceAddress} + 0); Copy a byte
                                 *(${targetAddress} + 0) = ${temp}; Finish copy
-                                ${remainingCount} += ${-targetInfo.bytesInWord}; Bump pointers
-                                ${sourceAddress} += ${targetInfo.bytesInWord}; Bump pointers
-                                ${targetAddress} += ${targetInfo.bytesInWord}; Bump pointers
+                                ${remainingCount} += ${-bytesInWord}; Bump pointers
+                                ${sourceAddress} += ${bytesInWord}; Bump pointers
+                                ${targetAddress} += ${bytesInWord}; Bump pointers
                                 goto ${copyLoop} if ${remainingCount} != 0; Not done
-                                *${
-                                    lhsInfo.newName
-                                } = ${destination}; Store global. TODO: really????
+                                *${lhsInfo.newName} = ${destination}; Store to destination
                             `),
                         ]);
                     default:
@@ -651,7 +648,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             };
             return compileExpression<Statement>(
                 [prepAndCleanup, ...createItems],
-                ([allocate, create]) => [...allocate, ...create]
+                ([allocate, ...create]) => [...allocate, ...flatten(create)]
             );
         }
         case 'memberAccess': {
