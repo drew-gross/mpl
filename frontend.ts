@@ -1034,11 +1034,20 @@ const extractFunctionBodyFromParseTree = node => {
     }
 };
 
-// TODO: Unify extractParameterList, extractArgumentList, extractTypeList
+// TODO: Unify extractParameterList, extractArgumentList, extractTypeList, extractListItems
 const extractArgumentList = (ast: MplAst): MplAst[] => {
     switch (ast.type) {
         case 'paramList':
             return [ast.children[0], ...extractArgumentList(ast.children[2])];
+        default:
+            return [ast];
+    }
+};
+
+const extractListItems = (ast: MplAst): MplAst[] => {
+    switch (ast.type) {
+        case 'listItems':
+            return [ast.children[0], ...extractListItems(ast.children[2])];
         default:
             return [ast];
     }
@@ -1350,7 +1359,9 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
         case 'listLiteral':
             return {
                 kind: 'listLiteral',
-                items: [astFromParseResult(ast.children[1]) as Ast.UninferredExpression],
+                items: extractListItems(ast.children[1]).map(
+                    astFromParseResult
+                ) as Ast.UninferredExpression[],
                 sourceLocation: ast.sourceLocation,
             };
         case 'indexAccess':

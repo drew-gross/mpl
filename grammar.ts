@@ -211,6 +211,7 @@ export type MplAstNode =
     | 'objectLiteralComponents'
     | 'memberAccess'
     | 'listLiteral'
+    | 'listItems'
     | 'indexAccess'
     | 'paramList';
 
@@ -352,9 +353,10 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     ]),
     listLiteral: OneOf([
         // TODO suport list literals with more than one item
-        Sequence('listLiteral', [leftSquareBracket, 'expression', rightSquareBracket]),
+        Sequence('listLiteral', [leftSquareBracket, 'listItems', rightSquareBracket]),
         'simpleExpression',
     ]),
+    listItems: OneOf([Sequence('listItems', ['expression', comma, 'listItems']), 'expression']),
     simpleExpression: OneOf([
         Sequence('bracketedExpression', [leftBracket, 'expression', rightBracket]),
         Sequence('callExpression', [

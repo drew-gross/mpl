@@ -644,46 +644,17 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 );
             });
             const prepAndCleanup: CompiledExpression<Statement> = {
-                prepare: [
-                    {
-                        kind: 'loadImmediate' as 'loadImmediate',
-                        value: ast.items.length * typeSize(targetInfo, ast.type, types),
-                        destination: bytesToAllocate,
-                        why: 'num bytes for list',
-                    },
-                    {
-                        kind: 'addImmediate',
-                        register: bytesToAllocate,
-                        amount: targetInfo.bytesInWord,
-                        why: 'add room for length',
-                    },
-                    {
-                        kind: 'callByName',
-                        function: 'my_malloc',
-                        arguments: [bytesToAllocate],
-                        destination: dataPointer,
-                        why: 'Allocate that much space',
-                    },
-                    {
-                        kind: 'loadImmediate',
-                        value: ast.items.length,
-                        destination: listLength,
-                        why: 'store size',
-                    },
-                    {
-                        kind: 'storeMemory',
-                        from: listLength,
-                        address: dataPointer,
-                        offset: 0,
-                        why: 'save list length',
-                    },
-                    {
-                        kind: 'move',
-                        from: dataPointer,
-                        to: destination,
-                        why: 'save memory for pointer',
-                    },
-                ],
+                prepare: ins(`
+                    ${s(bytesToAllocate)} = ${ast.items.length *
+                    typeSize(targetInfo, ast.type, types)}; ${
+                    ast.items.length
+                } items * ${typeSize(targetInfo, ast.type, types)} bytes per item
+                    ${s(bytesToAllocate)} += ${targetInfo.bytesInWord}; add room for length
+                    ${s(dataPointer)} = my_malloc(${s(bytesToAllocate)}); allocate
+                    ${s(listLength)} = ${ast.items.length}; save size
+                    *(${s(dataPointer)} + 0) = ${s(listLength)}; save list length
+                    ${s(destination)} = ${s(dataPointer)}; save memory for pointer
+                `),
                 execute: [],
                 cleanup: [
                     {

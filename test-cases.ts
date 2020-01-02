@@ -242,12 +242,39 @@ return isFive(5) ? 1 : 0`,
     },
     manyGlobalsMultiply(),
     {
+        name: 'Zero Item List',
+        source: `
+            myList := [];
+            return length(myList);
+        `,
+        exitCode: 0,
+        failing: true,
+    },
+    {
         name: 'One Item List',
         source: `
             myList := [11];
             return myList[0];
         `,
         exitCode: 11,
+    },
+    {
+        name: 'Two Item List',
+        source: `
+            myList := [11, 22];
+            return myList[0] + myList[1];
+        `,
+        exitCode: 33,
+        failing: true,
+    },
+    {
+        name: 'List Out Of Bounds Access',
+        source: `
+            myList := [11, 22];
+            return myList[2];
+        `,
+        exitCode: 0,
+        failing: true,
     },
     {
         name: 'Int Pair',
