@@ -62,7 +62,6 @@ const assignGlobal = (
     makeLabel,
     rhsRegister,
     rhsInstruction,
-    ast,
     destination,
     targetInfo,
     types,
@@ -72,13 +71,13 @@ const assignGlobal = (
     switch (lhsType.kind) {
         case 'Function':
         case 'Integer':
-            return compileExpression<Statement>([rhsInstruction], ([e1]) => [
-                ...e1,
+            return compileExpression<Statement>([rhsInstruction], ([rhs]) => [
+                ...rhs,
                 ...ins(`*${lhsInfo.newName} = ${rhsRegister}; Put ${lhsType.kind} into global`),
             ]);
         case 'String':
-            return compileExpression<Statement>([rhsInstruction], ([e1]) => [
-                ...e1,
+            return compileExpression<Statement>([rhsInstruction], ([rhs]) => [
+                ...rhs,
                 ...ins(`
                     r:len = length(${rhsRegister}); Get string length
                     r:len++; Add one for null terminator
@@ -98,10 +97,8 @@ const assignGlobal = (
                     *(${lhsAddress} + ${offset}) = ${memberTemporary}; store ${m.name}
                 `);
             });
-            const size = typeSize(targetInfo, ast.type, types);
-            return compileExpression<Statement>([rhsInstruction], ([e1]) => [
-                ...e1,
-                ...ins(`${destination} = alloca(${size}); lhs stack space`),
+            return compileExpression<Statement>([rhsInstruction], ([rhs]) => [
+                ...rhs,
                 ...ins(`${lhsAddress} = &${lhsInfo.newName}; Get address of global`),
                 ...flatten(copyMembers),
             ]);
@@ -113,8 +110,8 @@ const assignGlobal = (
             const sourceAddress = makeTemporary('sourceAddress');
             const temp = makeTemporary('temp');
             const bytesInWord = targetInfo.bytesInWord;
-            return compileExpression<Statement>([rhsInstruction], ([e1]) => [
-                ...e1,
+            return compileExpression<Statement>([rhsInstruction], ([rhs]) => [
+                ...rhs,
                 ...ins(`
                     ${remainingCount} = *(${rhsRegister} + 0); Get length of list
                     ${sourceAddress} = ${rhsRegister}; Local copy of source data pointer
@@ -377,7 +374,6 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     makeLabel,
                     rhsRegister,
                     recurse({ ast: ast.expression, destination: rhsRegister }),
-                    ast,
                     destination,
                     targetInfo,
                     types,
