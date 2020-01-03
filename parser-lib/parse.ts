@@ -588,7 +588,7 @@ const parseRule = <NodeType extends string, TokenType>(
     index: number
 ): ParseResultWithIndex<NodeType, TokenType> => {
     const childrenParser: Parser<NodeType, TokenType> = grammar[rule];
-    if (!childrenParser) throw debug('invalid rule name');
+    if (!childrenParser) throw debug(`invalid rule name: ${rule}`);
     return parseAnything(grammar, childrenParser, tokens, index);
 };
 

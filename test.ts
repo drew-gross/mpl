@@ -28,6 +28,7 @@ import {
     Optional,
     Grammar,
     Sequence,
+    OneOf,
 } from './parser-lib/parse.js';
 import * as Ast from './ast.js';
 import { removeBracketsFromAst } from './frontend.js';
@@ -1825,6 +1826,134 @@ test('Parse grammar from multiple entry points', t => {
                     line: 0,
                 },
                 whileParsing: ['a'],
+            },
+        ],
+    });
+});
+
+test.only('Parser lib - SeparatedList', t => {
+    type TestToken = 'a' | 'b' | 'comma';
+    type TestNode = 'a' | 'b' | 'comma';
+    const terminal = token => Terminal<TestNode, TestToken>(token);
+    const a = terminal('a');
+    const b = terminal('b');
+    const comma = terminal('comma');
+    const testGrammar = {
+        a,
+        b,
+        comma,
+        list: OneOf([Sequence('list', ['listItem', comma, 'list']), 'listItem']),
+        listItem: OneOf([a, b]),
+    };
+
+    const dummySourceLocation = { line: 0, column: 0 };
+    const oneItemList: any = parse(testGrammar, 'list', [
+        { type: 'a', string: 'anything', sourceLocation: dummySourceLocation },
+    ]);
+    t.deepEqual(oneItemList, {
+        newIndex: 1,
+        sourceLocation: dummySourceLocation,
+        success: true,
+        type: 'a',
+        value: undefined,
+    });
+
+    const twoItemList: any = parse(testGrammar, 'list', [
+        { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
+        { type: 'comma', string: ',', sourceLocation: dummySourceLocation },
+        { type: 'b', string: 'b', sourceLocation: dummySourceLocation },
+    ]);
+    t.deepEqual(twoItemList, {
+        newIndex: 3,
+        sourceLocation: dummySourceLocation,
+        success: true,
+        type: 'list',
+        children: [
+            {
+                newIndex: 1,
+                sourceLocation: { column: 0, line: 0 },
+                success: true,
+                type: 'a',
+                value: undefined,
+            },
+            {
+                newIndex: 2,
+                sourceLocation: { column: 0, line: 0 },
+                success: true,
+                type: 'comma',
+                value: undefined,
+            },
+            {
+                newIndex: 3,
+                sourceLocation: { column: 0, line: 0 },
+                success: true,
+                type: 'b',
+                value: undefined,
+            },
+        ],
+    });
+
+    const threeItemList: any = parse(testGrammar, 'list', [
+        { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
+        { type: 'comma', string: ',', sourceLocation: dummySourceLocation },
+        { type: 'b', string: 'b', sourceLocation: dummySourceLocation },
+        { type: 'comma', string: ',', sourceLocation: dummySourceLocation },
+        { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
+    ]);
+    t.deepEqual(threeItemList, {
+        newIndex: 5,
+        sourceLocation: dummySourceLocation,
+        success: true,
+        type: 'list',
+        children: [
+            {
+                newIndex: 1,
+                sourceLocation: {
+                    column: 0,
+                    line: 0,
+                },
+                success: true,
+                type: 'a',
+                value: undefined,
+            },
+            {
+                newIndex: 2,
+                sourceLocation: {
+                    column: 0,
+                    line: 0,
+                },
+                success: true,
+                type: 'comma',
+                value: undefined,
+            },
+            {
+                children: [
+                    {
+                        newIndex: 3,
+                        sourceLocation: { column: 0, line: 0 },
+                        success: true,
+                        type: 'b',
+                        value: undefined,
+                    },
+                    {
+                        newIndex: 4,
+                        sourceLocation: { column: 0, line: 0 },
+                        success: true,
+                        type: 'comma',
+                        value: undefined,
+                    },
+                    {
+                        newIndex: 5,
+                        sourceLocation: { column: 0, line: 0 },
+                        success: true,
+                        type: 'a',
+                        value: undefined,
+                    },
+                ],
+                newIndex: 5,
+                sourceLocation: { column: 0, line: 0 },
+                success: true,
+                type: 'list',
             },
         ],
     });
