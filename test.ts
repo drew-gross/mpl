@@ -424,10 +424,8 @@ test('lowering of bracketedExpressions', t => {
 
 test('correct inferred type for function', t => {
     const functionSource = 'a: Integer => 11';
-    const parseResult: MplParseResult = parse(
-        grammar,
-        'function',
-        lex(tokenSpecs, functionSource) as Token<MplToken>[]
+    const parseResult: MplParseResult = stripResultIndexes(
+        parse(grammar, 'function', lex(tokenSpecs, functionSource) as Token<MplToken>[])
     );
     const ast: Ast.UninferredExpression = astFromParseResult(
         parseResult as MplAst
@@ -1832,7 +1830,7 @@ test('Parse grammar from multiple entry points', t => {
     });
 });
 
-test('Parser lib - SeparatedList', t => {
+test.only('Parser lib - SeparatedList', t => {
     type TestToken = 'a' | 'b' | 'comma';
     type TestNode = 'a' | 'b' | 'comma';
     const terminal = token => Terminal<TestNode, TestToken>(token);
@@ -1843,20 +1841,30 @@ test('Parser lib - SeparatedList', t => {
         a,
         b,
         comma,
-        list: SeparatedList('list', comma, 'listItem'),
+        list: SeparatedList(comma, 'listItem'),
         listItem: OneOf([a, b]),
     };
 
     const dummySourceLocation = { line: 0, column: 0 };
+
+    const zeroItemList: any = parse(testGrammar, 'list', []);
+    t.deepEqual(zeroItemList, { items: [], separators: [], newIndex: 0 });
+
     const oneItemList: any = parse(testGrammar, 'list', [
         { type: 'a', string: 'anything', sourceLocation: dummySourceLocation },
     ]);
     t.deepEqual(oneItemList, {
         newIndex: 1,
-        sourceLocation: dummySourceLocation,
-        success: true,
-        type: 'a',
-        value: undefined,
+        items: [
+            {
+                newIndex: 1,
+                sourceLocation: { column: 0, line: 0 },
+                success: true,
+                type: 'a',
+                value: undefined,
+            },
+        ],
+        separators: [],
     });
 
     const twoItemList: any = parse(testGrammar, 'list', [
@@ -1866,10 +1874,7 @@ test('Parser lib - SeparatedList', t => {
     ]);
     t.deepEqual(twoItemList, {
         newIndex: 3,
-        sourceLocation: dummySourceLocation,
-        success: true,
-        type: 'list',
-        children: [
+        items: [
             {
                 newIndex: 1,
                 sourceLocation: { column: 0, line: 0 },
@@ -1878,17 +1883,19 @@ test('Parser lib - SeparatedList', t => {
                 value: undefined,
             },
             {
-                newIndex: 2,
-                sourceLocation: { column: 0, line: 0 },
-                success: true,
-                type: 'comma',
-                value: undefined,
-            },
-            {
                 newIndex: 3,
                 sourceLocation: { column: 0, line: 0 },
                 success: true,
                 type: 'b',
+                value: undefined,
+            },
+        ],
+        separators: [
+            {
+                newIndex: 2,
+                sourceLocation: { column: 0, line: 0 },
+                success: true,
+                type: 'comma',
                 value: undefined,
             },
         ],
@@ -1903,58 +1910,43 @@ test('Parser lib - SeparatedList', t => {
     ]);
     t.deepEqual(threeItemList, {
         newIndex: 5,
-        sourceLocation: dummySourceLocation,
-        success: true,
-        type: 'list',
-        children: [
+        items: [
             {
                 newIndex: 1,
-                sourceLocation: {
-                    column: 0,
-                    line: 0,
-                },
+                sourceLocation: { column: 0, line: 0 },
                 success: true,
                 type: 'a',
                 value: undefined,
             },
             {
+                newIndex: 3,
+                sourceLocation: { column: 0, line: 0 },
+                success: true,
+                type: 'b',
+                value: undefined,
+            },
+            {
+                newIndex: 5,
+                sourceLocation: { column: 0, line: 0 },
+                success: true,
+                type: 'a',
+                value: undefined,
+            },
+        ],
+        separators: [
+            {
                 newIndex: 2,
-                sourceLocation: {
-                    column: 0,
-                    line: 0,
-                },
+                sourceLocation: { column: 0, line: 0 },
                 success: true,
                 type: 'comma',
                 value: undefined,
             },
             {
-                children: [
-                    {
-                        newIndex: 3,
-                        sourceLocation: { column: 0, line: 0 },
-                        success: true,
-                        type: 'b',
-                        value: undefined,
-                    },
-                    {
-                        newIndex: 4,
-                        sourceLocation: { column: 0, line: 0 },
-                        success: true,
-                        type: 'comma',
-                        value: undefined,
-                    },
-                    {
-                        newIndex: 5,
-                        sourceLocation: { column: 0, line: 0 },
-                        success: true,
-                        type: 'a',
-                        value: undefined,
-                    },
-                ],
-                newIndex: 5,
+                newIndex: 4,
                 sourceLocation: { column: 0, line: 0 },
                 success: true,
-                type: 'list',
+                type: 'comma',
+                value: undefined,
             },
         ],
     });

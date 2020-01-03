@@ -16,7 +16,19 @@ export type Leaf<TokenType> = {
     sourceLocation: SourceLocation;
 };
 
-export type Ast<NodeType, LeafType> = Node<NodeType, LeafType> | Leaf<LeafType>;
+type SeparatedListNode<NodeType, LeafType> = {
+    items: Ast<NodeType, LeafType>[];
+    separators: Ast<NodeType, LeafType>[];
+};
+
+export type Ast<NodeType, LeafType> =
+    | Node<NodeType, LeafType>
+    | Leaf<LeafType>
+    | SeparatedListNode<NodeType, LeafType>;
+
+export const isSepearatedListNode = <NodeType, LeafType>(
+    n: Ast<NodeType, LeafType>
+): n is SeparatedListNode<NodeType, LeafType> => 'items' in n && 'separators' in n;
 
 interface LeafWithIndex<TokenType> {
     success: true;
@@ -36,7 +48,14 @@ interface NodeWithIndex<NodeType, LeafType> {
 
 export type AstWithIndex<NodeType, TokenType> =
     | NodeWithIndex<NodeType, TokenType>
-    | LeafWithIndex<TokenType>;
+    | LeafWithIndex<TokenType>
+    | SeparatedListWithIndex<NodeType, TokenType>;
+
+export type SeparatedListWithIndex<NodeType, TokenType> = {
+    items: AstWithIndex<NodeType, TokenType>[];
+    separators: AstWithIndex<NodeType, TokenType>[];
+    newIndex: number;
+};
 
 // TODO: just put the actual token in here instead of most of it's members
 export interface ParseFailureInfo<TokenType> {
@@ -68,10 +87,12 @@ export const parseResultIsError = <NodeType, LeafType, TokenType>(
 
 const parseResultWithIndexIsLeaf = <NodeType, TokenType>(
     r: ParseResultWithIndex<NodeType, TokenType>
-): r is LeafWithIndex<TokenType> => {
-    if (!r) throw debug('!r');
-    return 'value' in r;
-};
+): r is LeafWithIndex<TokenType> => 'value' in r;
+
+// TODO don't export this
+export const parseResultWithIndexIsSeparatedList = <NodeType, TokenType>(
+    r: ParseResultWithIndex<NodeType, TokenType>
+): r is SeparatedListWithIndex<NodeType, TokenType> => 'items' in r && 'searators' in r;
 
 const stripNodeIndexes = <NodeType, AstLeafNodeType>(
     r: AstWithIndex<NodeType, AstLeafNodeType>
@@ -81,6 +102,12 @@ const stripNodeIndexes = <NodeType, AstLeafNodeType>(
             value: r.value,
             type: r.type,
             sourceLocation: r.sourceLocation,
+        };
+    }
+    if (parseResultWithIndexIsSeparatedList(r)) {
+        return {
+            items: r.items.map(stripNodeIndexes),
+            separators: r.separators.map(stripNodeIndexes),
         };
     }
     return {
@@ -119,12 +146,18 @@ type Alternative<NodeType, TokenType> = {
     parsers: Parser<NodeType, TokenType>[];
 };
 type Optional<NodeType, TokenType> = { kind: 'optional'; parser: Parser<NodeType, TokenType> };
+type SeparatedList<NodeType, TokenType> = {
+    kind: 'separatedList';
+    separator: Parser<NodeType, TokenType>;
+    item: Parser<NodeType, TokenType>;
+};
 
 type Parser<NodeType, TokenType> =
     | Alternative<NodeType, TokenType>
     | Sequence<NodeType, TokenType>
     | BaseParser<NodeType, TokenType>
-    | Optional<NodeType, TokenType>;
+    | Optional<NodeType, TokenType>
+    | SeparatedList<NodeType, TokenType>;
 
 export const Sequence = <NodeType extends string, TokenType>(
     name: NodeType,
@@ -140,10 +173,13 @@ export const Optional = <NodeType, TokenType>(
 ): Optional<NodeType, TokenType> => ({ kind: 'optional', parser });
 
 export const SeparatedList = <NodeType, TokenType>(
-    thisParser: string,
     separator: Parser<NodeType, TokenType>,
     item: Parser<NodeType, TokenType>
-) => OneOf([Sequence(thisParser, [item, separator, thisParser]), item]);
+): SeparatedList<NodeType, TokenType> => ({
+    kind: 'separatedList',
+    separator,
+    item,
+});
 
 export interface Grammar<NodeType, TokenType> {
     // Ideally would have NodeType instead of string here but typescript doesn't allow that.
@@ -299,6 +335,12 @@ const parseAlternative = <NodeType extends string, TokenType>(
             currentParser = currentParser.parsers[currentProgress.subParserIndex];
 
             const currentProgressLastItem = last(currentProgress.parseResults);
+            if (
+                currentProgressLastItem !== null &&
+                parseResultIsError(currentProgressLastItem)
+            ) {
+                throw debug('todo');
+            }
             const tokenIndex =
                 currentProgressLastItem !== null ? currentProgressLastItem.newIndex : index;
             // Check if this parser has been completed due to being a successful prefix of a previous alternative
@@ -367,6 +409,9 @@ const parseAlternative = <NodeType extends string, TokenType>(
             ) {
                 const cachedSuccess = last(refreshedCurrentProgress.parseResults);
                 if (cachedSuccess === null) throw debug('cachedSuccess == null');
+                if (parseResultIsError(cachedSuccess)) {
+                    throw debug('todo');
+                }
                 return {
                     newIndex: cachedSuccess.newIndex,
                     success: true,
@@ -465,6 +510,31 @@ const parseAlternative = <NodeType extends string, TokenType>(
     return errors;
 };
 
+const parseSeparatedList = <NodeType extends string, TokenType>(
+    grammar: Grammar<NodeType, TokenType>,
+    sep: SeparatedList<NodeType, TokenType>,
+    tokens: Token<TokenType>[],
+    index: number
+): SeparatedListWithIndex<NodeType, TokenType> | ParseError<TokenType> => {
+    const item = parseAnything(grammar, sep.item, tokens, index);
+    if (parseResultIsError(item)) {
+        return { items: [], separators: [], newIndex: index };
+    }
+    const separator = parseAnything(grammar, sep.separator, tokens, item.newIndex);
+    if (parseResultIsError(separator)) {
+        return { items: [item], separators: [], newIndex: item.newIndex };
+    }
+    const next = parseSeparatedList(grammar, sep, tokens, separator.newIndex);
+    if (parseResultIsError(next)) {
+        return next;
+    }
+    return {
+        items: [item, ...next.items],
+        separators: [separator, ...next.separators],
+        newIndex: next.newIndex,
+    };
+};
+
 const parseAnything = <NodeType extends string, TokenType>(
     grammar: Grammar<NodeType, TokenType>,
     parser: Parser<NodeType, TokenType>,
@@ -479,6 +549,8 @@ const parseAnything = <NodeType extends string, TokenType>(
         return parseSequence(grammar, parser, tokens, index);
     } else if (parser.kind == 'oneOf') {
         return parseAlternative(grammar, parser, tokens, index);
+    } else if (parser.kind == 'separatedList') {
+        return parseSeparatedList(grammar, parser, tokens, index);
     } else {
         throw debug('bad type in parse');
     }
@@ -511,7 +583,10 @@ const parseTerminal = <NodeType, TokenType>(
                     foundTokenText: 'endOfFile',
                     expected: terminal.tokenType,
                     whileParsing: [],
-                    sourceLocation: getSourceLocation(tokens, index),
+                    sourceLocation:
+                        index > tokens.length
+                            ? getSourceLocation(tokens, index)
+                            : getSourceLocation(tokens, tokens.length - 1),
                 },
             ],
         };
@@ -556,6 +631,10 @@ export const toDotFile = <NodeType, TokenType>(ast: Ast<NodeType, TokenType>) =>
     const traverse = (node: Ast<NodeType, TokenType>): number => {
         const myId = id;
         id++;
+
+        if (isSepearatedListNode(node)) {
+            throw debug('todo');
+        }
         const nodeString =
             'children' in node ? node.type : `${node.type}\n${node.value ? node.value : ''}`;
         digraph.setNode(myId, { label: nodeString });

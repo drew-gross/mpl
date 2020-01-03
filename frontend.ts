@@ -10,6 +10,7 @@ import {
     parse,
     stripResultIndexes,
     Leaf as AstLeaf,
+    isSepearatedListNode,
 } from './parser-lib/parse.js';
 import ParseError from './parser-lib/ParseError.js';
 import {
@@ -74,7 +75,9 @@ const repairAssociativity = (nodeType, ast) => {
 };
 
 const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
-    if (ast.type === nodeType) {
+    if (isSepearatedListNode(ast)) {
+        debug('todo');
+    } else if (ast.type === nodeType) {
         const newNode = f(ast);
         if ('children' in newNode) {
             // If we aren't supposed to recurse, don't re-tranform the node we just made
@@ -1036,6 +1039,9 @@ const extractFunctionBodyFromParseTree = node => {
 
 // TODO: Unify extractParameterList, extractArgumentList, extractTypeList, extractListItems
 const extractArgumentList = (ast: MplAst): MplAst[] => {
+    if (isSepearatedListNode(ast)) {
+        throw debug('todo');
+    }
     switch (ast.type) {
         case 'paramList':
             return [ast.children[0], ...extractArgumentList(ast.children[2])];
@@ -1045,6 +1051,9 @@ const extractArgumentList = (ast: MplAst): MplAst[] => {
 };
 
 const extractListItems = (ast: MplAst): MplAst[] => {
+    if (isSepearatedListNode(ast)) {
+        throw debug('todo');
+    }
     switch (ast.type) {
         case 'listItems':
             return [ast.children[0], ...extractListItems(ast.children[2])];
@@ -1054,12 +1063,19 @@ const extractListItems = (ast: MplAst): MplAst[] => {
 };
 
 const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
+    if (isSepearatedListNode(ast)) {
+        throw debug('todo');
+    }
     if (ast.type == 'arg') {
-        if (ast.children[2].type == 'typeWithoutArgs') {
+        const child2 = ast.children[2];
+        if (isSepearatedListNode(child2)) {
+            throw debug('todo');
+        }
+        if (child2.type == 'typeWithoutArgs') {
             return [
                 {
                     name: (ast.children[0] as AstLeaf<MplToken>).value as string,
-                    type: parseType(ast.children[2]),
+                    type: parseType(child2),
                 },
             ];
         } else {
@@ -1082,6 +1098,9 @@ const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
 };
 
 const extractTypeList = (ast: MplAst): Type[] => {
+    if (isSepearatedListNode(ast)) {
+        throw debug('todo');
+    }
     switch (ast.type) {
         case 'typeList':
             return [parseType(ast.children[0]), ...extractTypeList(ast.children[2])];
@@ -1091,6 +1110,9 @@ const extractTypeList = (ast: MplAst): Type[] => {
 };
 
 const parseTypeLiteralComponent = (ast: MplAst): ProductComponent => {
+    if (isSepearatedListNode(ast)) {
+        throw debug('todo');
+    }
     if (ast.type != 'typeLiteralComponent') throw debug('wrong as type');
     return {
         name: (ast.children[0] as any).value,
@@ -1099,6 +1121,9 @@ const parseTypeLiteralComponent = (ast: MplAst): ProductComponent => {
 };
 
 const parseType = (ast: MplAst): Type => {
+    if (isSepearatedListNode(ast)) {
+        throw debug('todo');
+    }
     switch (ast.type) {
         case 'typeWithArgs': {
             const name = (ast.children[0] as any).value;
@@ -1112,6 +1137,9 @@ const parseType = (ast: MplAst): Type => {
         }
         case 'typeWithoutArgs': {
             const node = ast.children[0];
+            if (isSepearatedListNode(node)) {
+                throw debug('todo');
+            }
             if (node.type != 'typeIdentifier') throw debug('Failed to parse type');
             const name = node.value;
             if (typeof name != 'string') throw debug('Failed to parse type');
@@ -1136,6 +1164,9 @@ const parseType = (ast: MplAst): Type => {
 };
 
 const parseObjectMember = (ast: MplAst): Ast.UninferredObjectMember | 'WrongShapeAst' => {
+    if (isSepearatedListNode(ast)) {
+        throw debug('todo');
+    }
     if (ast.type != 'objectLiteralComponent') {
         {
             throw debug('wsa');
@@ -1158,6 +1189,9 @@ const parseObjectMember = (ast: MplAst): Ast.UninferredObjectMember | 'WrongShap
 
 let functionId = 0;
 const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' => {
+    if (isSepearatedListNode(ast)) {
+        throw debug('todo');
+    }
     switch (ast.type) {
         case 'returnStatement':
             return {
@@ -1206,10 +1240,14 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
         case 'paramList':
             throw debug('paramList in astFromParseResult'); // Should have been caught in "callExpression"
         case 'callExpression':
+            const child2 = ast.children[2];
+            if (isSepearatedListNode(child2)) {
+                throw debug('todo');
+            }
             const args =
-                ast.children[2].type == 'rightBracket'
+                child2.type == 'rightBracket'
                     ? []
-                    : extractArgumentList(ast.children[2]).map(astFromParseResult);
+                    : extractArgumentList(child2).map(astFromParseResult);
             return {
                 kind: 'callExpression',
                 name: (ast.children[0] as any).value as any,
@@ -1250,6 +1288,9 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             } as Ast.UninferredAst;
         case 'typedDeclarationAssignment':
             const destinationNode = ast.children[0];
+            if (isSepearatedListNode(destinationNode)) {
+                throw debug('todo');
+            }
             if (destinationNode.type != 'identifier') return 'WrongShapeAst';
             const expression = astFromParseResult(ast.children[4]); // TODO: figure out why this isn't a type error
             return {
@@ -1279,10 +1320,16 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             };
         case 'objectLiteral':
             const typeNameNode = ast.children[0];
+            if (isSepearatedListNode(typeNameNode)) {
+                throw debug('todo');
+            }
             if (typeNameNode.type != 'typeIdentifier') return 'WrongShapeAst';
             const typeName = typeNameNode.value;
             if (typeof typeName != 'string') return 'WrongShapeAst';
             const membersNode = ast.children[2];
+            if (isSepearatedListNode(membersNode)) {
+                throw debug('todo');
+            }
             if (membersNode.type != 'objectLiteralComponents') return 'WrongShapeAst';
             const members = membersNode.children.map(parseObjectMember);
             if (members.some(m => m == 'WrongShapeAst')) return 'WrongShapeAst';

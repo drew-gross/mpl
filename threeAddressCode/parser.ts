@@ -16,6 +16,7 @@ import {
     parseResultIsError,
     AstWithIndex,
     ParseFailureInfo,
+    parseResultWithIndexIsSeparatedList,
 } from '../parser-lib/parse.js';
 
 type TacToken =
@@ -435,6 +436,9 @@ const mergeParseResults = (
 const parseSyscallArgs = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | number)[] => {
     const a = ast as any;
     if (!ast) debug('no ast');
+    if (parseResultWithIndexIsSeparatedList(ast)) {
+        throw debug('todo');
+    }
     switch (ast.type) {
         case 'register':
             return [parseRegister(a.value)];
@@ -449,6 +453,9 @@ const parseSyscallArgs = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | 
 
 const parseArgList = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | number)[] => {
     const a = ast as any;
+    if (parseResultWithIndexIsSeparatedList(ast)) {
+        throw debug('todo');
+    }
     switch (ast.type) {
         case 'register':
             return [parseRegister(a.value)];
@@ -482,6 +489,9 @@ const parseRegister = (data: string): Register => {
 };
 
 const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Statement => {
+    if (parseResultWithIndexIsSeparatedList(ast)) {
+        throw debug('todo');
+    }
     const a = ast as any;
     switch (ast.type) {
         case 'assign': {
@@ -779,6 +789,9 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
 };
 
 const instructionsFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Statement[] => {
+    if (parseResultWithIndexIsSeparatedList(ast)) {
+        throw debug('todo');
+    }
     if (ast.type == 'instructions') {
         const a = ast as any;
         return [
@@ -794,6 +807,9 @@ const instructionsFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): S
 const functionFromParseResult = (
     ast: AstWithIndex<TacAstNode, TacToken>
 ): Function | ParseError[] => {
+    if (parseResultWithIndexIsSeparatedList(ast)) {
+        throw debug('todo');
+    }
     if (ast.type != 'function') {
         return ['Need a function'];
     }
@@ -803,27 +819,47 @@ const functionFromParseResult = (
     }
 
     let childIndex = 0;
-    if (ast.children[childIndex].type != 'function') {
+    let child = ast.children[childIndex];
+    if (parseResultWithIndexIsSeparatedList(child)) {
+        throw debug('todo');
+    }
+    if (child.type != 'function') {
         debug('wrong shape ast');
         return ['WrongShapeAst'];
     }
     childIndex++;
-    if (ast.children[childIndex].type == 'spillSpec') {
+    child = ast.children[childIndex];
+    if (parseResultWithIndexIsSeparatedList(child)) {
+        throw debug('todo');
+    }
+    if (child.type == 'spillSpec') {
         childIndex++;
     }
-    if (ast.children[childIndex].type != 'identifier') {
+    child = ast.children[childIndex];
+    if (parseResultWithIndexIsSeparatedList(child)) {
+        throw debug('todo');
+    }
+    if (child.type != 'identifier') {
         debug('wrong shape ast');
         return ['WrongShapeAst'];
     }
     const name = (ast.children[childIndex] as any).value;
     childIndex++;
-    if (ast.children[childIndex].type != 'leftBracket') {
+    child = ast.children[childIndex];
+    if (parseResultWithIndexIsSeparatedList(child)) {
+        throw debug('todo');
+    }
+    if (child.type != 'leftBracket') {
         debug('wrong shape ast');
         return ['WrongShapeAst'];
     }
     childIndex++;
     let args: Register[] = [];
-    if (['argList', 'register'].includes(ast.children[childIndex].type)) {
+    child = ast.children[childIndex];
+    if (parseResultWithIndexIsSeparatedList(child)) {
+        throw debug('todo');
+    }
+    if (['argList', 'register'].includes(child.type)) {
         const numArgs = parseArgList(ast.children[childIndex]);
         numArgs.forEach(a => {
             if (typeof a == 'number') {
@@ -834,18 +870,30 @@ const functionFromParseResult = (
         childIndex++;
     }
 
-    if (ast.children[childIndex].type != 'rightBracket') {
+    child = ast.children[childIndex];
+    if (parseResultWithIndexIsSeparatedList(child)) {
+        throw debug('todo');
+    }
+    if (child.type != 'rightBracket') {
         debug('wrong shape ast');
         return ['WrongShapeAst'];
     }
     childIndex++;
-    if (ast.children[childIndex].type != 'colon') {
+    child = ast.children[childIndex];
+    if (parseResultWithIndexIsSeparatedList(child)) {
+        throw debug('todo');
+    }
+    if (child.type != 'colon') {
         debug('wrong shape ast');
         return ['WrongShapeAst'];
     }
     childIndex++;
     let instructions: Statement[] = [];
-    if (ast.children[childIndex].type == 'instructions') {
+    child = ast.children[childIndex];
+    if (parseResultWithIndexIsSeparatedList(child)) {
+        throw debug('todo');
+    }
+    if (child.type == 'instructions') {
         instructions = instructionsFromParseResult(ast.children[childIndex]);
         childIndex++;
     } else {
@@ -855,8 +903,12 @@ const functionFromParseResult = (
     return { name, instructions, liveAtExit: [], arguments: args };
 };
 
+// TODO: this should accept Ast, not AstWithIndex
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Program | ParseError[] => {
     if (!ast) debug('no type');
+    if (parseResultWithIndexIsSeparatedList(ast)) {
+        throw debug('todo');
+    }
     switch (ast.type) {
         case 'program':
             return ast.children.reduce(
