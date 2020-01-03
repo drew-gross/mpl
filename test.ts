@@ -1832,7 +1832,7 @@ test('Parse grammar from multiple entry points', t => {
     });
 });
 
-test.only('Parser lib - SeparatedList', t => {
+test('Parser lib - SeparatedList', t => {
     type TestToken = 'a' | 'b' | 'comma';
     type TestNode = 'a' | 'b' | 'comma';
     const terminal = token => Terminal<TestNode, TestToken>(token);

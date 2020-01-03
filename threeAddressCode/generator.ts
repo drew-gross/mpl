@@ -57,34 +57,24 @@ const memberOffset = (
     return result * bytesInWord;
 };
 
-const assignGlobal = (
-    makeTemporary,
-    makeLabel,
-    rhsRegister,
-    rhsInstruction,
-    targetInfo,
-    types,
-    lhsInfo
-) => {
+const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, types, lhsInfo) => {
     const lhsType = lhsInfo.originalDeclaration.type;
     switch (lhsType.kind) {
         case 'Function':
         case 'Integer':
-            return compileExpression<Statement>([rhsInstruction], ([rhs]) => [
-                ...rhs,
-                ...ins(`*${lhsInfo.newName} = ${rhsRegister}; Put ${lhsType.kind} into global`),
-            ]);
+            return compileExpression<Statement>([], ([]) =>
+                ins(`*${lhsInfo.newName} = ${rhsRegister}; Put ${lhsType.kind} into global`)
+            );
         case 'String':
-            return compileExpression<Statement>([rhsInstruction], ([rhs]) => [
-                ...rhs,
-                ...ins(`
+            return compileExpression<Statement>([], ([]) =>
+                ins(`
                     r:len = length(${rhsRegister}); Get string length
                     r:len++; Add one for null terminator
                     r:buffer = my_malloc(r:len); Allocate that much space
                     string_copy(${rhsRegister}, r:buffer); Copy string into allocated space
                     *${lhsInfo.newName} = r:buffer; Store into global
-                `),
-            ]);
+                `)
+            );
         case 'Product':
             const lhsAddress = makeTemporary('lhsAddress');
             const copyMembers: Statement[][] = lhsType.members.map((m, i) => {
@@ -96,8 +86,7 @@ const assignGlobal = (
                     *(${lhsAddress} + ${offset}) = ${memberTemporary}; store ${m.name}
                 `);
             });
-            return compileExpression<Statement>([rhsInstruction], ([rhs]) => [
-                ...rhs,
+            return compileExpression<Statement>([], ([]) => [
                 ...ins(`${lhsAddress} = &${lhsInfo.newName}; Get address of global`),
                 ...flatten(copyMembers),
             ]);
@@ -109,8 +98,7 @@ const assignGlobal = (
             const sourceAddress = makeTemporary('sourceAddress');
             const temp = makeTemporary('temp');
             const bytesInWord = targetInfo.bytesInWord;
-            return compileExpression<Statement>([rhsInstruction], ([rhs]) => [
-                ...rhs,
+            return compileExpression<Statement>([], ([]) => [
                 ...ins(`
                     ${remainingCount} = *(${rhsRegister} + 0); Get length of list
                     ${sourceAddress} = ${rhsRegister}; Local copy of source data pointer
@@ -367,14 +355,19 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const lhs: string = ast.destination;
             if (lhs in globalNameMap) {
                 const rhsRegister = makeTemporary('assignment_rhs');
-                return assignGlobal(
-                    makeTemporary,
-                    makeLabel,
-                    rhsRegister,
-                    recurse({ ast: ast.expression, destination: rhsRegister }),
-                    targetInfo,
-                    types,
-                    globalNameMap[lhs]
+                return compileExpression<Statement>(
+                    [
+                        recurse({ ast: ast.expression, destination: rhsRegister }),
+                        assignGlobal(
+                            makeTemporary,
+                            makeLabel,
+                            rhsRegister,
+                            targetInfo,
+                            types,
+                            globalNameMap[lhs]
+                        ),
+                    ],
+                    ([rhs, assign]) => [...rhs, ...assign]
                 );
             } else if (lhs in variablesInScope) {
                 return recurse({ ast: ast.expression, destination: variablesInScope[lhs] });
