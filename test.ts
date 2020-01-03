@@ -29,6 +29,7 @@ import {
     Grammar,
     Sequence,
     OneOf,
+    SeparatedList,
 } from './parser-lib/parse.js';
 import * as Ast from './ast.js';
 import { removeBracketsFromAst } from './frontend.js';
@@ -1842,7 +1843,7 @@ test.only('Parser lib - SeparatedList', t => {
         a,
         b,
         comma,
-        list: OneOf([Sequence('list', ['listItem', comma, 'list']), 'listItem']),
+        list: SeparatedList('list', comma, 'listItem'),
         listItem: OneOf([a, b]),
     };
 

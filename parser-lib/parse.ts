@@ -101,15 +101,9 @@ export const stripResultIndexes = <NodeType, TokenType>(
 
 export const stripSourceLocation = ast => {
     if ('children' in ast) {
-        return {
-            type: ast.type,
-            children: ast.children.map(stripSourceLocation),
-        };
+        return { type: ast.type, children: ast.children.map(stripSourceLocation) };
     } else {
-        return {
-            type: ast.type,
-            value: ast.value,
-        };
+        return { type: ast.type, value: ast.value };
     }
 };
 
@@ -135,25 +129,21 @@ type Parser<NodeType, TokenType> =
 export const Sequence = <NodeType extends string, TokenType>(
     name: NodeType,
     parsers: Parser<NodeType, TokenType>[]
-): Sequence<NodeType, TokenType> => ({
-    kind: 'sequence',
-    name,
-    parsers,
-});
+): Sequence<NodeType, TokenType> => ({ kind: 'sequence', name, parsers });
 
 export const OneOf = <NodeType, TokenType>(
     parsers: Parser<NodeType, TokenType>[]
-): Alternative<NodeType, TokenType> => ({
-    kind: 'oneOf',
-    parsers,
-});
+): Alternative<NodeType, TokenType> => ({ kind: 'oneOf', parsers });
 
 export const Optional = <NodeType, TokenType>(
     parser: Parser<NodeType, TokenType>
-): Optional<NodeType, TokenType> => ({
-    kind: 'optional',
-    parser,
-});
+): Optional<NodeType, TokenType> => ({ kind: 'optional', parser });
+
+export const SeparatedList = <NodeType, TokenType>(
+    thisParser: string,
+    separator: Parser<NodeType, TokenType>,
+    item: Parser<NodeType, TokenType>
+) => OneOf([Sequence(thisParser, [item, separator, thisParser]), item]);
 
 export interface Grammar<NodeType, TokenType> {
     // Ideally would have NodeType instead of string here but typescript doesn't allow that.
