@@ -57,7 +57,7 @@ const memberOffset = (
     return result * bytesInWord;
 };
 
-const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, types, lhsInfo) => {
+const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, lhsInfo) => {
     const lhsType = lhsInfo.originalDeclaration.type;
     switch (lhsType.kind) {
         case 'Function':
@@ -363,7 +363,6 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             makeLabel,
                             rhsRegister,
                             targetInfo,
-                            types,
                             globalNameMap[lhs]
                         ),
                     ],
