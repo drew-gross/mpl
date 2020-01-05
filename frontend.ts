@@ -1040,18 +1040,7 @@ const extractFunctionBodyFromParseTree = node => {
     }
 };
 
-// TODO: Replace extractParameterList, extractArgumentList, extractListItems with SeparatedList
-const extractArgumentList = (ast: MplAst): MplAst[] => {
-    if (isSepearatedListNode(ast)) {
-        throw debug('todo');
-    }
-    switch (ast.type) {
-        case 'paramList':
-            return [ast.children[0], ...extractArgumentList(ast.children[2])];
-        default:
-            return [ast];
-    }
-};
+// TODO: Replace extractParameterList, extractListItems with SeparatedList
 
 const extractListItems = (ast: MplAst): MplAst[] => {
     if (isSepearatedListNode(ast)) {
@@ -1234,17 +1223,13 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             throw debug('paramList in astFromParseResult'); // Should have been caught in "callExpression"
         case 'callExpression':
             const child2 = ast.children[2];
-            if (isSepearatedListNode(child2)) {
+            if (!isSepearatedListNode(child2)) {
                 throw debug('todo');
             }
-            const args =
-                child2.type == 'rightBracket'
-                    ? []
-                    : extractArgumentList(child2).map(astFromParseResult);
             return {
                 kind: 'callExpression',
                 name: (ast.children[0] as any).value as any,
-                arguments: args,
+                arguments: child2.items.map(astFromParseResult),
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'subtraction':

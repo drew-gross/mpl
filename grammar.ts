@@ -372,5 +372,5 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         'objectLiteral',
         identifier,
     ]),
-    paramList: OneOf([Sequence('paramList', ['expression', comma, 'paramList']), 'expression']),
+    paramList: SeparatedList(comma, 'expression'),
 };
