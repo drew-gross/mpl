@@ -4,6 +4,7 @@ import {
     Ast,
     ParseResult,
     Sequence,
+    SeparatedList,
     OneOf,
     Optional,
 } from './parser-lib/parse.js';
@@ -282,7 +283,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         Sequence('typeDeclaration', [typeIdentifier, colon, assignment, 'type']),
         Sequence('reassignment', [identifier, assignment, 'expression']),
     ]),
-    typeList: OneOf([Sequence('typeList', ['type', comma, 'typeList']), 'type']),
+    typeList: SeparatedList(comma, 'type'),
     type: OneOf([
         Sequence('typeWithArgs', [typeIdentifier, lessThan, 'typeList', greaterThan]),
         Sequence('typeWithoutArgs', [typeIdentifier]),
@@ -352,7 +353,6 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         'listLiteral',
     ]),
     listLiteral: OneOf([
-        // TODO suport list literals with more than one item
         Sequence('listLiteral', [leftSquareBracket, 'listItems', rightSquareBracket]),
         'simpleExpression',
     ]),

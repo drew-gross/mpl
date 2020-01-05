@@ -74,9 +74,12 @@ const repairAssociativity = (nodeType, ast) => {
     }
 };
 
-const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean) => {
+const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean): MplAst => {
     if (isSepearatedListNode(ast)) {
-        debug('todo');
+        return {
+            items: ast.items.map(i => transformAst(nodeType, f, i, recurseOnNew)),
+            separators: ast.separators.map(i => transformAst(nodeType, f, i, recurseOnNew)),
+        };
     } else if (ast.type === nodeType) {
         const newNode = f(ast);
         if ('children' in newNode) {
@@ -1037,7 +1040,7 @@ const extractFunctionBodyFromParseTree = node => {
     }
 };
 
-// TODO: Unify extractParameterList, extractArgumentList, extractTypeList, extractListItems
+// TODO: Replace extractParameterList, extractArgumentList, extractListItems with SeparatedList
 const extractArgumentList = (ast: MplAst): MplAst[] => {
     if (isSepearatedListNode(ast)) {
         throw debug('todo');
@@ -1097,18 +1100,6 @@ const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
     }
 };
 
-const extractTypeList = (ast: MplAst): Type[] => {
-    if (isSepearatedListNode(ast)) {
-        throw debug('todo');
-    }
-    switch (ast.type) {
-        case 'typeList':
-            return [parseType(ast.children[0]), ...extractTypeList(ast.children[2])];
-        default:
-            return [parseType(ast)];
-    }
-};
-
 const parseTypeLiteralComponent = (ast: MplAst): ProductComponent => {
     if (isSepearatedListNode(ast)) {
         throw debug('todo');
@@ -1128,7 +1119,9 @@ const parseType = (ast: MplAst): Type => {
         case 'typeWithArgs': {
             const name = (ast.children[0] as any).value;
             if (name != 'Function') throw debug('Only functions support args right now');
-            const typeList = extractTypeList(ast.children[2]);
+            const list = ast.children[2];
+            if (!isSepearatedListNode(list)) throw debug('todo');
+            const typeList = list.items.map(parseType);
             return {
                 kind: name,
                 arguments: typeList.slice(0, typeList.length - 1),

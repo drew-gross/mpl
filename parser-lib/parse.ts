@@ -92,7 +92,7 @@ const parseResultWithIndexIsLeaf = <NodeType, TokenType>(
 // TODO don't export this
 export const parseResultWithIndexIsSeparatedList = <NodeType, TokenType>(
     r: ParseResultWithIndex<NodeType, TokenType>
-): r is SeparatedListWithIndex<NodeType, TokenType> => 'items' in r && 'searators' in r;
+): r is SeparatedListWithIndex<NodeType, TokenType> => 'items' in r && 'separators' in r;
 
 const stripNodeIndexes = <NodeType, AstLeafNodeType>(
     r: AstWithIndex<NodeType, AstLeafNodeType>
@@ -110,6 +110,7 @@ const stripNodeIndexes = <NodeType, AstLeafNodeType>(
             separators: r.separators.map(stripNodeIndexes),
         };
     }
+    if (!r.children) debug('expected children');
     return {
         type: r.type,
         children: r.children.map(stripNodeIndexes),
@@ -625,25 +626,37 @@ export const Terminal = <NodeType, TokenType>(
     tokenType: token,
 });
 
-export const toDotFile = <NodeType, TokenType>(ast: Ast<NodeType, TokenType>) => {
+export const toDotFile = <NodeType extends string, TokenType>(ast: Ast<NodeType, TokenType>) => {
     const digraph = new Graph();
     let id = 0;
     const traverse = (node: Ast<NodeType, TokenType>): number => {
         const myId = id;
         id++;
 
+        let children: Ast<NodeType, TokenType>[] = [];
+        let nodeString = '';
         if (isSepearatedListNode(node)) {
-            throw debug('todo');
+            // TODO: make this prettier as a node within the tree than just "seplist"
+            nodeString = 'seplist';
+            // TODO: interleave the items and separators for better display
+            children = [...node.items, ...node.separators];
+        } else if ('children' in node) {
+            nodeString = node.type;
+            children = node.children;
+        } else {
+            nodeString = `${node.type}\n${node.value ? node.value : ''}`;
         }
-        const nodeString =
-            'children' in node ? node.type : `${node.type}\n${node.value ? node.value : ''}`;
+
+        // Create a new graphviz node for this ast node
         digraph.setNode(myId, { label: nodeString });
-        if ('children' in node) {
-            const childIds = node.children.map(traverse);
-            node.children.forEach((child, index) => {
-                digraph.setEdge(myId, childIds[index]);
-            });
-        }
+
+        // Recursively create nodes for this node's children
+        const childIds = children.map(traverse);
+
+        // Add an edge from this node to each child
+        children.forEach((child, index) => {
+            digraph.setEdge(myId, childIds[index]);
+        });
         return myId;
     };
     traverse(ast);
