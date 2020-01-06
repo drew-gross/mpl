@@ -12,9 +12,11 @@ import {
     OneOf,
     Terminal,
     Optional,
+    SeparatedList,
     parse,
     parseResultIsError,
     AstWithIndex,
+    SeparatedListWithIndex,
     ParseFailureInfo,
     parseResultWithIndexIsSeparatedList,
 } from '../parser-lib/parse.js';
@@ -395,7 +397,7 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         Sequence('return', [return_, register, statementSeparator]),
     ]),
 
-    argList: OneOf([Sequence('argList', ['arg', comma, 'argList']), 'arg']),
+    argList: SeparatedList(comma, 'arg'),
     arg: OneOf([number, register]),
 
     syscallArgs: OneOf([
@@ -451,22 +453,22 @@ const parseSyscallArgs = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | 
     }
 };
 
-const parseArgList = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | number)[] => {
-    const a = ast as any;
-    if (parseResultWithIndexIsSeparatedList(ast)) {
-        throw debug('todo');
-    }
-    switch (ast.type) {
-        case 'register':
-            return [parseRegister(a.value)];
-        case 'argList':
-            return [...parseArgList(a.children[0]), ...parseArgList(a.children[2])];
-        case 'number':
-            return [a.value];
-        default:
-            return debug(`unhandled case in parseArgList: ${a.type}`);
-    }
-};
+const parseArgList = <NodeType, TokenType>(
+    ast: SeparatedListWithIndex<NodeType, TokenType>
+): (Register | number)[] =>
+    ast.items.map((item: AstWithIndex<NodeType, TokenType>) => {
+        if (parseResultWithIndexIsSeparatedList(item)) {
+            throw debug('todo');
+        }
+        switch (item.type) {
+            case 'number':
+                return (item as any).value;
+            case 'register':
+                return parseRegister((item as any).value);
+            default:
+                throw debug('bad type');
+        }
+    });
 
 const stripComment = (str: string): string => {
     return str.substring(2, str.length - 1);
@@ -857,16 +859,7 @@ const functionFromParseResult = (
     let args: Register[] = [];
     child = ast.children[childIndex];
     if (parseResultWithIndexIsSeparatedList(child)) {
-        throw debug('todo');
-    }
-    if (['argList', 'register'].includes(child.type)) {
-        const numArgs = parseArgList(ast.children[childIndex]);
-        numArgs.forEach(a => {
-            if (typeof a == 'number') {
-                debug("arg can't be a number");
-            }
-        });
-        args = numArgs as Register[];
+        args = parseArgList(child) as Register[];
         childIndex++;
     }
 
