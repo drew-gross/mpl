@@ -1040,20 +1040,7 @@ const extractFunctionBodyFromParseTree = node => {
     }
 };
 
-// TODO: Replace extractParameterList, extractListItems with SeparatedList
-
-const extractListItems = (ast: MplAst): MplAst[] => {
-    if (isSepearatedListNode(ast)) {
-        throw debug('todo');
-    }
-    switch (ast.type) {
-        case 'listItems':
-            return [ast.children[0], ...extractListItems(ast.children[2])];
-        default:
-            return [ast];
-    }
-};
-
+// TODO: Replace extractParameterList with SeparatedList
 const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
     if (isSepearatedListNode(ast)) {
         throw debug('todo');
@@ -1382,11 +1369,11 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 sourceLocation: ast.sourceLocation,
             };
         case 'listLiteral':
+            const items = ast.children[1];
+            if (!isSepearatedListNode(items)) throw debug('todo');
             return {
                 kind: 'listLiteral',
-                items: extractListItems(ast.children[1]).map(
-                    astFromParseResult
-                ) as Ast.UninferredExpression[],
+                items: items.items.map(astFromParseResult) as Ast.UninferredExpression[],
                 sourceLocation: ast.sourceLocation,
             };
         case 'indexAccess':

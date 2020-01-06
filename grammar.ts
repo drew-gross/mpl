@@ -356,7 +356,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         Sequence('listLiteral', [leftSquareBracket, 'listItems', rightSquareBracket]),
         'simpleExpression',
     ]),
-    listItems: OneOf([Sequence('listItems', ['expression', comma, 'listItems']), 'expression']),
+    listItems: SeparatedList(comma, 'expression'),
     simpleExpression: OneOf([
         Sequence('bracketedExpression', [leftBracket, 'expression', rightBracket]),
         Sequence('callExpression', [
