@@ -443,6 +443,28 @@ return isFive(5) ? 1 : 0`,
         `,
         exitCode: 6,
     },
+    {
+        name: 'Reassign Integer Inside Function',
+        source: `
+            foo := () => {
+                a := 1;
+                b := a + 5;
+                a = 2;
+                c := a + b;
+                return c;
+            };
+            return foo();
+        `,
+        exitCode: 8,
+    },
+    {
+        name: 'Function Named Times',
+        source: `
+            times := (a: Integer, b: Integer) => a * b;
+            return times(11, 1);
+        `,
+        exitCode: 11,
+    },
 ];
 
 export default testCases;

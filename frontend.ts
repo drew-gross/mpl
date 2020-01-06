@@ -33,6 +33,9 @@ import { TypeError } from './TypeError.js';
 import SourceLocation from './parser-lib/sourceLocation.js';
 import * as Ast from './ast.js';
 
+// TODO move this to parser lit
+const hasType = (ast, type: string) => 'type' in ast && ast.type == type;
+
 const repairAssociativity = (nodeType, ast) => {
     // Let this slide because TokenType overlaps InteriorNodeType right now
     if (ast.type === nodeType && !ast.children) /*debug('todo')*/ return ast;
@@ -1026,51 +1029,44 @@ const makeProgramAstNodeFromStatmentParseResult = (ast): Ast.UninferredStatement
     return children;
 };
 
-const extractFunctionBodyFromParseTree = node => {
+const extractFunctionBody = node => {
     switch (node.type) {
         case 'returnStatement':
             return [astFromParseResult(node)];
         case 'statement':
             return [
                 astFromParseResult(node.children[0]),
-                ...extractFunctionBodyFromParseTree(node.children[2]),
+                ...extractFunctionBody(node.children[2]),
             ];
         default:
-            throw debug(`${node.type} unhandled in extractFunctionBodyFromParseTree`);
+            throw debug(`${node.type} unhandled in extractFunctionBody`);
     }
 };
 
 // TODO: Replace extractParameterList with SeparatedList
 const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
     if (isSepearatedListNode(ast)) {
-        throw debug('todo');
-    }
-    if (ast.type == 'arg') {
-        const child2 = ast.children[2];
-        if (isSepearatedListNode(child2)) {
-            throw debug('todo');
-        }
-        if (child2.type == 'typeWithoutArgs') {
-            return [
-                {
-                    name: (ast.children[0] as AstLeaf<MplToken>).value as string,
-                    type: parseType(child2),
-                },
-            ];
-        } else {
-            throw debug('wrong children length');
-        }
-    } else if (ast.type == 'argList') {
-        return [
-            ...extractParameterList(ast.children[0]),
-            ...extractParameterList(ast.children[2]),
-        ];
-    } else if (ast.type == 'bracketedArgList') {
-        if (ast.children.length > 2) {
-            return extractParameterList(ast.children[1]);
-        } else {
-            return [];
-        }
+        return flatten(
+            ast.items.map(i => {
+                if (isSepearatedListNode(i) || !('children' in i)) {
+                    throw debug('todo');
+                }
+                const child2 = i.children[2];
+                if (isSepearatedListNode(child2)) {
+                    throw debug('todo');
+                }
+                if (child2.type == 'typeWithoutArgs') {
+                    return [
+                        {
+                            name: (i.children[0] as AstLeaf<MplToken>).value as string,
+                            type: parseType(child2),
+                        },
+                    ];
+                } else {
+                    throw debug('wrong children length');
+                }
+            })
+        );
     } else {
         throw debug(`${ast.type} unhandledi extractParameterList`);
     }
@@ -1330,32 +1326,79 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 rhs: astFromParseResult(ast.children[2]),
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
-        case 'function':
+        case 'function': {
             functionId++;
-            const parameters: VariableDeclaration[] = extractParameterList(ast.children[0]);
+
+            let childIndex = 0;
+            let hasBrackets = false;
+            if (hasType(ast.children[0], 'leftBracket')) {
+                childIndex++;
+                hasBrackets = true;
+            }
+            const parameters: VariableDeclaration[] = extractParameterList(
+                ast.children[childIndex]
+            );
+            childIndex++;
+
+            if (hasBrackets) {
+                if (!hasType(ast.children[childIndex], 'rightBracket')) {
+                    debug('mismatched brackets');
+                }
+                childIndex++;
+            }
+
+            if (!hasType(ast.children[childIndex], 'fatArrow')) debug('wrong');
+            childIndex++;
             return {
                 kind: 'functionLiteral',
                 deanonymizedName: `anonymous_${functionId}`,
                 body: [
                     {
                         kind: 'returnStatement',
-                        expression: astFromParseResult(ast.children[2]),
+                        expression: astFromParseResult(ast.children[childIndex]),
                         sourceLocation: ast.sourceLocation,
                     },
                 ],
                 parameters,
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
-        case 'functionWithBlock':
+        }
+        case 'functionWithBlock': {
             functionId++;
-            const parameters2: VariableDeclaration[] = extractParameterList(ast.children[0]);
+            let childIndex = 0;
+            let hasBrackets = false;
+            if (hasType(ast.children[childIndex], 'leftBracket')) {
+                hasBrackets = true;
+                childIndex++;
+            }
+            const parameters2: VariableDeclaration[] = extractParameterList(
+                ast.children[childIndex]
+            );
+            childIndex++;
+
+            if (hasBrackets) {
+                if (!hasType(ast.children[childIndex], 'rightBracket')) {
+                    debug('brackets mismatched');
+                }
+                childIndex++;
+            }
+            if (!hasType(ast.children[childIndex], 'fatArrow')) debug('wrong');
+            childIndex++;
+            if (!hasType(ast.children[childIndex], 'leftCurlyBrace')) debug('wrong');
+            childIndex++;
+            const body = extractFunctionBody(ast.children[childIndex]);
+            childIndex++;
+            if (!hasType(ast.children[childIndex], 'rightCurlyBrace')) debug('wrong');
+            childIndex++;
+            if (childIndex !== ast.children.length) debug('wrong');
             return {
                 kind: 'functionLiteral',
                 deanonymizedName: `anonymous_${functionId}`,
-                body: extractFunctionBodyFromParseTree(ast.children[3]),
+                body,
                 parameters: parameters2,
                 sourceLocation: ast.sourceLocation,
             };
+        }
         case 'booleanLiteral':
             return {
                 kind: 'booleanLiteral',

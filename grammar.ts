@@ -184,7 +184,7 @@ export type MplAstNode =
     | 'program'
     | 'function'
     | 'functionWithBlock'
-    | 'bracketedArgList'
+    | 'bracketedArgList' // TODO: grep-remove this
     | 'argList'
     | 'arg'
     | 'statement'
@@ -252,20 +252,24 @@ const memberAccess = mplTerminal('memberAccess');
 export const grammar: Grammar<MplAstNode, MplToken> = {
     program: Sequence<MplAstNode, MplToken>('program', ['functionBody']),
     function: OneOf([
-        Sequence('function', ['argList', fatArrow, 'expression']),
+        Sequence('function', [
+            mplOptional(leftBracket),
+            'argList', // TODO pull out "args" into separate rule
+            mplOptional(rightBracket),
+            fatArrow,
+            'expression',
+        ]),
         Sequence('functionWithBlock', [
+            mplOptional(leftBracket),
             'argList',
+            mplOptional(rightBracket),
             fatArrow,
             leftCurlyBrace,
             'functionBody',
             rightCurlyBrace,
         ]),
     ]),
-    argList: OneOf([
-        Sequence('argList', ['arg', comma, 'argList']),
-        Sequence('bracketedArgList', [leftBracket, mplOptional('argList'), rightBracket]),
-        'arg',
-    ]),
+    argList: SeparatedList(comma, 'arg'),
     arg: Sequence('arg', [identifier, colon, 'type']),
     functionBody: OneOf([
         Sequence('statement', ['statement', statementSeparator, 'functionBody']),

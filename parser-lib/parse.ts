@@ -542,18 +542,25 @@ const parseAnything = <NodeType extends string, TokenType>(
     tokens: Token<TokenType>[],
     index: number
 ): ParseResultWithIndex<NodeType, TokenType> => {
-    if (typeof parser === 'string') {
-        return parseRule(grammar, parser as NodeType, tokens, index);
-    } else if (isTerminalParser(parser)) {
-        return parseTerminal(parser, tokens, index);
-    } else if (parser.kind == 'sequence') {
-        return parseSequence(grammar, parser, tokens, index);
-    } else if (parser.kind == 'oneOf') {
-        return parseAlternative(grammar, parser, tokens, index);
-    } else if (parser.kind == 'separatedList') {
-        return parseSeparatedList(grammar, parser, tokens, index);
-    } else {
-        throw debug('bad type in parse');
+    try {
+        if (typeof parser === 'string') {
+            return parseRule(grammar, parser as NodeType, tokens, index);
+        } else if (isTerminalParser(parser)) {
+            return parseTerminal(parser, tokens, index);
+        } else if (parser.kind == 'sequence') {
+            return parseSequence(grammar, parser, tokens, index);
+        } else if (parser.kind == 'oneOf') {
+            return parseAlternative(grammar, parser, tokens, index);
+        } else if (parser.kind == 'separatedList') {
+            return parseSeparatedList(grammar, parser, tokens, index);
+        } else {
+            throw debug('bad type in parse');
+        }
+    } catch (e) {
+        if (e instanceof RangeError) {
+            debug('range error');
+        }
+        throw e;
     }
 };
 

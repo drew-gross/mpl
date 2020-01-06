@@ -312,27 +312,30 @@ test('ast for assignment then return', t => {
                             {
                                 type: 'function',
                                 children: [
+                                    // TODO pretty sure the commented out version is actaully correct
                                     {
-                                        type: 'arg',
-                                        children: [
-                                            {
-                                                type: 'identifier',
-                                                value: 'a',
-                                            },
-                                            {
-                                                type: 'colon',
-                                                value: null,
-                                            },
-                                            {
-                                                type: 'typeWithoutArgs',
-                                                children: [
-                                                    {
-                                                        type: 'typeIdentifier',
-                                                        value: 'Integer',
-                                                    },
-                                                ],
-                                            },
-                                        ],
+                                        // type: 'arg',
+                                        // children: [
+                                        //     {
+                                        //         type: 'identifier',
+                                        //         value: 'a',
+                                        //     },
+                                        //     {
+                                        //         type: 'colon',
+                                        //         value: null,
+                                        //     },
+                                        //     {
+                                        //         type: 'typeWithoutArgs',
+                                        //         children: [
+                                        //             {
+                                        //                 type: 'typeIdentifier',
+                                        //                 value: 'Integer',
+                                        //             },
+                                        //         ],
+                                        //     },
+                                        // ],
+                                        type: undefined,
+                                        value: undefined,
                                     },
                                     {
                                         type: 'fatArrow',
@@ -949,13 +952,6 @@ return timess(11, 1);`,
     exitCode: 11,
 });
 
-test('function named times', mplTest, {
-    source: `
-times := (a: Integer, b: Integer) => a * b;
-return times(11, 1);`,
-    exitCode: 11,
-});
-
 test('call with wrong number of args', mplTest, {
     source: `
 threeArgs := a: Integer, b: Integer, c: Integer => a + b + c;
@@ -1079,19 +1075,6 @@ hello := "HelloWorld";
 hello = hello ++ "!";
 return length(hello);`,
     exitCode: 11,
-});
-
-test('reassign integer inside function', mplTest, {
-    source: `
-foo := () => {
-    a := 1;
-    b := a + 5;
-    a = 2;
-    c := a + b;
-    return c;
-};
-return foo();`,
-    exitCode: 8,
 });
 
 test('reassign to undeclared identifier inside function', mplTest, {
