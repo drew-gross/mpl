@@ -1,108 +1,83 @@
-import { Token } from './lex.js';
+import { Token as LToken } from './lex.js';
 import last from '../util/list/last.js';
 import debug from '../util/debug.js';
 import { Graph } from 'graphlib';
 import SourceLocation from './sourceLocation.js';
 
-interface Node<NodeType, LeafType> {
-    type: NodeType;
-    children: Ast<NodeType, LeafType>[];
-    sourceLocation: SourceLocation;
-}
+type SeparatedListNode<Node, Leaf> = { items: Ast<Node, Leaf>[]; separators: Ast<Node, Leaf>[] };
 
-export type Leaf<TokenType> = {
-    type: TokenType | 'endOfFile';
-    value: string | number | null | undefined;
-    sourceLocation: SourceLocation;
-};
+type LeafValue = string | number | null | undefined;
 
-type SeparatedListNode<NodeType, LeafType> = {
-    items: Ast<NodeType, LeafType>[];
-    separators: Ast<NodeType, LeafType>[];
-};
+export type Ast<Node, Token> =
+    | { type: Node; children: Ast<Node, Token>[]; sourceLocation: SourceLocation }
+    | { type: Token | 'endOfFile'; value: LeafValue; sourceLocation: SourceLocation }
+    | SeparatedListNode<Node, Token>;
 
-export type Ast<NodeType, LeafType> =
-    | Node<NodeType, LeafType>
-    | Leaf<LeafType>
-    | SeparatedListNode<NodeType, LeafType>;
+export const isSepearatedListNode = <Node, Leaf>(
+    n: Ast<Node, Leaf>
+): n is SeparatedListNode<Node, Leaf> => 'items' in n && 'separators' in n;
 
-export const isSepearatedListNode = <NodeType, LeafType>(
-    n: Ast<NodeType, LeafType>
-): n is SeparatedListNode<NodeType, LeafType> => 'items' in n && 'separators' in n;
-
-interface LeafWithIndex<TokenType> {
+interface LeafWithIndex<Token> {
     success: true;
     newIndex: number;
-    type: TokenType | 'endOfFile';
+    type: Token | 'endOfFile';
     value: string | number | null | undefined;
     sourceLocation: SourceLocation;
 }
 
-interface NodeWithIndex<NodeType, LeafType> {
+interface NodeWithIndex<Node, Leaf> {
     success: true;
     newIndex: number;
-    type: NodeType;
-    children: AstWithIndex<NodeType, LeafType>[];
+    type: Node;
+    children: AstWithIndex<Node, Leaf>[];
     sourceLocation: SourceLocation;
 }
 
-export type AstWithIndex<NodeType, TokenType> =
-    | NodeWithIndex<NodeType, TokenType>
-    | LeafWithIndex<TokenType>
-    | SeparatedListWithIndex<NodeType, TokenType>;
+export type AstWithIndex<Node, Token> =
+    | NodeWithIndex<Node, Token>
+    | LeafWithIndex<Token>
+    | SeparatedListWithIndex<Node, Token>;
 
-export type SeparatedListWithIndex<NodeType, TokenType> = {
-    items: AstWithIndex<NodeType, TokenType>[];
-    separators: AstWithIndex<NodeType, TokenType>[];
+export type SeparatedListWithIndex<Node, Token> = {
+    items: AstWithIndex<Node, Token>[];
+    separators: AstWithIndex<Node, Token>[];
     newIndex: number;
 };
 
-// TODO: just put the actual token in here instead of most of it's members
-export interface ParseFailureInfo<TokenType> {
-    found: TokenType | 'endOfFile';
+// TODO: just put the actual Ltoken in here instead of most of it's members
+export interface ParseFailureInfo<Token> {
+    found: Token | 'endOfFile';
     foundTokenText: string;
-    expected: TokenType | 'endOfFile';
+    expected: Token | 'endOfFile';
     whileParsing: string[];
     sourceLocation: SourceLocation;
 }
 
-export type ParseError<TokenType> = {
-    kind: 'parseError';
-    errors: ParseFailureInfo<TokenType>[];
-};
+export type ParseError<Token> = { kind: 'parseError'; errors: ParseFailureInfo<Token>[] };
+export type ParseResultWithIndex<Node, Token> = ParseError<Token> | AstWithIndex<Node, Token>;
+export type ParseResult<Node, Token> = ParseError<Token> | Ast<Node, Token>;
 
-export type ParseResultWithIndex<NodeType, TokenType> =
-    | ParseError<TokenType>
-    | AstWithIndex<NodeType, TokenType>;
-export type ParseResult<NodeType, TokenType> = ParseError<TokenType> | Ast<NodeType, TokenType>;
-
-export const parseResultIsError = <NodeType, LeafType, TokenType>(
+export const parseResultIsError = <Node, Leaf, Token>(
     result:
-        | ParseResult<NodeType, TokenType>
-        | ParseResultWithIndex<NodeType, TokenType>
-        | AstWithIndex<NodeType, LeafType>[]
+        | ParseResult<Node, Token>
+        | ParseResultWithIndex<Node, Token>
+        | AstWithIndex<Node, Leaf>[]
         | 'missingOptional'
-): result is ParseError<TokenType> =>
+): result is ParseError<Token> =>
     result != 'missingOptional' && 'kind' in result && result.kind == 'parseError';
 
-const parseResultWithIndexIsLeaf = <NodeType, TokenType>(
-    r: ParseResultWithIndex<NodeType, TokenType>
-): r is LeafWithIndex<TokenType> => 'value' in r;
+const parseResultWithIndexIsLeaf = <Node, Token>(
+    r: ParseResultWithIndex<Node, Token>
+): r is LeafWithIndex<Token> => 'value' in r;
 
 // TODO don't export this
-export const parseResultWithIndexIsSeparatedList = <NodeType, TokenType>(
-    r: ParseResultWithIndex<NodeType, TokenType>
-): r is SeparatedListWithIndex<NodeType, TokenType> => 'items' in r && 'separators' in r;
+export const parseResultWithIndexIsSeparatedList = <Node, Token>(
+    r: ParseResultWithIndex<Node, Token>
+): r is SeparatedListWithIndex<Node, Token> => 'items' in r && 'separators' in r;
 
-const stripNodeIndexes = <NodeType, AstLeafNodeType>(
-    r: AstWithIndex<NodeType, AstLeafNodeType>
-): Ast<NodeType, AstLeafNodeType> => {
+const stripNodeIndexes = <Node, Leaf>(r: AstWithIndex<Node, Leaf>): Ast<Node, Leaf> => {
     if (parseResultWithIndexIsLeaf(r)) {
-        return {
-            value: r.value,
-            type: r.type,
-            sourceLocation: r.sourceLocation,
-        };
+        return { value: r.value, type: r.type, sourceLocation: r.sourceLocation };
     }
     if (parseResultWithIndexIsSeparatedList(r)) {
         return {
@@ -118,9 +93,9 @@ const stripNodeIndexes = <NodeType, AstLeafNodeType>(
     };
 };
 
-export const stripResultIndexes = <NodeType, TokenType>(
-    r: ParseResultWithIndex<NodeType, TokenType>
-): ParseResult<NodeType, TokenType> => {
+export const stripResultIndexes = <Node, Token>(
+    r: ParseResultWithIndex<Node, Token>
+): ParseResult<Node, Token> => {
     if (parseResultIsError(r)) {
         return r;
     }
@@ -135,64 +110,51 @@ export const stripSourceLocation = ast => {
     }
 };
 
-type Terminal<NodeType, TokenType> = { kind: 'terminal'; tokenType: TokenType };
-type BaseParser<NodeType, TokenType> = string | Terminal<NodeType, TokenType>;
-type Sequence<NodeType, TokenType> = {
-    kind: 'sequence';
-    name: string;
-    parsers: Parser<NodeType, TokenType>[];
-};
-type Alternative<NodeType, TokenType> = {
-    kind: 'oneOf';
-    parsers: Parser<NodeType, TokenType>[];
-};
-type Optional<NodeType, TokenType> = { kind: 'optional'; parser: Parser<NodeType, TokenType> };
-type SeparatedList<NodeType, TokenType> = {
+type Terminal<Node, Token> = { kind: 'terminal'; token: Token };
+type BaseParser<Node, Token> = string | Terminal<Node, Token>;
+type Sequence<Node, Token> = { kind: 'sequence'; name: string; parsers: Parser<Node, Token>[] };
+type Alternative<Node, Token> = { kind: 'oneOf'; parsers: Parser<Node, Token>[] };
+type Optional<Node, Token> = { kind: 'optional'; parser: Parser<Node, Token> };
+type SeparatedList<Node, Token> = {
     kind: 'separatedList';
-    separator: Parser<NodeType, TokenType>;
-    item: Parser<NodeType, TokenType>;
+    separator: Parser<Node, Token>;
+    item: Parser<Node, Token>;
 };
 
-type Parser<NodeType, TokenType> =
-    | Alternative<NodeType, TokenType>
-    | Sequence<NodeType, TokenType>
-    | BaseParser<NodeType, TokenType>
-    | Optional<NodeType, TokenType>
-    | SeparatedList<NodeType, TokenType>;
+type Parser<Node, Token> =
+    | Alternative<Node, Token>
+    | Sequence<Node, Token>
+    | BaseParser<Node, Token>
+    | Optional<Node, Token>
+    | SeparatedList<Node, Token>;
 
-export const Sequence = <NodeType extends string, TokenType>(
-    name: NodeType,
-    parsers: Parser<NodeType, TokenType>[]
-): Sequence<NodeType, TokenType> => ({ kind: 'sequence', name, parsers });
+export const Sequence = <Node extends string, Token>(
+    name: Node,
+    parsers: Parser<Node, Token>[]
+): Sequence<Node, Token> => ({ kind: 'sequence', name, parsers });
 
-export const OneOf = <NodeType, TokenType>(
-    parsers: Parser<NodeType, TokenType>[]
-): Alternative<NodeType, TokenType> => ({ kind: 'oneOf', parsers });
+export const OneOf = <Node, Token>(
+    parsers: Parser<Node, Token>[]
+): Alternative<Node, Token> => ({ kind: 'oneOf', parsers });
 
-export const Optional = <NodeType, TokenType>(
-    parser: Parser<NodeType, TokenType>
-): Optional<NodeType, TokenType> => ({ kind: 'optional', parser });
-
-export const SeparatedList = <NodeType, TokenType>(
-    separator: Parser<NodeType, TokenType>,
-    item: Parser<NodeType, TokenType>
-): SeparatedList<NodeType, TokenType> => ({
-    kind: 'separatedList',
-    separator,
-    item,
+export const Optional = <Node, Token>(parser: Parser<Node, Token>): Optional<Node, Token> => ({
+    kind: 'optional',
+    parser,
 });
 
-export interface Grammar<NodeType, TokenType> {
-    // Ideally would have NodeType instead of string here but typescript doesn't allow that.
-    [index: string]: Parser<NodeType, TokenType>;
+export const SeparatedList = <Node, Token>(
+    separator: Parser<Node, Token>,
+    item: Parser<Node, Token>
+): SeparatedList<Node, Token> => ({ kind: 'separatedList', separator, item });
+
+export interface Grammar<Node, Token> {
+    // Ideally would have Node instead of string here but typescript doesn't allow that.
+    [index: string]: Parser<Node, Token>;
 }
 
-const getSourceLocation = <TokenType>(
-    tokens: Token<TokenType>[],
-    index: number
-): SourceLocation => {
+const getSourceLocation = <Token>(tokens: LToken<Token>[], index: number): SourceLocation => {
     if (index >= tokens.length) {
-        const lastToken: Token<TokenType> = last(tokens) as Token<TokenType>;
+        const lastToken: LToken<Token> = last(tokens) as LToken<Token>;
         return {
             line: lastToken.sourceLocation.line,
             column: lastToken.sourceLocation.column + lastToken.string.length,
@@ -204,25 +166,23 @@ const getSourceLocation = <TokenType>(
     }
 };
 
-const isTerminalParser = <NodeType, TokenType>(
-    p: Parser<NodeType, TokenType>
-): p is Terminal<NodeType, TokenType> =>
+const isTerminalParser = <Node, Token>(p: Parser<Node, Token>): p is Terminal<Node, Token> =>
     typeof p == 'object' && 'kind' in p && p.kind === 'terminal';
 
-const parseSequence = <NodeType extends string, TokenType>(
-    grammar: Grammar<NodeType, TokenType>,
-    parser: Sequence<NodeType, TokenType>,
-    tokens: Token<TokenType>[],
+const parseSequence = <Node extends string, Token>(
+    grammar: Grammar<Node, Token>,
+    parser: Sequence<Node, Token>,
+    tokens: LToken<Token>[],
     index: number
-): ParseResultWithIndex<NodeType, TokenType> => {
+): ParseResultWithIndex<Node, Token> => {
     const originalIndex = index;
-    const results: AstWithIndex<NodeType, TokenType>[] = [];
+    const results: AstWithIndex<Node, Token>[] = [];
     for (const p of parser.parsers) {
-        let result: ParseResultWithIndex<NodeType, TokenType>;
+        let result: ParseResultWithIndex<Node, Token>;
         if (isTerminalParser(p)) {
             result = parseTerminal(p, tokens, index);
         } else if (typeof p === 'string') {
-            result = parseRule(grammar, p as NodeType, tokens, index);
+            result = parseRule(grammar, p as Node, tokens, index);
         } else if (p.kind == 'optional') {
             // TODO: Possibly they wanted the optional but had syntax error. If this is the case, we should get an error and do something useful with it (display it)
             // TODO: Handle case of parsing "x" with "x?x" where successfully parsing optional may cause remaining parse to fail and we need to try again without the optional.
@@ -249,33 +209,32 @@ const parseSequence = <NodeType extends string, TokenType>(
     return {
         success: true,
         newIndex: index,
-        type: parser.name as NodeType,
+        type: parser.name as Node,
         children: results,
         sourceLocation: getSourceLocation(tokens, originalIndex),
     };
 };
 
-type ParserProgress<NodeType, TokenType> =
-    | { kind: 'failed'; error: ParseError<TokenType> }
+type ParserProgress<Node, Token> =
+    | { kind: 'failed'; error: ParseError<Token> }
     | {
           kind: 'progress';
-          parseResults: AstWithIndex<NodeType, TokenType>[];
+          parseResults: AstWithIndex<Node, Token>[];
           subParserIndex: number;
       };
 
-const parseAlternative = <NodeType extends string, TokenType>(
-    grammar: Grammar<NodeType, TokenType>,
-    alternatives: Alternative<NodeType, TokenType>,
-    tokens: Token<TokenType>[],
+const parseAlternative = <Node extends string, Token>(
+    grammar: Grammar<Node, Token>,
+    alternatives: Alternative<Node, Token>,
+    tokens: LToken<Token>[],
     index: number
-): ParseResultWithIndex<NodeType, TokenType> => {
-    const progressCache: ParserProgress<NodeType, TokenType>[] = alternatives.parsers.map(
+): ParseResultWithIndex<Node, Token> => {
+    const progressCache: ParserProgress<Node, Token>[] = alternatives.parsers.map(
         _ =>
-            ({
-                kind: 'progress',
-                parseResults: [],
-                subParserIndex: 0,
-            } as ParserProgress<NodeType, TokenType>)
+            ({ kind: 'progress', parseResults: [], subParserIndex: 0 } as ParserProgress<
+                Node,
+                Token
+            >)
     );
 
     // TODO: fix this linter error
@@ -287,7 +246,7 @@ const parseAlternative = <NodeType extends string, TokenType>(
     ) {
         let alternativeNeedsSubtracting = false;
         let currentParser = alternatives.parsers[alternativeIndex];
-        let currentResult: ParseResultWithIndex<NodeType, TokenType> | 'missingOptional';
+        let currentResult: ParseResultWithIndex<Node, Token> | 'missingOptional';
         let currentIndex: number;
         const currentProgress = progressCache[alternativeIndex];
 
@@ -353,7 +312,7 @@ const parseAlternative = <NodeType extends string, TokenType>(
                     newIndex: currentProgressLastItem.newIndex,
                     success: true,
                     children: currentProgress.parseResults,
-                    type: sequenceParser.name as NodeType,
+                    type: sequenceParser.name as Node,
                     sourceLocation: getSourceLocation(tokens, index),
                 };
             }
@@ -363,12 +322,7 @@ const parseAlternative = <NodeType extends string, TokenType>(
                 currentResult = parseTerminal(currentParser, tokens, tokenIndex);
                 currentIndex = currentProgress.subParserIndex;
             } else if (typeof currentParser == 'string') {
-                currentResult = parseRule(
-                    grammar,
-                    currentParser as NodeType,
-                    tokens,
-                    tokenIndex
-                );
+                currentResult = parseRule(grammar, currentParser as Node, tokens, tokenIndex);
                 currentIndex = currentProgress.subParserIndex;
             } else if (currentParser.kind == 'optional') {
                 const optionalResult = parseOptional(grammar, currentParser, tokens, tokenIndex);
@@ -417,7 +371,7 @@ const parseAlternative = <NodeType extends string, TokenType>(
                     newIndex: cachedSuccess.newIndex,
                     success: true,
                     children: refreshedCurrentProgress.parseResults,
-                    type: sequenceParser.name as NodeType,
+                    type: sequenceParser.name as Node,
                     sourceLocation: getSourceLocation(tokens, index),
                 };
             }
@@ -494,7 +448,7 @@ const parseAlternative = <NodeType extends string, TokenType>(
         }
     }
 
-    const errors: ParseError<TokenType> = { kind: 'parseError', errors: [] };
+    const errors: ParseError<Token> = { kind: 'parseError', errors: [] };
     progressCache.forEach(progress => {
         if (progress.kind == 'failed') {
             errors.errors.push(...progress.error.errors);
@@ -511,12 +465,12 @@ const parseAlternative = <NodeType extends string, TokenType>(
     return errors;
 };
 
-const parseSeparatedList = <NodeType extends string, TokenType>(
-    grammar: Grammar<NodeType, TokenType>,
-    sep: SeparatedList<NodeType, TokenType>,
-    tokens: Token<TokenType>[],
+const parseSeparatedList = <Node extends string, Token>(
+    grammar: Grammar<Node, Token>,
+    sep: SeparatedList<Node, Token>,
+    tokens: LToken<Token>[],
     index: number
-): SeparatedListWithIndex<NodeType, TokenType> | ParseError<TokenType> => {
+): SeparatedListWithIndex<Node, Token> | ParseError<Token> => {
     const item = parseAnything(grammar, sep.item, tokens, index);
     if (parseResultIsError(item)) {
         return { items: [], separators: [], newIndex: index };
@@ -536,15 +490,15 @@ const parseSeparatedList = <NodeType extends string, TokenType>(
     };
 };
 
-const parseAnything = <NodeType extends string, TokenType>(
-    grammar: Grammar<NodeType, TokenType>,
-    parser: Parser<NodeType, TokenType>,
-    tokens: Token<TokenType>[],
+const parseAnything = <Node extends string, Token>(
+    grammar: Grammar<Node, Token>,
+    parser: Parser<Node, Token>,
+    tokens: LToken<Token>[],
     index: number
-): ParseResultWithIndex<NodeType, TokenType> => {
+): ParseResultWithIndex<Node, Token> => {
     try {
         if (typeof parser === 'string') {
-            return parseRule(grammar, parser as NodeType, tokens, index);
+            return parseRule(grammar, parser as Node, tokens, index);
         } else if (isTerminalParser(parser)) {
             return parseTerminal(parser, tokens, index);
         } else if (parser.kind == 'sequence') {
@@ -564,12 +518,12 @@ const parseAnything = <NodeType extends string, TokenType>(
     }
 };
 
-const parseOptional = <NodeType extends string, TokenType>(
-    grammar: Grammar<NodeType, TokenType>,
-    optional: Optional<NodeType, TokenType>,
-    tokens: Token<TokenType>[],
+const parseOptional = <Node extends string, Token>(
+    grammar: Grammar<Node, Token>,
+    optional: Optional<Node, Token>,
+    tokens: LToken<Token>[],
     index: number
-): ParseResultWithIndex<NodeType, TokenType> | undefined => {
+): ParseResultWithIndex<Node, Token> | undefined => {
     const result = parseAnything(grammar, optional.parser, tokens, index);
     if (parseResultIsError(result)) {
         return undefined;
@@ -577,11 +531,11 @@ const parseOptional = <NodeType extends string, TokenType>(
     return result;
 };
 
-const parseTerminal = <NodeType, TokenType>(
-    terminal: Terminal<NodeType, TokenType>,
-    tokens: Token<TokenType>[],
+const parseTerminal = <Node, Token>(
+    terminal: Terminal<Node, Token>,
+    tokens: LToken<Token>[],
     index
-): ParseResultWithIndex<NodeType, TokenType> => {
+): ParseResultWithIndex<Node, Token> => {
     if (index >= tokens.length) {
         return {
             kind: 'parseError',
@@ -589,7 +543,7 @@ const parseTerminal = <NodeType, TokenType>(
                 {
                     found: 'endOfFile',
                     foundTokenText: 'endOfFile',
-                    expected: terminal.tokenType,
+                    expected: terminal.token,
                     whileParsing: [],
                     sourceLocation:
                         index > tokens.length
@@ -599,7 +553,7 @@ const parseTerminal = <NodeType, TokenType>(
             ],
         };
     }
-    if (tokens[index].type == terminal.tokenType) {
+    if (tokens[index].type == terminal.token) {
         return {
             success: true,
             newIndex: index + 1,
@@ -613,11 +567,11 @@ const parseTerminal = <NodeType, TokenType>(
         kind: 'parseError',
         errors: [
             {
-                expected: terminal.tokenType,
+                expected: terminal.token,
                 found: tokens[index].type,
                 foundTokenText: tokens[index].string,
                 whileParsing: [],
-                // Use index of prevoius token so that the parse error shows up right
+                // Use index of prevoius Ltoken so that the parse error shows up right
                 // after the place where the user should have done something (e.g. they
                 // place where they forgot the semicolon
                 sourceLocation: getSourceLocation(tokens, index - 1),
@@ -626,21 +580,19 @@ const parseTerminal = <NodeType, TokenType>(
     };
 };
 
-export const Terminal = <NodeType, TokenType>(
-    token: TokenType
-): Terminal<NodeType, TokenType> => ({
+export const Terminal = <Node, Token>(Ltoken: Token): Terminal<Node, Token> => ({
     kind: 'terminal',
-    tokenType: token,
+    token: Ltoken,
 });
 
-export const toDotFile = <NodeType extends string, TokenType>(ast: Ast<NodeType, TokenType>) => {
+export const toDotFile = <Node extends string, Token>(ast: Ast<Node, Token>) => {
     const digraph = new Graph();
     let id = 0;
-    const traverse = (node: Ast<NodeType, TokenType>): number => {
+    const traverse = (node: Ast<Node, Token>): number => {
         const myId = id;
         id++;
 
-        let children: Ast<NodeType, TokenType>[] = [];
+        let children: Ast<Node, Token>[] = [];
         let nodeString = '';
         if (isSepearatedListNode(node)) {
             // TODO: make this prettier as a node within the tree than just "seplist"
@@ -670,22 +622,22 @@ export const toDotFile = <NodeType extends string, TokenType>(ast: Ast<NodeType,
     return digraph;
 };
 
-const parseRule = <NodeType extends string, TokenType>(
-    grammar: Grammar<NodeType, TokenType>,
-    rule: NodeType,
-    tokens: Token<TokenType>[],
+const parseRule = <Node extends string, Token>(
+    grammar: Grammar<Node, Token>,
+    rule: Node,
+    tokens: LToken<Token>[],
     index: number
-): ParseResultWithIndex<NodeType, TokenType> => {
-    const childrenParser: Parser<NodeType, TokenType> = grammar[rule];
+): ParseResultWithIndex<Node, Token> => {
+    const childrenParser: Parser<Node, Token> = grammar[rule];
     if (!childrenParser) throw debug(`invalid rule name: ${rule}`);
     return parseAnything(grammar, childrenParser, tokens, index);
 };
 
-export const parse = <NodeType extends string, TokenType>(
-    grammar: Grammar<NodeType, TokenType>,
-    firstRule: NodeType,
-    tokens: Token<TokenType>[]
-): ParseResultWithIndex<NodeType, TokenType> => {
+export const parse = <Node extends string, Token>(
+    grammar: Grammar<Node, Token>,
+    firstRule: Node,
+    tokens: LToken<Token>[]
+): ParseResultWithIndex<Node, Token> => {
     const result = parseRule(grammar, firstRule, tokens, 0);
     if (parseResultIsError(result)) return result;
     if (result.newIndex != tokens.length) {

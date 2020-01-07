@@ -9,7 +9,6 @@ import {
     parseResultIsError,
     parse,
     stripResultIndexes,
-    Leaf as AstLeaf,
     isSepearatedListNode,
 } from './parser-lib/parse.js';
 import ParseError from './parser-lib/ParseError.js';
@@ -1058,7 +1057,7 @@ const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
                 if (child2.type == 'typeWithoutArgs') {
                     return [
                         {
-                            name: (i.children[0] as AstLeaf<MplToken>).value as string,
+                            name: (i.children[0] as any).value as string,
                             type: parseType(child2),
                         },
                     ];
