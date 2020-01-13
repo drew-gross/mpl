@@ -4,6 +4,7 @@ import debug from '../util/debug.js';
 import { Graph } from 'graphlib';
 import SourceLocation from './sourceLocation.js';
 
+type ListNode<Node, Leaf> = { items: Ast<Node, Leaf>[] };
 type SeparatedListNode<Node, Leaf> = { items: Ast<Node, Leaf>[]; separators: Ast<Node, Leaf>[] };
 
 type LeafValue = string | number | null | undefined;
@@ -11,11 +12,15 @@ type LeafValue = string | number | null | undefined;
 export type Ast<Node, Token> =
     | { type: Node; children: Ast<Node, Token>[]; sourceLocation: SourceLocation }
     | { type: Token | 'endOfFile'; value: LeafValue; sourceLocation: SourceLocation }
-    | SeparatedListNode<Node, Token>;
+    | SeparatedListNode<Node, Token>
+    | ListNode<Node, Token>;
 
 export const isSepearatedListNode = <Node, Leaf>(
     n: Ast<Node, Leaf>
 ): n is SeparatedListNode<Node, Leaf> => 'items' in n && 'separators' in n;
+
+export const isListNode = <Node, Leaf>(n: Ast<Node, Leaf>): n is ListNode<Node, Leaf> =>
+    'items' in n && !('separators' in n);
 
 interface LeafWithIndex<Token> {
     success: true;
@@ -36,11 +41,17 @@ interface NodeWithIndex<Node, Leaf> {
 export type AstWithIndex<Node, Token> =
     | NodeWithIndex<Node, Token>
     | LeafWithIndex<Token>
-    | SeparatedListWithIndex<Node, Token>;
+    | SeparatedListWithIndex<Node, Token>
+    | ManyWithIndex<Node, Token>;
 
 export type SeparatedListWithIndex<Node, Token> = {
     items: AstWithIndex<Node, Token>[];
     separators: AstWithIndex<Node, Token>[];
+    newIndex: number;
+};
+
+type ManyWithIndex<Node, Token> = {
+    items: AstWithIndex<Node, Token>[];
     newIndex: number;
 };
 
@@ -70,10 +81,14 @@ const parseResultWithIndexIsLeaf = <Node, Token>(
     r: ParseResultWithIndex<Node, Token>
 ): r is LeafWithIndex<Token> => 'value' in r;
 
-// TODO don't export this
+// TODO don't export these, also use a real sum type
 export const parseResultWithIndexIsSeparatedList = <Node, Token>(
     r: ParseResultWithIndex<Node, Token>
 ): r is SeparatedListWithIndex<Node, Token> => 'items' in r && 'separators' in r;
+
+export const parseResultWithIndexIsList = <Node, Token>(
+    r: ParseResultWithIndex<Node, Token>
+): r is ManyWithIndex<Node, Token> => 'items' in r && !('separators' in r);
 
 const stripNodeIndexes = <Node, Leaf>(r: AstWithIndex<Node, Leaf>): Ast<Node, Leaf> => {
     if (parseResultWithIndexIsLeaf(r)) {
@@ -84,6 +99,9 @@ const stripNodeIndexes = <Node, Leaf>(r: AstWithIndex<Node, Leaf>): Ast<Node, Le
             items: r.items.map(stripNodeIndexes),
             separators: r.separators.map(stripNodeIndexes),
         };
+    }
+    if (parseResultWithIndexIsList(r)) {
+        return { items: r.items.map(stripNodeIndexes) };
     }
     if (!r.children) debug('expected children');
     return {
@@ -120,13 +138,15 @@ type SeparatedList<Node, Token> = {
     separator: Parser<Node, Token>;
     item: Parser<Node, Token>;
 };
+type Many<Node, Token> = { kind: 'many'; item: Parser<Node, Token> };
 
 type Parser<Node, Token> =
     | Alternative<Node, Token>
     | Sequence<Node, Token>
     | BaseParser<Node, Token>
     | Optional<Node, Token>
-    | SeparatedList<Node, Token>;
+    | SeparatedList<Node, Token>
+    | Many<Node, Token>;
 
 export const Sequence = <Node extends string, Token>(
     name: Node,
@@ -147,13 +167,20 @@ export const SeparatedList = <Node, Token>(
     item: Parser<Node, Token>
 ): SeparatedList<Node, Token> => ({ kind: 'separatedList', separator, item });
 
+export const Many = <Node, Token>(item: Parser<Node, Token>): Many<Node, Token> => ({
+    kind: 'many',
+    item,
+});
+
 export interface Grammar<Node, Token> {
     // Ideally would have Node instead of string here but typescript doesn't allow that.
     [index: string]: Parser<Node, Token>;
 }
 
 const getSourceLocation = <Token>(tokens: LToken<Token>[], index: number): SourceLocation => {
-    if (index >= tokens.length) {
+    if (tokens.length == 0) {
+        return { line: 0, column: 0 };
+    } else if (index >= tokens.length) {
         const lastToken: LToken<Token> = last(tokens) as LToken<Token>;
         return {
             line: lastToken.sourceLocation.line,
@@ -192,8 +219,10 @@ const parseSequence = <Node extends string, Token>(
             } else {
                 result = maybeResult;
             }
+        } else if (p.kind == 'many') {
+            result = parseMany(grammar, p, tokens, index);
         } else {
-            throw debug(`Sequence of sequences: ${JSON.stringify(p)}`);
+            throw debug(`Invalid parser type: ${JSON.stringify(p)}`);
         }
 
         if (parseResultIsError(result)) {
@@ -490,6 +519,23 @@ const parseSeparatedList = <Node extends string, Token>(
     };
 };
 
+const parseMany = <Node extends string, Token>(
+    grammar: Grammar<Node, Token>,
+    many: Many<Node, Token>,
+    tokens: LToken<Token>[],
+    index: number
+): ManyWithIndex<Node, Token> | ParseError<Token> => {
+    const item = parseAnything(grammar, many.item, tokens, index);
+    if (parseResultIsError(item)) {
+        return { items: [], newIndex: index };
+    }
+    const next = parseMany(grammar, many, tokens, item.newIndex);
+    if (parseResultIsError(next)) {
+        return { items: [item], newIndex: item.newIndex };
+    }
+    return { items: [item, ...next.items], newIndex: next.newIndex };
+};
+
 const parseAnything = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     parser: Parser<Node, Token>,
@@ -599,6 +645,10 @@ export const toDotFile = <Node extends string, Token>(ast: Ast<Node, Token>) => 
             nodeString = 'seplist';
             // TODO: interleave the items and separators for better display
             children = [...node.items, ...node.separators];
+        } else if (isListNode(node)) {
+            // TODO: make this prettier as a node within the tree than just "list"
+            nodeString = 'list';
+            children = node.items;
         } else if ('children' in node) {
             nodeString = node.type;
             children = node.children;

@@ -30,6 +30,7 @@ import {
     Sequence,
     OneOf,
     SeparatedList,
+    Many,
 } from './parser-lib/parse.js';
 import * as Ast from './ast.js';
 import { removeBracketsFromAst } from './frontend.js';
@@ -1932,6 +1933,29 @@ test('Parser lib - SeparatedList', t => {
                 value: undefined,
             },
         ],
+    });
+});
+
+test.only('Parser Lib - Many', t => {
+    type TestToken = 'a' | 'b';
+    type TestNode = 'a' | 'b';
+    const terminal = token => Terminal<TestNode, TestToken>(token);
+    const a = terminal('a');
+    const b = terminal('b');
+    const testGrammar = { a, b, asAndBs: Sequence('asAndBs', [Many(a), Many(b)]) };
+
+    const dummySourceLocation = { line: 0, column: 0 };
+
+    const zeroItemList: any = parse(testGrammar, 'asAndBs', []);
+    t.deepEqual(zeroItemList, {
+        children: [
+            { items: [], newIndex: 0 },
+            { items: [], newIndex: 0 },
+        ],
+        newIndex: 0,
+        sourceLocation: dummySourceLocation,
+        success: true,
+        type: 'asAndBs',
     });
 });
 
