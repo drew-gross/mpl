@@ -14,8 +14,7 @@ import {
     SeparatedList,
     SeparatedListNode,
     Many,
-    parse,
-    parseResultIsError,
+    parseString,
     Ast,
     ParseFailureInfo,
     isListNode,
@@ -868,27 +867,15 @@ const tacFromParseResult = (ast: Ast<TacAstNode, TacToken>): Program | ParseErro
 type ParseError = string | ParseFailureInfo<TacToken>;
 
 export const parseProgram = (input: string): Program | LexError | ParseError[] => {
-    const tokens = lex(tokenSpecs, input);
-    if ('kind' in tokens) {
-        return tokens;
-    }
-    const parseResult = parse(grammar, 'program', tokens);
-    if (parseResultIsError(parseResult)) {
-        return parseResult.errors;
-    }
-    return tacFromParseResult(parseResult);
+    const result = parseString(tokenSpecs, grammar, 'program', input);
+    if ('errors' in result) return result.errors;
+    return tacFromParseResult(result);
 };
 
 export const parseFunction = (input: string): Function | LexError | ParseError[] => {
-    const tokens = lex(tokenSpecs, input);
-    if ('kind' in tokens) {
-        return tokens;
-    }
-    const parseResult = parse(grammar, 'function', tokens);
-    if (parseResultIsError(parseResult)) {
-        return parseResult.errors;
-    }
-    return functionFromParseResult(parseResult);
+    const result = parseString(tokenSpecs, grammar, 'function', input);
+    if ('errors' in result) return result.errors;
+    return functionFromParseResult(result);
 };
 
 export const parseFunctionOrDie = (tacString: string): Function => {
@@ -907,18 +894,10 @@ export const parseFunctionOrDie = (tacString: string): Function => {
 };
 
 export const parseInstructions = (input: string): Statement[] | LexError | ParseError[] => {
-    const tokens = lex(tokenSpecs, input);
-    if ('kind' in tokens) {
-        return tokens;
-    }
-    const parseResult = parse(grammar, 'instructions', tokens);
-    if (parseResultIsError(parseResult)) {
-        return parseResult.errors;
-    }
-    if (!isListNode(parseResult)) {
-        throw debug('bad list');
-    }
-    return parseResult.items.map(instructionFromParseResult);
+    const result = parseString(tokenSpecs, grammar, 'instructions', input);
+    if ('errors' in result) return result.errors;
+    if (!isListNode(result)) throw debug('bad list');
+    return result.items.map(instructionFromParseResult);
 };
 
 export const parseInstructionsOrDie = (tacString: string): Statement[] => {

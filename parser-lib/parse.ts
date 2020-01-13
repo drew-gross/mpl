@@ -3,6 +3,7 @@ import last from '../util/list/last.js';
 import debug from '../util/debug.js';
 import { Graph } from 'graphlib';
 import SourceLocation from './sourceLocation.js';
+import { TokenSpec, lex, LexError } from './lex.js';
 
 type ListNode<Node, Leaf> = { items: Ast<Node, Leaf>[] };
 export type SeparatedListNode<Node, Leaf> = {
@@ -712,4 +713,19 @@ export const parse = <Node extends string, Token>(
         };
     }
     return stripResultIndexes(result);
+};
+
+export const parseString = <Node extends string, Token>(
+    tokens: TokenSpec<Token>[],
+    grammar: Grammar<Node, Token>,
+    rule: any,
+    input: string
+): ParseResult<Node, Token> | { errors: LexError | ParseFailureInfo<Token>[] } => {
+    const lexed = lex(tokens, input);
+    if ('kind' in lexed) return { errors: lexed };
+    const parsed = parse(grammar, rule, lexed);
+    if (parseResultIsError(parsed)) {
+        return { errors: parsed.errors };
+    }
+    return parsed;
 };
