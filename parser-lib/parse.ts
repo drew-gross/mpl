@@ -553,6 +553,8 @@ const parseAnything = <Node extends string, Token>(
             return parseAlternative(grammar, parser, tokens, index);
         } else if (parser.kind == 'separatedList') {
             return parseSeparatedList(grammar, parser, tokens, index);
+        } else if (parser.kind == 'many') {
+            return parseMany(grammar, parser, tokens, index);
         } else {
             throw debug('bad type in parse');
         }

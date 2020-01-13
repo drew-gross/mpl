@@ -13,6 +13,7 @@ import {
     Terminal,
     Optional,
     SeparatedList,
+    Many,
     parse,
     parseResultIsError,
     AstWithIndex,
@@ -289,12 +290,8 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         colon,
         'instructions',
     ]),
-
-    // TODO: make it possible to have function with no instructions
-    instructions: OneOf([
-        Sequence('instructions', ['instruction', 'instructions']),
-        'instruction',
-    ]),
+    // TODO: make it possible to spcify a Many at the parser entry point, so I can fold Many('instruction') into function, and remove parseInstructions function
+    instructions: Many('instruction'),
     instruction: OneOf([
         Sequence('statementSeparator', [statementSeparator]),
         Sequence('label', [identifier, colon, statementSeparator]),
@@ -791,22 +788,6 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
     }
 };
 
-const instructionsFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Statement[] => {
-    if (parseResultWithIndexIsSeparatedList(ast) || parseResultWithIndexIsList(ast)) {
-        throw debug('todo');
-    }
-    if (ast.type == 'instructions') {
-        const a = ast as any;
-        return [
-            instructionFromParseResult(a.children[0]),
-            ...instructionsFromParseResult(a.children[1]),
-        ];
-    } else {
-        const a = ast as any;
-        return [instructionFromParseResult(a)];
-    }
-};
-
 const functionFromParseResult = (
     ast: AstWithIndex<TacAstNode, TacToken>
 ): Function | ParseError[] => {
@@ -882,18 +863,11 @@ const functionFromParseResult = (
         return ['WrongShapeAst'];
     }
     childIndex++;
-    let instructions: Statement[] = [];
     child = ast.children[childIndex];
-    if (parseResultWithIndexIsSeparatedList(child) || parseResultWithIndexIsList(child)) {
+    if (!parseResultWithIndexIsList(child)) {
         throw debug('todo');
     }
-    if (child.type == 'instructions') {
-        instructions = instructionsFromParseResult(ast.children[childIndex]);
-        childIndex++;
-    } else {
-        instructions = [instructionFromParseResult(ast.children[childIndex])];
-        childIndex++;
-    }
+    const instructions: Statement[] = child.items.map(instructionFromParseResult);
     return { name, instructions, liveAtExit: [], arguments: args };
 };
 
@@ -1020,7 +994,10 @@ export const parseInstructions = (input: string): Statement[] | LexError | Parse
     if (parseResultIsError(parseResult)) {
         return parseResult.errors;
     }
-    return instructionsFromParseResult(parseResult);
+    if (!parseResultWithIndexIsList(parseResult)) {
+        throw debug('bad list');
+    }
+    return parseResult.items.map(instructionFromParseResult);
 };
 
 export const parseInstructionsOrDie = (tacString: string): Statement[] => {
