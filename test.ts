@@ -1957,6 +1957,145 @@ test.only('Parser Lib - Many', t => {
         success: true,
         type: 'asAndBs',
     });
+
+    const twoAs: any = parse(testGrammar, 'asAndBs', [
+        { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
+        { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
+    ]);
+    t.deepEqual(twoAs, {
+        children: [
+            {
+                items: [
+                    {
+                        newIndex: 1,
+                        sourceLocation: {
+                            column: 0,
+                            line: 0,
+                        },
+                        success: true,
+                        type: 'a',
+                        value: undefined,
+                    },
+                    {
+                        newIndex: 2,
+                        sourceLocation: {
+                            column: 0,
+                            line: 0,
+                        },
+                        success: true,
+                        type: 'a',
+                        value: undefined,
+                    },
+                ],
+                newIndex: 2,
+            },
+            { items: [], newIndex: 2 },
+        ],
+        newIndex: 2,
+        sourceLocation: dummySourceLocation,
+        success: true,
+        type: 'asAndBs',
+    });
+
+    const twobs: any = parse(testGrammar, 'asAndBs', [
+        { type: 'b', string: 'b', sourceLocation: dummySourceLocation },
+        { type: 'b', string: 'b', sourceLocation: dummySourceLocation },
+    ]);
+    t.deepEqual(twobs, {
+        children: [
+            { items: [], newIndex: 0 },
+            {
+                items: [
+                    {
+                        newIndex: 1,
+                        sourceLocation: {
+                            column: 0,
+                            line: 0,
+                        },
+                        success: true,
+                        type: 'b',
+                        value: undefined,
+                    },
+                    {
+                        newIndex: 2,
+                        sourceLocation: {
+                            column: 0,
+                            line: 0,
+                        },
+                        success: true,
+                        type: 'b',
+                        value: undefined,
+                    },
+                ],
+                newIndex: 2,
+            },
+        ],
+        newIndex: 2,
+        sourceLocation: dummySourceLocation,
+        success: true,
+        type: 'asAndBs',
+    });
+
+    const aThenB: any = parse(testGrammar, 'asAndBs', [
+        { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
+        { type: 'b', string: 'b', sourceLocation: dummySourceLocation },
+    ]);
+    t.deepEqual(aThenB, {
+        children: [
+            {
+                items: [
+                    {
+                        newIndex: 1,
+                        sourceLocation: {
+                            column: 0,
+                            line: 0,
+                        },
+                        success: true,
+                        type: 'a',
+                        value: undefined,
+                    },
+                ],
+                newIndex: 1,
+            },
+            {
+                items: [
+                    {
+                        newIndex: 2,
+                        sourceLocation: {
+                            column: 0,
+                            line: 0,
+                        },
+                        success: true,
+                        type: 'b',
+                        value: undefined,
+                    },
+                ],
+                newIndex: 2,
+            },
+        ],
+        newIndex: 2,
+        sourceLocation: dummySourceLocation,
+        success: true,
+        type: 'asAndBs',
+    });
+
+    const aba: any = parse(testGrammar, 'asAndBs', [
+        { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
+        { type: 'b', string: 'b', sourceLocation: dummySourceLocation },
+        { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
+    ]);
+    t.deepEqual(aba, {
+        kind: 'parseError',
+        errors: [
+            {
+                expected: 'endOfFile',
+                found: 'a',
+                foundTokenText: 'a',
+                sourceLocation: { column: 0, line: 0 },
+                whileParsing: ['asAndBs'],
+            },
+        ],
+    });
 });
 
 test('Parse instructions with no comment', t => {
