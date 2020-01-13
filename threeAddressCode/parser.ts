@@ -215,10 +215,8 @@ type TacAstNode =
     | 'addressOf'
     | 'global'
     | 'loadImmediate'
-    | 'globals'
     | 'label'
     | 'function'
-    | 'functions'
     | 'instructions'
     | 'sum'
     | 'difference'
@@ -274,12 +272,8 @@ const unspillInstruction = tacTerminal('unspillInstruction');
 const greaterThan = tacTerminal('greaterThan');
 
 const grammar: Grammar<TacAstNode, TacToken> = {
-    program: Sequence('program', [tacOptional('globals'), tacOptional('functions')]),
-
-    globals: OneOf([Sequence('globals', ['global', 'globals']), 'global']),
+    program: Sequence('program', [Many('global'), Many('function')]),
     global: Sequence('global', [global_, identifier, colon, identifier, number]),
-
-    functions: OneOf([Sequence('functions', ['function', 'functions']), 'function']),
     function: Sequence('function', [
         function_,
         tacOptional(spillSpec),
@@ -405,32 +399,6 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     syscallArg: OneOf([number, register]),
 
     data: OneOf([identifier, register, number]),
-};
-
-const mergeParseResults = (
-    lhs: Program | ParseError[],
-    rhs: Program | ParseError[]
-): Program | ParseError[] => {
-    let errors: ParseError[] = [];
-    if (Array.isArray(lhs)) {
-        errors = errors.concat(lhs);
-    }
-    if (Array.isArray(rhs)) {
-        errors = errors.concat(rhs);
-    }
-    if (errors.length > 0) {
-        return errors;
-    }
-    if ((lhs as Program).main && (rhs as Program).main) {
-        return ['both functions had a main!'];
-    }
-
-    return {
-        globals: { ...(lhs as any).globals, ...(rhs as any).globals },
-        functions: [...(lhs as any).functions, ...(rhs as any).functions],
-        main: (lhs as any).main || (rhs as any).main,
-        stringLiterals: [...(lhs as any).stringLiterals, ...(rhs as any).stringLiterals],
-    };
 };
 
 const parseSyscallArgs = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | number)[] => {
@@ -788,18 +756,16 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
     }
 };
 
-const functionFromParseResult = (
-    ast: AstWithIndex<TacAstNode, TacToken>
-): Function | ParseError[] => {
+const functionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Function => {
     if (parseResultWithIndexIsSeparatedList(ast) || parseResultWithIndexIsList(ast)) {
         throw debug('todo');
     }
     if (ast.type != 'function') {
-        return ['Need a function'];
+        throw debug('Need a function');
     }
     if (!('children' in ast)) {
         debug('wrong shape ast');
-        return ['WrongShapeAst'];
+        throw debug('WrongShapeAst');
     }
 
     let childIndex = 0;
@@ -809,7 +775,7 @@ const functionFromParseResult = (
     }
     if (child.type != 'function') {
         debug('wrong shape ast');
-        return ['WrongShapeAst'];
+        throw debug('WrongShapeAst');
     }
     childIndex++;
     child = ast.children[childIndex];
@@ -825,7 +791,7 @@ const functionFromParseResult = (
     }
     if (child.type != 'identifier') {
         debug('wrong shape ast');
-        return ['WrongShapeAst'];
+        throw debug('WrongShapeAst');
     }
     const name = (ast.children[childIndex] as any).value;
     childIndex++;
@@ -835,7 +801,7 @@ const functionFromParseResult = (
     }
     if (child.type != 'leftBracket') {
         debug('wrong shape ast');
-        return ['WrongShapeAst'];
+        throw debug('WrongShapeAst');
     }
     childIndex++;
     let args: Register[] = [];
@@ -851,7 +817,7 @@ const functionFromParseResult = (
     }
     if (child.type != 'rightBracket') {
         debug('wrong shape ast');
-        return ['WrongShapeAst'];
+        throw debug('WrongShapeAst');
     }
     childIndex++;
     child = ast.children[childIndex];
@@ -860,7 +826,7 @@ const functionFromParseResult = (
     }
     if (child.type != 'colon') {
         debug('wrong shape ast');
-        return ['WrongShapeAst'];
+        throw debug('WrongShapeAst');
     }
     childIndex++;
     child = ast.children[childIndex];
@@ -874,74 +840,35 @@ const functionFromParseResult = (
 // TODO: this should accept Ast, not AstWithIndex
 const tacFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): Program | ParseError[] => {
     if (!ast) debug('no type');
-    if (parseResultWithIndexIsSeparatedList(ast)) {
-        throw debug('todo');
-    }
-    if (parseResultWithIndexIsList(ast)) {
-        throw debug('todo');
-    }
-    switch (ast.type) {
-        case 'program':
-            return ast.children.reduce(
-                (results, child) => mergeParseResults(results, tacFromParseResult(child)),
-                {
-                    globals: {},
-                    functions: [],
-                    main: undefined,
-                    stringLiterals: [],
-                }
-            );
-        case 'global': {
-            const a = ast as any;
-            return {
-                globals: {
-                    [a.children[1].value]: {
-                        mangledName: a.children[3].value,
-                        bytes: a.children[4].value,
-                    },
-                },
-                functions: [],
-                main: undefined,
-                stringLiterals: [],
-            };
-        }
-        case 'globals': {
-            return mergeParseResults(
-                tacFromParseResult(ast.children[0]),
-                tacFromParseResult(ast.children[1])
-            );
-        }
-        case 'functions': {
-            const f = functionFromParseResult(ast.children[0]);
-            if (Array.isArray(f)) {
-                return f;
+    if (parseResultWithIndexIsSeparatedList(ast)) throw debug('todo');
+    if (parseResultWithIndexIsList(ast)) throw debug('todo');
+    if (ast.type !== 'program') throw debug('todo');
+    const parsedGlobals = ast.children[0];
+    const parsedFunctions = ast.children[1];
+    if (!parseResultWithIndexIsList(parsedGlobals)) throw debug('todo');
+    if (!parseResultWithIndexIsList(parsedFunctions)) throw debug('todo');
+    const globals = {};
+    parsedGlobals.items.forEach((a: any) => {
+        globals[a.children[1].value] = {
+            mangledName: a.children[3].value,
+            bytes: a.children[4].value,
+        };
+    });
+    const allFunctions = parsedFunctions.items.map(functionFromParseResult);
+    let main: Function | undefined = undefined;
+    const functions: Function[] = [];
+    allFunctions.forEach(f => {
+        if (f.name == 'main') {
+            if (main) {
+                throw debug('two mains');
             }
-            const remainder = tacFromParseResult(ast.children[1]);
-            return mergeParseResults(
-                {
-                    globals: {},
-                    functions: f.name == 'main' ? [] : [f],
-                    main: f.name == 'main' ? f : undefined,
-                    stringLiterals: [],
-                },
-                remainder
-            );
+            main = f;
+        } else {
+            functions.push(f);
         }
-        case 'function': {
-            const f = functionFromParseResult(ast);
-            if (Array.isArray(f)) {
-                return f;
-            }
-            return {
-                globals: {},
-                functions: f.name == 'main' ? [] : [f],
-                main: f.name == 'main' ? f : undefined,
-                stringLiterals: [],
-            };
-        }
-        default:
-            throw debug(`${ast.type} unhandled in tacFromParseResult`);
-    }
+    });
+
+    return { globals, functions, main, stringLiterals: [] };
 };
 
 type ParseError = string | ParseFailureInfo<TacToken>;
