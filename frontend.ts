@@ -1290,11 +1290,10 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             const typeName = typeNameNode.value;
             if (typeof typeName != 'string') return 'WrongShapeAst';
             const membersNode = ast.children[2];
-            if (isSepearatedListNode(membersNode) || isListNode(membersNode)) {
+            if (!isListNode(membersNode)) {
                 throw debug('todo');
             }
-            if (membersNode.type != 'objectLiteralComponents') return 'WrongShapeAst';
-            const members = membersNode.children.map(parseObjectMember);
+            const members = membersNode.items.map(parseObjectMember);
             if (members.some(m => m == 'WrongShapeAst')) return 'WrongShapeAst';
             return {
                 kind: 'objectLiteral',

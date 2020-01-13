@@ -7,6 +7,7 @@ import {
     SeparatedList,
     OneOf,
     Optional,
+    Many,
 } from './parser-lib/parse.js';
 import { TokenSpec } from './parser-lib/lex.js';
 
@@ -209,7 +210,6 @@ export type MplAstNode =
     | 'typeList'
     | 'objectLiteral'
     | 'objectLiteralComponent'
-    | 'objectLiteralComponents'
     | 'memberAccess'
     | 'listLiteral'
     | 'listItems'
@@ -311,15 +311,8 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     objectLiteral: Sequence('objectLiteral', [
         typeIdentifier,
         leftCurlyBrace,
-        'objectLiteralComponents',
+        Many('objectLiteralComponent'),
         rightCurlyBrace,
-    ]),
-    objectLiteralComponents: OneOf([
-        Sequence('objectLiteralComponents', [
-            'objectLiteralComponent',
-            'objectLiteralComponents',
-        ]),
-        'objectLiteralComponent',
     ]),
     objectLiteralComponent: Sequence('objectLiteralComponent', [
         identifier,
