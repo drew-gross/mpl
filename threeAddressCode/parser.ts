@@ -387,13 +387,11 @@ const grammar: Grammar<TacAstNode, TacToken> = {
         ]),
         Sequence('return', [return_, register, statementSeparator]),
     ]),
-
-    argList: SeparatedList(comma, 'arg'),
-    arg: OneOf([number, register]),
-
-    syscallArgs: Sequence('syscallArgs', [tacOptional(identifier), Many('syscallArg')]),
-    syscallArg: OneOf([number, register]),
-
+    argList: SeparatedList(comma, OneOf([number, register])),
+    syscallArgs: Sequence('syscallArgs', [
+        tacOptional(identifier),
+        Many(OneOf([number, register])),
+    ]),
     data: OneOf([identifier, register, number]),
 };
 
