@@ -1119,12 +1119,17 @@ const parseType = (ast: MplAst): Type => {
                     return { kind: 'NameRef', namedType: name };
             }
         }
-        case 'typeLiteral':
+        case 'typeLiteral': {
+            const node = ast.children[1];
+            if (!isListNode(node)) {
+                throw debug('todo');
+            }
             return {
                 kind: 'Product',
                 name: ast.type,
-                members: (ast.children[1] as any).children.map(parseTypeLiteralComponent),
+                members: node.items.map(parseTypeLiteralComponent),
             };
+        }
         default:
             throw debug(`${ast.type} unhandled in parseType`);
     }

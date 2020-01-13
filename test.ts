@@ -1121,18 +1121,6 @@ return b;`,
     exitCode: 2,
 });
 
-test('bool pair', mplTest, {
-    source: `
-BoolPair := {
-    first: Boolean;
-    second: Boolean;
-};
-bp: BoolPair = BoolPair { first: true, second: false, };
-return bp.first ? 10 : 20;
-`,
-    exitCode: 10,
-});
-
 test('controlFlowGraph basic test', t => {
     const rtl: Statement[] = [
         {

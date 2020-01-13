@@ -276,6 +276,18 @@ return isFive(5) ? 1 : 0`,
         failing: true,
     },
     {
+        name: 'Bool Pair',
+        source: `
+            BoolPair := {
+                first: Boolean;
+                second: Boolean;
+            };
+            bp: BoolPair = BoolPair { first: true, second: false, };
+            return bp.first ? 10 : 20;
+        `,
+        exitCode: 10,
+    },
+    {
         name: 'Int Pair',
         source: `
             IntPair := {

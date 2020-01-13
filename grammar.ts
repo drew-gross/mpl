@@ -205,7 +205,6 @@ export type MplAstNode =
     | 'typeWithArgs'
     | 'typeWithoutArgs'
     | 'typeLiteral'
-    | 'typeLiteralComponents'
     | 'typeLiteralComponent'
     | 'typeList'
     | 'objectLiteral'
@@ -295,12 +294,8 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     ]),
     typeLiteral: Sequence('typeLiteral', [
         leftCurlyBrace,
-        'typeLiteralComponents',
+        Many('typeLiteralComponent'),
         rightCurlyBrace,
-    ]),
-    typeLiteralComponents: OneOf([
-        Sequence('typeLiteralComponents', ['typeLiteralComponent', 'typeLiteralComponents']),
-        'typeLiteralComponent',
     ]),
     typeLiteralComponent: Sequence('typeLiteralComponent', [
         identifier,
