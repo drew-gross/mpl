@@ -1,5 +1,4 @@
 import debug from '../util/debug.js';
-import flatten from '../util/list/flatten.js';
 import last from '../util/list/last.js';
 import { TokenSpec, lex, LexError } from '../parser-lib/lex.js';
 import { Register } from './Register.js';
@@ -392,31 +391,29 @@ const grammar: Grammar<TacAstNode, TacToken> = {
     argList: SeparatedList(comma, 'arg'),
     arg: OneOf([number, register]),
 
-    syscallArgs: OneOf([
-        Sequence('syscallArgs', [tacOptional(identifier), 'syscallArg', 'syscallArgs']),
-        'syscallArg',
-    ]),
+    syscallArgs: Sequence('syscallArgs', [tacOptional(identifier), Many('syscallArg')]),
     syscallArg: OneOf([number, register]),
 
     data: OneOf([identifier, register, number]),
 };
 
 const parseSyscallArgs = (ast: AstWithIndex<TacAstNode, TacToken>): (Register | number)[] => {
-    const a = ast as any;
-    if (!ast) debug('no ast');
-    if (parseResultWithIndexIsSeparatedList(ast) || parseResultWithIndexIsList(ast)) {
-        throw debug('todo');
-    }
-    switch (ast.type) {
-        case 'register':
-            return [parseRegister(a.value)];
-        case 'number':
-            return [a.value];
-        case 'syscallArgs':
-            return flatten(a.children.map(parseSyscallArgs));
-        default:
-            return debug(`unhandled case in parseSyscallArgs: ${a.type}`);
-    }
+    if (!parseResultWithIndexIsList(ast)) throw debug('todo');
+    return ast.items.map(child => {
+        if (parseResultWithIndexIsSeparatedList(child) || parseResultWithIndexIsList(child)) {
+            throw debug('todo');
+        }
+        switch (child.type) {
+            case 'register':
+                if (typeof child.value !== 'string') throw debug('str');
+                return parseRegister(child.value);
+            case 'number':
+                if (typeof child.value !== 'number') throw debug('str');
+                return child.value;
+            default:
+                throw debug(`unhandled case in parseSyscallArgs: ${child.type}`);
+        }
+    });
 };
 
 const parseArgList = <NodeType, TokenType>(
@@ -675,7 +672,7 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
                 return {
                     kind: 'syscall',
                     name: a.children[3].value,
-                    arguments: parseSyscallArgs(a.children[4]),
+                    arguments: parseSyscallArgs(a.children[4].children[0]),
                     destination: parseRegister(a.children[0].value),
                     why: stripComment(a.children[3].value),
                 };
@@ -683,7 +680,7 @@ const instructionFromParseResult = (ast: AstWithIndex<TacAstNode, TacToken>): St
                 return {
                     kind: 'syscall',
                     name: a.children[1].value,
-                    arguments: parseSyscallArgs(a.children[2]),
+                    arguments: parseSyscallArgs(a.children[2].children[0]),
                     destination: null,
                     why: stripComment(a.children[3].value),
                 };
