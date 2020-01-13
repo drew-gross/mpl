@@ -20,7 +20,6 @@ import { parseMpl, compile, astFromParseResult, typeOfExpression } from './front
 import { mplTest, tacTest } from './test-utils.js';
 import { grammar, tokenSpecs, MplParseResult, MplAst, MplToken } from './grammar.js';
 import {
-    stripResultIndexes,
     parse,
     parseResultIsError,
     stripSourceLocation,
@@ -106,7 +105,7 @@ test('lex with initial whitespace', t => {
 
 test('ast for single number', t => {
     const tokens = lex(tokenSpecs, 'return 7;') as Token<MplToken>[];
-    const parseResult = stripResultIndexes(parse(grammar, 'program', tokens));
+    const parseResult = parse(grammar, 'program', tokens);
     if (parseResultIsError(parseResult)) {
         t.fail('Parse Failed');
         return;
@@ -144,9 +143,7 @@ test('ast for single number', t => {
 test('ast for number in brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(
-            stripResultIndexes(
-                parse(grammar, 'program', lex(tokenSpecs, ' return (5);') as Token<MplToken>[])
-            )
+            parse(grammar, 'program', lex(tokenSpecs, ' return (5);') as Token<MplToken>[])
         ),
         {
             type: 'program',
@@ -181,9 +178,7 @@ test('ast for number in brackets', t => {
 test('ast for number in double brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(
-            stripResultIndexes(
-                parse(grammar, 'program', lex(tokenSpecs, 'return ((20));') as Token<MplToken>[])
-            )
+            parse(grammar, 'program', lex(tokenSpecs, 'return ((20));') as Token<MplToken>[])
         ),
         {
             type: 'program',
@@ -218,12 +213,10 @@ test('ast for number in double brackets', t => {
 test('ast for product with brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(
-            stripResultIndexes(
-                parse(
-                    grammar,
-                    'program',
-                    lex(tokenSpecs, 'return 3 * (4 * 5);') as Token<MplToken>[]
-                )
+            parse(
+                grammar,
+                'program',
+                lex(tokenSpecs, 'return 3 * (4 * 5);') as Token<MplToken>[]
             )
         ),
         {
@@ -377,14 +370,10 @@ test('ast for assignment then return', t => {
     };
     const astWithSemicolon = stripSourceLocation(
         removeBracketsFromAst(
-            stripResultIndexes(
-                parse(
-                    grammar,
-                    'program',
-                    lex(tokenSpecs, 'constThree := a: Integer => 3; return 10;') as Token<
-                        MplToken
-                    >[]
-                )
+            parse(
+                grammar,
+                'program',
+                lex(tokenSpecs, 'constThree := a: Integer => 3; return 10;') as Token<MplToken>[]
             )
         )
     );
@@ -428,8 +417,10 @@ test('lowering of bracketedExpressions', t => {
 
 test('correct inferred type for function', t => {
     const functionSource = 'a: Integer => 11';
-    const parseResult: MplParseResult = stripResultIndexes(
-        parse(grammar, 'function', lex(tokenSpecs, functionSource) as Token<MplToken>[])
+    const parseResult: MplParseResult = parse(
+        grammar,
+        'function',
+        lex(tokenSpecs, functionSource) as Token<MplToken>[]
     );
     const ast: Ast.UninferredExpression = astFromParseResult(
         parseResult as MplAst
@@ -1761,9 +1752,7 @@ test('Parse grammar from multiple entry points', t => {
         { type: 'a', string: 'anything', sourceLocation: dummySourceLocation },
     ]);
     t.deepEqual(aresult, {
-        newIndex: 1,
         sourceLocation: dummySourceLocation,
-        success: true,
         type: 'a',
         value: undefined,
     });
@@ -1773,9 +1762,7 @@ test('Parse grammar from multiple entry points', t => {
         { type: 'b', string: 'anything', sourceLocation: dummySourceLocation },
     ]);
     t.deepEqual(bresult, {
-        newIndex: 1,
         sourceLocation: dummySourceLocation,
-        success: true,
         type: 'b',
         value: undefined,
     });
@@ -1820,22 +1807,13 @@ test('Parser lib - SeparatedList', t => {
     const dummySourceLocation = { line: 0, column: 0 };
 
     const zeroItemList: any = parse(testGrammar, 'list', []);
-    t.deepEqual(zeroItemList, { items: [], separators: [], newIndex: 0 });
+    t.deepEqual(zeroItemList, { items: [], separators: [] });
 
     const oneItemList: any = parse(testGrammar, 'list', [
         { type: 'a', string: 'anything', sourceLocation: dummySourceLocation },
     ]);
     t.deepEqual(oneItemList, {
-        newIndex: 1,
-        items: [
-            {
-                newIndex: 1,
-                sourceLocation: { column: 0, line: 0 },
-                success: true,
-                type: 'a',
-                value: undefined,
-            },
-        ],
+        items: [{ sourceLocation: dummySourceLocation, type: 'a', value: undefined }],
         separators: [],
     });
 
@@ -1845,32 +1823,11 @@ test('Parser lib - SeparatedList', t => {
         { type: 'b', string: 'b', sourceLocation: dummySourceLocation },
     ]);
     t.deepEqual(twoItemList, {
-        newIndex: 3,
         items: [
-            {
-                newIndex: 1,
-                sourceLocation: { column: 0, line: 0 },
-                success: true,
-                type: 'a',
-                value: undefined,
-            },
-            {
-                newIndex: 3,
-                sourceLocation: { column: 0, line: 0 },
-                success: true,
-                type: 'b',
-                value: undefined,
-            },
+            { type: 'a', value: undefined, sourceLocation: dummySourceLocation },
+            { type: 'b', value: undefined, sourceLocation: dummySourceLocation },
         ],
-        separators: [
-            {
-                newIndex: 2,
-                sourceLocation: { column: 0, line: 0 },
-                success: true,
-                type: 'comma',
-                value: undefined,
-            },
-        ],
+        separators: [{ type: 'comma', value: undefined, sourceLocation: dummySourceLocation }],
     });
 
     const threeItemList: any = parse(testGrammar, 'list', [
@@ -1881,45 +1838,14 @@ test('Parser lib - SeparatedList', t => {
         { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
     ]);
     t.deepEqual(threeItemList, {
-        newIndex: 5,
         items: [
-            {
-                newIndex: 1,
-                sourceLocation: { column: 0, line: 0 },
-                success: true,
-                type: 'a',
-                value: undefined,
-            },
-            {
-                newIndex: 3,
-                sourceLocation: { column: 0, line: 0 },
-                success: true,
-                type: 'b',
-                value: undefined,
-            },
-            {
-                newIndex: 5,
-                sourceLocation: { column: 0, line: 0 },
-                success: true,
-                type: 'a',
-                value: undefined,
-            },
+            { sourceLocation: dummySourceLocation, type: 'a', value: undefined },
+            { sourceLocation: dummySourceLocation, type: 'b', value: undefined },
+            { sourceLocation: dummySourceLocation, type: 'a', value: undefined },
         ],
         separators: [
-            {
-                newIndex: 2,
-                sourceLocation: { column: 0, line: 0 },
-                success: true,
-                type: 'comma',
-                value: undefined,
-            },
-            {
-                newIndex: 4,
-                sourceLocation: { column: 0, line: 0 },
-                success: true,
-                type: 'comma',
-                value: undefined,
-            },
+            { sourceLocation: dummySourceLocation, type: 'comma', value: undefined },
+            { sourceLocation: dummySourceLocation, type: 'comma', value: undefined },
         ],
     });
 });
@@ -1936,13 +1862,8 @@ test('Parser Lib - Many', t => {
 
     const zeroItemList: any = parse(testGrammar, 'asAndBs', []);
     t.deepEqual(zeroItemList, {
-        children: [
-            { items: [], newIndex: 0 },
-            { items: [], newIndex: 0 },
-        ],
-        newIndex: 0,
+        children: [{ items: [] }, { items: [] }],
         sourceLocation: dummySourceLocation,
-        success: true,
         type: 'asAndBs',
     });
 
@@ -1954,34 +1875,13 @@ test('Parser Lib - Many', t => {
         children: [
             {
                 items: [
-                    {
-                        newIndex: 1,
-                        sourceLocation: {
-                            column: 0,
-                            line: 0,
-                        },
-                        success: true,
-                        type: 'a',
-                        value: undefined,
-                    },
-                    {
-                        newIndex: 2,
-                        sourceLocation: {
-                            column: 0,
-                            line: 0,
-                        },
-                        success: true,
-                        type: 'a',
-                        value: undefined,
-                    },
+                    { sourceLocation: dummySourceLocation, type: 'a', value: undefined },
+                    { sourceLocation: dummySourceLocation, type: 'a', value: undefined },
                 ],
-                newIndex: 2,
             },
-            { items: [], newIndex: 2 },
+            { items: [] },
         ],
-        newIndex: 2,
         sourceLocation: dummySourceLocation,
-        success: true,
         type: 'asAndBs',
     });
 
@@ -1991,36 +1891,15 @@ test('Parser Lib - Many', t => {
     ]);
     t.deepEqual(twobs, {
         children: [
-            { items: [], newIndex: 0 },
+            { items: [] },
             {
                 items: [
-                    {
-                        newIndex: 1,
-                        sourceLocation: {
-                            column: 0,
-                            line: 0,
-                        },
-                        success: true,
-                        type: 'b',
-                        value: undefined,
-                    },
-                    {
-                        newIndex: 2,
-                        sourceLocation: {
-                            column: 0,
-                            line: 0,
-                        },
-                        success: true,
-                        type: 'b',
-                        value: undefined,
-                    },
+                    { type: 'b', value: undefined, sourceLocation: dummySourceLocation },
+                    { type: 'b', value: undefined, sourceLocation: dummySourceLocation },
                 ],
-                newIndex: 2,
             },
         ],
-        newIndex: 2,
         sourceLocation: dummySourceLocation,
-        success: true,
         type: 'asAndBs',
     });
 
@@ -2031,39 +1910,13 @@ test('Parser Lib - Many', t => {
     t.deepEqual(aThenB, {
         children: [
             {
-                items: [
-                    {
-                        newIndex: 1,
-                        sourceLocation: {
-                            column: 0,
-                            line: 0,
-                        },
-                        success: true,
-                        type: 'a',
-                        value: undefined,
-                    },
-                ],
-                newIndex: 1,
+                items: [{ sourceLocation: dummySourceLocation, type: 'a', value: undefined }],
             },
             {
-                items: [
-                    {
-                        newIndex: 2,
-                        sourceLocation: {
-                            column: 0,
-                            line: 0,
-                        },
-                        success: true,
-                        type: 'b',
-                        value: undefined,
-                    },
-                ],
-                newIndex: 2,
+                items: [{ sourceLocation: dummySourceLocation, type: 'b', value: undefined }],
             },
         ],
-        newIndex: 2,
         sourceLocation: dummySourceLocation,
-        success: true,
         type: 'asAndBs',
     });
 
@@ -2079,7 +1932,7 @@ test('Parser Lib - Many', t => {
                 expected: 'endOfFile',
                 found: 'a',
                 foundTokenText: 'a',
-                sourceLocation: { column: 0, line: 0 },
+                sourceLocation: dummySourceLocation,
                 whileParsing: ['asAndBs'],
             },
         ],
@@ -2152,7 +2005,7 @@ test.failing('Parse "x" with "x?x"', t => {
         { type: 'xToken', string: 'xToken', sourceLocation: { line: 0, column: 0 } },
     ];
     const ast = parse(testGrammar, 'x', tokens);
-    t.deepEqual(stripSourceLocation(stripResultIndexes(ast)), {
+    t.deepEqual(stripSourceLocation(ast), {
         children: [{ type: 'xToken', value: undefined }],
         type: 'x?x',
     });

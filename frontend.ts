@@ -8,8 +8,7 @@ import { tokenSpecs, grammar, MplAst, MplParseResult, MplToken } from './grammar
 import {
     parseResultIsError,
     parse,
-    stripResultIndexes,
-    isSepearatedListNode,
+    isSeparatedListNode,
     isListNode,
 } from './parser-lib/parse.js';
 import ParseError from './parser-lib/ParseError.js';
@@ -78,7 +77,7 @@ const repairAssociativity = (nodeType, ast) => {
 };
 
 const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean): MplAst => {
-    if (isSepearatedListNode(ast)) {
+    if (isSeparatedListNode(ast)) {
         return {
             items: ast.items.map(i => transformAst(nodeType, f, i, recurseOnNew)),
             separators: ast.separators.map(i => transformAst(nodeType, f, i, recurseOnNew)),
@@ -241,7 +240,7 @@ const removeBracketsFromAst = ast =>
     transformAst('bracketedExpression', node => node.children[1], ast, true);
 
 const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
-    const parseResult: MplParseResult = stripResultIndexes(parse(grammar, 'program', tokens));
+    const parseResult: MplParseResult = parse(grammar, 'program', tokens);
 
     if (parseResultIsError(parseResult)) {
         // TODO: Just get the parser to give us good errors directly instead of taking the first
@@ -1047,14 +1046,14 @@ const extractFunctionBody = node => {
 
 // TODO: Replace extractParameterList with SeparatedList
 const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
-    if (isSepearatedListNode(ast)) {
+    if (isSeparatedListNode(ast)) {
         return flatten(
             ast.items.map(i => {
-                if (isSepearatedListNode(i) || !('children' in i)) {
+                if (isSeparatedListNode(i) || !('children' in i)) {
                     throw debug('todo');
                 }
                 const child2 = i.children[2];
-                if (isSepearatedListNode(child2) || isListNode(child2)) {
+                if (isSeparatedListNode(child2) || isListNode(child2)) {
                     throw debug('todo');
                 }
                 if (child2.type == 'typeWithoutArgs') {
@@ -1075,7 +1074,7 @@ const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
 };
 
 const parseTypeLiteralComponent = (ast: MplAst): ProductComponent => {
-    if (isSepearatedListNode(ast) || isListNode(ast)) {
+    if (isSeparatedListNode(ast) || isListNode(ast)) {
         throw debug('todo');
     }
     if (ast.type != 'typeLiteralComponent') throw debug('wrong as type');
@@ -1086,7 +1085,7 @@ const parseTypeLiteralComponent = (ast: MplAst): ProductComponent => {
 };
 
 const parseType = (ast: MplAst): Type => {
-    if (isSepearatedListNode(ast) || isListNode(ast)) {
+    if (isSeparatedListNode(ast) || isListNode(ast)) {
         throw debug('todo');
     }
     switch (ast.type) {
@@ -1094,7 +1093,7 @@ const parseType = (ast: MplAst): Type => {
             const name = (ast.children[0] as any).value;
             if (name != 'Function') throw debug('Only functions support args right now');
             const list = ast.children[2];
-            if (!isSepearatedListNode(list)) throw debug('todo');
+            if (!isSeparatedListNode(list)) throw debug('todo');
             const typeList = list.items.map(parseType);
             return {
                 kind: name,
@@ -1104,7 +1103,7 @@ const parseType = (ast: MplAst): Type => {
         }
         case 'typeWithoutArgs': {
             const node = ast.children[0];
-            if (isSepearatedListNode(node) || isListNode(node)) {
+            if (isSeparatedListNode(node) || isListNode(node)) {
                 throw debug('todo');
             }
             if (node.type != 'typeIdentifier') throw debug('Failed to parse type');
@@ -1136,7 +1135,7 @@ const parseType = (ast: MplAst): Type => {
 };
 
 const parseObjectMember = (ast: MplAst): Ast.UninferredObjectMember | 'WrongShapeAst' => {
-    if (isSepearatedListNode(ast) || isListNode(ast)) {
+    if (isSeparatedListNode(ast) || isListNode(ast)) {
         throw debug('todo');
     }
     if (ast.type != 'objectLiteralComponent') {
@@ -1161,7 +1160,7 @@ const parseObjectMember = (ast: MplAst): Ast.UninferredObjectMember | 'WrongShap
 
 let functionId = 0;
 const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' => {
-    if (isSepearatedListNode(ast) || isListNode(ast)) {
+    if (isSeparatedListNode(ast) || isListNode(ast)) {
         throw debug('todo');
     }
     switch (ast.type) {
@@ -1213,7 +1212,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             throw debug('paramList in astFromParseResult'); // Should have been caught in "callExpression"
         case 'callExpression':
             const child2 = ast.children[2];
-            if (!isSepearatedListNode(child2)) {
+            if (!isSeparatedListNode(child2)) {
                 throw debug('todo');
             }
             return {
@@ -1256,7 +1255,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             } as Ast.UninferredAst;
         case 'typedDeclarationAssignment':
             const destinationNode = ast.children[0];
-            if (isSepearatedListNode(destinationNode) || isListNode(destinationNode)) {
+            if (isSeparatedListNode(destinationNode) || isListNode(destinationNode)) {
                 throw debug('todo');
             }
             if (destinationNode.type != 'identifier') return 'WrongShapeAst';
@@ -1288,7 +1287,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             };
         case 'objectLiteral':
             const typeNameNode = ast.children[0];
-            if (isSepearatedListNode(typeNameNode) || isListNode(typeNameNode)) {
+            if (isSeparatedListNode(typeNameNode) || isListNode(typeNameNode)) {
                 throw debug('todo');
             }
             if (typeNameNode.type != 'typeIdentifier') return 'WrongShapeAst';
@@ -1419,7 +1418,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             };
         case 'listLiteral':
             const items = ast.children[1];
-            if (!isSepearatedListNode(items)) throw debug('todo');
+            if (!isSeparatedListNode(items)) throw debug('todo');
             return {
                 kind: 'listLiteral',
                 items: items.items.map(astFromParseResult) as Ast.UninferredExpression[],

@@ -5,7 +5,10 @@ import { Graph } from 'graphlib';
 import SourceLocation from './sourceLocation.js';
 
 type ListNode<Node, Leaf> = { items: Ast<Node, Leaf>[] };
-type SeparatedListNode<Node, Leaf> = { items: Ast<Node, Leaf>[]; separators: Ast<Node, Leaf>[] };
+export type SeparatedListNode<Node, Leaf> = {
+    items: Ast<Node, Leaf>[];
+    separators: Ast<Node, Leaf>[];
+};
 
 type LeafValue = string | number | null | undefined;
 
@@ -15,7 +18,7 @@ export type Ast<Node, Token> =
     | SeparatedListNode<Node, Token>
     | ListNode<Node, Token>;
 
-export const isSepearatedListNode = <Node, Leaf>(
+export const isSeparatedListNode = <Node, Leaf>(
     n: Ast<Node, Leaf>
 ): n is SeparatedListNode<Node, Leaf> => 'items' in n && 'separators' in n;
 
@@ -38,13 +41,13 @@ interface NodeWithIndex<Node, Leaf> {
     sourceLocation: SourceLocation;
 }
 
-export type AstWithIndex<Node, Token> =
+type AstWithIndex<Node, Token> =
     | NodeWithIndex<Node, Token>
     | LeafWithIndex<Token>
     | SeparatedListWithIndex<Node, Token>
     | ManyWithIndex<Node, Token>;
 
-export type SeparatedListWithIndex<Node, Token> = {
+type SeparatedListWithIndex<Node, Token> = {
     items: AstWithIndex<Node, Token>[];
     separators: AstWithIndex<Node, Token>[];
     newIndex: number;
@@ -81,12 +84,12 @@ const parseResultWithIndexIsLeaf = <Node, Token>(
     r: ParseResultWithIndex<Node, Token>
 ): r is LeafWithIndex<Token> => 'value' in r;
 
-// TODO don't export these, also use a real sum type
-export const parseResultWithIndexIsSeparatedList = <Node, Token>(
+// TODO also use a real sum type
+const parseResultWithIndexIsSeparatedList = <Node, Token>(
     r: ParseResultWithIndex<Node, Token>
 ): r is SeparatedListWithIndex<Node, Token> => 'items' in r && 'separators' in r;
 
-export const parseResultWithIndexIsList = <Node, Token>(
+const parseResultWithIndexIsList = <Node, Token>(
     r: ParseResultWithIndex<Node, Token>
 ): r is ManyWithIndex<Node, Token> => 'items' in r && !('separators' in r);
 
@@ -111,7 +114,7 @@ const stripNodeIndexes = <Node, Leaf>(r: AstWithIndex<Node, Leaf>): Ast<Node, Le
     };
 };
 
-export const stripResultIndexes = <Node, Token>(
+const stripResultIndexes = <Node, Token>(
     r: ParseResultWithIndex<Node, Token>
 ): ParseResult<Node, Token> => {
     if (parseResultIsError(r)) {
@@ -642,7 +645,7 @@ export const toDotFile = <Node extends string, Token>(ast: Ast<Node, Token>) => 
 
         let children: Ast<Node, Token>[] = [];
         let nodeString = '';
-        if (isSepearatedListNode(node)) {
+        if (isSeparatedListNode(node)) {
             // TODO: make this prettier as a node within the tree than just "seplist"
             nodeString = 'seplist';
             // TODO: interleave the items and separators for better display
@@ -689,7 +692,7 @@ export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     firstRule: Node,
     tokens: LToken<Token>[]
-): ParseResultWithIndex<Node, Token> => {
+): ParseResult<Node, Token> => {
     const result = parseRule(grammar, firstRule, tokens, 0);
     if (parseResultIsError(result)) return result;
     if (result.newIndex != tokens.length) {
@@ -708,5 +711,5 @@ export const parse = <Node extends string, Token>(
             ],
         };
     }
-    return result;
+    return stripResultIndexes(result);
 };
