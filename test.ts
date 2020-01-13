@@ -1936,7 +1936,7 @@ test('Parser lib - SeparatedList', t => {
     });
 });
 
-test.only('Parser Lib - Many', t => {
+test('Parser Lib - Many', t => {
     type TestToken = 'a' | 'b';
     type TestNode = 'a' | 'b';
     const terminal = token => Terminal<TestNode, TestToken>(token);
