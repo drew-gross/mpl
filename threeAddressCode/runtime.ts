@@ -23,15 +23,7 @@ const switchableMallocImpl = (
             syscall exit -1;
         my_malloc_zero_size_check_passed:;
             r:currentBlockPointer = &first_block;
-        `),
-        {
-            kind: 'loadMemory',
-            from: new Register('currentBlockPointer'),
-            to: new Register('currentBlockPointer'),
-            offset: 0,
-            why: 'curr = *curr',
-        },
-        ...ins(`
+            r:currentBlockPointer = *(r:currentBlockPointer + 0); curr = *curr (TODO: why?)
             r:previousBlockPointer = 0;
         find_large_enough_free_block_loop:;
             goto found_large_enough_block if r:currentBlockPointer == 0; No blocks left, need syscall
