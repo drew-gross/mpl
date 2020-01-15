@@ -24,18 +24,13 @@ const switchableMallocImpl = (
         my_malloc_zero_size_check_passed:;
             r:currentBlockPointer = &first_block;
         `),
-        // TODO: something weird is going on here. For some reason, x64 backend requires this line, and mips doesn't. Figure out what is right.
-        ...(include == 'include curr = *curr'
-            ? [
-                  {
-                      kind: 'loadMemory',
-                      from: new Register('currentBlockPointer'),
-                      to: new Register('currentBlockPointer'),
-                      offset: 0,
-                      why: 'curr = *curr',
-                  },
-              ]
-            : []),
+        {
+            kind: 'loadMemory',
+            from: new Register('currentBlockPointer'),
+            to: new Register('currentBlockPointer'),
+            offset: 0,
+            why: 'curr = *curr',
+        },
         ...ins(`
             r:previousBlockPointer = 0;
         find_large_enough_free_block_loop:;

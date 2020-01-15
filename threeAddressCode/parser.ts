@@ -1,6 +1,6 @@
 import debug from '../util/debug.js';
 import last from '../util/list/last.js';
-import { TokenSpec, lex, LexError } from '../parser-lib/lex.js';
+import { TokenSpec, LexError } from '../parser-lib/lex.js';
 import { Register } from './Register.js';
 import { Function } from './Function.js';
 import { Program } from './Program.js';
