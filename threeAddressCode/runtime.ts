@@ -5,11 +5,7 @@ import { Register } from './Register.js';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => Function;
 
-const switchableMallocImpl = (
-    bytesInWord,
-    include: 'include curr = *curr' | 'dont include curr = *curr',
-    makeSyscall
-): Function => ({
+const switchableMallocImpl = (bytesInWord, makeSyscall): Function => ({
     name: 'my_malloc',
     liveAtExit: [],
     arguments: [new Register('numBytes')],
@@ -75,7 +71,7 @@ const switchableMallocImpl = (
 });
 
 export const mallocWithSbrk: RuntimeFunctionGenerator = bytesInWord =>
-    switchableMallocImpl(bytesInWord, 'dont include curr = *curr', (amount, destination) => ({
+    switchableMallocImpl(bytesInWord, (amount, destination) => ({
         kind: 'syscall',
         name: 'sbrk',
         arguments: [amount],
@@ -84,7 +80,7 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = bytesInWord =>
     }));
 
 export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord =>
-    switchableMallocImpl(bytesInWord, 'include curr = *curr', (amount, destination) => ({
+    switchableMallocImpl(bytesInWord, (amount, destination) => ({
         kind: 'syscall',
         name: 'mmap',
         arguments: [
