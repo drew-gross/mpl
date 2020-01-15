@@ -1566,22 +1566,6 @@ test('Add Numbers in ThreeAddressCode', tacTest, {
     exitCode: 3,
 });
 
-// TODO: update paresr with new spill/unspill semantics
-test.failing('Stack Offset Load and Store', tacTest, {
-    source: `
-(function) (spill:2) main():
-    r:temp1 = 1; Something to spill
-    spill:1 r:temp1; Spill it
-    r:temp2 = 2; Use it for something else
-    spill:2 r:temp2; Spill this one too
-    unspill:1 r:temp1; Load
-    unspill:2 r:temp2; Load
-    r:result = r:temp1 + r:temp2; Add the things
-    return r:result; ret
-`,
-    exitCode: 3,
-});
-
 test('Spill With Local Variables', mplTest, {
     source: `
 a := 0;
