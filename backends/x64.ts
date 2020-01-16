@@ -239,6 +239,7 @@ const compileTac = async (
             `ld ${linkerInputPath.path} -o ${binaryFile.path} -macosx_version_min 10.6 -lSystem`
         );
         return {
+            source: x64String,
             sourceFile,
             binaryFile,
             threeAddressCodeFile,

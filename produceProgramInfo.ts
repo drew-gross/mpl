@@ -110,7 +110,6 @@ export default async (
     const backendResults: BackendResult[] = await Promise.all(
         backends.map(async ({ name, compile: compileFn, executors }) => {
             const compilationResult = await compileFn(frontendOutput);
-
             // TODO: better way to report these specific errors. Probably muck with the type of ExecutionResult.
             if ('error' in compilationResult) {
                 return {

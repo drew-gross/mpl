@@ -155,6 +155,7 @@ const readInt = async () => {
     const sourceFile = await writeTempFile(jsSource, 'program', 'js');
     const binaryFile = sourceFile;
     return {
+        source: jsSource,
         sourceFile,
         binaryFile,
         threeAddressCodeFile: undefined,

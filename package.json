@@ -33,7 +33,7 @@
         "build+install": "tsc && npm link"
     },
     "bin": {
-        "dump-builtins-to-cfg-svg": "built/bin/dump-builtins-to-cfg-svg.js"
+        "mpl": "built/bin/index.js"
     },
     "author": "Drew Gross",
     "dependencies": {

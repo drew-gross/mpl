@@ -655,6 +655,7 @@ ${Cprogram}
         };
     }
     return {
+        source: cSource,
         sourceFile,
         binaryFile,
         threeAddressCodeFile: undefined,

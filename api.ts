@@ -49,6 +49,7 @@ export type Assembly = {};
 
 export type CompilationResult =
     | {
+          source: string;
           sourceFile: FileResult;
           binaryFile: FileResult;
           threeAddressCode?: Assembly;

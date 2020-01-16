@@ -215,12 +215,15 @@ const compileTac = async (
         'txt'
     );
 
-    const sourceFile = await writeTempFile(
-        tacToExecutable(tac, includeCleanup),
-        'program',
-        'mips'
-    );
-    return { sourceFile, binaryFile: sourceFile, threeAddressCodeFile, threeAddressCode: {} };
+    const source = tacToExecutable(tac, includeCleanup);
+    const sourceFile = await writeTempFile(source, 'program', 'mips');
+    return {
+        source,
+        sourceFile,
+        binaryFile: sourceFile,
+        threeAddressCodeFile,
+        threeAddressCode: {},
+    };
 };
 
 const spimExecutor = async (
