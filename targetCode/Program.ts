@@ -1,8 +1,8 @@
-import debug from '../util/debug.js';
-import { toTarget as functionToTarget, Function } from './Function.js';
-import { Function as ThreeAddressFunction } from '../threeAddressCode/Function.js';
-import { Program as ThreeAddressProgram } from '../threeAddressCode/Program.js';
-import { TargetInfo } from '../TargetInfo.js';
+import debug from '../util/debug';
+import { toTarget as functionToTarget, Function } from './Function';
+import { Function as ThreeAddressFunction } from '../threeAddressCode/Function';
+import { Program as ThreeAddressProgram } from '../threeAddressCode/Program';
+import { TargetInfo } from '../TargetInfo';
 
 type ToTargetInput<TargetRegister> = {
     program: ThreeAddressProgram;

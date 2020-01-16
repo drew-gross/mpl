@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
         "outDir": "./built",
+        "sourceMap": true,
         "allowJs": true,
         "target": "ES2017",
         "module": "commonjs",

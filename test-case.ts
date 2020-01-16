@@ -1,4 +1,4 @@
-import { ExecutionResult } from './api.js';
+import { ExecutionResult } from './api';
 
 export type TestCase = {
     // Test name

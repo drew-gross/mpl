@@ -1,5 +1,5 @@
-import { Statement } from './targetCode/Statement.js';
-import { Function } from './threeAddressCode/Function.js';
+import { Statement } from './targetCode/Statement';
+import { Function } from './threeAddressCode/Function';
 
 // These functions tend to have platform specific implementations. Put your platforms implementation here.
 export type TargetFunctionImpls = {

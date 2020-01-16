@@ -1,10 +1,10 @@
-import debug from '../util/debug.js';
-import last from '../util/list/last.js';
-import { TokenSpec, LexError } from '../parser-lib/lex.js';
-import { Register } from './Register.js';
-import { Function } from './Function.js';
-import { Program } from './Program.js';
-import { Statement } from './statement.js';
+import debug from '../util/debug';
+import last from '../util/list/last';
+import { TokenSpec, LexError } from '../parser-lib/lex';
+import { Register } from './Register';
+import { Function } from './Function';
+import { Program } from './Program';
+import { Statement } from './statement';
 import {
     Grammar,
     Sequence,
@@ -19,7 +19,7 @@ import {
     ParseFailureInfo,
     isListNode,
     isSeparatedListNode,
-} from '../parser-lib/parse.js';
+} from '../parser-lib/parse';
 
 type TacToken =
     | 'global'

@@ -1,9 +1,9 @@
-import { Token as LToken } from './lex.js';
-import last from '../util/list/last.js';
-import debug from '../util/debug.js';
+import { Token as LToken } from './lex';
+import last from '../util/list/last';
+import debug from '../util/debug';
 import { Graph } from 'graphlib';
-import SourceLocation from './sourceLocation.js';
-import { TokenSpec, lex, LexError } from './lex.js';
+import SourceLocation from './sourceLocation';
+import { TokenSpec, lex, LexError } from './lex';
 
 type ListNode<Node, Leaf> = { items: Ast<Node, Leaf>[] };
 export type SeparatedListNode<Node, Leaf> = {

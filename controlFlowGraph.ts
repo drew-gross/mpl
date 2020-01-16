@@ -1,24 +1,24 @@
-import ComparisonResult from './util/comparisonResult.js';
-import debug from './util/debug.js';
-import last from './util/list/last.js';
-import { set, Set, join as setJoin, fromList as setFromList } from './util/set.js';
-import { orderedSet, OrderedSet } from './util/ordered-set.js';
-import join from './util/join.js';
-import idAppender from './util/idAppender.js';
-import { RegisterAssignment } from './backend-utils.js';
+import ComparisonResult from './util/comparisonResult';
+import debug from './util/debug';
+import last from './util/list/last';
+import { set, Set, join as setJoin, fromList as setFromList } from './util/set';
+import { orderedSet, OrderedSet } from './util/ordered-set';
+import join from './util/join';
+import idAppender from './util/idAppender';
+import { RegisterAssignment } from './backend-utils';
 import {
     Register,
     isEqual as registerIsEqual,
     compare as registerCompare,
-} from './threeAddressCode/Register.js';
-import { Function } from './threeAddressCode/Function.js';
+} from './threeAddressCode/Register';
+import { Function } from './threeAddressCode/Function';
 import {
     Statement,
     toString as tasToString,
     reads,
     writes,
     hasSideEffects,
-} from './threeAddressCode/statement.js';
+} from './threeAddressCode/statement';
 
 export type BasicBlock = {
     name: string;

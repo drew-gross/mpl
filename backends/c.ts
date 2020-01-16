@@ -1,4 +1,4 @@
-import * as Ast from '../ast.js';
+import * as Ast from '../ast';
 import { file as tmpFile } from 'tmp-promise';
 import {
     VariableDeclaration,
@@ -7,22 +7,22 @@ import {
     StringLiteralData,
     Backend,
     CompilationResult,
-} from '../api.js';
-import { Type, equal as typesAreEqual, builtinTypes } from '../types.js';
+} from '../api';
+import { Type, equal as typesAreEqual, builtinTypes } from '../types';
 import { exec } from 'child-process-promise';
-import execAndGetResult from '../util/execAndGetResult.js';
-import debug from '../util/debug.js';
-import join from '../util/join.js';
+import execAndGetResult from '../util/execAndGetResult';
+import debug from '../util/debug';
+import join from '../util/join';
 import {
     CompiledProgram,
     CompiledExpression,
     compileExpression,
     CompiledAssignment,
-} from '../backend-utils.js';
-import { errors } from '../runtime-strings.js';
-import { mergeDeclarations } from '../frontend.js';
-import idAppender from '../util/idAppender.js';
-import writeTempFile from '../util/writeTempFile.js';
+} from '../backend-utils';
+import { errors } from '../runtime-strings';
+import { mergeDeclarations } from '../frontend';
+import idAppender from '../util/idAppender';
+import writeTempFile from '../util/writeTempFile';
 
 // Beginnings of experiment with tracing code from source to target
 const callFree = (target: string, reason: string) => `my_free(${target}); // ${reason}`;

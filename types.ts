@@ -1,8 +1,8 @@
-import debug from './util/debug.js';
-import join from './util/join.js';
-import sum from './util/list/sum.js';
-import { VariableDeclaration } from './api.js';
-import { RegisterAgnosticTargetInfo } from './TargetInfo.js';
+import debug from './util/debug';
+import join from './util/join';
+import sum from './util/list/sum';
+import { VariableDeclaration } from './api';
+import { RegisterAgnosticTargetInfo } from './TargetInfo';
 
 export type ProductComponent = {
     name: string;

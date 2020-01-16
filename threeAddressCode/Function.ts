@@ -1,7 +1,7 @@
-import { Register } from './Register.js';
-import { toString as statementToString, Statement } from './Statement.js';
-import join from '../util/join.js';
-import debug from '../util/debug.js';
+import { Register } from './Register';
+import { toString as statementToString, Statement } from './Statement';
+import join from '../util/join';
+import debug from '../util/debug';
 
 export type Function = {
     instructions: Statement[];

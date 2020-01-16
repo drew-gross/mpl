@@ -1,4 +1,4 @@
-import debug from '../debug.js';
+import debug from '../debug';
 import { exec } from 'child-process-promise';
 import { file as tmpFile } from 'tmp-promise';
 import { writeFile, ensureFile } from 'fs-extra';

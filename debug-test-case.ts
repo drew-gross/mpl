@@ -1,17 +1,17 @@
 import { file as tmpFile } from 'tmp-promise';
-import testCases from './test-cases.js';
-import { passed } from './test-case.js';
-import produceProgramInfo from './produceProgramInfo.js';
-import writeSvg from './util/graph/writeSvg.js';
-import writeTempFile from './util/writeTempFile.js';
+import testCases from './test-cases';
+import { passed } from './test-case';
+import produceProgramInfo from './produceProgramInfo';
+import writeSvg from './util/graph/writeSvg';
+import writeTempFile from './util/writeTempFile';
 import { prompt } from 'inquirer';
 import * as dot from 'graphlib-dot';
-import { toDotFile } from './parser-lib/parse.js';
-import parseErrorToString from './parser-lib/parseErrorToString.js';
-import { toString as typeErrorToString } from './TypeError.js';
+import { toDotFile } from './parser-lib/parse';
+import parseErrorToString from './parser-lib/parseErrorToString';
+import { toString as typeErrorToString } from './TypeError';
 import * as chalk from 'chalk';
 import * as commander from 'commander';
-import annotateSource from './annotateSource.js';
+import annotateSource from './annotateSource';
 
 (async () => {
     commander

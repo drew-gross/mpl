@@ -1,6 +1,6 @@
-import { TestCase } from './test-case.js';
-import join from './util/join.js';
-import range from './util/list/range.js';
+import { TestCase } from './test-case';
+import join from './util/join';
+import range from './util/list/range';
 
 const manyGlobalsMultiply = () => {
     const numbers = range(1, 20);

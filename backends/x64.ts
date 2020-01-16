@@ -1,32 +1,32 @@
-import writeTempFile from '../util/writeTempFile.js';
+import writeTempFile from '../util/writeTempFile';
 import { exec } from 'child-process-promise';
-import { errors } from '../runtime-strings.js';
-import debug from '../util/debug.js';
-import join from '../util/join.js';
+import { errors } from '../runtime-strings';
+import debug from '../util/debug';
+import join from '../util/join';
 import {
     stringLiteralName,
     preceedingWhitespace,
     makeExecutable,
     executableToString,
-} from '../backend-utils.js';
-import { makeTargetProgram } from '../threeAddressCode/generator.js';
-import { Statement } from '../targetCode/Statement.js';
-import { TargetInfo, RegisterAgnosticTargetInfo } from '../TargetInfo.js';
-import { Program, toString } from '../threeAddressCode/Program.js';
+} from '../backend-utils';
+import { makeTargetProgram } from '../threeAddressCode/generator';
+import { Statement } from '../targetCode/Statement';
+import { TargetInfo, RegisterAgnosticTargetInfo } from '../TargetInfo';
+import { Program, toString } from '../threeAddressCode/Program';
 import {
     mallocWithMmap,
     printWithWriteRuntimeFunction,
     readIntThroughSyscall,
-} from '../threeAddressCode/runtime.js';
+} from '../threeAddressCode/runtime';
 import {
     ExecutionResult,
     FrontendOutput,
     StringLiteralData,
     Backend,
     CompilationResult,
-} from '../api.js';
+} from '../api';
 import { file as tmpFile } from 'tmp-promise';
-import execAndGetResult from '../util/execAndGetResult.js';
+import execAndGetResult from '../util/execAndGetResult';
 
 type X64Register =
     // function args

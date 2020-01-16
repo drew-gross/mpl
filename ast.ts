@@ -1,8 +1,8 @@
-import { VariableDeclaration } from './api.js';
-import SourceLocation from './parser-lib/sourceLocation.js';
-import { Type } from './types.js';
-import debug from './util/debug.js';
-import join from './util/join.js';
+import { VariableDeclaration } from './api';
+import SourceLocation from './parser-lib/sourceLocation';
+import { Type } from './types';
+import debug from './util/debug';
+import join from './util/join';
 
 type Leaf = Number | Identifier | BooleanLiteral | StringLiteral;
 

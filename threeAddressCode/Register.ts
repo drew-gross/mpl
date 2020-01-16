@@ -1,5 +1,5 @@
-import ComparisonResult from '../util/comparisonResult.js';
-import compareString from '../string/compare.js';
+import ComparisonResult from '../util/comparisonResult';
+import compareString from '../string/compare';
 
 export class Register {
     public name: string;

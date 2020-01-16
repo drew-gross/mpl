@@ -1,16 +1,16 @@
-import writeTempFile from '../util/writeTempFile.js';
-import flatten from '../util/list/flatten.js';
-import execAndGetResult from '../util/execAndGetResult.js';
+import writeTempFile from '../util/writeTempFile';
+import flatten from '../util/list/flatten';
+import execAndGetResult from '../util/execAndGetResult';
 import {
     FrontendOutput,
     ExecutionResult,
     CompilationResult,
     Backend,
     VariableDeclaration,
-} from '../api.js';
-import * as Ast from '../ast.js';
-import debug from '../util/debug.js';
-import join from '../util/join.js';
+} from '../api';
+import * as Ast from '../ast';
+import debug from '../util/debug';
+import join from '../util/join';
 
 const astToJS = ({
     ast,

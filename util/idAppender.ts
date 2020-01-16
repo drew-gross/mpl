@@ -1,4 +1,4 @@
-import idMaker from './idMaker.js';
+import idMaker from './idMaker';
 
 export default () => {
     const makeId = idMaker();

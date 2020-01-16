@@ -1,12 +1,12 @@
 import * as omitDeep from 'omit-deep';
-import { toString as typeErrorToString } from './TypeError.js';
-import writeTempFile from './util/writeTempFile.js';
-import join from './util/join.js';
-import { stripSourceLocation } from './parser-lib/parse.js';
-import { parseFunction } from './threeAddressCode/parser.js';
-import { backends } from './backend-utils.js';
-import { passed } from './test-case.js';
-import produceProgramInfo from './produceProgramInfo.js';
+import { toString as typeErrorToString } from './TypeError';
+import writeTempFile from './util/writeTempFile';
+import join from './util/join';
+import { stripSourceLocation } from './parser-lib/parse';
+import { parseFunction } from './threeAddressCode/parser';
+import { backends } from './backend-utils';
+import { passed } from './test-case';
+import produceProgramInfo from './produceProgramInfo';
 
 // TODO: separate this for mplTest vs tacTest, they have a lot of overlap but not perfect.
 // TODO: express in the type that exitCode OR expectedErrors of some sort must be provided.

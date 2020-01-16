@@ -8,8 +8,8 @@ import {
     OneOf,
     Optional,
     Many,
-} from './parser-lib/parse.js';
-import { TokenSpec } from './parser-lib/lex.js';
+} from './parser-lib/parse';
+import { TokenSpec } from './parser-lib/lex';
 
 export type MplToken =
     | 'return'

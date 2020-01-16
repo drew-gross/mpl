@@ -1,8 +1,8 @@
-import { UninferredStatement, Statement } from './ast.js';
-import { RegisterAgnosticTargetInfo } from './TargetInfo.js';
-import { Type, TypeDeclaration } from './types.js';
+import { UninferredStatement, Statement } from './ast';
+import { RegisterAgnosticTargetInfo } from './TargetInfo';
+import { Type, TypeDeclaration } from './types';
 import { FileResult } from 'fs-extra';
-import { Program } from './threeAddressCode/Program.js';
+import { Program } from './threeAddressCode/Program';
 
 export type VariableLocation = 'Global' | 'Parameter' | 'Stack';
 export type VariableDeclaration = {

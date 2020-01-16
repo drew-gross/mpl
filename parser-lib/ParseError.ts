@@ -1,4 +1,4 @@
-import SourceLocation from './sourceLocation.js';
+import SourceLocation from './sourceLocation';
 
 type ParseError = {
     expected: string;

@@ -1,8 +1,8 @@
 #! /usr/bin/env node
 
-import { allRuntimeFunctions } from '../threeAddressCode/runtime.js';
-import { controlFlowGraph, toDotFile } from '../controlFlowGraph.js';
-import writeSvg from '../util/graph/writeSvg.js';
+import { allRuntimeFunctions } from '../threeAddressCode/runtime';
+import { controlFlowGraph, toDotFile } from '../controlFlowGraph';
+import writeSvg from '../util/graph/writeSvg';
 
 allRuntimeFunctions
     .map(f => f(0))

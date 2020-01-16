@@ -1,17 +1,12 @@
-import flatten from './util/list/flatten.js';
-import uniqueBy from './util/list/uniqueBy.js';
-import idMaker from './util/idMaker.js';
-import last from './util/list/last.js';
-import debug from './util/debug.js';
-import { lex, Token, LexError } from './parser-lib/lex.js';
-import { tokenSpecs, grammar, MplAst, MplParseResult, MplToken } from './grammar.js';
-import {
-    parseResultIsError,
-    parse,
-    isSeparatedListNode,
-    isListNode,
-} from './parser-lib/parse.js';
-import ParseError from './parser-lib/ParseError.js';
+import flatten from './util/list/flatten';
+import uniqueBy from './util/list/uniqueBy';
+import idMaker from './util/idMaker';
+import last from './util/list/last';
+import debug from './util/debug';
+import { lex, Token, LexError } from './parser-lib/lex';
+import { tokenSpecs, grammar, MplAst, MplParseResult, MplToken } from './grammar';
+import { parseResultIsError, parse, isSeparatedListNode, isListNode } from './parser-lib/parse';
+import ParseError from './parser-lib/ParseError';
 import {
     Type,
     ProductComponent,
@@ -20,17 +15,17 @@ import {
     builtinTypes,
     builtinFunctions,
     TypeDeclaration,
-} from './types.js';
+} from './types';
 import {
     VariableDeclaration,
     Function,
     UninferredFunction,
     FrontendOutput,
     StringLiteralData,
-} from './api.js';
-import { TypeError } from './TypeError.js';
-import SourceLocation from './parser-lib/sourceLocation.js';
-import * as Ast from './ast.js';
+} from './api';
+import { TypeError } from './TypeError';
+import SourceLocation from './parser-lib/sourceLocation';
+import * as Ast from './ast';
 
 // TODO move this to parser lit
 const hasType = (ast, type: string) => 'type' in ast && ast.type == type;

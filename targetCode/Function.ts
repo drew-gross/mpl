@@ -1,23 +1,18 @@
-import uniqueCmp from '../util/list/uniqueCmp.js';
-import { Statement as ThreeAddressStatement, reads } from '../threeAddressCode/Statement.js';
+import uniqueCmp from '../util/list/uniqueCmp';
+import { Statement as ThreeAddressStatement, reads } from '../threeAddressCode/Statement';
 import { Function as ThreeAddressFunction } from '../threeAddressCode/Function';
-import { Register, isEqual } from '../threeAddressCode/Register.js';
-import { assignRegisters } from '../controlFlowGraph.js';
-import debug from '../util/debug.js';
-import { orderedSet, operatorCompare } from '../util/ordered-set.js';
-import flatten from '../util/list/flatten.js';
+import { Register, isEqual } from '../threeAddressCode/Register';
+import { assignRegisters } from '../controlFlowGraph';
+import debug from '../util/debug';
+import { orderedSet, operatorCompare } from '../util/ordered-set';
+import flatten from '../util/list/flatten';
 import {
     Statement as TargetStatement,
     toTarget as statementToTarget,
     argumentLocation,
-} from './Statement.js';
-import {
-    StackUsage,
-    calleeReserveCount,
-    savedExtraOffset,
-    savedUsedOffset,
-} from './StackUsage.js';
-import { TargetInfo } from '../TargetInfo.js';
+} from './Statement';
+import { StackUsage, calleeReserveCount, savedExtraOffset, savedUsedOffset } from './StackUsage';
+import { TargetInfo } from '../TargetInfo';
 
 type ToTargetInput<TargetRegister> = {
     threeAddressFunction: ThreeAddressFunction;

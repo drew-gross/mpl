@@ -1,7 +1,7 @@
-import { errors } from '../runtime-strings.js';
-import { Function } from './Function.js';
-import { parseFunctionOrDie, parseInstructionsOrDie as ins } from './parser.js';
-import { Register } from './Register.js';
+import { errors } from '../runtime-strings';
+import { Function } from './Function';
+import { parseFunctionOrDie, parseInstructionsOrDie as ins } from './parser';
+import { Register } from './Register';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => Function;
 

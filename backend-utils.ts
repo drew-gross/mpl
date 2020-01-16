@@ -1,19 +1,19 @@
-import debug from './util/debug.js';
-import { StringLiteralData, Backend, VariableDeclaration } from './api.js';
-import flatten from './util/list/flatten.js';
-import { Statement } from './threeAddressCode/Statement.js';
-import { Statement as TargetStatement } from './targetCode/Statement.js';
-import { Program } from './threeAddressCode/Program.js';
-import { RegisterAgnosticTargetInfo, TargetInfo, TargetRegisters } from './TargetInfo.js';
-import { toTarget } from './targetCode/Function.js';
-import { StackUsage, stackUsageToString } from './targetCode/StackUsage.js';
-import { Register } from './threeAddressCode/Register.js';
-import join from './util/join.js';
+import debug from './util/debug';
+import { StringLiteralData, Backend, VariableDeclaration } from './api';
+import flatten from './util/list/flatten';
+import { Statement } from './threeAddressCode/Statement';
+import { Statement as TargetStatement } from './targetCode/Statement';
+import { Program } from './threeAddressCode/Program';
+import { RegisterAgnosticTargetInfo, TargetInfo, TargetRegisters } from './TargetInfo';
+import { toTarget } from './targetCode/Function';
+import { StackUsage, stackUsageToString } from './targetCode/StackUsage';
+import { Register } from './threeAddressCode/Register';
+import join from './util/join';
 
-import mipsBackend from './backends/mips.js';
-import jsBackend from './backends/js.js';
-import cBackend from './backends/c.js';
-import x64Backend from './backends/x64.js';
+import mipsBackend from './backends/mips';
+import jsBackend from './backends/js';
+import cBackend from './backends/c';
+import x64Backend from './backends/x64';
 
 export const preceedingWhitespace = <TargetRegister>(
     tas: TargetStatement<TargetRegister>

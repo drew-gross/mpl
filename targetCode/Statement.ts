@@ -1,9 +1,9 @@
-import debug from '../util/debug.js';
-import { Statement as ThreeAddressStatement } from '../threeAddressCode/statement.js';
-import { Register, isEqual } from '../threeAddressCode/Register.js';
-import { RegisterAssignment, saveFunctionCallResult } from '../backend-utils.js';
-import { TargetInfo, TargetRegisters } from '../TargetInfo.js';
-import { StackUsage, offset } from './StackUsage.js';
+import debug from '../util/debug';
+import { Statement as ThreeAddressStatement } from '../threeAddressCode/statement';
+import { Register, isEqual } from '../threeAddressCode/Register';
+import { RegisterAssignment, saveFunctionCallResult } from '../backend-utils';
+import { TargetInfo, TargetRegisters } from '../TargetInfo';
+import { StackUsage, offset } from './StackUsage';
 
 export type DataLocation<TargetRegister> =
     | { kind: 'register'; register: TargetRegister }

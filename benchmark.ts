@@ -1,15 +1,15 @@
 import { stat } from 'fs-extra';
 import { writeFile, readFile } from 'fs-extra';
-import testCases from './test-cases.js';
-import { compile } from './frontend.js';
-import { Backend } from './api.js';
+import testCases from './test-cases';
+import { compile } from './frontend';
+import { Backend } from './api';
 import * as commander from 'commander';
 import { zip } from 'lodash';
 
-import mipsBackend from './backends/mips.js';
-import jsBackend from './backends/js.js';
-import cBackend from './backends/c.js';
-import x64Backend from './backends/x64.js';
+import mipsBackend from './backends/mips';
+import jsBackend from './backends/js';
+import cBackend from './backends/c';
+import x64Backend from './backends/x64';
 
 commander
     .option('--before <file>')

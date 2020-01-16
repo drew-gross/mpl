@@ -1,21 +1,21 @@
-import { parseProgram as parseTacProgram } from './threeAddressCode/parser.js';
+import { parseProgram as parseTacProgram } from './threeAddressCode/parser';
 import {
     mallocWithSbrk,
     printWithPrintRuntimeFunction,
     readIntDirect,
-} from './threeAddressCode/runtime.js';
-import { tokenSpecs, MplToken, MplAst } from './grammar.js';
-import writeTempFile from './util/writeTempFile.js';
-import { lex, Token, LexError } from './parser-lib/lex.js';
-import { parseMpl, compile } from './frontend.js';
-import { FrontendOutput, ExecutionResult, CompilationResult } from './api.js';
-import ParseError from './parser-lib/ParseError.js';
-import join from './util/join.js';
-import { toString as typeToString } from './types.js';
-import { astToString } from './ast.js';
-import { Program, toString as programToString } from './threeAddressCode/Program.js';
-import { makeTargetProgram } from './threeAddressCode/generator.js';
-import { backends } from './backend-utils.js';
+} from './threeAddressCode/runtime';
+import { tokenSpecs, MplToken, MplAst } from './grammar';
+import writeTempFile from './util/writeTempFile';
+import { lex, Token, LexError } from './parser-lib/lex';
+import { parseMpl, compile } from './frontend';
+import { FrontendOutput, ExecutionResult, CompilationResult } from './api';
+import ParseError from './parser-lib/ParseError';
+import join from './util/join';
+import { toString as typeToString } from './types';
+import { astToString } from './ast';
+import { Program, toString as programToString } from './threeAddressCode/Program';
+import { makeTargetProgram } from './threeAddressCode/generator';
+import { backends } from './backend-utils';
 
 type BackendResult = {
     name: string;

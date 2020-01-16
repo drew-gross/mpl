@@ -1,6 +1,6 @@
-import { RegisterAgnosticTargetInfo } from '../TargetInfo.js';
-import { Function } from './Function.js';
-import { Program } from './Program.js';
+import { RegisterAgnosticTargetInfo } from '../TargetInfo';
+import { Function } from './Function';
+import { Program } from './Program';
 import {
     length,
     intFromString,
@@ -9,28 +9,28 @@ import {
     stringConcatenateRuntimeFunction,
     stringEqualityRuntimeFunction,
     myFreeRuntimeFunction,
-} from './runtime.js';
-import idAppender from '../util/idAppender.js';
-import * as Ast from '../ast.js';
-import flatten from '../util/list/flatten.js';
-import drain from '../util/list/drain.js';
-import { builtinFunctions, Type, TypeDeclaration, resolve, typeSize } from '../types.js';
-import debug from '../util/debug.js';
+} from './runtime';
+import idAppender from '../util/idAppender';
+import * as Ast from '../ast';
+import flatten from '../util/list/flatten';
+import drain from '../util/list/drain';
+import { builtinFunctions, Type, TypeDeclaration, resolve, typeSize } from '../types';
+import debug from '../util/debug';
 import {
     CompiledExpression,
     compileExpression,
     stringLiteralName,
     freeGlobalsInstructions,
-} from '../backend-utils.js';
-import { Register } from './Register.js';
+} from '../backend-utils';
+import { Register } from './Register';
 import {
     FrontendOutput,
     Function as ApiFunction,
     VariableDeclaration,
     StringLiteralData,
-} from '../api.js';
-import { Statement } from './statement.js';
-import { parseInstructionsOrDie as ins } from './parser.js';
+} from '../api';
+import { Statement } from './statement';
+import { parseInstructionsOrDie as ins } from './parser';
 
 export type GlobalInfo = { newName: string; originalDeclaration: VariableDeclaration };
 

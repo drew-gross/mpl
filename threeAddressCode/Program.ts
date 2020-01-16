@@ -1,6 +1,6 @@
-import { StringLiteralData } from '../api.js';
-import { Function, toString as functionToString } from './Function.js';
-import join from '../util/join.js';
+import { StringLiteralData } from '../api';
+import { Function, toString as functionToString } from './Function';
+import join from '../util/join';
 
 export type Program = {
     globals: { [key: string]: { mangledName: string; bytes: number } };

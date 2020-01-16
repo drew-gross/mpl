@@ -1,4 +1,4 @@
-import debug from './debug.js';
+import debug from './debug';
 import ComparisonResult from './comparisonResult';
 // Binary search tree based set structure. No balancing. Iterations is ordered lowest to highest. TODO: use red-black tree.
 

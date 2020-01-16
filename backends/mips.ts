@@ -1,30 +1,30 @@
-import writeTempFile from '../util/writeTempFile.js';
-import { errors } from '../runtime-strings.js';
+import writeTempFile from '../util/writeTempFile';
+import { errors } from '../runtime-strings';
 import {
     FrontendOutput,
     ExecutionResult,
     StringLiteralData,
     Backend,
     CompilationResult,
-} from '../api.js';
-import debug from '../util/debug.js';
-import execAndGetResult from '../util/execAndGetResult.js';
+} from '../api';
+import debug from '../util/debug';
+import execAndGetResult from '../util/execAndGetResult';
 import {
     stringLiteralName,
     preceedingWhitespace,
     makeExecutable,
     executableToString,
-} from '../backend-utils.js';
-import { makeTargetProgram } from '../threeAddressCode/generator.js';
-import { Statement } from '../targetCode/Statement.js';
-import { Program } from '../threeAddressCode/Program.js';
-import { TargetInfo, RegisterAgnosticTargetInfo } from '../TargetInfo.js';
-import { toString } from '../threeAddressCode/Program.js';
+} from '../backend-utils';
+import { makeTargetProgram } from '../threeAddressCode/generator';
+import { Statement } from '../targetCode/Statement';
+import { Program } from '../threeAddressCode/Program';
+import { TargetInfo, RegisterAgnosticTargetInfo } from '../TargetInfo';
+import { toString } from '../threeAddressCode/Program';
 import {
     mallocWithSbrk,
     printWithPrintRuntimeFunction,
     readIntDirect,
-} from '../threeAddressCode/runtime.js';
+} from '../threeAddressCode/runtime';
 
 type MipsRegister =
     // s

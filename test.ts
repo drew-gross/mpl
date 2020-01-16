@@ -1,24 +1,21 @@
-import uniqueCmp from './util/list/uniqueCmp.js';
-import uniqueBy from './util/list/uniqueBy.js';
-import testCases from './test-cases.js';
-import {
-    parseProgram as parseTacProgram,
-    parseInstructions,
-} from './threeAddressCode/parser.js';
-import annontateSource from './annotateSource.js';
-import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types.js';
-import { Function } from './threeAddressCode/Function.js';
-import { Register } from './threeAddressCode/Register.js';
-import { Statement } from './threeAddressCode/statement.js';
-import * as threeAddressCodeRuntime from './threeAddressCode/runtime.js';
+import uniqueCmp from './util/list/uniqueCmp';
+import uniqueBy from './util/list/uniqueBy';
+import testCases from './test-cases';
+import { parseProgram as parseTacProgram, parseInstructions } from './threeAddressCode/parser';
+import annontateSource from './annotateSource';
+import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types';
+import { Function } from './threeAddressCode/Function';
+import { Register } from './threeAddressCode/Register';
+import { Statement } from './threeAddressCode/statement';
+import * as threeAddressCodeRuntime from './threeAddressCode/runtime';
 import test from 'ava';
-import flatten from './util/list/flatten.js';
-import join from './util/join.js';
-import range from './util/list/range.js';
-import { lex, Token } from './parser-lib/lex.js';
-import { parseMpl, compile, astFromParseResult, typeOfExpression } from './frontend.js';
-import { mplTest, tacTest } from './test-utils.js';
-import { grammar, tokenSpecs, MplParseResult, MplAst, MplToken } from './grammar.js';
+import flatten from './util/list/flatten';
+import join from './util/join';
+import range from './util/list/range';
+import { lex, Token } from './parser-lib/lex';
+import { parseMpl, compile, astFromParseResult, typeOfExpression } from './frontend';
+import { mplTest, tacTest } from './test-utils';
+import { grammar, tokenSpecs, MplParseResult, MplAst, MplToken } from './grammar';
 import {
     parse,
     parseResultIsError,
@@ -30,18 +27,18 @@ import {
     OneOf,
     SeparatedList,
     Many,
-} from './parser-lib/parse.js';
-import * as Ast from './ast.js';
-import { removeBracketsFromAst } from './frontend.js';
+} from './parser-lib/parse';
+import * as Ast from './ast';
+import { removeBracketsFromAst } from './frontend';
 import {
     assignRegisters,
     controlFlowGraph,
     BasicBlock,
     computeBlockLiveness,
     tafLiveness,
-} from './controlFlowGraph.js';
-import { orderedSet, operatorCompare } from './util/ordered-set.js';
-import { set } from './util/set.js';
+} from './controlFlowGraph';
+import { orderedSet, operatorCompare } from './util/ordered-set';
+import { set } from './util/set';
 import { shuffle } from 'shuffle-seed';
 
 test('double flatten', t => {

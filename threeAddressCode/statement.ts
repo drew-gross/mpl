@@ -1,7 +1,7 @@
-import { Register } from './Register.js';
-import { filter, FilterPredicate } from '../util/list/filter.js';
-import join from '../util/join.js';
-import debug from '../util/debug.js';
+import { Register } from './Register';
+import { filter, FilterPredicate } from '../util/list/filter';
+import join from '../util/join';
+import debug from '../util/debug';
 
 type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 

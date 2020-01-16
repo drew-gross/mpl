@@ -1,4 +1,4 @@
-import ParseError from './ParseError.js';
+import ParseError from './ParseError';
 
 export default ({ expected, found, sourceLocation }: ParseError): string => {
     const line = sourceLocation.line;

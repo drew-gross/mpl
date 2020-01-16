@@ -1,5 +1,5 @@
-import debug from '../util/debug.js';
-import SourceLocation from './sourceLocation.js';
+import debug from '../util/debug';
+import SourceLocation from './sourceLocation';
 
 export type TokenSpec<TokenType> = {
     token: string;

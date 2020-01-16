@@ -1,13 +1,14 @@
-import { compile } from '../frontend.js';
+import { compile } from './frontend';
 import { readFile, writeFile } from 'fs-extra';
-import jsBackend from '../backends/js.js';
+import jsBackend from './backends/js';
 
 if (process.argv.length != 4) {
     console.log('Usage: mpl <input> <output>');
     process.exit(-1);
 }
 
-let [_, __, inputPath, outputPath] = process.argv;
+const inputPath = process.argv[2];
+const outputPath = process.argv[3];
 
 (async () => {
     const input = await readFile(inputPath, 'utf8');

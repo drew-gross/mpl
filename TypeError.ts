@@ -1,6 +1,6 @@
-import debug from './util/debug.js';
-import SourceLocation from './parser-lib/sourceLocation.js';
-import { Type } from './types.js';
+import debug from './util/debug';
+import SourceLocation from './parser-lib/sourceLocation';
+import { Type } from './types';
 
 export type TypeError = { sourceLocation: SourceLocation } & (
     | { kind: 'unknownIdentifier'; name: string }
