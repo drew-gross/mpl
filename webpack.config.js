@@ -2,7 +2,10 @@ const path = require('path');
 
 module.exports = {
     devtool: 'inline-source-map',
-    entry: './index.ts',
+    entry: {
+        mpl: './mpl.ts',
+        'mpl-loader': './mpl-loader.ts',
+    },
     module: {
         rules: [
             {
@@ -10,11 +13,12 @@ module.exports = {
                 test: /\.tsx?$/,
                 use: 'ts-loader',
             },
+            {
+                exclude: /node_modules/,
+                test: /\.mpl$/,
+                use: path.resolve('tools/mpl-loader'),
+            },
         ],
-    },
-    output: {
-        filename: 'built/bundle.js',
-        path: path.resolve(__dirname, 'dist'),
     },
     resolve: {
         extensions: ['.tsx', '.ts', '.js'],

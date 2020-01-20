@@ -30,7 +30,9 @@
         "cloc-test": "cloc  ./test.ts ./test-cases.ts",
         "format": "prettier --config package.json --list-different '**/*.ts'",
         "format-fix": "prettier --config package.json --write '**/*.ts'",
-        "build+install": "tsc && npm link"
+        "build+install": "tsc && npm link",
+        "webpack": "webpack --mode development --output tools/[name]-dev",
+        "webpack-prod": "webpack --mode development --output tools/[name]"
     },
     "bin": {
         "mpl": "built/bin/index.js"
