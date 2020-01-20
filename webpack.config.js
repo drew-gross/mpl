@@ -13,10 +13,11 @@ module.exports = {
         ],
     },
     output: {
-        filename: 'built/bundle',
+        filename: 'built/bundle.js',
         path: path.resolve(__dirname, 'dist'),
     },
     resolve: {
-        extensions: ['.tsx', '.ts', ''],
+        extensions: ['.tsx', '.ts', '.js'],
     },
+    target: 'node',
 };
