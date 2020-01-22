@@ -108,8 +108,19 @@ export default async (
     const stdinFile = await writeTempFile(stdin, 'stdin', 'txt');
 
     const backendResults: BackendResult[] = await Promise.all(
-        backends.map(async ({ name, compile: compileFn, executors }) => {
-            const compilationResult = await compileFn(frontendOutput);
+        backends.map(async ({ name, compile: compileFn, finishCompilation, executors }) => {
+            const targetSource = await compileFn(frontendOutput);
+            if ('error' in targetSource) {
+                return {
+                    name,
+                    compilationResult: targetSource,
+                    executionResults: [{ error: 'Compilation Failed', executorName: 'N/A' }],
+                };
+            }
+            const compilationResult = await finishCompilation(
+                targetSource.target,
+                targetSource.tac
+            );
             // TODO: better way to report these specific errors. Probably muck with the type of ExecutionResult.
             if ('error' in compilationResult) {
                 return {

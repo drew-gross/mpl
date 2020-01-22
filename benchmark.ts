@@ -55,7 +55,16 @@ if (!before) {
                 const backends: Backend[] = [jsBackend, cBackend, mipsBackend, x64Backend];
                 const [jsSize, cSize, mipsSize, x64Size] = await Promise.all(
                     backends.map(async (backend: Backend) => {
-                        const compilationResult = await backend.compile(frontendOutput);
+                        const targetSource = await backend.compile(frontendOutput);
+                        if ('error' in targetSource) {
+                            throw new Error(
+                                `Failed to compile ${name} to ${backend.name}: ${targetSource.error}`
+                            );
+                        }
+                        const compilationResult = await backend.finishCompilation(
+                            targetSource.target,
+                            targetSource.tac
+                        );
                         if ('error' in compilationResult) {
                             throw new Error(
                                 `Failed to compile ${name} to ${backend.name}: ${compilationResult.error}`

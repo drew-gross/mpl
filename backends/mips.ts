@@ -184,7 +184,8 @@ const tacToExecutable = (tac: Program, includeCleanup: boolean) => {
         includeCleanup
     );
     executable.main.name = 'main';
-    return `
+    return {
+        target: `
 .data
 ${Object.values(tac.globals)
     .map(({ mangledName, bytes }) => globalDeclaration(mangledName, bytes))
@@ -199,26 +200,35 @@ first_block: .word 0
 
 .text
 ${executableToString('#', executable)}
-`;
+`,
+        tac,
+    };
 };
 
-const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
-    compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget }), true);
+const compile = (
+    inputs: FrontendOutput
+): { target: string; tac: Program | undefined } | { error: string } => {
+    const tac = makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget });
+    const target = compileTac(tac, true);
+    if (typeof target != 'string') return target;
+    return { target, tac };
+};
 
-const compileTac = async (
-    tac: Program,
-    includeCleanup: boolean
+const compileTac = (tac: Program, includeCleanup: boolean): string | { error: string } => {
+    return tacToExecutable(tac, includeCleanup).target;
+};
+
+const finishCompilation = async (
+    mipsSource: string,
+    tac: Program | undefined
 ): Promise<CompilationResult | { error: string }> => {
-    const threeAddressCodeFile = await writeTempFile(
-        toString(tac),
-        'three-address-code-mips',
-        'txt'
-    );
+    const threeAddressCodeFile = tac
+        ? await writeTempFile(toString(tac), 'three-address-code-mips', 'txt')
+        : undefined;
 
-    const source = tacToExecutable(tac, includeCleanup);
-    const sourceFile = await writeTempFile(source, 'program', 'mips');
+    const sourceFile = await writeTempFile(mipsSource, 'program', 'mips');
     return {
-        source,
+        source: mipsSource,
         sourceFile,
         binaryFile: sourceFile,
         threeAddressCodeFile,
@@ -284,6 +294,7 @@ const mipsBackend: Backend = {
     name: 'mips',
     compile,
     compileTac,
+    finishCompilation,
     targetInfo: mipsTarget,
     executors: [
         { execute: spimExecutor, name: 'spim' },

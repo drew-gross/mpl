@@ -216,10 +216,15 @@ export const tacTest = async (
     await Promise.all(
         backends.map(async backend => {
             if (backend.compileTac && !failing.includes(backend.name)) {
-                const compilationResult = await backend.compileTac(
-                    { globals: {}, functions: [], main: parsed, stringLiterals: [] },
-                    false
-                );
+                const program = { globals: {}, functions: [], main: parsed, stringLiterals: [] };
+                const targetSource = backend.compileTac(program, false);
+
+                if (typeof targetSource != 'string') {
+                    t.fail(`${backend.name} compilation failed: ${targetSource.error}`);
+                    return;
+                }
+
+                const compilationResult = await backend.finishCompilation(targetSource, program);
 
                 if ('error' in compilationResult) {
                     t.fail(`${backend.name} compilation failed: ${compilationResult.error}`);

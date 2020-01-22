@@ -40,10 +40,7 @@ export type ExecutionResult =
           runInstructions: string;
           debugInstructions: string;
       }
-    | {
-          error: string;
-          executorName: string;
-      };
+    | { error: string; executorName: string };
 
 export type Assembly = {};
 
@@ -64,10 +61,13 @@ export type Executor = {
 
 export type Backend = {
     name: string;
-    compile: (input: FrontendOutput) => Promise<CompilationResult | { error: string }>;
-    compileTac?: (
-        input: Program,
-        includeLeakCheck: boolean
+    compile: (
+        input: FrontendOutput
+    ) => { target: string; tac: Program | undefined } | { error: string };
+    compileTac?: (input: Program, includeLeakCheck: boolean) => string | { error: string };
+    finishCompilation: (
+        input: string,
+        tac: Program | undefined
     ) => Promise<CompilationResult | { error: string }>;
     targetInfo?: RegisterAgnosticTargetInfo;
     executors: Executor[];

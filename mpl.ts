@@ -25,8 +25,8 @@ const outputPath = process.argv[3];
     }
     const backendOutput = await jsBackend.compile(frontendOutput);
     if ('error' in backendOutput) {
-        console.log(backendOutput);
+        console.log(backendOutput.error);
         process.exit(-1);
     }
-    await writeFile(outputPath, backendOutput.source);
+    await writeFile(outputPath, backendOutput.target);
 })();

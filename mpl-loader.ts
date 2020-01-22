@@ -1,5 +1,5 @@
 import { compile } from './frontend';
-import jsBackend from './backends/js';
+// import jsBackend from './backends/js';
 
 export default function(source: string) {
     const frontendOutput = compile(source);

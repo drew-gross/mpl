@@ -195,7 +195,8 @@ const tacToExecutable = (tac: Program, includeCleanup: boolean) => {
         includeCleanup
     );
     executable.main.name = 'start';
-    return `
+    return {
+        target: `
 global start
 
 section .text
@@ -210,24 +211,32 @@ ${Object.values(tac.globals)
 ${Object.keys(errors)
     .map(key => `${errors[key].name}: db "${errors[key].value}", 0`)
     .join('\n')}
-`;
+`,
+        tac,
+    };
 };
 
-const compile = async (inputs: FrontendOutput): Promise<CompilationResult | { error: string }> =>
-    compileTac(makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target }), true);
+const compile = (
+    inputs: FrontendOutput
+): { target: string; tac: Program | undefined } | { error: string } => {
+    const tac = makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target });
+    const target = compileTac(tac, true);
+    if (typeof target != 'string') return target;
+    return { target, tac };
+};
 
-const compileTac = async (
-    tac: Program,
-    includeCleanup
+const compileTac = (tac: Program, includeCleanup): string | { error: string } => {
+    return tacToExecutable(tac, includeCleanup).target;
+};
+
+const finishCompilation = async (
+    x64source: string,
+    tac: Program | undefined
 ): Promise<CompilationResult | { error: string }> => {
-    const threeAddressCodeFile = await writeTempFile(
-        toString(tac),
-        'three-address-core-x64',
-        'txt'
-    );
-
-    const x64String = tacToExecutable(tac, includeCleanup);
-    const sourceFile = await writeTempFile(x64String, 'program', 'x64');
+    const threeAddressCodeFile = tac
+        ? await writeTempFile(toString(tac), 'three-address-core-x64', 'txt')
+        : undefined;
+    const sourceFile = await writeTempFile(x64source, 'program', 'x64');
 
     const linkerInputPath = await tmpFile({ template: 'object-XXXXXX.o', dir: '/tmp' });
 
@@ -239,7 +248,7 @@ const compileTac = async (
             `ld ${linkerInputPath.path} -o ${binaryFile.path} -macosx_version_min 10.6 -lSystem`
         );
         return {
-            source: x64String,
+            source: x64source,
             sourceFile,
             binaryFile,
             threeAddressCodeFile,
@@ -264,6 +273,7 @@ const x64Backend: Backend = {
     name: 'x64',
     compile,
     compileTac,
+    finishCompilation,
     executors: [{ execute, name: 'local' }],
     targetInfo: x64Target,
 };
