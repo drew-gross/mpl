@@ -1,3 +1,4 @@
+import { Program } from '../threeAddressCode/Program';
 import * as Ast from '../ast';
 import { file as tmpFile } from 'tmp-promise';
 import {
@@ -413,13 +414,13 @@ const makeCfunctionBody = ({
 const productTypeMemberToCStructMember = ({ name, type }) =>
     `${mplTypeToCDeclaration(type, '')} ${name};`;
 
-const compile = async ({
+const compile = ({
     functions,
     program,
     types,
     globalDeclarations,
     stringLiterals,
-}: FrontendOutput): Promise<CompilationResult | { error: string }> => {
+}: FrontendOutput): { target: string; tac: Program | undefined } | { error: string } => {
     const CtypeDeclarations = types
         .filter(t => t.type.kind == 'Product')
         .map(
@@ -474,7 +475,8 @@ const compile = async ({
         .map(declaration => mplTypeToCDeclaration(declaration.type, declaration.name))
         .map(cDeclaration => `${cDeclaration};`);
 
-    const cSource = `
+    return {
+        target: `
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -639,8 +641,18 @@ ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
 ${join(Cdeclarations, '\n')}
 ${join(Cfunctions, '\n')}
 ${Cprogram}
-`;
+`,
+        tac: undefined,
+    };
+};
 
+const finishCompilation = async (
+    cSource: string,
+    tac: Program | undefined
+): Promise<CompilationResult | { error: string }> => {
+    if (tac !== undefined) {
+        debug('why tac');
+    }
     const sourceFile = await writeTempFile(cSource, 'program', 'c');
     const binaryFile = await tmpFile();
     try {
@@ -676,5 +688,10 @@ const execute = async (executablePath: string, stdinPath: string): Promise<Execu
     }
 };
 
-const cBackend: Backend = { name: 'c', compile, executors: [{ execute, name: 'clang' }] };
+const cBackend: Backend = {
+    name: 'c',
+    compile,
+    finishCompilation,
+    executors: [{ execute, name: 'clang' }],
+};
 export default cBackend;

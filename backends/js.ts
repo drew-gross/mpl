@@ -1,3 +1,4 @@
+import { Program } from '../threeAddressCode/Program';
 import writeTempFile from '../util/writeTempFile';
 import flatten from '../util/list/flatten';
 import execAndGetResult from '../util/execAndGetResult';
@@ -100,12 +101,12 @@ const astToJS = ({
     }
 };
 
-const compile = async ({
+const compile = ({
     functions,
     builtinFunctions,
     program,
     globalDeclarations,
-}: FrontendOutput): Promise<CompilationResult | { error: string }> => {
+}: FrontendOutput): { target: string; tac: Program | undefined } | { error: string } => {
     const JSfunctions = functions.map(({ name, parameters, statements }) => {
         const prefix = `${name} = (${join(
             parameters.map(parameter => parameter.name),
@@ -128,7 +129,8 @@ const compile = async ({
             astToJS({ ast: child, builtinFunctions, exitInsteadOfReturn: true })
         )
     );
-    const jsSource = `
+    return {
+        target: `
 const readline = require('readline');
 
 const length = str => str.length;
@@ -150,7 +152,18 @@ const readInt = async () => {
 (async () => {
     ${join(JSfunctions, '\n')}
     ${join(JS, '\n')}
-})();`;
+})();`,
+        tac: undefined,
+    };
+};
+
+const finishCompilation = async (
+    jsSource: string,
+    tac: Program | undefined
+): Promise<CompilationResult | { error: string }> => {
+    if (tac !== undefined) {
+        debug('why tac');
+    }
 
     const sourceFile = await writeTempFile(jsSource, 'program', 'js');
     const binaryFile = sourceFile;
@@ -176,5 +189,10 @@ const execute = async (executablePath: string, stdinPath: string): Promise<Execu
     }
 };
 
-const jsBackend: Backend = { name: 'js', compile, executors: [{ execute, name: 'node' }] };
+const jsBackend: Backend = {
+    name: 'js',
+    compile,
+    finishCompilation,
+    executors: [{ execute, name: 'node' }],
+};
 export default jsBackend;
