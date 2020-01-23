@@ -40,6 +40,7 @@ import {
 import { orderedSet, operatorCompare } from './util/ordered-set';
 import { set } from './util/set';
 import { shuffle } from 'shuffle-seed';
+import loader from './mpl-loader';
 
 test('double flatten', t => {
     t.deepEqual(flatten(flatten([[[1, 2]], [[3], [4]], [[5]]])), [1, 2, 3, 4, 5]);
@@ -2421,4 +2422,8 @@ node_0 -> null_7 [style="invis"]
     );
 
     // await writeSvg(dotText, './set.svg');
+});
+
+test('loader', t => {
+    t.assert((loader('return 1') as any).includes(1));
 });

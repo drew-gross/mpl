@@ -1,5 +1,5 @@
 import { compile } from './frontend';
-// import jsBackend from './backends/js';
+import jsBackend from './backends/js';
 
 export default function(source: string) {
     const frontendOutput = compile(source);
@@ -9,6 +9,13 @@ export default function(source: string) {
         'kind' in frontendOutput ||
         'internalError' in frontendOutput
     ) {
-        this.emitError('ooops');
+        this.emitError(frontendOutput);
+        return;
     }
+    const js = jsBackend.compile(frontendOutput);
+    if ('error' in js) {
+        this.emitError(js.error);
+        return;
+    }
+    return js.target;
 }
