@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = env => {
-    const useDevLoader = env && 'experimental' in env && env.experimental === true;
+    const useDevLoader = env !== undefined && 'experimental' in env && env.experimental === true;
     return {
         devtool: 'inline-source-map',
         entry: {
