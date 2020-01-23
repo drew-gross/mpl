@@ -175,7 +175,7 @@ const astToJS = ({ ast, exitInsteadOfReturn, builtinFunctions, }) => {
             throw debug_1.default(`${ast.kind} unhanlded in toJS`);
     }
 };
-const compile = async ({ functions, builtinFunctions, program, globalDeclarations, }) => {
+const compile = ({ functions, builtinFunctions, program, globalDeclarations, }) => {
     const JSfunctions = functions.map(({ name, parameters, statements }) => {
         const prefix = `${name} = (${join_1.default(parameters.map(parameter => parameter.name), ', ')}) => {`;
         const suffix = `}`;
@@ -185,7 +185,8 @@ const compile = async ({ functions, builtinFunctions, program, globalDeclaration
         return [prefix, ...body, suffix].join(' ');
     });
     const JS = flatten_1.default(program.statements.map(child => astToJS({ ast: child, builtinFunctions, exitInsteadOfReturn: true })));
-    const jsSource = `
+    return {
+        target: `
 const readline = require('readline');
 
 const length = str => str.length;
@@ -207,7 +208,14 @@ const readInt = async () => {
 (async () => {
     ${join_1.default(JSfunctions, '\n')}
     ${join_1.default(JS, '\n')}
-})();`;
+})();`,
+        tac: undefined,
+    };
+};
+const finishCompilation = async (jsSource, tac) => {
+    if (tac !== undefined) {
+        debug_1.default('why tac');
+    }
     const sourceFile = await writeTempFile_1.default(jsSource, 'program', 'js');
     const binaryFile = sourceFile;
     return {
@@ -226,7 +234,12 @@ const execute = async (executablePath, stdinPath) => {
         return { error: e.msg, executorName: 'node' };
     }
 };
-const jsBackend = { name: 'js', compile, executors: [{ execute, name: 'node' }] };
+const jsBackend = {
+    name: 'js',
+    compile,
+    finishCompilation,
+    executors: [{ execute, name: 'node' }],
+};
 exports.default = jsBackend;
 
 
@@ -252,7 +265,7 @@ exports.lex = lex_1.lex;
 const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
 const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
 const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
-//const add = require('./util/add.mpl');
+// const add = require('./util/add.mpl');
 // TODO move this to parser lit
 const hasType = (ast, type) => 'type' in ast && ast.type == type;
 const repairAssociativity = (nodeType, ast) => {
@@ -2041,10 +2054,10 @@ const outputPath = process.argv[3];
     }
     const backendOutput = await js_1.default.compile(frontendOutput);
     if ('error' in backendOutput) {
-        console.log(backendOutput);
+        console.log(backendOutput.error);
         process.exit(-1);
     }
-    await fs_extra_1.writeFile(outputPath, backendOutput.source);
+    await fs_extra_1.writeFile(outputPath, backendOutput.target);
 })();
 
 
