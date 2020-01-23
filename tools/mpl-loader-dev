@@ -2034,7 +2034,7 @@ exports.grammar = {
 Object.defineProperty(exports, "__esModule", { value: true });
 const frontend_1 = __webpack_require__(/*! ./frontend */ "./frontend.ts");
 const js_1 = __webpack_require__(/*! ./backends/js */ "./backends/js.ts");
-function default_1(source) {
+function mplLoader(source) {
     const frontendOutput = frontend_1.compile(source);
     if ('parseErrors' in frontendOutput ||
         'typeErrors' in frontendOutput ||
@@ -2050,7 +2050,7 @@ function default_1(source) {
     }
     return js.target;
 }
-exports.default = default_1;
+exports.default = mplLoader;
 
 
 /***/ }),

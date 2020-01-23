@@ -1,7 +1,7 @@
 import { compile } from './frontend';
 import jsBackend from './backends/js';
 
-export default function(source: string) {
+function mplLoader(source: string) {
     const frontendOutput = compile(source);
     if (
         'parseErrors' in frontendOutput ||
@@ -19,3 +19,5 @@ export default function(source: string) {
     }
     return js.target;
 }
+
+export default mplLoader;

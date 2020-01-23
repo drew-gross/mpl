@@ -265,7 +265,7 @@ exports.lex = lex_1.lex;
 const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
 const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
 const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
-const add = __webpack_require__(/*! ./util/add.mpl */ "./util/add.mpl");
+// const add = require('./util/add.mpl');
 // TODO move this to parser lit
 const hasType = (ast, type) => 'type' in ast && ast.type == type;
 const repairAssociativity = (nodeType, ast) => {
@@ -22911,17 +22911,6 @@ exports.typeSize = (targetInfo, type, typeDeclarations) => {
     }
 };
 
-
-/***/ }),
-
-/***/ "./util/add.mpl":
-/*!**********************!*\
-  !*** ./util/add.mpl ***!
-  \**********************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-throw new Error("Module build failed (from ./tools/mpl-loader):\nLoaderRunnerError: Module '/Users/drew/Documents/mpl/tools/mpl-loader' is not a loader (must have normal or pitch function)\n    at loadLoader (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/loadLoader.js:43:20)\n    at iteratePitchingLoaders (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:169:2)\n    at runLoaders (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:365:2)\n    at NormalModule.doBuild (/Users/drew/Documents/mpl/node_modules/webpack/lib/NormalModule.js:295:3)\n    at NormalModule.build (/Users/drew/Documents/mpl/node_modules/webpack/lib/NormalModule.js:446:15)\n    at Compilation.buildModule (/Users/drew/Documents/mpl/node_modules/webpack/lib/Compilation.js:739:10)\n    at /Users/drew/Documents/mpl/node_modules/webpack/lib/Compilation.js:981:14\n    at /Users/drew/Documents/mpl/node_modules/webpack/lib/NormalModuleFactory.js:409:6\n    at /Users/drew/Documents/mpl/node_modules/webpack/lib/NormalModuleFactory.js:155:13\n    at AsyncSeriesWaterfallHook.eval [as callAsync] (eval at create (/Users/drew/Documents/mpl/node_modules/tapable/lib/HookCodeFactory.js:33:10), <anonymous>:4:1)\n    at /Users/drew/Documents/mpl/node_modules/webpack/lib/NormalModuleFactory.js:138:29\n    at /Users/drew/Documents/mpl/node_modules/webpack/lib/NormalModuleFactory.js:346:9\n    at processTicksAndRejections (internal/process/task_queues.js:79:11)");
 
 /***/ }),
 
