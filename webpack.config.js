@@ -11,6 +11,11 @@ module.exports = env => {
             mpl: './mpl.ts',
             'mpl-loader': './mpl-loader.ts',
         },
+        output: {
+            path: path.join(__dirname, 'tools'),
+            filename: '[name]',
+            library: ['default', 'default'],
+        },
         module: {
             rules: [
                 {
