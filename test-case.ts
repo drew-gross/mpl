@@ -11,6 +11,7 @@ export type TestCase = {
     exitCode?: number;
     stdout?: string;
     parseErrors?: any[];
+    typeErrors?: any[];
     ast?: any;
 
     // Runtime inputs to test
@@ -18,6 +19,7 @@ export type TestCase = {
 
     // Control test runner
     failing?: boolean; // Expect this to fail
+    only?: boolean; // Run only this test
     infiniteLooping?: boolean; // Don't even attempt to compile this, it will infinite loop
 };
 

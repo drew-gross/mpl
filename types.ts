@@ -40,8 +40,12 @@ export const toString = (type: Type): string => {
                 type.members.map(member => `${member.name}: ${toString(member.type)}`) +
                 '}'
             );
+        case 'NameRef':
+            return type.namedType;
+        case 'List':
+            return `${toString(type.of)}[]`;
         default:
-            throw debug('Unhandled kind in type toString');
+            throw debug(`Unhandled kind in type toString: ${(type as any).kind}`);
     }
 };
 

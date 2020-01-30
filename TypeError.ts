@@ -1,6 +1,6 @@
 import debug from './util/debug';
 import SourceLocation from './parser-lib/sourceLocation';
-import { Type } from './types';
+import { Type, toString as typeToString } from './types';
 
 export type TypeError = { sourceLocation: SourceLocation } & (
     | { kind: 'unknownIdentifier'; name: string }
@@ -49,6 +49,10 @@ export const toString = (e: TypeError): string => {
             return `Unknown identifier ${e.name}`;
         case 'wrongNumberOfArguments':
             return `Wrong number of arguments for ${e.targetFunction}. Expected ${e.expectedArgumentCount}, found ${e.passedArgumentCount}`;
+        case 'assignWrongType':
+            return `Wrong type for ${e.lhsName}. Expected ${typeToString(
+                e.lhsType
+            )}, found ${typeToString(e.rhsType)}.`;
         default:
             throw debug(`need string for error: ${e.kind}`);
     }

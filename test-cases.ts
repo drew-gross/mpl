@@ -244,11 +244,37 @@ return isFive(5) ? 1 : 0`,
     {
         name: 'Zero Item List',
         source: `
-            myList := [];
+            myList: Boolean[] = [];
             return length(myList);
         `,
         exitCode: 0,
         failing: true,
+    },
+    {
+        name: 'Untyped Zero Item List',
+        source: `
+            myList := [];
+            return length(myList);
+        `,
+        exitCode: 0,
+        failing: true, // expect a type error
+    },
+    {
+        name: 'Wrong Type List',
+        source: `
+            myList: Boolean[] = [5];
+            return length(myList);
+        `,
+        exitCode: 0,
+        typeErrors: [
+            {
+                kind: 'assignWrongType',
+                lhsName: 'myList',
+                lhsType: { kind: 'NameRef', namedType: 'Boolean[]' },
+                rhsType: { kind: 'List', of: { kind: 'Integer' } },
+                sourceLocation: { column: 13, line: 2 },
+            },
+        ],
     },
     {
         name: 'One Item List',

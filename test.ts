@@ -453,14 +453,26 @@ test('correct inferred type for function', t => {
 });
 
 testCases.forEach(
-    ({ name, source, exitCode, stdin, stdout, ast, parseErrors, failing, infiniteLooping }) => {
+    ({
+        name,
+        source,
+        exitCode,
+        stdin,
+        stdout,
+        ast,
+        parseErrors,
+        typeErrors,
+        failing,
+        only,
+        infiniteLooping,
+    }) => {
         if (infiniteLooping) {
             test.failing(name, t => {
                 t.fail();
             });
             return;
         } else {
-            const runner = failing ? test.failing : test;
+            const runner = only ? test.only : failing ? test.failing : test;
             runner(name, mplTest, {
                 source,
                 exitCode,
@@ -468,6 +480,7 @@ testCases.forEach(
                 stdin,
                 expectedStdOut: stdout,
                 expectedParseErrors: parseErrors,
+                expectedTypeErrors: typeErrors,
                 expectedAst: ast,
             });
         }
