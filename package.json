@@ -31,8 +31,8 @@
         "format": "prettier --config package.json --list-different '**/*.ts'",
         "format-fix": "prettier --config package.json --write '**/*.ts'",
         "build+install": "tsc && npm link",
-        "webpack": "webpack --mode development --output tools/[name]-dev",
-        "webpack-prod": "webpack --mode development --output tools/[name]",
+        "webpack": "webpack --mode development --output [name]-dev",
+        "webpack-prod": "webpack --mode development --output [name]",
         "webpack-experimental": "webpack --mode development --output /tmp/tools/[name]-experimental --env.experimental"
     },
     "bin": {

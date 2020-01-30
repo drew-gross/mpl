@@ -3,8 +3,11 @@ const path = require('path');
 module.exports = env => {
     const useDevLoader = env !== undefined && 'experimental' in env && env.experimental === true;
     const loader = useDevLoader
-        ? path.resolve('tools/mpl-loader-dev')
-        : path.resolve('tools/mpl-loader');
+        ? path.resolve('built/mpl-loader-dev')
+        : path.resolve('built/mpl-loader');
+    console.log(loader);
+    console.log('loader');
+
     return {
         devtool: 'inline-source-map',
         entry: {
@@ -14,7 +17,8 @@ module.exports = env => {
         output: {
             path: path.join(__dirname, 'tools'),
             filename: '[name]',
-            library: ['default', 'default'],
+            library: 'mplLoader',
+            libraryExport: 'loaderasdasd',
         },
         module: {
             rules: [

@@ -17,6 +17,7 @@ function mplLoader(source: string) {
         this.emitError(js.error);
         return;
     }
+    console.log('asdasd');
     return js.target;
 }
 
