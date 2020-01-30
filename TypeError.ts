@@ -37,6 +37,7 @@ export type TypeError = { sourceLocation: SourceLocation } & (
           // TODO infer nonhomogenousList as sum type so this isn't an erro,
           kind: 'nonhomogenousList';
       }
+    | { kind: 'uninferrableEmptyList' }
     | { kind: 'nonIntegerIndex'; index: Type }
     | { kind: 'indexAccessNonList'; accessed: Type }
 );
@@ -53,6 +54,10 @@ export const toString = (e: TypeError): string => {
             return `Wrong type for ${e.lhsName}. Expected ${typeToString(
                 e.lhsType
             )}, found ${typeToString(e.rhsType)}.`;
+        case 'wrongArgumentType':
+            return `Wrong argument type for ${e.targetFunction}. Expected ${typeToString(
+                e.expectedType
+            )}, found ${typeToString(e.passedType)}.`;
         default:
             throw debug(`need string for error: ${e.kind}`);
     }

@@ -213,6 +213,14 @@ export type UninferredFunctionCall = {
     arguments: UninferredExpression[];
 };
 
+export type UninferredMemberStyleCall = {
+    kind: 'memberStyleCall';
+    sourceLocation: SourceLocation;
+    lhs: UninferredExpression;
+    memberName: string;
+    params: UninferredExpression[];
+};
+
 export type UninferredMemberAccess = {
     kind: 'memberAccess';
     sourceLocation: SourceLocation;
@@ -320,6 +328,7 @@ export type UninferredExpression =
     | UninferredProduct
     | UninferredConcatenation
     | UninferredMemberAccess
+    | UninferredMemberStyleCall
     | UninferredListLiteral
     | UninferredIndexAccess;
 

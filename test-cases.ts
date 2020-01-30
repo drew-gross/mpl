@@ -248,7 +248,7 @@ return isFive(5) ? 1 : 0`,
             return length(myList);
         `,
         exitCode: 0,
-        failing: true,
+        failing: true, // TODO: Length currently only for strings :(
     },
     {
         name: 'Untyped Zero Item List',
@@ -270,6 +270,7 @@ return isFive(5) ? 1 : 0`,
             {
                 kind: 'assignWrongType',
                 lhsName: 'myList',
+                // TODO: make this a list instead of nameref maybe?
                 lhsType: { kind: 'NameRef', namedType: 'Boolean[]' },
                 rhsType: { kind: 'List', of: { kind: 'Integer' } },
                 sourceLocation: { column: 13, line: 2 },
@@ -377,6 +378,15 @@ return isFive(5) ? 1 : 0`,
         exitCode: 0,
     },
     {
+        name: 'String Length as Member',
+        source: `
+            myStr: String = "test";
+            return myStr.length();
+        `,
+        exitCode: 4,
+        failing: true,
+    },
+    {
         name: 'Seven Argument Function',
         source: `
             foo := (a: Integer, b: Integer, c: Integer, d: Integer, e: Integer, f: Integer, g: Integer) => {
@@ -465,13 +475,13 @@ return isFive(5) ? 1 : 0`,
         name: 'Write to Argument',
         source: `
             foo := a: Boolean => {
-                a = False; // TODO: should error
+                a = False;
                 return 0;
             };
             return foo(true);
         `,
         exitCode: 0,
-        failing: true,
+        failing: true, // TODO: should error about assigning to argument
     },
     {
         name: 'Return String',

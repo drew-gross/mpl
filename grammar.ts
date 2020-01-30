@@ -210,6 +210,7 @@ export type MplAstNode =
     | 'objectLiteral'
     | 'objectLiteralComponent'
     | 'memberAccess'
+    | 'memberStyleCall'
     | 'listLiteral'
     | 'listItems'
     | 'indexAccess'
@@ -329,6 +330,17 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     ]),
     concatenation: OneOf([
         Sequence('concatenation', ['memberAccess', concatenation, 'concatenation']),
+        'memberStyleCall',
+    ]),
+    memberStyleCall: OneOf([
+        Sequence('memberStyleCall', [
+            'simpleExpression',
+            memberAccess,
+            identifier,
+            leftBracket,
+            'paramList',
+            rightBracket,
+        ]),
         'memberAccess',
     ]),
     memberAccess: OneOf([

@@ -114,13 +114,20 @@ const extractVariable = (
     switch (ctx.w.kind) {
         case 'reassignment':
         case 'declarationAssignment':
-        case 'typedDeclarationAssignment':
             // Recursive functions can refer to the left side on the right side, so to extract
             // the left side, we need to know about the right side. Probably, this just shouldn't return
             // a type. TODO: allow more types of recursive functions than just single int...
             return {
                 name: ctx.w.destination,
                 type: (typeOfExpression({ ...ctx, w: ctx.w.expression }) as TOEResult).type,
+            };
+        case 'typedDeclarationAssignment':
+            return {
+                name: ctx.w.destination,
+                type: (typeOfExpression(
+                    { ...ctx, w: ctx.w.expression },
+                    ctx.w.type
+                ) as TOEResult).type,
             };
         case 'returnStatement':
         case 'typeDeclaration':
@@ -272,7 +279,8 @@ type TOEResult = { type: Type; extractedFunctions: Function[] };
 
 // TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer() maybe?
 export const typeOfExpression = (
-    ctx: WithContext<Ast.UninferredExpression>
+    ctx: WithContext<Ast.UninferredExpression>,
+    expectedType: Type | undefined = undefined
 ): TOEResult | TypeError[] => {
     const recurse = ast2 => typeOfExpression({ ...ctx, w: ast2 });
     const { w, availableVariables, availableTypes } = ctx;
@@ -603,7 +611,11 @@ export const typeOfExpression = (
                 extractedFunctions.push(...result.extractedFunctions);
             }
             if (!innerType) {
-                return [{ kind: 'nonhomogenousList', sourceLocation: ast.sourceLocation }]; // TODO infer from target
+                if (expectedType) {
+                    return { type: expectedType, extractedFunctions };
+                }
+                debugger;
+                return [{ kind: 'uninferrableEmptyList', sourceLocation: ast.sourceLocation }];
             }
             return { type: { kind: 'List', of: innerType }, extractedFunctions };
         case 'indexAccess':
@@ -721,13 +733,16 @@ const typeCheckStatement = (
         case 'typedDeclarationAssignment': {
             // Check that type of var being assigned to matches type being assigned
             const destinationType = ast.type;
-            const expressionType = typeOfExpression({
-                ...ctx,
-                w: ast.expression,
-                availableVariables: mergeDeclarations(availableVariables, [
-                    { name: ast.destination, type: destinationType },
-                ]),
-            });
+            const expressionType = typeOfExpression(
+                {
+                    ...ctx,
+                    w: ast.expression,
+                    availableVariables: mergeDeclarations(availableVariables, [
+                        { name: ast.destination, type: destinationType },
+                    ]),
+                },
+                ast.type
+            );
             if (isTypeError(expressionType)) {
                 return { errors: expressionType, newVariables: [] };
             }
@@ -1300,7 +1315,28 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 members: members as any,
                 sourceLocation: ast.sourceLocation,
             };
-        case 'memberAccess':
+        case 'memberStyleCall': {
+            const anyAst = ast as any;
+            const lhsNode = anyAst.children[0];
+            const lhs = astFromParseResult(lhsNode);
+            if (lhs == 'WrongShapeAst') {
+                return 'WrongShapeAst';
+            }
+            const memberName = anyAst.children[2].value;
+            const params = anyAst.children[4].items.map(astFromParseResult);
+            if (params == 'WrongShapeAst') {
+                return 'WrongShapeAst';
+            }
+            const r: Ast.UninferredMemberStyleCall = {
+                kind: 'memberStyleCall',
+                lhs: lhs as Ast.UninferredExpression,
+                memberName,
+                params: params as Ast.UninferredExpression[],
+                sourceLocation: ast.sourceLocation,
+            };
+            return r;
+        }
+        case 'memberAccess': {
             const anyAst = ast as any;
             const lhsNode = anyAst.children[0];
             const lhs = astFromParseResult(lhsNode);
@@ -1310,6 +1346,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 rhs: anyAst.children[2].value,
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
+        }
         case 'concatenation':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
