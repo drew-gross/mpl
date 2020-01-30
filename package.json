@@ -30,10 +30,7 @@
         "cloc-test": "cloc  ./test.ts ./test-cases.ts",
         "format": "prettier --config package.json --list-different '**/*.ts'",
         "format-fix": "prettier --config package.json --write '**/*.ts'",
-        "build+install": "tsc && npm link",
-        "webpack": "webpack --mode development --output [name]-dev",
-        "webpack-prod": "webpack --mode development --output [name]",
-        "webpack-experimental": "webpack --mode development --output /tmp/tools/[name]-experimental --env.experimental"
+        "build+install": "tsc && npm link"
     },
     "bin": {
         "mpl": "built/bin/index.js"
@@ -70,8 +67,6 @@
     "devDependencies": {
         "shuffle-seed": "1.1.6",
         "ts-loader": "6.2.1",
-        "typescript": "3.7.4",
-        "webpack": "4.41.5",
-        "webpack-cli": "3.3.10"
+        "typescript": "3.7.4"
     }
 }
