@@ -233,6 +233,8 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
             return [...result, ...flatten(ast.items.map(recurse))];
         case 'indexAccess':
             return [...result, ...recurse(ast.accessed), ...recurse(ast.index)];
+        case 'memberStyleCall':
+            return [...result, ...recurse(ast.lhs), ...flatten(ast.params.map(recurse))];
         default:
             throw debug(`${(ast as any).kind} unhandled in walkAst`);
     }
@@ -457,6 +459,76 @@ export const typeOfExpression = (
                     },
                 ];
             }
+            for (let i = 0; i < argTypes.length; i++) {
+                if (
+                    !typesAreEqual(
+                        (argTypes[i] as TOEResult).type,
+                        functionType.arguments[i],
+                        availableTypes
+                    )
+                ) {
+                    return [
+                        {
+                            kind: 'wrongArgumentType',
+                            targetFunction: functionName,
+                            passedType: (argTypes[i] as TOEResult).type,
+                            expectedType: functionType.arguments[i],
+                            sourceLocation: ast.sourceLocation,
+                        } as TypeError,
+                    ];
+                }
+            }
+            return { type: functionType.returnType, extractedFunctions: [] };
+        }
+        case 'memberStyleCall': {
+            const argTypes: (TOEResult | TypeError[])[] = ast.params.map(recurse);
+
+            const argTypeErrors: TypeError[] = [];
+            argTypes.forEach(argType => {
+                if (isTypeError(argType)) {
+                    argTypeErrors.push(...argType);
+                }
+            });
+
+            if (argTypeErrors.length > 0) {
+                return argTypeErrors;
+            }
+            const functionName = ast.memberName;
+
+            const declaration = availableVariables.find(({ name }) => functionName == name);
+            if (!declaration) {
+                return [
+                    {
+                        kind: 'unknownIdentifier',
+                        name: functionName,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            const functionType = declaration.type;
+            if (!functionType) throw debug('bad function! This should be a better error.');
+            if (functionType.kind !== 'Function') {
+                return [
+                    {
+                        kind: 'calledNonFunction',
+                        identifierName: functionName,
+                        actualType: functionType,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            if (argTypes.length !== functionType.arguments.length) {
+                return [
+                    {
+                        kind: 'wrongNumberOfArguments',
+                        targetFunction: functionName,
+                        passedArgumentCount: argTypes.length,
+                        expectedArgumentCount: functionType.arguments.length,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            // TODO: this is probably wrong, we need check agains the LHS type
             for (let i = 0; i < argTypes.length; i++) {
                 if (
                     !typesAreEqual(
