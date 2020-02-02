@@ -384,7 +384,6 @@ return isFive(5) ? 1 : 0`,
             return myStr.length();
         `,
         exitCode: 4,
-        failing: true,
     },
     {
         name: 'Seven Argument Function',

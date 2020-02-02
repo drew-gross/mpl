@@ -481,10 +481,10 @@ export const typeOfExpression = (
             return { type: functionType.returnType, extractedFunctions: [] };
         }
         case 'memberStyleCall': {
-            const argTypes: (TOEResult | TypeError[])[] = ast.params.map(recurse);
+            const callArgTypes: (TOEResult | TypeError[])[] = ast.params.map(recurse);
 
             const argTypeErrors: TypeError[] = [];
-            argTypes.forEach(argType => {
+            callArgTypes.forEach(argType => {
                 if (isTypeError(argType)) {
                     argTypeErrors.push(...argType);
                 }
@@ -493,8 +493,13 @@ export const typeOfExpression = (
             if (argTypeErrors.length > 0) {
                 return argTypeErrors;
             }
-            const functionName = ast.memberName;
 
+            const thisArgType = recurse(ast.lhs);
+            if (isTypeError(thisArgType)) {
+                return thisArgType;
+            }
+
+            const functionName = ast.memberName;
             const declaration = availableVariables.find(({ name }) => functionName == name);
             if (!declaration) {
                 return [
@@ -517,22 +522,23 @@ export const typeOfExpression = (
                     },
                 ];
             }
-            if (argTypes.length !== functionType.arguments.length) {
+            const allArgTypes = [thisArgType, ...callArgTypes];
+            if (allArgTypes.length !== functionType.arguments.length) {
                 return [
                     {
                         kind: 'wrongNumberOfArguments',
                         targetFunction: functionName,
-                        passedArgumentCount: argTypes.length,
+                        passedArgumentCount: allArgTypes.length,
                         expectedArgumentCount: functionType.arguments.length,
                         sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
             // TODO: this is probably wrong, we need check agains the LHS type
-            for (let i = 0; i < argTypes.length; i++) {
+            for (let i = 0; i < allArgTypes.length; i++) {
                 if (
                     !typesAreEqual(
-                        (argTypes[i] as TOEResult).type,
+                        (allArgTypes[i] as TOEResult).type,
                         functionType.arguments[i],
                         availableTypes
                     )
@@ -541,7 +547,7 @@ export const typeOfExpression = (
                         {
                             kind: 'wrongArgumentType',
                             targetFunction: functionName,
-                            passedType: (argTypes[i] as TOEResult).type,
+                            passedType: (allArgTypes[i] as TOEResult).type,
                             expectedType: functionType.arguments[i],
                             sourceLocation: ast.sourceLocation,
                         } as TypeError,
@@ -1010,6 +1016,13 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
                 sourceLocation: ast.sourceLocation,
                 name: ast.name,
                 arguments: ast.arguments.map(recurse),
+            };
+        case 'memberStyleCall':
+            return {
+                kind: 'callExpression',
+                sourceLocation: ast.sourceLocation,
+                name: ast.memberName,
+                arguments: [recurse(ast.lhs), ...ast.params.map(recurse)],
             };
         case 'ternary':
             return {
