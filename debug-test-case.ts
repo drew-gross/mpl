@@ -21,7 +21,7 @@ import annotateSource from './annotateSource';
             '--skip-backends [backends]',
             "Don't run x64",
             (val, memo) => {
-                memo.push(val);
+                (memo as any).push(val);
                 return memo;
             },
             []
