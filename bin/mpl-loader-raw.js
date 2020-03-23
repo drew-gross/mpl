@@ -81,7 +81,7 @@
 /******/
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = "./mpl.ts");
+/******/ 	return __webpack_require__(__webpack_require__.s = "./mpl-loader.ts");
 /******/ })
 /************************************************************************/
 /******/ ({
@@ -2139,10 +2139,10 @@ exports.grammar = {
 
 /***/ }),
 
-/***/ "./mpl.ts":
-/*!****************!*\
-  !*** ./mpl.ts ***!
-  \****************/
+/***/ "./mpl-loader.ts":
+/*!***********************!*\
+  !*** ./mpl-loader.ts ***!
+  \***********************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2150,32 +2150,24 @@ exports.grammar = {
 
 Object.defineProperty(exports, "__esModule", { value: true });
 const frontend_1 = __webpack_require__(/*! ./frontend */ "./frontend.ts");
-const fs_extra_1 = __webpack_require__(/*! fs-extra */ "./node_modules/fs-extra/lib/index.js");
 const js_1 = __webpack_require__(/*! ./backends/js */ "./backends/js.ts");
-if (process.argv.length != 4) {
-    console.log('Usage: mpl <input> <output>');
-    process.exit(-1);
-}
-const inputPath = process.argv[2];
-const outputPath = process.argv[3];
-(async () => {
-    const input = await fs_extra_1.readFile(inputPath, 'utf8');
-    const frontendOutput = frontend_1.compile(input);
-    // TODO: better way to report these specific errors. Probably muck with the type of ExecutionResult.
+function mplLoader(source) {
+    const frontendOutput = frontend_1.compile(source);
     if ('parseErrors' in frontendOutput ||
         'typeErrors' in frontendOutput ||
         'kind' in frontendOutput ||
         'internalError' in frontendOutput) {
-        console.log(frontendOutput);
-        process.exit(-1);
+        this.emitError(frontendOutput);
+        return;
     }
-    const backendOutput = await js_1.default.compile(frontendOutput);
-    if ('error' in backendOutput) {
-        console.log(backendOutput.error);
-        process.exit(-1);
+    const js = js_1.default.compile(frontendOutput);
+    if ('error' in js) {
+        this.emitError(js.error);
+        return;
     }
-    await fs_extra_1.writeFile(outputPath, backendOutput.target);
-})();
+    return js.target;
+}
+exports.default = mplLoader;
 
 
 /***/ }),

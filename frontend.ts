@@ -26,6 +26,7 @@ import {
 import { TypeError } from './TypeError';
 import SourceLocation from './parser-lib/sourceLocation';
 import * as Ast from './ast';
+const add = require('./mpl/add.mpl');
 
 // TODO move this to parser lit
 const hasType = (ast, type: string) => 'type' in ast && ast.type == type;
@@ -1253,7 +1254,7 @@ const parseObjectMember = (ast: MplAst): Ast.UninferredObjectMember | 'WrongShap
     return result;
 };
 
-let functionId = 0;
+let functionId = add(-1, 1);
 const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' => {
     if (isSeparatedListNode(ast) || isListNode(ast)) {
         throw debug('todo');
