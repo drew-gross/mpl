@@ -1254,7 +1254,7 @@ const parseObjectMember = (ast: MplAst): Ast.UninferredObjectMember | 'WrongShap
     return result;
 };
 
-let functionId = add(-1, 1);
+let functionId = 0; //add(-1, 1);
 const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' => {
     if (isSeparatedListNode(ast) || isListNode(ast)) {
         throw debug('todo');

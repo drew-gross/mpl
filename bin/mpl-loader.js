@@ -1,3 +1,5 @@
+//const rawLoader = require('./mpl-loader-raw.js');
+
 module.exports = function (source) {
-    return 'module.exports = function add(a, b) { return a + b; }';
+    return ''; //rawLoader.mplLoader.call(this, source);
 };

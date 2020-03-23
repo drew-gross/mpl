@@ -1,4 +1,14 @@
-/******/ (function(modules) { // webpackBootstrap
+(function webpackUniversalModuleDefinition(root, factory) {
+	if(typeof exports === 'object' && typeof module === 'object')
+		module.exports = factory();
+	else if(typeof define === 'function' && define.amd)
+		define([], factory);
+	else if(typeof exports === 'object')
+		exports["mplLoader"] = factory();
+	else
+		root["mplLoader"] = factory();
+})(global, function() {
+return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
 /******/
@@ -1420,7 +1430,7 @@ const parseObjectMember = (ast) => {
     };
     return result;
 };
-let functionId = add(-1, 1);
+let functionId = 0; //add(-1, 1);
 const astFromParseResult = (ast) => {
     if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
         throw debug_1.default('todo');
@@ -2187,7 +2197,7 @@ const outputPath = process.argv[3];
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = function add(a, b) { return a + b; }
+
 
 /***/ }),
 
@@ -23324,3 +23334,4 @@ module.exports = require("util");
 /***/ })
 
 /******/ });
+});
