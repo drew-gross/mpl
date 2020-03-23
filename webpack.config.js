@@ -1,7 +1,10 @@
 const path = require('path');
 
 module.exports = {
-    entry: './mpl.ts',
+    entry: {
+        mpl: './mpl.ts',
+        'mpl-loader': './mpl-loader.ts',
+    },
     target: 'node',
     devtool: false,
     module: {
@@ -15,7 +18,7 @@ module.exports = {
     },
     resolve: { extensions: ['.ts', '.js'] },
     output: {
-        filename: 'mpl.js',
+        filename: '[name].js',
         path: path.resolve(__dirname, 'bin'),
     },
 };
