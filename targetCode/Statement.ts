@@ -285,9 +285,11 @@ export const toTarget = <TargetRegister>({
                           },
                       ] as Statement<TargetRegister>[])
                     : []),
-                ...registersToSave
-                    .reverse()
-                    .map(r => ({ kind: 'pop' as 'pop', register: r, why: 'restore registers' })),
+                ...registersToSave.reverse().map(r => ({
+                    kind: 'pop' as 'pop',
+                    register: r,
+                    why: 'restore registers',
+                })),
             ];
             return result;
         case 'move':

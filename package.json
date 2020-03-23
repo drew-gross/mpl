@@ -52,7 +52,7 @@
         "node": "13.6.0",
         "omit-deep": "0.3.0",
         "parallelshell": "3.0.2",
-        "prettier": "1.19.1",
+        "prettier": "2.0.1",
         "rimraf": "3.0.0",
         "tmp-promise": "2.0.2",
         "tslint": "5.20.1",
@@ -62,7 +62,8 @@
         "printWidth": 97,
         "singleQuote": true,
         "trailingComma": "es5",
-        "tabWidth": 4
+        "tabWidth": 4,
+        "arrowParens": "avoid"
     },
     "devDependencies": {
         "shuffle-seed": "1.1.6",
