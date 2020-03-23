@@ -38,7 +38,7 @@
     "author": "Drew Gross",
     "dependencies": {
         "0x": "4.9.1",
-        "@types/node": "12.12.8",
+        "@types/node": "13.9.3",
         "ava": "3.5.1",
         "chalk": "3.0.0",
         "child-process-promise": "2.2.1",
@@ -47,13 +47,13 @@
         "fs-extra": "8.1.0",
         "graphlib": "2.1.8",
         "graphlib-dot": "0.6.4",
-        "inquirer": "7.0.3",
+        "inquirer": "7.1.0",
         "lodash": "4.17.15",
-        "node": "13.6.0",
+        "node": "13.11.0",
         "omit-deep": "0.3.0",
         "parallelshell": "3.0.2",
         "prettier": "2.0.1",
-        "rimraf": "3.0.0",
+        "rimraf": "3.0.2",
         "tmp-promise": "2.0.2",
         "tslint": "5.20.1",
         "tslint-config-prettier": "1.18.0"
@@ -67,7 +67,7 @@
     },
     "devDependencies": {
         "shuffle-seed": "1.1.6",
-        "ts-loader": "6.2.1",
+        "ts-loader": "6.2.2",
         "typescript": "3.8.3"
     }
 }
