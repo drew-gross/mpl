@@ -16,7 +16,7 @@
         "lint": "tslint --project ./tsconfig.json",
         "lint-fix": "tslint --fix --project ./tsconfig.json",
         "test": "rimraf built && tsc && ava --verbose && npm run lint && npm run format",
-        "test-debug": "tsc && node --inspect --inspect-brk node_modules/ava/profile.js built/test.js",
+        "test-debug": "tsc && ava debug built/test.js",
         "test-fast": "tsc && ava --verbose",
         "test-all": "npm run test && npm run benchmark",
         "test-watch": "parallelshell 'ava --watch --no-color' 'tsc --watch'",
