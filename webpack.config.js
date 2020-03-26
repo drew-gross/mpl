@@ -1,7 +1,12 @@
 const path = require('path');
 
 module.exports = env => {
-    filename = env.commit ? '[name].js' : '[name]-experimental.js';
+    let filename = '[name]-experimental.js';
+    if (env.commit) {
+        filename = '[name].js';
+    } else if (env.experimental) {
+        filename = '[name]-super-experimental.js';
+    }
 
     return {
         entry: {
@@ -19,7 +24,10 @@ module.exports = env => {
                 },
                 {
                     test: /\.mpl$/,
-                    use: './bin/mpl-loader.js',
+                    use: {
+                        loader: './bin/mpl-loader.js',
+                        options: { experimental: env.experimental },
+                    },
                     exclude: /node_modules/,
                 },
             ],

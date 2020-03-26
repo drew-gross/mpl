@@ -91,7 +91,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = "./mpl-loader.ts");
+/******/ 	return __webpack_require__(__webpack_require__.s = "./mpl.ts");
 /******/ })
 /************************************************************************/
 /******/ ({
@@ -2149,10 +2149,10 @@ exports.grammar = {
 
 /***/ }),
 
-/***/ "./mpl-loader.ts":
-/*!***********************!*\
-  !*** ./mpl-loader.ts ***!
-  \***********************/
+/***/ "./mpl.ts":
+/*!****************!*\
+  !*** ./mpl.ts ***!
+  \****************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2160,24 +2160,32 @@ exports.grammar = {
 
 Object.defineProperty(exports, "__esModule", { value: true });
 const frontend_1 = __webpack_require__(/*! ./frontend */ "./frontend.ts");
+const fs_extra_1 = __webpack_require__(/*! fs-extra */ "./node_modules/fs-extra/lib/index.js");
 const js_1 = __webpack_require__(/*! ./backends/js */ "./backends/js.ts");
-function mplLoader(source, context) {
-    const frontendOutput = frontend_1.compile(source);
+if (process.argv.length != 4) {
+    console.log('Usage: mpl <input> <output>');
+    process.exit(-1);
+}
+const inputPath = process.argv[2];
+const outputPath = process.argv[3];
+(async () => {
+    const input = await fs_extra_1.readFile(inputPath, 'utf8');
+    const frontendOutput = frontend_1.compile(input);
+    // TODO: better way to report these specific errors. Probably muck with the type of ExecutionResult.
     if ('parseErrors' in frontendOutput ||
         'typeErrors' in frontendOutput ||
         'kind' in frontendOutput ||
         'internalError' in frontendOutput) {
-        context.emitError(new Error(JSON.stringify(frontendOutput)));
-        return;
+        console.log(frontendOutput);
+        process.exit(-1);
     }
-    const js = js_1.default.compile(frontendOutput);
-    if ('error' in js) {
-        context.emitError(new Error(JSON.stringify(js.error)));
-        return;
+    const backendOutput = await js_1.default.compile(frontendOutput);
+    if ('error' in backendOutput) {
+        console.log(backendOutput.error);
+        process.exit(-1);
     }
-    return js.target;
-}
-exports.mplLoader = mplLoader;
+    await fs_extra_1.writeFile(outputPath, backendOutput.target);
+})();
 
 
 /***/ }),
@@ -2189,7 +2197,7 @@ exports.mplLoader = mplLoader;
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-throw new Error("Module build failed: Error: Final loader (./bin/mpl-loader.js) didn't return a Buffer or String\n    at /Users/drew/Documents/mpl/node_modules/webpack/lib/NormalModule.js:333:18\n    at /Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:373:3\n    at iterateNormalLoaders (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:214:10)\n    at iterateNormalLoaders (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:221:10)\n    at /Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:236:3\n    at runSyncOrAsync (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:124:12)\n    at iterateNormalLoaders (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:232:2)\n    at Array.<anonymous> (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:205:4)\n    at Storage.finished (/Users/drew/Documents/mpl/node_modules/enhanced-resolve/lib/CachedInputFileSystem.js:55:16)\n    at /Users/drew/Documents/mpl/node_modules/enhanced-resolve/lib/CachedInputFileSystem.js:91:9\n    at /Users/drew/Documents/mpl/node_modules/graceful-fs/graceful-fs.js:78:16\n    at FSReqCallback.readFileAfterClose [as oncomplete] (internal/fs/read_file_context.js:63:3)");
+throw new Error("Module build failed (from ./bin/mpl-loader.js):\nError: Module build failed: Error: Final loader (./bin/mpl-loader.js) didn't return a Buffer or String\n    at /Users/drew/Documents/mpl/node_modules/webpack/lib/NormalModule.js:333:18\n    at /Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:373:3\n    at iterateNormalLoaders (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:214:10)\n    at iterateNormalLoaders (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:221:10)\n    at /Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:236:3\n    at runSyncOrAsync (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:124:12)\n    at iterateNormalLoaders (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:232:2)\n    at Array.<anonymous> (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:205:4)\n    at Storage.finished (/Users/drew/Documents/mpl/node_modules/enhanced-resolve/lib/CachedInputFileSystem.js:55:16)\n    at /Users/drew/Documents/mpl/node_modules/enhanced-resolve/lib/CachedInputFileSystem.js:91:9\n    at /Users/drew/Documents/mpl/node_modules/graceful-fs/graceful-fs.js:78:16\n    at FSReqCallback.readFileAfterClose [as oncomplete] (internal/fs/read_file_context.js:63:3)\n    at Object../mpl/add.mpl (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:2192:7)\n    at __webpack_require__ (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:30:30)\n    at Object../frontend.ts (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:278:13)\n    at __webpack_require__ (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:30:30)\n    at Object../mpl-loader.ts (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:2162:20)\n    at __webpack_require__ (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:30:30)\n    at /Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:94:18\n    at /Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:97:10\n    at webpackUniversalModuleDefinition (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:3:20)\n    at Object.<anonymous> (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:10:3)\n    at Module._compile (/Users/drew/Documents/mpl/node_modules/v8-compile-cache/v8-compile-cache.js:192:30)\n    at Object.Module._extensions..js (internal/modules/cjs/loader.js:1167:10)\n    at Module.load (internal/modules/cjs/loader.js:996:32)\n    at Function.Module._load (internal/modules/cjs/loader.js:896:14)\n    at Module.require (internal/modules/cjs/loader.js:1036:19)\n    at require (/Users/drew/Documents/mpl/node_modules/v8-compile-cache/v8-compile-cache.js:161:20)\n    at Object.module.exports (/Users/drew/Documents/mpl/bin/mpl-loader.js:5:11)");
 
 /***/ }),
 

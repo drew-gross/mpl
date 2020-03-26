@@ -275,7 +275,7 @@ exports.lex = lex_1.lex;
 const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
 const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
 const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
-//const add = require('./mpl/add.mpl');
+const add = __webpack_require__(/*! ./mpl/add.mpl */ "./mpl/add.mpl");
 // TODO move this to parser lit
 const hasType = (ast, type) => 'type' in ast && ast.type == type;
 const repairAssociativity = (nodeType, ast) => {
@@ -2187,6 +2187,17 @@ const outputPath = process.argv[3];
     await fs_extra_1.writeFile(outputPath, backendOutput.target);
 })();
 
+
+/***/ }),
+
+/***/ "./mpl/add.mpl":
+/*!*********************!*\
+  !*** ./mpl/add.mpl ***!
+  \*********************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+throw new Error("Module build failed: Error: Final loader (./bin/mpl-loader.js) didn't return a Buffer or String\n    at /Users/drew/Documents/mpl/node_modules/webpack/lib/NormalModule.js:333:18\n    at /Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:373:3\n    at iterateNormalLoaders (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:214:10)\n    at iterateNormalLoaders (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:221:10)\n    at /Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:236:3\n    at runSyncOrAsync (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:124:12)\n    at iterateNormalLoaders (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:232:2)\n    at Array.<anonymous> (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:205:4)\n    at Storage.finished (/Users/drew/Documents/mpl/node_modules/enhanced-resolve/lib/CachedInputFileSystem.js:55:16)\n    at /Users/drew/Documents/mpl/node_modules/enhanced-resolve/lib/CachedInputFileSystem.js:91:9\n    at /Users/drew/Documents/mpl/node_modules/graceful-fs/graceful-fs.js:78:16\n    at FSReqCallback.readFileAfterClose [as oncomplete] (internal/fs/read_file_context.js:63:3)");
 
 /***/ }),
 
