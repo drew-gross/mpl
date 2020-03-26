@@ -2161,18 +2161,18 @@ exports.grammar = {
 Object.defineProperty(exports, "__esModule", { value: true });
 const frontend_1 = __webpack_require__(/*! ./frontend */ "./frontend.ts");
 const js_1 = __webpack_require__(/*! ./backends/js */ "./backends/js.ts");
-function mplLoader(source) {
+function mplLoader(source, context) {
     const frontendOutput = frontend_1.compile(source);
     if ('parseErrors' in frontendOutput ||
         'typeErrors' in frontendOutput ||
         'kind' in frontendOutput ||
         'internalError' in frontendOutput) {
-        this.emitError(frontendOutput);
+        context.emitError(new Error(JSON.stringify(frontendOutput)));
         return;
     }
     const js = js_1.default.compile(frontendOutput);
     if ('error' in js) {
-        this.emitError(js.error);
+        context.emitError(new Error(JSON.stringify(js.error)));
         return;
     }
     return js.target;

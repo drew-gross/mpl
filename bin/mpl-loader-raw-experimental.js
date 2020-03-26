@@ -275,7 +275,7 @@ exports.lex = lex_1.lex;
 const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
 const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
 const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
-const add = __webpack_require__(/*! ./mpl/add.mpl */ "./mpl/add.mpl");
+//const add = require('./mpl/add.mpl');
 // TODO move this to parser lit
 const hasType = (ast, type) => 'type' in ast && ast.type == type;
 const repairAssociativity = (nodeType, ast) => {
@@ -2161,34 +2161,23 @@ exports.grammar = {
 Object.defineProperty(exports, "__esModule", { value: true });
 const frontend_1 = __webpack_require__(/*! ./frontend */ "./frontend.ts");
 const js_1 = __webpack_require__(/*! ./backends/js */ "./backends/js.ts");
-function mplLoader(source) {
+function mplLoader(source, context) {
     const frontendOutput = frontend_1.compile(source);
     if ('parseErrors' in frontendOutput ||
         'typeErrors' in frontendOutput ||
         'kind' in frontendOutput ||
         'internalError' in frontendOutput) {
-        this.emitError(frontendOutput);
+        context.emitError(new Error(JSON.stringify(frontendOutput)));
         return;
     }
     const js = js_1.default.compile(frontendOutput);
     if ('error' in js) {
-        this.emitError(js.error);
+        context.emitError(new Error(JSON.stringify(js.error)));
         return;
     }
     return js.target;
 }
 exports.mplLoader = mplLoader;
-
-
-/***/ }),
-
-/***/ "./mpl/add.mpl":
-/*!*********************!*\
-  !*** ./mpl/add.mpl ***!
-  \*********************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
 
 
 /***/ }),

@@ -275,7 +275,7 @@ exports.lex = lex_1.lex;
 const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
 const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
 const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
-const add = __webpack_require__(/*! ./mpl/add.mpl */ "./mpl/add.mpl");
+//const add = require('./mpl/add.mpl');
 // TODO move this to parser lit
 const hasType = (ast, type) => 'type' in ast && ast.type == type;
 const repairAssociativity = (nodeType, ast) => {
@@ -2186,17 +2186,6 @@ const outputPath = process.argv[3];
     }
     await fs_extra_1.writeFile(outputPath, backendOutput.target);
 })();
-
-
-/***/ }),
-
-/***/ "./mpl/add.mpl":
-/*!*********************!*\
-  !*** ./mpl/add.mpl ***!
-  \*********************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
 
 
 /***/ }),

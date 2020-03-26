@@ -2,7 +2,6 @@ const path = require('path');
 
 module.exports = env => {
     filename = env.commit ? '[name].js' : '[name]-experimental.js';
-    console.log(env);
 
     return {
         entry: {
