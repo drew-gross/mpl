@@ -216,6 +216,12 @@ return isFive(5) ? 1 : 0`,
         exitCode: 11,
     },
     {
+        name: 'No Return',
+        source: 'const11 := () => 11;',
+        exitCode: 1,
+        failing: true, // TODO: should be a syntax error (no return)
+    },
+    {
         name: 'Read Integer',
         source: `
             val := readInt();

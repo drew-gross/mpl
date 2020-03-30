@@ -105,6 +105,7 @@ test('ast for single number', t => {
     const tokens = lex(tokenSpecs, 'return 7;') as Token<MplToken>[];
     const parseResult = parse(grammar, 'program', tokens);
     if (parseResultIsError(parseResult)) {
+        console.log(parseResult);
         t.fail('Parse Failed');
         return;
     }
@@ -112,18 +113,24 @@ test('ast for single number', t => {
         type: 'program',
         children: [
             {
-                type: 'returnStatement',
+                type: 'statement',
                 sourceLocation: { line: 1, column: 1 },
                 children: [
                     {
-                        type: 'return',
-                        value: null,
+                        type: 'returnStatement',
                         sourceLocation: { line: 1, column: 1 },
-                    },
-                    {
-                        type: 'number',
-                        value: 7,
-                        sourceLocation: { line: 1, column: 8 },
+                        children: [
+                            {
+                                type: 'return',
+                                value: null,
+                                sourceLocation: { line: 1, column: 1 },
+                            },
+                            {
+                                type: 'number',
+                                value: 7,
+                                sourceLocation: { line: 1, column: 8 },
+                            },
+                        ],
                     },
                     {
                         type: 'statementSeparator',

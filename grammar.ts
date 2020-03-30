@@ -280,7 +280,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     arg: Sequence('arg', [identifier, colon, 'type']),
     functionBody: OneOf([
         Sequence('statement', ['statement', statementSeparator, 'functionBody']),
-        Sequence('returnStatement', [_return, 'expression', Optional(statementSeparator)]),
+        Sequence('statement', ['statement', mplOptional(statementSeparator)]),
     ]),
     statement: OneOf([
         Sequence('typedDeclarationAssignment', [
@@ -300,6 +300,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         ]),
         Sequence('typeDeclaration', [typeIdentifier, colon, assignment, 'type']),
         Sequence('reassignment', [identifier, assignment, 'expression']),
+        Sequence('returnStatement', [_return, 'expression']),
     ]),
     typeList: SeparatedList(comma, 'type'),
     type: OneOf([
