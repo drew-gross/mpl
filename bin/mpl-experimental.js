@@ -2195,9 +2195,34 @@ const outputPath = process.argv[3];
   !*** ./mpl/add.mpl ***!
   \*********************/
 /*! no static exports found */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
 
-throw new Error("Module build failed: Error: Final loader (./bin/mpl-loader.js) didn't return a Buffer or String\n    at /Users/drew/Documents/mpl/node_modules/webpack/lib/NormalModule.js:333:18\n    at /Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:373:3\n    at iterateNormalLoaders (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:214:10)\n    at iterateNormalLoaders (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:221:10)\n    at /Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:236:3\n    at runSyncOrAsync (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:124:12)\n    at iterateNormalLoaders (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:232:2)\n    at Array.<anonymous> (/Users/drew/Documents/mpl/node_modules/loader-runner/lib/LoaderRunner.js:205:4)\n    at Storage.finished (/Users/drew/Documents/mpl/node_modules/enhanced-resolve/lib/CachedInputFileSystem.js:55:16)\n    at /Users/drew/Documents/mpl/node_modules/enhanced-resolve/lib/CachedInputFileSystem.js:91:9\n    at /Users/drew/Documents/mpl/node_modules/graceful-fs/graceful-fs.js:78:16\n    at FSReqCallback.readFileAfterClose [as oncomplete] (internal/fs/read_file_context.js:63:3)");
+
+const readline = __webpack_require__(/*! readline */ "readline");
+
+const length = str => str.length;
+const print = str => process.stdout.write(str);
+
+const readInt = async () => {
+    return new Promise((resolve, reject) => {
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+        });
+        rl.on('line', line => {
+            rl.close();
+            resolve(line);
+        });
+    });
+};
+
+(async () => {
+    anonymous_1 = (a, b) => { return  a + b }
+    let add = 
+anonymous_1
+;
+process.exit(0)
+})();
 
 /***/ }),
 
@@ -23308,6 +23333,17 @@ module.exports = require("os");
 /***/ (function(module, exports) {
 
 module.exports = require("path");
+
+/***/ }),
+
+/***/ "readline":
+/*!***************************!*\
+  !*** external "readline" ***!
+  \***************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = require("readline");
 
 /***/ }),
 

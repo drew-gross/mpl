@@ -13,6 +13,7 @@ import { TokenSpec } from './parser-lib/lex';
 
 export type MplToken =
     | 'return'
+    | 'export'
     | 'booleanLiteral'
     | 'stringLiteral'
     | 'identifier'
@@ -59,6 +60,11 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
         token: 'return',
         type: 'return',
         toString: () => 'return',
+    },
+    {
+        token: 'export',
+        type: 'export',
+        toString: () => 'export',
     },
     {
         token: 'true|false',
@@ -222,6 +228,7 @@ export type MplParseResult = ParseResult<MplAstNode, MplToken>;
 const mplTerminal = token => Terminal<MplAstNode, MplToken>(token);
 const mplOptional = parser => Optional<MplAstNode, MplToken>(parser);
 
+const export_ = mplTerminal('export');
 const plus = mplTerminal('sum');
 const minus = mplTerminal('subtraction');
 const times = mplTerminal('product');
@@ -277,13 +284,20 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     ]),
     statement: OneOf([
         Sequence('typedDeclarationAssignment', [
+            mplOptional(export_),
             identifier,
             colon,
             'type',
             assignment,
             'expression',
         ]),
-        Sequence('declarationAssignment', [identifier, colon, assignment, 'expression']),
+        Sequence('declarationAssignment', [
+            mplOptional(export_),
+            identifier,
+            colon,
+            assignment,
+            'expression',
+        ]),
         Sequence('typeDeclaration', [typeIdentifier, colon, assignment, 'type']),
         Sequence('reassignment', [identifier, assignment, 'expression']),
     ]),

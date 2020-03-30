@@ -6,6 +6,5 @@
             "folder_exclude_patterns": ["built", ".git"]
         }
     ],
-    "settings": {
-    }
+    "settings": {"SublimeLinter.linters.eslint.disable": true}
 }

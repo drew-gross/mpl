@@ -76,6 +76,27 @@ const testCases: TestCase[] = [
         exitCode: 10,
     },
     {
+        name: 'Exported Function',
+        source: 'export constThree := a: Integer => 3;',
+        exitCode: 0,
+        failing: true, // TODO: Set up a test harness for modules
+    },
+    {
+        name: 'Exported Integer',
+        source: 'export three := 3;',
+        exitCode: 0,
+        failing: true, // TODO: Set up a test harness for modules
+    },
+    {
+        name: 'Export in Non-Module',
+        source: `
+            export three := 3;
+            return 7;
+        `,
+        exitCode: 0,
+        failing: true, // TOOD: Should be error
+    },
+    {
         name: 'Used Function',
         source: 'takeItToEleven := a: Integer => 11; return takeItToEleven(0)',
         exitCode: 11,
