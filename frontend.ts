@@ -1327,6 +1327,11 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             } as Ast.UninferredAst;
         case 'declaration': {
             let childIndex = 0;
+            let exported: boolean = false;
+            if ((ast.children[childIndex] as any).type == 'export') {
+                exported = true;
+                childIndex++;
+            }
             const destination = (ast.children[childIndex] as any).value as any;
             childIndex++;
             const destinationNode = ast.children[childIndex];
@@ -1363,6 +1368,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                     destination,
                     expression,
                     type,
+                    exported,
                     sourceLocation: ast.sourceLocation,
                 } as Ast.UninferredAst;
             } else {
@@ -1370,6 +1376,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                     kind: 'declarationAssignment',
                     destination,
                     expression,
+                    exported,
                     sourceLocation: ast.sourceLocation,
                 } as Ast.UninferredAst;
             }
@@ -1595,6 +1602,27 @@ const compile = (
         return { internalError: 'AST was not a program' };
     }
 
+    const exportedDeclarations = ast.statements.filter(
+        s =>
+            (s.kind == 'typedDeclarationAssignment' || s.kind == 'declarationAssignment') &&
+            s.exported
+    );
+
+    const topLevelStatements = ast.statements.filter(
+        s => s.kind != 'typedDeclarationAssignment' && s.kind != 'declarationAssignment'
+    );
+
+    if (exportedDeclarations.length > 0 && topLevelStatements.length > 0) {
+        return {
+            typeErrors: [
+                {
+                    kind: 'topLevelStatementsInModule',
+                    sourceLocation: topLevelStatements[0].sourceLocation,
+                },
+            ],
+        };
+    }
+
     const availableTypes = walkAst<TypeDeclaration, Ast.UninferredTypeDeclaration>(
         ast,
         ['typeDeclaration'],
@@ -1603,7 +1631,7 @@ const compile = (
 
     let availableVariables = builtinFunctions;
     const program: UninferredFunction = {
-        name: `main_program`,
+        name: 'main_program',
         statements: ast.statements,
         variables: extractVariables({ w: ast.statements, availableVariables, availableTypes }),
         parameters: [],

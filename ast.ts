@@ -197,6 +197,7 @@ export type UninferredTypedDeclarationAssignment = {
     destination: string;
     type: Type;
     expression: UninferredExpression;
+    exported: boolean;
 };
 
 export type UninferredReassignment = {
@@ -269,6 +270,7 @@ export type UninferredDeclarationAssignment = {
     sourceLocation: SourceLocation;
     destination: string;
     expression: UninferredExpression;
+    exported: boolean;
 };
 
 export type UninferredTypeDeclaration = {

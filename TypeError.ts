@@ -40,6 +40,7 @@ export type TypeError = { sourceLocation: SourceLocation } & (
     | { kind: 'uninferrableEmptyList' }
     | { kind: 'nonIntegerIndex'; index: Type }
     | { kind: 'indexAccessNonList'; accessed: Type }
+    | { kind: 'topLevelStatementsInModule' }
 );
 
 export const toString = (e: TypeError): string => {
@@ -58,6 +59,8 @@ export const toString = (e: TypeError): string => {
             return `Wrong argument type for ${e.targetFunction}. Expected ${typeToString(
                 e.expectedType
             )}, found ${typeToString(e.passedType)}.`;
+        case 'topLevelStatementsInModule':
+            return `Modules may not have top level statements.`;
         default:
             throw debug(`need string for error: ${e.kind}`);
     }

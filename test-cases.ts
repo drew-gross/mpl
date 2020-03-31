@@ -99,8 +99,10 @@ const testCases: TestCase[] = [
             export three := 3;
             return 7;
         `,
-        exitCode: 0,
-        failing: true, // TOOD: Should be error
+        typeErrors: [
+            { kind: 'topLevelStatementsInModule', sourceLocation: { column: 13, line: 3 } },
+        ],
+        only: true,
     },
     {
         name: 'Used Function',
