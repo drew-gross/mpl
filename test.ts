@@ -312,20 +312,11 @@ test('ast for assignment then return', t => {
                 type: 'statement',
                 children: [
                     {
-                        type: 'declarationAssignment',
+                        type: 'declaration',
                         children: [
-                            {
-                                type: 'identifier',
-                                value: 'constThree',
-                            },
-                            {
-                                type: 'colon',
-                                value: null,
-                            },
-                            {
-                                type: 'assignment',
-                                value: null,
-                            },
+                            { type: 'identifier', value: 'constThree' },
+                            { type: 'colon', value: null },
+                            { type: 'assignment', value: null },
                             {
                                 type: 'function',
                                 children: [
@@ -354,42 +345,24 @@ test('ast for assignment then return', t => {
                                         type: undefined,
                                         value: undefined,
                                     },
-                                    {
-                                        type: 'fatArrow',
-                                        value: null,
-                                    },
-                                    {
-                                        type: 'number',
-                                        value: 3,
-                                    },
+                                    { type: 'fatArrow', value: null },
+                                    { type: 'number', value: 3 },
                                 ],
                             },
                         ],
                     },
-                    {
-                        type: 'statementSeparator',
-                        value: null,
-                    },
+                    { type: 'statementSeparator', value: null },
                     {
                         type: 'statement',
                         children: [
                             {
                                 type: 'returnStatement',
                                 children: [
-                                    {
-                                        type: 'return',
-                                        value: null,
-                                    },
-                                    {
-                                        type: 'number',
-                                        value: 10,
-                                    },
+                                    { type: 'return', value: null },
+                                    { type: 'number', value: 10 },
                                 ],
                             },
-                            {
-                                type: 'statementSeparator',
-                                value: null,
-                            },
+                            { type: 'statementSeparator', value: null },
                         ],
                     },
                 ],

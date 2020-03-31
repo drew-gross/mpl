@@ -196,8 +196,7 @@ export type MplAstNode =
     | 'arg'
     | 'statement'
     | 'returnStatement'
-    | 'typedDeclarationAssignment'
-    | 'declarationAssignment'
+    | 'declaration'
     | 'reassignment'
     | 'ternary'
     | 'addition'
@@ -284,18 +283,11 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         mplOptional('functionBody'),
     ]),
     statement: OneOf([
-        Sequence('typedDeclarationAssignment', [
+        Sequence('declaration', [
             mplOptional(export_),
             identifier,
             colon,
-            'type',
-            assignment,
-            'expression',
-        ]),
-        Sequence('declarationAssignment', [
-            mplOptional(export_),
-            identifier,
-            colon,
+            mplOptional('type'),
             assignment,
             'expression',
         ]),

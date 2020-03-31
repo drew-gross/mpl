@@ -1325,38 +1325,66 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 expression: astFromParseResult(ast.children[2]),
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
-        case 'declarationAssignment':
-            if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
-            return {
-                kind: 'declarationAssignment',
-                destination: (ast.children[0] as any).value as any,
-                expression: astFromParseResult(ast.children[3]),
-                sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredAst;
-        case 'typedDeclarationAssignment':
-            const destinationNode = ast.children[0];
+        case 'declaration': {
+            let childIndex = 0;
+            const destination = (ast.children[childIndex] as any).value as any;
+            childIndex++;
+            const destinationNode = ast.children[childIndex];
             if (isSeparatedListNode(destinationNode) || isListNode(destinationNode)) {
                 throw debug('todo');
             }
-            if (destinationNode.type != 'identifier') return 'WrongShapeAst';
-            const expression = astFromParseResult(ast.children[4]); // TODO: figure out why this isn't a type error
-            return {
-                kind: 'typedDeclarationAssignment',
-                destination: destinationNode.value,
-                type: parseType(ast.children[2]),
+            if (destinationNode.type != 'colon') debug('expected a colon');
+            childIndex++;
+            let type: Type | undefined = undefined;
+            const maybeTypeNode = ast.children[childIndex];
+            if (isSeparatedListNode(maybeTypeNode) || isListNode(maybeTypeNode)) {
+                throw debug('todo');
+            }
+            if (
+                ['typeWithArgs', 'typeWithoutArgs', 'typeLiteral'].includes(maybeTypeNode.type)
+            ) {
+                type = parseType(maybeTypeNode);
+                childIndex++;
+            }
+
+            if ((ast.children[childIndex] as any).type != 'assignment')
+                debug('expected assignment');
+            childIndex++;
+            const expression = astFromParseResult(ast.children[childIndex]);
+            const result = {
+                kind: 'declarationAssignment',
+                destination,
                 expression,
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
+            if (type) {
+                return {
+                    kind: 'typedDeclarationAssignment',
+                    destination,
+                    expression,
+                    type,
+                    sourceLocation: ast.sourceLocation,
+                } as Ast.UninferredAst;
+            } else {
+                return {
+                    kind: 'declarationAssignment',
+                    destination,
+                    expression,
+                    sourceLocation: ast.sourceLocation,
+                } as Ast.UninferredAst;
+            }
+            return result;
+        }
         case 'typeDeclaration':
-            const type: Type = parseType(ast.children[3]);
+            const theType: Type = parseType(ast.children[3]);
             const name: string = (ast.children[0] as any).value;
-            if (type.kind == 'Product') {
-                type.name = name;
+            if (theType.kind == 'Product') {
+                theType.name = name;
             }
             return {
                 kind: 'typeDeclaration',
                 name,
-                type,
+                type: theType,
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredTypeDeclaration & SourceLocation;
         case 'stringLiteral':
