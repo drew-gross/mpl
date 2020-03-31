@@ -29,42 +29,48 @@ const manyGlobalsMultiply = () => {
 };
 
 const testCases: TestCase[] = [
-    { name: 'Bare Return', source: 'return 7', exitCode: 7 },
-    { name: 'Single Product', source: 'return 2 * 2', exitCode: 4 },
-    { name: 'Brackets', source: 'return (3)', exitCode: 3 },
+    { name: 'Bare Return', source: 'return 7;', exitCode: 7 },
+    { name: 'Single Product', source: 'return 2 * 2;', exitCode: 4 },
+    { name: 'Brackets', source: 'return (3);', exitCode: 3 },
     {
         name: 'Double Product with Brackets',
-        source: 'return 2 * (3 * 4) * 5',
+        source: 'return 2 * (3 * 4) * 5;',
         exitCode: 120,
         ast: {
             type: 'program',
             children: [
                 {
-                    type: 'returnStatement',
+                    type: 'statement',
                     children: [
-                        { type: 'return', value: null },
                         {
-                            type: 'product',
+                            type: 'returnStatement',
                             children: [
+                                { type: 'return', value: null },
                                 {
                                     type: 'product',
                                     children: [
-                                        { type: 'number', value: 2 },
-                                        { type: 'product', value: null },
                                         {
                                             type: 'product',
                                             children: [
-                                                { type: 'number', value: 3 },
+                                                { type: 'number', value: 2 },
                                                 { type: 'product', value: null },
-                                                { type: 'number', value: 4 },
+                                                {
+                                                    type: 'product',
+                                                    children: [
+                                                        { type: 'number', value: 3 },
+                                                        { type: 'product', value: null },
+                                                        { type: 'number', value: 4 },
+                                                    ],
+                                                },
                                             ],
                                         },
+                                        { type: 'product', value: null },
+                                        { type: 'number', value: 5 },
                                     ],
                                 },
-                                { type: 'product', value: null },
-                                { type: 'number', value: 5 },
                             ],
                         },
+                        { type: 'statementSeparator', value: null },
                     ],
                 },
             ],
@@ -72,7 +78,7 @@ const testCases: TestCase[] = [
     },
     {
         name: 'Unused Function',
-        source: 'constThree := a: Integer => 3; return 10',
+        source: 'constThree := a: Integer => 3; return 10;',
         exitCode: 10,
     },
     {
@@ -98,7 +104,7 @@ const testCases: TestCase[] = [
     },
     {
         name: 'Used Function',
-        source: 'takeItToEleven := a: Integer => 11; return takeItToEleven(0)',
+        source: 'takeItToEleven := a: Integer => 11; return takeItToEleven(0);',
         exitCode: 11,
     },
     {
@@ -152,12 +158,12 @@ return a;
         name: 'Function Returns Boolean',
         source: `
 isFive: Function<Integer, Boolean> = a: Integer => a == 5;
-return isFive(5) ? 1 : 0`,
+return isFive(5) ? 1 : 0;`,
         exitCode: 1,
     },
     {
         name: 'Ternary False',
-        source: 'return 0 == 1 ? 5 : 6',
+        source: 'return 0 == 1 ? 5 : 6;',
         exitCode: 6,
     },
     {
@@ -425,7 +431,7 @@ return isFive(5) ? 1 : 0`,
     {
         name: 'Id Function',
         source: `
-            id := a: Integer => a; return id(5)
+            id := a: Integer => a; return id(5);
         `,
         exitCode: 5,
     },
@@ -513,7 +519,7 @@ return isFive(5) ? 1 : 0`,
         name: 'Return String',
         source: `
             isFive: Function<Integer, String> = a: Integer => a == 5 ? "isFive" : "isNotFive";
-            return length(isFive(5))
+            return length(isFive(5));
         `,
         exitCode: 6,
     },

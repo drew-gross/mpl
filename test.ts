@@ -40,7 +40,7 @@ import {
 import { orderedSet, operatorCompare } from './util/ordered-set';
 import { set } from './util/set';
 import { shuffle } from 'shuffle-seed';
-//import loader from './mpl-loader';
+// import loader from './mpl-loader';
 
 test('double flatten', t => {
     t.deepEqual(flatten(flatten([[[1, 2]], [[3], [4]], [[5]]])), [1, 2, 3, 4, 5]);
@@ -155,18 +155,24 @@ test('ast for number in brackets', t => {
             sourceLocation: { line: 1, column: 2 },
             children: [
                 {
-                    type: 'returnStatement',
+                    type: 'statement',
                     sourceLocation: { line: 1, column: 2 },
                     children: [
                         {
-                            type: 'return',
-                            value: null,
+                            type: 'returnStatement',
                             sourceLocation: { line: 1, column: 2 },
-                        },
-                        {
-                            type: 'number',
-                            value: 5,
-                            sourceLocation: { line: 1, column: 10 },
+                            children: [
+                                {
+                                    type: 'return',
+                                    value: null,
+                                    sourceLocation: { line: 1, column: 2 },
+                                },
+                                {
+                                    type: 'number',
+                                    value: 5,
+                                    sourceLocation: { line: 1, column: 10 },
+                                },
+                            ],
                         },
                         {
                             type: 'statementSeparator',
@@ -190,18 +196,24 @@ test('ast for number in double brackets', t => {
             sourceLocation: { line: 1, column: 1 },
             children: [
                 {
-                    type: 'returnStatement',
+                    type: 'statement',
                     sourceLocation: { line: 1, column: 1 },
                     children: [
                         {
-                            type: 'return',
-                            value: null,
+                            type: 'returnStatement',
                             sourceLocation: { line: 1, column: 1 },
-                        },
-                        {
-                            type: 'number',
-                            value: 20,
-                            sourceLocation: { line: 1, column: 10 },
+                            children: [
+                                {
+                                    type: 'return',
+                                    value: null,
+                                    sourceLocation: { line: 1, column: 1 },
+                                },
+                                {
+                                    type: 'number',
+                                    value: 20,
+                                    sourceLocation: { line: 1, column: 10 },
+                                },
+                            ],
                         },
                         {
                             type: 'statementSeparator',
@@ -229,46 +241,52 @@ test('ast for product with brackets', t => {
             sourceLocation: { line: 1, column: 1 },
             children: [
                 {
-                    type: 'returnStatement',
+                    type: 'statement',
                     sourceLocation: { line: 1, column: 1 },
                     children: [
                         {
-                            type: 'return',
+                            type: 'returnStatement',
                             sourceLocation: { line: 1, column: 1 },
-                            value: null,
-                        },
-                        {
-                            type: 'product',
-                            sourceLocation: { line: 1, column: 8 },
                             children: [
                                 {
-                                    type: 'number',
-                                    value: 3,
-                                    sourceLocation: { line: 1, column: 8 },
-                                },
-                                {
-                                    type: 'product',
+                                    type: 'return',
+                                    sourceLocation: { line: 1, column: 1 },
                                     value: null,
-                                    sourceLocation: { line: 1, column: 10 },
                                 },
                                 {
                                     type: 'product',
-                                    sourceLocation: { line: 1, column: 13 },
+                                    sourceLocation: { line: 1, column: 8 },
                                     children: [
                                         {
                                             type: 'number',
-                                            value: 4,
-                                            sourceLocation: { line: 1, column: 13 },
+                                            value: 3,
+                                            sourceLocation: { line: 1, column: 8 },
                                         },
                                         {
                                             type: 'product',
                                             value: null,
-                                            sourceLocation: { line: 1, column: 15 },
+                                            sourceLocation: { line: 1, column: 10 },
                                         },
                                         {
-                                            type: 'number',
-                                            value: 5,
-                                            sourceLocation: { line: 1, column: 17 },
+                                            type: 'product',
+                                            sourceLocation: { line: 1, column: 13 },
+                                            children: [
+                                                {
+                                                    type: 'number',
+                                                    value: 4,
+                                                    sourceLocation: { line: 1, column: 13 },
+                                                },
+                                                {
+                                                    type: 'product',
+                                                    value: null,
+                                                    sourceLocation: { line: 1, column: 15 },
+                                                },
+                                                {
+                                                    type: 'number',
+                                                    value: 5,
+                                                    sourceLocation: { line: 1, column: 17 },
+                                                },
+                                            ],
                                         },
                                     ],
                                 },
@@ -353,15 +371,20 @@ test('ast for assignment then return', t => {
                         value: null,
                     },
                     {
-                        type: 'returnStatement',
+                        type: 'statement',
                         children: [
                             {
-                                type: 'return',
-                                value: null,
-                            },
-                            {
-                                type: 'number',
-                                value: 10,
+                                type: 'returnStatement',
+                                children: [
+                                    {
+                                        type: 'return',
+                                        value: null,
+                                    },
+                                    {
+                                        type: 'number',
+                                        value: 10,
+                                    },
+                                ],
                             },
                             {
                                 type: 'statementSeparator',
@@ -386,33 +409,42 @@ test('ast for assignment then return', t => {
 });
 
 test('lowering of bracketedExpressions', t => {
-    const lexResult = lex(tokenSpecs, 'return (8 * ((7)))') as Token<MplToken>[];
+    const lexResult = lex(tokenSpecs, 'return (8 * ((7)));') as Token<MplToken>[];
     t.deepEqual(stripSourceLocation(parseMpl(lexResult)), {
         type: 'program',
         children: [
             {
-                type: 'returnStatement',
+                type: 'statement',
                 children: [
                     {
-                        type: 'return',
-                        value: null,
-                    },
-                    {
-                        type: 'product',
+                        type: 'returnStatement',
                         children: [
                             {
-                                type: 'number',
-                                value: 8,
-                            },
-                            {
-                                type: 'product',
+                                type: 'return',
                                 value: null,
                             },
                             {
-                                type: 'number',
-                                value: 7,
+                                type: 'product',
+                                children: [
+                                    {
+                                        type: 'number',
+                                        value: 8,
+                                    },
+                                    {
+                                        type: 'product',
+                                        value: null,
+                                    },
+                                    {
+                                        type: 'number',
+                                        value: 7,
+                                    },
+                                ],
                             },
                         ],
+                    },
+                    {
+                        type: 'statementSeparator',
+                        value: null,
                     },
                 ],
             },
@@ -495,48 +527,36 @@ testCases.forEach(
 );
 
 test('double product', mplTest, {
-    source: 'return 5 * 3 * 4',
+    source: 'return 5 * 3 * 4;',
     exitCode: 60,
     expectedAst: {
         type: 'program',
         children: [
             {
-                type: 'returnStatement',
+                type: 'statement',
                 children: [
                     {
-                        type: 'return',
-                        value: null,
-                    },
-                    {
-                        type: 'product',
+                        type: 'returnStatement',
                         children: [
+                            { type: 'return', value: null },
                             {
                                 type: 'product',
                                 children: [
                                     {
-                                        type: 'number',
-                                        value: 5,
-                                    },
-                                    {
                                         type: 'product',
-                                        value: null,
+                                        children: [
+                                            { type: 'number', value: 5 },
+                                            { type: 'product', value: null },
+                                            { type: 'number', value: 3 },
+                                        ],
                                     },
-                                    {
-                                        type: 'number',
-                                        value: 3,
-                                    },
+                                    { type: 'product', value: null },
+                                    { type: 'number', value: 4 },
                                 ],
-                            },
-                            {
-                                type: 'product',
-                                value: null,
-                            },
-                            {
-                                type: 'number',
-                                value: 4,
                             },
                         ],
                     },
+                    { type: 'statementSeparator', value: null },
                 ],
             },
         ],
@@ -544,48 +564,36 @@ test('double product', mplTest, {
 });
 
 test('brackets product', mplTest, {
-    source: 'return (3 * 4) * 5',
+    source: 'return (3 * 4) * 5;',
     exitCode: 60,
     expectedAst: {
         type: 'program',
         children: [
             {
-                type: 'returnStatement',
+                type: 'statement',
                 children: [
                     {
-                        type: 'return',
-                        value: null,
-                    },
-                    {
-                        type: 'product',
+                        type: 'returnStatement',
                         children: [
+                            { type: 'return', value: null },
                             {
                                 type: 'product',
                                 children: [
                                     {
-                                        type: 'number',
-                                        value: 3,
-                                    },
-                                    {
                                         type: 'product',
-                                        value: null,
+                                        children: [
+                                            { type: 'number', value: 3 },
+                                            { type: 'product', value: null },
+                                            { type: 'number', value: 4 },
+                                        ],
                                     },
-                                    {
-                                        type: 'number',
-                                        value: 4,
-                                    },
+                                    { type: 'product', value: null },
+                                    { type: 'number', value: 5 },
                                 ],
-                            },
-                            {
-                                type: 'product',
-                                value: null,
-                            },
-                            {
-                                type: 'number',
-                                value: 5,
                             },
                         ],
                     },
+                    { type: 'statementSeparator', value: null },
                 ],
             },
         ],
@@ -593,27 +601,27 @@ test('brackets product', mplTest, {
 });
 
 test('double function', mplTest, {
-    source: 'doubleIt := a: Integer => 2 * a; return doubleIt(100)',
+    source: 'doubleIt := a: Integer => 2 * a; return doubleIt(100);',
     exitCode: 200,
 });
 
 test('subtraction', mplTest, {
-    source: 'return 7 - 5',
+    source: 'return 7 - 5;',
     exitCode: 2,
 });
 
 test('order of operations', mplTest, {
-    source: 'return 2 * 5 - 1',
+    source: 'return 2 * 5 - 1;',
     exitCode: 9,
 });
 
 test('associativity of subtraction', mplTest, {
-    source: 'return 5 - 2 - 1',
+    source: 'return 5 - 2 - 1;',
     exitCode: 2,
 });
 
 test('ternary true', mplTest, {
-    source: 'return 1 == 1 ? 5 : 6',
+    source: 'return 1 == 1 ? 5 : 6;',
     exitCode: 5,
 });
 
@@ -667,7 +675,7 @@ return recursive(1);`,
 });
 
 test('return bool fail', mplTest, {
-    source: 'return 1 == 2',
+    source: 'return 1 == 2;',
     expectedTypeErrors: [
         {
             kind: 'wrongTypeReturn',
@@ -678,12 +686,12 @@ test('return bool fail', mplTest, {
 });
 
 test('boolean literal false', mplTest, {
-    source: `return false ? 1 : 2`,
+    source: `return false ? 1 : 2;`,
     exitCode: 2,
 });
 
 test('boolean literal true', mplTest, {
-    source: `return true ? 1 : 2`,
+    source: `return true ? 1 : 2;`,
     exitCode: 1,
 });
 
@@ -807,7 +815,7 @@ return myFunc("");`,
 });
 
 test('return local integer', mplTest, {
-    source: 'myVar: Integer = 3 * 3; return myVar',
+    source: 'myVar: Integer = 3 * 3; return myVar;',
     exitCode: 9,
 });
 
@@ -912,12 +920,12 @@ test('concatenate and get length then subtract', mplTest, {
 });
 
 test('parsing fails for extra invalid tokens', mplTest, {
-    source: `return 5 (`,
+    source: `return 5; (`,
     expectedParseErrors: [
         {
             found: 'leftBracket',
             expected: 'endOfFile',
-            sourceLocation: { line: 1, column: 10 },
+            sourceLocation: { line: 1, column: 11 },
         },
     ],
 });
@@ -1094,7 +1102,7 @@ foo := () => {
     b = 2;
     return a + b;
 };
-return foo()`,
+return foo();`,
     expectedTypeErrors: [
         {
             kind: 'assignUndeclaredIdentifer',

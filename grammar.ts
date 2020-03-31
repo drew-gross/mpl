@@ -278,9 +278,10 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     ]),
     argList: SeparatedList(comma, 'arg'),
     arg: Sequence('arg', [identifier, colon, 'type']),
-    functionBody: OneOf([
-        Sequence('statement', ['statement', statementSeparator, 'functionBody']),
-        Sequence('statement', ['statement', mplOptional(statementSeparator)]),
+    functionBody: Sequence('statement', [
+        'statement',
+        statementSeparator,
+        mplOptional('functionBody'),
     ]),
     statement: OneOf([
         Sequence('typedDeclarationAssignment', [

@@ -26,7 +26,7 @@ import {
 import { TypeError } from './TypeError';
 import SourceLocation from './parser-lib/sourceLocation';
 import * as Ast from './ast';
-//const add = require('./mpl/add.mpl');
+// const add = require('./mpl/add.mpl');
 
 // TODO move this to parser lit
 const hasType = (ast, type: string) => 'type' in ast && ast.type == type;
@@ -1115,28 +1115,12 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
     }
 };
 
-const makeProgramAstNodeFromStatmentParseResult = (ast): Ast.UninferredStatement[] => {
-    const children: Ast.UninferredStatement[] = [];
-    if (ast.type === 'statement') {
-        children.push(astFromParseResult(ast.children[0]) as Ast.UninferredStatement);
-        children.push(...makeProgramAstNodeFromStatmentParseResult(ast.children[2]));
-    } else {
-        children.push(astFromParseResult(ast) as Ast.UninferredStatement);
-    }
-    return children;
-};
-
 const extractFunctionBody = node => {
-    switch (node.type) {
-        case 'returnStatement':
-            return [astFromParseResult(node)];
-        case 'statement':
-            return [
-                astFromParseResult(node.children[0]),
-                ...extractFunctionBody(node.children[2]),
-            ];
-        default:
-            throw debug(`${node.type} unhandled in extractFunctionBody`);
+    if (node.type !== 'statement') debug('expected a statement');
+    if (node.children.length === 3) {
+        return [astFromParseResult(node.children[0]), ...extractFunctionBody(node.children[2])];
+    } else {
+        return [astFromParseResult(node.children[0])];
     }
 };
 
@@ -1254,7 +1238,7 @@ const parseObjectMember = (ast: MplAst): Ast.UninferredObjectMember | 'WrongShap
     return result;
 };
 
-let functionId = 0; //add(-1, 1);
+let functionId = 0; // add(-1, 1);
 const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' => {
     if (isSeparatedListNode(ast) || isListNode(ast)) {
         throw debug('todo');
@@ -1531,7 +1515,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
         case 'program':
             return {
                 kind: 'program',
-                statements: makeProgramAstNodeFromStatmentParseResult(ast.children[0]),
+                statements: extractFunctionBody(ast.children[0]),
                 sourceLocation: ast.sourceLocation,
             };
         case 'listLiteral':

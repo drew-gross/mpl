@@ -12,6 +12,7 @@ import { toString as typeErrorToString } from './TypeError';
 import * as chalk from 'chalk';
 import * as commander from 'commander';
 import annotateSource from './annotateSource';
+import * as deepEqual from 'deep-equal';
 
 (async () => {
     commander
@@ -88,11 +89,14 @@ import annotateSource from './annotateSource';
                 .path
         }`
     );
-    console.log(
-        `Ast: ${
-            (await writeTempFile(JSON.stringify(programInfo.ast, null, 2), 'ast', 'json')).path
-        }`
-    );
+    const astFile = await writeTempFile(JSON.stringify(programInfo.ast, null, 2), 'ast', 'json');
+    const astInfo = `Ast: ${astFile.path}`;
+    const astMismatch = 'ast' in testCase && !deepEqual(testCase.ast, programInfo.ast);
+    if (astMismatch) {
+        console.log(chalk.red(astInfo));
+    } else {
+        console.log(astInfo);
+    }
 
     const dotText = dot.write(toDotFile(programInfo.ast));
     const svgFile = await tmpFile({ template: 'ast-XXXXXX.svg', dir: '/tmp' });
