@@ -102,7 +102,6 @@ const testCases: TestCase[] = [
         typeErrors: [
             { kind: 'topLevelStatementsInModule', sourceLocation: { column: 13, line: 3 } },
         ],
-        only: true,
     },
     {
         name: 'Used Function',

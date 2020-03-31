@@ -51,147 +51,38 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
         },
         toString: x => x,
     },
-    {
-        token: ',',
-        type: 'comma',
-        toString: () => ', ',
-    },
-    {
-        token: 'return',
-        type: 'return',
-        toString: () => 'return',
-    },
-    {
-        token: 'export',
-        type: 'export',
-        toString: () => 'export',
-    },
-    {
-        token: 'true|false',
-        type: 'booleanLiteral',
-        action: x => x.trim(),
-        toString: x => x,
-    },
-    {
-        token: '[a-z]\\w*',
-        type: 'identifier',
-        action: x => x,
-        toString: x => x,
-    },
-    {
-        token: '[A-Z][A-z]*',
-        type: 'typeIdentifier',
-        action: x => x,
-        toString: x => x,
-    },
-    {
-        token: ';',
-        type: 'statementSeparator',
-        toString: _ => ';',
-    },
-    {
-        token: '=>',
-        type: 'fatArrow',
-        toString: _ => '=>',
-    },
-    {
-        token: '==',
-        type: 'equality',
-        toString: _ => '==',
-    },
-    {
-        token: '=',
-        type: 'assignment',
-        toString: _ => '=',
-    },
-    {
-        token: '\\d+',
-        type: 'number',
-        action: parseInt,
-        toString: x => x.toString(),
-    },
-    {
-        token: '\\+\\+',
-        type: 'concatenation',
-        toString: _ => '++',
-    },
-    {
-        token: '\\+',
-        type: 'sum',
-        toString: _ => '+',
-    },
-    {
-        token: '\\*',
-        type: 'product',
-        toString: _ => '*',
-    },
-    {
-        token: '\\-',
-        type: 'subtraction',
-        toString: _ => '-',
-    },
-    {
-        token: '\\(',
-        type: 'leftBracket',
-        toString: _ => '(',
-    },
-    {
-        token: '\\)',
-        type: 'rightBracket',
-        toString: _ => ')',
-    },
-    {
-        token: '{',
-        type: 'leftCurlyBrace',
-        toString: _ => '{',
-    },
-    {
-        token: '}',
-        type: 'rightCurlyBrace',
-        toString: _ => '}',
-    },
-    {
-        token: '\\[',
-        type: 'leftSquareBracket',
-        toString: _ => '[',
-    },
-    {
-        token: '\\]',
-        type: 'rightSquareBracket',
-        toString: _ => ']',
-    },
-    {
-        token: '\\:',
-        type: 'colon',
-        toString: _ => ':',
-    },
-    {
-        token: '\\?',
-        type: 'ternaryOperator',
-        toString: _ => '?',
-    },
-    {
-        token: '<',
-        type: 'lessThan',
-        toString: _ => '<',
-    },
-    {
-        token: '>',
-        type: 'greaterThan',
-        toString: _ => '>',
-    },
-    {
-        token: '\\.',
-        type: 'memberAccess',
-        toString: _ => '.',
-    },
+    { token: ',', type: 'comma', toString: () => ', ' },
+    { token: 'return', type: 'return', toString: () => 'return' },
+    { token: 'export', type: 'export', toString: () => 'export' },
+    { token: 'true|false', type: 'booleanLiteral', action: x => x.trim(), toString: x => x },
+    { token: '[a-z]\\w*', type: 'identifier', action: x => x, toString: x => x },
+    { token: '[A-Z][A-z]*', type: 'typeIdentifier', action: x => x, toString: x => x },
+    { token: ';', type: 'statementSeparator', toString: _ => ';' },
+    { token: '=>', type: 'fatArrow', toString: _ => '=>' },
+    { token: '==', type: 'equality', toString: _ => '==' },
+    { token: '=', type: 'assignment', toString: _ => '=' },
+    { token: '\\d+', type: 'number', action: parseInt, toString: x => x.toString() },
+    { token: '\\+\\+', type: 'concatenation', toString: _ => '++' },
+    { token: '\\+', type: 'sum', toString: _ => '+' },
+    { token: '\\*', type: 'product', toString: _ => '*' },
+    { token: '\\-', type: 'subtraction', toString: _ => '-' },
+    { token: '\\(', type: 'leftBracket', toString: _ => '(' },
+    { token: '\\)', type: 'rightBracket', toString: _ => ')' },
+    { token: '{', type: 'leftCurlyBrace', toString: _ => '{' },
+    { token: '}', type: 'rightCurlyBrace', toString: _ => '}' },
+    { token: '\\[', type: 'leftSquareBracket', toString: _ => '[' },
+    { token: '\\]', type: 'rightSquareBracket', toString: _ => ']' },
+    { token: '\\:', type: 'colon', toString: _ => ':' },
+    { token: '\\?', type: 'ternaryOperator', toString: _ => '?' },
+    { token: '<', type: 'lessThan', toString: _ => '<' },
+    { token: '>', type: 'greaterThan', toString: _ => '>' },
+    { token: '\\.', type: 'memberAccess', toString: _ => '.' },
 ];
 
 export type MplAstNode =
     | 'program'
     | 'function'
     | 'functionWithBlock'
-    | 'bracketedArgList' // TODO: grep-remove this
     | 'argList'
     | 'arg'
     | 'statement'

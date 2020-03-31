@@ -53,16 +53,8 @@ type TacToken =
     | 'statementSeparator';
 
 const tokenSpecs: TokenSpec<TacToken>[] = [
-    {
-        token: '\\(global\\)',
-        type: 'global',
-        toString: x => x,
-    },
-    {
-        token: '\\(function\\)',
-        type: 'function',
-        toString: x => x,
-    },
+    { token: '\\(global\\)', type: 'global', toString: x => x },
+    { token: '\\(function\\)', type: 'function', toString: x => x },
     {
         token: '\\(spill:\\d+\\)',
         type: 'spillSpec',
@@ -81,131 +73,30 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         toString: x => x,
         action: s => parseInt(s.slice(8), 10),
     },
-    {
-        token: 'return',
-        type: 'return',
-        toString: x => x,
-    },
-    {
-        token: 'goto',
-        type: 'goto',
-        toString: x => x,
-    },
-    {
-        token: 'alloca',
-        type: 'alloca',
-        toString: x => x,
-    },
-    {
-        token: 'r:[a-z]\\w*',
-        type: 'register',
-        toString: x => x,
-        action: x => x,
-    },
-    {
-        token: 'syscall',
-        type: 'syscall',
-        toString: x => x,
-        action: x => x,
-    },
-    {
-        token: 'if',
-        type: 'if',
-        toString: x => x,
-    },
-    {
-        token: '\\:',
-        type: 'colon',
-        toString: _ => ':',
-    },
-    {
-        token: '\\,',
-        type: 'comma',
-        toString: _ => ',',
-    },
-    {
-        token: '-?\\d+',
-        type: 'number',
-        action: parseInt,
-        toString: x => x.toString(),
-    },
-    {
-        token: '!=',
-        type: 'notEqual',
-        toString: _ => '!=',
-    },
-    {
-        token: '\\+=',
-        type: 'plusEqual',
-        toString: _ => '+=',
-    },
-    {
-        token: '==',
-        type: 'doubleEqual',
-        toString: _ => '==',
-    },
-    {
-        token: '\\+\\+',
-        type: 'plusplus',
-        toString: _ => '++',
-    },
-    {
-        token: '\\+',
-        type: 'plus',
-        toString: _ => '+',
-    },
-    {
-        token: '\\(',
-        type: 'leftBracket',
-        toString: _ => '(',
-    },
-    {
-        token: '\\)',
-        type: 'rightBracket',
-        toString: _ => ')',
-    },
-    {
-        token: '=',
-        type: 'assign',
-        toString: () => '=',
-    },
-    {
-        token: '\\*',
-        type: 'star',
-        toString: _ => '*',
-    },
-    {
-        token: '\\&',
-        type: 'and',
-        toString: _ => '*',
-    },
-    {
-        token: '\\-',
-        type: 'minus',
-        toString: _ => '-',
-    },
-    {
-        token: '<',
-        type: 'lessThan',
-        toString: _ => '<',
-    },
-    {
-        token: '>',
-        type: 'greaterThan',
-        toString: _ => '>',
-    },
-    {
-        token: '[a-z]\\w*',
-        type: 'identifier',
-        action: x => x,
-        toString: x => x,
-    },
-    {
-        token: ';.*\n?',
-        type: 'statementSeparator',
-        action: x => x,
-        toString: x => x,
-    },
+    { token: 'return', type: 'return', toString: x => x },
+    { token: 'goto', type: 'goto', toString: x => x },
+    { token: 'alloca', type: 'alloca', toString: x => x },
+    { token: 'r:[a-z]\\w*', type: 'register', toString: x => x, action: x => x },
+    { token: 'syscall', type: 'syscall', toString: x => x, action: x => x },
+    { token: 'if', type: 'if', toString: x => x },
+    { token: '\\:', type: 'colon', toString: _ => ':' },
+    { token: '\\,', type: 'comma', toString: _ => ',' },
+    { token: '-?\\d+', type: 'number', action: parseInt, toString: x => x.toString() },
+    { token: '!=', type: 'notEqual', toString: _ => '!=' },
+    { token: '\\+=', type: 'plusEqual', toString: _ => '+=' },
+    { token: '==', type: 'doubleEqual', toString: _ => '==' },
+    { token: '\\+\\+', type: 'plusplus', toString: _ => '++' },
+    { token: '\\+', type: 'plus', toString: _ => '+' },
+    { token: '\\(', type: 'leftBracket', toString: _ => '(' },
+    { token: '\\)', type: 'rightBracket', toString: _ => ')' },
+    { token: '=', type: 'assign', toString: () => '=' },
+    { token: '\\*', type: 'star', toString: _ => '*' },
+    { token: '\\&', type: 'and', toString: _ => '*' },
+    { token: '\\-', type: 'minus', toString: _ => '-' },
+    { token: '<', type: 'lessThan', toString: _ => '<' },
+    { token: '>', type: 'greaterThan', toString: _ => '>' },
+    { token: '[a-z]\\w*', type: 'identifier', action: x => x, toString: x => x },
+    { token: ';.*\n?', type: 'statementSeparator', action: x => x, toString: x => x },
 ];
 
 type TacAstNode =
