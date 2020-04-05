@@ -11,7 +11,7 @@ import produceProgramInfo from './produceProgramInfo';
 export interface Test {
     name: string;
     source: string;
-    failing?: boolean; // Expect this to fail
+    failing?: boolean | string | string[]; // Expect this to fail, or backends that are expected to fail
     only?: boolean; // Run only this test
     infiniteLooping?: boolean; // Don't even attempt to compile this, it will infinite loop
 }
@@ -20,7 +20,7 @@ export type TestProgram = {
     // To extend "Test"
     name: string;
     source: string;
-    failing?: boolean; // Expect this to fail
+    failing?: boolean | string | string[]; // Expect this to fail
     only?: boolean; // Run only this test
     infiniteLooping?: boolean; // Don't even attempt to compile this, it will infinite loop
 
@@ -39,7 +39,7 @@ export type TestModule = {
     // To extend "Test"
     name: string;
     source: string;
-    failing?: boolean; // Expect this to fail
+    failing?: boolean | string | string[]; // Expect this to fail
     only?: boolean; // Run only this test
     infiniteLooping?: boolean; // Don't even attempt to compile this, it will infinite loop
 };
@@ -72,19 +72,23 @@ type TestOptions = {
     stdin?: string;
 };
 
+const required = (errorMessage: string): any => {
+    throw errorMessage;
+};
+
 export const mplTest = async (
     t,
     {
-        source,
+        source = required('test must have source code'),
         exitCode,
-        expectedTypeErrors,
-        expectedParseErrors,
-        expectedStdOut,
-        expectedAst,
-        failing = [],
+        typeErrors,
+        parseErrors,
+        stdout,
+        ast,
+        failing,
         name = undefined,
         stdin = '',
-    }: TestOptions
+    }: Partial<TestProgram>
 ) => {
     if (typeof failing === 'string') {
         failing = [failing];
@@ -108,24 +112,24 @@ export const mplTest = async (
     }
 
     if ('parseErrors' in programInfo) {
-        if (expectedParseErrors) {
+        if (parseErrors) {
             // I'm still iterating on how these keys will work. No point fixing the tests yet.
             const keysToOmit = ['whileParsing', 'foundTokenText'];
-            t.deepEqual(expectedParseErrors, omitDeep(programInfo.parseErrors, keysToOmit));
+            t.deepEqual(parseErrors, omitDeep(programInfo.parseErrors, keysToOmit));
         } else {
             error('parse error');
         }
         return;
     }
 
-    if (expectedParseErrors) {
+    if (parseErrors) {
         error('expected parse errors and none found');
         return;
     }
 
     if ('typeErrors' in programInfo) {
-        if (expectedTypeErrors) {
-            t.deepEqual(expectedTypeErrors, programInfo.typeErrors);
+        if (typeErrors) {
+            t.deepEqual(typeErrors, programInfo.typeErrors);
             return;
         } else {
             error(
@@ -138,14 +142,14 @@ export const mplTest = async (
         return;
     }
 
-    if (expectedTypeErrors) {
+    if (typeErrors) {
         error('expected type errors and none found');
         return;
     }
 
     // Frontend
-    if (expectedAst) {
-        t.deepEqual(stripSourceLocation(programInfo.ast), expectedAst);
+    if (ast) {
+        t.deepEqual(stripSourceLocation(programInfo.ast), ast);
     }
 
     // Run valdations on frontend output (currently just detects values that don't match their type)
@@ -200,41 +204,36 @@ generated source:
             return;
         }
         const testPassed = executionResults.every(r =>
-            passed(
-                {
-                    exitCode,
-                    stdout: expectedStdOut,
-                    name: backendName ? backendName : 'unnamed',
-                    source,
-                },
-                r
-            )
+            passed({ exitCode, stdout, name: backendName ? backendName : 'unnamed', source }, r)
         );
 
-        if (!failing.includes(backendName)) {
-            if (!testPassed) {
-                error('wrong behaviour');
-            }
-            // TODO: share this code with some of the code in debug-test-case.ts
-            const verbose = false;
-            if (verbose) {
-                console.log('');
-                console.log(`Name: ${backendName}`);
-                executionResults.forEach(r => {
-                    console.log(`Executor: ${r.executorName}`);
-                    if ('exitCode' in r) {
-                        const { stdout, exitCode: actualExitCode } = r;
-                        console.log(`Exit code: ${exitCode}`);
-                        console.log(`Expected exit code: ${actualExitCode}`);
-                        if (expectedStdOut !== undefined) {
-                            console.log(`Stdout: ${stdout}`);
-                            console.log(`Expected Stdout: ${expectedStdOut}`);
-                        }
-                    } else {
-                        console.log(`Error: ${r.error}`);
+        // Allow failures if specific backends are expected to be failing, otherwise require success
+        if (Array.isArray(failing) && failing.includes(backendName)) return;
+        if (typeof failing === 'string' && failing == backendName) return;
+
+        if (!testPassed) {
+            error('wrong behaviour');
+        }
+
+        // TODO: share this code with some of the code in debug-test-case.ts
+        const verbose = false;
+        if (verbose) {
+            console.log('');
+            console.log(`Name: ${backendName}`);
+            executionResults.forEach(r => {
+                console.log(`Executor: ${r.executorName}`);
+                if ('exitCode' in r) {
+                    const { stdout: actualStdout, exitCode: actualExitCode } = r;
+                    console.log(`Exit code: ${exitCode}`);
+                    console.log(`Expected exit code: ${actualExitCode}`);
+                    if (stdout !== undefined) {
+                        console.log(`Stdout: ${actualStdout}`);
+                        console.log(`Expected Stdout: ${stdout}`);
                     }
-                });
-            }
+                } else {
+                    console.log(`Error: ${r.error}`);
+                }
+            });
         }
     }
 

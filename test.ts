@@ -476,16 +476,7 @@ const getRunner = ({ name, infiniteLooping, failing, only }: Test) => {
 };
 
 testPrograms.forEach((testProgram: TestProgram) => {
-    getRunner(testProgram)(testProgram.name, mplTest, {
-        source: testProgram.source,
-        exitCode: testProgram.exitCode,
-        name: testProgram.name,
-        stdin: testProgram.stdin,
-        expectedStdOut: testProgram.stdout,
-        expectedParseErrors: testProgram.parseErrors,
-        expectedTypeErrors: testProgram.typeErrors,
-        expectedAst: testProgram.ast,
-    });
+    getRunner(testProgram)(testProgram.name, mplTest, testProgram);
 });
 
 testModules.forEach((testModule: TestModule) => {
@@ -497,7 +488,7 @@ testModules.forEach((testModule: TestModule) => {
 test('double product', mplTest, {
     source: 'return 5 * 3 * 4;',
     exitCode: 60,
-    expectedAst: {
+    ast: {
         type: 'program',
         children: [
             {
@@ -534,7 +525,7 @@ test('double product', mplTest, {
 test('brackets product', mplTest, {
     source: 'return (3 * 4) * 5;',
     exitCode: 60,
-    expectedAst: {
+    ast: {
         type: 'program',
         children: [
             {
@@ -595,7 +586,7 @@ test('ternary true', mplTest, {
 
 test('parse error', mplTest, {
     source: '=>',
-    expectedParseErrors: [
+    parseErrors: [
         { expected: 'identifier', found: 'fatArrow', sourceLocation: { column: 0, line: 0 } },
     ],
 });
@@ -644,7 +635,7 @@ return recursive(1);`,
 
 test('return bool fail', mplTest, {
     source: 'return 1 == 2;',
-    expectedTypeErrors: [
+    typeErrors: [
         {
             kind: 'wrongTypeReturn',
             expressionType: builtinTypes.Boolean,
@@ -667,7 +658,7 @@ test('wrong type for arg', mplTest, {
     source: `
 boolFunc := a: Boolean => 1;
 return boolFunc(7);`,
-    expectedTypeErrors: [
+    typeErrors: [
         {
             kind: 'wrongArgumentType',
             targetFunction: 'boolFunc',
@@ -680,7 +671,7 @@ return boolFunc(7);`,
 
 test('assign wrong type', mplTest, {
     source: 'myInt: Integer = false; return myInt;',
-    expectedTypeErrors: [
+    typeErrors: [
         {
             kind: 'assignWrongType',
             lhsName: 'myInt',
@@ -714,7 +705,7 @@ test('assign function to wrong args number', mplTest, {
     source: `
 myFunc: Function<Integer, Integer> = () => 111;
 return 0;`,
-    expectedTypeErrors: [
+    typeErrors: [
         {
             kind: 'assignWrongType',
             lhsName: 'myFunc',
@@ -738,7 +729,7 @@ test('assign function to wrong args type', mplTest, {
     source: `
 myFunc: Function<Integer, Integer> = (a: String) => 111;
 return myFunc("");`,
-    expectedTypeErrors: [
+    typeErrors: [
         {
             kind: 'assignWrongType',
             lhsName: 'myFunc',
@@ -762,7 +753,7 @@ test('assign function to wrong return type', mplTest, {
     source: `
 myFunc: Function<Integer, Boolean> = (a: String) => 111;
 return myFunc("");`,
-    expectedTypeErrors: [
+    typeErrors: [
         {
             kind: 'assignWrongType',
             lhsName: 'myFunc',
@@ -804,7 +795,7 @@ test('multi statement function with type error', mplTest, {
     source: `
 boolTimesInt := a: Integer => { b: Boolean = false; return a * b; };
 return boolTimesInt(1);`,
-    expectedTypeErrors: [
+    typeErrors: [
         {
             kind: 'wrongTypeForOperator',
             operator: 'product',
@@ -871,7 +862,7 @@ return str1 == str2 ? 7 : 2;
 
 test('wrong type global', mplTest, {
     source: `str: String = 5; return length(str);`,
-    expectedTypeErrors: [
+    typeErrors: [
         {
             kind: 'assignWrongType',
             lhsName: 'str',
@@ -889,7 +880,7 @@ test('concatenate and get length then subtract', mplTest, {
 
 test('parsing fails for extra invalid tokens', mplTest, {
     source: `return 5; (`,
-    expectedParseErrors: [
+    parseErrors: [
         {
             found: 'leftBracket',
             expected: 'endOfFile',
@@ -942,7 +933,7 @@ test('call with wrong number of args', mplTest, {
     source: `
 threeArgs := a: Integer, b: Integer, c: Integer => a + b + c;
 return threeArgs(7, 4);`,
-    expectedTypeErrors: [
+    typeErrors: [
         {
             kind: 'wrongNumberOfArguments',
             targetFunction: 'threeArgs',
@@ -957,7 +948,7 @@ test('call with wrong arg type', mplTest, {
     source: `
 threeArgs := a: Integer, b: Integer, c: Integer => a + b + c;
 return threeArgs(7, 4, "notAnInteger");`,
-    expectedTypeErrors: [
+    typeErrors: [
         {
             kind: 'wrongArgumentType',
             targetFunction: 'threeArgs',
@@ -973,7 +964,7 @@ test('print string with space', mplTest, {
 dummy := print("sample string with space");
 return 1;`,
     exitCode: 1,
-    expectedStdOut: 'sample string with space',
+    stdout: 'sample string with space',
 });
 
 test.failing('require/force no return value for print', mplTest, {
@@ -981,7 +972,7 @@ test.failing('require/force no return value for print', mplTest, {
 print("sample string");
 return 1;`,
     exitCode: 1,
-    expectedStdOut: 'sample string',
+    stdout: 'sample string',
 });
 
 test('print string containing number', mplTest, {
@@ -989,7 +980,7 @@ test('print string containing number', mplTest, {
 dummy := print("1");
 return 1 + dummy - dummy;`,
     exitCode: 1,
-    expectedStdOut: '1',
+    stdout: '1',
     // Fails mips because of the silly way we extract exit codes.
     failing: ['mips'],
 });
@@ -1011,7 +1002,7 @@ excitmentifier := (boring: String) => {
     return 11 + dummy - dummy;
 };
 return excitmentifier("Hello World");`,
-    expectedStdOut: 'Hello World!',
+    stdout: 'Hello World!',
     exitCode: 11,
 });
 
@@ -1030,7 +1021,7 @@ test('reassign to undeclared identifier', mplTest, {
 a := 1;
 b = 2;
 return a + b;`,
-    expectedTypeErrors: [
+    typeErrors: [
         {
             kind: 'assignUndeclaredIdentifer',
             destinationName: 'b',
@@ -1044,7 +1035,7 @@ test('reassigning wrong type', mplTest, {
 a := 1;
 a = true;
 return a;`,
-    expectedTypeErrors: [
+    typeErrors: [
         {
             kind: 'assignWrongType',
             lhsName: 'a',
@@ -1071,7 +1062,7 @@ foo := () => {
     return a + b;
 };
 return foo();`,
-    expectedTypeErrors: [
+    typeErrors: [
         {
             kind: 'assignUndeclaredIdentifer',
             destinationName: 'b',
@@ -1088,7 +1079,7 @@ foo := () => {
     return a;
 };
 return foo();`,
-    expectedTypeErrors: [
+    typeErrors: [
         {
             kind: 'assignWrongType',
             lhsName: 'a',
