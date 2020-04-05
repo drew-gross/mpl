@@ -1,4 +1,4 @@
-import { TestCase } from './test-case';
+import { TestProgram } from './test-case';
 import join from './util/join';
 import range from './util/list/range';
 
@@ -28,7 +28,7 @@ const manyGlobalsMultiply = () => {
     };
 };
 
-export const testPrograms: TestCase[] = [
+export const testPrograms: TestProgram[] = [
     { name: 'Bare Return', source: 'return 7;', exitCode: 7 },
     { name: 'Single Product', source: 'return 2 * 2;', exitCode: 4 },
     { name: 'Brackets', source: 'return (3);', exitCode: 3 },

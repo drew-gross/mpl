@@ -1,6 +1,6 @@
 import { ExecutionResult } from './api';
 
-export type TestCase = {
+export type TestProgram = {
     // Test name
     name: string;
 
@@ -23,7 +23,7 @@ export type TestCase = {
     infiniteLooping?: boolean; // Don't even attempt to compile this, it will infinite loop
 };
 
-export const passed = (testCase: TestCase, result: ExecutionResult) => {
+export const passed = (testCase: TestProgram, result: ExecutionResult) => {
     if ('error' in result) return false;
     if (testCase.exitCode != result.exitCode) return false;
     if (
