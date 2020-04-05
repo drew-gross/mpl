@@ -91,7 +91,7 @@ const testCases: TestCase[] = [
         name: 'Exported Integer',
         source: 'export three := 3;',
         exitCode: 0,
-        failing: true, // TODO: Set up a test harness for modules
+        failing: true, // TODO: finish modules
     },
     {
         name: 'Export in Non-Module',

@@ -124,6 +124,9 @@ const compile = ({
         return [prefix, ...body, suffix].join(' ');
     });
 
+    if (!program) {
+        throw debug("C backend doesn't support modules.");
+    }
     const JS: string[] = flatten(
         program.statements.map(child =>
             astToJS({ ast: child, builtinFunctions, exitInsteadOfReturn: true })

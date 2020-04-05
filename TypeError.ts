@@ -12,6 +12,7 @@ export type TypeError = { sourceLocation: SourceLocation } & (
           side: 'left' | 'right';
       }
     | { kind: 'assignUndeclaredIdentifer'; destinationName: string }
+    | { kind: 'missingReturn' }
     | { kind: 'wrongTypeReturn'; expressionType: Type }
     | { kind: 'wrongArgumentType'; targetFunction: string; passedType: Type; expectedType: Type }
     | { kind: 'calledNonFunction'; identifierName: string; actualType: Type }
@@ -61,6 +62,8 @@ export const toString = (e: TypeError): string => {
             )}, found ${typeToString(e.passedType)}.`;
         case 'topLevelStatementsInModule':
             return `Modules may not have top level statements.`;
+        case 'missingReturn':
+            return 'Missing final return statement';
         default:
             throw debug(`need string for error: ${e.kind}`);
     }

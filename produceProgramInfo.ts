@@ -1,3 +1,4 @@
+import debug from './util/debug';
 import { parseProgram as parseTacProgram } from './threeAddressCode/parser';
 import {
     mallocWithSbrk,
@@ -83,6 +84,9 @@ export default async (
         structure += `---> ${declaration.type.kind} ${declaration.name}\n`;
     });
     structure += '-> Statements:\n';
+    if (!frontendOutput.program) {
+        throw debug("Produce Program Info doesn't support modules.");
+    }
     frontendOutput.program.statements.forEach(statement => {
         structure += `---> ${astToString(statement)}\n`;
     });

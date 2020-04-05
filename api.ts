@@ -28,7 +28,7 @@ export type FrontendOutput = {
     types: TypeDeclaration[];
     functions: Function[];
     builtinFunctions: VariableDeclaration[];
-    program: Function;
+    program: Function | undefined; // No program means it's a module.
     globalDeclarations: VariableDeclaration[];
     stringLiterals: StringLiteralData[];
 };

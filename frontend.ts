@@ -914,8 +914,11 @@ const inferFunction = (ctx: WithContext<UninferredFunction>): Function | TypeErr
         statements.push(infer(statementContext) as Ast.Statement);
     });
     const maybeReturnStatement = last(ctx.w.statements);
-    if (!maybeReturnStatement || maybeReturnStatement.kind != 'returnStatement') {
-        throw debug('Missing returnStatement');
+    if (!maybeReturnStatement) {
+        return [{ kind: 'missingReturn', sourceLocation: { line: 0, column: 0 } }];
+    }
+    if (maybeReturnStatement.kind != 'returnStatement') {
+        return [{ kind: 'missingReturn', sourceLocation: maybeReturnStatement.sourceLocation }];
     }
     const returnStatement = maybeReturnStatement;
     const returnType = typeOfExpression({
@@ -1704,22 +1707,30 @@ const compile = (
                 availableTypes,
             })
         );
+    let inferredProgram: Function | undefined = undefined;
 
-    const inferredProgram = inferFunction({ w: program, availableVariables, availableTypes });
-    if (isTypeError(inferredProgram)) {
-        return { typeErrors: inferredProgram };
-    }
+    if (exportedDeclarations.length == 0) {
+        const maybeInferredProgram = inferFunction({
+            w: program,
+            availableVariables,
+            availableTypes,
+        });
+        if (isTypeError(maybeInferredProgram)) {
+            return { typeErrors: maybeInferredProgram };
+        }
+        inferredProgram = maybeInferredProgram;
 
-    if (!typesAreEqual(inferredProgram.returnType, builtinTypes.Integer, availableTypes)) {
-        return {
-            typeErrors: [
-                {
-                    kind: 'wrongTypeReturn',
-                    expressionType: inferredProgram.returnType,
-                    sourceLocation: { line: 1, column: 1 },
-                },
-            ],
-        };
+        if (!typesAreEqual(inferredProgram.returnType, builtinTypes.Integer, availableTypes)) {
+            return {
+                typeErrors: [
+                    {
+                        kind: 'wrongTypeReturn',
+                        expressionType: inferredProgram.returnType,
+                        sourceLocation: { line: 1, column: 1 },
+                    },
+                ],
+            };
+        }
     }
 
     return {

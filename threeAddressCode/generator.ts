@@ -780,6 +780,9 @@ export const makeTargetProgram = ({
         )
     );
 
+    if (!program) {
+        throw debug("Three Address Code doesn't support modules.");
+    }
     const mainProgramInstructions: Statement[] = flatten(
         program.statements.map(statement => {
             const compiledProgram = astToThreeAddressCode({

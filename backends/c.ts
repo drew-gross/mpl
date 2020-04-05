@@ -449,6 +449,9 @@ const compile = ({
             returnType,
         })
     );
+    if (!program) {
+        throw debug("C backend doesn't support modules.");
+    }
     const Cprogram = makeCfunctionBody({
         name: 'main', // Unused for now
         parameters: [], // Unused for now
