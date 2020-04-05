@@ -1,6 +1,7 @@
 import uniqueCmp from './util/list/uniqueCmp';
 import uniqueBy from './util/list/uniqueBy';
-import { testPrograms } from './test-cases';
+import { testPrograms, testModules } from './test-cases';
+import { TestModule, TestProgram, Test, mplTest, tacTest } from './test-case';
 import { parseProgram as parseTacProgram, parseInstructions } from './threeAddressCode/parser';
 import annontateSource from './annotateSource';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types';
@@ -14,7 +15,6 @@ import join from './util/join';
 import range from './util/list/range';
 import { lex, Token } from './parser-lib/lex';
 import { parseMpl, compile, astFromParseResult, typeOfExpression } from './frontend';
-import { mplTest, tacTest } from './test-utils';
 import { grammar, tokenSpecs, MplParseResult, MplAst, MplToken } from './grammar';
 import {
     parse,
@@ -464,40 +464,35 @@ test('correct inferred type for function', t => {
     });
 });
 
-testPrograms.forEach(
-    ({
-        name,
-        source,
-        exitCode,
-        stdin,
-        stdout,
-        ast,
-        parseErrors,
-        typeErrors,
-        failing,
-        only,
-        infiniteLooping,
-    }) => {
-        if (infiniteLooping) {
+const getRunner = ({ name, infiniteLooping, failing, only }: Test) => {
+    if (infiniteLooping) {
+        return () => {
             test.failing(name, t => {
                 t.fail();
             });
-            return;
-        } else {
-            const runner = only ? test.only : failing ? test.failing : test;
-            runner(name, mplTest, {
-                source,
-                exitCode,
-                name,
-                stdin,
-                expectedStdOut: stdout,
-                expectedParseErrors: parseErrors,
-                expectedTypeErrors: typeErrors,
-                expectedAst: ast,
-            });
-        }
+        };
     }
-);
+    return only ? test.only : failing ? test.failing : test;
+};
+
+testPrograms.forEach((testProgram: TestProgram) => {
+    getRunner(testProgram)(testProgram.name, mplTest, {
+        source: testProgram.source,
+        exitCode: testProgram.exitCode,
+        name: testProgram.name,
+        stdin: testProgram.stdin,
+        expectedStdOut: testProgram.stdout,
+        expectedParseErrors: testProgram.parseErrors,
+        expectedTypeErrors: testProgram.typeErrors,
+        expectedAst: testProgram.ast,
+    });
+});
+
+testModules.forEach((testModule: TestModule) => {
+    getRunner(testModule)(testModule.name, t => {
+        t.fail(); // TODO: implement something. Also maybe move this to test-utils?
+    });
+});
 
 test('double product', mplTest, {
     source: 'return 5 * 3 * 4;',

@@ -1,4 +1,4 @@
-import { TestProgram } from './test-case';
+import { TestProgram, TestModule } from './test-case';
 import join from './util/join';
 import range from './util/list/range';
 
@@ -27,6 +27,19 @@ const manyGlobalsMultiply = () => {
         failing: true,
     };
 };
+
+export const testModules: TestModule[] = [
+    {
+        name: 'Exported Function',
+        source: 'export constThree := a: Integer => 3;',
+        failing: true, // TODO: Set up a test harness for modules
+    },
+    {
+        name: 'Exported Integer',
+        source: 'export three := 3;',
+        failing: true, // TODO: finish modules
+    },
+];
 
 export const testPrograms: TestProgram[] = [
     { name: 'Bare Return', source: 'return 7;', exitCode: 7 },
@@ -80,18 +93,6 @@ export const testPrograms: TestProgram[] = [
         name: 'Unused Function',
         source: 'constThree := a: Integer => 3; return 10;',
         exitCode: 10,
-    },
-    {
-        name: 'Exported Function',
-        source: 'export constThree := a: Integer => 3;',
-        exitCode: 0,
-        failing: true, // TODO: Set up a test harness for modules
-    },
-    {
-        name: 'Exported Integer',
-        source: 'export three := 3;',
-        exitCode: 0,
-        failing: true, // TODO: finish modules
     },
     {
         name: 'Export in Non-Module',
