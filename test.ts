@@ -1,6 +1,6 @@
 import uniqueCmp from './util/list/uniqueCmp';
 import uniqueBy from './util/list/uniqueBy';
-import { testCases } from './test-cases';
+import { testPrograms } from './test-cases';
 import { parseProgram as parseTacProgram, parseInstructions } from './threeAddressCode/parser';
 import annontateSource from './annotateSource';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types';
@@ -464,7 +464,7 @@ test('correct inferred type for function', t => {
     });
 });
 
-testCases.forEach(
+testPrograms.forEach(
     ({
         name,
         source,

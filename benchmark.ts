@@ -1,6 +1,6 @@
 import { stat } from 'fs-extra';
 import { writeFile, readFile } from 'fs-extra';
-import { testCases } from './test-cases';
+import { testPrograms } from './test-cases';
 import { compile } from './frontend';
 import { Backend } from './api';
 import * as commander from 'commander';
@@ -38,7 +38,7 @@ const fmtNum = num =>
 if (!before) {
     (async () => {
         const results = await Promise.all(
-            testCases.map(async ({ name, source, failing }) => {
+            testPrograms.map(async ({ name, source, failing }) => {
                 if (failing) {
                     return;
                 }

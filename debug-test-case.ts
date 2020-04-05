@@ -1,5 +1,5 @@
 import { file as tmpFile } from 'tmp-promise';
-import { testCases } from './test-cases';
+import { testPrograms } from './test-cases';
 import { passed } from './test-case';
 import produceProgramInfo from './produceProgramInfo';
 import writeSvg from './util/graph/writeSvg';
@@ -29,7 +29,7 @@ import * as deepEqual from 'deep-equal';
         )
         .parse(process.argv);
 
-    const testCase = testCases.find(c => c.name == commander.args[0]);
+    const testCase = testPrograms.find(c => c.name == commander.args[0]);
 
     if (!testCase) {
         console.log(`Could not find a test case named "${commander.args[0]}"`);
