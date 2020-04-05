@@ -1,5 +1,5 @@
 import { file as tmpFile } from 'tmp-promise';
-import testCases from './test-cases';
+import { testCases } from './test-cases';
 import { passed } from './test-case';
 import produceProgramInfo from './produceProgramInfo';
 import writeSvg from './util/graph/writeSvg';

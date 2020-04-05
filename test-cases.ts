@@ -28,7 +28,7 @@ const manyGlobalsMultiply = () => {
     };
 };
 
-const testCases: TestCase[] = [
+export const testCases: TestCase[] = [
     { name: 'Bare Return', source: 'return 7;', exitCode: 7 },
     { name: 'Single Product', source: 'return 2 * 2;', exitCode: 4 },
     { name: 'Brackets', source: 'return (3);', exitCode: 3 },
@@ -547,5 +547,3 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 11,
     },
 ];
-
-export default testCases;
