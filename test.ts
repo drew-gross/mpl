@@ -1,7 +1,7 @@
 import uniqueCmp from './util/list/uniqueCmp';
 import uniqueBy from './util/list/uniqueBy';
 import { testPrograms, testModules } from './test-cases';
-import { TestModule, TestProgram, Test, mplTest, tacTest } from './test-case';
+import { TestModule, TestProgram, Test, mplTest, tacTest, moduleTest } from './test-case';
 import { parseProgram as parseTacProgram, parseInstructions } from './threeAddressCode/parser';
 import annontateSource from './annotateSource';
 import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types';
@@ -40,7 +40,6 @@ import {
 import { orderedSet, operatorCompare } from './util/ordered-set';
 import { set } from './util/set';
 import { shuffle } from 'shuffle-seed';
-// import loader from './mpl-loader';
 
 test('double flatten', t => {
     t.deepEqual(flatten(flatten([[[1, 2]], [[3], [4]], [[5]]])), [1, 2, 3, 4, 5]);
@@ -445,7 +444,7 @@ test('correct inferred type for function', t => {
         extractedFunctions: [
             {
                 name: 'anonymous_1', // TODO: Make this not dependent on test order
-                parameters: [{ name: 'a', type: { kind: 'Integer' } }],
+                parameters: [{ name: 'a', type: { kind: 'Integer' }, exported: false }],
                 returnType: { kind: 'Integer' },
                 statements: [
                     {
@@ -458,7 +457,7 @@ test('correct inferred type for function', t => {
                         sourceLocation: { column: 1, line: 1 },
                     },
                 ],
-                variables: [{ name: 'a', type: { kind: 'Integer' } }],
+                variables: [{ name: 'a', type: { kind: 'Integer' }, exported: false }],
             },
         ],
     });
@@ -480,9 +479,7 @@ testPrograms.forEach((testProgram: TestProgram) => {
 });
 
 testModules.forEach((testModule: TestModule) => {
-    getRunner(testModule)(testModule.name, t => {
-        t.fail(); // TODO: implement something. Also maybe move this to test-utils?
-    });
+    getRunner(testModule)(testModule.name, moduleTest, testModule);
 });
 
 test('double product', mplTest, {
@@ -2410,7 +2407,3 @@ node_0 -> null_7 [style="invis"]
 
     // await writeSvg(dotText, './set.svg');
 });
-
-// test('loader', t => {
-//     t.assert((loader('return 1') as any).includes(1));
-// });

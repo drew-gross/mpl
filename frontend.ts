@@ -121,6 +121,7 @@ const extractVariable = (
             return {
                 name: ctx.w.destination,
                 type: (typeOfExpression({ ...ctx, w: ctx.w.expression }) as TOEResult).type,
+                exported: false,
             };
         case 'typedDeclarationAssignment':
             return {
@@ -129,6 +130,7 @@ const extractVariable = (
                     { ...ctx, w: ctx.w.expression },
                     ctx.w.type
                 ) as TOEResult).type,
+                exported: false,
             };
         case 'returnStatement':
         case 'typeDeclaration':
@@ -763,6 +765,7 @@ const typeCheckStatement = (
                             permissions: [],
                             returnType: { kind: 'Integer' },
                         },
+                        exported: false,
                     },
                 ]),
             });
@@ -772,7 +775,7 @@ const typeCheckStatement = (
             // Left type is inferred as right type
             return {
                 errors: [],
-                newVariables: [{ name: ast.destination, type: rightType.type }],
+                newVariables: [{ name: ast.destination, type: rightType.type, exported: false }],
             };
         }
         case 'reassignment': {
@@ -817,7 +820,7 @@ const typeCheckStatement = (
                     ...ctx,
                     w: ast.expression,
                     availableVariables: mergeDeclarations(availableVariables, [
-                        { name: ast.destination, type: destinationType },
+                        { name: ast.destination, type: destinationType, exported: false },
                     ]),
                 },
                 ast.type
@@ -841,7 +844,9 @@ const typeCheckStatement = (
             }
             return {
                 errors: [],
-                newVariables: [{ name: ast.destination, type: destinationType }],
+                newVariables: [
+                    { name: ast.destination, type: destinationType, exported: false },
+                ],
             };
         }
         case 'typeDeclaration':
@@ -889,7 +894,7 @@ const assignmentToGlobalDeclaration = (
 ): VariableDeclaration => {
     const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
-    return { name: ctx.w.destination, type: result.type };
+    return { name: ctx.w.destination, type: result.type, exported: ctx.w.exported };
 };
 
 type WithContext<T> = {
@@ -1144,6 +1149,7 @@ const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
                         {
                             name: (i.children[0] as any).value as string,
                             type: parseType(child2),
+                            exported: false,
                         },
                     ];
                 } else {
@@ -1707,7 +1713,7 @@ const compile = (
                 availableTypes,
             })
         );
-    let inferredProgram: Function | undefined = undefined;
+    let inferredProgram: Function | string[] | undefined = undefined;
 
     if (exportedDeclarations.length == 0) {
         const maybeInferredProgram = inferFunction({
@@ -1731,6 +1737,8 @@ const compile = (
                 ],
             };
         }
+    } else {
+        inferredProgram = globalDeclarations.map(d => d.name);
     }
 
     return {

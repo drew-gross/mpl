@@ -32,12 +32,16 @@ export const testModules: TestModule[] = [
     {
         name: 'Exported Function',
         source: 'export constThree := a: Integer => 3;',
-        failing: true, // TODO: Set up a test harness for modules
+        resultJs: `
+                constThree = (a) => { return  3 }
+            `,
+        only: true,
     },
     {
         name: 'Exported Integer',
         source: 'export three := 3;',
-        failing: true, // TODO: finish modules
+        resultJs: 'export const three = 3;',
+        failing: true, // TODO: Export constants
     },
 ];
 

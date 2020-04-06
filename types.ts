@@ -121,6 +121,7 @@ export const builtinFunctions: VariableDeclaration[] = [
             permissions: [],
             returnType: builtinTypes.Integer,
         },
+        exported: false,
     },
     {
         name: 'print',
@@ -130,6 +131,7 @@ export const builtinFunctions: VariableDeclaration[] = [
             permissions: [],
             returnType: builtinTypes.Integer,
         },
+        exported: false,
     },
     {
         name: 'readInt',
@@ -139,6 +141,7 @@ export const builtinFunctions: VariableDeclaration[] = [
             permissions: ['stdout'],
             returnType: builtinTypes.Integer,
         },
+        exported: false,
     },
 ];
 

@@ -84,7 +84,7 @@ export default async (
         structure += `---> ${declaration.type.kind} ${declaration.name}\n`;
     });
     structure += '-> Statements:\n';
-    if (!frontendOutput.program) {
+    if (Array.isArray(frontendOutput.program)) {
         throw debug("Produce Program Info doesn't support modules.");
     }
     frontendOutput.program.statements.forEach(statement => {

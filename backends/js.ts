@@ -124,8 +124,18 @@ const compile = ({
         return [prefix, ...body, suffix].join(' ');
     });
 
-    if (!program) {
-        throw debug("C backend doesn't support modules.");
+    if (Array.isArray(program)) {
+        // Must be a module
+        const exp = program.map(d => {
+            return d;
+        });
+        return {
+            target: `
+                ${join(JSfunctions, '\n')}
+                ${join(exp, '\n')}
+            `,
+            tac: undefined,
+        };
     }
     const JS: string[] = flatten(
         program.statements.map(child =>

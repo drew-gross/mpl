@@ -449,7 +449,7 @@ const compile = ({
             returnType,
         })
     );
-    if (!program) {
+    if (Array.isArray(program)) {
         throw debug("C backend doesn't support modules.");
     }
     const Cprogram = makeCfunctionBody({

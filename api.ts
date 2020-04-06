@@ -8,6 +8,7 @@ export type VariableLocation = 'Global' | 'Parameter' | 'Stack';
 export type VariableDeclaration = {
     name: string;
     type: Type;
+    exported: boolean;
 };
 export type UninferredFunction = {
     // TODO: Don't export this (or rethink it)
@@ -28,7 +29,7 @@ export type FrontendOutput = {
     types: TypeDeclaration[];
     functions: Function[];
     builtinFunctions: VariableDeclaration[];
-    program: Function | undefined; // No program means it's a module.
+    program: Function | string[]; // string list is names of exported variables. TODO: better name
     globalDeclarations: VariableDeclaration[];
     stringLiterals: StringLiteralData[];
 };

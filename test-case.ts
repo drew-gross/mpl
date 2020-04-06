@@ -7,6 +7,7 @@ import { stripSourceLocation } from './parser-lib/parse';
 import { parseFunction } from './threeAddressCode/parser';
 import { backends } from './backend-utils';
 import produceProgramInfo from './produceProgramInfo';
+import { mplLoader } from './mpl-loader';
 
 export interface Test {
     name: string;
@@ -42,6 +43,9 @@ export type TestModule = {
     failing?: boolean | string | string[]; // Expect this to fail
     only?: boolean; // Run only this test
     infiniteLooping?: boolean; // Don't even attempt to compile this, it will infinite loop
+
+    // To check results
+    resultJs: string;
 };
 
 export const passed = (testCase: TestProgram, result: ExecutionResult) => {
@@ -74,6 +78,15 @@ type TestOptions = {
 
 const required = (errorMessage: string): any => {
     throw errorMessage;
+};
+
+export const moduleTest = (t, m: TestModule) => {
+    const errors: string[] = [];
+    const resultJs = mplLoader(m.source, { emitError: e => errors.push(e) });
+    if (errors.length != 0) {
+        t.fail('got errors');
+    }
+    t.deepEqual(m.resultJs, resultJs);
 };
 
 export const mplTest = async (

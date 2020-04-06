@@ -780,7 +780,7 @@ export const makeTargetProgram = ({
         )
     );
 
-    if (!program) {
+    if (Array.isArray(program)) {
         throw debug("Three Address Code doesn't support modules.");
     }
     const mainProgramInstructions: Statement[] = flatten(
