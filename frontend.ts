@@ -28,7 +28,7 @@ import { TypeError } from './TypeError';
 import SourceLocation from './parser-lib/sourceLocation';
 import * as Ast from './ast';
 /* tslint:disable */
-const add = require('./mpl/add.mpl');
+const { add } = require('./mpl/add.mpl');
 /* tslint:enable */
 
 // TODO move this to parser lit
@@ -1258,7 +1258,7 @@ const parseObjectMember = (ast: MplAst): Ast.UninferredObjectMember | 'WrongShap
     return result;
 };
 
-let functionId = 0; // add(-1, 1);
+let functionId = add(-1, 1);
 const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' => {
     if (isSeparatedListNode(ast) || isListNode(ast)) {
         throw debug('todo');

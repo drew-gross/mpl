@@ -2246,7 +2246,7 @@ const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
 const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
 const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
 /* tslint:disable */
-const add = __webpack_require__(/*! ./mpl/add.mpl */ "./mpl/add.mpl");
+const { add } = __webpack_require__(/*! ./mpl/add.mpl */ "./mpl/add.mpl");
 /* tslint:enable */
 // TODO move this to parser lit
 const hasType = (ast, type) => 'type' in ast && ast.type == type;
@@ -3404,7 +3404,7 @@ const parseObjectMember = (ast) => {
     };
     return result;
 };
-let functionId = 0; // add(-1, 1);
+let functionId = add(-1, 1);
 const astFromParseResult = (ast) => {
     if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
         throw debug_1.default('todo');
