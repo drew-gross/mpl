@@ -33,9 +33,9 @@ export const testModules: TestModule[] = [
         name: 'Exported Function',
         source: 'export constThree := a: Integer => 3;',
         resultJs: `
-                constThree = (a) => { return  3 }
+                anonymous_1 = (a) => { return  3 }
+                export constThree;
             `,
-        only: true,
     },
     {
         name: 'Exported Integer',
