@@ -187,7 +187,7 @@ const astToJS = ({ ast, exitInsteadOfReturn, builtinFunctions, }) => {
 };
 const compile = ({ functions, builtinFunctions, program, globalDeclarations, }) => {
     const JSfunctions = functions.map(({ name, parameters, statements }) => {
-        const prefix = `${name} = (${join_1.default(parameters.map(parameter => parameter.name), ', ')}) => {`;
+        const prefix = `const ${name} = (${join_1.default(parameters.map(parameter => parameter.name), ', ')}) => {`;
         const suffix = `}`;
         const body = statements.map(statement => {
             return join_1.default(astToJS({ ast: statement, exitInsteadOfReturn: false, builtinFunctions }), ' ');

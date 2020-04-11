@@ -187,7 +187,7 @@ const astToJS = ({ ast, exitInsteadOfReturn, builtinFunctions, }) => {
 };
 const compile = ({ functions, builtinFunctions, program, globalDeclarations, }) => {
     const JSfunctions = functions.map(({ name, parameters, statements }) => {
-        const prefix = `${name} = (${join_1.default(parameters.map(parameter => parameter.name), ', ')}) => {`;
+        const prefix = `const ${name} = (${join_1.default(parameters.map(parameter => parameter.name), ', ')}) => {`;
         const suffix = `}`;
         const body = statements.map(statement => {
             return join_1.default(astToJS({ ast: statement, exitInsteadOfReturn: false, builtinFunctions }), ' ');
@@ -288,7 +288,7 @@ exports.lex = lex_1.lex;
 const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
 const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
 const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
-const add = __webpack_require__(/*! ./mpl/add.mpl */ "./mpl/add.mpl");
+// const add = require('./mpl/add.mpl');
 // TODO move this to parser lit
 const hasType = (ast, type) => 'type' in ast && ast.type == type;
 const repairAssociativity = (nodeType, ast) => {
@@ -2162,17 +2162,6 @@ const outputPath = process.argv[3];
     await fs_extra_1.writeFile(outputPath, backendOutput.target);
 })();
 
-
-/***/ }),
-
-/***/ "./mpl/add.mpl":
-/*!*********************!*\
-  !*** ./mpl/add.mpl ***!
-  \*********************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-throw new Error("Module build failed (from ./bin/mpl-loader.js):\nReferenceError: anonymous_1 is not defined\n    at Module../mpl/add.mpl (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:2171:29)\n    at __webpack_require__ (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:30:30)\n    at Object../frontend.ts (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:291:13)\n    at __webpack_require__ (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:30:30)\n    at Object../mpl-loader.ts (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:2137:20)\n    at __webpack_require__ (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:30:30)\n    at /Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:94:18\n    at /Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:97:10\n    at webpackUniversalModuleDefinition (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:3:20)\n    at Object.<anonymous> (/Users/drew/Documents/mpl/bin/mpl-loader-raw-experimental.js:10:3)\n    at Module._compile (/Users/drew/Documents/mpl/node_modules/v8-compile-cache/v8-compile-cache.js:192:30)\n    at Object.Module._extensions..js (internal/modules/cjs/loader.js:1167:10)\n    at Module.load (internal/modules/cjs/loader.js:996:32)\n    at Function.Module._load (internal/modules/cjs/loader.js:896:14)\n    at Module.require (internal/modules/cjs/loader.js:1036:19)\n    at require (/Users/drew/Documents/mpl/node_modules/v8-compile-cache/v8-compile-cache.js:161:20)\n    at Object.module.exports (/Users/drew/Documents/mpl/bin/mpl-loader.js:5:11)");
 
 /***/ }),
 

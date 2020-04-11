@@ -187,7 +187,7 @@ const astToJS = ({ ast, exitInsteadOfReturn, builtinFunctions, }) => {
 };
 const compile = ({ functions, builtinFunctions, program, globalDeclarations, }) => {
     const JSfunctions = functions.map(({ name, parameters, statements }) => {
-        const prefix = `${name} = (${join_1.default(parameters.map(parameter => parameter.name), ', ')}) => {`;
+        const prefix = `const ${name} = (${join_1.default(parameters.map(parameter => parameter.name), ', ')}) => {`;
         const suffix = `}`;
         const body = statements.map(statement => {
             return join_1.default(astToJS({ ast: statement, exitInsteadOfReturn: false, builtinFunctions }), ' ');
@@ -288,7 +288,7 @@ exports.lex = lex_1.lex;
 const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
 const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
 const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
-const add = __webpack_require__(/*! ./mpl/add.mpl */ "./mpl/add.mpl");
+// const add = require('./mpl/add.mpl');
 // TODO move this to parser lit
 const hasType = (ast, type) => 'type' in ast && ast.type == type;
 const repairAssociativity = (nodeType, ast) => {
@@ -2162,23 +2162,6 @@ const outputPath = process.argv[3];
     await fs_extra_1.writeFile(outputPath, backendOutput.target);
 })();
 
-
-/***/ }),
-
-/***/ "./mpl/add.mpl":
-/*!*********************!*\
-  !*** ./mpl/add.mpl ***!
-  \*********************/
-/*! exports provided: add */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "add", function() { return add; });
-
-                anonymous_1 = (a, b) => { return  a + b }
-                const add = anonymous_1;
-            
 
 /***/ }),
 
