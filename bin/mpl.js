@@ -288,7 +288,9 @@ exports.lex = lex_1.lex;
 const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
 const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
 const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
-// const add = require('./mpl/add.mpl');
+/* tslint:disable */
+const add = __webpack_require__(/*! ./mpl/add.mpl */ "./mpl/add.mpl");
+/* tslint:enable */
 // TODO move this to parser lit
 const hasType = (ast, type) => 'type' in ast && ast.type == type;
 const repairAssociativity = (nodeType, ast) => {
@@ -2162,6 +2164,23 @@ const outputPath = process.argv[3];
     await fs_extra_1.writeFile(outputPath, backendOutput.target);
 })();
 
+
+/***/ }),
+
+/***/ "./mpl/add.mpl":
+/*!*********************!*\
+  !*** ./mpl/add.mpl ***!
+  \*********************/
+/*! exports provided: add */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "add", function() { return add; });
+
+                const anonymous_1 = (a, b) => { return  a + b }
+                const add = anonymous_1;
+            
 
 /***/ }),
 

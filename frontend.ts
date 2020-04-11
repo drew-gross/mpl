@@ -27,7 +27,9 @@ import {
 import { TypeError } from './TypeError';
 import SourceLocation from './parser-lib/sourceLocation';
 import * as Ast from './ast';
-// const add = require('./mpl/add.mpl');
+/* tslint:disable */
+const add = require('./mpl/add.mpl');
+/* tslint:enable */
 
 // TODO move this to parser lit
 const hasType = (ast, type: string) => 'type' in ast && ast.type == type;
