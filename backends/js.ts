@@ -108,7 +108,7 @@ const compile = ({
     globalDeclarations,
 }: FrontendOutput): { target: string; tac: Program | undefined } | { error: string } => {
     const JSfunctions = functions.map(({ name, parameters, statements }) => {
-        const prefix = `${name} = (${join(
+        const prefix = `const ${name} = (${join(
             parameters.map(parameter => parameter.name),
             ', '
         )}) => {`;

@@ -33,7 +33,7 @@ export const testModules: TestModule[] = [
         name: 'Exported Function',
         source: 'export constThree := a: Integer => 3;',
         resultJs: `
-                anonymous_1 = (a) => { return  3 }
+                const anonymous_1 = (a) => { return  3 }
                 export const constThree = anonymous_1;
             `,
     },
@@ -41,7 +41,7 @@ export const testModules: TestModule[] = [
         name: 'Add Functions',
         source: 'export add := (a: Integer, b: Integer) => a + b;',
         resultJs: `
-                anonymous_1 = (a, b) => { return  a + b }
+                const anonymous_1 = (a, b) => { return  a + b }
                 export const add = anonymous_1;
             `,
     },
