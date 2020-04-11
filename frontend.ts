@@ -22,6 +22,7 @@ import {
     UninferredFunction,
     FrontendOutput,
     StringLiteralData,
+    ExportedVariable,
 } from './api';
 import { TypeError } from './TypeError';
 import SourceLocation from './parser-lib/sourceLocation';
@@ -894,7 +895,15 @@ const assignmentToGlobalDeclaration = (
 ): VariableDeclaration => {
     const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
-    return { name: ctx.w.destination, type: result.type, exported: ctx.w.exported };
+    return {
+        name: ctx.w.destination,
+        type: result.type,
+        exported: ctx.w.exported,
+        mangledName:
+            ctx.w.expression.kind == 'functionLiteral'
+                ? ctx.w.expression.deanonymizedName
+                : ctx.w.destination,
+    };
 };
 
 type WithContext<T> = {
@@ -1714,7 +1723,7 @@ const compile = (
                 availableTypes,
             })
         );
-    let inferredProgram: Function | string[] | undefined = undefined;
+    let inferredProgram: Function | ExportedVariable[] | undefined = undefined;
 
     if (exportedDeclarations.length == 0) {
         const maybeInferredProgram = inferFunction({
@@ -1739,7 +1748,10 @@ const compile = (
             };
         }
     } else {
-        inferredProgram = globalDeclarations.map(d => d.name);
+        inferredProgram = globalDeclarations.map(d => ({
+            exportedName: d.name,
+            declaredName: d.mangledName || '',
+        }));
     }
 
     return {

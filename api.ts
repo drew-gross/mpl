@@ -9,6 +9,7 @@ export type VariableDeclaration = {
     name: string;
     type: Type;
     exported: boolean;
+    mangledName?: string;
 };
 export type UninferredFunction = {
     // TODO: Don't export this (or rethink it)
@@ -25,11 +26,15 @@ export type Function = {
     returnType: Type;
 };
 export type StringLiteralData = { id: number; value: string };
+export type ExportedVariable = {
+    exportedName: string;
+    declaredName: string;
+};
 export type FrontendOutput = {
     types: TypeDeclaration[];
     functions: Function[];
     builtinFunctions: VariableDeclaration[];
-    program: Function | string[]; // string list is names of exported variables. TODO: better name
+    program: Function | ExportedVariable[];
     globalDeclarations: VariableDeclaration[];
     stringLiterals: StringLiteralData[];
 };

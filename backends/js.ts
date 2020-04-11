@@ -126,8 +126,8 @@ const compile = ({
 
     if (Array.isArray(program)) {
         // Must be a module
-        const exp = program.map(d => {
-            return `export ${d};`;
+        const exp = program.map(v => {
+            return `export const ${v.exportedName} = ${v.declaredName};`;
         });
         return {
             target: `

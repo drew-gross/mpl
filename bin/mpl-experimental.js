@@ -196,8 +196,8 @@ const compile = ({ functions, builtinFunctions, program, globalDeclarations, }) 
     });
     if (Array.isArray(program)) {
         // Must be a module
-        const exp = program.map(d => {
-            return `export ${d};`;
+        const exp = program.map(v => {
+            return `export const ${v.exportedName} = ${v.declaredName};`;
         });
         return {
             target: `
@@ -1094,7 +1094,14 @@ const assignmentToGlobalDeclaration = (ctx) => {
     const result = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }));
     if (isTypeError(result))
         throw debug_1.default('isTypeError in assignmentToGlobalDeclaration');
-    return { name: ctx.w.destination, type: result.type, exported: ctx.w.exported };
+    return {
+        name: ctx.w.destination,
+        type: result.type,
+        exported: ctx.w.exported,
+        mangledName: ctx.w.expression.kind == 'functionLiteral'
+            ? ctx.w.expression.deanonymizedName
+            : ctx.w.destination,
+    };
 };
 const inferFunction = (ctx) => {
     const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
@@ -1885,7 +1892,10 @@ const compile = (source) => {
         }
     }
     else {
-        inferredProgram = globalDeclarations.map(d => d.name);
+        inferredProgram = globalDeclarations.map(d => ({
+            exportedName: d.name,
+            declaredName: d.mangledName || '',
+        }));
     }
     return {
         types: availableTypes,
