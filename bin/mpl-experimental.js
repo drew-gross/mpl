@@ -194,6 +194,19 @@ const compile = ({ functions, builtinFunctions, program, globalDeclarations, }) 
         });
         return [prefix, ...body, suffix].join(' ');
     });
+    if (Array.isArray(program)) {
+        // Must be a module
+        const exp = program.map(d => {
+            return `export ${d};`;
+        });
+        return {
+            target: `
+                ${join_1.default(JSfunctions, '\n')}
+                ${join_1.default(exp, '\n')}
+            `,
+            tac: undefined,
+        };
+    }
     const JS = flatten_1.default(program.statements.map(child => astToJS({ ast: child, builtinFunctions, exitInsteadOfReturn: true })));
     return {
         target: `
@@ -275,7 +288,7 @@ exports.lex = lex_1.lex;
 const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
 const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
 const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
-const add = __webpack_require__(/*! ./mpl/add.mpl */ "./mpl/add.mpl");
+// const add = require('./mpl/add.mpl');
 // TODO move this to parser lit
 const hasType = (ast, type) => 'type' in ast && ast.type == type;
 const repairAssociativity = (nodeType, ast) => {
@@ -373,11 +386,13 @@ const extractVariable = (ctx) => {
             return {
                 name: ctx.w.destination,
                 type: exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression })).type,
+                exported: false,
             };
         case 'typedDeclarationAssignment':
             return {
                 name: ctx.w.destination,
                 type: exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }), ctx.w.type).type,
+                exported: false,
             };
         case 'returnStatement':
         case 'typeDeclaration':
@@ -966,6 +981,7 @@ const typeCheckStatement = (ctx) => {
                             permissions: [],
                             returnType: { kind: 'Integer' },
                         },
+                        exported: false,
                     },
                 ]),
             });
@@ -975,7 +991,7 @@ const typeCheckStatement = (ctx) => {
             // Left type is inferred as right type
             return {
                 errors: [],
-                newVariables: [{ name: ast.destination, type: rightType.type }],
+                newVariables: [{ name: ast.destination, type: rightType.type, exported: false }],
             };
         }
         case 'reassignment': {
@@ -1016,7 +1032,7 @@ const typeCheckStatement = (ctx) => {
             // Check that type of var being assigned to matches type being assigned
             const destinationType = ast.type;
             const expressionType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression, availableVariables: mergeDeclarations(availableVariables, [
-                    { name: ast.destination, type: destinationType },
+                    { name: ast.destination, type: destinationType, exported: false },
                 ]) }), ast.type);
             if (isTypeError(expressionType)) {
                 return { errors: expressionType, newVariables: [] };
@@ -1037,7 +1053,9 @@ const typeCheckStatement = (ctx) => {
             }
             return {
                 errors: [],
-                newVariables: [{ name: ast.destination, type: destinationType }],
+                newVariables: [
+                    { name: ast.destination, type: destinationType, exported: false },
+                ],
             };
         }
         case 'typeDeclaration':
@@ -1076,7 +1094,7 @@ const assignmentToGlobalDeclaration = (ctx) => {
     const result = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }));
     if (isTypeError(result))
         throw debug_1.default('isTypeError in assignmentToGlobalDeclaration');
-    return { name: ctx.w.destination, type: result.type };
+    return { name: ctx.w.destination, type: result.type, exported: ctx.w.exported };
 };
 const inferFunction = (ctx) => {
     const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
@@ -1094,8 +1112,11 @@ const inferFunction = (ctx) => {
         statements.push(infer(statementContext));
     });
     const maybeReturnStatement = last_1.default(ctx.w.statements);
-    if (!maybeReturnStatement || maybeReturnStatement.kind != 'returnStatement') {
-        throw debug_1.default('Missing returnStatement');
+    if (!maybeReturnStatement) {
+        return [{ kind: 'missingReturn', sourceLocation: { line: 0, column: 0 } }];
+    }
+    if (maybeReturnStatement.kind != 'returnStatement') {
+        return [{ kind: 'missingReturn', sourceLocation: maybeReturnStatement.sourceLocation }];
     }
     const returnStatement = maybeReturnStatement;
     const returnType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { availableVariables: variablesFound, w: returnStatement.expression }));
@@ -1291,28 +1312,14 @@ const infer = (ctx) => {
             throw debug_1.default(`${ast.kind} unhandled in infer`);
     }
 };
-const makeProgramAstNodeFromStatmentParseResult = (ast) => {
-    const children = [];
-    if (ast.type === 'statement') {
-        children.push(astFromParseResult(ast.children[0]));
-        children.push(...makeProgramAstNodeFromStatmentParseResult(ast.children[2]));
+const extractFunctionBody = node => {
+    if (node.type !== 'statement')
+        debug_1.default('expected a statement');
+    if (node.children.length === 3) {
+        return [astFromParseResult(node.children[0]), ...extractFunctionBody(node.children[2])];
     }
     else {
-        children.push(astFromParseResult(ast));
-    }
-    return children;
-};
-const extractFunctionBody = node => {
-    switch (node.type) {
-        case 'returnStatement':
-            return [astFromParseResult(node)];
-        case 'statement':
-            return [
-                astFromParseResult(node.children[0]),
-                ...extractFunctionBody(node.children[2]),
-            ];
-        default:
-            throw debug_1.default(`${node.type} unhandled in extractFunctionBody`);
+        return [astFromParseResult(node.children[0])];
     }
 };
 // TODO: Replace extractParameterList with SeparatedList
@@ -1331,6 +1338,7 @@ const extractParameterList = (ast) => {
                     {
                         name: i.children[0].value,
                         type: parseType(child2),
+                        exported: false,
                     },
                 ];
             }
@@ -1430,7 +1438,7 @@ const parseObjectMember = (ast) => {
     };
     return result;
 };
-let functionId = 0; //add(-1, 1);
+let functionId = 0; // add(-1, 1);
 const astFromParseResult = (ast) => {
     if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
         throw debug_1.default('todo');
@@ -1524,40 +1532,72 @@ const astFromParseResult = (ast) => {
                 expression: astFromParseResult(ast.children[2]),
                 sourceLocation: ast.sourceLocation,
             };
-        case 'declarationAssignment':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'declarationAssignment',
-                destination: ast.children[0].value,
-                expression: astFromParseResult(ast.children[3]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'typedDeclarationAssignment':
-            const destinationNode = ast.children[0];
+        case 'declaration': {
+            let childIndex = 0;
+            let exported = false;
+            if (ast.children[childIndex].type == 'export') {
+                exported = true;
+                childIndex++;
+            }
+            const destination = ast.children[childIndex].value;
+            childIndex++;
+            const destinationNode = ast.children[childIndex];
             if (parse_1.isSeparatedListNode(destinationNode) || parse_1.isListNode(destinationNode)) {
                 throw debug_1.default('todo');
             }
-            if (destinationNode.type != 'identifier')
-                return 'WrongShapeAst';
-            const expression = astFromParseResult(ast.children[4]); // TODO: figure out why this isn't a type error
-            return {
-                kind: 'typedDeclarationAssignment',
-                destination: destinationNode.value,
-                type: parseType(ast.children[2]),
+            if (destinationNode.type != 'colon')
+                debug_1.default('expected a colon');
+            childIndex++;
+            let type = undefined;
+            const maybeTypeNode = ast.children[childIndex];
+            if (parse_1.isSeparatedListNode(maybeTypeNode) || parse_1.isListNode(maybeTypeNode)) {
+                throw debug_1.default('todo');
+            }
+            if (['typeWithArgs', 'typeWithoutArgs', 'typeLiteral'].includes(maybeTypeNode.type)) {
+                type = parseType(maybeTypeNode);
+                childIndex++;
+            }
+            if (ast.children[childIndex].type != 'assignment')
+                debug_1.default('expected assignment');
+            childIndex++;
+            const expression = astFromParseResult(ast.children[childIndex]);
+            const result = {
+                kind: 'declarationAssignment',
+                destination,
                 expression,
                 sourceLocation: ast.sourceLocation,
             };
+            if (type) {
+                return {
+                    kind: 'typedDeclarationAssignment',
+                    destination,
+                    expression,
+                    type,
+                    exported,
+                    sourceLocation: ast.sourceLocation,
+                };
+            }
+            else {
+                return {
+                    kind: 'declarationAssignment',
+                    destination,
+                    expression,
+                    exported,
+                    sourceLocation: ast.sourceLocation,
+                };
+            }
+            return result;
+        }
         case 'typeDeclaration':
-            const type = parseType(ast.children[3]);
+            const theType = parseType(ast.children[3]);
             const name = ast.children[0].value;
-            if (type.kind == 'Product') {
-                type.name = name;
+            if (theType.kind == 'Product') {
+                theType.name = name;
             }
             return {
                 kind: 'typeDeclaration',
                 name,
-                type,
+                type: theType,
                 sourceLocation: ast.sourceLocation,
             };
         case 'stringLiteral':
@@ -1718,7 +1758,7 @@ const astFromParseResult = (ast) => {
         case 'program':
             return {
                 kind: 'program',
-                statements: makeProgramAstNodeFromStatmentParseResult(ast.children[0]),
+                statements: extractFunctionBody(ast.children[0]),
                 sourceLocation: ast.sourceLocation,
             };
         case 'listLiteral':
@@ -1743,6 +1783,7 @@ const astFromParseResult = (ast) => {
 };
 exports.astFromParseResult = astFromParseResult;
 const compile = (source) => {
+    functionId = 0;
     const tokens = lex_1.lex(grammar_1.tokenSpecs, source);
     if ('kind' in tokens) {
         return tokens;
@@ -1758,10 +1799,23 @@ const compile = (source) => {
     if (ast.kind !== 'program') {
         return { internalError: 'AST was not a program' };
     }
+    const exportedDeclarations = ast.statements.filter(s => (s.kind == 'typedDeclarationAssignment' || s.kind == 'declarationAssignment') &&
+        s.exported);
+    const topLevelStatements = ast.statements.filter(s => s.kind != 'typedDeclarationAssignment' && s.kind != 'declarationAssignment');
+    if (exportedDeclarations.length > 0 && topLevelStatements.length > 0) {
+        return {
+            typeErrors: [
+                {
+                    kind: 'topLevelStatementsInModule',
+                    sourceLocation: topLevelStatements[0].sourceLocation,
+                },
+            ],
+        };
+    }
     const availableTypes = walkAst(ast, ['typeDeclaration'], n => n);
     let availableVariables = types_1.builtinFunctions;
     const program = {
-        name: `main_program`,
+        name: 'main_program',
         statements: ast.statements,
         variables: extractVariables({ w: ast.statements, availableVariables, availableTypes }),
         parameters: [],
@@ -1807,20 +1861,31 @@ const compile = (source) => {
         availableVariables,
         availableTypes,
     }));
-    const inferredProgram = inferFunction({ w: program, availableVariables, availableTypes });
-    if (isTypeError(inferredProgram)) {
-        return { typeErrors: inferredProgram };
+    let inferredProgram = undefined;
+    if (exportedDeclarations.length == 0) {
+        const maybeInferredProgram = inferFunction({
+            w: program,
+            availableVariables,
+            availableTypes,
+        });
+        if (isTypeError(maybeInferredProgram)) {
+            return { typeErrors: maybeInferredProgram };
+        }
+        inferredProgram = maybeInferredProgram;
+        if (!types_1.equal(inferredProgram.returnType, types_1.builtinTypes.Integer, availableTypes)) {
+            return {
+                typeErrors: [
+                    {
+                        kind: 'wrongTypeReturn',
+                        expressionType: inferredProgram.returnType,
+                        sourceLocation: { line: 1, column: 1 },
+                    },
+                ],
+            };
+        }
     }
-    if (!types_1.equal(inferredProgram.returnType, types_1.builtinTypes.Integer, availableTypes)) {
-        return {
-            typeErrors: [
-                {
-                    kind: 'wrongTypeReturn',
-                    expressionType: inferredProgram.returnType,
-                    sourceLocation: { line: 1, column: 1 },
-                },
-            ],
-        };
+    else {
+        inferredProgram = globalDeclarations.map(d => d.name);
     }
     return {
         types: availableTypes,
@@ -1858,138 +1923,36 @@ exports.tokenSpecs = [
         },
         toString: x => x,
     },
-    {
-        token: ',',
-        type: 'comma',
-        toString: () => ', ',
-    },
-    {
-        token: 'return',
-        type: 'return',
-        toString: () => 'return',
-    },
-    {
-        token: 'true|false',
-        type: 'booleanLiteral',
-        action: x => x.trim(),
-        toString: x => x,
-    },
-    {
-        token: '[a-z]\\w*',
-        type: 'identifier',
-        action: x => x,
-        toString: x => x,
-    },
-    {
-        token: '[A-Z][A-z]*',
-        type: 'typeIdentifier',
-        action: x => x,
-        toString: x => x,
-    },
-    {
-        token: ';',
-        type: 'statementSeparator',
-        toString: _ => ';',
-    },
-    {
-        token: '=>',
-        type: 'fatArrow',
-        toString: _ => '=>',
-    },
-    {
-        token: '==',
-        type: 'equality',
-        toString: _ => '==',
-    },
-    {
-        token: '=',
-        type: 'assignment',
-        toString: _ => '=',
-    },
-    {
-        token: '\\d+',
-        type: 'number',
-        action: parseInt,
-        toString: x => x.toString(),
-    },
-    {
-        token: '\\+\\+',
-        type: 'concatenation',
-        toString: _ => '++',
-    },
-    {
-        token: '\\+',
-        type: 'sum',
-        toString: _ => '+',
-    },
-    {
-        token: '\\*',
-        type: 'product',
-        toString: _ => '*',
-    },
-    {
-        token: '\\-',
-        type: 'subtraction',
-        toString: _ => '-',
-    },
-    {
-        token: '\\(',
-        type: 'leftBracket',
-        toString: _ => '(',
-    },
-    {
-        token: '\\)',
-        type: 'rightBracket',
-        toString: _ => ')',
-    },
-    {
-        token: '{',
-        type: 'leftCurlyBrace',
-        toString: _ => '{',
-    },
-    {
-        token: '}',
-        type: 'rightCurlyBrace',
-        toString: _ => '}',
-    },
-    {
-        token: '\\[',
-        type: 'leftSquareBracket',
-        toString: _ => '[',
-    },
-    {
-        token: '\\]',
-        type: 'rightSquareBracket',
-        toString: _ => ']',
-    },
-    {
-        token: '\\:',
-        type: 'colon',
-        toString: _ => ':',
-    },
-    {
-        token: '\\?',
-        type: 'ternaryOperator',
-        toString: _ => '?',
-    },
-    {
-        token: '<',
-        type: 'lessThan',
-        toString: _ => '<',
-    },
-    {
-        token: '>',
-        type: 'greaterThan',
-        toString: _ => '>',
-    },
-    {
-        token: '\\.',
-        type: 'memberAccess',
-        toString: _ => '.',
-    },
+    { token: ',', type: 'comma', toString: () => ', ' },
+    { token: 'return', type: 'return', toString: () => 'return' },
+    { token: 'export', type: 'export', toString: () => 'export' },
+    { token: 'true|false', type: 'booleanLiteral', action: x => x.trim(), toString: x => x },
+    { token: '[a-z]\\w*', type: 'identifier', action: x => x, toString: x => x },
+    { token: '[A-Z][A-z]*', type: 'typeIdentifier', action: x => x, toString: x => x },
+    { token: ';', type: 'statementSeparator', toString: _ => ';' },
+    { token: '=>', type: 'fatArrow', toString: _ => '=>' },
+    { token: '==', type: 'equality', toString: _ => '==' },
+    { token: '=', type: 'assignment', toString: _ => '=' },
+    { token: '\\d+', type: 'number', action: parseInt, toString: x => x.toString() },
+    { token: '\\+\\+', type: 'concatenation', toString: _ => '++' },
+    { token: '\\+', type: 'sum', toString: _ => '+' },
+    { token: '\\*', type: 'product', toString: _ => '*' },
+    { token: '\\-', type: 'subtraction', toString: _ => '-' },
+    { token: '\\(', type: 'leftBracket', toString: _ => '(' },
+    { token: '\\)', type: 'rightBracket', toString: _ => ')' },
+    { token: '{', type: 'leftCurlyBrace', toString: _ => '{' },
+    { token: '}', type: 'rightCurlyBrace', toString: _ => '}' },
+    { token: '\\[', type: 'leftSquareBracket', toString: _ => '[' },
+    { token: '\\]', type: 'rightSquareBracket', toString: _ => ']' },
+    { token: '\\:', type: 'colon', toString: _ => ':' },
+    { token: '\\?', type: 'ternaryOperator', toString: _ => '?' },
+    { token: '<', type: 'lessThan', toString: _ => '<' },
+    { token: '>', type: 'greaterThan', toString: _ => '>' },
+    { token: '\\.', type: 'memberAccess', toString: _ => '.' },
 ];
 const mplTerminal = token => parse_1.Terminal(token);
 const mplOptional = parser => parse_1.Optional(parser);
+const export_ = mplTerminal('export');
 const plus = mplTerminal('sum');
 const minus = mplTerminal('subtraction');
 const times = mplTerminal('product');
@@ -2038,21 +2001,23 @@ exports.grammar = {
     ]),
     argList: parse_1.SeparatedList(comma, 'arg'),
     arg: parse_1.Sequence('arg', [identifier, colon, 'type']),
-    functionBody: parse_1.OneOf([
-        parse_1.Sequence('statement', ['statement', statementSeparator, 'functionBody']),
-        parse_1.Sequence('returnStatement', [_return, 'expression', parse_1.Optional(statementSeparator)]),
+    functionBody: parse_1.Sequence('statement', [
+        'statement',
+        statementSeparator,
+        mplOptional('functionBody'),
     ]),
     statement: parse_1.OneOf([
-        parse_1.Sequence('typedDeclarationAssignment', [
+        parse_1.Sequence('declaration', [
+            mplOptional(export_),
             identifier,
             colon,
-            'type',
+            mplOptional('type'),
             assignment,
             'expression',
         ]),
-        parse_1.Sequence('declarationAssignment', [identifier, colon, assignment, 'expression']),
         parse_1.Sequence('typeDeclaration', [typeIdentifier, colon, assignment, 'type']),
         parse_1.Sequence('reassignment', [identifier, assignment, 'expression']),
+        parse_1.Sequence('returnStatement', [_return, 'expression']),
     ]),
     typeList: parse_1.SeparatedList(comma, 'type'),
     type: parse_1.OneOf([
@@ -2187,42 +2152,6 @@ const outputPath = process.argv[3];
     await fs_extra_1.writeFile(outputPath, backendOutput.target);
 })();
 
-
-/***/ }),
-
-/***/ "./mpl/add.mpl":
-/*!*********************!*\
-  !*** ./mpl/add.mpl ***!
-  \*********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-
-const readline = __webpack_require__(/*! readline */ "readline");
-
-const length = str => str.length;
-const print = str => process.stdout.write(str);
-
-const readInt = async () => {
-    return new Promise((resolve, reject) => {
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-        });
-        rl.on('line', line => {
-            rl.close();
-            resolve(line);
-        });
-    });
-};
-
-(async () => {
-    anonymous_1 = (a, b) => { return  a + b }
-    let add = 
-anonymous_1
-;
-process.exit(0)
-})();
 
 /***/ }),
 
@@ -23007,6 +22936,7 @@ exports.builtinFunctions = [
             permissions: [],
             returnType: exports.builtinTypes.Integer,
         },
+        exported: false,
     },
     {
         name: 'print',
@@ -23016,6 +22946,7 @@ exports.builtinFunctions = [
             permissions: [],
             returnType: exports.builtinTypes.Integer,
         },
+        exported: false,
     },
     {
         name: 'readInt',
@@ -23025,6 +22956,7 @@ exports.builtinFunctions = [
             permissions: ['stdout'],
             returnType: exports.builtinTypes.Integer,
         },
+        exported: false,
     },
 ];
 exports.typeSize = (targetInfo, type, typeDeclarations) => {
@@ -23333,17 +23265,6 @@ module.exports = require("os");
 /***/ (function(module, exports) {
 
 module.exports = require("path");
-
-/***/ }),
-
-/***/ "readline":
-/*!***************************!*\
-  !*** external "readline" ***!
-  \***************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = require("readline");
 
 /***/ }),
 
