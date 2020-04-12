@@ -64,6 +64,8 @@ export const toString = (e: TypeError): string => {
             return `Modules may not have top level statements.`;
         case 'missingReturn':
             return 'Missing final return statement';
+        case 'objectDoesNotHaveMember':
+            return `Object of type ${typeToString(e.lhsType)} does not have member ${e.member}`;
         default:
             throw debug(`need string for error: ${e.kind}`);
     }

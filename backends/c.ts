@@ -47,8 +47,10 @@ const mplTypeToCType = (type: Type): ((name: string) => string) => {
             return name => `struct ${type.name} ${name}`;
         case 'List':
             return name => `struct list ${name}`;
+        case 'NameRef':
+            return name => `TODO: make mplTypeToCType work`;
         default:
-            throw debug(`${type.kind} unhandled in mplTypeToCType`);
+            throw debug(`${(type as any).kind} unhandled in mplTypeToCType`);
     }
 };
 
@@ -183,6 +185,8 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                             rhs
                         );
                     }
+                case 'NameRef':
+                    return compileExpression([], ([]) => ['TODO: make this work']);
                 default:
                     throw debug(
                         `${declaration.type.kind} unhandled in typedDeclarationAssignment`

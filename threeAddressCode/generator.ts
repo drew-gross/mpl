@@ -57,9 +57,31 @@ const memberOffset = (
     return result * bytesInWord;
 };
 
-const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, lhsInfo) => {
+const assignGlobal = (
+    makeTemporary: (name: string) => Register,
+    makeLabel: (name: string) => string,
+    rhsRegister: Register,
+    targetInfo: RegisterAgnosticTargetInfo,
+    lhsInfo: GlobalInfo,
+    availableTypes: TypeDeclaration[]
+) => {
     const lhsType = lhsInfo.originalDeclaration.type;
     switch (lhsType.kind) {
+        case 'NameRef':
+            const resolvedType = resolve(lhsType, availableTypes);
+            if (!resolvedType) {
+                throw debug('Unable to resolve type');
+            }
+            const newDeclaration = { ...lhsInfo.originalDeclaration, type: resolvedType };
+            const newLhsInfo = { ...lhsInfo, originalDeclaration: newDeclaration };
+            return assignGlobal(
+                makeTemporary,
+                makeLabel,
+                rhsRegister,
+                targetInfo,
+                newLhsInfo,
+                availableTypes
+            );
         case 'Function':
         case 'Integer':
             return compileExpression<Statement>([], ([]) =>
@@ -363,7 +385,8 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             makeLabel,
                             rhsRegister,
                             targetInfo,
-                            globalNameMap[lhs]
+                            globalNameMap[lhs],
+                            types
                         ),
                     ],
                     ([rhs, assign]) => [...rhs, ...assign]

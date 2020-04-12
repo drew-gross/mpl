@@ -53,6 +53,7 @@ export type TypeDeclaration = { name: string; type: Type };
 
 // TODO: split Type into ResolveType and Type, and have this function accept Type and return ResolvedType
 export const resolve = (t: NameRef, typeDeclarations: TypeDeclaration[]): Type | undefined => {
+    if (!typeDeclarations) debug('no declarations');
     const type = typeDeclarations.find(d => d.name == t.namedType);
     return type ? type.type : type; // lol
 };

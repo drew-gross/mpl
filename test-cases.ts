@@ -413,10 +413,10 @@ return isFive(5) ? 1 : 0;`,
         source: `
             IntPair := {
                 first: Integer;
-                seconds: Integer;
+                second: Integer;
             };
 
-            returnsIntPair := () => {
+            returnsIntPair: Function<IntPair> = () => {
                 ip := IntPair {
                     first: 12,
                     second: 34,
