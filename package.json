@@ -19,7 +19,7 @@
         "test-debug": "npm run compile-tests && ava debug built/test.js",
         "test-fast": "npm run compile-tests && ava --verbose",
         "test-all": "npm run test && npm run benchmark",
-        "test-case": "tsc && node --stack_size=1000000 ./built/debug-test-case.js",
+        "test-case": "npm run compile-tests && node --stack_size=1000000 ./built/debug-test-case.js",
         "test-case-debug": "tsc && node  --stack_size=1000000 --inspect --inspect-brk ./built/debug-test-case.js",
         "test-case-profile": "tsc && node_modules/.bin/0x ./built/debug-test-case.js",
         "compile": "webpack --mode development --env",

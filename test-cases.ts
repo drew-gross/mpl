@@ -409,6 +409,27 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 7,
     },
     {
+        name: 'Return Int Pair',
+        source: `
+            IntPair := {
+                first: Integer;
+                seconds: Integer;
+            };
+
+            returnsIntPair := () => {
+                ip := IntPair {
+                    first: 12,
+                    second: 34,
+                };
+                return ip;
+            };
+
+            result: IntPair = returnsIntPair();
+            return result.second - result.first;
+        `,
+        exitCode: 34 - 12,
+    },
+    {
         name: 'String Length',
         source: `
             myStr: String = "test";
