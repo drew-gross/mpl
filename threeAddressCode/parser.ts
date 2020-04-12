@@ -73,7 +73,7 @@ const tokenSpecs: TokenSpec<TacToken>[] = [
         toString: x => x,
         action: s => parseInt(s.slice(8), 10),
     },
-    { token: 'return', type: 'return', toString: x => x },
+    { token: 'return\\b', type: 'return', toString: x => x },
     { token: 'goto', type: 'goto', toString: x => x },
     { token: 'alloca', type: 'alloca', toString: x => x },
     { token: 'r:[a-z]\\w*', type: 'register', toString: x => x, action: x => x },

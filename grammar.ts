@@ -52,8 +52,9 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
         toString: x => x,
     },
     { token: ',', type: 'comma', toString: () => ', ' },
-    { token: 'return', type: 'return', toString: () => 'return' },
-    { token: 'export', type: 'export', toString: () => 'export' },
+    // TODO: Make a "keyword" utility function for the lexer. Also figure out why \b doesn't work here.
+    { token: 'return[^A-z]', type: 'return', toString: () => 'return' },
+    { token: 'export[^A-z]', type: 'export', toString: () => 'export' },
     { token: 'true|false', type: 'booleanLiteral', action: x => x.trim(), toString: x => x },
     { token: '[a-z]\\w*', type: 'identifier', action: x => x, toString: x => x },
     { token: '[A-Z][A-z]*', type: 'typeIdentifier', action: x => x, toString: x => x },

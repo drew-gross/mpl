@@ -580,4 +580,13 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 11,
     },
+    {
+        name: 'Variable Named Like Keyword',
+        source: `
+            returnVar := 5;
+            exportVar := 6;
+            return returnVar + exportVar;
+        `,
+        exitCode: 11,
+    },
 ];
