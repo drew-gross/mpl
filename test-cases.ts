@@ -1,6 +1,7 @@
 import { TestProgram, TestModule } from './test-case';
 import join from './util/join';
 import range from './util/list/range';
+import { builtinTypes } from './types';
 
 const manyGlobalsMultiply = () => {
     const numbers = range(1, 20);
@@ -589,5 +590,92 @@ return isFive(5) ? 1 : 0;`,
             return returnVar + exportVar;
         `,
         exitCode: 11,
+    },
+    {
+        name: 'Assign Function to Wrong Args Number',
+        source: `
+            myFunc: Function<Integer, Integer> = () => 111;
+            return 0;
+        `,
+        typeErrors: [
+            {
+                kind: 'assignWrongType',
+                lhsName: 'myFunc',
+                lhsType: {
+                    type: {
+                        kind: 'Function',
+                        arguments: [builtinTypes.Integer],
+                        returnType: builtinTypes.Integer,
+                    },
+                },
+                rhsType: {
+                    type: {
+                        kind: 'Function',
+                        arguments: [],
+                        permissions: [],
+                        returnType: builtinTypes.Integer,
+                    },
+                },
+                sourceLocation: { line: 2, column: 13 },
+            },
+        ],
+    },
+    {
+        name: 'Assign Function to Wrong Args Type',
+        source: `
+            myFunc: Function<Integer, Integer> = (a: String) => 111;
+            return myFunc("");
+        `,
+        typeErrors: [
+            {
+                kind: 'assignWrongType',
+                lhsName: 'myFunc',
+                lhsType: {
+                    type: {
+                        kind: 'Function',
+                        arguments: [builtinTypes.Integer],
+                        returnType: builtinTypes.Integer,
+                    },
+                },
+                rhsType: {
+                    type: {
+                        kind: 'Function',
+                        arguments: [builtinTypes.String],
+                        permissions: [],
+                        returnType: builtinTypes.Integer,
+                    },
+                },
+                sourceLocation: { line: 2, column: 13 },
+            },
+        ],
+    },
+    {
+        name: 'Assign Function to Wrong Return Type',
+        source: `
+            myFunc: Function<Integer, Boolean> = (a: String) => 111;
+            return myFunc("");
+        `,
+        typeErrors: [
+            {
+                kind: 'assignWrongType',
+                lhsName: 'myFunc',
+                lhsType: {
+                    type: {
+                        kind: 'Function',
+                        arguments: [builtinTypes.Integer],
+                        returnType: builtinTypes.Boolean,
+                    },
+                },
+                rhsType: {
+                    type: {
+                        kind: 'Function',
+                        arguments: [builtinTypes.String],
+                        permissions: [],
+                        returnType: builtinTypes.Integer,
+                    },
+                },
+                sourceLocation: { line: 2, column: 13 },
+            },
+        ],
     },
 ];
