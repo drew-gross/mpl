@@ -1398,7 +1398,7 @@ test('type equality', t => {
     );
 });
 
-test.only('equal types are equal', t => {
+test('equal types are equal', t => {
     t.assert(typesAreEqual({ type: { kind: 'Integer' } }, { type: { kind: 'Integer' } }));
 });
 
@@ -1447,12 +1447,14 @@ test('type of objectLiteral', t => {
     });
     const expectedType = {
         type: {
-            kind: 'Product',
-            name: 'BoolPair',
-            members: [
-                { name: 'first', type: { type: { kind: 'Boolean' } } },
-                { name: 'second', type: { type: { kind: 'Boolean' } } },
-            ],
+            type: {
+                kind: 'Product',
+                name: 'BoolPair',
+                members: [
+                    { name: 'first', type: { type: { kind: 'Boolean' } } },
+                    { name: 'second', type: { type: { kind: 'Boolean' } } },
+                ],
+            },
         },
         extractedFunctions: [],
     };

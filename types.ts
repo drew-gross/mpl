@@ -83,6 +83,7 @@ export const equal = (a: Type, b: Type): boolean => {
         return true;
     }
     if (a.type.kind == 'Product' && b.type.kind == 'Product') {
+        if (a.type.name != b.type.name) return false;
         const bProduct = b.type;
         const allInLeftPresentInRight = a.type.members.every(memberA =>
             bProduct.members.some(
