@@ -71,7 +71,9 @@ export default async (
     structure += 'Functions:\n';
     frontendOutput.functions.forEach(f => {
         structure += `-> ${f.name}(${join(
-            f.parameters.map(p => typeToString(p.type)),
+            f.parameters.map(p =>
+                'namedType' in p.type ? p.type.namedType : typeToString(p.type)
+            ),
             ', '
         )})\n`;
         f.statements.forEach(statement => {
@@ -81,7 +83,7 @@ export default async (
     structure += 'Program:\n';
     structure += '-> Globals:\n';
     frontendOutput.globalDeclarations.forEach(declaration => {
-        structure += `---> ${declaration.type.kind} ${declaration.name}\n`;
+        structure += `---> ${declaration.type.type.kind} ${declaration.name}\n`;
     });
     structure += '-> Statements:\n';
     if (Array.isArray(frontendOutput.program)) {

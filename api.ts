@@ -1,15 +1,21 @@
 import { UninferredStatement, Statement } from './ast';
 import { RegisterAgnosticTargetInfo } from './TargetInfo';
-import { Type, TypeDeclaration } from './types';
+import { Type, TypeDeclaration, TypeReference } from './types';
 import { FileResult } from 'fs-extra';
 import { Program } from './threeAddressCode/Program';
 
 export type VariableLocation = 'Global' | 'Parameter' | 'Stack';
 export type VariableDeclaration = {
     name: string;
-    type: Type;
+    type: Type | TypeReference;
     exported: boolean;
     mangledName?: string;
+};
+export type GlobalVariable = {
+    name: string;
+    exported: boolean;
+    type: Type;
+    mangledName: string; // TODO: feels like this shouldn't be necessary?
 };
 export type UninferredFunction = {
     // TODO: Don't export this (or rethink it)
@@ -35,7 +41,7 @@ export type FrontendOutput = {
     functions: Function[];
     builtinFunctions: VariableDeclaration[];
     program: Function | ExportedVariable[];
-    globalDeclarations: VariableDeclaration[];
+    globalDeclarations: GlobalVariable[];
     stringLiterals: StringLiteralData[];
 };
 export type ExecutionResult =

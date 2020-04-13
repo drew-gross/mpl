@@ -13,6 +13,14 @@ import * as Ast from '../ast';
 import debug from '../util/debug';
 import join from '../util/join';
 
+const needsAwait = (decl: VariableDeclaration | undefined) => {
+    if (!decl) return false;
+    if ('namedType' in decl.type) throw debug('TODO get a real type here');
+    if (decl.type.type.kind != 'Function') return false;
+    if (decl.type.type.permissions.includes('stdout')) return true;
+    return false;
+};
+
 const astToJS = ({
     ast,
     exitInsteadOfReturn,
@@ -51,11 +59,7 @@ const astToJS = ({
             const functionName = ast.name;
             const functionDecl = builtinFunctions.find(({ name, type }) => name == functionName);
             const jsArguments: string[][] = ast.arguments.map(argument => recurse(argument));
-            const needsAwait =
-                functionDecl &&
-                functionDecl.type.kind == 'Function' &&
-                functionDecl.type.permissions.includes('stdout');
-            const awaitStr = needsAwait ? 'await' : '';
+            const awaitStr = needsAwait(functionDecl) ? 'await' : '';
             return [
                 awaitStr + ` ${ast.name}(`,
                 join(

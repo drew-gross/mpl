@@ -27,12 +27,14 @@ import {
     FrontendOutput,
     Function as ApiFunction,
     VariableDeclaration,
+    GlobalVariable,
     StringLiteralData,
 } from '../api';
 import { Statement } from './statement';
 import { parseInstructionsOrDie as ins } from './parser';
 
-export type GlobalInfo = { newName: string; originalDeclaration: VariableDeclaration };
+// TODO: merge this with GlobalVariable?
+export type GlobalInfo = { newName: string; originalDeclaration: GlobalVariable };
 
 export type BackendOptions = {
     ast: Ast.Ast;
@@ -51,8 +53,8 @@ const memberOffset = (
     memberName: string,
     { bytesInWord }: RegisterAgnosticTargetInfo
 ): number => {
-    if (type.kind != 'Product') throw debug('need a product here');
-    const result = type.members.findIndex(m => m.name == memberName);
+    if (type.type.kind != 'Product') throw debug('need a product here');
+    const result = type.type.members.findIndex(m => m.name == memberName);
     if (result < 0) throw debug('coudnt find member');
     return result * bytesInWord;
 };
@@ -66,26 +68,11 @@ const assignGlobal = (
     availableTypes: TypeDeclaration[]
 ) => {
     const lhsType = lhsInfo.originalDeclaration.type;
-    switch (lhsType.kind) {
-        case 'NameRef':
-            const resolvedType = resolve(lhsType, availableTypes);
-            if (!resolvedType) {
-                throw debug('Unable to resolve type');
-            }
-            const newDeclaration = { ...lhsInfo.originalDeclaration, type: resolvedType };
-            const newLhsInfo = { ...lhsInfo, originalDeclaration: newDeclaration };
-            return assignGlobal(
-                makeTemporary,
-                makeLabel,
-                rhsRegister,
-                targetInfo,
-                newLhsInfo,
-                availableTypes
-            );
+    switch (lhsType.type.kind) {
         case 'Function':
         case 'Integer':
             return compileExpression<Statement>([], ([]) =>
-                ins(`*${lhsInfo.newName} = ${rhsRegister}; Put ${lhsType.kind} into global`)
+                ins(`*${lhsInfo.newName} = ${rhsRegister}; Put ${lhsType.type.kind} into global`)
             );
         case 'String':
             return compileExpression<Statement>([], ([]) =>
@@ -99,7 +86,7 @@ const assignGlobal = (
             );
         case 'Product':
             const lhsAddress = makeTemporary('lhsAddress');
-            const copyMembers: Statement[][] = lhsType.members.map((m, i) => {
+            const copyMembers: Statement[][] = lhsType.type.members.map((m, i) => {
                 // TODO: Should add up sizes of preceeding members
                 const offset = i * targetInfo.bytesInWord;
                 const memberTemporary = makeTemporary('member');
@@ -139,7 +126,7 @@ const assignGlobal = (
                 `),
             ]);
         default:
-            const unhandled = lhsInfo.originalDeclaration.type.kind;
+            const unhandled = lhsInfo.originalDeclaration.type.type.kind;
             throw debug(`${unhandled} unhandled in assignGlobal`);
     }
 };
@@ -318,7 +305,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             ]);
         }
         case 'equality': {
-            if (ast.type.kind == 'String') {
+            if (ast.type.type.kind == 'String') {
                 // Put left in s0 and right in s1 for passing to string equality function
                 const lhsArg = makeTemporary('lhs');
                 const storeLeftInstructions = recurse({ ast: ast.lhs, destination: lhsArg });
@@ -403,7 +390,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 const reassignmentRhs = makeTemporary('reassignment_rhs');
                 const rhs = recurse({ ast: ast.expression, destination: reassignmentRhs });
                 const declaration = globalNameMap[lhs];
-                switch (declaration.originalDeclaration.type.kind) {
+                switch (declaration.originalDeclaration.type.type.kind) {
                     case 'Function':
                     case 'Integer':
                         return compileExpression<Statement>([rhs], ([e1]) => [
@@ -518,7 +505,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const identifierName = ast.value;
             if (identifierName in globalNameMap) {
                 const info = globalNameMap[identifierName];
-                if (info.originalDeclaration.type.kind == 'Product') {
+                if (info.originalDeclaration.type.type.kind == 'Product') {
                     return compileExpression<Statement>([], ([]) => [
                         {
                             kind: 'loadSymbolAddress',
@@ -655,22 +642,13 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
         case 'memberAccess': {
             const lhs = makeTemporary('object_to_access');
             const lhsInstructions = recurse({ ast: ast.lhs, destination: lhs });
-            let type = ast.lhsType;
-            if (type.kind == 'NameRef') {
-                const resolvedType = resolve(type, types);
-                if (resolvedType) {
-                    type = resolvedType;
-                } else {
-                    throw debug('invalid nameref');
-                }
-            }
             return compileExpression<Statement>([lhsInstructions], ([makeLhs]) => [
                 ...makeLhs,
                 {
                     kind: 'loadMemory',
                     from: lhs,
                     to: destination,
-                    offset: memberOffset(type, ast.rhs, targetInfo),
+                    offset: memberOffset(ast.lhsType, ast.rhs, targetInfo),
                     why: 'Read the memory',
                 },
             ]);

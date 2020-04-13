@@ -428,6 +428,7 @@ return isFive(5) ? 1 : 0;`,
             return result.second - result.first;
         `,
         exitCode: 34 - 12,
+        failing: true,
     },
     {
         name: 'String Length',

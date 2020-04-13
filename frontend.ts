@@ -12,9 +12,11 @@ import {
     ProductComponent,
     equal as typesAreEqual,
     resolve as resolveType,
+    resolveIfNecessary,
     builtinTypes,
     builtinFunctions,
     TypeDeclaration,
+    TypeReference,
 } from './types';
 import {
     VariableDeclaration,
@@ -23,6 +25,7 @@ import {
     FrontendOutput,
     StringLiteralData,
     ExportedVariable,
+    GlobalVariable,
 } from './api';
 import { TypeError } from './TypeError';
 import SourceLocation from './parser-lib/sourceLocation';
@@ -307,7 +310,7 @@ export const typeOfExpression = (
             }
             const lt = leftType as TOEResult;
             const rt = rightType as TOEResult;
-            if (!typesAreEqual(lt.type, builtinTypes.Integer, availableTypes)) {
+            if (!typesAreEqual(lt.type, builtinTypes.Integer)) {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -319,7 +322,7 @@ export const typeOfExpression = (
                     },
                 ];
             }
-            if (!typesAreEqual(rt.type, builtinTypes.Integer, availableTypes)) {
+            if (!typesAreEqual(rt.type, builtinTypes.Integer)) {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -345,7 +348,7 @@ export const typeOfExpression = (
             }
             const lt = leftType as TOEResult;
             const rt = rightType as TOEResult;
-            if (!typesAreEqual(lt.type, rt.type, availableTypes)) {
+            if (!typesAreEqual(lt.type, rt.type)) {
                 return [
                     {
                         kind: 'typeMismatchForOperator',
@@ -367,7 +370,7 @@ export const typeOfExpression = (
             }
             const lt = leftType as TOEResult;
             const rt = rightType as TOEResult;
-            if (lt.type.kind !== 'String') {
+            if (lt.type.type.kind !== 'String') {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -379,7 +382,7 @@ export const typeOfExpression = (
                     },
                 ];
             }
-            if (rt.type.kind !== 'String') {
+            if (rt.type.type.kind !== 'String') {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -411,10 +414,20 @@ export const typeOfExpression = (
             }
             return {
                 type: {
-                    kind: 'Function',
-                    arguments: ast.parameters.map(p => p.type),
-                    permissions: [],
-                    returnType: f.returnType,
+                    type: {
+                        kind: 'Function',
+                        arguments: ast.parameters
+                            .map(p => p.type)
+                            .map(t => {
+                                const resolved = resolveIfNecessary(t, ctx.availableTypes);
+                                if (!resolved) {
+                                    throw debug('bag argument. This should be a better error.');
+                                }
+                                return resolved;
+                            }),
+                        permissions: [],
+                        returnType: f.returnType,
+                    },
                 },
                 extractedFunctions: [f], // TODO: Add functions extracted within the function itself
             };
@@ -444,7 +457,10 @@ export const typeOfExpression = (
             }
             const functionType = declaration.type;
             if (!functionType) throw debug('bad function! This should be a better error.');
-            if (functionType.kind !== 'Function') {
+            if ('namedType' in functionType) {
+                throw debug('nameRef function! This should be supported.');
+            }
+            if (functionType.type.kind !== 'Function') {
                 return [
                     {
                         kind: 'calledNonFunction',
@@ -454,13 +470,13 @@ export const typeOfExpression = (
                     },
                 ];
             }
-            if (argTypes.length !== functionType.arguments.length) {
+            if (argTypes.length !== functionType.type.arguments.length) {
                 return [
                     {
                         kind: 'wrongNumberOfArguments',
                         targetFunction: functionName,
                         passedArgumentCount: argTypes.length,
-                        expectedArgumentCount: functionType.arguments.length,
+                        expectedArgumentCount: functionType.type.arguments.length,
                         sourceLocation: ast.sourceLocation,
                     },
                 ];
@@ -469,8 +485,7 @@ export const typeOfExpression = (
                 if (
                     !typesAreEqual(
                         (argTypes[i] as TOEResult).type,
-                        functionType.arguments[i],
-                        availableTypes
+                        functionType.type.arguments[i]
                     )
                 ) {
                     return [
@@ -478,13 +493,13 @@ export const typeOfExpression = (
                             kind: 'wrongArgumentType',
                             targetFunction: functionName,
                             passedType: (argTypes[i] as TOEResult).type,
-                            expectedType: functionType.arguments[i],
+                            expectedType: functionType.type.arguments[i],
                             sourceLocation: ast.sourceLocation,
                         } as TypeError,
                     ];
                 }
             }
-            return { type: functionType.returnType, extractedFunctions: [] };
+            return { type: functionType.type.returnType, extractedFunctions: [] };
         }
         case 'memberStyleCall': {
             const callArgTypes: (TOEResult | TypeError[])[] = ast.params.map(recurse);
@@ -518,7 +533,10 @@ export const typeOfExpression = (
             }
             const functionType = declaration.type;
             if (!functionType) throw debug('bad function! This should be a better error.');
-            if (functionType.kind !== 'Function') {
+            if ('namedType' in functionType) {
+                throw debug('nameRef function! This should be supported.');
+            }
+            if (functionType.type.kind !== 'Function') {
                 return [
                     {
                         kind: 'calledNonFunction',
@@ -529,13 +547,13 @@ export const typeOfExpression = (
                 ];
             }
             const allArgTypes = [thisArgType, ...callArgTypes];
-            if (allArgTypes.length !== functionType.arguments.length) {
+            if (allArgTypes.length !== functionType.type.arguments.length) {
                 return [
                     {
                         kind: 'wrongNumberOfArguments',
                         targetFunction: functionName,
                         passedArgumentCount: allArgTypes.length,
-                        expectedArgumentCount: functionType.arguments.length,
+                        expectedArgumentCount: functionType.type.arguments.length,
                         sourceLocation: ast.sourceLocation,
                     },
                 ];
@@ -545,8 +563,7 @@ export const typeOfExpression = (
                 if (
                     !typesAreEqual(
                         (allArgTypes[i] as TOEResult).type,
-                        functionType.arguments[i],
-                        availableTypes
+                        functionType.type.arguments[i]
                     )
                 ) {
                     return [
@@ -554,17 +571,17 @@ export const typeOfExpression = (
                             kind: 'wrongArgumentType',
                             targetFunction: functionName,
                             passedType: (allArgTypes[i] as TOEResult).type,
-                            expectedType: functionType.arguments[i],
+                            expectedType: functionType.type.arguments[i],
                             sourceLocation: ast.sourceLocation,
                         } as TypeError,
                     ];
                 }
             }
-            return { type: functionType.returnType, extractedFunctions: [] };
+            return { type: functionType.type.returnType, extractedFunctions: [] };
         }
         case 'identifier': {
-            const declaration = availableVariables.find(({ name }) => ast.value == name);
-            if (!declaration) {
+            const unresolved = availableVariables.find(({ name }) => ast.value == name);
+            if (!unresolved) {
                 return [
                     {
                         kind: 'unknownTypeForIdentifier',
@@ -573,7 +590,17 @@ export const typeOfExpression = (
                     },
                 ];
             }
-            return { type: declaration.type, extractedFunctions: [] };
+            const declaration = resolveIfNecessary(unresolved.type, availableTypes);
+            if (!declaration) {
+                return [
+                    {
+                        kind: 'couldNotFindType',
+                        name: (unresolved.type as any).namedType,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return { type: declaration, extractedFunctions: [] };
         }
         case 'ternary': {
             const conditionType = recurse(ast.condition);
@@ -596,7 +623,7 @@ export const typeOfExpression = (
                     return [];
                 }
             }
-            if (!typesAreEqual(conditionType.type, builtinTypes.Boolean, availableTypes)) {
+            if (!typesAreEqual(conditionType.type, builtinTypes.Boolean)) {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -608,7 +635,7 @@ export const typeOfExpression = (
                     },
                 ];
             }
-            if (!typesAreEqual(trueBranchType.type, falseBranchType.type, availableTypes)) {
+            if (!typesAreEqual(trueBranchType.type, falseBranchType.type)) {
                 return [
                     {
                         kind: 'ternaryBranchMismatch',
@@ -630,12 +657,14 @@ export const typeOfExpression = (
             if (!(typeErrors.length == 0)) return typeErrors;
             return {
                 type: {
-                    kind: 'Product',
-                    name: ast.typeName,
-                    members: ast.members.map(({ name, expression }) => ({
-                        name,
-                        type: (recurse(expression) as TOEResult).type,
-                    })),
+                    type: {
+                        kind: 'Product',
+                        name: ast.typeName,
+                        members: ast.members.map(({ name, expression }) => ({
+                            name,
+                            type: (recurse(expression) as TOEResult).type,
+                        })),
+                    },
                 },
                 extractedFunctions: [], // TODO: propagate these
             };
@@ -645,20 +674,7 @@ export const typeOfExpression = (
                 return lhsType;
             }
             let resolvedLhs = lhsType.type;
-            if (resolvedLhs.kind == 'NameRef') {
-                const resolved = resolveType(resolvedLhs, availableTypes);
-                if (!resolved) {
-                    return [
-                        {
-                            kind: 'couldNotFindType',
-                            name: resolvedLhs.namedType,
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ];
-                }
-                resolvedLhs = resolved;
-            }
-            if (resolvedLhs.kind != 'Product') {
+            if (resolvedLhs.type.kind != 'Product') {
                 return [
                     {
                         kind: 'invalidMemberAccess',
@@ -667,7 +683,7 @@ export const typeOfExpression = (
                     },
                 ];
             }
-            const accessedMember = resolvedLhs.members.find(m => m.name == ast.rhs);
+            const accessedMember = resolvedLhs.type.members.find(m => m.name == ast.rhs);
             if (!accessedMember) {
                 return [
                     {
@@ -689,7 +705,7 @@ export const typeOfExpression = (
                 }
                 if (!innerType) {
                     innerType = result.type;
-                } else if (!typesAreEqual(innerType, result.type, availableTypes)) {
+                } else if (!typesAreEqual(innerType, result.type)) {
                     return [{ kind: 'nonhomogenousList', sourceLocation: ast.sourceLocation }];
                 }
                 extractedFunctions.push(...result.extractedFunctions);
@@ -698,16 +714,15 @@ export const typeOfExpression = (
                 if (expectedType) {
                     return { type: expectedType, extractedFunctions };
                 }
-                debugger;
                 return [{ kind: 'uninferrableEmptyList', sourceLocation: ast.sourceLocation }];
             }
-            return { type: { kind: 'List', of: innerType }, extractedFunctions };
+            return { type: { type: { kind: 'List', of: innerType } }, extractedFunctions };
         case 'indexAccess':
             const accessedType = recurse(ast.accessed);
             if (isTypeError(accessedType)) {
                 return accessedType;
             }
-            if (accessedType.type.kind != 'List') {
+            if (accessedType.type.type.kind != 'List') {
                 return [
                     {
                         kind: 'indexAccessNonList',
@@ -720,7 +735,7 @@ export const typeOfExpression = (
             if (isTypeError(indexType)) {
                 return indexType;
             }
-            if (indexType.type.kind != 'Integer') {
+            if (indexType.type.type.kind != 'Integer') {
                 return [
                     {
                         kind: 'nonIntegerIndex',
@@ -730,7 +745,7 @@ export const typeOfExpression = (
                 ];
             }
             return {
-                type: accessedType.type.of,
+                type: accessedType.type.type.of,
                 extractedFunctions: [
                     ...accessedType.extractedFunctions,
                     ...indexType.extractedFunctions,
@@ -763,10 +778,12 @@ const typeCheckStatement = (
                     {
                         name: ast.destination,
                         type: {
-                            kind: 'Function',
-                            arguments: [{ kind: 'Integer' }],
-                            permissions: [],
-                            returnType: { kind: 'Integer' },
+                            type: {
+                                kind: 'Function' as 'Function',
+                                arguments: [{ type: { kind: 'Integer' } }],
+                                permissions: [],
+                                returnType: { type: { kind: 'Integer' } },
+                            },
                         },
                         exported: false,
                     },
@@ -786,8 +803,8 @@ const typeCheckStatement = (
             if (isTypeError(rightType)) {
                 return { errors: rightType, newVariables: [] };
             }
-            const leftType = availableVariables.find(v => v.name == ast.destination);
-            if (!leftType) {
+            const unresolvedLeftType = availableVariables.find(v => v.name == ast.destination);
+            if (!unresolvedLeftType) {
                 return {
                     errors: [
                         {
@@ -799,13 +816,27 @@ const typeCheckStatement = (
                     newVariables: [],
                 };
             }
-            if (!typesAreEqual(leftType.type, rightType.type, availableTypes)) {
+            const leftType = resolveIfNecessary(unresolvedLeftType.type, availableTypes);
+            if (!leftType) {
+                return {
+                    errors: [
+                        {
+                            kind: 'couldNotFindType',
+                            name: unresolvedLeftType.name,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+
+            if (!typesAreEqual(leftType, rightType.type)) {
                 return {
                     errors: [
                         {
                             kind: 'assignWrongType',
                             lhsName: ast.destination,
-                            lhsType: leftType.type,
+                            lhsType: leftType,
                             rhsType: rightType.type,
                             sourceLocation: ast.sourceLocation,
                         },
@@ -831,7 +862,7 @@ const typeCheckStatement = (
             if (isTypeError(expressionType)) {
                 return { errors: expressionType, newVariables: [] };
             }
-            if (!typesAreEqual(expressionType.type, destinationType, availableTypes)) {
+            if (!typesAreEqual(expressionType.type, destinationType)) {
                 return {
                     errors: [
                         {
@@ -894,7 +925,7 @@ const typeCheckFunction = (ctx: WithContext<UninferredFunction>) => {
 
 const assignmentToGlobalDeclaration = (
     ctx: WithContext<Ast.UninferredDeclarationAssignment>
-): VariableDeclaration => {
+): GlobalVariable => {
     const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
     return {
@@ -1114,7 +1145,7 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
             return {
                 kind: 'listLiteral',
                 sourceLocation: ast.sourceLocation,
-                type: { kind: 'List', of: itemType },
+                type: { type: { kind: 'List', of: itemType } },
                 items,
             };
         case 'indexAccess':
@@ -1178,13 +1209,16 @@ const parseTypeLiteralComponent = (ast: MplAst): ProductComponent => {
         throw debug('todo');
     }
     if (ast.type != 'typeLiteralComponent') throw debug('wrong as type');
+    const unresolved = parseType(ast.children[2]);
+    const resolved = resolveIfNecessary(unresolved, []);
+    if (!resolved) throw debug('need to make products work as components of other products');
     return {
         name: (ast.children[0] as any).value,
-        type: parseType(ast.children[2]),
+        type: resolved,
     };
 };
 
-const parseType = (ast: MplAst): Type => {
+const parseType = (ast: MplAst): Type | TypeReference => {
     if (isSeparatedListNode(ast) || isListNode(ast)) {
         throw debug('todo');
     }
@@ -1194,11 +1228,20 @@ const parseType = (ast: MplAst): Type => {
             if (name != 'Function') throw debug('Only functions support args right now');
             const list = ast.children[2];
             if (!isSeparatedListNode(list)) throw debug('todo');
-            const typeList = list.items.map(parseType);
+            const typeList = list.items.map(parseType).map(t => {
+                if ('namedType' in t) {
+                    const resolved = resolveType(t, []);
+                    if (!resolved) throw debug('Need to make type refs work in functions');
+                    return resolved;
+                }
+                return t;
+            });
             return {
-                kind: name,
-                arguments: typeList.slice(0, typeList.length - 1),
-                returnType: typeList[typeList.length - 1],
+                type: {
+                    kind: name,
+                    arguments: typeList.slice(0, typeList.length - 1),
+                    returnType: typeList[typeList.length - 1],
+                },
             };
         }
         case 'typeWithoutArgs': {
@@ -1213,9 +1256,9 @@ const parseType = (ast: MplAst): Type => {
                 case 'String':
                 case 'Integer':
                 case 'Boolean':
-                    return { kind: name } as Type;
+                    return { type: { kind: name } };
                 default:
-                    return { kind: 'NameRef', namedType: name };
+                    return { namedType: name };
             }
         }
         case 'typeLiteral': {
@@ -1224,9 +1267,11 @@ const parseType = (ast: MplAst): Type => {
                 throw debug('todo');
             }
             return {
-                kind: 'Product',
-                name: ast.type,
-                members: node.items.map(parseTypeLiteralComponent),
+                type: {
+                    kind: 'Product',
+                    name: ast.type,
+                    members: node.items.map(parseTypeLiteralComponent),
+                },
             };
         }
         default:
@@ -1360,7 +1405,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             }
             if (destinationNode.type != 'colon') debug('expected a colon');
             childIndex++;
-            let type: Type | undefined = undefined;
+            let type: Type | TypeReference | undefined = undefined;
             const maybeTypeNode = ast.children[childIndex];
             if (isSeparatedListNode(maybeTypeNode) || isListNode(maybeTypeNode)) {
                 throw debug('todo');
@@ -1403,10 +1448,10 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             return result;
         }
         case 'typeDeclaration':
-            const theType: Type = parseType(ast.children[3]);
+            const theType = parseType(ast.children[3]);
             const name: string = (ast.children[0] as any).value;
-            if (theType.kind == 'Product') {
-                theType.name = name;
+            if (!('namedType' in theType) && theType.type.kind == 'Product') {
+                theType.type.name = name;
             }
             return {
                 kind: 'typeDeclaration',
@@ -1714,7 +1759,7 @@ const compile = (
         return { typeErrors: flatTypeErrors };
     }
 
-    const globalDeclarations: VariableDeclaration[] = program.statements
+    const globalDeclarations: GlobalVariable[] = program.statements
         .filter(
             s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment'
         )
@@ -1738,13 +1783,16 @@ const compile = (
         }
         inferredProgram = maybeInferredProgram;
 
-        if (!typesAreEqual(inferredProgram.returnType, builtinTypes.Integer, availableTypes)) {
+        if (!typesAreEqual(inferredProgram.returnType, builtinTypes.Integer)) {
+            const returnStatement = last(inferredProgram.statements);
             return {
                 typeErrors: [
                     {
                         kind: 'wrongTypeReturn',
                         expressionType: inferredProgram.returnType,
-                        sourceLocation: { line: 1, column: 1 },
+                        sourceLocation: returnStatement
+                            ? returnStatement.sourceLocation
+                            : { line: 1, column: 1 },
                     },
                 ],
             };

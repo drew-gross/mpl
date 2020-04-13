@@ -436,28 +436,38 @@ test('correct inferred type for function', t => {
     ) as Ast.UninferredExpression;
     t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
         type: {
-            kind: 'Function',
-            arguments: [{ kind: 'Integer' }],
-            permissions: [],
-            returnType: { kind: 'Integer' },
+            type: {
+                kind: 'Function',
+                arguments: [{ type: { kind: 'Integer' } }],
+                permissions: [],
+                returnType: { type: { kind: 'Integer' } },
+            },
         },
         extractedFunctions: [
             {
-                name: 'anonymous_1', // TODO: Make this not dependent on test order
-                parameters: [{ name: 'a', type: { kind: 'Integer' }, exported: false }],
-                returnType: { kind: 'Integer' },
+                name: 'anonymous_1',
+                parameters: [
+                    { name: 'a', type: { type: { kind: 'Integer' } }, exported: false },
+                ],
+                returnType: { type: { kind: 'Integer' as 'Integer' } },
                 statements: [
                     {
                         expression: {
-                            kind: 'number',
+                            kind: 'number' as 'number',
                             sourceLocation: { column: 15, line: 1 },
                             value: 11,
                         },
-                        kind: 'returnStatement',
+                        kind: 'returnStatement' as 'returnStatement',
                         sourceLocation: { column: 1, line: 1 },
                     },
                 ],
-                variables: [{ name: 'a', type: { kind: 'Integer' }, exported: false }],
+                variables: [
+                    {
+                        name: 'a',
+                        type: { type: { kind: 'Integer' as 'Integer' } },
+                        exported: false,
+                    },
+                ],
             },
         ],
     });
@@ -1369,18 +1379,21 @@ test('type equality', t => {
     t.false(
         typesAreEqual(
             {
-                kind: 'Function',
-                arguments: [],
-                permissions: [],
-                returnType: { kind: 'Integer' },
+                type: {
+                    kind: 'Function',
+                    arguments: [],
+                    permissions: [],
+                    returnType: { type: { kind: 'Integer' } },
+                },
             },
             {
-                kind: 'Function',
-                arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
-                permissions: [],
-                returnType: { kind: 'Integer' },
-            },
-            []
+                type: {
+                    kind: 'Function',
+                    arguments: [{ type: { kind: 'Integer' } }, { type: { kind: 'Integer' } }],
+                    permissions: [],
+                    returnType: { type: { kind: 'Integer' } },
+                },
+            }
         )
     );
 });
@@ -1416,12 +1429,14 @@ test('type of objectLiteral', t => {
             {
                 name: 'BoolPair',
                 type: {
-                    kind: 'Product',
-                    name: 'BoolPair',
-                    members: [
-                        { name: 'first', type: { kind: 'Boolean' } },
-                        { name: 'second', type: { kind: 'Boolean' } },
-                    ],
+                    type: {
+                        kind: 'Product',
+                        name: 'BoolPair',
+                        members: [
+                            { name: 'first', type: { type: { kind: 'Boolean' } } },
+                            { name: 'second', type: { type: { kind: 'Boolean' } } },
+                        ],
+                    },
                 },
             },
         ],
@@ -1431,8 +1446,8 @@ test('type of objectLiteral', t => {
             kind: 'Product',
             name: 'BoolPair',
             members: [
-                { name: 'first', type: { kind: 'Boolean' } },
-                { name: 'second', type: { kind: 'Boolean' } },
+                { name: 'first', type: { type: { kind: 'Boolean' } } },
+                { name: 'second', type: { type: { kind: 'Boolean' } } },
             ],
         },
         extractedFunctions: [],
@@ -1440,21 +1455,28 @@ test('type of objectLiteral', t => {
     t.deepEqual(type, expectedType as any);
 });
 
-test('type equality via name lookup', t => {
+test('no structural typing', t => {
     const leftType: Type = {
-        kind: 'Product',
-        name: 'BoolPair',
-        members: [
-            { name: 'first', type: { kind: 'Boolean' } },
-            { name: 'second', type: { kind: 'Boolean' } },
-        ],
+        type: {
+            kind: 'Product',
+            name: 'BoolPair1',
+            members: [
+                { name: 'first', type: { type: { kind: 'Boolean' } } },
+                { name: 'second', type: { type: { kind: 'Boolean' } } },
+            ],
+        },
     };
     const rightType: Type = {
-        kind: 'NameRef',
-        namedType: 'BoolPair',
+        type: {
+            kind: 'Product',
+            name: 'BoolPair2',
+            members: [
+                { name: 'first', type: { type: { kind: 'Boolean' } } },
+                { name: 'second', type: { type: { kind: 'Boolean' } } },
+            ],
+        },
     };
-    const typeDeclarations: TypeDeclaration[] = [{ name: 'BoolPair', type: leftType }];
-    t.deepEqual(typesAreEqual(leftType, rightType as any, typeDeclarations), true);
+    t.assert(!typesAreEqual(leftType, rightType));
 });
 
 test('pretty-parse-error', t => {

@@ -9,7 +9,7 @@ import {
     Backend,
     CompilationResult,
 } from '../api';
-import { Type, equal as typesAreEqual, builtinTypes } from '../types';
+import { Type, equal as typesAreEqual, builtinTypes, Product } from '../types';
 import { exec } from 'child-process-promise';
 import execAndGetResult from '../util/execAndGetResult';
 import debug from '../util/debug';
@@ -31,7 +31,7 @@ const callFree = (target: string, reason: string) => `my_free(${target}); // ${r
 // TODO: This returns a function, which is pretty janky. It looks like this because of the way function
 // pointer declarations work in C: the variable name appears in the middle of the declaration
 const mplTypeToCType = (type: Type): ((name: string) => string) => {
-    switch (type.kind) {
+    switch (type.type.kind) {
         case 'Integer':
             return name => `uint8_t ${name}`;
         case 'Boolean':
@@ -39,16 +39,14 @@ const mplTypeToCType = (type: Type): ((name: string) => string) => {
         case 'String':
             return name => `char *${name}`;
         case 'Function':
-            const returnType = mplTypeToCType(type.returnType)('');
-            const argumentTypes = type.arguments.map(mplTypeToCType).map(f => f(''));
+            const returnType = mplTypeToCType(type.type.returnType)('');
+            const argumentTypes = type.type.arguments.map(mplTypeToCType).map(f => f(''));
             const argumentsString = join(argumentTypes, ', ');
             return name => `${returnType} (*${name})(${argumentsString})`;
         case 'Product':
-            return name => `struct ${type.name} ${name}`;
+            return name => `struct ${(type.type as Product).name} ${name}`;
         case 'List':
             return name => `struct list ${name}`;
-        case 'NameRef':
-            return name => `TODO: make mplTypeToCType work`;
         default:
             throw debug(`${(type as any).kind} unhandled in mplTypeToCType`);
     }
@@ -100,12 +98,13 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         case 'objectLiteral':
             const memberExpressions = ast.members.map(m => recurse(m.expression));
             const type = ast.type;
-            if (type.kind != 'Product') {
+            if (type.type.kind != 'Product') {
                 throw debug('need a produduct');
             }
+            const product = type.type;
             return compileExpression(memberExpressions, expr => [
                 '(struct ',
-                type.name,
+                product.name,
                 ')',
                 '{',
                 ...expr.map((e, i) => `.${ast.members[i].name} = ${e},`),
@@ -147,7 +146,8 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             const rhs = recurse(ast.expression);
             const declaration = declarations.find(d => d.name === lhs);
             if (!declaration) throw debug('todo');
-            switch (declaration.type.kind) {
+            if ('namedType' in declaration.type) throw 'TODO: get a real type here';
+            switch (declaration.type.type.kind) {
                 case 'Function':
                 case 'Integer':
                 case 'Product':
@@ -185,11 +185,9 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                             rhs
                         );
                     }
-                case 'NameRef':
-                    return compileExpression([], ([]) => ['TODO: make this work']);
                 default:
                     throw debug(
-                        `${declaration.type.kind} unhandled in typedDeclarationAssignment`
+                        `${declaration.type.type.kind} unhandled in typedDeclarationAssignment`
                     );
             }
         }
@@ -198,7 +196,8 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             const rhs = recurse(ast.expression);
             const declaration = declarations.find(d => d.name === lhs);
             if (!declaration) throw debug('todo');
-            switch (declaration.type.kind) {
+            if ('namedType' in declaration.type) throw debug('todo');
+            switch (declaration.type.type.kind) {
                 case 'Function':
                 case 'Integer':
                     return compileAssignment(lhs, rhs);
@@ -230,7 +229,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                     );
                     return compileAssignment(declaration.name, expression);
                 default:
-                    throw debug(`${declaration.type.kind} unhandled C reassignment`);
+                    throw debug(`${JSON.stringify(declaration.type)} unhandled C reassignment`);
             }
         }
         case 'functionLiteral':
@@ -260,7 +259,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         case 'equality': {
             const lhs = recurse(ast.lhs);
             const rhs = recurse(ast.rhs);
-            if (ast.type.kind == 'String') {
+            if (ast.type.type.kind == 'String') {
                 return compileExpression([lhs, rhs], ([e1, e2]) => [
                     'string_compare(',
                     ...e1,
@@ -380,13 +379,10 @@ const makeCfunctionBody = ({
     const endOfFunctionFrees = variables
         .filter(s => !globalVariableNames.includes(s.name))
         .filter(s => !parameters.map(d => d.name).includes(s.name))
-        .filter(s =>
-            typesAreEqual(
-                s.type,
-                builtinTypes.String,
-                [] /* TODO: maybe get actual type list in here? no need for comparing with string */
-            )
-        )
+        .filter(s => {
+            if ('namedType' in s.type) throw debug('TODO get a real type here');
+            return typesAreEqual(s.type, builtinTypes.String);
+        })
         .map(s => callFree(s.name, 'Freeing Stack String at end of function'));
     const returnCode = astToC({
         ast: returnStatement.expression,
@@ -426,7 +422,7 @@ const compile = ({
     stringLiterals,
 }: FrontendOutput): { target: string; tac: Program | undefined } | { error: string } => {
     const CtypeDeclarations = types
-        .filter(t => t.type.kind == 'Product')
+        .filter(t => t.type.type.kind == 'Product')
         .map(
             t =>
                 `struct ${t.name} {${join(
@@ -444,9 +440,10 @@ const compile = ({
             globalDeclarations,
             stringLiterals,
             buildSignature: (functionName, params) => {
-                const parameterDeclarations = params.map(p =>
-                    mplTypeToCDeclaration(p.type, p.name)
-                );
+                const parameterDeclarations = params.map(p => {
+                    if ('namedType' in p.type) throw debug('TODO: get a read type here');
+                    return mplTypeToCDeclaration(p.type, p.name);
+                });
                 const cReturnType = mplTypeToCType(returnType)('');
                 return `${cReturnType} ${functionName}(${join(parameterDeclarations, ', ')})`;
             },
@@ -464,12 +461,12 @@ const compile = ({
         globalDeclarations,
         stringLiterals,
         buildSignature: (_1, _2) => 'int main(int argc, char **argv)',
-        returnType: { kind: 'Integer' }, // Main can only ever return integer
+        returnType: { type: { kind: 'Integer' } }, // Main can only ever return integer
         beforeExit: [
             ...globalDeclarations
-                .filter(d => ['String', 'List'].includes(d.type.kind))
+                .filter(d => ['String', 'List'].includes(d.type.type.kind))
                 .map(d => {
-                    if (d.type.kind == 'String') {
+                    if (d.type.type.kind == 'String') {
                         return `my_free(${d.name}); // Free global string`;
                     } else {
                         return `my_free(${d.name}.data); // Free global list`;

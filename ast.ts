@@ -369,7 +369,7 @@ export const astToString = (ast: Ast) => {
         case 'concatenation':
             return `${ast.lhs} ++ ${ast.rhs}`;
         case 'typedDeclarationAssignment':
-            return `${ast.destination}: ${ast.type.kind} = ${astToString(ast.expression)};`;
+            return `${ast.destination}: ${ast.type.type.kind} = ${astToString(ast.expression)};`;
         case 'typeDeclaration':
             return `(${ast.kind})`; // TODO: Figure out what parts of type declaration should go in AST vs uninferred AST.
         case 'reassignment':

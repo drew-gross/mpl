@@ -165,15 +165,6 @@ export const mplTest = async (
         t.deepEqual(stripSourceLocation(programInfo.ast), ast);
     }
 
-    // Run valdations on frontend output (currently just detects values that don't match their type)
-    programInfo.frontendOutput.functions.forEach(f => {
-        f.variables.forEach(v => {
-            if (!v.type.kind) {
-                error(`invalid frontend output: ${v.name} (in ${f.name}) had a bad type!`);
-            }
-        });
-    });
-
     if (Array.isArray(programInfo.threeAddressRoundTrip)) {
         t.fail(`
 three address code:${programInfo.threeAddressCode}

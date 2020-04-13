@@ -10,6 +10,7 @@ export type ProductComponent = {
 };
 
 type Permission = 'stdout';
+export type TypeReference = { namedType: string };
 
 export type String = { kind: 'String' };
 export type Integer = { kind: 'Integer' };
@@ -22,28 +23,28 @@ export type Function = {
 };
 export type List = { kind: 'List'; of: Type };
 export type Product = { kind: 'Product'; name: string; members: ProductComponent[] };
-export type NameRef = { kind: 'NameRef'; namedType: string };
-
-export type Type = String | Integer | Boolean | Function | List | Product | NameRef;
+export type Type = {
+    type: String | Integer | Boolean | Function | List | Product;
+    original?: TypeReference;
+};
 
 export const toString = (type: Type): string => {
-    switch (type.kind) {
+    // TODO: Include the original in here somehow?
+    switch (type.type.kind) {
         case 'String':
         case 'Integer':
         case 'Boolean':
-            return type.kind;
+            return type.type.kind;
         case 'Function':
-            return type.kind + '<' + join(type.arguments.map(toString), ', ') + '>';
+            return type.type.kind + '<' + join(type.type.arguments.map(toString), ', ') + '>';
         case 'Product':
             return (
                 '{' +
-                type.members.map(member => `${member.name}: ${toString(member.type)}`) +
+                type.type.members.map(member => `${member.name}: ${toString(member.type)}`) +
                 '}'
             );
-        case 'NameRef':
-            return type.namedType;
         case 'List':
-            return `${toString(type.of)}[]`;
+            return `${toString(type.type.of)}[]`;
         default:
             throw debug(`Unhandled kind in type toString: ${(type as any).kind}`);
     }
@@ -51,65 +52,58 @@ export const toString = (type: Type): string => {
 
 export type TypeDeclaration = { name: string; type: Type };
 
-// TODO: split Type into ResolveType and Type, and have this function accept Type and return ResolvedType
-export const resolve = (t: NameRef, typeDeclarations: TypeDeclaration[]): Type | undefined => {
-    if (!typeDeclarations) debug('no declarations');
-    const type = typeDeclarations.find(d => d.name == t.namedType);
-    return type ? type.type : type; // lol
+export const resolve = (
+    t: TypeReference,
+    availableTypes: TypeDeclaration[]
+): Type | undefined => {
+    if (!availableTypes) debug('no declarations');
+    const type = availableTypes.find(d => d.name == t.namedType);
+    if (!type) return undefined;
+    return {
+        type: type.type.type, // lol
+        original: t,
+    };
 };
 
-export const equal = (a: Type, b: Type, typeDeclarations: TypeDeclaration[]): boolean => {
-    if (a.kind == 'NameRef' && b.kind == 'NameRef') {
-        return a.namedType == b.namedType;
-    }
-    let resolvedA = a;
-    if (a.kind == 'NameRef') {
-        const resolved = resolve(a, typeDeclarations);
-        if (!resolved) return false;
-        resolvedA = resolved;
-    }
-    let resolvedB = b;
-    if (b.kind == 'NameRef') {
-        const resolved = resolve(b, typeDeclarations);
-        if (!resolved) return false;
-        resolvedB = resolved;
-    }
+export const resolveIfNecessary = (unresolved: Type | TypeReference, availableTypes) =>
+    'namedType' in unresolved ? resolve(unresolved, availableTypes) : unresolved;
 
-    if (resolvedA.kind == 'Function' && resolvedB.kind == 'Function') {
-        if (resolvedA.arguments.length != resolvedB.arguments.length) {
+export const equal = (a: Type, b: Type): boolean => {
+    // Should we allow assigning one product to another if they have different names but identical members? That would be "structural typing" which I'm not sure I want.
+    if (a.original == b.original) return false;
+    if (a.type.kind == 'Function' && b.type.kind == 'Function') {
+        if (a.type.arguments.length != b.type.arguments.length) {
             return false;
         }
-        for (let i = 0; i < resolvedA.arguments.length; i++) {
-            if (!equal(resolvedA.arguments[i], resolvedB.arguments[i], typeDeclarations)) {
+        for (let i = 0; i < a.type.arguments.length; i++) {
+            if (!equal(a.type.arguments[i], b.type.arguments[i])) {
                 return false;
             }
         }
         return true;
     }
-    if (resolvedA.kind == 'Product' && resolvedB.kind == 'Product') {
-        const allInLeftPresentInRight = resolvedA.members.every(memberA =>
-            (resolvedB as any).members.some(
-                memberB =>
-                    memberA.name == memberB.name &&
-                    equal(memberA.type, memberB.type, typeDeclarations)
+    if (a.type.kind == 'Product' && b.type.kind == 'Product') {
+        const bProduct = b.type;
+        const allInLeftPresentInRight = a.type.members.every(memberA =>
+            bProduct.members.some(
+                memberB => memberA.name == memberB.name && equal(memberA.type, memberB.type)
             )
         );
-        const allInRightPresentInLeft = resolvedB.members.every(memberB =>
-            (resolvedA as any).members.some(
-                memberA =>
-                    memberA.name == memberB.name &&
-                    equal(memberA.type, memberB.type, typeDeclarations)
+        const aProduct = a.type;
+        const allInRightPresentInLeft = b.type.members.every(memberB =>
+            aProduct.members.some(
+                memberA => memberA.name == memberB.name && equal(memberA.type, memberB.type)
             )
         );
         return allInLeftPresentInRight && allInRightPresentInLeft;
     }
-    return resolvedA.kind == resolvedB.kind;
+    return a.type.kind == b.type.kind;
 };
 
 export const builtinTypes: { [index: string]: Type } = {
-    String: { kind: 'String' },
-    Integer: { kind: 'Integer' },
-    Boolean: { kind: 'Boolean' },
+    String: { type: { kind: 'String' } },
+    Integer: { type: { kind: 'Integer' } },
+    Boolean: { type: { kind: 'Boolean' } },
 };
 
 // TODO: Require these to be imported in user code
@@ -117,30 +111,36 @@ export const builtinFunctions: VariableDeclaration[] = [
     {
         name: 'length',
         type: {
-            kind: 'Function',
-            arguments: [builtinTypes.String],
-            permissions: [],
-            returnType: builtinTypes.Integer,
+            type: {
+                kind: 'Function',
+                arguments: [builtinTypes.String],
+                permissions: [],
+                returnType: builtinTypes.Integer,
+            },
         },
         exported: false,
     },
     {
         name: 'print',
         type: {
-            kind: 'Function',
-            arguments: [builtinTypes.String],
-            permissions: [],
-            returnType: builtinTypes.Integer,
+            type: {
+                kind: 'Function',
+                arguments: [builtinTypes.String],
+                permissions: [],
+                returnType: builtinTypes.Integer,
+            },
         },
         exported: false,
     },
     {
         name: 'readInt',
         type: {
-            kind: 'Function',
-            arguments: [],
-            permissions: ['stdout'],
-            returnType: builtinTypes.Integer,
+            type: {
+                kind: 'Function',
+                arguments: [],
+                permissions: ['stdout'],
+                returnType: builtinTypes.Integer,
+            },
         },
         exported: false,
     },
@@ -151,21 +151,19 @@ export const typeSize = (
     type: Type,
     typeDeclarations: TypeDeclaration[]
 ): number => {
-    switch (type.kind) {
+    switch (type.type.kind) {
         case 'List':
             // Pointer + size
             return targetInfo.bytesInWord * 2;
         case 'Product':
-            return sum(type.members.map(m => typeSize(targetInfo, m.type, typeDeclarations)));
+            return sum(
+                type.type.members.map(m => typeSize(targetInfo, m.type, typeDeclarations))
+            );
         case 'Boolean':
         case 'Function':
         case 'String':
         case 'Integer':
             return targetInfo.bytesInWord;
-        case 'NameRef':
-            const resolved = resolve(type, typeDeclarations);
-            if (!resolved) throw debug('couldnt resolve');
-            return typeSize(targetInfo, resolved, typeDeclarations);
         default:
             throw debug(`${(type as any).kind} unhandled in typeSize`);
     }
