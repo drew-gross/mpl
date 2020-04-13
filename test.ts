@@ -4,7 +4,7 @@ import { testPrograms, testModules } from './test-cases';
 import { TestModule, TestProgram, Test, mplTest, tacTest, moduleTest } from './test-case';
 import { parseProgram as parseTacProgram, parseInstructions } from './threeAddressCode/parser';
 import annontateSource from './annotateSource';
-import { equal as typesAreEqual, builtinTypes, Type, TypeDeclaration } from './types';
+import { equal as typesAreEqual, builtinTypes, Type } from './types';
 import { Function } from './threeAddressCode/Function';
 import { Register } from './threeAddressCode/Register';
 import { Statement } from './threeAddressCode/statement';
@@ -1396,6 +1396,10 @@ test('type equality', t => {
             }
         )
     );
+});
+
+test.only('equal types are equal', t => {
+    t.assert(typesAreEqual({ type: { kind: 'Integer' } }, { type: { kind: 'Integer' } }));
 });
 
 test('type of objectLiteral', t => {

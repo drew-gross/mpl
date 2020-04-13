@@ -1,5 +1,5 @@
 import debug from './util/debug';
-import { StringLiteralData, Backend, VariableDeclaration, GlobalVariable } from './api';
+import { StringLiteralData, Backend, GlobalVariable } from './api';
 import flatten from './util/list/flatten';
 import { Statement } from './threeAddressCode/Statement';
 import { Statement as TargetStatement } from './targetCode/Statement';

@@ -14,7 +14,7 @@ import idAppender from '../util/idAppender';
 import * as Ast from '../ast';
 import flatten from '../util/list/flatten';
 import drain from '../util/list/drain';
-import { builtinFunctions, Type, TypeDeclaration, resolve, typeSize } from '../types';
+import { builtinFunctions, Type, TypeDeclaration, typeSize } from '../types';
 import debug from '../util/debug';
 import {
     CompiledExpression,
@@ -26,7 +26,6 @@ import { Register } from './Register';
 import {
     FrontendOutput,
     Function as ApiFunction,
-    VariableDeclaration,
     GlobalVariable,
     StringLiteralData,
 } from '../api';

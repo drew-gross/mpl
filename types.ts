@@ -70,7 +70,7 @@ export const resolveIfNecessary = (unresolved: Type | TypeReference, availableTy
 
 export const equal = (a: Type, b: Type): boolean => {
     // Should we allow assigning one product to another if they have different names but identical members? That would be "structural typing" which I'm not sure I want.
-    if (a.original == b.original) return false;
+    if (a.original != b.original) return false;
     if (a.type.kind == 'Function' && b.type.kind == 'Function') {
         if (a.type.arguments.length != b.type.arguments.length) {
             return false;

@@ -146,7 +146,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             const rhs = recurse(ast.expression);
             const declaration = declarations.find(d => d.name === lhs);
             if (!declaration) throw debug('todo');
-            if ('namedType' in declaration.type) throw 'TODO: get a real type here';
+            if ('namedType' in declaration.type) throw debug('TODO: get a real type here');
             switch (declaration.type.type.kind) {
                 case 'Function':
                 case 'Integer':

@@ -673,7 +673,7 @@ export const typeOfExpression = (
             if (isTypeError(lhsType)) {
                 return lhsType;
             }
-            let resolvedLhs = lhsType.type;
+            const resolvedLhs = lhsType.type;
             if (resolvedLhs.type.kind != 'Product') {
                 return [
                     {
