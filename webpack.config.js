@@ -40,6 +40,6 @@ module.exports = env => {
         },
         resolve: { extensions: ['.ts', '.js'] },
         output: { filename, path, library: 'mplLoader', libraryTarget: 'umd' },
-        externals: { ava: 'ava' },
+        externals: { ava: 'ava', 'spawn-sync': 'spawn-sync' },
     };
 };

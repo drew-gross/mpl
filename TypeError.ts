@@ -4,6 +4,7 @@ import { Type, toString as typeToString } from './types';
 
 export type TypeError = { sourceLocation: SourceLocation } & (
     | { kind: 'unknownIdentifier'; name: string }
+    | { kind: 'unknownType'; name: string }
     | {
           kind: 'wrongTypeForOperator';
           found: Type;
@@ -50,6 +51,8 @@ export const toString = (e: TypeError): string => {
             return `Unknown identifier ${e.destinationName}`;
         case 'unknownIdentifier':
             return `Unknown identifier ${e.name}`;
+        case 'unknownType':
+            return `Unknown type ${e.name}`;
         case 'wrongNumberOfArguments':
             return `Wrong number of arguments for ${e.targetFunction}. Expected ${e.expectedArgumentCount}, found ${e.passedArgumentCount}`;
         case 'assignWrongType':

@@ -1,6 +1,6 @@
 import { VariableDeclaration } from './api';
 import SourceLocation from './parser-lib/sourceLocation';
-import { Type } from './types';
+import { Type, TypeReference } from './types';
 import debug from './util/debug';
 import join from './util/join';
 
@@ -195,7 +195,7 @@ export type UninferredTypedDeclarationAssignment = {
     kind: 'typedDeclarationAssignment';
     sourceLocation: SourceLocation;
     destination: string;
-    type: Type;
+    type: Type | TypeReference;
     expression: UninferredExpression;
     exported: boolean;
 };

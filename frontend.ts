@@ -13,6 +13,7 @@ import {
     equal as typesAreEqual,
     resolve as resolveType,
     resolveIfNecessary,
+    resolveOrError,
     builtinTypes,
     builtinFunctions,
     TypeDeclaration,
@@ -134,7 +135,7 @@ const extractVariable = (
                 name: ctx.w.destination,
                 type: (typeOfExpression(
                     { ...ctx, w: ctx.w.expression },
-                    ctx.w.type
+                    resolveIfNecessary(ctx.w.type, ctx.availableTypes)
                 ) as TOEResult).type,
                 exported: false,
             };
@@ -849,6 +850,14 @@ const typeCheckStatement = (
         case 'typedDeclarationAssignment': {
             // Check that type of var being assigned to matches type being assigned
             const destinationType = ast.type;
+            const resolvedDestination = resolveOrError(
+                destinationType,
+                availableTypes,
+                ast.sourceLocation
+            );
+            if ('errors' in resolvedDestination) {
+                return resolvedDestination;
+            }
             const expressionType = typeOfExpression(
                 {
                     ...ctx,
@@ -857,18 +866,18 @@ const typeCheckStatement = (
                         { name: ast.destination, type: destinationType, exported: false },
                     ]),
                 },
-                ast.type
+                resolvedDestination
             );
             if (isTypeError(expressionType)) {
                 return { errors: expressionType, newVariables: [] };
             }
-            if (!typesAreEqual(expressionType.type, destinationType)) {
+            if (!typesAreEqual(expressionType.type, resolvedDestination)) {
                 return {
                     errors: [
                         {
                             kind: 'assignWrongType',
                             lhsName: ast.destination,
-                            lhsType: destinationType,
+                            lhsType: resolvedDestination,
                             rhsType: expressionType.type,
                             sourceLocation: ast.sourceLocation,
                         },
@@ -1037,11 +1046,13 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
                 rhs: recurse(ast.rhs),
             };
         case 'typedDeclarationAssignment':
+            const resolved = resolveIfNecessary(ast.type, availableTypes);
+            if (!resolved) throw debug("resolution shouldn't fail here");
             return {
                 kind: 'typedDeclarationAssignment',
                 sourceLocation: ast.sourceLocation,
                 expression: recurse(ast.expression),
-                type: ast.type,
+                type: resolved,
                 destination: ast.destination,
             };
         case 'declarationAssignment':
@@ -1421,36 +1432,34 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 debug('expected assignment');
             childIndex++;
             const expression = astFromParseResult(ast.children[childIndex]);
-            const result = {
-                kind: 'declarationAssignment',
-                destination,
-                expression,
-                sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredAst;
             if (type) {
                 return {
                     kind: 'typedDeclarationAssignment',
                     destination,
-                    expression,
+                    expression: expression as any,
                     type,
                     exported,
                     sourceLocation: ast.sourceLocation,
-                } as Ast.UninferredAst;
+                };
             } else {
                 return {
                     kind: 'declarationAssignment',
                     destination,
-                    expression,
+                    expression: expression as any,
                     exported,
                     sourceLocation: ast.sourceLocation,
-                } as Ast.UninferredAst;
+                };
             }
-            return result;
         }
         case 'typeDeclaration':
             const theType = parseType(ast.children[3]);
             const name: string = (ast.children[0] as any).value;
-            if (!('namedType' in theType) && theType.type.kind == 'Product') {
+            if ('namedType' in theType) {
+                throw debug(
+                    "Shouldn't get here, delcaring types have to actually declare a type"
+                );
+            }
+            if (theType.type.kind == 'Product') {
                 theType.type.name = name;
             }
             return {
@@ -1458,7 +1467,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 name,
                 type: theType,
                 sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredTypeDeclaration & SourceLocation;
+            };
         case 'stringLiteral':
             return {
                 kind: 'stringLiteral',

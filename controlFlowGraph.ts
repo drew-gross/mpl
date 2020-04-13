@@ -18,7 +18,7 @@ import {
     reads,
     writes,
     hasSideEffects,
-} from './threeAddressCode/statement';
+} from './threeAddressCode/Statement';
 
 export type BasicBlock = {
     name: string;

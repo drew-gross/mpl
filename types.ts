@@ -3,6 +3,7 @@ import join from './util/join';
 import sum from './util/list/sum';
 import { VariableDeclaration } from './api';
 import { RegisterAgnosticTargetInfo } from './TargetInfo';
+import { TypeError } from './TypeError';
 
 export type ProductComponent = {
     name: string;
@@ -67,6 +68,28 @@ export const resolve = (
 
 export const resolveIfNecessary = (unresolved: Type | TypeReference, availableTypes) =>
     'namedType' in unresolved ? resolve(unresolved, availableTypes) : unresolved;
+
+export const resolveOrError = (
+    unresolved: Type | TypeReference,
+    availableTypes,
+    sourceLocation
+): Type | { errors: TypeError[]; newVariables: VariableDeclaration[] } => {
+    const resolved = resolveIfNecessary(unresolved, availableTypes);
+    if (!resolved) {
+        debugger;
+        return {
+            errors: [
+                {
+                    kind: 'unknownType',
+                    name: (unresolved as TypeReference).namedType,
+                    sourceLocation: sourceLocation,
+                },
+            ],
+            newVariables: [],
+        };
+    }
+    return resolved;
+};
 
 export const equal = (a: Type, b: Type): boolean => {
     // Should we allow assigning one product to another if they have different names but identical members? That would be "structural typing" which I'm not sure I want.
