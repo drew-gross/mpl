@@ -666,6 +666,7 @@ export const typeOfExpression = (
                             type: (recurse(expression) as TOEResult).type,
                         })),
                     },
+                    original: { namedType: ast.typeName },
                 },
                 extractedFunctions: [], // TODO: propagate these
             };

@@ -426,7 +426,7 @@ const compile = ({
         .map(
             t =>
                 `struct ${t.name} {${join(
-                    (t.type as any).members.map(productTypeMemberToCStructMember),
+                    (t.type.type as Product).members.map(productTypeMemberToCStructMember),
                     '\n'
                 )}};`
         );
