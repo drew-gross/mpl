@@ -29,7 +29,6 @@ import {
     GlobalVariable,
 } from './api';
 import { TypeError } from './TypeError';
-import SourceLocation from './parser-lib/sourceLocation';
 import * as Ast from './ast';
 /* tslint:disable */
 const { add } = require('./mpl/add.mpl');

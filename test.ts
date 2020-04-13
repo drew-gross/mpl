@@ -1376,17 +1376,18 @@ test('type of objectLiteral', t => {
     const expectedType = {
         type: {
             type: {
-                kind: 'Product',
+                kind: 'Product' as 'Product',
                 name: 'BoolPair',
                 members: [
                     { name: 'first', type: { type: { kind: 'Boolean' } } },
                     { name: 'second', type: { type: { kind: 'Boolean' } } },
-                ],
+                ] as any,
             },
+            original: { namedType: 'BoolPair' },
         },
         extractedFunctions: [],
     };
-    t.deepEqual(type, expectedType as any);
+    t.deepEqual(type, expectedType);
 });
 
 test('no structural typing', t => {

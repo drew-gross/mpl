@@ -83,7 +83,7 @@ export const resolveOrError = (
                 {
                     kind: 'unknownType',
                     name: (unresolved as TypeReference).namedType,
-                    sourceLocation: sourceLocation,
+                    sourceLocation,
                 },
             ],
             newVariables: [],
