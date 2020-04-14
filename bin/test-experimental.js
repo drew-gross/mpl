@@ -1,13 +1,13 @@
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory(require("ava"));
+		module.exports = factory(require("ava"), (function webpackLoadOptionalExternalModule() { try { return require("spawn-sync"); } catch(e) {} }()));
 	else if(typeof define === 'function' && define.amd)
-		define(["ava"], factory);
+		define(["ava", "spawn-sync"], factory);
 	else if(typeof exports === 'object')
-		exports["mplLoader"] = factory(require("ava"));
+		exports["mplLoader"] = factory(require("ava"), (function webpackLoadOptionalExternalModule() { try { return require("spawn-sync"); } catch(e) {} }()));
 	else
-		root["mplLoader"] = factory(root["ava"]);
-})(global, function(__WEBPACK_EXTERNAL_MODULE_ava__) {
+		root["mplLoader"] = factory(root["ava"], root["spawn-sync"]);
+})(global, function(__WEBPACK_EXTERNAL_MODULE_ava__, __WEBPACK_EXTERNAL_MODULE_spawn_sync__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -114,6 +114,8 @@ exports.toString = (e) => {
             return `Unknown identifier ${e.destinationName}`;
         case 'unknownIdentifier':
             return `Unknown identifier ${e.name}`;
+        case 'unknownType':
+            return `Unknown type ${e.name}`;
         case 'wrongNumberOfArguments':
             return `Wrong number of arguments for ${e.targetFunction}. Expected ${e.expectedArgumentCount}, found ${e.passedArgumentCount}`;
         case 'assignWrongType':
@@ -124,6 +126,8 @@ exports.toString = (e) => {
             return `Modules may not have top level statements.`;
         case 'missingReturn':
             return 'Missing final return statement';
+        case 'objectDoesNotHaveMember':
+            return `Object of type ${types_1.toString(e.lhsType)} does not have member ${e.member}`;
         default:
             throw debug_1.default(`need string for error: ${e.kind}`);
     }
@@ -206,7 +210,7 @@ exports.astToString = (ast) => {
         case 'concatenation':
             return `${ast.lhs} ++ ${ast.rhs}`;
         case 'typedDeclarationAssignment':
-            return `${ast.destination}: ${ast.type.kind} = ${exports.astToString(ast.expression)};`;
+            return `${ast.destination}: ${ast.type.type.kind} = ${exports.astToString(ast.expression)};`;
         case 'typeDeclaration':
             return `(${ast.kind})`; // TODO: Figure out what parts of type declaration should go in AST vs uninferred AST.
         case 'reassignment':
@@ -353,7 +357,7 @@ exports.makeExecutable = ({ functions, main }, { syscallNumbers }, targetRegiste
 // TODO: Move map to outside?
 exports.freeGlobalsInstructions = (globals, makeTemporary, globalNameMap) => {
     const instructions = flatten_1.default(globals
-        .filter(declaration => ['String', 'List'].includes(declaration.type.kind))
+        .filter(declaration => ['String', 'List'].includes(declaration.type.type.kind))
         .map(declaration => {
         const globalStringAddress = makeTemporary('gobalStringAddress');
         return [
@@ -410,7 +414,7 @@ const callFree = (target, reason) => `my_free(${target}); // ${reason}`;
 // TODO: This returns a function, which is pretty janky. It looks like this because of the way function
 // pointer declarations work in C: the variable name appears in the middle of the declaration
 const mplTypeToCType = (type) => {
-    switch (type.kind) {
+    switch (type.type.kind) {
         case 'Integer':
             return name => `uint8_t ${name}`;
         case 'Boolean':
@@ -418,12 +422,12 @@ const mplTypeToCType = (type) => {
         case 'String':
             return name => `char *${name}`;
         case 'Function':
-            const returnType = mplTypeToCType(type.returnType)('');
-            const argumentTypes = type.arguments.map(mplTypeToCType).map(f => f(''));
+            const returnType = mplTypeToCType(type.type.returnType)('');
+            const argumentTypes = type.type.arguments.map(mplTypeToCType).map(f => f(''));
             const argumentsString = join_1.default(argumentTypes, ', ');
             return name => `${returnType} (*${name})(${argumentsString})`;
         case 'Product':
-            return name => `struct ${type.name} ${name}`;
+            return name => `struct ${type.type.name} ${name}`;
         case 'List':
             return name => `struct list ${name}`;
         default:
@@ -463,12 +467,13 @@ const astToC = (input) => {
         case 'objectLiteral':
             const memberExpressions = ast.members.map(m => recurse(m.expression));
             const type = ast.type;
-            if (type.kind != 'Product') {
+            if (type.type.kind != 'Product') {
                 throw debug_1.default('need a produduct');
             }
+            const product = type.type;
             return backend_utils_1.compileExpression(memberExpressions, expr => [
                 '(struct ',
-                type.name,
+                product.name,
                 ')',
                 '{',
                 ...expr.map((e, i) => `.${ast.members[i].name} = ${e},`),
@@ -511,7 +516,9 @@ const astToC = (input) => {
             const declaration = declarations.find(d => d.name === lhs);
             if (!declaration)
                 throw debug_1.default('todo');
-            switch (declaration.type.kind) {
+            if ('namedType' in declaration.type)
+                throw debug_1.default('TODO: get a real type here');
+            switch (declaration.type.type.kind) {
                 case 'Function':
                 case 'Integer':
                 case 'Product':
@@ -544,7 +551,7 @@ const astToC = (input) => {
                         return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
                     }
                 default:
-                    throw debug_1.default(`${declaration.type.kind} unhandled in typedDeclarationAssignment`);
+                    throw debug_1.default(`${declaration.type.type.kind} unhandled in typedDeclarationAssignment`);
             }
         }
         case 'reassignment': {
@@ -553,7 +560,9 @@ const astToC = (input) => {
             const declaration = declarations.find(d => d.name === lhs);
             if (!declaration)
                 throw debug_1.default('todo');
-            switch (declaration.type.kind) {
+            if ('namedType' in declaration.type)
+                throw debug_1.default('todo');
+            switch (declaration.type.type.kind) {
                 case 'Function':
                 case 'Integer':
                     return compileAssignment(lhs, rhs);
@@ -577,7 +586,7 @@ const astToC = (input) => {
                     ([executeRhs, executeAssign]) => executeAssign);
                     return compileAssignment(declaration.name, expression);
                 default:
-                    throw debug_1.default(`${declaration.type.kind} unhandled C reassignment`);
+                    throw debug_1.default(`${JSON.stringify(declaration.type)} unhandled C reassignment`);
             }
         }
         case 'functionLiteral':
@@ -601,7 +610,7 @@ const astToC = (input) => {
         case 'equality': {
             const lhs = recurse(ast.lhs);
             const rhs = recurse(ast.rhs);
-            if (ast.type.kind == 'String') {
+            if (ast.type.type.kind == 'String') {
                 return backend_utils_1.compileExpression([lhs, rhs], ([e1, e2]) => [
                     'string_compare(',
                     ...e1,
@@ -688,7 +697,11 @@ const makeCfunctionBody = ({ name, parameters, statements, variables, globalDecl
     const endOfFunctionFrees = variables
         .filter(s => !globalVariableNames.includes(s.name))
         .filter(s => !parameters.map(d => d.name).includes(s.name))
-        .filter(s => types_1.equal(s.type, types_1.builtinTypes.String, [] /* TODO: maybe get actual type list in here? no need for comparing with string */))
+        .filter(s => {
+        if ('namedType' in s.type)
+            throw debug_1.default('TODO get a real type here');
+        return types_1.equal(s.type, types_1.builtinTypes.String);
+    })
         .map(s => callFree(s.name, 'Freeing Stack String at end of function'));
     const returnCode = astToC({
         ast: returnStatement.expression,
@@ -713,8 +726,8 @@ const makeCfunctionBody = ({ name, parameters, statements, variables, globalDecl
 const productTypeMemberToCStructMember = ({ name, type }) => `${mplTypeToCDeclaration(type, '')} ${name};`;
 const compile = ({ functions, program, types, globalDeclarations, stringLiterals, }) => {
     const CtypeDeclarations = types
-        .filter(t => t.type.kind == 'Product')
-        .map(t => `struct ${t.name} {${join_1.default(t.type.members.map(productTypeMemberToCStructMember), '\n')}};`);
+        .filter(t => t.type.type.kind == 'Product')
+        .map(t => `struct ${t.name} {${join_1.default(t.type.type.members.map(productTypeMemberToCStructMember), '\n')}};`);
     const Cfunctions = functions.map(({ name, parameters, statements, variables, returnType }) => makeCfunctionBody({
         name,
         parameters,
@@ -723,7 +736,11 @@ const compile = ({ functions, program, types, globalDeclarations, stringLiterals
         globalDeclarations,
         stringLiterals,
         buildSignature: (functionName, params) => {
-            const parameterDeclarations = params.map(p => mplTypeToCDeclaration(p.type, p.name));
+            const parameterDeclarations = params.map(p => {
+                if ('namedType' in p.type)
+                    throw debug_1.default('TODO: get a read type here');
+                return mplTypeToCDeclaration(p.type, p.name);
+            });
             const cReturnType = mplTypeToCType(returnType)('');
             return `${cReturnType} ${functionName}(${join_1.default(parameterDeclarations, ', ')})`;
         },
@@ -740,12 +757,12 @@ const compile = ({ functions, program, types, globalDeclarations, stringLiterals
         globalDeclarations,
         stringLiterals,
         buildSignature: (_1, _2) => 'int main(int argc, char **argv)',
-        returnType: { kind: 'Integer' },
+        returnType: { type: { kind: 'Integer' } },
         beforeExit: [
             ...globalDeclarations
-                .filter(d => ['String', 'List'].includes(d.type.kind))
+                .filter(d => ['String', 'List'].includes(d.type.type.kind))
                 .map(d => {
-                if (d.type.kind == 'String') {
+                if (d.type.type.kind == 'String') {
                     return `my_free(${d.name}); // Free global string`;
                 }
                 else {
@@ -985,6 +1002,17 @@ const flatten_1 = __webpack_require__(/*! ../util/list/flatten */ "./util/list/f
 const execAndGetResult_1 = __webpack_require__(/*! ../util/execAndGetResult */ "./util/execAndGetResult.ts");
 const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
+const needsAwait = (decl) => {
+    if (!decl)
+        return false;
+    if ('namedType' in decl.type)
+        throw debug_1.default('TODO get a real type here');
+    if (decl.type.type.kind != 'Function')
+        return false;
+    if (decl.type.type.permissions.includes('stdout'))
+        return true;
+    return false;
+};
 const astToJS = ({ ast, exitInsteadOfReturn, builtinFunctions, }) => {
     if (!ast)
         debugger;
@@ -1016,10 +1044,7 @@ const astToJS = ({ ast, exitInsteadOfReturn, builtinFunctions, }) => {
             const functionName = ast.name;
             const functionDecl = builtinFunctions.find(({ name, type }) => name == functionName);
             const jsArguments = ast.arguments.map(argument => recurse(argument));
-            const needsAwait = functionDecl &&
-                functionDecl.type.kind == 'Function' &&
-                functionDecl.type.permissions.includes('stdout');
-            const awaitStr = needsAwait ? 'await' : '';
+            const awaitStr = needsAwait(functionDecl) ? 'await' : '';
             return [
                 awaitStr + ` ${ast.name}(`,
                 join_1.default(jsArguments.map(argument => join_1.default(argument, ' ')), ', '),
@@ -1620,7 +1645,7 @@ const ordered_set_1 = __webpack_require__(/*! ./util/ordered-set */ "./util/orde
 const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
 const idAppender_1 = __webpack_require__(/*! ./util/idAppender */ "./util/idAppender.ts");
 const Register_1 = __webpack_require__(/*! ./threeAddressCode/Register */ "./threeAddressCode/Register.ts");
-const statement_1 = __webpack_require__(/*! ./threeAddressCode/statement */ "./threeAddressCode/statement.ts");
+const Statement_1 = __webpack_require__(/*! ./threeAddressCode/Statement */ "./threeAddressCode/Statement.ts");
 const blockBehaviour = (tas) => {
     switch (tas.kind) {
         case 'empty':
@@ -1723,7 +1748,7 @@ exports.toDotFile = ({ blocks, connections, labelToIndexMap, exits, }) => {
     dotText += `Entry [style="invis"]\n`;
     dotText += `Entry -> node_0\n`;
     blocks.forEach(({ name, instructions }, index) => {
-        const label = join_1.default(instructions.map(statement_1.toString), '\\n')
+        const label = join_1.default(instructions.map(Statement_1.toString), '\\n')
             .replace(/"/g, '\\"')
             .replace(/:/g, '\\:');
         dotText += `node_${index} [shape="box", label="${label}"]`;
@@ -1805,8 +1830,8 @@ exports.computeBlockLiveness = (block, args) => {
         .reverse()
         .reduce((liveness, next) => {
         const newLiveness = liveness[0].copy();
-        const newlyLive = statement_1.reads(next, args);
-        const newlyDead = statement_1.writes(next);
+        const newlyLive = Statement_1.reads(next, args);
+        const newlyDead = Statement_1.writes(next);
         newlyDead.forEach(item => {
             newLiveness.remove(item);
         });
@@ -1822,7 +1847,7 @@ const propagateBlockLiveness = (block, liveness, liveAtExit) => {
     liveAtExit.forEach(item => {
         for (let i = liveness.length - 1; i >= 0; i--) {
             if (i < block.instructions.length) {
-                const newlyDead = set_1.fromList(Register_1.isEqual, statement_1.writes(block.instructions[i]));
+                const newlyDead = set_1.fromList(Register_1.isEqual, Statement_1.writes(block.instructions[i]));
                 if (newlyDead.has(item)) {
                     return;
                 }
@@ -2093,8 +2118,8 @@ exports.spill = (taf, registerToSpill) => {
                 }
                 break;
             default:
-                if (statement_1.reads(instruction, taf.arguments).includes(registerToSpill) ||
-                    statement_1.writes(instruction).includes(registerToSpill)) {
+                if (Statement_1.reads(instruction, taf.arguments).includes(registerToSpill) ||
+                    Statement_1.writes(instruction).includes(registerToSpill)) {
                     throw debug_1.default(`${instruction.kind} unhandled in spill`);
                 }
                 else {
@@ -2113,11 +2138,11 @@ const removeDeadStores = (taf, liveness) => {
     for (let i = 0; i < taf.instructions.length; i++) {
         const currentInstruction = taf.instructions[i];
         // Any instruction with side effects needs to stay until we can prove that the side effects don't matter.
-        if (statement_1.hasSideEffects(currentInstruction)) {
+        if (Statement_1.hasSideEffects(currentInstruction)) {
             newFunction.instructions.push(currentInstruction);
             continue;
         }
-        const targets = statement_1.writes(currentInstruction);
+        const targets = Statement_1.writes(currentInstruction);
         // If there are written registers and none of them are live, omit the write.
         // TODO: Treat function result and arguments less special-casey somehow. Maybe put it into liveness computing. NOTE: Writes to arguments are not dead because length is implemented in a way where the arguments are destroyed and repaired (TODO: verify this). TODO: probably should check if any target is a register?
         const isLiveWrite = targets.some(target => liveness[i + 1].has(target));
@@ -2350,7 +2375,7 @@ const extractVariable = (ctx) => {
         case 'typedDeclarationAssignment':
             return {
                 name: ctx.w.destination,
-                type: exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }), ctx.w.type).type,
+                type: exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }), types_1.resolveIfNecessary(ctx.w.type, ctx.availableTypes)).type,
                 exported: false,
             };
         case 'returnStatement':
@@ -2499,7 +2524,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
             }
             const lt = leftType;
             const rt = rightType;
-            if (!types_1.equal(lt.type, types_1.builtinTypes.Integer, availableTypes)) {
+            if (!types_1.equal(lt.type, types_1.builtinTypes.Integer)) {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -2511,7 +2536,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                     },
                 ];
             }
-            if (!types_1.equal(rt.type, types_1.builtinTypes.Integer, availableTypes)) {
+            if (!types_1.equal(rt.type, types_1.builtinTypes.Integer)) {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -2537,7 +2562,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
             }
             const lt = leftType;
             const rt = rightType;
-            if (!types_1.equal(lt.type, rt.type, availableTypes)) {
+            if (!types_1.equal(lt.type, rt.type)) {
                 return [
                     {
                         kind: 'typeMismatchForOperator',
@@ -2559,7 +2584,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
             }
             const lt = leftType;
             const rt = rightType;
-            if (lt.type.kind !== 'String') {
+            if (lt.type.type.kind !== 'String') {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -2571,7 +2596,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                     },
                 ];
             }
-            if (rt.type.kind !== 'String') {
+            if (rt.type.type.kind !== 'String') {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -2600,10 +2625,20 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
             }
             return {
                 type: {
-                    kind: 'Function',
-                    arguments: ast.parameters.map(p => p.type),
-                    permissions: [],
-                    returnType: f.returnType,
+                    type: {
+                        kind: 'Function',
+                        arguments: ast.parameters
+                            .map(p => p.type)
+                            .map(t => {
+                            const resolved = types_1.resolveIfNecessary(t, ctx.availableTypes);
+                            if (!resolved) {
+                                throw debug_1.default('bag argument. This should be a better error.');
+                            }
+                            return resolved;
+                        }),
+                        permissions: [],
+                        returnType: f.returnType,
+                    },
                 },
                 extractedFunctions: [f],
             };
@@ -2632,7 +2667,10 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
             const functionType = declaration.type;
             if (!functionType)
                 throw debug_1.default('bad function! This should be a better error.');
-            if (functionType.kind !== 'Function') {
+            if ('namedType' in functionType) {
+                throw debug_1.default('nameRef function! This should be supported.');
+            }
+            if (functionType.type.kind !== 'Function') {
                 return [
                     {
                         kind: 'calledNonFunction',
@@ -2642,31 +2680,31 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                     },
                 ];
             }
-            if (argTypes.length !== functionType.arguments.length) {
+            if (argTypes.length !== functionType.type.arguments.length) {
                 return [
                     {
                         kind: 'wrongNumberOfArguments',
                         targetFunction: functionName,
                         passedArgumentCount: argTypes.length,
-                        expectedArgumentCount: functionType.arguments.length,
+                        expectedArgumentCount: functionType.type.arguments.length,
                         sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
             for (let i = 0; i < argTypes.length; i++) {
-                if (!types_1.equal(argTypes[i].type, functionType.arguments[i], availableTypes)) {
+                if (!types_1.equal(argTypes[i].type, functionType.type.arguments[i])) {
                     return [
                         {
                             kind: 'wrongArgumentType',
                             targetFunction: functionName,
                             passedType: argTypes[i].type,
-                            expectedType: functionType.arguments[i],
+                            expectedType: functionType.type.arguments[i],
                             sourceLocation: ast.sourceLocation,
                         },
                     ];
                 }
             }
-            return { type: functionType.returnType, extractedFunctions: [] };
+            return { type: functionType.type.returnType, extractedFunctions: [] };
         }
         case 'memberStyleCall': {
             const callArgTypes = ast.params.map(recurse);
@@ -2697,7 +2735,10 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
             const functionType = declaration.type;
             if (!functionType)
                 throw debug_1.default('bad function! This should be a better error.');
-            if (functionType.kind !== 'Function') {
+            if ('namedType' in functionType) {
+                throw debug_1.default('nameRef function! This should be supported.');
+            }
+            if (functionType.type.kind !== 'Function') {
                 return [
                     {
                         kind: 'calledNonFunction',
@@ -2708,36 +2749,36 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                 ];
             }
             const allArgTypes = [thisArgType, ...callArgTypes];
-            if (allArgTypes.length !== functionType.arguments.length) {
+            if (allArgTypes.length !== functionType.type.arguments.length) {
                 return [
                     {
                         kind: 'wrongNumberOfArguments',
                         targetFunction: functionName,
                         passedArgumentCount: allArgTypes.length,
-                        expectedArgumentCount: functionType.arguments.length,
+                        expectedArgumentCount: functionType.type.arguments.length,
                         sourceLocation: ast.sourceLocation,
                     },
                 ];
             }
             // TODO: this is probably wrong, we need check agains the LHS type
             for (let i = 0; i < allArgTypes.length; i++) {
-                if (!types_1.equal(allArgTypes[i].type, functionType.arguments[i], availableTypes)) {
+                if (!types_1.equal(allArgTypes[i].type, functionType.type.arguments[i])) {
                     return [
                         {
                             kind: 'wrongArgumentType',
                             targetFunction: functionName,
                             passedType: allArgTypes[i].type,
-                            expectedType: functionType.arguments[i],
+                            expectedType: functionType.type.arguments[i],
                             sourceLocation: ast.sourceLocation,
                         },
                     ];
                 }
             }
-            return { type: functionType.returnType, extractedFunctions: [] };
+            return { type: functionType.type.returnType, extractedFunctions: [] };
         }
         case 'identifier': {
-            const declaration = availableVariables.find(({ name }) => ast.value == name);
-            if (!declaration) {
+            const unresolved = availableVariables.find(({ name }) => ast.value == name);
+            if (!unresolved) {
                 return [
                     {
                         kind: 'unknownTypeForIdentifier',
@@ -2746,7 +2787,17 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                     },
                 ];
             }
-            return { type: declaration.type, extractedFunctions: [] };
+            const declaration = types_1.resolveIfNecessary(unresolved.type, availableTypes);
+            if (!declaration) {
+                return [
+                    {
+                        kind: 'couldNotFindType',
+                        name: unresolved.type.namedType,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return { type: declaration, extractedFunctions: [] };
         }
         case 'ternary': {
             const conditionType = recurse(ast.condition);
@@ -2768,7 +2819,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                     return [];
                 }
             }
-            if (!types_1.equal(conditionType.type, types_1.builtinTypes.Boolean, availableTypes)) {
+            if (!types_1.equal(conditionType.type, types_1.builtinTypes.Boolean)) {
                 return [
                     {
                         kind: 'wrongTypeForOperator',
@@ -2780,7 +2831,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                     },
                 ];
             }
-            if (!types_1.equal(trueBranchType.type, falseBranchType.type, availableTypes)) {
+            if (!types_1.equal(trueBranchType.type, falseBranchType.type)) {
                 return [
                     {
                         kind: 'ternaryBranchMismatch',
@@ -2803,12 +2854,15 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                 return typeErrors;
             return {
                 type: {
-                    kind: 'Product',
-                    name: ast.typeName,
-                    members: ast.members.map(({ name, expression }) => ({
-                        name,
-                        type: recurse(expression).type,
-                    })),
+                    type: {
+                        kind: 'Product',
+                        name: ast.typeName,
+                        members: ast.members.map(({ name, expression }) => ({
+                            name,
+                            type: recurse(expression).type,
+                        })),
+                    },
+                    original: { namedType: ast.typeName },
                 },
                 extractedFunctions: [],
             };
@@ -2817,21 +2871,8 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
             if (isTypeError(lhsType)) {
                 return lhsType;
             }
-            let resolvedLhs = lhsType.type;
-            if (resolvedLhs.kind == 'NameRef') {
-                const resolved = types_1.resolve(resolvedLhs, availableTypes);
-                if (!resolved) {
-                    return [
-                        {
-                            kind: 'couldNotFindType',
-                            name: resolvedLhs.namedType,
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ];
-                }
-                resolvedLhs = resolved;
-            }
-            if (resolvedLhs.kind != 'Product') {
+            const resolvedLhs = lhsType.type;
+            if (resolvedLhs.type.kind != 'Product') {
                 return [
                     {
                         kind: 'invalidMemberAccess',
@@ -2840,7 +2881,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                     },
                 ];
             }
-            const accessedMember = resolvedLhs.members.find(m => m.name == ast.rhs);
+            const accessedMember = resolvedLhs.type.members.find(m => m.name == ast.rhs);
             if (!accessedMember) {
                 return [
                     {
@@ -2863,7 +2904,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                 if (!innerType) {
                     innerType = result.type;
                 }
-                else if (!types_1.equal(innerType, result.type, availableTypes)) {
+                else if (!types_1.equal(innerType, result.type)) {
                     return [{ kind: 'nonhomogenousList', sourceLocation: ast.sourceLocation }];
                 }
                 extractedFunctions.push(...result.extractedFunctions);
@@ -2872,16 +2913,15 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                 if (expectedType) {
                     return { type: expectedType, extractedFunctions };
                 }
-                debugger;
                 return [{ kind: 'uninferrableEmptyList', sourceLocation: ast.sourceLocation }];
             }
-            return { type: { kind: 'List', of: innerType }, extractedFunctions };
+            return { type: { type: { kind: 'List', of: innerType } }, extractedFunctions };
         case 'indexAccess':
             const accessedType = recurse(ast.accessed);
             if (isTypeError(accessedType)) {
                 return accessedType;
             }
-            if (accessedType.type.kind != 'List') {
+            if (accessedType.type.type.kind != 'List') {
                 return [
                     {
                         kind: 'indexAccessNonList',
@@ -2894,7 +2934,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
             if (isTypeError(indexType)) {
                 return indexType;
             }
-            if (indexType.type.kind != 'Integer') {
+            if (indexType.type.type.kind != 'Integer') {
                 return [
                     {
                         kind: 'nonIntegerIndex',
@@ -2904,7 +2944,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                 ];
             }
             return {
-                type: accessedType.type.of,
+                type: accessedType.type.type.of,
                 extractedFunctions: [
                     ...accessedType.extractedFunctions,
                     ...indexType.extractedFunctions,
@@ -2935,10 +2975,12 @@ const typeCheckStatement = (ctx) => {
                     {
                         name: ast.destination,
                         type: {
-                            kind: 'Function',
-                            arguments: [{ kind: 'Integer' }],
-                            permissions: [],
-                            returnType: { kind: 'Integer' },
+                            type: {
+                                kind: 'Function',
+                                arguments: [{ type: { kind: 'Integer' } }],
+                                permissions: [],
+                                returnType: { type: { kind: 'Integer' } },
+                            },
                         },
                         exported: false,
                     },
@@ -2958,8 +3000,8 @@ const typeCheckStatement = (ctx) => {
             if (isTypeError(rightType)) {
                 return { errors: rightType, newVariables: [] };
             }
-            const leftType = availableVariables.find(v => v.name == ast.destination);
-            if (!leftType) {
+            const unresolvedLeftType = availableVariables.find(v => v.name == ast.destination);
+            if (!unresolvedLeftType) {
                 return {
                     errors: [
                         {
@@ -2971,13 +3013,26 @@ const typeCheckStatement = (ctx) => {
                     newVariables: [],
                 };
             }
-            if (!types_1.equal(leftType.type, rightType.type, availableTypes)) {
+            const leftType = types_1.resolveIfNecessary(unresolvedLeftType.type, availableTypes);
+            if (!leftType) {
+                return {
+                    errors: [
+                        {
+                            kind: 'couldNotFindType',
+                            name: unresolvedLeftType.name,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+            if (!types_1.equal(leftType, rightType.type)) {
                 return {
                     errors: [
                         {
                             kind: 'assignWrongType',
                             lhsName: ast.destination,
-                            lhsType: leftType.type,
+                            lhsType: leftType,
                             rhsType: rightType.type,
                             sourceLocation: ast.sourceLocation,
                         },
@@ -2990,19 +3045,23 @@ const typeCheckStatement = (ctx) => {
         case 'typedDeclarationAssignment': {
             // Check that type of var being assigned to matches type being assigned
             const destinationType = ast.type;
+            const resolvedDestination = types_1.resolveOrError(destinationType, availableTypes, ast.sourceLocation);
+            if ('errors' in resolvedDestination) {
+                return resolvedDestination;
+            }
             const expressionType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression, availableVariables: mergeDeclarations(availableVariables, [
                     { name: ast.destination, type: destinationType, exported: false },
-                ]) }), ast.type);
+                ]) }), resolvedDestination);
             if (isTypeError(expressionType)) {
                 return { errors: expressionType, newVariables: [] };
             }
-            if (!types_1.equal(expressionType.type, destinationType, availableTypes)) {
+            if (!types_1.equal(expressionType.type, resolvedDestination)) {
                 return {
                     errors: [
                         {
                             kind: 'assignWrongType',
                             lhsName: ast.destination,
-                            lhsType: destinationType,
+                            lhsType: resolvedDestination,
                             rhsType: expressionType.type,
                             sourceLocation: ast.sourceLocation,
                         },
@@ -3149,11 +3208,14 @@ const infer = (ctx) => {
                 rhs: recurse(ast.rhs),
             };
         case 'typedDeclarationAssignment':
+            const resolved = types_1.resolveIfNecessary(ast.type, availableTypes);
+            if (!resolved)
+                throw debug_1.default("resolution shouldn't fail here");
             return {
                 kind: 'typedDeclarationAssignment',
                 sourceLocation: ast.sourceLocation,
                 expression: recurse(ast.expression),
-                type: ast.type,
+                type: resolved,
                 destination: ast.destination,
             };
         case 'declarationAssignment':
@@ -3259,7 +3321,7 @@ const infer = (ctx) => {
             return {
                 kind: 'listLiteral',
                 sourceLocation: ast.sourceLocation,
-                type: { kind: 'List', of: itemType },
+                type: { type: { kind: 'List', of: itemType } },
                 items,
             };
         case 'indexAccess':
@@ -3323,9 +3385,13 @@ const parseTypeLiteralComponent = (ast) => {
     }
     if (ast.type != 'typeLiteralComponent')
         throw debug_1.default('wrong as type');
+    const unresolved = parseType(ast.children[2]);
+    const resolved = types_1.resolveIfNecessary(unresolved, []);
+    if (!resolved)
+        throw debug_1.default('need to make products work as components of other products');
     return {
         name: ast.children[0].value,
-        type: parseType(ast.children[2]),
+        type: resolved,
     };
 };
 const parseType = (ast) => {
@@ -3340,11 +3406,21 @@ const parseType = (ast) => {
             const list = ast.children[2];
             if (!parse_1.isSeparatedListNode(list))
                 throw debug_1.default('todo');
-            const typeList = list.items.map(parseType);
+            const typeList = list.items.map(parseType).map(t => {
+                if ('namedType' in t) {
+                    const resolved = types_1.resolve(t, []);
+                    if (!resolved)
+                        throw debug_1.default('Need to make type refs work in functions');
+                    return resolved;
+                }
+                return t;
+            });
             return {
-                kind: name,
-                arguments: typeList.slice(0, typeList.length - 1),
-                returnType: typeList[typeList.length - 1],
+                type: {
+                    kind: name,
+                    arguments: typeList.slice(0, typeList.length - 1),
+                    returnType: typeList[typeList.length - 1],
+                },
             };
         }
         case 'typeWithoutArgs': {
@@ -3361,9 +3437,9 @@ const parseType = (ast) => {
                 case 'String':
                 case 'Integer':
                 case 'Boolean':
-                    return { kind: name };
+                    return { type: { kind: name } };
                 default:
-                    return { kind: 'NameRef', namedType: name };
+                    return { namedType: name };
             }
         }
         case 'typeLiteral': {
@@ -3372,9 +3448,11 @@ const parseType = (ast) => {
                 throw debug_1.default('todo');
             }
             return {
-                kind: 'Product',
-                name: ast.type,
-                members: node.items.map(parseTypeLiteralComponent),
+                type: {
+                    kind: 'Product',
+                    name: ast.type,
+                    members: node.items.map(parseTypeLiteralComponent),
+                },
             };
         }
         default:
@@ -3527,17 +3605,11 @@ const astFromParseResult = (ast) => {
                 debug_1.default('expected assignment');
             childIndex++;
             const expression = astFromParseResult(ast.children[childIndex]);
-            const result = {
-                kind: 'declarationAssignment',
-                destination,
-                expression,
-                sourceLocation: ast.sourceLocation,
-            };
             if (type) {
                 return {
                     kind: 'typedDeclarationAssignment',
                     destination,
-                    expression,
+                    expression: expression,
                     type,
                     exported,
                     sourceLocation: ast.sourceLocation,
@@ -3547,18 +3619,20 @@ const astFromParseResult = (ast) => {
                 return {
                     kind: 'declarationAssignment',
                     destination,
-                    expression,
+                    expression: expression,
                     exported,
                     sourceLocation: ast.sourceLocation,
                 };
             }
-            return result;
         }
         case 'typeDeclaration':
             const theType = parseType(ast.children[3]);
             const name = ast.children[0].value;
-            if (theType.kind == 'Product') {
-                theType.name = name;
+            if ('namedType' in theType) {
+                throw debug_1.default("Shouldn't get here, delcaring types have to actually declare a type");
+            }
+            if (theType.type.kind == 'Product') {
+                theType.type.name = name;
             }
             return {
                 kind: 'typeDeclaration',
@@ -3838,13 +3912,16 @@ const compile = (source) => {
             return { typeErrors: maybeInferredProgram };
         }
         inferredProgram = maybeInferredProgram;
-        if (!types_1.equal(inferredProgram.returnType, types_1.builtinTypes.Integer, availableTypes)) {
+        if (!types_1.equal(inferredProgram.returnType, types_1.builtinTypes.Integer)) {
+            const returnStatement = last_1.default(inferredProgram.statements);
             return {
                 typeErrors: [
                     {
                         kind: 'wrongTypeReturn',
                         expressionType: inferredProgram.returnType,
-                        sourceLocation: { line: 1, column: 1 },
+                        sourceLocation: returnStatement
+                            ? returnStatement.sourceLocation
+                            : { line: 1, column: 1 },
                     },
                 ],
             };
@@ -3893,11 +3970,12 @@ exports.tokenSpecs = [
         toString: x => x,
     },
     { token: ',', type: 'comma', toString: () => ', ' },
-    { token: 'return', type: 'return', toString: () => 'return' },
-    { token: 'export', type: 'export', toString: () => 'export' },
+    // TODO: Make a "keyword" utility function for the lexer. Also figure out why \b doesn't work here.
+    { token: 'return[^A-z]', type: 'return', toString: () => 'return' },
+    { token: 'export[^A-z]', type: 'export', toString: () => 'export' },
     { token: 'true|false', type: 'booleanLiteral', action: x => x.trim(), toString: x => x },
     { token: '[a-z]\\w*', type: 'identifier', action: x => x, toString: x => x },
-    { token: '[A-Z][A-z]*', type: 'typeIdentifier', action: x => x, toString: x => x },
+    { token: '[A-Z][A-Za-z]*', type: 'typeIdentifier', action: x => x, toString: x => x },
     { token: ';', type: 'statementSeparator', toString: _ => ';' },
     { token: '=>', type: 'fatArrow', toString: _ => '=>' },
     { token: '==', type: 'equality', toString: _ => '==' },
@@ -5106,7 +5184,7 @@ function spawnSync(command, args, options) {
 
     if (!cpSpawnSync) {
         try {
-            cpSpawnSync = __webpack_require__(!(function webpackMissingModule() { var e = new Error("Cannot find module 'spawn-sync'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));  // eslint-disable-line global-require
+            cpSpawnSync = __webpack_require__(/*! spawn-sync */ "spawn-sync");  // eslint-disable-line global-require
         } catch (ex) {
             throw new Error(
                 'In order to use spawnSync on node 0.10 or older, you must ' +
@@ -5437,6 +5515,973 @@ function resolveCommand(command, noExtension) {
 }
 
 module.exports = resolveCommand;
+
+
+/***/ }),
+
+/***/ "./node_modules/deep-equal/index.js":
+/*!******************************************!*\
+  !*** ./node_modules/deep-equal/index.js ***!
+  \******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+var objectKeys = __webpack_require__(/*! object-keys */ "./node_modules/object-keys/index.js");
+var isArguments = __webpack_require__(/*! is-arguments */ "./node_modules/is-arguments/index.js");
+var is = __webpack_require__(/*! object-is */ "./node_modules/object-is/index.js");
+var isRegex = __webpack_require__(/*! is-regex */ "./node_modules/is-regex/index.js");
+var flags = __webpack_require__(/*! regexp.prototype.flags */ "./node_modules/regexp.prototype.flags/index.js");
+var isArray = __webpack_require__(/*! isarray */ "./node_modules/deep-equal/node_modules/isarray/index.js");
+var isDate = __webpack_require__(/*! is-date-object */ "./node_modules/is-date-object/index.js");
+var whichBoxedPrimitive = __webpack_require__(/*! which-boxed-primitive */ "./node_modules/which-boxed-primitive/index.js");
+var GetIntrinsic = __webpack_require__(/*! es-abstract/GetIntrinsic */ "./node_modules/es-abstract/GetIntrinsic.js");
+var callBound = __webpack_require__(/*! es-abstract/helpers/callBound */ "./node_modules/es-abstract/helpers/callBound.js");
+var whichCollection = __webpack_require__(/*! which-collection */ "./node_modules/which-collection/index.js");
+var getIterator = __webpack_require__(/*! es-get-iterator */ "./node_modules/es-get-iterator/index.js");
+var getSideChannel = __webpack_require__(/*! side-channel */ "./node_modules/side-channel/index.js");
+
+var $getTime = callBound('Date.prototype.getTime');
+var gPO = Object.getPrototypeOf;
+var $objToString = callBound('Object.prototype.toString');
+
+var $Set = GetIntrinsic('%Set%', true);
+var $mapHas = callBound('Map.prototype.has', true);
+var $mapGet = callBound('Map.prototype.get', true);
+var $mapSize = callBound('Map.prototype.size', true);
+var $setAdd = callBound('Set.prototype.add', true);
+var $setDelete = callBound('Set.prototype.delete', true);
+var $setHas = callBound('Set.prototype.has', true);
+var $setSize = callBound('Set.prototype.size', true);
+
+// taken from https://github.com/browserify/commonjs-assert/blob/bba838e9ba9e28edf3127ce6974624208502f6bc/internal/util/comparisons.js#L401-L414
+function setHasEqualElement(set, val1, strict, channel) {
+  var i = getIterator(set);
+  var result;
+  while ((result = i.next()) && !result.done) {
+    if (internalDeepEqual(val1, result.value, strict, channel)) { // eslint-disable-line no-use-before-define
+      // Remove the matching element to make sure we do not check that again.
+      $setDelete(set, result.value);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// taken from https://github.com/browserify/commonjs-assert/blob/bba838e9ba9e28edf3127ce6974624208502f6bc/internal/util/comparisons.js#L416-L439
+function findLooseMatchingPrimitives(prim) {
+  if (typeof prim === 'undefined') {
+    return null;
+  }
+  if (typeof prim === 'object') { // Only pass in null as object!
+    return void 0;
+  }
+  if (typeof prim === 'symbol') {
+    return false;
+  }
+  if (typeof prim === 'string' || typeof prim === 'number') {
+    // Loose equal entries exist only if the string is possible to convert to a regular number and not NaN.
+    return +prim === +prim; // eslint-disable-line no-implicit-coercion
+  }
+  return true;
+}
+
+// taken from https://github.com/browserify/commonjs-assert/blob/bba838e9ba9e28edf3127ce6974624208502f6bc/internal/util/comparisons.js#L449-L460
+function mapMightHaveLoosePrim(a, b, prim, item, channel) {
+  var altValue = findLooseMatchingPrimitives(prim);
+  if (altValue != null) {
+    return altValue;
+  }
+  var curB = $mapGet(b, altValue);
+  // eslint-disable-next-line no-use-before-define
+  if ((typeof curB === 'undefined' && !$mapHas(b, altValue)) || !internalDeepEqual(item, curB, false, channel)) {
+    return false;
+  }
+  // eslint-disable-next-line no-use-before-define
+  return !$mapHas(a, altValue) && internalDeepEqual(item, curB, false, channel);
+}
+
+// taken from https://github.com/browserify/commonjs-assert/blob/bba838e9ba9e28edf3127ce6974624208502f6bc/internal/util/comparisons.js#L441-L447
+function setMightHaveLoosePrim(a, b, prim) {
+  var altValue = findLooseMatchingPrimitives(prim);
+  if (altValue != null) {
+    return altValue;
+  }
+
+  return $setHas(b, altValue) && !$setHas(a, altValue);
+}
+
+// taken from https://github.com/browserify/commonjs-assert/blob/bba838e9ba9e28edf3127ce6974624208502f6bc/internal/util/comparisons.js#L518-L533
+function mapHasEqualEntry(set, map, key1, item1, strict, channel) {
+  var i = getIterator(set);
+  var result;
+  var key2;
+  while ((result = i.next()) && !result.done) {
+    key2 = result.value;
+    if (
+      // eslint-disable-next-line no-use-before-define
+      internalDeepEqual(key1, key2, strict, channel)
+      // eslint-disable-next-line no-use-before-define
+      && internalDeepEqual(item1, $mapGet(map, key2), strict, channel)
+    ) {
+      $setDelete(set, key2);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function internalDeepEqual(actual, expected, options, channel) {
+  var opts = options || {};
+
+  // 7.1. All identical values are equivalent, as determined by ===.
+  if (opts.strict ? is(actual, expected) : actual === expected) {
+    return true;
+  }
+
+  var actualBoxed = whichBoxedPrimitive(actual);
+  var expectedBoxed = whichBoxedPrimitive(expected);
+  if (actualBoxed !== expectedBoxed) {
+    return false;
+  }
+
+  // 7.3. Other pairs that do not both pass typeof value == 'object', equivalence is determined by ==.
+  if (!actual || !expected || (typeof actual !== 'object' && typeof expected !== 'object')) {
+    if ((actual === false && expected) || (actual && expected === false)) { return false; }
+    return opts.strict ? is(actual, expected) : actual == expected; // eslint-disable-line eqeqeq
+  }
+
+  /*
+   * 7.4. For all other Object pairs, including Array objects, equivalence is
+   * determined by having the same number of owned properties (as verified
+   * with Object.prototype.hasOwnProperty.call), the same set of keys
+   * (although not necessarily the same order), equivalent values for every
+   * corresponding key, and an identical 'prototype' property. Note: this
+   * accounts for both named and indexed properties on Arrays.
+   */
+  // see https://github.com/nodejs/node/commit/d3aafd02efd3a403d646a3044adcf14e63a88d32 for memos/channel inspiration
+
+  var hasActual = channel.has(actual);
+  var hasExpected = channel.has(expected);
+  var sentinel;
+  if (hasActual && hasExpected) {
+    if (channel.get(actual) === channel.get(expected)) {
+      return true;
+    }
+  } else {
+    sentinel = {};
+  }
+  if (!hasActual) { channel.set(actual, sentinel); }
+  if (!hasExpected) { channel.set(expected, sentinel); }
+
+  // eslint-disable-next-line no-use-before-define
+  return objEquiv(actual, expected, opts, channel);
+}
+
+function isBuffer(x) {
+  if (!x || typeof x !== 'object' || typeof x.length !== 'number') {
+    return false;
+  }
+  if (typeof x.copy !== 'function' || typeof x.slice !== 'function') {
+    return false;
+  }
+  if (x.length > 0 && typeof x[0] !== 'number') {
+    return false;
+  }
+  return true;
+}
+
+function setEquiv(a, b, opts, channel) {
+  if ($setSize(a) !== $setSize(b)) {
+    return false;
+  }
+  var iA = getIterator(a);
+  var iB = getIterator(b);
+  var resultA;
+  var resultB;
+  var set;
+  while ((resultA = iA.next()) && !resultA.done) {
+    if (resultA.value && typeof resultA.value === 'object') {
+      if (!set) { set = new $Set(); }
+      $setAdd(set, resultA.value);
+    } else if (!$setHas(b, resultA.value)) {
+      if (opts.strict) { return false; }
+      if (!setMightHaveLoosePrim(a, b, resultA.value)) {
+        return false;
+      }
+      if (!set) { set = new $Set(); }
+      $setAdd(set, resultA.value);
+    }
+  }
+  if (set) {
+    while ((resultB = iB.next()) && !resultB.done) {
+      // We have to check if a primitive value is already matching and only if it's not, go hunting for it.
+      if (resultB.value && typeof resultB.value === 'object') {
+        if (!setHasEqualElement(set, resultB.value, opts.strict, channel)) {
+          return false;
+        }
+      } else if (
+        !opts.strict
+        && !$setHas(a, resultB.value)
+        && !setHasEqualElement(set, resultB.value, opts.strict, channel)
+      ) {
+        return false;
+      }
+    }
+    return $setSize(set) === 0;
+  }
+  return true;
+}
+
+function mapEquiv(a, b, opts, channel) {
+  if ($mapSize(a) !== $mapSize(b)) {
+    return false;
+  }
+  var iA = getIterator(a);
+  var iB = getIterator(b);
+  var resultA;
+  var resultB;
+  var set;
+  var key;
+  var item1;
+  var item2;
+  while ((resultA = iA.next()) && !resultA.done) {
+    key = resultA.value[0];
+    item1 = resultA.value[1];
+    if (key && typeof key === 'object') {
+      if (!set) { set = new $Set(); }
+      $setAdd(set, key);
+    } else {
+      item2 = $mapGet(b, key);
+      // if (typeof curB === 'undefined' && !$mapHas(b, altValue) || !internalDeepEqual(item, curB, false, channel)) {
+      if ((typeof item2 === 'undefined' && !$mapHas(b, key)) || !internalDeepEqual(item1, item2, opts.strict, channel)) {
+        if (opts.strict) {
+          return false;
+        }
+        if (!mapMightHaveLoosePrim(a, b, key, item1, channel)) {
+          return false;
+        }
+        if (!set) { set = new $Set(); }
+        $setAdd(set, key);
+      }
+    }
+  }
+
+  if (set) {
+    while ((resultB = iB.next()) && !resultB.done) {
+      key = resultB.value[0];
+      item1 = resultB.value[1];
+      if (key && typeof key === 'object') {
+        if (!mapHasEqualEntry(set, a, key, item1, opts.strict, channel)) {
+          return false;
+        }
+      } else if (
+        !opts.strict
+        && (!a.has(key) || !internalDeepEqual($mapGet(a, key), item1, false, channel))
+        && !mapHasEqualEntry(set, a, key, item1, false, channel)
+      ) {
+        return false;
+      }
+    }
+    return $setSize(set) === 0;
+  }
+  return true;
+}
+
+function objEquiv(a, b, opts, channel) {
+  /* eslint max-statements: [2, 100], max-lines-per-function: [2, 120], max-depth: [2, 5] */
+  var i, key;
+
+  if (typeof a !== typeof b) { return false; }
+  if (a == null || b == null) { return false; }
+
+  // an identical 'prototype' property.
+  if (a.prototype !== b.prototype) { return false; }
+
+  if ($objToString(a) !== $objToString(b)) { return false; }
+
+  if (isArguments(a) !== isArguments(b)) { return false; }
+
+  var aIsArray = isArray(a);
+  var bIsArray = isArray(b);
+  if (aIsArray !== bIsArray) { return false; }
+
+  // TODO: replace when a cross-realm brand check is available
+  var aIsError = a instanceof Error;
+  var bIsError = b instanceof Error;
+  if (aIsError !== bIsError) { return false; }
+  if (aIsError || bIsError) {
+    if (a.name !== b.name || a.message !== b.message) { return false; }
+  }
+
+  var aIsRegex = isRegex(a);
+  var bIsRegex = isRegex(b);
+  if (aIsRegex !== bIsRegex) { return false; }
+  if ((aIsRegex || bIsRegex) && (a.source !== b.source || flags(a) !== flags(b))) {
+    return false;
+  }
+
+  var aIsDate = isDate(a);
+  var bIsDate = isDate(b);
+  if (aIsDate !== bIsDate) { return false; }
+  if (aIsDate || bIsDate) { // && would work too, because both are true or both false here
+    if ($getTime(a) !== $getTime(b)) { return false; }
+  }
+  if (opts.strict && gPO && gPO(a) !== gPO(b)) { return false; }
+
+  var aIsBuffer = isBuffer(a);
+  var bIsBuffer = isBuffer(b);
+  if (aIsBuffer !== bIsBuffer) { return false; }
+  if (aIsBuffer || bIsBuffer) { // && would work too, because both are true or both false here
+    if (a.length !== b.length) { return false; }
+    for (i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) { return false; }
+    }
+    return true;
+  }
+
+  if (typeof a !== typeof b) { return false; }
+
+  try {
+    var ka = objectKeys(a);
+    var kb = objectKeys(b);
+  } catch (e) { // happens when one is a string literal and the other isn't
+    return false;
+  }
+  // having the same number of owned properties (keys incorporates hasOwnProperty)
+  if (ka.length !== kb.length) { return false; }
+
+  // the same set of keys (although not necessarily the same order),
+  ka.sort();
+  kb.sort();
+  // ~~~cheap key test
+  for (i = ka.length - 1; i >= 0; i--) {
+    if (ka[i] != kb[i]) { return false; } // eslint-disable-line eqeqeq
+  }
+
+  // equivalent values for every corresponding key, and ~~~possibly expensive deep test
+  for (i = ka.length - 1; i >= 0; i--) {
+    key = ka[i];
+    if (!internalDeepEqual(a[key], b[key], opts, channel)) { return false; }
+  }
+
+  var aCollection = whichCollection(a);
+  var bCollection = whichCollection(b);
+  if (aCollection !== bCollection) {
+    return false;
+  }
+  if (aCollection === 'Set' || bCollection === 'Set') { // aCollection === bCollection
+    return setEquiv(a, b, opts, channel);
+  }
+  if (aCollection === 'Map') { // aCollection === bCollection
+    return mapEquiv(a, b, opts, channel);
+  }
+
+  return true;
+}
+
+module.exports = function deepEqual(a, b, opts) {
+  return internalDeepEqual(a, b, opts, getSideChannel());
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/deep-equal/node_modules/isarray/index.js":
+/*!***************************************************************!*\
+  !*** ./node_modules/deep-equal/node_modules/isarray/index.js ***!
+  \***************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+var toString = {}.toString;
+
+module.exports = Array.isArray || function (arr) {
+  return toString.call(arr) == '[object Array]';
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/define-properties/index.js":
+/*!*************************************************!*\
+  !*** ./node_modules/define-properties/index.js ***!
+  \*************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var keys = __webpack_require__(/*! object-keys */ "./node_modules/object-keys/index.js");
+var hasSymbols = typeof Symbol === 'function' && typeof Symbol('foo') === 'symbol';
+
+var toStr = Object.prototype.toString;
+var concat = Array.prototype.concat;
+var origDefineProperty = Object.defineProperty;
+
+var isFunction = function (fn) {
+	return typeof fn === 'function' && toStr.call(fn) === '[object Function]';
+};
+
+var arePropertyDescriptorsSupported = function () {
+	var obj = {};
+	try {
+		origDefineProperty(obj, 'x', { enumerable: false, value: obj });
+		// eslint-disable-next-line no-unused-vars, no-restricted-syntax
+		for (var _ in obj) { // jscs:ignore disallowUnusedVariables
+			return false;
+		}
+		return obj.x === obj;
+	} catch (e) { /* this is IE 8. */
+		return false;
+	}
+};
+var supportsDescriptors = origDefineProperty && arePropertyDescriptorsSupported();
+
+var defineProperty = function (object, name, value, predicate) {
+	if (name in object && (!isFunction(predicate) || !predicate())) {
+		return;
+	}
+	if (supportsDescriptors) {
+		origDefineProperty(object, name, {
+			configurable: true,
+			enumerable: false,
+			value: value,
+			writable: true
+		});
+	} else {
+		object[name] = value;
+	}
+};
+
+var defineProperties = function (object, map) {
+	var predicates = arguments.length > 2 ? arguments[2] : {};
+	var props = keys(map);
+	if (hasSymbols) {
+		props = concat.call(props, Object.getOwnPropertySymbols(map));
+	}
+	for (var i = 0; i < props.length; i += 1) {
+		defineProperty(object, props[i], map[props[i]], predicates[props[i]]);
+	}
+};
+
+defineProperties.supportsDescriptors = !!supportsDescriptors;
+
+module.exports = defineProperties;
+
+
+/***/ }),
+
+/***/ "./node_modules/es-abstract/GetIntrinsic.js":
+/*!**************************************************!*\
+  !*** ./node_modules/es-abstract/GetIntrinsic.js ***!
+  \**************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+/* globals
+	Atomics,
+	SharedArrayBuffer,
+*/
+
+var undefined;
+
+var $TypeError = TypeError;
+
+var $gOPD = Object.getOwnPropertyDescriptor;
+if ($gOPD) {
+	try {
+		$gOPD({}, '');
+	} catch (e) {
+		$gOPD = null; // this is IE 8, which has a broken gOPD
+	}
+}
+
+var throwTypeError = function () { throw new $TypeError(); };
+var ThrowTypeError = $gOPD
+	? (function () {
+		try {
+			// eslint-disable-next-line no-unused-expressions, no-caller, no-restricted-properties
+			arguments.callee; // IE 8 does not throw here
+			return throwTypeError;
+		} catch (calleeThrows) {
+			try {
+				// IE 8 throws on Object.getOwnPropertyDescriptor(arguments, '')
+				return $gOPD(arguments, 'callee').get;
+			} catch (gOPDthrows) {
+				return throwTypeError;
+			}
+		}
+	}())
+	: throwTypeError;
+
+var hasSymbols = __webpack_require__(/*! has-symbols */ "./node_modules/has-symbols/index.js")();
+
+var getProto = Object.getPrototypeOf || function (x) { return x.__proto__; }; // eslint-disable-line no-proto
+
+var generator; // = function * () {};
+var generatorFunction = generator ? getProto(generator) : undefined;
+var asyncFn; // async function() {};
+var asyncFunction = asyncFn ? asyncFn.constructor : undefined;
+var asyncGen; // async function * () {};
+var asyncGenFunction = asyncGen ? getProto(asyncGen) : undefined;
+var asyncGenIterator = asyncGen ? asyncGen() : undefined;
+
+var TypedArray = typeof Uint8Array === 'undefined' ? undefined : getProto(Uint8Array);
+
+var INTRINSICS = {
+	'%Array%': Array,
+	'%ArrayBuffer%': typeof ArrayBuffer === 'undefined' ? undefined : ArrayBuffer,
+	'%ArrayBufferPrototype%': typeof ArrayBuffer === 'undefined' ? undefined : ArrayBuffer.prototype,
+	'%ArrayIteratorPrototype%': hasSymbols ? getProto([][Symbol.iterator]()) : undefined,
+	'%ArrayPrototype%': Array.prototype,
+	'%ArrayProto_entries%': Array.prototype.entries,
+	'%ArrayProto_forEach%': Array.prototype.forEach,
+	'%ArrayProto_keys%': Array.prototype.keys,
+	'%ArrayProto_values%': Array.prototype.values,
+	'%AsyncFromSyncIteratorPrototype%': undefined,
+	'%AsyncFunction%': asyncFunction,
+	'%AsyncFunctionPrototype%': asyncFunction ? asyncFunction.prototype : undefined,
+	'%AsyncGenerator%': asyncGen ? getProto(asyncGenIterator) : undefined,
+	'%AsyncGeneratorFunction%': asyncGenFunction,
+	'%AsyncGeneratorPrototype%': asyncGenFunction ? asyncGenFunction.prototype : undefined,
+	'%AsyncIteratorPrototype%': asyncGenIterator && hasSymbols && Symbol.asyncIterator ? asyncGenIterator[Symbol.asyncIterator]() : undefined,
+	'%Atomics%': typeof Atomics === 'undefined' ? undefined : Atomics,
+	'%Boolean%': Boolean,
+	'%BooleanPrototype%': Boolean.prototype,
+	'%DataView%': typeof DataView === 'undefined' ? undefined : DataView,
+	'%DataViewPrototype%': typeof DataView === 'undefined' ? undefined : DataView.prototype,
+	'%Date%': Date,
+	'%DatePrototype%': Date.prototype,
+	'%decodeURI%': decodeURI,
+	'%decodeURIComponent%': decodeURIComponent,
+	'%encodeURI%': encodeURI,
+	'%encodeURIComponent%': encodeURIComponent,
+	'%Error%': Error,
+	'%ErrorPrototype%': Error.prototype,
+	'%eval%': eval, // eslint-disable-line no-eval
+	'%EvalError%': EvalError,
+	'%EvalErrorPrototype%': EvalError.prototype,
+	'%Float32Array%': typeof Float32Array === 'undefined' ? undefined : Float32Array,
+	'%Float32ArrayPrototype%': typeof Float32Array === 'undefined' ? undefined : Float32Array.prototype,
+	'%Float64Array%': typeof Float64Array === 'undefined' ? undefined : Float64Array,
+	'%Float64ArrayPrototype%': typeof Float64Array === 'undefined' ? undefined : Float64Array.prototype,
+	'%Function%': Function,
+	'%FunctionPrototype%': Function.prototype,
+	'%Generator%': generator ? getProto(generator()) : undefined,
+	'%GeneratorFunction%': generatorFunction,
+	'%GeneratorPrototype%': generatorFunction ? generatorFunction.prototype : undefined,
+	'%Int8Array%': typeof Int8Array === 'undefined' ? undefined : Int8Array,
+	'%Int8ArrayPrototype%': typeof Int8Array === 'undefined' ? undefined : Int8Array.prototype,
+	'%Int16Array%': typeof Int16Array === 'undefined' ? undefined : Int16Array,
+	'%Int16ArrayPrototype%': typeof Int16Array === 'undefined' ? undefined : Int8Array.prototype,
+	'%Int32Array%': typeof Int32Array === 'undefined' ? undefined : Int32Array,
+	'%Int32ArrayPrototype%': typeof Int32Array === 'undefined' ? undefined : Int32Array.prototype,
+	'%isFinite%': isFinite,
+	'%isNaN%': isNaN,
+	'%IteratorPrototype%': hasSymbols ? getProto(getProto([][Symbol.iterator]())) : undefined,
+	'%JSON%': typeof JSON === 'object' ? JSON : undefined,
+	'%JSONParse%': typeof JSON === 'object' ? JSON.parse : undefined,
+	'%Map%': typeof Map === 'undefined' ? undefined : Map,
+	'%MapIteratorPrototype%': typeof Map === 'undefined' || !hasSymbols ? undefined : getProto(new Map()[Symbol.iterator]()),
+	'%MapPrototype%': typeof Map === 'undefined' ? undefined : Map.prototype,
+	'%Math%': Math,
+	'%Number%': Number,
+	'%NumberPrototype%': Number.prototype,
+	'%Object%': Object,
+	'%ObjectPrototype%': Object.prototype,
+	'%ObjProto_toString%': Object.prototype.toString,
+	'%ObjProto_valueOf%': Object.prototype.valueOf,
+	'%parseFloat%': parseFloat,
+	'%parseInt%': parseInt,
+	'%Promise%': typeof Promise === 'undefined' ? undefined : Promise,
+	'%PromisePrototype%': typeof Promise === 'undefined' ? undefined : Promise.prototype,
+	'%PromiseProto_then%': typeof Promise === 'undefined' ? undefined : Promise.prototype.then,
+	'%Promise_all%': typeof Promise === 'undefined' ? undefined : Promise.all,
+	'%Promise_reject%': typeof Promise === 'undefined' ? undefined : Promise.reject,
+	'%Promise_resolve%': typeof Promise === 'undefined' ? undefined : Promise.resolve,
+	'%Proxy%': typeof Proxy === 'undefined' ? undefined : Proxy,
+	'%RangeError%': RangeError,
+	'%RangeErrorPrototype%': RangeError.prototype,
+	'%ReferenceError%': ReferenceError,
+	'%ReferenceErrorPrototype%': ReferenceError.prototype,
+	'%Reflect%': typeof Reflect === 'undefined' ? undefined : Reflect,
+	'%RegExp%': RegExp,
+	'%RegExpPrototype%': RegExp.prototype,
+	'%Set%': typeof Set === 'undefined' ? undefined : Set,
+	'%SetIteratorPrototype%': typeof Set === 'undefined' || !hasSymbols ? undefined : getProto(new Set()[Symbol.iterator]()),
+	'%SetPrototype%': typeof Set === 'undefined' ? undefined : Set.prototype,
+	'%SharedArrayBuffer%': typeof SharedArrayBuffer === 'undefined' ? undefined : SharedArrayBuffer,
+	'%SharedArrayBufferPrototype%': typeof SharedArrayBuffer === 'undefined' ? undefined : SharedArrayBuffer.prototype,
+	'%String%': String,
+	'%StringIteratorPrototype%': hasSymbols ? getProto(''[Symbol.iterator]()) : undefined,
+	'%StringPrototype%': String.prototype,
+	'%Symbol%': hasSymbols ? Symbol : undefined,
+	'%SymbolPrototype%': hasSymbols ? Symbol.prototype : undefined,
+	'%SyntaxError%': SyntaxError,
+	'%SyntaxErrorPrototype%': SyntaxError.prototype,
+	'%ThrowTypeError%': ThrowTypeError,
+	'%TypedArray%': TypedArray,
+	'%TypedArrayPrototype%': TypedArray ? TypedArray.prototype : undefined,
+	'%TypeError%': $TypeError,
+	'%TypeErrorPrototype%': $TypeError.prototype,
+	'%Uint8Array%': typeof Uint8Array === 'undefined' ? undefined : Uint8Array,
+	'%Uint8ArrayPrototype%': typeof Uint8Array === 'undefined' ? undefined : Uint8Array.prototype,
+	'%Uint8ClampedArray%': typeof Uint8ClampedArray === 'undefined' ? undefined : Uint8ClampedArray,
+	'%Uint8ClampedArrayPrototype%': typeof Uint8ClampedArray === 'undefined' ? undefined : Uint8ClampedArray.prototype,
+	'%Uint16Array%': typeof Uint16Array === 'undefined' ? undefined : Uint16Array,
+	'%Uint16ArrayPrototype%': typeof Uint16Array === 'undefined' ? undefined : Uint16Array.prototype,
+	'%Uint32Array%': typeof Uint32Array === 'undefined' ? undefined : Uint32Array,
+	'%Uint32ArrayPrototype%': typeof Uint32Array === 'undefined' ? undefined : Uint32Array.prototype,
+	'%URIError%': URIError,
+	'%URIErrorPrototype%': URIError.prototype,
+	'%WeakMap%': typeof WeakMap === 'undefined' ? undefined : WeakMap,
+	'%WeakMapPrototype%': typeof WeakMap === 'undefined' ? undefined : WeakMap.prototype,
+	'%WeakSet%': typeof WeakSet === 'undefined' ? undefined : WeakSet,
+	'%WeakSetPrototype%': typeof WeakSet === 'undefined' ? undefined : WeakSet.prototype
+};
+
+var bind = __webpack_require__(/*! function-bind */ "./node_modules/function-bind/index.js");
+var $replace = bind.call(Function.call, String.prototype.replace);
+
+/* adapted from https://github.com/lodash/lodash/blob/4.17.15/dist/lodash.js#L6735-L6744 */
+var rePropName = /[^%.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(?:\.|\[\])(?:\.|\[\]|%$))/g;
+var reEscapeChar = /\\(\\)?/g; /** Used to match backslashes in property paths. */
+var stringToPath = function stringToPath(string) {
+	var result = [];
+	$replace(string, rePropName, function (match, number, quote, subString) {
+		result[result.length] = quote ? $replace(subString, reEscapeChar, '$1') : (number || match);
+	});
+	return result;
+};
+/* end adaptation */
+
+var getBaseIntrinsic = function getBaseIntrinsic(name, allowMissing) {
+	if (!(name in INTRINSICS)) {
+		throw new SyntaxError('intrinsic ' + name + ' does not exist!');
+	}
+
+	// istanbul ignore if // hopefully this is impossible to test :-)
+	if (typeof INTRINSICS[name] === 'undefined' && !allowMissing) {
+		throw new $TypeError('intrinsic ' + name + ' exists, but is not available. Please file an issue!');
+	}
+
+	return INTRINSICS[name];
+};
+
+module.exports = function GetIntrinsic(name, allowMissing) {
+	if (typeof name !== 'string' || name.length === 0) {
+		throw new TypeError('intrinsic name must be a non-empty string');
+	}
+	if (arguments.length > 1 && typeof allowMissing !== 'boolean') {
+		throw new TypeError('"allowMissing" argument must be a boolean');
+	}
+
+	var parts = stringToPath(name);
+
+	var value = getBaseIntrinsic('%' + (parts.length > 0 ? parts[0] : '') + '%', allowMissing);
+	for (var i = 1; i < parts.length; i += 1) {
+		if (value != null) {
+			if ($gOPD && (i + 1) >= parts.length) {
+				var desc = $gOPD(value, parts[i]);
+				if (!allowMissing && !(parts[i] in value)) {
+					throw new $TypeError('base intrinsic for ' + name + ' exists, but the property is not available.');
+				}
+				value = desc ? (desc.get || desc.value) : value[parts[i]];
+			} else {
+				value = value[parts[i]];
+			}
+		}
+	}
+	return value;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/es-abstract/helpers/callBind.js":
+/*!******************************************************!*\
+  !*** ./node_modules/es-abstract/helpers/callBind.js ***!
+  \******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var bind = __webpack_require__(/*! function-bind */ "./node_modules/function-bind/index.js");
+
+var GetIntrinsic = __webpack_require__(/*! ../GetIntrinsic */ "./node_modules/es-abstract/GetIntrinsic.js");
+
+var $Function = GetIntrinsic('%Function%');
+var $apply = $Function.apply;
+var $call = $Function.call;
+
+module.exports = function callBind() {
+	return bind.apply($call, arguments);
+};
+
+module.exports.apply = function applyBind() {
+	return bind.apply($apply, arguments);
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/es-abstract/helpers/callBound.js":
+/*!*******************************************************!*\
+  !*** ./node_modules/es-abstract/helpers/callBound.js ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var GetIntrinsic = __webpack_require__(/*! ../GetIntrinsic */ "./node_modules/es-abstract/GetIntrinsic.js");
+
+var callBind = __webpack_require__(/*! ./callBind */ "./node_modules/es-abstract/helpers/callBind.js");
+
+var $indexOf = callBind(GetIntrinsic('String.prototype.indexOf'));
+
+module.exports = function callBoundIntrinsic(name, allowMissing) {
+	var intrinsic = GetIntrinsic(name, !!allowMissing);
+	if (typeof intrinsic === 'function' && $indexOf(name, '.prototype.')) {
+		return callBind(intrinsic);
+	}
+	return intrinsic;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/es-get-iterator/index.js":
+/*!***********************************************!*\
+  !*** ./node_modules/es-get-iterator/index.js ***!
+  \***********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+/* eslint global-require: 0 */
+// the code is structured this way so that bundlers can
+// alias out `has-symbols` to `() => true` or `() => false` if your target
+// environments' Symbol capabilities are known, and then use
+// dead code elimination on the rest of this module.
+//
+// Similarly, `isarray` can be aliased to `Array.isArray` if
+// available in all target environments.
+
+var isArguments = __webpack_require__(/*! is-arguments */ "./node_modules/is-arguments/index.js");
+
+if (__webpack_require__(/*! has-symbols */ "./node_modules/has-symbols/index.js")() || __webpack_require__(/*! has-symbols/shams */ "./node_modules/has-symbols/shams.js")()) {
+	var $iterator = Symbol.iterator;
+	// Symbol is available natively or shammed
+	// natively:
+	//  - Chrome >= 38
+	//  - Edge 12-14?, Edge >= 15 for sure
+	//  - FF >= 36
+	//  - Safari >= 9
+	//  - node >= 0.12
+	module.exports = function getIterator(iterable) {
+		// alternatively, `iterable[$iterator]?.()`
+		if (iterable != null && typeof iterable[$iterator] !== 'undefined') {
+			return iterable[$iterator]();
+		}
+		if (isArguments(iterable)) {
+			// arguments objects lack Symbol.iterator
+			// - node 0.12
+			return Array.prototype[$iterator].call(iterable);
+		}
+	};
+} else {
+	// Symbol is not available, native or shammed
+	var isArray = __webpack_require__(/*! isarray */ "./node_modules/es-get-iterator/node_modules/isarray/index.js");
+	var isString = __webpack_require__(/*! is-string */ "./node_modules/is-string/index.js");
+	var GetIntrinsic = __webpack_require__(/*! es-abstract/GetIntrinsic */ "./node_modules/es-abstract/GetIntrinsic.js");
+	var $Map = GetIntrinsic('%Map%', true);
+	var $Set = GetIntrinsic('%Set%', true);
+	var callBound = __webpack_require__(/*! es-abstract/helpers/callBound */ "./node_modules/es-abstract/helpers/callBound.js");
+	var $arrayPush = callBound('Array.prototype.push');
+	var $charCodeAt = callBound('String.prototype.charCodeAt');
+	var $stringSlice = callBound('String.prototype.slice');
+
+	var advanceStringIndex = function advanceStringIndex(S, index) {
+		var length = S.length;
+		if ((index + 1) >= length) {
+			return index + 1;
+		}
+
+		var first = $charCodeAt(S, index);
+		if (first < 0xD800 || first > 0xDBFF) {
+			return index + 1;
+		}
+
+		var second = $charCodeAt(S, index + 1);
+		if (second < 0xDC00 || second > 0xDFFF) {
+			return index + 1;
+		}
+
+		return index + 2;
+	};
+
+	var getArrayIterator = function getArrayIterator(arraylike) {
+		var i = 0;
+		return {
+			next: function next() {
+				var done = i >= arraylike.length;
+				var value;
+				if (!done) {
+					value = arraylike[i];
+					i += 1;
+				}
+				return {
+					done: done,
+					value: value
+				};
+			}
+		};
+	};
+
+	var getNonCollectionIterator = function getNonCollectionIterator(iterable) {
+		if (isArray(iterable) || isArguments(iterable)) {
+			return getArrayIterator(iterable);
+		}
+		if (isString(iterable)) {
+			var i = 0;
+			return {
+				next: function next() {
+					var nextIndex = advanceStringIndex(iterable, i);
+					var value = $stringSlice(iterable, i, nextIndex);
+					i = nextIndex;
+					return {
+						done: nextIndex > iterable.length,
+						value: value
+					};
+				}
+			};
+		}
+	};
+
+	if (!$Map && !$Set) {
+		// the only language iterables are Array, String, arguments
+		// - Safari <= 6.0
+		// - Chrome < 38
+		// - node < 0.12
+		// - FF < 13
+		// - IE < 11
+		// - Edge < 11
+
+		module.exports = getNonCollectionIterator;
+	} else {
+		// either Map or Set are available, but Symbol is not
+		// - es6-shim on an ES5 browser
+		// - Safari 6.2 (maybe 6.1?)
+		// - FF v[13, 36)
+		// - IE 11
+		// - Edge 11
+		// - Safari v[6, 9)
+
+		var isMap = __webpack_require__(/*! is-map */ "./node_modules/is-map/index.js");
+		var isSet = __webpack_require__(/*! is-set */ "./node_modules/is-set/index.js");
+
+		// Firefox >= 27, IE 11, Safari 6.2 - 9, Edge 11, es6-shim in older envs, all have forEach
+		var $mapForEach = callBound('Map.prototype.forEach', true);
+		var $setForEach = callBound('Set.prototype.forEach', true);
+		if (typeof process === 'undefined' || !process.versions || !process.versions.node) { // "if is not node"
+
+			// Firefox 17 - 26 has `.iterator()`, whose iterator `.next()` either
+			// returns a value, or throws a StopIteration object. These browsers
+			// do not have any other mechanism for iteration.
+			var $mapIterator = callBound('Map.prototype.iterator', true);
+			var $setIterator = callBound('Set.prototype.iterator', true);
+			var getStopIterationIterator = function (iterator) {
+				var done = false;
+				return {
+					next: function next() {
+						try {
+							return {
+								done: done,
+								value: done ? undefined : iterator.next()
+							};
+						} catch (e) {
+							done = true;
+							return {
+								done: true,
+								value: undefined
+							};
+						}
+					}
+				};
+			};
+		}
+		// Firefox 27-35, and some older es6-shim versions, use a string "@@iterator" property
+		// this returns a proper iterator object, so we should use it instead of forEach.
+		// newer es6-shim versions use a string "_es6-shim iterator_" property.
+		var $mapAtAtIterator = callBound('Map.prototype.@@iterator', true) || callBound('Map.prototype._es6-shim iterator_', true);
+		var $setAtAtIterator = callBound('Set.prototype.@@iterator', true) || callBound('Set.prototype._es6-shim iterator_', true);
+
+		var getCollectionIterator = function getCollectionIterator(iterable) {
+			if (isMap(iterable)) {
+				if ($mapIterator) {
+					return getStopIterationIterator($mapIterator(iterable));
+				}
+				if ($mapAtAtIterator) {
+					return $mapAtAtIterator(iterable);
+				}
+				if ($mapForEach) {
+					var entries = [];
+					$mapForEach(iterable, function (v, k) {
+						$arrayPush(entries, [k, v]);
+					});
+					return getArrayIterator(entries);
+				}
+			}
+			if (isSet(iterable)) {
+				if ($setIterator) {
+					return getStopIterationIterator($setIterator(iterable));
+				}
+				if ($setAtAtIterator) {
+					return $setAtAtIterator(iterable);
+				}
+				if ($setForEach) {
+					var values = [];
+					$setForEach(iterable, function (v) {
+						$arrayPush(values, v);
+					});
+					return getArrayIterator(values);
+				}
+			}
+		};
+
+		module.exports = function getIterator(iterable) {
+			return getCollectionIterator(iterable) || getNonCollectionIterator(iterable);
+		};
+	}
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/es-get-iterator/node_modules/isarray/index.js":
+/*!********************************************************************!*\
+  !*** ./node_modules/es-get-iterator/node_modules/isarray/index.js ***!
+  \********************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+var toString = {}.toString;
+
+module.exports = Array.isArray || function (arr) {
+  return toString.call(arr) == '[object Array]';
+};
 
 
 /***/ }),
@@ -8878,6 +9923,87 @@ exports.realpath = function realpath(p, cache, cb) {
 
 /***/ }),
 
+/***/ "./node_modules/function-bind/implementation.js":
+/*!******************************************************!*\
+  !*** ./node_modules/function-bind/implementation.js ***!
+  \******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+/* eslint no-invalid-this: 1 */
+
+var ERROR_MESSAGE = 'Function.prototype.bind called on incompatible ';
+var slice = Array.prototype.slice;
+var toStr = Object.prototype.toString;
+var funcType = '[object Function]';
+
+module.exports = function bind(that) {
+    var target = this;
+    if (typeof target !== 'function' || toStr.call(target) !== funcType) {
+        throw new TypeError(ERROR_MESSAGE + target);
+    }
+    var args = slice.call(arguments, 1);
+
+    var bound;
+    var binder = function () {
+        if (this instanceof bound) {
+            var result = target.apply(
+                this,
+                args.concat(slice.call(arguments))
+            );
+            if (Object(result) === result) {
+                return result;
+            }
+            return this;
+        } else {
+            return target.apply(
+                that,
+                args.concat(slice.call(arguments))
+            );
+        }
+    };
+
+    var boundLength = Math.max(0, target.length - args.length);
+    var boundArgs = [];
+    for (var i = 0; i < boundLength; i++) {
+        boundArgs.push('$' + i);
+    }
+
+    bound = Function('binder', 'return function (' + boundArgs.join(',') + '){ return binder.apply(this,arguments); }')(binder);
+
+    if (target.prototype) {
+        var Empty = function Empty() {};
+        Empty.prototype = target.prototype;
+        bound.prototype = new Empty();
+        Empty.prototype = null;
+    }
+
+    return bound;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/function-bind/index.js":
+/*!*********************************************!*\
+  !*** ./node_modules/function-bind/index.js ***!
+  \*********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var implementation = __webpack_require__(/*! ./implementation */ "./node_modules/function-bind/implementation.js");
+
+module.exports = Function.prototype.bind || implementation;
+
+
+/***/ }),
+
 /***/ "./node_modules/get-value/index.js":
 /*!*****************************************!*\
   !*** ./node_modules/get-value/index.js ***!
@@ -11132,6 +12258,85 @@ module.exports = '2.1.8';
 
 /***/ }),
 
+/***/ "./node_modules/has-symbols/index.js":
+/*!*******************************************!*\
+  !*** ./node_modules/has-symbols/index.js ***!
+  \*******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var origSymbol = global.Symbol;
+var hasSymbolSham = __webpack_require__(/*! ./shams */ "./node_modules/has-symbols/shams.js");
+
+module.exports = function hasNativeSymbols() {
+	if (typeof origSymbol !== 'function') { return false; }
+	if (typeof Symbol !== 'function') { return false; }
+	if (typeof origSymbol('foo') !== 'symbol') { return false; }
+	if (typeof Symbol('bar') !== 'symbol') { return false; }
+
+	return hasSymbolSham();
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/has-symbols/shams.js":
+/*!*******************************************!*\
+  !*** ./node_modules/has-symbols/shams.js ***!
+  \*******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+/* eslint complexity: [2, 18], max-statements: [2, 33] */
+module.exports = function hasSymbols() {
+	if (typeof Symbol !== 'function' || typeof Object.getOwnPropertySymbols !== 'function') { return false; }
+	if (typeof Symbol.iterator === 'symbol') { return true; }
+
+	var obj = {};
+	var sym = Symbol('test');
+	var symObj = Object(sym);
+	if (typeof sym === 'string') { return false; }
+
+	if (Object.prototype.toString.call(sym) !== '[object Symbol]') { return false; }
+	if (Object.prototype.toString.call(symObj) !== '[object Symbol]') { return false; }
+
+	// temp disabled per https://github.com/ljharb/object.assign/issues/17
+	// if (sym instanceof Symbol) { return false; }
+	// temp disabled per https://github.com/WebReflection/get-own-property-symbols/issues/4
+	// if (!(symObj instanceof Symbol)) { return false; }
+
+	// if (typeof Symbol.prototype.toString !== 'function') { return false; }
+	// if (String(sym) !== Symbol.prototype.toString.call(sym)) { return false; }
+
+	var symVal = 42;
+	obj[sym] = symVal;
+	for (sym in obj) { return false; } // eslint-disable-line no-restricted-syntax
+	if (typeof Object.keys === 'function' && Object.keys(obj).length !== 0) { return false; }
+
+	if (typeof Object.getOwnPropertyNames === 'function' && Object.getOwnPropertyNames(obj).length !== 0) { return false; }
+
+	var syms = Object.getOwnPropertySymbols(obj);
+	if (syms.length !== 1 || syms[0] !== sym) { return false; }
+
+	if (!Object.prototype.propertyIsEnumerable.call(obj, sym)) { return false; }
+
+	if (typeof Object.getOwnPropertyDescriptor === 'function') {
+		var descriptor = Object.getOwnPropertyDescriptor(obj, sym);
+		if (descriptor.value !== symVal || descriptor.enumerable !== true) { return false; }
+	}
+
+	return true;
+};
+
+
+/***/ }),
+
 /***/ "./node_modules/has-value/index.js":
 /*!*****************************************!*\
   !*** ./node_modules/has-value/index.js ***!
@@ -11207,6 +12412,23 @@ module.exports = function hasValue(o, noZero) {
   }
   return false;
 };
+
+
+/***/ }),
+
+/***/ "./node_modules/has/src/index.js":
+/*!***************************************!*\
+  !*** ./node_modules/has/src/index.js ***!
+  \***************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var bind = __webpack_require__(/*! function-bind */ "./node_modules/function-bind/index.js");
+
+module.exports = bind.call(Function.call, Object.prototype.hasOwnProperty);
 
 
 /***/ }),
@@ -11328,6 +12550,258 @@ if (typeof Object.create === 'function') {
 
 /***/ }),
 
+/***/ "./node_modules/is-arguments/index.js":
+/*!********************************************!*\
+  !*** ./node_modules/is-arguments/index.js ***!
+  \********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var hasToStringTag = typeof Symbol === 'function' && typeof Symbol.toStringTag === 'symbol';
+var toStr = Object.prototype.toString;
+
+var isStandardArguments = function isArguments(value) {
+	if (hasToStringTag && value && typeof value === 'object' && Symbol.toStringTag in value) {
+		return false;
+	}
+	return toStr.call(value) === '[object Arguments]';
+};
+
+var isLegacyArguments = function isArguments(value) {
+	if (isStandardArguments(value)) {
+		return true;
+	}
+	return value !== null &&
+		typeof value === 'object' &&
+		typeof value.length === 'number' &&
+		value.length >= 0 &&
+		toStr.call(value) !== '[object Array]' &&
+		toStr.call(value.callee) === '[object Function]';
+};
+
+var supportsStandardArguments = (function () {
+	return isStandardArguments(arguments);
+}());
+
+isStandardArguments.isLegacyArguments = isLegacyArguments; // for tests
+
+module.exports = supportsStandardArguments ? isStandardArguments : isLegacyArguments;
+
+
+/***/ }),
+
+/***/ "./node_modules/is-bigint/index.js":
+/*!*****************************************!*\
+  !*** ./node_modules/is-bigint/index.js ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+if (typeof BigInt === 'function') {
+	var bigIntValueOf = BigInt.prototype.valueOf;
+	var tryBigInt = function tryBigIntObject(value) {
+		try {
+			bigIntValueOf.call(value);
+			return true;
+		} catch (e) {
+		}
+		return false;
+	};
+
+	module.exports = function isBigInt(value) {
+		if (
+			value === null
+			|| typeof value === 'undefined'
+			|| typeof value === 'boolean'
+			|| typeof value === 'string'
+			|| typeof value === 'number'
+			|| typeof value === 'symbol'
+			|| typeof value === 'function'
+		) {
+			return false;
+		}
+		if (typeof value === 'bigint') { // eslint-disable-line valid-typeof
+			return true;
+		}
+
+		return tryBigInt(value);
+	};
+} else {
+	module.exports = function isBigInt(value) {
+		return  false && false;
+	};
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/is-boolean-object/index.js":
+/*!*************************************************!*\
+  !*** ./node_modules/is-boolean-object/index.js ***!
+  \*************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var boolToStr = Boolean.prototype.toString;
+
+var tryBooleanObject = function booleanBrandCheck(value) {
+	try {
+		boolToStr.call(value);
+		return true;
+	} catch (e) {
+		return false;
+	}
+};
+var toStr = Object.prototype.toString;
+var boolClass = '[object Boolean]';
+var hasToStringTag = typeof Symbol === 'function' && typeof Symbol.toStringTag === 'symbol';
+
+module.exports = function isBoolean(value) {
+	if (typeof value === 'boolean') {
+		return true;
+	}
+	if (value === null || typeof value !== 'object') {
+		return false;
+	}
+	return hasToStringTag && Symbol.toStringTag in value ? tryBooleanObject(value) : toStr.call(value) === boolClass;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/is-date-object/index.js":
+/*!**********************************************!*\
+  !*** ./node_modules/is-date-object/index.js ***!
+  \**********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var getDay = Date.prototype.getDay;
+var tryDateObject = function tryDateGetDayCall(value) {
+	try {
+		getDay.call(value);
+		return true;
+	} catch (e) {
+		return false;
+	}
+};
+
+var toStr = Object.prototype.toString;
+var dateClass = '[object Date]';
+var hasToStringTag = typeof Symbol === 'function' && typeof Symbol.toStringTag === 'symbol';
+
+module.exports = function isDateObject(value) {
+	if (typeof value !== 'object' || value === null) {
+		return false;
+	}
+	return hasToStringTag ? tryDateObject(value) : toStr.call(value) === dateClass;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/is-map/index.js":
+/*!**************************************!*\
+  !*** ./node_modules/is-map/index.js ***!
+  \**************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var $Map = typeof Map === 'function' && Map.prototype ? Map : null;
+var $Set = typeof Set === 'function' && Set.prototype ? Set : null;
+
+var exported;
+
+if (!$Map) {
+	// eslint-disable-next-line no-unused-vars
+	exported = function isMap(x) {
+		// `Map` is not present in this environment.
+		return false;
+	};
+}
+
+var $mapHas = $Map ? Map.prototype.has : null;
+var $setHas = $Set ? Set.prototype.has : null;
+if (!exported && !$mapHas) {
+	// eslint-disable-next-line no-unused-vars
+	exported = function isMap(x) {
+		// `Map` does not have a `has` method
+		return false;
+	};
+}
+
+module.exports = exported || function isMap(x) {
+	if (!x || typeof x !== 'object') {
+		return false;
+	}
+	try {
+		$mapHas.call(x);
+		if ($setHas) {
+			try {
+				$setHas.call(x);
+			} catch (e) {
+				return true;
+			}
+		}
+		return x instanceof $Map; // core-js workaround, pre-v2.5.0
+	} catch (e) {}
+	return false;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/is-number-object/index.js":
+/*!************************************************!*\
+  !*** ./node_modules/is-number-object/index.js ***!
+  \************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var numToStr = Number.prototype.toString;
+var tryNumberObject = function tryNumberObject(value) {
+	try {
+		numToStr.call(value);
+		return true;
+	} catch (e) {
+		return false;
+	}
+};
+var toStr = Object.prototype.toString;
+var numClass = '[object Number]';
+var hasToStringTag = typeof Symbol === 'function' && typeof Symbol.toStringTag === 'symbol';
+
+module.exports = function isNumberObject(value) {
+	if (typeof value === 'number') {
+		return true;
+	}
+	if (typeof value !== 'object') {
+		return false;
+	}
+	return hasToStringTag ? tryNumberObject(value) : toStr.call(value) === numClass;
+};
+
+
+/***/ }),
+
 /***/ "./node_modules/is-plain-object/index.js":
 /*!***********************************************!*\
   !*** ./node_modules/is-plain-object/index.js ***!
@@ -11396,6 +12870,302 @@ module.exports = function isPlainObject(o) {
 
 module.exports = function isObject(val) {
   return val != null && typeof val === 'object' && Array.isArray(val) === false;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/is-regex/index.js":
+/*!****************************************!*\
+  !*** ./node_modules/is-regex/index.js ***!
+  \****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var has = __webpack_require__(/*! has */ "./node_modules/has/src/index.js");
+var regexExec = RegExp.prototype.exec;
+var gOPD = Object.getOwnPropertyDescriptor;
+
+var tryRegexExecCall = function tryRegexExec(value) {
+	try {
+		var lastIndex = value.lastIndex;
+		value.lastIndex = 0; // eslint-disable-line no-param-reassign
+
+		regexExec.call(value);
+		return true;
+	} catch (e) {
+		return false;
+	} finally {
+		value.lastIndex = lastIndex; // eslint-disable-line no-param-reassign
+	}
+};
+var toStr = Object.prototype.toString;
+var regexClass = '[object RegExp]';
+var hasToStringTag = typeof Symbol === 'function' && typeof Symbol.toStringTag === 'symbol';
+
+module.exports = function isRegex(value) {
+	if (!value || typeof value !== 'object') {
+		return false;
+	}
+	if (!hasToStringTag) {
+		return toStr.call(value) === regexClass;
+	}
+
+	var descriptor = gOPD(value, 'lastIndex');
+	var hasLastIndexDataProperty = descriptor && has(descriptor, 'value');
+	if (!hasLastIndexDataProperty) {
+		return false;
+	}
+
+	return tryRegexExecCall(value);
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/is-set/index.js":
+/*!**************************************!*\
+  !*** ./node_modules/is-set/index.js ***!
+  \**************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var $Map = typeof Map === 'function' && Map.prototype ? Map : null;
+var $Set = typeof Set === 'function' && Set.prototype ? Set : null;
+
+var exported;
+
+if (!$Set) {
+	// eslint-disable-next-line no-unused-vars
+	exported = function isSet(x) {
+		// `Set` is not present in this environment.
+		return false;
+	};
+}
+
+var $mapHas = $Map ? Map.prototype.has : null;
+var $setHas = $Set ? Set.prototype.has : null;
+if (!exported && !$setHas) {
+	// eslint-disable-next-line no-unused-vars
+	exported = function isSet(x) {
+		// `Set` does not have a `has` method
+		return false;
+	};
+}
+
+module.exports = exported || function isSet(x) {
+	if (!x || typeof x !== 'object') {
+		return false;
+	}
+	try {
+		$setHas.call(x);
+		if ($mapHas) {
+			try {
+				$mapHas.call(x);
+			} catch (e) {
+				return true;
+			}
+		}
+		return x instanceof $Set; // core-js workaround, pre-v2.5.0
+	} catch (e) {}
+	return false;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/is-string/index.js":
+/*!*****************************************!*\
+  !*** ./node_modules/is-string/index.js ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var strValue = String.prototype.valueOf;
+var tryStringObject = function tryStringObject(value) {
+	try {
+		strValue.call(value);
+		return true;
+	} catch (e) {
+		return false;
+	}
+};
+var toStr = Object.prototype.toString;
+var strClass = '[object String]';
+var hasToStringTag = typeof Symbol === 'function' && typeof Symbol.toStringTag === 'symbol';
+
+module.exports = function isString(value) {
+	if (typeof value === 'string') {
+		return true;
+	}
+	if (typeof value !== 'object') {
+		return false;
+	}
+	return hasToStringTag ? tryStringObject(value) : toStr.call(value) === strClass;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/is-symbol/index.js":
+/*!*****************************************!*\
+  !*** ./node_modules/is-symbol/index.js ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var toStr = Object.prototype.toString;
+var hasSymbols = __webpack_require__(/*! has-symbols */ "./node_modules/has-symbols/index.js")();
+
+if (hasSymbols) {
+	var symToStr = Symbol.prototype.toString;
+	var symStringRegex = /^Symbol\(.*\)$/;
+	var isSymbolObject = function isRealSymbolObject(value) {
+		if (typeof value.valueOf() !== 'symbol') {
+			return false;
+		}
+		return symStringRegex.test(symToStr.call(value));
+	};
+
+	module.exports = function isSymbol(value) {
+		if (typeof value === 'symbol') {
+			return true;
+		}
+		if (toStr.call(value) !== '[object Symbol]') {
+			return false;
+		}
+		try {
+			return isSymbolObject(value);
+		} catch (e) {
+			return false;
+		}
+	};
+} else {
+
+	module.exports = function isSymbol(value) {
+		// this environment does not support Symbols.
+		return  false && false;
+	};
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/is-weakmap/index.js":
+/*!******************************************!*\
+  !*** ./node_modules/is-weakmap/index.js ***!
+  \******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var $WeakMap = typeof WeakMap === 'function' && WeakMap.prototype ? WeakMap : null;
+var $WeakSet = typeof WeakSet === 'function' && WeakSet.prototype ? WeakSet : null;
+
+var exported;
+
+if (!$WeakMap) {
+	// eslint-disable-next-line no-unused-vars
+	exported = function isWeakMap(x) {
+		// `WeakMap` is not present in this environment.
+		return false;
+	};
+}
+
+var $mapHas = $WeakMap ? $WeakMap.prototype.has : null;
+var $setHas = $WeakSet ? $WeakSet.prototype.has : null;
+if (!exported && !$mapHas) {
+	// eslint-disable-next-line no-unused-vars
+	exported = function isWeakMap(x) {
+		// `WeakMap` does not have a `has` method
+		return false;
+	};
+}
+
+module.exports = exported || function isWeakMap(x) {
+	if (!x || typeof x !== 'object') {
+		return false;
+	}
+	try {
+		$mapHas.call(x, $mapHas);
+		if ($setHas) {
+			try {
+				$setHas.call(x, $setHas);
+			} catch (e) {
+				return true;
+			}
+		}
+		return x instanceof $WeakMap; // core-js workaround, pre-v3
+	} catch (e) {}
+	return false;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/is-weakset/index.js":
+/*!******************************************!*\
+  !*** ./node_modules/is-weakset/index.js ***!
+  \******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var $WeakMap = typeof WeakMap === 'function' && WeakMap.prototype ? WeakMap : null;
+var $WeakSet = typeof WeakSet === 'function' && WeakSet.prototype ? WeakSet : null;
+
+var exported;
+
+if (!$WeakMap) {
+	// eslint-disable-next-line no-unused-vars
+	exported = function isWeakSet(x) {
+		// `WeakSet` is not present in this environment.
+		return false;
+	};
+}
+
+var $mapHas = $WeakMap ? $WeakMap.prototype.has : null;
+var $setHas = $WeakSet ? $WeakSet.prototype.has : null;
+if (!exported && !$setHas) {
+	// eslint-disable-next-line no-unused-vars
+	module.exports = function isWeakSet(x) {
+		// `WeakSet` does not have a `has` method
+		return false;
+	};
+}
+
+module.exports = exported || function isWeakSet(x) {
+	if (!x || typeof x !== 'object') {
+		return false;
+	}
+	try {
+		$setHas.call(x, $setHas);
+		if ($mapHas) {
+			try {
+				$mapHas.call(x, $mapHas);
+			} catch (e) {
+				return true;
+			}
+		}
+		return x instanceof $WeakSet; // core-js workaround, pre-v3
+	} catch (e) {}
+	return false;
 };
 
 
@@ -19666,6 +21436,576 @@ module.exports = (function() {
 
 /***/ }),
 
+/***/ "./node_modules/object-inspect/index.js":
+/*!**********************************************!*\
+  !*** ./node_modules/object-inspect/index.js ***!
+  \**********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+var hasMap = typeof Map === 'function' && Map.prototype;
+var mapSizeDescriptor = Object.getOwnPropertyDescriptor && hasMap ? Object.getOwnPropertyDescriptor(Map.prototype, 'size') : null;
+var mapSize = hasMap && mapSizeDescriptor && typeof mapSizeDescriptor.get === 'function' ? mapSizeDescriptor.get : null;
+var mapForEach = hasMap && Map.prototype.forEach;
+var hasSet = typeof Set === 'function' && Set.prototype;
+var setSizeDescriptor = Object.getOwnPropertyDescriptor && hasSet ? Object.getOwnPropertyDescriptor(Set.prototype, 'size') : null;
+var setSize = hasSet && setSizeDescriptor && typeof setSizeDescriptor.get === 'function' ? setSizeDescriptor.get : null;
+var setForEach = hasSet && Set.prototype.forEach;
+var hasWeakMap = typeof WeakMap === 'function' && WeakMap.prototype;
+var weakMapHas = hasWeakMap ? WeakMap.prototype.has : null;
+var hasWeakSet = typeof WeakSet === 'function' && WeakSet.prototype;
+var weakSetHas = hasWeakSet ? WeakSet.prototype.has : null;
+var booleanValueOf = Boolean.prototype.valueOf;
+var objectToString = Object.prototype.toString;
+var match = String.prototype.match;
+var bigIntValueOf = typeof BigInt === 'function' ? BigInt.prototype.valueOf : null;
+
+var inspectCustom = __webpack_require__(/*! ./util.inspect */ "./node_modules/object-inspect/util.inspect.js").custom;
+var inspectSymbol = inspectCustom && isSymbol(inspectCustom) ? inspectCustom : null;
+
+module.exports = function inspect_(obj, options, depth, seen) {
+    var opts = options || {};
+
+    if (has(opts, 'quoteStyle') && (opts.quoteStyle !== 'single' && opts.quoteStyle !== 'double')) {
+        throw new TypeError('option "quoteStyle" must be "single" or "double"');
+    }
+
+    if (typeof obj === 'undefined') {
+        return 'undefined';
+    }
+    if (obj === null) {
+        return 'null';
+    }
+    if (typeof obj === 'boolean') {
+        return obj ? 'true' : 'false';
+    }
+
+    if (typeof obj === 'string') {
+        return inspectString(obj, opts);
+    }
+    if (typeof obj === 'number') {
+        if (obj === 0) {
+            return Infinity / obj > 0 ? '0' : '-0';
+        }
+        return String(obj);
+    }
+    if (typeof obj === 'bigint') { // eslint-disable-line valid-typeof
+        return String(obj) + 'n';
+    }
+
+    var maxDepth = typeof opts.depth === 'undefined' ? 5 : opts.depth;
+    if (typeof depth === 'undefined') { depth = 0; }
+    if (depth >= maxDepth && maxDepth > 0 && typeof obj === 'object') {
+        return '[Object]';
+    }
+
+    if (typeof seen === 'undefined') {
+        seen = [];
+    } else if (indexOf(seen, obj) >= 0) {
+        return '[Circular]';
+    }
+
+    function inspect(value, from) {
+        if (from) {
+            seen = seen.slice();
+            seen.push(from);
+        }
+        return inspect_(value, opts, depth + 1, seen);
+    }
+
+    if (typeof obj === 'function') {
+        var name = nameOf(obj);
+        return '[Function' + (name ? ': ' + name : '') + ']';
+    }
+    if (isSymbol(obj)) {
+        var symString = Symbol.prototype.toString.call(obj);
+        return typeof obj === 'object' ? markBoxed(symString) : symString;
+    }
+    if (isElement(obj)) {
+        var s = '<' + String(obj.nodeName).toLowerCase();
+        var attrs = obj.attributes || [];
+        for (var i = 0; i < attrs.length; i++) {
+            s += ' ' + attrs[i].name + '=' + wrapQuotes(quote(attrs[i].value), 'double', opts);
+        }
+        s += '>';
+        if (obj.childNodes && obj.childNodes.length) { s += '...'; }
+        s += '</' + String(obj.nodeName).toLowerCase() + '>';
+        return s;
+    }
+    if (isArray(obj)) {
+        if (obj.length === 0) { return '[]'; }
+        return '[ ' + arrObjKeys(obj, inspect).join(', ') + ' ]';
+    }
+    if (isError(obj)) {
+        var parts = arrObjKeys(obj, inspect);
+        if (parts.length === 0) { return '[' + String(obj) + ']'; }
+        return '{ [' + String(obj) + '] ' + parts.join(', ') + ' }';
+    }
+    if (typeof obj === 'object') {
+        if (inspectSymbol && typeof obj[inspectSymbol] === 'function') {
+            return obj[inspectSymbol]();
+        } else if (typeof obj.inspect === 'function') {
+            return obj.inspect();
+        }
+    }
+    if (isMap(obj)) {
+        var mapParts = [];
+        mapForEach.call(obj, function (value, key) {
+            mapParts.push(inspect(key, obj) + ' => ' + inspect(value, obj));
+        });
+        return collectionOf('Map', mapSize.call(obj), mapParts);
+    }
+    if (isSet(obj)) {
+        var setParts = [];
+        setForEach.call(obj, function (value) {
+            setParts.push(inspect(value, obj));
+        });
+        return collectionOf('Set', setSize.call(obj), setParts);
+    }
+    if (isWeakMap(obj)) {
+        return weakCollectionOf('WeakMap');
+    }
+    if (isWeakSet(obj)) {
+        return weakCollectionOf('WeakSet');
+    }
+    if (isNumber(obj)) {
+        return markBoxed(inspect(Number(obj)));
+    }
+    if (isBigInt(obj)) {
+        return markBoxed(inspect(bigIntValueOf.call(obj)));
+    }
+    if (isBoolean(obj)) {
+        return markBoxed(booleanValueOf.call(obj));
+    }
+    if (isString(obj)) {
+        return markBoxed(inspect(String(obj)));
+    }
+    if (!isDate(obj) && !isRegExp(obj)) {
+        var xs = arrObjKeys(obj, inspect);
+        if (xs.length === 0) { return '{}'; }
+        return '{ ' + xs.join(', ') + ' }';
+    }
+    return String(obj);
+};
+
+function wrapQuotes(s, defaultStyle, opts) {
+    var quoteChar = (opts.quoteStyle || defaultStyle) === 'double' ? '"' : "'";
+    return quoteChar + s + quoteChar;
+}
+
+function quote(s) {
+    return String(s).replace(/"/g, '&quot;');
+}
+
+function isArray(obj) { return toStr(obj) === '[object Array]'; }
+function isDate(obj) { return toStr(obj) === '[object Date]'; }
+function isRegExp(obj) { return toStr(obj) === '[object RegExp]'; }
+function isError(obj) { return toStr(obj) === '[object Error]'; }
+function isSymbol(obj) { return toStr(obj) === '[object Symbol]'; }
+function isString(obj) { return toStr(obj) === '[object String]'; }
+function isNumber(obj) { return toStr(obj) === '[object Number]'; }
+function isBigInt(obj) { return toStr(obj) === '[object BigInt]'; }
+function isBoolean(obj) { return toStr(obj) === '[object Boolean]'; }
+
+var hasOwn = Object.prototype.hasOwnProperty || function (key) { return key in this; };
+function has(obj, key) {
+    return hasOwn.call(obj, key);
+}
+
+function toStr(obj) {
+    return objectToString.call(obj);
+}
+
+function nameOf(f) {
+    if (f.name) { return f.name; }
+    var m = match.call(f, /^function\s*([\w$]+)/);
+    if (m) { return m[1]; }
+    return null;
+}
+
+function indexOf(xs, x) {
+    if (xs.indexOf) { return xs.indexOf(x); }
+    for (var i = 0, l = xs.length; i < l; i++) {
+        if (xs[i] === x) { return i; }
+    }
+    return -1;
+}
+
+function isMap(x) {
+    if (!mapSize || !x || typeof x !== 'object') {
+        return false;
+    }
+    try {
+        mapSize.call(x);
+        try {
+            setSize.call(x);
+        } catch (s) {
+            return true;
+        }
+        return x instanceof Map; // core-js workaround, pre-v2.5.0
+    } catch (e) {}
+    return false;
+}
+
+function isWeakMap(x) {
+    if (!weakMapHas || !x || typeof x !== 'object') {
+        return false;
+    }
+    try {
+        weakMapHas.call(x, weakMapHas);
+        try {
+            weakSetHas.call(x, weakSetHas);
+        } catch (s) {
+            return true;
+        }
+        return x instanceof WeakMap; // core-js workaround, pre-v2.5.0
+    } catch (e) {}
+    return false;
+}
+
+function isSet(x) {
+    if (!setSize || !x || typeof x !== 'object') {
+        return false;
+    }
+    try {
+        setSize.call(x);
+        try {
+            mapSize.call(x);
+        } catch (m) {
+            return true;
+        }
+        return x instanceof Set; // core-js workaround, pre-v2.5.0
+    } catch (e) {}
+    return false;
+}
+
+function isWeakSet(x) {
+    if (!weakSetHas || !x || typeof x !== 'object') {
+        return false;
+    }
+    try {
+        weakSetHas.call(x, weakSetHas);
+        try {
+            weakMapHas.call(x, weakMapHas);
+        } catch (s) {
+            return true;
+        }
+        return x instanceof WeakSet; // core-js workaround, pre-v2.5.0
+    } catch (e) {}
+    return false;
+}
+
+function isElement(x) {
+    if (!x || typeof x !== 'object') { return false; }
+    if (typeof HTMLElement !== 'undefined' && x instanceof HTMLElement) {
+        return true;
+    }
+    return typeof x.nodeName === 'string' && typeof x.getAttribute === 'function';
+}
+
+function inspectString(str, opts) {
+    // eslint-disable-next-line no-control-regex
+    var s = str.replace(/(['\\])/g, '\\$1').replace(/[\x00-\x1f]/g, lowbyte);
+    return wrapQuotes(s, 'single', opts);
+}
+
+function lowbyte(c) {
+    var n = c.charCodeAt(0);
+    var x = {
+        8: 'b', 9: 't', 10: 'n', 12: 'f', 13: 'r'
+    }[n];
+    if (x) { return '\\' + x; }
+    return '\\x' + (n < 0x10 ? '0' : '') + n.toString(16);
+}
+
+function markBoxed(str) {
+    return 'Object(' + str + ')';
+}
+
+function weakCollectionOf(type) {
+    return type + ' { ? }';
+}
+
+function collectionOf(type, size, entries) {
+    return type + ' (' + size + ') {' + entries.join(', ') + '}';
+}
+
+function arrObjKeys(obj, inspect) {
+    var isArr = isArray(obj);
+    var xs = [];
+    if (isArr) {
+        xs.length = obj.length;
+        for (var i = 0; i < obj.length; i++) {
+            xs[i] = has(obj, i) ? inspect(obj[i], obj) : '';
+        }
+    }
+    for (var key in obj) { // eslint-disable-line no-restricted-syntax
+        if (!has(obj, key)) { continue; } // eslint-disable-line no-restricted-syntax, no-continue
+        if (isArr && String(Number(key)) === key && key < obj.length) { continue; } // eslint-disable-line no-restricted-syntax, no-continue
+        if ((/[^\w$]/).test(key)) {
+            xs.push(inspect(key, obj) + ': ' + inspect(obj[key], obj));
+        } else {
+            xs.push(key + ': ' + inspect(obj[key], obj));
+        }
+    }
+    return xs;
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/object-inspect/util.inspect.js":
+/*!*****************************************************!*\
+  !*** ./node_modules/object-inspect/util.inspect.js ***!
+  \*****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+module.exports = __webpack_require__(/*! util */ "util").inspect;
+
+
+/***/ }),
+
+/***/ "./node_modules/object-is/index.js":
+/*!*****************************************!*\
+  !*** ./node_modules/object-is/index.js ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+// http://www.ecma-international.org/ecma-262/6.0/#sec-object.is
+
+var numberIsNaN = function (value) {
+	return value !== value;
+};
+
+module.exports = function is(a, b) {
+	if (a === 0 && b === 0) {
+		return 1 / a === 1 / b;
+	}
+	if (a === b) {
+		return true;
+	}
+	if (numberIsNaN(a) && numberIsNaN(b)) {
+		return true;
+	}
+	return false;
+};
+
+
+
+/***/ }),
+
+/***/ "./node_modules/object-keys/implementation.js":
+/*!****************************************************!*\
+  !*** ./node_modules/object-keys/implementation.js ***!
+  \****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var keysShim;
+if (!Object.keys) {
+	// modified from https://github.com/es-shims/es5-shim
+	var has = Object.prototype.hasOwnProperty;
+	var toStr = Object.prototype.toString;
+	var isArgs = __webpack_require__(/*! ./isArguments */ "./node_modules/object-keys/isArguments.js"); // eslint-disable-line global-require
+	var isEnumerable = Object.prototype.propertyIsEnumerable;
+	var hasDontEnumBug = !isEnumerable.call({ toString: null }, 'toString');
+	var hasProtoEnumBug = isEnumerable.call(function () {}, 'prototype');
+	var dontEnums = [
+		'toString',
+		'toLocaleString',
+		'valueOf',
+		'hasOwnProperty',
+		'isPrototypeOf',
+		'propertyIsEnumerable',
+		'constructor'
+	];
+	var equalsConstructorPrototype = function (o) {
+		var ctor = o.constructor;
+		return ctor && ctor.prototype === o;
+	};
+	var excludedKeys = {
+		$applicationCache: true,
+		$console: true,
+		$external: true,
+		$frame: true,
+		$frameElement: true,
+		$frames: true,
+		$innerHeight: true,
+		$innerWidth: true,
+		$onmozfullscreenchange: true,
+		$onmozfullscreenerror: true,
+		$outerHeight: true,
+		$outerWidth: true,
+		$pageXOffset: true,
+		$pageYOffset: true,
+		$parent: true,
+		$scrollLeft: true,
+		$scrollTop: true,
+		$scrollX: true,
+		$scrollY: true,
+		$self: true,
+		$webkitIndexedDB: true,
+		$webkitStorageInfo: true,
+		$window: true
+	};
+	var hasAutomationEqualityBug = (function () {
+		/* global window */
+		if (typeof window === 'undefined') { return false; }
+		for (var k in window) {
+			try {
+				if (!excludedKeys['$' + k] && has.call(window, k) && window[k] !== null && typeof window[k] === 'object') {
+					try {
+						equalsConstructorPrototype(window[k]);
+					} catch (e) {
+						return true;
+					}
+				}
+			} catch (e) {
+				return true;
+			}
+		}
+		return false;
+	}());
+	var equalsConstructorPrototypeIfNotBuggy = function (o) {
+		/* global window */
+		if (typeof window === 'undefined' || !hasAutomationEqualityBug) {
+			return equalsConstructorPrototype(o);
+		}
+		try {
+			return equalsConstructorPrototype(o);
+		} catch (e) {
+			return false;
+		}
+	};
+
+	keysShim = function keys(object) {
+		var isObject = object !== null && typeof object === 'object';
+		var isFunction = toStr.call(object) === '[object Function]';
+		var isArguments = isArgs(object);
+		var isString = isObject && toStr.call(object) === '[object String]';
+		var theKeys = [];
+
+		if (!isObject && !isFunction && !isArguments) {
+			throw new TypeError('Object.keys called on a non-object');
+		}
+
+		var skipProto = hasProtoEnumBug && isFunction;
+		if (isString && object.length > 0 && !has.call(object, 0)) {
+			for (var i = 0; i < object.length; ++i) {
+				theKeys.push(String(i));
+			}
+		}
+
+		if (isArguments && object.length > 0) {
+			for (var j = 0; j < object.length; ++j) {
+				theKeys.push(String(j));
+			}
+		} else {
+			for (var name in object) {
+				if (!(skipProto && name === 'prototype') && has.call(object, name)) {
+					theKeys.push(String(name));
+				}
+			}
+		}
+
+		if (hasDontEnumBug) {
+			var skipConstructor = equalsConstructorPrototypeIfNotBuggy(object);
+
+			for (var k = 0; k < dontEnums.length; ++k) {
+				if (!(skipConstructor && dontEnums[k] === 'constructor') && has.call(object, dontEnums[k])) {
+					theKeys.push(dontEnums[k]);
+				}
+			}
+		}
+		return theKeys;
+	};
+}
+module.exports = keysShim;
+
+
+/***/ }),
+
+/***/ "./node_modules/object-keys/index.js":
+/*!*******************************************!*\
+  !*** ./node_modules/object-keys/index.js ***!
+  \*******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var slice = Array.prototype.slice;
+var isArgs = __webpack_require__(/*! ./isArguments */ "./node_modules/object-keys/isArguments.js");
+
+var origKeys = Object.keys;
+var keysShim = origKeys ? function keys(o) { return origKeys(o); } : __webpack_require__(/*! ./implementation */ "./node_modules/object-keys/implementation.js");
+
+var originalKeys = Object.keys;
+
+keysShim.shim = function shimObjectKeys() {
+	if (Object.keys) {
+		var keysWorksWithArguments = (function () {
+			// Safari 5.0 bug
+			var args = Object.keys(arguments);
+			return args && args.length === arguments.length;
+		}(1, 2));
+		if (!keysWorksWithArguments) {
+			Object.keys = function keys(object) { // eslint-disable-line func-name-matching
+				if (isArgs(object)) {
+					return originalKeys(slice.call(object));
+				}
+				return originalKeys(object);
+			};
+		}
+	} else {
+		Object.keys = keysShim;
+	}
+	return Object.keys || keysShim;
+};
+
+module.exports = keysShim;
+
+
+/***/ }),
+
+/***/ "./node_modules/object-keys/isArguments.js":
+/*!*************************************************!*\
+  !*** ./node_modules/object-keys/isArguments.js ***!
+  \*************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var toStr = Object.prototype.toString;
+
+module.exports = function isArguments(value) {
+	var str = toStr.call(value);
+	var isArgs = str === '[object Arguments]';
+	if (!isArgs) {
+		isArgs = str !== '[object Array]' &&
+			value !== null &&
+			typeof value === 'object' &&
+			typeof value.length === 'number' &&
+			value.length >= 0 &&
+			toStr.call(value.callee) === '[object Function]';
+	}
+	return isArgs;
+};
+
+
+/***/ }),
+
 /***/ "./node_modules/omit-deep/index.js":
 /*!*****************************************!*\
   !*** ./node_modules/omit-deep/index.js ***!
@@ -20188,6 +22528,148 @@ function set (data, k, v) {
   data.size++
   data[key] = new Entry(k, v, key)
 }
+
+
+/***/ }),
+
+/***/ "./node_modules/regexp.prototype.flags/implementation.js":
+/*!***************************************************************!*\
+  !*** ./node_modules/regexp.prototype.flags/implementation.js ***!
+  \***************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var $Object = Object;
+var $TypeError = TypeError;
+
+module.exports = function flags() {
+	if (this != null && this !== $Object(this)) {
+		throw new $TypeError('RegExp.prototype.flags getter called on non-object');
+	}
+	var result = '';
+	if (this.global) {
+		result += 'g';
+	}
+	if (this.ignoreCase) {
+		result += 'i';
+	}
+	if (this.multiline) {
+		result += 'm';
+	}
+	if (this.dotAll) {
+		result += 's';
+	}
+	if (this.unicode) {
+		result += 'u';
+	}
+	if (this.sticky) {
+		result += 'y';
+	}
+	return result;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/regexp.prototype.flags/index.js":
+/*!******************************************************!*\
+  !*** ./node_modules/regexp.prototype.flags/index.js ***!
+  \******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var define = __webpack_require__(/*! define-properties */ "./node_modules/define-properties/index.js");
+var callBind = __webpack_require__(/*! es-abstract/helpers/callBind */ "./node_modules/es-abstract/helpers/callBind.js");
+
+var implementation = __webpack_require__(/*! ./implementation */ "./node_modules/regexp.prototype.flags/implementation.js");
+var getPolyfill = __webpack_require__(/*! ./polyfill */ "./node_modules/regexp.prototype.flags/polyfill.js");
+var shim = __webpack_require__(/*! ./shim */ "./node_modules/regexp.prototype.flags/shim.js");
+
+var flagsBound = callBind(implementation);
+
+define(flagsBound, {
+	getPolyfill: getPolyfill,
+	implementation: implementation,
+	shim: shim
+});
+
+module.exports = flagsBound;
+
+
+/***/ }),
+
+/***/ "./node_modules/regexp.prototype.flags/polyfill.js":
+/*!*********************************************************!*\
+  !*** ./node_modules/regexp.prototype.flags/polyfill.js ***!
+  \*********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var implementation = __webpack_require__(/*! ./implementation */ "./node_modules/regexp.prototype.flags/implementation.js");
+
+var supportsDescriptors = __webpack_require__(/*! define-properties */ "./node_modules/define-properties/index.js").supportsDescriptors;
+var $gOPD = Object.getOwnPropertyDescriptor;
+var $TypeError = TypeError;
+
+module.exports = function getPolyfill() {
+	if (!supportsDescriptors) {
+		throw new $TypeError('RegExp.prototype.flags requires a true ES5 environment that supports property descriptors');
+	}
+	if ((/a/mig).flags === 'gim') {
+		var descriptor = $gOPD(RegExp.prototype, 'flags');
+		if (descriptor && typeof descriptor.get === 'function' && typeof (/a/).dotAll === 'boolean') {
+			return descriptor.get;
+		}
+	}
+	return implementation;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/regexp.prototype.flags/shim.js":
+/*!*****************************************************!*\
+  !*** ./node_modules/regexp.prototype.flags/shim.js ***!
+  \*****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var supportsDescriptors = __webpack_require__(/*! define-properties */ "./node_modules/define-properties/index.js").supportsDescriptors;
+var getPolyfill = __webpack_require__(/*! ./polyfill */ "./node_modules/regexp.prototype.flags/polyfill.js");
+var gOPD = Object.getOwnPropertyDescriptor;
+var defineProperty = Object.defineProperty;
+var TypeErr = TypeError;
+var getProto = Object.getPrototypeOf;
+var regex = /a/;
+
+module.exports = function shimFlags() {
+	if (!supportsDescriptors || !getProto) {
+		throw new TypeErr('RegExp.prototype.flags requires a true ES5 environment that supports property descriptors');
+	}
+	var polyfill = getPolyfill();
+	var proto = getProto(regex);
+	var descriptor = gOPD(proto, 'flags');
+	if (!descriptor || descriptor.get !== polyfill) {
+		defineProperty(proto, 'flags', {
+			configurable: true,
+			enumerable: false,
+			get: polyfill
+		});
+	}
+	return polyfill;
+};
 
 
 /***/ }),
@@ -21325,6 +23807,125 @@ module.exports = self;
 		module.exports=self;
 	} else {}
 }.call(this));
+
+
+/***/ }),
+
+/***/ "./node_modules/side-channel/index.js":
+/*!********************************************!*\
+  !*** ./node_modules/side-channel/index.js ***!
+  \********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var GetIntrinsic = __webpack_require__(/*! es-abstract/GetIntrinsic */ "./node_modules/es-abstract/GetIntrinsic.js");
+var callBound = __webpack_require__(/*! es-abstract/helpers/callBound */ "./node_modules/es-abstract/helpers/callBound.js");
+var inspect = __webpack_require__(/*! object-inspect */ "./node_modules/object-inspect/index.js");
+
+var $TypeError = GetIntrinsic('%TypeError%');
+var $WeakMap = GetIntrinsic('%WeakMap%', true);
+var $Map = GetIntrinsic('%Map%', true);
+var $push = callBound('Array.prototype.push');
+
+var $weakMapGet = callBound('WeakMap.prototype.get', true);
+var $weakMapSet = callBound('WeakMap.prototype.set', true);
+var $weakMapHas = callBound('WeakMap.prototype.has', true);
+var $mapGet = callBound('Map.prototype.get', true);
+var $mapSet = callBound('Map.prototype.set', true);
+var $mapHas = callBound('Map.prototype.has', true);
+var objectGet = function (objects, key) { // eslint-disable-line consistent-return
+	for (var i = 0; i < objects.length; i += 1) {
+		if (objects[i].key === key) {
+			return objects[i].value;
+		}
+	}
+};
+var objectSet = function (objects, key, value) {
+	for (var i = 0; i < objects.length; i += 1) {
+		if (objects[i].key === key) {
+			objects[i].value = value; // eslint-disable-line no-param-reassign
+			return;
+		}
+	}
+	$push(objects, {
+		key: key,
+		value: value
+	});
+};
+var objectHas = function (objects, key) {
+	for (var i = 0; i < objects.length; i += 1) {
+		if (objects[i].key === key) {
+			return true;
+		}
+	}
+	return false;
+};
+
+module.exports = function getSideChannel() {
+	var $wm;
+	var $m;
+	var $o;
+	var channel = {
+		assert: function (key) {
+			if (!channel.has(key)) {
+				throw new $TypeError('Side channel does not contain ' + inspect(key));
+			}
+		},
+		get: function (key) { // eslint-disable-line consistent-return
+			if ($WeakMap && key && (typeof key === 'object' || typeof key === 'function')) {
+				if ($wm) {
+					return $weakMapGet($wm, key);
+				}
+			} else if ($Map) {
+				if ($m) {
+					return $mapGet($m, key);
+				}
+			} else {
+				if ($o) { // eslint-disable-line no-lonely-if
+					return objectGet($o, key);
+				}
+			}
+		},
+		has: function (key) {
+			if ($WeakMap && key && (typeof key === 'object' || typeof key === 'function')) {
+				if ($wm) {
+					return $weakMapHas($wm, key);
+				}
+			} else if ($Map) {
+				if ($m) {
+					return $mapHas($m, key);
+				}
+			} else {
+				if ($o) { // eslint-disable-line no-lonely-if
+					return objectHas($o, key);
+				}
+			}
+			return false;
+		},
+		set: function (key, value) {
+			if ($WeakMap && key && (typeof key === 'object' || typeof key === 'function')) {
+				if (!$wm) {
+					$wm = new $WeakMap();
+				}
+				$weakMapSet($wm, key, value);
+			} else if ($Map) {
+				if (!$m) {
+					$m = new $Map();
+				}
+				$mapSet($m, key, value);
+			} else {
+				if (!$o) {
+					$o = [];
+				}
+				objectSet($o, key, value);
+			}
+		}
+	};
+	return channel;
+};
 
 
 /***/ }),
@@ -25191,6 +27792,84 @@ module.exports = function(module) {
 
 /***/ }),
 
+/***/ "./node_modules/which-boxed-primitive/index.js":
+/*!*****************************************************!*\
+  !*** ./node_modules/which-boxed-primitive/index.js ***!
+  \*****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var isString = __webpack_require__(/*! is-string */ "./node_modules/is-string/index.js");
+var isNumber = __webpack_require__(/*! is-number-object */ "./node_modules/is-number-object/index.js");
+var isBoolean = __webpack_require__(/*! is-boolean-object */ "./node_modules/is-boolean-object/index.js");
+var isSymbol = __webpack_require__(/*! is-symbol */ "./node_modules/is-symbol/index.js");
+var isBigInt = __webpack_require__(/*! is-bigint */ "./node_modules/is-bigint/index.js");
+
+// eslint-disable-next-line consistent-return
+module.exports = function whichBoxedPrimitive(value) {
+	// eslint-disable-next-line eqeqeq
+	if (value == null || (typeof value !== 'object' && typeof value !== 'function')) {
+		return null;
+	}
+	if (isString(value)) {
+		return 'String';
+	}
+	if (isNumber(value)) {
+		return 'Number';
+	}
+	if (isBoolean(value)) {
+		return 'Boolean';
+	}
+	if (isSymbol(value)) {
+		return 'Symbol';
+	}
+	if (isBigInt(value)) {
+		return 'BigInt';
+	}
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/which-collection/index.js":
+/*!************************************************!*\
+  !*** ./node_modules/which-collection/index.js ***!
+  \************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var isMap = __webpack_require__(/*! is-map */ "./node_modules/is-map/index.js");
+var isSet = __webpack_require__(/*! is-set */ "./node_modules/is-set/index.js");
+var isWeakMap = __webpack_require__(/*! is-weakmap */ "./node_modules/is-weakmap/index.js");
+var isWeakSet = __webpack_require__(/*! is-weakset */ "./node_modules/is-weakset/index.js");
+
+module.exports = function whichCollection(value) {
+	if (value && typeof value === 'object') {
+		if (isMap(value)) {
+			return 'Map';
+		}
+		if (isSet(value)) {
+			return 'Set';
+		}
+		if (isWeakMap(value)) {
+			return 'WeakMap';
+		}
+		if (isWeakSet(value)) {
+			return 'WeakSet';
+		}
+	}
+	return false;
+};
+
+
+/***/ }),
+
 /***/ "./node_modules/which/which.js":
 /*!*************************************!*\
   !*** ./node_modules/which/which.js ***!
@@ -26406,7 +29085,7 @@ exports.default = async (source, stdin, { includeExecutionResult, skipBackends }
     let structure = '';
     structure += 'Functions:\n';
     frontendOutput.functions.forEach(f => {
-        structure += `-> ${f.name}(${join_1.default(f.parameters.map(p => types_1.toString(p.type)), ', ')})\n`;
+        structure += `-> ${f.name}(${join_1.default(f.parameters.map(p => 'namedType' in p.type ? p.type.namedType : types_1.toString(p.type)), ', ')})\n`;
         f.statements.forEach(statement => {
             structure += `---> ${ast_1.astToString(statement)}\n`;
         });
@@ -26414,7 +29093,7 @@ exports.default = async (source, stdin, { includeExecutionResult, skipBackends }
     structure += 'Program:\n';
     structure += '-> Globals:\n';
     frontendOutput.globalDeclarations.forEach(declaration => {
-        structure += `---> ${declaration.type.kind} ${declaration.name}\n`;
+        structure += `---> ${declaration.type.type.kind} ${declaration.name}\n`;
     });
     structure += '-> Statements:\n';
     if (Array.isArray(frontendOutput.program)) {
@@ -27129,14 +29808,6 @@ exports.mplTest = async (t, { source = required('test must have source code'), e
     if (ast) {
         t.deepEqual(parse_1.stripSourceLocation(programInfo.ast), ast);
     }
-    // Run valdations on frontend output (currently just detects values that don't match their type)
-    programInfo.frontendOutput.functions.forEach(f => {
-        f.variables.forEach(v => {
-            if (!v.type.kind) {
-                error(`invalid frontend output: ${v.name} (in ${f.name}) had a bad type!`);
-            }
-        });
-    });
     if (Array.isArray(programInfo.threeAddressRoundTrip)) {
         t.fail(`
 three address code:${programInfo.threeAddressCode}
@@ -27258,6 +29929,7 @@ exports.tacTest = async (t, { source, exitCode, printSubsteps = [], debugSubstep
 Object.defineProperty(exports, "__esModule", { value: true });
 const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
 const range_1 = __webpack_require__(/*! ./util/list/range */ "./util/list/range.ts");
+const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
 const manyGlobalsMultiply = () => {
     const numbers = range_1.default(1, 20);
     const createVars = join_1.default(numbers.map(i => `var_${i} := readInt();`), '\n');
@@ -27568,6 +30240,7 @@ return isFive(5) ? 1 : 0;`,
                 sourceLocation: { column: 13, line: 2 },
             },
         ],
+        failing: true,
     },
     {
         name: 'One Item List',
@@ -27658,10 +30331,10 @@ return isFive(5) ? 1 : 0;`,
         source: `
             IntPair := {
                 first: Integer;
-                seconds: Integer;
+                second: Integer;
             };
 
-            returnsIntPair := () => {
+            returnsIntPair: Function<IntPair> = () => {
                 ip := IntPair {
                     first: 12,
                     second: 34,
@@ -27673,6 +30346,7 @@ return isFive(5) ? 1 : 0;`,
             return result.second - result.first;
         `,
         exitCode: 34 - 12,
+        failing: true,
     },
     {
         name: 'String Length',
@@ -27825,6 +30499,102 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 11,
     },
+    {
+        name: 'Variable Named Like Keyword',
+        source: `
+            returnVar := 5;
+            exportVar := 6;
+            return returnVar + exportVar;
+        `,
+        exitCode: 11,
+    },
+    {
+        name: 'Assign Function to Wrong Args Number',
+        source: `
+            myFunc: Function<Integer, Integer> = () => 111;
+            return 0;
+        `,
+        typeErrors: [
+            {
+                kind: 'assignWrongType',
+                lhsName: 'myFunc',
+                lhsType: {
+                    type: {
+                        kind: 'Function',
+                        arguments: [types_1.builtinTypes.Integer],
+                        returnType: types_1.builtinTypes.Integer,
+                    },
+                },
+                rhsType: {
+                    type: {
+                        kind: 'Function',
+                        arguments: [],
+                        permissions: [],
+                        returnType: types_1.builtinTypes.Integer,
+                    },
+                },
+                sourceLocation: { line: 2, column: 13 },
+            },
+        ],
+    },
+    {
+        name: 'Assign Function to Wrong Args Type',
+        source: `
+            myFunc: Function<Integer, Integer> = (a: String) => 111;
+            return myFunc("");
+        `,
+        typeErrors: [
+            {
+                kind: 'assignWrongType',
+                lhsName: 'myFunc',
+                lhsType: {
+                    type: {
+                        kind: 'Function',
+                        arguments: [types_1.builtinTypes.Integer],
+                        returnType: types_1.builtinTypes.Integer,
+                    },
+                },
+                rhsType: {
+                    type: {
+                        kind: 'Function',
+                        arguments: [types_1.builtinTypes.String],
+                        permissions: [],
+                        returnType: types_1.builtinTypes.Integer,
+                    },
+                },
+                sourceLocation: { line: 2, column: 13 },
+            },
+        ],
+    },
+    {
+        name: 'Assign Function to Wrong Return Type',
+        source: `
+            myFunc: Function<Integer, Boolean> = (a: String) => 111;
+            return myFunc("");
+        `,
+        typeErrors: [
+            {
+                kind: 'assignWrongType',
+                lhsName: 'myFunc',
+                lhsType: {
+                    type: {
+                        kind: 'Function',
+                        arguments: [types_1.builtinTypes.Integer],
+                        returnType: types_1.builtinTypes.Boolean,
+                    },
+                },
+                rhsType: {
+                    type: {
+                        kind: 'Function',
+                        arguments: [types_1.builtinTypes.String],
+                        permissions: [],
+                        returnType: types_1.builtinTypes.Integer,
+                    },
+                },
+                sourceLocation: { line: 2, column: 13 },
+            },
+        ],
+    },
 ];
 
 
@@ -27916,6 +30686,28 @@ ava_1.default('lexer', t => {
 ava_1.default('lex with initial whitespace', t => {
     t.deepEqual(lex_1.lex(grammar_1.tokenSpecs, ' 123'), [
         { type: 'number', value: 123, string: '123', sourceLocation: { line: 1, column: 2 } },
+    ]);
+});
+ava_1.default('lex type identifier', t => {
+    t.deepEqual(lex_1.lex(grammar_1.tokenSpecs, 'Boolean[]'), [
+        {
+            string: 'Boolean',
+            type: 'typeIdentifier',
+            value: 'Boolean',
+            sourceLocation: { line: 1, column: 1 },
+        },
+        {
+            string: '[',
+            type: 'leftSquareBracket',
+            value: null,
+            sourceLocation: { column: 8, line: 1 },
+        },
+        {
+            string: ']',
+            type: 'rightSquareBracket',
+            value: null,
+            sourceLocation: { column: 9, line: 1 },
+        },
     ]);
 });
 ava_1.default('ast for single number', t => {
@@ -28215,16 +31007,20 @@ ava_1.default('correct inferred type for function', t => {
     const ast = frontend_1.astFromParseResult(parseResult);
     t.deepEqual(frontend_1.typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
         type: {
-            kind: 'Function',
-            arguments: [{ kind: 'Integer' }],
-            permissions: [],
-            returnType: { kind: 'Integer' },
+            type: {
+                kind: 'Function',
+                arguments: [{ type: { kind: 'Integer' } }],
+                permissions: [],
+                returnType: { type: { kind: 'Integer' } },
+            },
         },
         extractedFunctions: [
             {
                 name: 'anonymous_1',
-                parameters: [{ name: 'a', type: { kind: 'Integer' }, exported: false }],
-                returnType: { kind: 'Integer' },
+                parameters: [
+                    { name: 'a', type: { type: { kind: 'Integer' } }, exported: false },
+                ],
+                returnType: { type: { kind: 'Integer' } },
                 statements: [
                     {
                         expression: {
@@ -28236,7 +31032,13 @@ ava_1.default('correct inferred type for function', t => {
                         sourceLocation: { column: 1, line: 1 },
                     },
                 ],
-                variables: [{ name: 'a', type: { kind: 'Integer' }, exported: false }],
+                variables: [
+                    {
+                        name: 'a',
+                        type: { type: { kind: 'Integer' } },
+                        exported: false,
+                    },
+                ],
             },
         ],
     });
@@ -28450,75 +31252,6 @@ ava_1.default('assign function with no args to typed var', test_case_1.mplTest, 
 myFunc: Function<Integer> = () => 111;
 return myFunc();`,
     exitCode: 111,
-});
-ava_1.default('assign function to wrong args number', test_case_1.mplTest, {
-    source: `
-myFunc: Function<Integer, Integer> = () => 111;
-return 0;`,
-    typeErrors: [
-        {
-            kind: 'assignWrongType',
-            lhsName: 'myFunc',
-            lhsType: {
-                kind: 'Function',
-                arguments: [types_1.builtinTypes.Integer],
-                returnType: types_1.builtinTypes.Integer,
-            },
-            rhsType: {
-                kind: 'Function',
-                arguments: [],
-                permissions: [],
-                returnType: types_1.builtinTypes.Integer,
-            },
-            sourceLocation: { line: 2, column: 1 },
-        },
-    ],
-});
-ava_1.default('assign function to wrong args type', test_case_1.mplTest, {
-    source: `
-myFunc: Function<Integer, Integer> = (a: String) => 111;
-return myFunc("");`,
-    typeErrors: [
-        {
-            kind: 'assignWrongType',
-            lhsName: 'myFunc',
-            lhsType: {
-                kind: 'Function',
-                arguments: [types_1.builtinTypes.Integer],
-                returnType: types_1.builtinTypes.Integer,
-            },
-            rhsType: {
-                kind: 'Function',
-                arguments: [types_1.builtinTypes.String],
-                permissions: [],
-                returnType: types_1.builtinTypes.Integer,
-            },
-            sourceLocation: { line: 2, column: 1 },
-        },
-    ],
-});
-ava_1.default('assign function to wrong return type', test_case_1.mplTest, {
-    source: `
-myFunc: Function<Integer, Boolean> = (a: String) => 111;
-return myFunc("");`,
-    typeErrors: [
-        {
-            kind: 'assignWrongType',
-            lhsName: 'myFunc',
-            lhsType: {
-                kind: 'Function',
-                arguments: [types_1.builtinTypes.Integer],
-                returnType: types_1.builtinTypes.Boolean,
-            },
-            rhsType: {
-                kind: 'Function',
-                arguments: [types_1.builtinTypes.String],
-                permissions: [],
-                returnType: types_1.builtinTypes.Integer,
-            },
-            sourceLocation: { line: 2, column: 1 },
-        },
-    ],
 });
 ava_1.default('return local integer', test_case_1.mplTest, {
     source: 'myVar: Integer = 3 * 3; return myVar;',
@@ -29075,16 +31808,23 @@ ava_1.default('liveness of stringEquality', t => {
 });
 ava_1.default('type equality', t => {
     t.false(types_1.equal({
-        kind: 'Function',
-        arguments: [],
-        permissions: [],
-        returnType: { kind: 'Integer' },
+        type: {
+            kind: 'Function',
+            arguments: [],
+            permissions: [],
+            returnType: { type: { kind: 'Integer' } },
+        },
     }, {
-        kind: 'Function',
-        arguments: [{ kind: 'Integer' }, { kind: 'Integer' }],
-        permissions: [],
-        returnType: { kind: 'Integer' },
-    }, []));
+        type: {
+            kind: 'Function',
+            arguments: [{ type: { kind: 'Integer' } }, { type: { kind: 'Integer' } }],
+            permissions: [],
+            returnType: { type: { kind: 'Integer' } },
+        },
+    }));
+});
+ava_1.default('equal types are equal', t => {
+    t.assert(types_1.equal({ type: { kind: 'Integer' } }, { type: { kind: 'Integer' } }));
 });
 ava_1.default('type of objectLiteral', t => {
     const ast = {
@@ -29117,44 +31857,56 @@ ava_1.default('type of objectLiteral', t => {
             {
                 name: 'BoolPair',
                 type: {
-                    kind: 'Product',
-                    name: 'BoolPair',
-                    members: [
-                        { name: 'first', type: { kind: 'Boolean' } },
-                        { name: 'second', type: { kind: 'Boolean' } },
-                    ],
+                    type: {
+                        kind: 'Product',
+                        name: 'BoolPair',
+                        members: [
+                            { name: 'first', type: { type: { kind: 'Boolean' } } },
+                            { name: 'second', type: { type: { kind: 'Boolean' } } },
+                        ],
+                    },
                 },
             },
         ],
     });
     const expectedType = {
         type: {
-            kind: 'Product',
-            name: 'BoolPair',
-            members: [
-                { name: 'first', type: { kind: 'Boolean' } },
-                { name: 'second', type: { kind: 'Boolean' } },
-            ],
+            type: {
+                kind: 'Product',
+                name: 'BoolPair',
+                members: [
+                    { name: 'first', type: { type: { kind: 'Boolean' } } },
+                    { name: 'second', type: { type: { kind: 'Boolean' } } },
+                ],
+            },
+            original: { namedType: 'BoolPair' },
         },
         extractedFunctions: [],
     };
     t.deepEqual(type, expectedType);
 });
-ava_1.default('type equality via name lookup', t => {
+ava_1.default('no structural typing', t => {
     const leftType = {
-        kind: 'Product',
-        name: 'BoolPair',
-        members: [
-            { name: 'first', type: { kind: 'Boolean' } },
-            { name: 'second', type: { kind: 'Boolean' } },
-        ],
+        type: {
+            kind: 'Product',
+            name: 'BoolPair1',
+            members: [
+                { name: 'first', type: { type: { kind: 'Boolean' } } },
+                { name: 'second', type: { type: { kind: 'Boolean' } } },
+            ],
+        },
     };
     const rightType = {
-        kind: 'NameRef',
-        namedType: 'BoolPair',
+        type: {
+            kind: 'Product',
+            name: 'BoolPair2',
+            members: [
+                { name: 'first', type: { type: { kind: 'Boolean' } } },
+                { name: 'second', type: { type: { kind: 'Boolean' } } },
+            ],
+        },
     };
-    const typeDeclarations = [{ name: 'BoolPair', type: leftType }];
-    t.deepEqual(types_1.equal(leftType, rightType, typeDeclarations), true);
+    t.assert(!types_1.equal(leftType, rightType));
 });
 ava_1.default('pretty-parse-error', t => {
     // nominal test
@@ -30345,19 +33097,19 @@ const backend_utils_1 = __webpack_require__(/*! ../backend-utils */ "./backend-u
 const Register_1 = __webpack_require__(/*! ./Register */ "./threeAddressCode/Register.ts");
 const parser_1 = __webpack_require__(/*! ./parser */ "./threeAddressCode/parser.ts");
 const memberOffset = (type, memberName, { bytesInWord }) => {
-    if (type.kind != 'Product')
+    if (type.type.kind != 'Product')
         throw debug_1.default('need a product here');
-    const result = type.members.findIndex(m => m.name == memberName);
+    const result = type.type.members.findIndex(m => m.name == memberName);
     if (result < 0)
         throw debug_1.default('coudnt find member');
     return result * bytesInWord;
 };
-const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, lhsInfo) => {
+const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, lhsInfo, availableTypes) => {
     const lhsType = lhsInfo.originalDeclaration.type;
-    switch (lhsType.kind) {
+    switch (lhsType.type.kind) {
         case 'Function':
         case 'Integer':
-            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`*${lhsInfo.newName} = ${rhsRegister}; Put ${lhsType.kind} into global`));
+            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`*${lhsInfo.newName} = ${rhsRegister}; Put ${lhsType.type.kind} into global`));
         case 'String':
             return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`
                     r:len = length(${rhsRegister}); Get string length
@@ -30368,7 +33120,7 @@ const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, lhsInfo
                 `));
         case 'Product':
             const lhsAddress = makeTemporary('lhsAddress');
-            const copyMembers = lhsType.members.map((m, i) => {
+            const copyMembers = lhsType.type.members.map((m, i) => {
                 // TODO: Should add up sizes of preceeding members
                 const offset = i * targetInfo.bytesInWord;
                 const memberTemporary = makeTemporary('member');
@@ -30408,7 +33160,7 @@ const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, lhsInfo
                 `),
             ]);
         default:
-            const unhandled = lhsInfo.originalDeclaration.type.kind;
+            const unhandled = lhsInfo.originalDeclaration.type.type.kind;
             throw debug_1.default(`${unhandled} unhandled in assignGlobal`);
     }
 };
@@ -30554,7 +33306,7 @@ exports.astToThreeAddressCode = (input) => {
             ]);
         }
         case 'equality': {
-            if (ast.type.kind == 'String') {
+            if (ast.type.type.kind == 'String') {
                 // Put left in s0 and right in s1 for passing to string equality function
                 const lhsArg = makeTemporary('lhs');
                 const storeLeftInstructions = recurse({ ast: ast.lhs, destination: lhsArg });
@@ -30608,7 +33360,7 @@ exports.astToThreeAddressCode = (input) => {
                 const rhsRegister = makeTemporary('assignment_rhs');
                 return backend_utils_1.compileExpression([
                     recurse({ ast: ast.expression, destination: rhsRegister }),
-                    assignGlobal(makeTemporary, makeLabel, rhsRegister, targetInfo, globalNameMap[lhs]),
+                    assignGlobal(makeTemporary, makeLabel, rhsRegister, targetInfo, globalNameMap[lhs], types),
                 ], ([rhs, assign]) => [...rhs, ...assign]);
             }
             else if (lhs in variablesInScope) {
@@ -30624,7 +33376,7 @@ exports.astToThreeAddressCode = (input) => {
                 const reassignmentRhs = makeTemporary('reassignment_rhs');
                 const rhs = recurse({ ast: ast.expression, destination: reassignmentRhs });
                 const declaration = globalNameMap[lhs];
-                switch (declaration.originalDeclaration.type.kind) {
+                switch (declaration.originalDeclaration.type.type.kind) {
                     case 'Function':
                     case 'Integer':
                         return backend_utils_1.compileExpression([rhs], ([e1]) => [
@@ -30738,7 +33490,7 @@ exports.astToThreeAddressCode = (input) => {
             const identifierName = ast.value;
             if (identifierName in globalNameMap) {
                 const info = globalNameMap[identifierName];
-                if (info.originalDeclaration.type.kind == 'Product') {
+                if (info.originalDeclaration.type.type.kind == 'Product') {
                     return backend_utils_1.compileExpression([], ([]) => [
                         {
                             kind: 'loadSymbolAddress',
@@ -30861,23 +33613,13 @@ exports.astToThreeAddressCode = (input) => {
         case 'memberAccess': {
             const lhs = makeTemporary('object_to_access');
             const lhsInstructions = recurse({ ast: ast.lhs, destination: lhs });
-            let type = ast.lhsType;
-            if (type.kind == 'NameRef') {
-                const resolvedType = types_1.resolve(type, types);
-                if (resolvedType) {
-                    type = resolvedType;
-                }
-                else {
-                    throw debug_1.default('invalid nameref');
-                }
-            }
             return backend_utils_1.compileExpression([lhsInstructions], ([makeLhs]) => [
                 ...makeLhs,
                 {
                     kind: 'loadMemory',
                     from: lhs,
                     to: destination,
-                    offset: memberOffset(type, ast.rhs, targetInfo),
+                    offset: memberOffset(ast.lhsType, ast.rhs, targetInfo),
                     why: 'Read the memory',
                 },
             ]);
@@ -31102,7 +33844,7 @@ const tokenSpecs = [
         toString: x => x,
         action: s => parseInt(s.slice(8), 10),
     },
-    { token: 'return', type: 'return', toString: x => x },
+    { token: 'return\\b', type: 'return', toString: x => x },
     { token: 'goto', type: 'goto', toString: x => x },
     { token: 'alloca', type: 'alloca', toString: x => x },
     { token: 'r:[a-z]\\w*', type: 'register', toString: x => x, action: x => x },
@@ -32076,301 +34818,6 @@ exports.allRuntimeFunctions = [
 
 /***/ }),
 
-/***/ "./threeAddressCode/statement.ts":
-/*!***************************************!*\
-  !*** ./threeAddressCode/statement.ts ***!
-  \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const filter_1 = __webpack_require__(/*! ../util/list/filter */ "./util/list/filter.ts");
-const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
-const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
-const toStringWithoutComment = (tas) => {
-    switch (tas.kind) {
-        case 'empty':
-            return '';
-        case 'syscall': {
-            const args = tas.arguments.map(arg => arg.toString()).join(' ');
-            if (tas.destination) {
-                return `${tas.destination} = syscall ${tas.name} ${args}`;
-            }
-            else {
-                return `syscall ${tas.name} ${args}`;
-            }
-        }
-        case 'move':
-            return `${tas.to} = ${tas.from}`;
-        case 'loadImmediate':
-            return `${tas.destination} = ${tas.value}`;
-        case 'addImmediate':
-            return `${tas.register} += ${tas.amount}`;
-        case 'subtract':
-            return `${tas.destination} = ${tas.lhs} - ${tas.rhs}`;
-        case 'add':
-            return `${tas.destination} = ${tas.lhs} + ${tas.rhs}`;
-        case 'multiply':
-            return `${tas.destination} = ${tas.lhs} * ${tas.rhs}`;
-        case 'increment':
-            return `${tas.register}++`;
-        case 'label':
-        case 'functionLabel':
-            return `${tas.name}:`;
-        case 'goto':
-            return `goto ${tas.label}`;
-        case 'gotoIfEqual':
-            return `goto ${tas.label} if ${tas.lhs} == ${tas.rhs}`;
-        case 'gotoIfNotEqual':
-            if (typeof tas.rhs == 'number') {
-                return `goto ${tas.label} if ${tas.lhs} != ${tas.rhs}`;
-            }
-            return `goto ${tas.label} if ${tas.lhs} != ${tas.rhs}`;
-        case 'gotoIfZero':
-            return `goto ${tas.label} if ${tas.register} == 0`;
-        case 'gotoIfGreater':
-            return `goto ${tas.label} if ${tas.lhs} > ${tas.rhs}`;
-        case 'storeGlobal':
-            return `*${tas.to} = ${tas.from}`;
-        case 'loadGlobal':
-            return `${tas.to} = ${tas.from}`;
-        case 'loadSymbolAddress':
-            return `${tas.to} = &${tas.symbolName}`;
-        case 'storeMemory':
-            return `*(${tas.address} + ${tas.offset}) = ${tas.from}`;
-        case 'storeMemoryByte':
-            return `*${tas.address} = ${tas.contents}`;
-        case 'storeZeroToMemory':
-            return `*(${tas.address} + ${tas.offset}) = 0`;
-        case 'loadMemory':
-            return `${tas.to} = *(${tas.from} + ${tas.offset})`;
-        case 'loadMemoryByte':
-            return `${tas.to} = *${tas.address}`;
-        case 'callByRegister': {
-            if (!tas.arguments)
-                throw debug_1.default('bad argumnets');
-            const args = join_1.default(tas.arguments.map(arg => arg.toString()), ', ');
-            if (tas.destination) {
-                return `${tas.destination} = ${tas.function}(${args})`;
-            }
-            else {
-                return `${tas.function}(${args})`;
-            }
-        }
-        case 'callByName': {
-            if (!tas.arguments)
-                throw debug_1.default('bad argumnets');
-            const args = join_1.default(tas.arguments.map(arg => arg.toString()), ', ');
-            if (tas.destination) {
-                return `${tas.destination} = ${tas.function}(${args})`;
-            }
-            else {
-                return `${tas.function}(${args})`;
-            }
-        }
-        case 'return':
-            return `return ${tas.register};`;
-        case 'alloca':
-            return `${tas.register} = alloca(${tas.bytes})`;
-        case 'spill':
-            return `spill:${tas.register}`;
-        case 'unspill':
-            return `unspill:${tas.register}`;
-    }
-};
-const preceedingWhitespace = (tas) => {
-    switch (tas.kind) {
-        case 'label':
-            return '';
-        case 'functionLabel':
-            return '\n\n';
-        default:
-            return '    ';
-    }
-};
-exports.toString = (tas) => {
-    return `${preceedingWhitespace(tas)}${toStringWithoutComment(tas)}; ${tas.why.trim()}`;
-};
-exports.reads = (tas, args) => {
-    switch (tas.kind) {
-        case 'empty':
-            return [];
-        case 'syscall': {
-            const predicate = (arg) => typeof arg !== 'number';
-            return filter_1.filter(tas.arguments, predicate);
-        }
-        case 'move':
-            return [tas.from];
-        case 'loadImmediate':
-            return [];
-        case 'addImmediate':
-        case 'increment':
-            return [tas.register];
-        case 'subtract':
-        case 'add':
-        case 'multiply':
-            return [tas.lhs, tas.rhs];
-        case 'storeGlobal':
-            return [tas.from];
-        case 'loadGlobal':
-            return [];
-        case 'storeMemory':
-            return [tas.from, tas.address];
-        case 'storeMemoryByte':
-            return [tas.contents, tas.address];
-        case 'storeZeroToMemory':
-            return [tas.address];
-        case 'loadMemory':
-            return [tas.from];
-        case 'loadMemoryByte':
-            return [tas.address];
-        case 'loadSymbolAddress':
-            return [];
-        case 'callByRegister': {
-            const predicate = (arg) => typeof arg !== 'number';
-            return [tas.function, ...filter_1.filter(tas.arguments, predicate)];
-        }
-        case 'callByName': {
-            const predicate = (arg) => typeof arg !== 'number';
-            return filter_1.filter(tas.arguments, predicate);
-        }
-        case 'return':
-            return [tas.register];
-        case 'label':
-        case 'functionLabel':
-        case 'goto':
-            // TODO: args should not be reads; these instructions should have no reads
-            return args;
-        case 'gotoIfEqual':
-        case 'gotoIfNotEqual':
-        case 'gotoIfGreater':
-            const result = [tas.lhs];
-            if (typeof tas.rhs != 'number') {
-                result.push(tas.rhs);
-            }
-            return result;
-        case 'gotoIfZero':
-            return [tas.register];
-        case 'alloca':
-            return [];
-        // Spill/Unspill doesn't really fit into the reads/write paradigm correctly, because it _implements_ reads/writes. Semantics: After we spill something, it's not live anymore, so it's a "write" since writes kill a register. After we unspill something, we can kinda do whatever (whether it's live depends on whether future readers exist)TODO: handle it better somehow
-        case 'unspill':
-            return [];
-        case 'spill':
-            return [];
-    }
-    throw debug_1.default(`kind ${tas.kind} missing in reads`);
-};
-exports.writes = (tas) => {
-    switch (tas.kind) {
-        case 'empty':
-            return [];
-        case 'syscall':
-            return tas.destination ? [tas.destination] : [];
-        case 'move':
-            return [tas.to];
-        case 'loadImmediate':
-            return [tas.destination];
-        case 'addImmediate':
-        case 'increment':
-            return [];
-        case 'subtract':
-        case 'add':
-        case 'multiply':
-            return [tas.destination];
-        case 'storeGlobal':
-            return [];
-        case 'loadGlobal':
-            return [tas.to];
-        case 'storeMemory':
-            return [];
-        case 'storeMemoryByte':
-            return [];
-        case 'storeZeroToMemory':
-            return [];
-        case 'loadMemory':
-            return [tas.to];
-        case 'loadMemoryByte':
-            return [tas.to];
-        case 'loadSymbolAddress':
-            return [tas.to];
-        case 'callByRegister':
-        case 'callByName':
-            return tas.destination ? [tas.destination] : [];
-        case 'label':
-        case 'functionLabel':
-        case 'return':
-        case 'goto':
-            return [];
-        case 'gotoIfEqual':
-        case 'gotoIfNotEqual':
-        case 'gotoIfGreater':
-            return [];
-        case 'gotoIfZero':
-            return [];
-        case 'alloca':
-            return [tas.register];
-        case 'unspill':
-            // Spill/Unspill doesn't really fit into the reads/write paradigm correctly, because it _implements_ reads/writes. Semantics: After we spill something, it's not live anymore, so it's a "write" since writes kill a register. After we unspill something, we can kinda do whatever (whether it's live depends on whether future readers exist)TODO: handle it better somehow
-            return [tas.register, tas.to];
-        case 'spill':
-            return [tas.register];
-    }
-    throw debug_1.default(`kind ${tas.kind} missing in writes`);
-};
-// An instruction has side effects if it does anything other than change the registers in it's write()s. Basically exists to prevent removal of functions for having only dead stores where their stores are to things other than registers.
-exports.hasSideEffects = (tas) => {
-    switch (tas.kind) {
-        // Syscalls ultimately cause all user-visible effects
-        case 'syscall':
-        // Writes to memory are not captured by "writes" but are side effects
-        case 'storeGlobal':
-        case 'storeMemory':
-        case 'storeZeroToMemory':
-        case 'storeMemoryByte':
-        // These write to the stack
-        case 'alloca':
-        case 'spill':
-        // Labels act as a side effect in that it can't be removed for having no side effects
-        case 'label':
-        case 'functionLabel':
-        case 'return':
-        // Control flow affects the "instruction pointer" which is technically a register but we usually don't treat it as one.
-        case 'goto':
-        case 'gotoIfEqual':
-        case 'gotoIfNotEqual':
-        case 'gotoIfGreater':
-        case 'gotoIfZero':
-            return true;
-        // TODO: Maybe putting callByRegister and callByNmae here is too restrictive? Part of the point of this language is to ensure that the compiler knows which functions have side effects, so we should be able to say here whether a function call has side effects or not. That said, maybe that optimization should go at a higher level, and this function should assume that any function thats still here has side effects.
-        case 'callByRegister':
-        case 'callByName':
-            return true;
-        // Empty instructions are really just comments
-        case 'empty':
-        // These all change registers so they only have real effects, not side effects.
-        case 'move':
-        case 'loadImmediate':
-        case 'addImmediate':
-        case 'increment':
-        case 'subtract':
-        case 'add':
-        case 'multiply':
-        case 'loadSymbolAddress':
-        case 'loadGlobal':
-        case 'loadMemory':
-        case 'loadMemoryByte':
-        case 'unspill':
-            return false;
-    }
-    throw debug_1.default(`kind ${tas.kind} missing in hasSideEffects`);
-};
-
-
-/***/ }),
-
 /***/ "./types.ts":
 /*!******************!*\
   !*** ./types.ts ***!
@@ -32384,124 +34831,136 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
 const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
 const sum_1 = __webpack_require__(/*! ./util/list/sum */ "./util/list/sum.ts");
+const deepEqual = __webpack_require__(/*! deep-equal */ "./node_modules/deep-equal/index.js");
 exports.toString = (type) => {
-    switch (type.kind) {
+    // TODO: Include the original in here somehow?
+    switch (type.type.kind) {
         case 'String':
         case 'Integer':
         case 'Boolean':
-            return type.kind;
+            return type.type.kind;
         case 'Function':
-            return type.kind + '<' + join_1.default(type.arguments.map(exports.toString), ', ') + '>';
+            return type.type.kind + '<' + join_1.default(type.type.arguments.map(exports.toString), ', ') + '>';
         case 'Product':
             return ('{' +
-                type.members.map(member => `${member.name}: ${exports.toString(member.type)}`) +
+                type.type.members.map(member => `${member.name}: ${exports.toString(member.type)}`) +
                 '}');
-        case 'NameRef':
-            return type.namedType;
         case 'List':
-            return `${exports.toString(type.of)}[]`;
+            return `${exports.toString(type.type.of)}[]`;
         default:
             throw debug_1.default(`Unhandled kind in type toString: ${type.kind}`);
     }
 };
-// TODO: split Type into ResolveType and Type, and have this function accept Type and return ResolvedType
-exports.resolve = (t, typeDeclarations) => {
-    const type = typeDeclarations.find(d => d.name == t.namedType);
-    return type ? type.type : type; // lol
+exports.resolve = (t, availableTypes) => {
+    if (!availableTypes)
+        debug_1.default('no declarations');
+    const type = availableTypes.find(d => d.name == t.namedType);
+    if (!type)
+        return undefined;
+    return {
+        type: type.type.type,
+        original: t,
+    };
 };
-exports.equal = (a, b, typeDeclarations) => {
-    if (a.kind == 'NameRef' && b.kind == 'NameRef') {
-        return a.namedType == b.namedType;
+exports.resolveIfNecessary = (unresolved, availableTypes) => 'namedType' in unresolved ? exports.resolve(unresolved, availableTypes) : unresolved;
+exports.resolveOrError = (unresolved, availableTypes, sourceLocation) => {
+    const resolved = exports.resolveIfNecessary(unresolved, availableTypes);
+    if (!resolved) {
+        return {
+            errors: [
+                {
+                    kind: 'unknownType',
+                    name: unresolved.namedType,
+                    sourceLocation,
+                },
+            ],
+            newVariables: [],
+        };
     }
-    let resolvedA = a;
-    if (a.kind == 'NameRef') {
-        const resolved = exports.resolve(a, typeDeclarations);
-        if (!resolved)
-            return false;
-        resolvedA = resolved;
-    }
-    let resolvedB = b;
-    if (b.kind == 'NameRef') {
-        const resolved = exports.resolve(b, typeDeclarations);
-        if (!resolved)
-            return false;
-        resolvedB = resolved;
-    }
-    if (resolvedA.kind == 'Function' && resolvedB.kind == 'Function') {
-        if (resolvedA.arguments.length != resolvedB.arguments.length) {
+    return resolved;
+};
+exports.equal = (a, b) => {
+    // Should we allow assigning one product to another if they have different names but identical members? That would be "structural typing" which I'm not sure I want.
+    if (!deepEqual(a.original, b.original))
+        return false;
+    if (a.type.kind == 'Function' && b.type.kind == 'Function') {
+        if (a.type.arguments.length != b.type.arguments.length) {
             return false;
         }
-        for (let i = 0; i < resolvedA.arguments.length; i++) {
-            if (!exports.equal(resolvedA.arguments[i], resolvedB.arguments[i], typeDeclarations)) {
+        for (let i = 0; i < a.type.arguments.length; i++) {
+            if (!exports.equal(a.type.arguments[i], b.type.arguments[i])) {
                 return false;
             }
         }
         return true;
     }
-    if (resolvedA.kind == 'Product' && resolvedB.kind == 'Product') {
-        const allInLeftPresentInRight = resolvedA.members.every(memberA => resolvedB.members.some(memberB => memberA.name == memberB.name &&
-            exports.equal(memberA.type, memberB.type, typeDeclarations)));
-        const allInRightPresentInLeft = resolvedB.members.every(memberB => resolvedA.members.some(memberA => memberA.name == memberB.name &&
-            exports.equal(memberA.type, memberB.type, typeDeclarations)));
+    if (a.type.kind == 'Product' && b.type.kind == 'Product') {
+        if (a.type.name != b.type.name)
+            return false;
+        const bProduct = b.type;
+        const allInLeftPresentInRight = a.type.members.every(memberA => bProduct.members.some(memberB => memberA.name == memberB.name && exports.equal(memberA.type, memberB.type)));
+        const aProduct = a.type;
+        const allInRightPresentInLeft = b.type.members.every(memberB => aProduct.members.some(memberA => memberA.name == memberB.name && exports.equal(memberA.type, memberB.type)));
         return allInLeftPresentInRight && allInRightPresentInLeft;
     }
-    return resolvedA.kind == resolvedB.kind;
+    return a.type.kind == b.type.kind;
 };
 exports.builtinTypes = {
-    String: { kind: 'String' },
-    Integer: { kind: 'Integer' },
-    Boolean: { kind: 'Boolean' },
+    String: { type: { kind: 'String' } },
+    Integer: { type: { kind: 'Integer' } },
+    Boolean: { type: { kind: 'Boolean' } },
 };
 // TODO: Require these to be imported in user code
 exports.builtinFunctions = [
     {
         name: 'length',
         type: {
-            kind: 'Function',
-            arguments: [exports.builtinTypes.String],
-            permissions: [],
-            returnType: exports.builtinTypes.Integer,
+            type: {
+                kind: 'Function',
+                arguments: [exports.builtinTypes.String],
+                permissions: [],
+                returnType: exports.builtinTypes.Integer,
+            },
         },
         exported: false,
     },
     {
         name: 'print',
         type: {
-            kind: 'Function',
-            arguments: [exports.builtinTypes.String],
-            permissions: [],
-            returnType: exports.builtinTypes.Integer,
+            type: {
+                kind: 'Function',
+                arguments: [exports.builtinTypes.String],
+                permissions: [],
+                returnType: exports.builtinTypes.Integer,
+            },
         },
         exported: false,
     },
     {
         name: 'readInt',
         type: {
-            kind: 'Function',
-            arguments: [],
-            permissions: ['stdout'],
-            returnType: exports.builtinTypes.Integer,
+            type: {
+                kind: 'Function',
+                arguments: [],
+                permissions: ['stdout'],
+                returnType: exports.builtinTypes.Integer,
+            },
         },
         exported: false,
     },
 ];
 exports.typeSize = (targetInfo, type, typeDeclarations) => {
-    switch (type.kind) {
+    switch (type.type.kind) {
         case 'List':
             // Pointer + size
             return targetInfo.bytesInWord * 2;
         case 'Product':
-            return sum_1.default(type.members.map(m => exports.typeSize(targetInfo, m.type, typeDeclarations)));
+            return sum_1.default(type.type.members.map(m => exports.typeSize(targetInfo, m.type, typeDeclarations)));
         case 'Boolean':
         case 'Function':
         case 'String':
         case 'Integer':
             return targetInfo.bytesInWord;
-        case 'NameRef':
-            const resolved = exports.resolve(type, typeDeclarations);
-            if (!resolved)
-                throw debug_1.default('couldnt resolve');
-            return exports.typeSize(targetInfo, resolved, typeDeclarations);
         default:
             throw debug_1.default(`${type.kind} unhandled in typeSize`);
     }
@@ -33401,6 +35860,18 @@ module.exports = require("os");
 /***/ (function(module, exports) {
 
 module.exports = require("path");
+
+/***/ }),
+
+/***/ "spawn-sync":
+/*!*****************************!*\
+  !*** external "spawn-sync" ***!
+  \*****************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+if(typeof __WEBPACK_EXTERNAL_MODULE_spawn_sync__ === 'undefined') {var e = new Error("Cannot find module 'spawn-sync'"); e.code = 'MODULE_NOT_FOUND'; throw e;}
+module.exports = __WEBPACK_EXTERNAL_MODULE_spawn_sync__;
 
 /***/ }),
 
