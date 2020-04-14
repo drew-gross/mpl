@@ -57,7 +57,7 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
     { token: 'export[^A-z]', type: 'export', toString: () => 'export' },
     { token: 'true|false', type: 'booleanLiteral', action: x => x.trim(), toString: x => x },
     { token: '[a-z]\\w*', type: 'identifier', action: x => x, toString: x => x },
-    { token: '[A-Z][A-z]*', type: 'typeIdentifier', action: x => x, toString: x => x },
+    { token: '[A-Z][A-Za-z]*', type: 'typeIdentifier', action: x => x, toString: x => x },
     { token: ';', type: 'statementSeparator', toString: _ => ';' },
     { token: '=>', type: 'fatArrow', toString: _ => '=>' },
     { token: '==', type: 'equality', toString: _ => '==' },

@@ -77,7 +77,6 @@ export const resolveOrError = (
 ): Type | { errors: TypeError[]; newVariables: VariableDeclaration[] } => {
     const resolved = resolveIfNecessary(unresolved, availableTypes);
     if (!resolved) {
-        debugger;
         return {
             errors: [
                 {

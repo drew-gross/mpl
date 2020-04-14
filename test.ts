@@ -100,6 +100,29 @@ test('lex with initial whitespace', t => {
     ]);
 });
 
+test('lex type identifier', t => {
+    t.deepEqual(lex(tokenSpecs, 'Boolean[]'), [
+        {
+            string: 'Boolean',
+            type: 'typeIdentifier',
+            value: 'Boolean',
+            sourceLocation: { line: 1, column: 1 },
+        },
+        {
+            string: '[',
+            type: 'leftSquareBracket',
+            value: null,
+            sourceLocation: { column: 8, line: 1 },
+        },
+        {
+            string: ']',
+            type: 'rightSquareBracket',
+            value: null,
+            sourceLocation: { column: 9, line: 1 },
+        },
+    ] as any);
+});
+
 test('ast for single number', t => {
     const tokens = lex(tokenSpecs, 'return 7;') as Token<MplToken>[];
     const parseResult = parse(grammar, 'program', tokens);

@@ -324,6 +324,7 @@ return isFive(5) ? 1 : 0;`,
                 sourceLocation: { column: 13, line: 2 },
             },
         ],
+        failing: true, // syntax for list types in flux
     },
     {
         name: 'One Item List',
