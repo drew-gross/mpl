@@ -583,6 +583,18 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 11,
     },
     {
+        name: 'Variable Named Result',
+        source: `
+            foo := () => {
+                result := 10;
+                return result;
+            };
+            return foo();
+        `,
+        exitCode: 10,
+        failing: true,
+    },
+    {
         name: 'Variable Named Like Keyword',
         source: `
             returnVar := 5;
