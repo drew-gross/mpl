@@ -11,7 +11,6 @@ import {
     Type,
     ProductComponent,
     equal as typesAreEqual,
-    resolve as resolveType,
     resolveIfNecessary,
     resolveOrError,
     builtinTypes,
@@ -482,12 +481,15 @@ export const typeOfExpression = (
                 ];
             }
             for (let i = 0; i < argTypes.length; i++) {
-                if (
-                    !typesAreEqual(
-                        (argTypes[i] as TOEResult).type,
-                        functionType.type.arguments[i]
-                    )
-                ) {
+                const resolved = resolveOrError(
+                    functionType.type.arguments[i],
+                    ctx.availableTypes,
+                    ast.sourceLocation
+                );
+                if ('errors' in resolved) {
+                    return resolved.errors;
+                }
+                if (!typesAreEqual((argTypes[i] as TOEResult).type, resolved)) {
                     return [
                         {
                             kind: 'wrongArgumentType',
@@ -499,7 +501,15 @@ export const typeOfExpression = (
                     ];
                 }
             }
-            return { type: functionType.type.returnType, extractedFunctions: [] };
+            const returnType = resolveOrError(
+                functionType.type.returnType,
+                ctx.availableTypes,
+                ast.sourceLocation
+            );
+            if ('errors' in returnType) {
+                return returnType.errors;
+            }
+            return { type: returnType, extractedFunctions: [] };
         }
         case 'memberStyleCall': {
             const callArgTypes: (TOEResult | TypeError[])[] = ast.params.map(recurse);
@@ -560,12 +570,15 @@ export const typeOfExpression = (
             }
             // TODO: this is probably wrong, we need check agains the LHS type
             for (let i = 0; i < allArgTypes.length; i++) {
-                if (
-                    !typesAreEqual(
-                        (allArgTypes[i] as TOEResult).type,
-                        functionType.type.arguments[i]
-                    )
-                ) {
+                const resolved = resolveOrError(
+                    functionType.type.arguments[i],
+                    ctx.availableTypes,
+                    ast.sourceLocation
+                );
+                if ('errors' in resolved) {
+                    return resolved.errors;
+                }
+                if (!typesAreEqual((allArgTypes[i] as TOEResult).type, resolved)) {
                     return [
                         {
                             kind: 'wrongArgumentType',
@@ -577,7 +590,15 @@ export const typeOfExpression = (
                     ];
                 }
             }
-            return { type: functionType.type.returnType, extractedFunctions: [] };
+            const returnType = resolveOrError(
+                functionType.type.returnType,
+                ctx.availableTypes,
+                ast.sourceLocation
+            );
+            if ('errors' in returnType) {
+                return returnType.errors;
+            }
+            return { type: returnType, extractedFunctions: [] };
         }
         case 'identifier': {
             const unresolved = availableVariables.find(({ name }) => ast.value == name);
@@ -1239,14 +1260,7 @@ const parseType = (ast: MplAst): Type | TypeReference => {
             if (name != 'Function') throw debug('Only functions support args right now');
             const list = ast.children[2];
             if (!isSeparatedListNode(list)) throw debug('todo');
-            const typeList = list.items.map(parseType).map(t => {
-                if ('namedType' in t) {
-                    const resolved = resolveType(t, []);
-                    if (!resolved) throw debug('Need to make type refs work in functions');
-                    return resolved;
-                }
-                return t;
-            });
+            const typeList = list.items.map(parseType);
             return {
                 type: {
                     kind: name,

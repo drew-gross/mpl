@@ -39,6 +39,9 @@ const mplTypeToCType = (type: Type): ((name: string) => string) => {
         case 'String':
             return name => `char *${name}`;
         case 'Function':
+            if ('namedType' in type.type.returnType) {
+                throw debug('figure this out');
+            }
             const returnType = mplTypeToCType(type.type.returnType)('');
             const argumentTypes = type.type.arguments.map(mplTypeToCType).map(f => f(''));
             const argumentsString = join(argumentTypes, ', ');

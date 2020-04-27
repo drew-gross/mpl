@@ -426,11 +426,10 @@ return isFive(5) ? 1 : 0;`,
                 return ip;
             };
 
-            result: IntPair = returnsIntPair();
-            return result.second - result.first;
+            resultVar: IntPair = returnsIntPair();
+            return resultVar.second - resultVar.first;
         `,
         exitCode: 34 - 12,
-        failing: true,
     },
     {
         name: 'String Length',

@@ -20,8 +20,8 @@ export type Boolean = { kind: 'Boolean' };
 export type Function = {
     kind: 'Function';
     permissions: Permission[];
-    arguments: Type[];
-    returnType: Type;
+    arguments: (Type | TypeReference)[];
+    returnType: Type | TypeReference;
 };
 export type List = { kind: 'List'; of: Type };
 export type Product = { kind: 'Product'; name: string; members: ProductComponent[] };
@@ -99,7 +99,15 @@ export const equal = (a: Type, b: Type): boolean => {
             return false;
         }
         for (let i = 0; i < a.type.arguments.length; i++) {
-            if (!equal(a.type.arguments[i], b.type.arguments[i])) {
+            const tA = a.type.arguments[i];
+            if ('namedType' in tA) {
+                throw debug('need to handle refs here');
+            }
+            const tB = b.type.arguments[i];
+            if ('namedType' in tB) {
+                throw debug('need to handle refs here');
+            }
+            if (!equal(tA, tB)) {
                 return false;
             }
         }

@@ -143,7 +143,7 @@ import * as deepEqual from 'deep-equal';
             if ('intermediateFile' in compilationResult) {
                 console.log(
                     chalk.red(
-                        `        Intermediate File:: ${compilationResult.intermediateFile.path}`
+                        `        Intermediate File: ${compilationResult.intermediateFile.path}`
                     )
                 );
             }
