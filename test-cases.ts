@@ -432,6 +432,51 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 34 - 12,
     },
     {
+        name: 'Return Int Pair Twice',
+        source: `
+            IntPair := {
+                first: Integer;
+                second: Integer;
+            };
+
+            returnsIntPair: Function<IntPair> = () => {
+                ip := IntPair {
+                    first: 12,
+                    second: 34,
+                };
+                return ip;
+            };
+
+            result1: IntPair = returnsIntPair();
+            midVar := 2;
+            result2: IntPair = returnsIntPair();
+            return result1.second - result2.first - midVar;
+        `,
+        exitCode: 34 - 12 - 2,
+    },
+    {
+        name: 'Return List',
+        source: `
+            returnsList := () => {
+                return [1,2,3,4,5,6,7];
+            };
+            l := returnsList();
+            return l[3];
+        `,
+        exitCode: 4,
+    },
+    {
+        name: 'Temporary List',
+        source: `
+            returnsList := () => {
+                return [1,2,3,4,5,6,7];
+            };
+            return returnsList()[3];
+        `,
+        exitCode: 4,
+        failing: true,
+    },
+    {
         name: 'String Length',
         source: `
             myStr: String = "test";
