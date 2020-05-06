@@ -1506,7 +1506,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             if (typeNameNode.type != 'typeIdentifier') return 'WrongShapeAst';
             const typeName = typeNameNode.value;
             if (typeof typeName != 'string') return 'WrongShapeAst';
-            const membersNode = ast.children[2];
+            const membersNode = ast.children[1];
             if (!isListNode(membersNode)) {
                 throw debug('todo');
             }

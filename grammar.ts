@@ -148,6 +148,8 @@ const lessThan = mplTerminal('lessThan');
 const greaterThan = mplTerminal('greaterThan');
 const memberAccess = mplTerminal('memberAccess');
 
+const curlies = { left: leftCurlyBrace, right: rightCurlyBrace };
+
 export const grammar: Grammar<MplAstNode, MplToken> = {
     program: Sequence<MplAstNode, MplToken>('program', ['functionBody']),
     function: OneOf([
@@ -208,9 +210,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     ]),
     objectLiteral: Sequence('objectLiteral', [
         typeIdentifier,
-        leftCurlyBrace,
-        Many('objectLiteralComponent'),
-        rightCurlyBrace,
+        Many('objectLiteralComponent', { nestedIn: curlies }),
     ]),
     objectLiteralComponent: Sequence('objectLiteralComponent', [
         identifier,
