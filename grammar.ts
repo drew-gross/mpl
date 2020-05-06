@@ -101,6 +101,7 @@ export type MplAstNode =
     | 'typeDeclaration'
     | 'typeWithArgs'
     | 'typeWithoutArgs'
+    | 'listType'
     | 'typeLiteral'
     | 'typeLiteralComponent'
     | 'typeList'
@@ -189,6 +190,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     ]),
     typeList: SeparatedList(comma, 'type'),
     type: OneOf([
+        Sequence('listType', [typeIdentifier, leftSquareBracket, rightSquareBracket]),
         Sequence('typeWithArgs', [typeIdentifier, lessThan, 'typeList', greaterThan]),
         Sequence('typeWithoutArgs', [typeIdentifier]),
         'typeLiteral',

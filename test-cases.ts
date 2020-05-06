@@ -299,6 +299,15 @@ return isFive(5) ? 1 : 0;`,
         failing: true, // TODO: Length currently only for strings :(
     },
     {
+        name: 'Explicitly Typed List',
+        source: `
+            myList: Boolean[] = [true];
+            return length(myList);
+        `,
+        exitCode: 0,
+        failing: true, // TODO: Length currently only for strings :(
+    },
+    {
         name: 'Untyped Zero Item List',
         source: `
             myList := [];

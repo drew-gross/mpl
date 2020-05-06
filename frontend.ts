@@ -1299,6 +1299,14 @@ const parseType = (ast: MplAst): Type | TypeReference => {
                 },
             };
         }
+        case 'listType': {
+            const node = ast.children[0];
+            if (isSeparatedListNode(node) || isListNode(node) || node.type != 'typeIdentifier') {
+                throw debug('expected a type');
+            }
+            const listOf: Type = { type: { kind: node.value as 'String' } };
+            return { type: { kind: 'List', of: listOf } };
+        }
         default:
             throw debug(`${ast.type} unhandled in parseType`);
     }
@@ -1436,7 +1444,9 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 throw debug('todo');
             }
             if (
-                ['typeWithArgs', 'typeWithoutArgs', 'typeLiteral'].includes(maybeTypeNode.type)
+                ['typeWithArgs', 'typeWithoutArgs', 'typeLiteral', 'listType'].includes(
+                    maybeTypeNode.type
+                )
             ) {
                 type = parseType(maybeTypeNode);
                 childIndex++;
