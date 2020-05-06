@@ -149,6 +149,7 @@ const lessThan = mplTerminal('lessThan');
 const greaterThan = mplTerminal('greaterThan');
 const memberAccess = mplTerminal('memberAccess');
 
+const rounds = { left: leftBracket, right: rightBracket };
 const curlies = { left: leftCurlyBrace, right: rightCurlyBrace };
 const squares = { left: leftSquareBracket, right: rightSquareBracket };
 
@@ -235,9 +236,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
             'simpleExpression',
             memberAccess,
             identifier,
-            leftBracket,
-            'paramList',
-            rightBracket,
+            NestedIn(rounds, 'paramList'),
         ]),
         'memberAccess',
     ]),

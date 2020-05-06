@@ -1526,7 +1526,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 return 'WrongShapeAst';
             }
             const memberName = anyAst.children[2].value;
-            const params = anyAst.children[4].items.map(astFromParseResult);
+            const params = anyAst.children[3].items.map(astFromParseResult);
             if (params == 'WrongShapeAst') {
                 return 'WrongShapeAst';
             }
