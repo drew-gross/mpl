@@ -150,6 +150,7 @@ const greaterThan = mplTerminal('greaterThan');
 const memberAccess = mplTerminal('memberAccess');
 
 const curlies = { left: leftCurlyBrace, right: rightCurlyBrace };
+const squares = { left: leftSquareBracket, right: rightSquareBracket };
 
 export const grammar: Grammar<MplAstNode, MplToken> = {
     program: Sequence<MplAstNode, MplToken>('program', ['functionBody']),
@@ -245,12 +246,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         'indexAccess',
     ]),
     indexAccess: OneOf([
-        Sequence('indexAccess', [
-            'simpleExpression',
-            leftSquareBracket,
-            'simpleExpression',
-            rightSquareBracket,
-        ]),
+        Sequence('indexAccess', ['simpleExpression', NestedIn(squares, 'simpleExpression')]),
         'listLiteral',
     ]),
     listLiteral: OneOf([

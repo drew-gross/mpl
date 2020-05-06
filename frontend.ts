@@ -1658,7 +1658,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
         case 'indexAccess':
             return {
                 kind: 'indexAccess',
-                index: astFromParseResult(ast.children[2]) as Ast.UninferredExpression,
+                index: astFromParseResult(ast.children[1]) as Ast.UninferredExpression,
                 accessed: astFromParseResult(ast.children[0]) as Ast.UninferredExpression,
                 sourceLocation: ast.sourceLocation,
             };
