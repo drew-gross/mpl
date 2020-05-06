@@ -147,7 +147,11 @@ type SeparatedList<Node, Token> = {
 type Many<Node, Token> = {
     kind: 'many';
     item: Parser<Node, Token>;
-    nestedIn: Nesting<Node, Token> | undefined;
+};
+type Nested<Node, Token> = {
+    kind: 'nested';
+    in: Nesting<Node, Token>;
+    parser: Parser<Node, Token>;
 };
 
 type Parser<Node, Token> =
@@ -156,7 +160,8 @@ type Parser<Node, Token> =
     | BaseParser<Node, Token>
     | Optional<Node, Token>
     | SeparatedList<Node, Token>
-    | Many<Node, Token>;
+    | Many<Node, Token>
+    | Nested<Node, Token>;
 
 export const Sequence = <Node extends string, Token>(
     name: Node,
@@ -177,19 +182,19 @@ export const SeparatedList = <Node, Token>(
     item: Parser<Node, Token>
 ): SeparatedList<Node, Token> => ({ kind: 'separatedList', separator, item });
 
-// TODO: Should we allows nesting anything in anything? Currently you can only nest manys in things.
 export type Nesting<Node, Token> = {
     left: Parser<Node, Token>;
     right: Parser<Node, Token>;
 };
 
-export const Many = <Node, Token>(
-    item: Parser<Node, Token>,
-    { nestedIn }: { nestedIn: Nesting<Node, Token> | undefined } = { nestedIn: undefined }
-): Many<Node, Token> => ({
+export const NestedIn = <Node, Token>(
+    nesting: Nesting<Node, Token>,
+    parser: Parser<Node, Token>
+): Nested<Node, Token> => ({ kind: 'nested', in: nesting, parser });
+
+export const Many = <Node, Token>(item: Parser<Node, Token>): Many<Node, Token> => ({
     kind: 'many',
     item,
-    nestedIn,
 });
 
 export interface Grammar<Node, Token> {
@@ -241,6 +246,8 @@ const parseSequence = <Node extends string, Token>(
             }
         } else if (p.kind == 'many') {
             result = parseMany(grammar, p, tokens, index);
+        } else if (p.kind == 'nested') {
+            result = parseNested(grammar, p, tokens, index);
         } else {
             throw debug(`Invalid parser type: ${JSON.stringify(p)}`);
         }
@@ -539,39 +546,42 @@ const parseSeparatedList = <Node extends string, Token>(
     };
 };
 
+const parseNested = <Node extends string, Token>(
+    grammar: Grammar<Node, Token>,
+    nested: Nested<Node, Token>,
+    tokens: LToken<Token>[],
+    index: number
+): ParseResultWithIndex<Node, Token> => {
+    const leftNest = parseAnything(grammar, nested.in.left, tokens, index);
+    if (parseResultIsError(leftNest)) {
+        return leftNest;
+    }
+    const result = parseAnything(grammar, nested.parser, tokens, leftNest.newIndex);
+    if (parseResultIsError(result)) {
+        return result;
+    }
+    const rightNest = parseAnything(grammar, nested.in.right, tokens, result.newIndex);
+    if (parseResultIsError(rightNest)) {
+        return rightNest;
+    }
+    return { ...result, newIndex: rightNest.newIndex };
+};
+
 const parseMany = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     many: Many<Node, Token>,
     tokens: LToken<Token>[],
     index: number
 ): ManyWithIndex<Node, Token> | ParseError<Token> => {
-    if (many.nestedIn) {
-        const leftNest = parseAnything(grammar, many.nestedIn.left, tokens, index);
-        if (parseResultIsError(leftNest)) {
-            return leftNest;
-        }
-        const manyCopy = { ...many };
-        delete manyCopy.nestedIn;
-        const result = parseMany(grammar, manyCopy, tokens, leftNest.newIndex);
-        if (parseResultIsError(result)) {
-            return result;
-        }
-        const rightNest = parseAnything(grammar, many.nestedIn.right, tokens, result.newIndex);
-        if (parseResultIsError(rightNest)) {
-            return rightNest;
-        }
-        return { ...result, newIndex: rightNest.newIndex };
-    } else {
-        const item = parseAnything(grammar, many.item, tokens, index);
-        if (parseResultIsError(item)) {
-            return { items: [], newIndex: index };
-        }
-        const next = parseMany(grammar, many, tokens, item.newIndex);
-        if (parseResultIsError(next)) {
-            return { items: [item], newIndex: item.newIndex };
-        }
-        return { items: [item, ...next.items], newIndex: next.newIndex };
+    const item = parseAnything(grammar, many.item, tokens, index);
+    if (parseResultIsError(item)) {
+        return { items: [], newIndex: index };
     }
+    const next = parseMany(grammar, many, tokens, item.newIndex);
+    if (parseResultIsError(next)) {
+        return { items: [item], newIndex: item.newIndex };
+    }
+    return { items: [item, ...next.items], newIndex: next.newIndex };
 };
 
 const parseAnything = <Node extends string, Token>(
@@ -593,6 +603,8 @@ const parseAnything = <Node extends string, Token>(
             return parseSeparatedList(grammar, parser, tokens, index);
         } else if (parser.kind == 'many') {
             return parseMany(grammar, parser, tokens, index);
+        } else if (parser.kind == 'nested') {
+            return parseNested(grammar, parser, tokens, index);
         } else {
             throw debug('bad type in parse');
         }

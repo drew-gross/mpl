@@ -8,6 +8,7 @@ import {
     OneOf,
     Optional,
     Many,
+    NestedIn,
 } from './parser-lib/parse';
 import { TokenSpec } from './parser-lib/lex';
 
@@ -197,7 +198,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         Sequence('typeWithoutArgs', [typeIdentifier]),
         'typeLiteral',
     ]),
-    typeLiteral: Sequence('typeLiteral', [Many('typeLiteralComponent', { nestedIn: curlies })]),
+    typeLiteral: Sequence('typeLiteral', [NestedIn(curlies, Many('typeLiteralComponent'))]),
     typeLiteralComponent: Sequence('typeLiteralComponent', [
         identifier,
         colon,
@@ -206,7 +207,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     ]),
     objectLiteral: Sequence('objectLiteral', [
         typeIdentifier,
-        Many('objectLiteralComponent', { nestedIn: curlies }),
+        NestedIn(curlies, Many('objectLiteralComponent')),
     ]),
     objectLiteralComponent: Sequence('objectLiteralComponent', [
         identifier,
