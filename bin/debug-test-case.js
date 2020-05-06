@@ -422,6 +422,9 @@ const mplTypeToCType = (type) => {
         case 'String':
             return name => `char *${name}`;
         case 'Function':
+            if ('namedType' in type.type.returnType) {
+                throw debug_1.default('figure this out');
+            }
             const returnType = mplTypeToCType(type.type.returnType)('');
             const argumentTypes = type.type.arguments.map(mplTypeToCType).map(f => f(''));
             const argumentsString = join_1.default(argumentTypes, ', ');
@@ -2358,7 +2361,7 @@ const deepEqual = __webpack_require__(/*! deep-equal */ "./node_modules/deep-equ
         if ('error' in compilationResult) {
             console.log(chalk.red(`        Compilation Failed: ${compilationResult.error}`));
             if ('intermediateFile' in compilationResult) {
-                console.log(chalk.red(`        Intermediate File:: ${compilationResult.intermediateFile.path}`));
+                console.log(chalk.red(`        Intermediate File: ${compilationResult.intermediateFile.path}`));
             }
         }
         else {
@@ -2846,7 +2849,11 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                 ];
             }
             for (let i = 0; i < argTypes.length; i++) {
-                if (!types_1.equal(argTypes[i].type, functionType.type.arguments[i])) {
+                const resolved = types_1.resolveOrError(functionType.type.arguments[i], ctx.availableTypes, ast.sourceLocation);
+                if ('errors' in resolved) {
+                    return resolved.errors;
+                }
+                if (!types_1.equal(argTypes[i].type, resolved)) {
                     return [
                         {
                             kind: 'wrongArgumentType',
@@ -2858,7 +2865,11 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                     ];
                 }
             }
-            return { type: functionType.type.returnType, extractedFunctions: [] };
+            const returnType = types_1.resolveOrError(functionType.type.returnType, ctx.availableTypes, ast.sourceLocation);
+            if ('errors' in returnType) {
+                return returnType.errors;
+            }
+            return { type: returnType, extractedFunctions: [] };
         }
         case 'memberStyleCall': {
             const callArgTypes = ast.params.map(recurse);
@@ -2916,7 +2927,11 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
             }
             // TODO: this is probably wrong, we need check agains the LHS type
             for (let i = 0; i < allArgTypes.length; i++) {
-                if (!types_1.equal(allArgTypes[i].type, functionType.type.arguments[i])) {
+                const resolved = types_1.resolveOrError(functionType.type.arguments[i], ctx.availableTypes, ast.sourceLocation);
+                if ('errors' in resolved) {
+                    return resolved.errors;
+                }
+                if (!types_1.equal(allArgTypes[i].type, resolved)) {
                     return [
                         {
                             kind: 'wrongArgumentType',
@@ -2928,7 +2943,11 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                     ];
                 }
             }
-            return { type: functionType.type.returnType, extractedFunctions: [] };
+            const returnType = types_1.resolveOrError(functionType.type.returnType, ctx.availableTypes, ast.sourceLocation);
+            if ('errors' in returnType) {
+                return returnType.errors;
+            }
+            return { type: returnType, extractedFunctions: [] };
         }
         case 'identifier': {
             const unresolved = availableVariables.find(({ name }) => ast.value == name);
@@ -3560,15 +3579,7 @@ const parseType = (ast) => {
             const list = ast.children[2];
             if (!parse_1.isSeparatedListNode(list))
                 throw debug_1.default('todo');
-            const typeList = list.items.map(parseType).map(t => {
-                if ('namedType' in t) {
-                    const resolved = types_1.resolve(t, []);
-                    if (!resolved)
-                        throw debug_1.default('Need to make type refs work in functions');
-                    return resolved;
-                }
-                return t;
-            });
+            const typeList = list.items.map(parseType);
             return {
                 type: {
                     kind: name,
@@ -3608,6 +3619,14 @@ const parseType = (ast) => {
                     members: node.items.map(parseTypeLiteralComponent),
                 },
             };
+        }
+        case 'listType': {
+            const node = ast.children[0];
+            if (parse_1.isSeparatedListNode(node) || parse_1.isListNode(node) || node.type != 'typeIdentifier') {
+                throw debug_1.default('expected a type');
+            }
+            const listOf = { type: { kind: node.value } };
+            return { type: { kind: 'List', of: listOf } };
         }
         default:
             throw debug_1.default(`${ast.type} unhandled in parseType`);
@@ -3751,7 +3770,7 @@ const astFromParseResult = (ast) => {
             if (parse_1.isSeparatedListNode(maybeTypeNode) || parse_1.isListNode(maybeTypeNode)) {
                 throw debug_1.default('todo');
             }
-            if (['typeWithArgs', 'typeWithoutArgs', 'typeLiteral'].includes(maybeTypeNode.type)) {
+            if (['typeWithArgs', 'typeWithoutArgs', 'typeLiteral', 'listType'].includes(maybeTypeNode.type)) {
                 type = parseType(maybeTypeNode);
                 childIndex++;
             }
@@ -4222,6 +4241,7 @@ exports.grammar = {
     ]),
     typeList: parse_1.SeparatedList(comma, 'type'),
     type: parse_1.OneOf([
+        parse_1.Sequence('listType', [typeIdentifier, leftSquareBracket, rightSquareBracket]),
         parse_1.Sequence('typeWithArgs', [typeIdentifier, lessThan, 'typeList', greaterThan]),
         parse_1.Sequence('typeWithoutArgs', [typeIdentifier]),
         'typeLiteral',
@@ -75765,6 +75785,15 @@ return isFive(5) ? 1 : 0;`,
         failing: true,
     },
     {
+        name: 'Explicitly Typed List',
+        source: `
+            myList: Boolean[] = [true];
+            return length(myList);
+        `,
+        exitCode: 0,
+        failing: true,
+    },
+    {
         name: 'Untyped Zero Item List',
         source: `
             myList := [];
@@ -75892,10 +75921,54 @@ return isFive(5) ? 1 : 0;`,
                 return ip;
             };
 
-            result: IntPair = returnsIntPair();
-            return result.second - result.first;
+            resultVar: IntPair = returnsIntPair();
+            return resultVar.second - resultVar.first;
         `,
         exitCode: 34 - 12,
+    },
+    {
+        name: 'Return Int Pair Twice',
+        source: `
+            IntPair := {
+                first: Integer;
+                second: Integer;
+            };
+
+            returnsIntPair: Function<IntPair> = () => {
+                ip := IntPair {
+                    first: 12,
+                    second: 34,
+                };
+                return ip;
+            };
+
+            result1: IntPair = returnsIntPair();
+            midVar := 2;
+            result2: IntPair = returnsIntPair();
+            return result1.second - result2.first - midVar;
+        `,
+        exitCode: 34 - 12 - 2,
+    },
+    {
+        name: 'Return List',
+        source: `
+            returnsList := () => {
+                return [1,2,3,4,5,6,7];
+            };
+            l := returnsList();
+            return l[3];
+        `,
+        exitCode: 4,
+    },
+    {
+        name: 'Temporary List',
+        source: `
+            returnsList := () => {
+                return [1,2,3,4,5,6,7];
+            };
+            return returnsList()[3];
+        `,
+        exitCode: 4,
         failing: true,
     },
     {
@@ -76048,6 +76121,18 @@ return isFive(5) ? 1 : 0;`,
             return times(11, 1);
         `,
         exitCode: 11,
+    },
+    {
+        name: 'Variable Named Result',
+        source: `
+            foo := () => {
+                result := 10;
+                return result;
+            };
+            return foo();
+        `,
+        exitCode: 10,
+        failing: true,
     },
     {
         name: 'Variable Named Like Keyword',
@@ -78336,7 +78421,15 @@ exports.equal = (a, b) => {
             return false;
         }
         for (let i = 0; i < a.type.arguments.length; i++) {
-            if (!exports.equal(a.type.arguments[i], b.type.arguments[i])) {
+            const tA = a.type.arguments[i];
+            if ('namedType' in tA) {
+                throw debug_1.default('need to handle refs here');
+            }
+            const tB = b.type.arguments[i];
+            if ('namedType' in tB) {
+                throw debug_1.default('need to handle refs here');
+            }
+            if (!exports.equal(tA, tB)) {
                 return false;
             }
         }
