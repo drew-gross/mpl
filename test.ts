@@ -1353,6 +1353,15 @@ test('equal types are equal', t => {
     t.assert(typesAreEqual({ type: { kind: 'Integer' } }, { type: { kind: 'Integer' } }));
 });
 
+test('list type equality', t => {
+    t.assert(
+        !typesAreEqual(
+            { type: { kind: 'List', of: { type: { kind: 'Boolean' } } } },
+            { type: { kind: 'List', of: { type: { kind: 'Integer' } } } }
+        )
+    );
+});
+
 test('type of objectLiteral', t => {
     const ast: Ast.UninferredExpression = {
         kind: 'objectLiteral',

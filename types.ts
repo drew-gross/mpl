@@ -129,6 +129,9 @@ export const equal = (a: Type, b: Type): boolean => {
         );
         return allInLeftPresentInRight && allInRightPresentInLeft;
     }
+    if (a.type.kind == 'List' && b.type.kind == 'List') {
+        return equal(a.type.of, b.type.of);
+    }
     return a.type.kind == b.type.kind;
 };
 

@@ -319,20 +319,18 @@ return isFive(5) ? 1 : 0;`,
         name: 'Wrong Type List',
         source: `
             myList: Boolean[] = [5];
-            return length(myList);
+            return myList[0] ? 1 : 2;
         `,
         exitCode: 0,
         typeErrors: [
             {
                 kind: 'assignWrongType',
                 lhsName: 'myList',
-                // TODO: make this a list instead of nameref maybe?
-                lhsType: { kind: 'NameRef', namedType: 'Boolean[]' },
-                rhsType: { kind: 'List', of: { kind: 'Integer' } },
+                lhsType: { type: { kind: 'List', of: { type: { kind: 'Boolean' } } } },
+                rhsType: { type: { kind: 'List', of: { type: { kind: 'Integer' } } } },
                 sourceLocation: { column: 13, line: 2 },
             },
         ],
-        failing: true, // syntax for list types in flux
     },
     {
         name: 'One Item List',
