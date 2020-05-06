@@ -388,6 +388,9 @@ const parseAlternative = <Node extends string, Token>(
                     currentResult = optionalResult;
                 }
                 currentIndex = currentProgress.subParserIndex;
+            } else if (currentParser.kind == 'nested') {
+                currentResult = parseNested(grammar, currentParser, tokens, tokenIndex);
+                currentIndex = currentProgress.subParserIndex;
             } else {
                 throw debug(`unhandled kind of parser: ${currentParser.kind}`);
             }

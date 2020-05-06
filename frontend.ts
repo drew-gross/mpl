@@ -1624,11 +1624,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             }
             if (!hasType(ast.children[childIndex], 'fatArrow')) debug('wrong');
             childIndex++;
-            if (!hasType(ast.children[childIndex], 'leftCurlyBrace')) debug('wrong');
-            childIndex++;
             const body = extractFunctionBody(ast.children[childIndex]);
-            childIndex++;
-            if (!hasType(ast.children[childIndex], 'rightCurlyBrace')) debug('wrong');
             childIndex++;
             if (childIndex !== ast.children.length) debug('wrong');
             return {
