@@ -1287,7 +1287,7 @@ const parseType = (ast: MplAst): Type | TypeReference => {
             }
         }
         case 'typeLiteral': {
-            const node = ast.children[1];
+            const node = ast.children[0];
             if (!isListNode(node)) {
                 throw debug('todo');
             }
