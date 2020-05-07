@@ -342,6 +342,10 @@ const parseAlternative = <Node extends string, Token>(
                     progressCache[alternativeIndex] = { kind: 'failed', error: currentResult };
                 }
             }
+        } else if (currentParser.kind == 'nested') {
+            throw debug(
+                'should figure out a way to do nested inside alternative - probably need a more generic framework'
+            );
         } else if (currentParser.kind == 'sequence') {
             // Sequence. This is the complex one.
 
