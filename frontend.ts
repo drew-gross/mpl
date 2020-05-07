@@ -1648,7 +1648,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 sourceLocation: ast.sourceLocation,
             };
         case 'listLiteral':
-            const items = ast.children[1];
+            const items = ast.children[0];
             if (!isSeparatedListNode(items)) throw debug('todo');
             return {
                 kind: 'listLiteral',

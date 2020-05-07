@@ -249,7 +249,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         'listLiteral',
     ]),
     listLiteral: OneOf([
-        Sequence('listLiteral', [leftSquareBracket, 'listItems', rightSquareBracket]),
+        Sequence('listLiteral', [NestedIn(squares, 'listItems')]),
         'simpleExpression',
     ]),
     listItems: SeparatedList(comma, 'expression'),
