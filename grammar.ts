@@ -199,7 +199,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         Sequence('typeWithoutArgs', [typeIdentifier]),
         'typeLiteral',
     ]),
-    typeLiteral: Sequence('typeLiteral', [NestedIn(curlies, Many('typeLiteralComponent'))]),
+    typeLiteral: NestedIn(curlies, Many('typeLiteralComponent')),
     typeLiteralComponent: Sequence('typeLiteralComponent', [
         identifier,
         colon,

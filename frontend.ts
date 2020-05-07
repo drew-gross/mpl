@@ -1250,8 +1250,16 @@ const parseTypeLiteralComponent = (ast: MplAst): ProductComponent => {
 };
 
 const parseType = (ast: MplAst): Type | TypeReference => {
-    if (isSeparatedListNode(ast) || isListNode(ast)) {
+    if (isSeparatedListNode(ast)) {
         throw debug('todo');
+    }
+    if (isListNode(ast)) {
+        return {
+            type: {
+                kind: 'Product',
+                members: ast.items.map(parseTypeLiteralComponent),
+            },
+        };
     }
     switch (ast.type) {
         case 'typeWithArgs': {
@@ -1284,18 +1292,6 @@ const parseType = (ast: MplAst): Type | TypeReference => {
                 default:
                     return { namedType: name };
             }
-        }
-        case 'typeLiteral': {
-            const node = ast.children[0];
-            if (!isListNode(node)) {
-                throw debug('todo');
-            }
-            return {
-                type: {
-                    kind: 'Product',
-                    members: node.items.map(parseTypeLiteralComponent),
-                },
-            };
         }
         case 'listType': {
             const node = ast.children[0];
