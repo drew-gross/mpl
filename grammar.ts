@@ -258,6 +258,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         Sequence('bracketedExpression', [NestedIn(rounds, 'expression')]),
         Sequence('callExpression', [
             identifier,
+            // TODO: Make NestedIn(..., Optional(...)) work
             leftBracket,
             mplOptional('paramList'),
             rightBracket,
