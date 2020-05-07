@@ -249,7 +249,7 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
 };
 
 const removeBracketsFromAst = ast =>
-    transformAst('bracketedExpression', node => node.children[1], ast, true);
+    transformAst('bracketedExpression', node => node.children[0], ast, true);
 
 const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
     const parseResult: MplParseResult = parse(grammar, 'program', tokens);
@@ -1258,7 +1258,7 @@ const parseType = (ast: MplAst): Type | TypeReference => {
         case 'typeWithArgs': {
             const name = (ast.children[0] as any).value;
             if (name != 'Function') throw debug('Only functions support args right now');
-            const list = ast.children[2];
+            const list = ast.children[1];
             if (!isSeparatedListNode(list)) throw debug('todo');
             const typeList = list.items.map(parseType);
             return {

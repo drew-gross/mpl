@@ -152,6 +152,7 @@ const memberAccess = mplTerminal('memberAccess');
 const rounds = { left: leftBracket, right: rightBracket };
 const curlies = { left: leftCurlyBrace, right: rightCurlyBrace };
 const squares = { left: leftSquareBracket, right: rightSquareBracket };
+const angles = { left: lessThan, right: greaterThan };
 
 export const grammar: Grammar<MplAstNode, MplToken> = {
     program: Sequence<MplAstNode, MplToken>('program', ['functionBody']),
@@ -194,7 +195,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     typeList: SeparatedList(comma, 'type'),
     type: OneOf([
         Sequence('listType', [typeIdentifier, leftSquareBracket, rightSquareBracket]),
-        Sequence('typeWithArgs', [typeIdentifier, lessThan, 'typeList', greaterThan]),
+        Sequence('typeWithArgs', [typeIdentifier, NestedIn(angles, 'typeList')]),
         Sequence('typeWithoutArgs', [typeIdentifier]),
         'typeLiteral',
     ]),
@@ -254,7 +255,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     ]),
     listItems: SeparatedList(comma, 'expression'),
     simpleExpression: OneOf([
-        Sequence('bracketedExpression', [leftBracket, 'expression', rightBracket]),
+        Sequence('bracketedExpression', [NestedIn(rounds, 'expression')]),
         Sequence('callExpression', [
             identifier,
             leftBracket,
