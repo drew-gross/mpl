@@ -24,7 +24,7 @@ export type Function = {
     returnType: Type | TypeReference;
 };
 export type List = { kind: 'List'; of: Type };
-export type Product = { kind: 'Product'; name: string; members: ProductComponent[] };
+export type Product = { kind: 'Product'; members: ProductComponent[] };
 export type Type = {
     type: String | Integer | Boolean | Function | List | Product;
     original?: TypeReference;
@@ -114,7 +114,6 @@ export const equal = (a: Type, b: Type): boolean => {
         return true;
     }
     if (a.type.kind == 'Product' && b.type.kind == 'Product') {
-        if (a.type.name != b.type.name) return false;
         const bProduct = b.type;
         const allInLeftPresentInRight = a.type.members.every(memberA =>
             bProduct.members.some(

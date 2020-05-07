@@ -28,6 +28,13 @@ import writeTempFile from '../util/writeTempFile';
 // Beginnings of experiment with tracing code from source to target
 const callFree = (target: string, reason: string) => `my_free(${target}); // ${reason}`;
 
+const mangleProduct = (p: Product) =>
+    `_${Buffer.from(JSON.stringify(p))
+        .toString('base64')
+        .replace('/', '_')
+        .replace('+', '_')
+        .replace('=', '_')}`;
+
 // TODO: This returns a function, which is pretty janky. It looks like this because of the way function
 // pointer declarations work in C: the variable name appears in the middle of the declaration
 const mplTypeToCType = (type: Type): ((name: string) => string) => {
@@ -47,7 +54,7 @@ const mplTypeToCType = (type: Type): ((name: string) => string) => {
             const argumentsString = join(argumentTypes, ', ');
             return name => `${returnType} (*${name})(${argumentsString})`;
         case 'Product':
-            return name => `struct ${(type.type as Product).name} ${name}`;
+            return name => `struct ${mangleProduct(type.type as Product)} ${name}`;
         case 'List':
             return name => `struct list ${name}`;
         default:
@@ -107,7 +114,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             const product = type.type;
             return compileExpression(memberExpressions, expr => [
                 '(struct ',
-                product.name,
+                mangleProduct(product),
                 ')',
                 '{',
                 ...expr.map((e, i) => `.${ast.members[i].name} = ${e},`),
@@ -428,7 +435,7 @@ const compile = ({
         .filter(t => t.type.type.kind == 'Product')
         .map(
             t =>
-                `struct ${t.name} {${join(
+                `struct ${mangleProduct(t.type.type as Product)} {${join(
                     (t.type.type as Product).members.map(productTypeMemberToCStructMember),
                     '\n'
                 )}};`

@@ -680,7 +680,6 @@ export const typeOfExpression = (
                 type: {
                     type: {
                         kind: 'Product',
-                        name: ast.typeName,
                         members: ast.members.map(({ name, expression }) => ({
                             name,
                             type: (recurse(expression) as TOEResult).type,
@@ -1294,7 +1293,6 @@ const parseType = (ast: MplAst): Type | TypeReference => {
             return {
                 type: {
                     kind: 'Product',
-                    name: ast.type,
                     members: node.items.map(parseTypeLiteralComponent),
                 },
             };
@@ -1482,9 +1480,6 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 throw debug(
                     "Shouldn't get here, delcaring types have to actually declare a type"
                 );
-            }
-            if (theType.type.kind == 'Product') {
-                theType.type.name = name;
             }
             return {
                 kind: 'typeDeclaration',
