@@ -741,4 +741,16 @@ return isFive(5) ? 1 : 0;`,
             },
         ],
     },
+    {
+        name: 'For',
+        source: `
+            numbers := [1, 2, 3];
+            sum := 0;
+            for (number : sum) {
+                sum = sum + number;
+            }
+            return sum;
+        `,
+        exitCode: 6,
+    },
 ];

@@ -403,6 +403,54 @@ test('ast for assignment then return', t => {
     t.deepEqual(astWithSemicolon, expected);
 });
 
+test('parse for', t => {
+    const source = `
+        for (a : b) {
+            a = b;
+        };
+    `;
+    const ast = parse(grammar, 'program', lex(tokenSpecs, source) as Token<MplToken>[]);
+    t.deepEqual(stripSourceLocation(ast), {
+        type: 'program',
+        children: [
+            {
+                type: 'statement' as any,
+                children: [
+                    {
+                        type: 'forLoop' as any,
+                        children: [
+                            { value: null, type: 'for' as any },
+                            {
+                                type: 'forCondition' as any,
+                                children: [
+                                    { value: 'a', type: 'identifier' as any },
+                                    { value: null, type: 'colon' as any },
+                                    { value: 'b', type: 'identifier' as any },
+                                ],
+                            },
+                            {
+                                type: 'statement' as any,
+                                children: [
+                                    {
+                                        type: 'reassignment' as any,
+                                        children: [
+                                            { value: 'a', type: 'identifier' as any },
+                                            { value: null, type: 'assignment' as any },
+                                            { value: 'b', type: 'identifier' as any },
+                                        ],
+                                    },
+                                    { value: null, type: 'statementSeparator' as any },
+                                ],
+                            },
+                        ],
+                    },
+                    { value: null, type: 'statementSeparator' as any },
+                ],
+            },
+        ],
+    });
+});
+
 test('lowering of bracketedExpressions', t => {
     const lexResult = lex(tokenSpecs, 'return (8 * ((7)));') as Token<MplToken>[];
     t.deepEqual(stripSourceLocation(parseMpl(lexResult)), {

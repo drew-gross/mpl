@@ -15,6 +15,7 @@ import { TokenSpec } from './parser-lib/lex';
 export type MplToken =
     | 'return'
     | 'export'
+    | 'for'
     | 'booleanLiteral'
     | 'stringLiteral'
     | 'identifier'
@@ -56,6 +57,7 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
     // TODO: Make a "keyword" utility function for the lexer. Also figure out why \b doesn't work here.
     { token: 'return[^A-z]', type: 'return', toString: () => 'return' },
     { token: 'export[^A-z]', type: 'export', toString: () => 'export' },
+    { token: 'for[^A-z]', type: 'for', toString: () => 'for' },
     { token: 'true|false', type: 'booleanLiteral', action: x => x.trim(), toString: x => x },
     { token: '[a-z]\\w*', type: 'identifier', action: x => x, toString: x => x },
     { token: '[A-Z][A-Za-z]*', type: 'typeIdentifier', action: x => x, toString: x => x },
@@ -122,6 +124,7 @@ const mplTerminal = token => Terminal<MplAstNode, MplToken>(token);
 const mplOptional = parser => Optional<MplAstNode, MplToken>(parser);
 
 const export_ = mplTerminal('export');
+const for_ = mplTerminal('for');
 const plus = mplTerminal('sum');
 const minus = mplTerminal('subtraction');
 const times = mplTerminal('product');
@@ -191,6 +194,11 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         Sequence('typeDeclaration', [typeIdentifier, colon, assignment, 'type']),
         Sequence('reassignment', [identifier, assignment, 'expression']),
         Sequence('returnStatement', [_return, 'expression']),
+        Sequence('forLoop', [
+            for_,
+            NestedIn(rounds, Sequence('forCondition', [identifier, colon, 'expression'])),
+            NestedIn(curlies, 'functionBody'),
+        ]),
     ]),
     typeList: SeparatedList(comma, 'type'),
     type: OneOf([
