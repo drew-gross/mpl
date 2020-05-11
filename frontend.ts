@@ -3,6 +3,7 @@ import uniqueBy from './util/list/uniqueBy';
 import idMaker from './util/idMaker';
 import last from './util/list/last';
 import debug from './util/debug';
+import never from './util/never';
 import { lex, Token, LexError } from './parser-lib/lex';
 import { tokenSpecs, grammar, MplAst, MplParseResult, MplToken } from './grammar';
 import { parseResultIsError, parse, isSeparatedListNode, isListNode } from './parser-lib/parse';
@@ -117,6 +118,7 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean): MplAst =
 const extractVariable = (
     ctx: WithContext<Ast.UninferredStatement>
 ): VariableDeclaration | undefined => {
+    const kind = ctx.w.kind;
     switch (ctx.w.kind) {
         case 'reassignment':
         case 'declarationAssignment':
@@ -140,8 +142,10 @@ const extractVariable = (
         case 'returnStatement':
         case 'typeDeclaration':
             return undefined;
+        case 'forLoop':
+            throw debug("forLoop has muliple variables, doesn't work here");
         default:
-            throw debug(`${(ctx.w as any).kind} unhandled in extractVariable`);
+            never(kind as never, 'extractVariable');
     }
 };
 
@@ -166,8 +170,20 @@ const extractVariables = (
                     variables.push(potentialVariable);
                 }
                 break;
+            case 'forLoop':
+                statement.body.forEach(s => {
+                    const vars = extractVariables({
+                        w: [s],
+                        availableVariables: mergeDeclarations(ctx.availableVariables, variables),
+                        availableTypes: ctx.availableTypes,
+                    });
+                    if (vars) {
+                        variables.push(...vars);
+                    }
+                });
+                break;
             default:
-                throw debug(`${statement.kind} unhandled in extractVariables`);
+                never(statement, 'extractVariables');
         }
     });
     return variables;
@@ -919,8 +935,34 @@ const typeCheckStatement = (
                 errors: [],
                 newVariables: [],
             };
+        case 'forLoop':
+            const expressionType = typeOfExpression({ ...ctx, w: ast.list });
+            if (isTypeError(expressionType)) {
+                return { errors: expressionType, newVariables: [] };
+            }
+            if (expressionType.type.type.kind == 'List') {
+                return {
+                    errors: [
+                        {
+                            kind: 'nonListInFor',
+                            found: expressionType.type,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+            const newVariables: VariableDeclaration[] = [];
+            for (let statement of ast.body) {
+                const statementType = typeCheckStatement({ ...ctx, w: statement });
+                if (isTypeError(statementType)) {
+                    return { errors: statementType, newVariables: [] };
+                }
+                newVariables.push(...statementType.newVariables);
+            }
+            return { errors: [], newVariables };
         default:
-            throw debug(`${(ast as any).kind} unhandled in typeCheckStatement`);
+            throw never(ast, 'typeCheckStatement');
     }
 };
 

@@ -43,6 +43,7 @@ export type TypeError = { sourceLocation: SourceLocation } & (
     | { kind: 'nonIntegerIndex'; index: Type }
     | { kind: 'indexAccessNonList'; accessed: Type }
     | { kind: 'topLevelStatementsInModule' }
+    | { kind: 'nonListInFor'; found: Type }
 );
 
 export const toString = (e: TypeError): string => {
