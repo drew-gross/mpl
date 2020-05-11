@@ -167,7 +167,7 @@ const extractVariables = (
                 }
                 break;
             default:
-                throw debug('todo');
+                throw debug(`${statement.kind} unhandled in extractVariables`);
         }
     });
     return variables;
@@ -243,6 +243,8 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
             return [...result, ...recurse(ast.accessed), ...recurse(ast.index)];
         case 'memberStyleCall':
             return [...result, ...recurse(ast.lhs), ...flatten(ast.params.map(recurse))];
+        case 'forLoop':
+            return [...result, ...recurse(ast.list), ...flatten(ast.body.map(recurse))];
         default:
             throw debug(`${(ast as any).kind} unhandled in walkAst`);
     }
@@ -1196,7 +1198,7 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
     }
 };
 
-const extractFunctionBody = node => {
+const extractFunctionBody = (node): any[] => {
     if (node.type !== 'statement') debug('expected a statement');
     if (node.children.length === 3) {
         return [astFromParseResult(node.children[0]), ...extractFunctionBody(node.children[2])];
@@ -1625,6 +1627,20 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 parameters: parameters2,
                 sourceLocation: ast.sourceLocation,
             };
+        }
+        case 'forLoop': {
+            const a = ast as any;
+            const body = extractFunctionBody(a.children[2]);
+            const list = astFromParseResult(a.children[1].children[2]);
+            if (list == 'WrongShapeAst') return list;
+            const result: Ast.UninferredForLoop = {
+                kind: 'forLoop',
+                var: a.children[1].children[0].value,
+                list: list as Ast.UninferredExpression,
+                body: body,
+                sourceLocation: a.sourceLocation,
+            };
+            return result;
         }
         case 'booleanLiteral':
             return {

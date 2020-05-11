@@ -87,6 +87,7 @@ export type MplAstNode =
     | 'program'
     | 'function'
     | 'functionWithBlock'
+    | 'forLoop'
     | 'argList'
     | 'arg'
     | 'statement'

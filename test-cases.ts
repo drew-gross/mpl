@@ -748,7 +748,7 @@ return isFive(5) ? 1 : 0;`,
             sum := 0;
             for (number : sum) {
                 sum = sum + number;
-            }
+            };
             return sum;
         `,
         exitCode: 6,

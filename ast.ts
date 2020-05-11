@@ -280,6 +280,14 @@ export type UninferredTypeDeclaration = {
     type: Type;
 };
 
+export type UninferredForLoop = {
+    kind: 'forLoop';
+    sourceLocation: SourceLocation;
+    var: VariableDeclaration;
+    list: UninferredExpression;
+    body: UninferredStatement[];
+};
+
 export type UninferredObjectMember = {
     name: string;
     expression: UninferredExpression;
@@ -316,6 +324,7 @@ export type UninferredStatement =
     | UninferredDeclarationAssignment
     | UninferredReassignment
     | UninferredTypeDeclaration
+    | UninferredForLoop
     | UninferredReturnStatement;
 
 export type UninferredExpression =
