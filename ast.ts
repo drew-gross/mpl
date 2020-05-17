@@ -30,11 +30,18 @@ export type StringLiteral = {
     value: string;
 };
 
-// Typed versions of things (...kinda)
 export type ReturnStatement = {
     kind: 'returnStatement';
     sourceLocation: SourceLocation;
     expression: Ast;
+};
+
+export type ForLoop = {
+    kind: 'forLoop';
+    sourceLocation: SourceLocation;
+    var: VariableDeclaration;
+    list: Ast;
+    body: Statement[];
 };
 
 export type Ternary = {
@@ -81,7 +88,7 @@ export type FunctionLiteral = {
     deanonymizedName: string;
 };
 
-export type Statement = TypedDeclarationAssignment | Reassignment | ReturnStatement;
+export type Statement = TypedDeclarationAssignment | Reassignment | ReturnStatement | ForLoop;
 
 export type Addition = {
     kind: 'addition';
@@ -350,6 +357,10 @@ export const astToString = (ast: Ast) => {
     switch (ast.kind) {
         case 'returnStatement':
             return `return ${astToString(ast.expression)}`;
+        case 'forLoop':
+            return `for (${ast.var} : ${astToString(ast.list)}) {
+                ${join(ast.body.map(astToString), '\n')}
+            };`;
         case 'ternary':
             return `${astToString(ast.condition)} ? ${astToString(ast.ifTrue)} : ${astToString(
                 ast.ifFalse

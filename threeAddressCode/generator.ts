@@ -234,6 +234,28 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 ]
             );
         }
+        case 'forLoop': {
+            const index = makeTemporary('index');
+            const max = makeTemporary('max');
+            const list = makeTemporary('list');
+            const loopLabel = makeLabel('loop');
+            const computeList = recurse({ ast: ast.list, destination: list });
+            const body = ast.body.map(statement => recurse({ ast: statement }));
+            // TODO this is super wrong, need to retrieve the index, and compute the max, etc.
+            return compileExpression<Statement>([computeList], ([makeList, ...statements]) => [
+                ...makeList,
+                { kind: 'label', name: loopLabel, why: 'loop' },
+                ...flatten(statements),
+                { kind: 'increment', register: index, why: 'i++' },
+                {
+                    kind: 'gotoIfNotEqual',
+                    lhs: index,
+                    rhs: max,
+                    label: loopLabel,
+                    why: 'not done',
+                },
+            ]);
+        }
         case 'callExpression': {
             const argumentRegisters: Register[] = [];
             const argumentComputers: CompiledExpression<Statement>[] = [];

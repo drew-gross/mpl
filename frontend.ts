@@ -1022,15 +1022,17 @@ const inferFunction = (ctx: WithContext<UninferredFunction>): Function | TypeErr
     const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
     const statements: Ast.Statement[] = [];
     ctx.w.statements.forEach(statement => {
+        const statementsContext: WithContext<Ast.UninferredStatement[]> = {
+            w: [statement],
+            availableVariables: variablesFound,
+            availableTypes: ctx.availableTypes,
+        };
         const statementContext: WithContext<Ast.UninferredStatement> = {
             w: statement,
             availableVariables: variablesFound,
             availableTypes: ctx.availableTypes,
         };
-        const maybeNewVariable = extractVariable(statementContext);
-        if (maybeNewVariable) {
-            variablesFound.push(maybeNewVariable);
-        }
+        variablesFound.push(...extractVariables(statementsContext));
         statements.push(infer(statementContext) as Ast.Statement);
     });
     const maybeReturnStatement = last(ctx.w.statements);
@@ -1069,6 +1071,14 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
                 kind: 'returnStatement',
                 expression: recurse(ast.expression),
                 sourceLocation: ast.sourceLocation,
+            };
+        case 'forLoop':
+            return {
+                kind: 'forLoop',
+                sourceLocation: ast.sourceLocation,
+                var: ast.var,
+                list: recurse(ast.list),
+                body: ast.body.map(recurse) as Ast.Statement[],
             };
         case 'equality':
             const equalityType = typeOfExpression({ ...ctx, w: ast.lhs });
