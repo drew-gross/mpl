@@ -1,5 +1,5 @@
 import debug from './util/debug';
-import { parseProgram as parseTacProgram } from './threeAddressCode/parser';
+import { parseProgram as parseTacProgram } from './threeAddressCode/Program';
 import {
     mallocWithSbrk,
     printWithPrintRuntimeFunction,
