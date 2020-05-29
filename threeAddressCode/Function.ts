@@ -1,4 +1,4 @@
-import { Register } from './Register';
+import { Register, toString as registerToString } from './Register';
 import { toString as statementToString, Statement } from './Statement';
 import join from '../util/join';
 import debug from '../util/debug';
@@ -14,10 +14,7 @@ export const toString = ({ name, instructions, arguments: args }: Function): str
     if (!args) debug('no args');
     return join(
         [
-            `(function) ${name}(${join(
-                args.map(arg => arg.toString()),
-                ', '
-            )}):`,
+            `(function) ${name}(${join(args.map(registerToString), ', ')}):`,
             ...instructions.map(statementToString),
         ],
         '\n'

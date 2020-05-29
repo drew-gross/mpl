@@ -20,7 +20,7 @@ export const stackUsageToString = <TargetRegister>(
         ...((usage.savedExtraRegisters as unknown) as string[]),
         ...((usage.savedUsedRegisters as unknown) as string[]),
         ...usage.spills.map(toString),
-    ];
+    ] as string[];
     return `[${join(descriptions, ', ')}]`;
 };
 

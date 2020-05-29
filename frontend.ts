@@ -935,7 +935,7 @@ const typeCheckStatement = (
                 errors: [],
                 newVariables: [],
             };
-        case 'forLoop':
+        case 'forLoop': {
             const expressionType = typeOfExpression({ ...ctx, w: ast.list });
             if (isTypeError(expressionType)) {
                 return { errors: expressionType, newVariables: [] };
@@ -953,7 +953,7 @@ const typeCheckStatement = (
                 };
             }
             const newVariables: VariableDeclaration[] = [];
-            for (let statement of ast.body) {
+            for (const statement of ast.body) {
                 const statementType = typeCheckStatement({ ...ctx, w: statement });
                 if (isTypeError(statementType)) {
                     return { errors: statementType, newVariables: [] };
@@ -961,6 +961,7 @@ const typeCheckStatement = (
                 newVariables.push(...statementType.newVariables);
             }
             return { errors: [], newVariables };
+        }
         default:
             throw never(ast, 'typeCheckStatement');
     }
@@ -1683,12 +1684,12 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
         case 'forLoop': {
             const a = ast as any;
             const body = extractFunctionBody(a.children[2]);
-            const list = astFromParseResult(a.children[1].children[2]);
-            if (list == 'WrongShapeAst') return list;
+            const lst = astFromParseResult(a.children[1].children[2]);
+            if (lst == 'WrongShapeAst') return lst;
             const result: Ast.UninferredForLoop = {
                 kind: 'forLoop',
                 var: a.children[1].children[0].value,
-                list: list as Ast.UninferredExpression,
+                list: lst as Ast.UninferredExpression,
                 body: body,
                 sourceLocation: a.sourceLocation,
             };

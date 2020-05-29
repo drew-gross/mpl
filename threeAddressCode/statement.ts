@@ -1,4 +1,4 @@
-import { Register } from './Register';
+import { Register, toString as s } from './Register';
 import { filter, FilterPredicate } from '../util/list/filter';
 import join from '../util/join';
 import debug from '../util/debug';
@@ -61,96 +61,98 @@ export type Statement = { why: string } & (
     | { kind: 'return'; register: Register }
 );
 
+const sOrV = (data: Register | number) => {
+    if (typeof data == 'number') {
+        return data.toString();
+    } else {
+        return s(data);
+    }
+};
+
 const toStringWithoutComment = (tas: Statement): string => {
     switch (tas.kind) {
         case 'empty':
             return '';
         case 'syscall': {
-            const args = tas.arguments.map(arg => arg.toString()).join(' ');
+            const args = tas.arguments.map(sOrV).join(' ');
             if (tas.destination) {
-                return `${tas.destination} = syscall ${tas.name} ${args}`;
+                return `${s(tas.destination)} = syscall ${tas.name} ${args}`;
             } else {
                 return `syscall ${tas.name} ${args}`;
             }
         }
         case 'move':
-            return `${tas.to} = ${tas.from}`;
+            return `${s(tas.to)} = ${s(tas.from)}`;
         case 'loadImmediate':
-            return `${tas.destination} = ${tas.value}`;
+            return `${s(tas.destination)} = ${tas.value}`;
         case 'addImmediate':
-            return `${tas.register} += ${tas.amount}`;
+            return `${s(tas.register)} += ${tas.amount}`;
         case 'subtract':
-            return `${tas.destination} = ${tas.lhs} - ${tas.rhs}`;
+            return `${s(tas.destination)} = ${s(tas.lhs)} - ${s(tas.rhs)}`;
         case 'add':
-            return `${tas.destination} = ${tas.lhs} + ${tas.rhs}`;
+            return `${s(tas.destination)} = ${s(tas.lhs)} + ${s(tas.rhs)}`;
         case 'multiply':
-            return `${tas.destination} = ${tas.lhs} * ${tas.rhs}`;
+            return `${s(tas.destination)} = ${s(tas.lhs)} * ${s(tas.rhs)}`;
         case 'increment':
-            return `${tas.register}++`;
+            return `${s(tas.register)}++`;
         case 'label':
         case 'functionLabel':
             return `${tas.name}:`;
         case 'goto':
             return `goto ${tas.label}`;
         case 'gotoIfEqual':
-            return `goto ${tas.label} if ${tas.lhs} == ${tas.rhs}`;
+            return `goto ${tas.label} if ${s(tas.lhs)} == ${s(tas.rhs)}`;
         case 'gotoIfNotEqual':
             if (typeof tas.rhs == 'number') {
-                return `goto ${tas.label} if ${tas.lhs} != ${tas.rhs}`;
+                return `goto ${tas.label} if ${s(tas.lhs)} != ${tas.rhs}`;
             }
-            return `goto ${tas.label} if ${tas.lhs} != ${tas.rhs}`;
+            return `goto ${tas.label} if ${s(tas.lhs)} != ${s(tas.rhs)}`;
         case 'gotoIfZero':
-            return `goto ${tas.label} if ${tas.register} == 0`;
+            return `goto ${tas.label} if ${s(tas.register)} == 0`;
         case 'gotoIfGreater':
-            return `goto ${tas.label} if ${tas.lhs} > ${tas.rhs}`;
+            return `goto ${tas.label} if ${s(tas.lhs)} > ${s(tas.rhs)}`;
         case 'storeGlobal':
-            return `*${tas.to} = ${tas.from}`;
+            return `*${tas.to} = ${s(tas.from)}`;
         case 'loadGlobal':
-            return `${tas.to} = ${tas.from}`;
+            return `${s(tas.to)} = ${tas.from}`;
         case 'loadSymbolAddress':
-            return `${tas.to} = &${tas.symbolName}`;
+            return `${s(tas.to)} = &${tas.symbolName}`;
         case 'storeMemory':
-            return `*(${tas.address} + ${tas.offset}) = ${tas.from}`;
+            return `*(${s(tas.address)} + ${tas.offset}) = ${s(tas.from)}`;
         case 'storeMemoryByte':
-            return `*${tas.address} = ${tas.contents}`;
+            return `*${s(tas.address)} = ${s(tas.contents)}`;
         case 'storeZeroToMemory':
-            return `*(${tas.address} + ${tas.offset}) = 0`;
+            return `*(${s(tas.address)} + ${tas.offset}) = 0`;
         case 'loadMemory':
-            return `${tas.to} = *(${tas.from} + ${tas.offset})`;
+            return `${s(tas.to)} = *(${s(tas.from)} + ${tas.offset})`;
         case 'loadMemoryByte':
-            return `${tas.to} = *${tas.address}`;
+            return `${s(tas.to)} = *${s(tas.address)}`;
         case 'callByRegister': {
             if (!tas.arguments) throw debug('bad argumnets');
-            const args = join(
-                tas.arguments.map(arg => arg.toString()),
-                ', '
-            );
+            const args = join(tas.arguments.map(sOrV), ', ');
             if (tas.destination) {
-                return `${tas.destination} = ${tas.function}(${args})`;
+                return `${s(tas.destination)} = ${s(tas.function)}(${args})`;
             } else {
-                return `${tas.function}(${args})`;
+                return `${s(tas.function)}(${args})`;
             }
         }
         case 'callByName': {
             if (!tas.arguments) throw debug('bad argumnets');
-            const args = join(
-                tas.arguments.map(arg => arg.toString()),
-                ', '
-            );
+            const args = join(tas.arguments.map(sOrV), ', ');
             if (tas.destination) {
-                return `${tas.destination} = ${tas.function}(${args})`;
+                return `${s(tas.destination)} = ${tas.function}(${args})`;
             } else {
                 return `${tas.function}(${args})`;
             }
         }
         case 'return':
-            return `return ${tas.register};`;
+            return `return ${s(tas.register)};`;
         case 'alloca':
-            return `${tas.register} = alloca(${tas.bytes})`;
+            return `${s(tas.register)} = alloca(${tas.bytes})`;
         case 'spill':
-            return `spill:${tas.register}`;
+            return `spill:${s(tas.register)}`;
         case 'unspill':
-            return `unspill:${tas.register}`;
+            return `unspill:${s(tas.register)}`;
     }
 };
 

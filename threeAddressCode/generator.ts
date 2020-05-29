@@ -22,7 +22,7 @@ import {
     stringLiteralName,
     freeGlobalsInstructions,
 } from '../backend-utils';
-import { Register } from './Register';
+import { Register, toString as s } from './Register';
 import {
     FrontendOutput,
     Function as ApiFunction,
@@ -71,15 +71,19 @@ const assignGlobal = (
         case 'Function':
         case 'Integer':
             return compileExpression<Statement>([], ([]) =>
-                ins(`*${lhsInfo.newName} = ${rhsRegister}; Put ${lhsType.type.kind} into global`)
+                ins(
+                    `*${lhsInfo.newName} = ${s(rhsRegister)}; Put ${
+                        lhsType.type.kind
+                    } into global`
+                )
             );
         case 'String':
             return compileExpression<Statement>([], ([]) =>
                 ins(`
-                    r:len = length(${rhsRegister}); Get string length
+                    r:len = length(${s(rhsRegister)}); Get string length
                     r:len++; Add one for null terminator
                     r:buffer = my_malloc(r:len); Allocate that much space
-                    string_copy(${rhsRegister}, r:buffer); Copy string into allocated space
+                    string_copy(${s(rhsRegister)}, r:buffer); Copy string into allocated space
                     *${lhsInfo.newName} = r:buffer; Store into global
                 `)
             );
@@ -90,12 +94,12 @@ const assignGlobal = (
                 const offset = i * targetInfo.bytesInWord;
                 const memberTemporary = makeTemporary('member');
                 return ins(`
-                    ${memberTemporary} = *(${rhsRegister} + ${offset}); load ${m.name}
-                    *(${lhsAddress} + ${offset}) = ${memberTemporary}; store ${m.name}
+                    ${s(memberTemporary)} = *(${s(rhsRegister)} + ${offset}); load ${m.name}
+                    *(${s(lhsAddress)} + ${offset}) = ${s(memberTemporary)}; store ${m.name}
                 `);
             });
             return compileExpression<Statement>([], ([]) => [
-                ...ins(`${lhsAddress} = &${lhsInfo.newName}; Get address of global`),
+                ...ins(`${s(lhsAddress)} = &${lhsInfo.newName}; Get address of global`),
                 ...flatten(copyMembers),
             ]);
         case 'List':
@@ -108,20 +112,22 @@ const assignGlobal = (
             const bytesInWord = targetInfo.bytesInWord;
             return compileExpression<Statement>([], ([]) => [
                 ...ins(`
-                    ${remainingCount} = *(${rhsRegister} + 0); Get length of list
-                    ${sourceAddress} = ${rhsRegister}; Local copy of source data pointer
-                    ${itemSize} = ${bytesInWord}; For multiplying
-                    ${remainingCount} = ${remainingCount} * ${itemSize}; Count = count * size
-                    ${remainingCount} += ${bytesInWord}; Add place to store length of list
-                    ${targetAddress} = my_malloc(${remainingCount}); Malloc
-                    *${lhsInfo.newName} = ${targetAddress}; Store to global
+                    ${s(remainingCount)} = *(${s(rhsRegister)} + 0); Get length of list
+                    ${s(sourceAddress)} = ${s(rhsRegister)}; Local copy of source data pointer
+                    ${s(itemSize)} = ${bytesInWord}; For multiplying
+                    ${s(remainingCount)} = ${s(remainingCount)} * ${s(
+                    itemSize
+                )}; Count = count * size
+                    ${s(remainingCount)} += ${bytesInWord}; Add place to store length of list
+                    ${s(targetAddress)} = my_malloc(${s(remainingCount)}); Malloc
+                    *${lhsInfo.newName} = ${s(targetAddress)}; Store to global
                 ${copyLoop}:; Copy loop
-                    ${temp} = *(${sourceAddress} + 0); Copy a byte
-                    *(${targetAddress} + 0) = ${temp}; Finish copy
-                    ${remainingCount} += ${-bytesInWord}; Bump pointers
-                    ${sourceAddress} += ${bytesInWord}; Bump pointers
-                    ${targetAddress} += ${bytesInWord}; Bump pointers
-                    goto ${copyLoop} if ${remainingCount} != 0; Not done
+                    ${s(temp)} = *(${s(sourceAddress)} + 0); Copy a byte
+                    *(${s(targetAddress)} + 0) = ${s(temp)}; Finish copy
+                    ${s(remainingCount)} += ${-bytesInWord}; Bump pointers
+                    ${s(sourceAddress)} += ${bytesInWord}; Bump pointers
+                    ${s(targetAddress)} += ${bytesInWord}; Bump pointers
+                    goto ${copyLoop} if ${s(remainingCount)} != 0; Not done
                 `),
             ]);
         default:
@@ -146,18 +152,18 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
     switch (ast.kind) {
         case 'number':
             return compileExpression<Statement>([], ([]) =>
-                ins(`${destination} = ${ast.value}; Load number literal`)
+                ins(`${s(destination)} = ${ast.value}; Load number literal`)
             );
         case 'booleanLiteral':
             return compileExpression<Statement>([], ([]) =>
-                ins(`${destination} = ${ast.value ? 1 : 0}; Load boolean literal`)
+                ins(`${s(destination)} = ${ast.value ? 1 : 0}; Load boolean literal`)
             );
         case 'stringLiteral': {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
             if (!stringLiteralData) throw debug('todo');
             return compileExpression<Statement>([], ([]) =>
                 ins(
-                    `${destination} = &${stringLiteralName(
+                    `${s(destination)} = &${stringLiteralName(
                         stringLiteralData
                     )}; Load string literal address`
                 )
@@ -165,7 +171,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
         }
         case 'functionLiteral':
             return compileExpression<Statement>([], ([]) =>
-                ins(`${destination} = &${ast.deanonymizedName}; Load function into register`)
+                ins(`${s(destination)} = &${ast.deanonymizedName}; Load function into register`)
             );
         case 'returnStatement':
             const result = makeTemporary('result');
@@ -173,7 +179,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const cleanupAndReturn = {
                 prepare: [],
                 execute: [],
-                cleanup: ins(`return ${result}; Return previous expression`),
+                cleanup: ins(`return ${s(result)}; Return previous expression`),
             };
             return compileExpression<Statement>(
                 [cleanupAndReturn, subExpression],
@@ -189,7 +195,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 ([storeLeft, storeRight]) => [
                     ...storeLeft,
                     ...storeRight,
-                    ...ins(`${destination} = ${lhs} - ${rhs}; Evaluate subtraction`),
+                    ...ins(`${s(destination)} = ${s(lhs)} - ${s(rhs)}; Evaluate subtraction`),
                 ]
             );
         }
@@ -203,7 +209,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 ([storeLeft, storeRight]) => [
                     ...storeLeft,
                     ...storeRight,
-                    ...ins(`${destination} = ${lhs} + ${rhs}; Evaluate addition`),
+                    ...ins(`${s(destination)} = ${s(lhs)} + ${s(rhs)}; Evaluate addition`),
                 ]
             );
         }
@@ -240,6 +246,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const list = makeTemporary('list');
             const loopLabel = makeLabel('loop');
             const computeList = recurse({ ast: ast.list, destination: list });
+            // TODO use this
             const body = ast.body.map(statement => recurse({ ast: statement }));
             // TODO this is super wrong, need to retrieve the index, and compute the max, etc.
             return compileExpression<Statement>([computeList], ([makeList, ...statements]) => [
@@ -496,28 +503,38 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const makeLhs = recurse({ ast: ast.lhs, destination: lhs });
             const makeRhs = recurse({ ast: ast.rhs, destination: rhs });
             const reqs: CompiledExpression<Statement> = {
-                prepare: ins(`${allocated} = 0; Will set to true if we need to clean up`),
+                prepare: ins(`${s(allocated)} = 0; Will set to true if we need to clean up`),
                 execute: [],
                 cleanup: ins(`
-                    goto ${doneFree} if ${allocated} == 0; If we never allocated, we should never free
-                    my_free(${destination}); Free destination of concat (TODO: are we sure we aren't using it?)
+                    goto ${doneFree} if ${s(
+                    allocated
+                )} == 0; If we never allocated, we should never free
+                    my_free(${s(
+                        destination
+                    )}); Free destination of concat (TODO: are we sure we aren't using it?)
                 ${doneFree}:; Done free
                 `),
             };
             return compileExpression<Statement>([makeLhs, makeRhs, reqs], ([e1, e2, _]) => [
                 ...ins(
-                    `${combinedLength} = 1; Combined length. Start with 1 for null terminator.`
+                    `${s(
+                        combinedLength
+                    )} = 1; Combined length. Start with 1 for null terminator.`
                 ),
                 ...e1,
                 ...e2,
                 ...ins(`
-                        r:lhsLength = length(${lhs}); Compute lhs length
-                        ${combinedLength} = ${combinedLength} + r:lhsLength; Accumulate it
-                        r:rhsLength = length(${rhs}); Compute rhs length
-                        ${combinedLength} = ${combinedLength} + r:rhsLength; Accumulate it
-                        ${destination} = my_malloc(${combinedLength}); Allocate space for new string
-                        ${allocated} = 1; Remind ourselves to decallocate
-                        string_concatenate(${lhs}, ${rhs}, ${destination}); Concatenate and put in new space
+                        r:lhsLength = length(${s(lhs)}); Compute lhs length
+                        ${s(combinedLength)} = ${s(combinedLength)} + r:lhsLength; Accumulate it
+                        r:rhsLength = length(${s(rhs)}); Compute rhs length
+                        ${s(combinedLength)} = ${s(combinedLength)} + r:rhsLength; Accumulate it
+                        ${s(destination)} = my_malloc(${s(
+                    combinedLength
+                )}); Allocate space for new string
+                        ${s(allocated)} = 1; Remind ourselves to decallocate
+                        string_concatenate(${s(lhs)}, ${s(rhs)}, ${s(
+                    destination
+                )}); Concatenate and put in new space
                     `),
             ]);
         }
@@ -639,10 +656,10 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const prepAndCleanup: CompiledExpression<Statement> = {
                 prepare: ins(`
                     ; ${bytesInWord}b for length, ${ast.items.length} ${itemSize}b items
-                    ${dataPointer} = my_malloc(${byteCount}); allocate
-                    ${listLength} = ${ast.items.length}; save size
-                    *(${dataPointer} + 0) = ${listLength}; save list length
-                    ${destination} = ${dataPointer}; save memory for pointer
+                    ${s(dataPointer)} = my_malloc(${byteCount}); allocate
+                    ${s(listLength)} = ${ast.items.length}; save size
+                    *(${s(dataPointer)} + 0) = ${s(listLength)}; save list length
+                    ${s(destination)} = ${s(dataPointer)}; save memory for pointer
                 `),
                 execute: [],
                 cleanup: [
@@ -691,12 +708,18 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     ...makeIndex,
                     ...makeAccess,
                     ...ins(`
-                        ${listLength} = *(${accessed} + 0); get list length
-                        goto ${outOfRange} if ${itemIndex} > ${listLength}; check OOB
-                        ${itemSize} = ${bytesInWord}; TODO: should be type size
-                        ${itemAddress} = ${itemIndex} * ${itemSize}; account for item size
-                        ${itemAddress} = ${itemAddress} + ${accessed}; offset from list base
-                        ${destination} = *(${itemAddress} + ${bytesInWord}); add word to adjust for length
+                        ${s(listLength)} = *(${s(accessed)} + 0); get list length
+                        goto ${outOfRange} if ${s(itemIndex)} > ${s(listLength)}; check OOB
+                        ${s(itemSize)} = ${bytesInWord}; TODO:) should be type size
+                        ${s(itemAddress)} = ${s(itemIndex)} * ${s(
+                        itemSize
+                    )}; account for item size
+                        ${s(itemAddress)} = ${s(itemAddress)} + ${s(
+                        accessed
+                    )}; offset from list base
+                        ${s(destination)} = *(${s(
+                        itemAddress
+                    )} + ${bytesInWord}); add word to adjust for length
                     ${outOfRange}:; TODO: exit on out of range
                     `),
                 ]

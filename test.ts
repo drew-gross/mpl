@@ -2,10 +2,14 @@ import uniqueCmp from './util/list/uniqueCmp';
 import uniqueBy from './util/list/uniqueBy';
 import { testPrograms, testModules } from './test-cases';
 import { TestModule, TestProgram, Test, mplTest, tacTest, moduleTest } from './test-case';
-import { parseProgram as parseTacProgram, parseInstructions } from './threeAddressCode/parser';
+import {
+    parseProgram as parseTacProgram,
+    parseInstructions,
+    parseFunctionOrDie,
+} from './threeAddressCode/parser';
 import annontateSource from './annotateSource';
 import { equal as typesAreEqual, builtinTypes, Type } from './types';
-import { Function } from './threeAddressCode/Function';
+import { Function, toString as functionToString } from './threeAddressCode/Function';
 import { Register } from './threeAddressCode/Register';
 import { Statement } from './threeAddressCode/statement';
 import * as threeAddressCodeRuntime from './threeAddressCode/runtime';
@@ -1132,14 +1136,15 @@ test('computeBlockLiveness basic test', t => {
             r:v = r:r;
         `) as Statement[],
     };
-    const liveness = computeBlockLiveness(block, []).map(l => l.toList().sort());
-    const expected = [
-        [new Register('l'), new Register('l2'), new Register('r')],
-        [new Register('l'), new Register('l2'), new Register('d')],
-        [new Register('r'), new Register('l')],
-        [new Register('r')],
-        [],
-    ].map(e => e.sort());
+    const liveness = computeBlockLiveness(block, []).map(l =>
+        l
+            .toList()
+            .map(x => x.name)
+            .sort()
+    );
+    const expected = [['l', 'l2', 'r'], ['l', 'l2', 'd'], ['r', 'l'], ['r'], []].map(e =>
+        e.sort()
+    );
     t.deepEqual(liveness, expected);
 });
 
@@ -1163,10 +1168,16 @@ test('computeBlockLiveness read and write in one', t => {
         ],
     };
     const liveness = computeBlockLiveness(block, []);
-    const expected = [[new Register('r'), new Register('d')], [new Register('r')], []];
+    const expected = [['r', 'd'], ['r'], []];
     t.deepEqual(liveness.length, expected.length);
     expected.forEach((e, i) => {
-        t.deepEqual(e.sort(), liveness[i].toList().sort());
+        t.deepEqual(
+            e.sort(),
+            liveness[i]
+                .toList()
+                .map(x => x.name)
+                .sort()
+        );
     });
 });
 
@@ -2104,6 +2115,84 @@ test("Control flow instructions don't get removed for having no writes", t => {
     const assigned = assignRegisters(f, [{ name: 'r1' }, { name: 'r2' }, { name: 'r3' }]);
     t.assert('one' in assigned.assignment.registerMap);
     t.assert('two' in assigned.assignment.registerMap);
+});
+
+test('functionToString', t => {
+    const f: Function = {
+        name: 'main',
+        instructions: [
+            {
+                kind: 'callByName',
+                function: 'my_malloc',
+                arguments: [28],
+                destination: {
+                    name: 'dataPointer_3',
+                },
+                why: 'allocate',
+            },
+        ],
+        liveAtExit: [],
+        arguments: [],
+    };
+    t.deepEqual(
+        functionToString(f),
+        `(function) main():
+    r:dataPointer_3 = my_malloc(28); allocate`
+    );
+});
+
+test('Register Assignment Regression', t => {
+    const tacString = `(function) main():
+    ; 4b for length, 3 8b items
+    r:dataPointer_3 = my_malloc(28); allocate
+    r:listLength_4 = 3; save size
+    *(r:dataPointer_3 + 0) = r:listLength_4; save list length
+    r:assignment_rhs_2 = r:dataPointer_3; save memory for pointer
+    r:item_0_5 = 1; Load number litera
+    *(r:dataPointer_3 + 4) = r:item_0_5; Store this item in the list
+    r:item_1_6 = 2; Load number litera
+    *(r:dataPointer_3 + 8) = r:item_1_6; Store this item in the list
+    r:item_2_7 = 3; Load number litera
+    *(r:dataPointer_3 + 12) = r:item_2_7; Store this item in the list
+    r:remainingCount_8 = *(r:assignment_rhs_2 + 0); Get length of list
+    r:sourceAddress_11 = r:assignment_rhs_2; Local copy of source data pointer
+    r:itemSize_10 = 4; For multiplying
+    r:remainingCount_8 = r:remainingCount_8 * r:itemSize_10; Count = count * size
+    r:remainingCount_8 += 4; Add place to store length of list
+    r:targetAddress_9 = my_malloc(r:remainingCount_8); Malloc
+    *numbers_1 = r:targetAddress_9; Store to global
+copyLoop_1:; Copy loop
+    r:temp_12 = *(r:sourceAddress_11 + 0); Copy a byte
+    *(r:targetAddress_9 + 0) = r:temp_12; Finish copy
+    r:remainingCount_8 += -4; Bump pointers
+    r:sourceAddress_11 += 4; Bump pointers
+    r:targetAddress_9 += 4; Bump pointers
+    goto copyLoop_1 if r:remainingCount_8 != 0; Not done
+    my_free(r:dataPointer_3); free temporary list
+    r:assignment_rhs_13 = 0; Load number litera
+    *sum_2 = r:assignment_rhs_13; Put Integer into globa
+    r:list_16 = sum_2; Load sum from global into register
+loop_2:; loop
+    r:index_14++; i++
+    goto loop_2 if r:index_14 != r:max_15; not done
+    r:result_20 = sum_2; Load sum from global into register
+    return r:result_20;; Return previous expression`;
+    const f: Function = parseFunctionOrDie(tacString);
+    // TODO: Figure out why this n needs to be added
+    t.deepEqual(functionToString(f) + 'n', tacString);
+    const assigned = assignRegisters(f, [
+        '$t1',
+        '$t2',
+        '$t3',
+        '$t4',
+        '$t5',
+        '$t6',
+        '$t7',
+        '$t8',
+        '$t9',
+    ]);
+    console.log(assigned);
+    debugger;
 });
 
 test('Range', t => {

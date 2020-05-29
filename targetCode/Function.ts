@@ -128,6 +128,7 @@ export const toTarget = <TargetRegister>({
         targetInfo
     );
 
+    debugger;
     const { assignment, newFunction: functionWithAssignment } = assignRegisters(
         functonWithArgsFromStack,
         targetInfo.registers.generalPurpose

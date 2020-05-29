@@ -1,7 +1,6 @@
 import { Token as LToken } from './lex';
 import last from '../util/list/last';
 import debug from '../util/debug';
-import never from '../util/never';
 import { Graph } from 'graphlib';
 import SourceLocation from './sourceLocation';
 import { TokenSpec, lex, LexError } from './lex';
