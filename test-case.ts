@@ -4,7 +4,7 @@ import { toString as typeErrorToString } from './TypeError';
 import writeTempFile from './util/writeTempFile';
 import join from './util/join';
 import { stripSourceLocation } from './parser-lib/parse';
-import { parseFunction } from './threeAddressCode/parser';
+import { parseFunction } from './threeAddressCode/Function';
 import { backends } from './backend-utils';
 import produceProgramInfo from './produceProgramInfo';
 import { mplLoader } from './mpl-loader';

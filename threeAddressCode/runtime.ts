@@ -1,6 +1,7 @@
 import { errors } from '../runtime-strings';
 import { Function } from './Function';
-import { parseFunctionOrDie, parseInstructionsOrDie as ins } from './parser';
+import { parseInstructionsOrDie as ins } from './parser';
+import { parseFunctionOrDie } from './Function';
 import { Register } from './Register';
 
 export type RuntimeFunctionGenerator = (bytesInWord: number) => Function;

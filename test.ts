@@ -2,11 +2,8 @@ import uniqueCmp from './util/list/uniqueCmp';
 import uniqueBy from './util/list/uniqueBy';
 import { testPrograms, testModules } from './test-cases';
 import { TestModule, TestProgram, Test, mplTest, tacTest, moduleTest } from './test-case';
-import {
-    parseProgram as parseTacProgram,
-    parseInstructions,
-    parseFunctionOrDie,
-} from './threeAddressCode/parser';
+import { parseProgram as parseTacProgram, parseInstructions } from './threeAddressCode/parser';
+import { parseFunctionOrDie } from './threeAddressCode/Function';
 import annontateSource from './annotateSource';
 import { equal as typesAreEqual, builtinTypes, Type } from './types';
 import { Function, toString as functionToString } from './threeAddressCode/Function';

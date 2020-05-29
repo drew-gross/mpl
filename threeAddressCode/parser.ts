@@ -52,7 +52,7 @@ type TacToken =
     | 'unspillInstruction'
     | 'statementSeparator';
 
-const tokenSpecs: TokenSpec<TacToken>[] = [
+export const tokenSpecs: TokenSpec<TacToken>[] = [
     { token: '\\(global\\)', type: 'global', toString: x => x },
     { token: '\\(function\\)', type: 'function', toString: x => x },
     {
@@ -160,7 +160,7 @@ const spillInstruction = tacTerminal('spillInstruction');
 const unspillInstruction = tacTerminal('unspillInstruction');
 const greaterThan = tacTerminal('greaterThan');
 
-const grammar: Grammar<TacAstNode, TacToken> = {
+export const grammar: Grammar<TacAstNode, TacToken> = {
     program: Sequence('program', [Many('global'), Many('function')]),
     global: Sequence('global', [global_, identifier, colon, identifier, number]),
     function: Sequence('function', [
@@ -641,7 +641,8 @@ const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Statement =
     }
 };
 
-const functionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Function => {
+// TODO: put this in ./Function?
+export const functionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Function => {
     if (isSeparatedListNode(ast) || isListNode(ast)) {
         throw debug('todo');
     }
@@ -755,33 +756,13 @@ const tacFromParseResult = (ast: Ast<TacAstNode, TacToken>): Program | ParseErro
     return { globals, functions, main, stringLiterals: [] };
 };
 
-type ParseError = string | ParseFailureInfo<TacToken>;
+// TODO: This probably belongs in parser-lib
+export type ParseError = string | ParseFailureInfo<TacToken>;
 
 export const parseProgram = (input: string): Program | LexError | ParseError[] => {
     const result = parseString(tokenSpecs, grammar, 'program', input);
     if ('errors' in result) return result.errors;
     return tacFromParseResult(result);
-};
-
-export const parseFunction = (input: string): Function | LexError | ParseError[] => {
-    const result = parseString(tokenSpecs, grammar, 'function', input);
-    if ('errors' in result) return result.errors;
-    return functionFromParseResult(result);
-};
-
-export const parseFunctionOrDie = (tacString: string): Function => {
-    const parsed = parseFunction(tacString);
-    if ('kind' in parsed) {
-        debugger;
-        parseFunction(tacString);
-        throw debug('error in parseFunctionOrDie');
-    }
-    if (Array.isArray(parsed)) {
-        debugger;
-        parseFunction(tacString);
-        throw debug('error in parseFunctionOrDie');
-    }
-    return parsed;
 };
 
 export const parseInstructions = (input: string): Statement[] | LexError | ParseError[] => {
