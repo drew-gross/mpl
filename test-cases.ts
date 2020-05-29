@@ -755,7 +755,7 @@ return isFive(5) ? 1 : 0;`,
             {
                 kind: 'assignUndeclaredIdentifer',
                 destinationName: 'b',
-                sourceLocation: { line: 4, column: 7 },
+                sourceLocation: { line: 4, column: 17 },
             },
             {
                 kind: 'unknownTypeForIdentifier',
