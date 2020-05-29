@@ -70,6 +70,8 @@ export const toString = (e: TypeError): string => {
             return 'Missing final return statement';
         case 'objectDoesNotHaveMember':
             return `Object of type ${typeToString(e.lhsType)} does not have member ${e.member}`;
+        case 'unknownTypeForIdentifier':
+            return `Could not find a type for ${e.identifierName}`;
         default:
             throw debug(`need string for error: ${e.kind}`);
     }

@@ -742,6 +742,29 @@ return isFive(5) ? 1 : 0;`,
         ],
     },
     {
+        name: 'Reassign to Undeclared Identifier Inside Function',
+        source: `
+            foo := () => {
+                a := 1;
+                b = 2;
+                return a + b;
+            };
+            return foo();
+        `,
+        typeErrors: [
+            {
+                kind: 'assignUndeclaredIdentifer',
+                destinationName: 'b',
+                sourceLocation: { line: 4, column: 7 },
+            },
+            {
+                kind: 'unknownTypeForIdentifier',
+                identifierName: 'b',
+                sourceLocation: { line: 5, column: 28 },
+            },
+        ],
+    },
+    {
         name: 'For',
         source: `
             numbers := [1, 2, 3];

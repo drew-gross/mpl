@@ -1065,23 +1065,6 @@ return length(hello);`,
     exitCode: 11,
 });
 
-test('reassign to undeclared identifier inside function', mplTest, {
-    source: `
-foo := () => {
-    a := 1;
-    b = 2;
-    return a + b;
-};
-return foo();`,
-    typeErrors: [
-        {
-            kind: 'assignUndeclaredIdentifer',
-            destinationName: 'b',
-            sourceLocation: { line: 4, column: 5 },
-        },
-    ],
-});
-
 test('reassigning wrong type inside function', mplTest, {
     source: `
 foo := () => {
