@@ -1690,7 +1690,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 kind: 'forLoop',
                 var: a.children[1].children[0].value,
                 list: lst as Ast.UninferredExpression,
-                body: body,
+                body,
                 sourceLocation: a.sourceLocation,
             };
             return result;

@@ -37,12 +37,13 @@ type ProgramInfo = {
 type RequestedInfo = {
     includeExecutionResult: boolean;
     skipBackends?: string[];
+    skipExecutors?: string[];
 };
 
 export default async (
     source: string,
     stdin: string,
-    { includeExecutionResult, skipBackends }: RequestedInfo
+    { includeExecutionResult, skipBackends, skipExecutors }: RequestedInfo
 ): Promise<
     ProgramInfo | LexError | { parseErrors: ParseError[] } | { typeErrors: TypeError[] }
 > => {
@@ -141,12 +142,14 @@ export default async (
                     executionResults: [{ error: 'Not requested', executorName: 'N/A' }],
                 };
             } else {
-                const executionResults = await Promise.all(
-                    executors.map(
-                        async ({ execute }) =>
-                            await execute(compilationResult.binaryFile.path, stdinFile.path)
-                    )
-                );
+                const executionResults = (await Promise.all(
+                    executors.map(async ({ execute }) => {
+                        if ((skipExecutors || []).includes(name)) {
+                            return;
+                        }
+                        return await execute(compilationResult.binaryFile.path, stdinFile.path);
+                    })
+                )).filter(Boolean) as any;
                 return { name, compilationResult, executionResults };
             }
         })

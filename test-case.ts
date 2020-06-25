@@ -118,6 +118,7 @@ export const mplTest = async (
     // Make sure it parses
     const programInfo = await produceProgramInfo(source, stdin, {
         includeExecutionResult: true,
+        skipExecutors: ['mars'], // mars bogs down my computer :( TODO make it not do that
     });
     if ('kind' in programInfo) {
         error('failed to produce info');
@@ -286,6 +287,10 @@ export const tacTest = async (
 
                 await Promise.all(
                     backend.executors.map(async ({ name, execute }) => {
+                        // mars bogs down my computer when running all tests. TODO: try to make it work.
+                        if (name == 'mars') {
+                            return;
+                        }
                         const result = await execute(
                             compilationResult.binaryFile.path,
                             stdinFile.path

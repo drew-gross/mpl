@@ -2,8 +2,6 @@ import debug from '../util/debug';
 import last from '../util/list/last';
 import { TokenSpec, LexError } from '../parser-lib/lex';
 import { Register } from './Register';
-import { Function } from './Function';
-import { Program } from './Program';
 import { Statement } from './statement';
 import {
     Grammar,
