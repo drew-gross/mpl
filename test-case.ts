@@ -118,6 +118,7 @@ export const mplTest = async (
     // Make sure it parses
     const programInfo = await produceProgramInfo(source, stdin, {
         includeExecutionResult: true,
+        buildBinaries: true,
         skipExecutors: ['mars'], // mars bogs down my computer :( TODO make it not do that
     });
     if ('kind' in programInfo) {

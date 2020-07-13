@@ -36,6 +36,7 @@ type ProgramInfo = {
 
 type RequestedInfo = {
     includeExecutionResult: boolean;
+    buildBinaries: boolean;
     skipBackends?: string[];
     skipExecutors?: string[];
 };
@@ -43,7 +44,7 @@ type RequestedInfo = {
 export default async (
     source: string,
     stdin: string,
-    { includeExecutionResult, skipBackends, skipExecutors }: RequestedInfo
+    { includeExecutionResult, skipBackends, skipExecutors, buildBinaries }: RequestedInfo
 ): Promise<
     ProgramInfo | LexError | { parseErrors: ParseError[] } | { typeErrors: TypeError[] }
 > => {
@@ -94,7 +95,7 @@ export default async (
         structure += `---> ${astToString(statement)}\n`;
     });
 
-    // Make three address code with random alignment, bytesInWord, and malloc/print impl. TODO: This is jank. Maybe three addree code should abstract over platform stuff?
+    // Make three address code with random alignment, bytesInWord, and malloc/print impl. TODO: This is jank. Maybe three address code should abstract over platform stuff?
     const threeAddressCode = makeTargetProgram({
         backendInputs: frontendOutput,
         targetInfo: {
@@ -114,46 +115,54 @@ export default async (
 
     const stdinFile = await writeTempFile(stdin, 'stdin', 'txt');
 
-    const backendResults: BackendResult[] = await Promise.all(
-        backends.map(async ({ name, compile: compileFn, finishCompilation, executors }) => {
-            const targetSource = await compileFn(frontendOutput);
-            if ('error' in targetSource) {
-                return {
-                    name,
-                    compilationResult: targetSource,
-                    executionResults: [{ error: 'Compilation Failed', executorName: 'N/A' }],
-                };
-            }
-            const compilationResult = await finishCompilation(
-                targetSource.target,
-                targetSource.tac
-            );
-            // TODO: better way to report these specific errors. Probably muck with the type of ExecutionResult.
-            if ('error' in compilationResult) {
-                return {
-                    name,
-                    compilationResult,
-                    executionResults: [{ error: 'Compilation failed', executorName: 'N/A' }],
-                };
-            } else if (!includeExecutionResult || (skipBackends || []).includes(name)) {
-                return {
-                    name,
-                    compilationResult,
-                    executionResults: [{ error: 'Not requested', executorName: 'N/A' }],
-                };
-            } else {
-                const executionResults = (await Promise.all(
-                    executors.map(async ({ execute }) => {
-                        if ((skipExecutors || []).includes(name)) {
-                            return;
-                        }
-                        return await execute(compilationResult.binaryFile.path, stdinFile.path);
-                    })
-                )).filter(Boolean) as any;
-                return { name, compilationResult, executionResults };
-            }
-        })
-    );
+    let backendResults: BackendResult[] = [];
+    if (buildBinaries) {
+        backendResults = await Promise.all(
+            backends.map(async ({ name, compile: compileFn, finishCompilation, executors }) => {
+                const targetSource = await compileFn(frontendOutput);
+                if ('error' in targetSource) {
+                    return {
+                        name,
+                        compilationResult: targetSource,
+                        executionResults: [{ error: 'Compilation Failed', executorName: 'N/A' }],
+                    };
+                }
+                const compilationResult = await finishCompilation(
+                    targetSource.target,
+                    targetSource.tac
+                );
+                // TODO: better way to report these specific errors. Probably muck with the type of ExecutionResult.
+                if ('error' in compilationResult) {
+                    return {
+                        name,
+                        compilationResult,
+                        executionResults: [{ error: 'Compilation failed', executorName: 'N/A' }],
+                    };
+                } else if (!includeExecutionResult || (skipBackends || []).includes(name)) {
+                    return {
+                        name,
+                        compilationResult,
+                        executionResults: [{ error: 'Not requested', executorName: 'N/A' }],
+                    };
+                } else {
+                    const executionResults = (
+                        await Promise.all(
+                            executors.map(async ({ execute }) => {
+                                if ((skipExecutors || []).includes(name)) {
+                                    return;
+                                }
+                                return await execute(
+                                    compilationResult.binaryFile.path,
+                                    stdinFile.path
+                                );
+                            })
+                        )
+                    ).filter(Boolean) as any;
+                    return { name, compilationResult, executionResults };
+                }
+            })
+        );
+    }
 
     return {
         tokens,

@@ -17,6 +17,7 @@ import * as deepEqual from 'deep-equal';
 (async () => {
     commander
         .arguments('<test_name>')
+        .allowUnknownOption()
         .option('--no-execute', "Only produce binaries, don't execute them")
         .option(
             '--skip-backends [backends]',
@@ -27,8 +28,8 @@ import * as deepEqual from 'deep-equal';
             },
             []
         )
+        //.option('--build-binaries', 'Whether to build binaries, or three address code only')
         .parse(process.argv);
-
     const testCase = testPrograms.find(c => c.name == commander.args[0]);
 
     if (!testCase) {
@@ -41,6 +42,8 @@ import * as deepEqual from 'deep-equal';
         testCase.stdin ? testCase.stdin : '',
         {
             includeExecutionResult: commander.execute,
+            // Commander is dumb
+            buildBinaries: !process.argv.includes('--no-build-binaries'),
             skipBackends: commander.skipBackends,
         }
     );
