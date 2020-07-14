@@ -2020,6 +2020,49 @@ test('Assign registers for syscall-only functions', t => {
     });
 });
 
+test.only('Assign Registers for For', t => {
+    const f = parseFunctionOrDie(`
+        (function) main():
+            ; 4b for length, 3 8b items
+            r:dataPointer_3 = my_malloc(28); allocate
+            r:listLength_4 = 3; save size
+            *(r:dataPointer_3 + 0) = r:listLength_4; save list length
+            r:assignment_rhs_2 = r:dataPointer_3; save memory for pointer
+            r:item_0_5 = 1; Load number litera
+            *(r:dataPointer_3 + 4) = r:item_0_5; Store this item in the list
+            r:item_1_6 = 2; Load number litera
+            *(r:dataPointer_3 + 8) = r:item_1_6; Store this item in the list
+            r:item_2_7 = 3; Load number litera
+            *(r:dataPointer_3 + 12) = r:item_2_7; Store this item in the list
+            r:remainingCount_8 = *(r:assignment_rhs_2 + 0); Get length of list
+            r:sourceAddress_11 = r:assignment_rhs_2; Local copy of source data pointer
+            r:itemSize_10 = 4; For multiplying
+            r:remainingCount_8 = r:remainingCount_8 * r:itemSize_10; Count = count * size
+            r:remainingCount_8 += 4; Add place to store length of list
+            r:targetAddress_9 = my_malloc(r:remainingCount_8); Malloc
+            *numbers_1 = r:targetAddress_9; Store to global
+        copyLoop_1:; Copy loop
+            r:temp_12 = *(r:sourceAddress_11 + 0); Copy a byte
+            *(r:targetAddress_9 + 0) = r:temp_12; Finish copy
+            r:remainingCount_8 += -4; Bump pointers
+            r:sourceAddress_11 += 4; Bump pointers
+            r:targetAddress_9 += 4; Bump pointers
+            goto copyLoop_1 if r:remainingCount_8 != 0; Not done
+            my_free(r:dataPointer_3); free temporary list
+            r:assignment_rhs_13 = 0; Load number litera
+            *sum_2 = r:assignment_rhs_13; Put Integer into globa
+            r:list_16 = sum_2; Load sum from global into register
+        loop_2:; loop
+            r:index_14++; i++
+            goto loop_2 if r:index_14 != r:max_15; not done
+            r:result_20 = sum_2; Load sum from global into register
+            return r:result_20;; Return previous expressio
+    `);
+    const assigned = assignRegisters(f, ['r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8']);
+    console.log(assigned.assignment.registerMap);
+    t.assert('list_16' in assigned.assignment.registerMap);
+});
+
 // Regression test from before we used hasSideEffects and used shitty heuristics for determining whether an instruction had side effects.
 test("Functions calls with side effects don't get removed for being dead", t => {
     const f: Function = {
@@ -2123,60 +2166,6 @@ test('functionToString', t => {
         `(function) main():
     r:dataPointer_3 = my_malloc(28); allocate`
     );
-});
-
-test('Register Assignment Regression', t => {
-    const tacString = `(function) main():
-    ; 4b for length, 3 8b items
-    r:dataPointer_3 = my_malloc(28); allocate
-    r:listLength_4 = 3; save size
-    *(r:dataPointer_3 + 0) = r:listLength_4; save list length
-    r:assignment_rhs_2 = r:dataPointer_3; save memory for pointer
-    r:item_0_5 = 1; Load number litera
-    *(r:dataPointer_3 + 4) = r:item_0_5; Store this item in the list
-    r:item_1_6 = 2; Load number litera
-    *(r:dataPointer_3 + 8) = r:item_1_6; Store this item in the list
-    r:item_2_7 = 3; Load number litera
-    *(r:dataPointer_3 + 12) = r:item_2_7; Store this item in the list
-    r:remainingCount_8 = *(r:assignment_rhs_2 + 0); Get length of list
-    r:sourceAddress_11 = r:assignment_rhs_2; Local copy of source data pointer
-    r:itemSize_10 = 4; For multiplying
-    r:remainingCount_8 = r:remainingCount_8 * r:itemSize_10; Count = count * size
-    r:remainingCount_8 += 4; Add place to store length of list
-    r:targetAddress_9 = my_malloc(r:remainingCount_8); Malloc
-    *numbers_1 = r:targetAddress_9; Store to global
-copyLoop_1:; Copy loop
-    r:temp_12 = *(r:sourceAddress_11 + 0); Copy a byte
-    *(r:targetAddress_9 + 0) = r:temp_12; Finish copy
-    r:remainingCount_8 += -4; Bump pointers
-    r:sourceAddress_11 += 4; Bump pointers
-    r:targetAddress_9 += 4; Bump pointers
-    goto copyLoop_1 if r:remainingCount_8 != 0; Not done
-    my_free(r:dataPointer_3); free temporary list
-    r:assignment_rhs_13 = 0; Load number litera
-    *sum_2 = r:assignment_rhs_13; Put Integer into globa
-    r:list_16 = sum_2; Load sum from global into register
-loop_2:; loop
-    r:index_14++; i++
-    goto loop_2 if r:index_14 != r:max_15; not done
-    r:result_20 = sum_2; Load sum from global into register
-    return r:result_20;; Return previous expression`;
-    const f: Function = parseFunctionOrDie(tacString);
-    // TODO: Figure out why this n needs to be added
-    t.deepEqual(functionToString(f) + 'n', tacString);
-    const assigned = assignRegisters(f, [
-        '$t1',
-        '$t2',
-        '$t3',
-        '$t4',
-        '$t5',
-        '$t6',
-        '$t7',
-        '$t8',
-        '$t9',
-    ]);
-    console.log(assigned);
-    debugger;
 });
 
 test('Range', t => {
