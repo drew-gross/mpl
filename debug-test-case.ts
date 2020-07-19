@@ -15,6 +15,10 @@ import annotateSource from './annotateSource';
 import * as deepEqual from 'deep-equal';
 
 (async () => {
+            // Commander is dumb
+    let args = process.argv;
+    const buildBinaries = !args.includes('--no-build-binaries');
+    args = args.filter(arg => arg != '--no-build-binaries');
     commander
         .arguments('<test_name>')
         .allowUnknownOption()
@@ -28,8 +32,7 @@ import * as deepEqual from 'deep-equal';
             },
             []
         )
-        //.option('--build-binaries', 'Whether to build binaries, or three address code only')
-        .parse(process.argv);
+        .parse(args);
     const testCase = testPrograms.find(c => c.name == commander.args[0]);
 
     if (!testCase) {
@@ -42,8 +45,7 @@ import * as deepEqual from 'deep-equal';
         testCase.stdin ? testCase.stdin : '',
         {
             includeExecutionResult: commander.execute,
-            // Commander is dumb
-            buildBinaries: !process.argv.includes('--no-build-binaries'),
+            buildBinaries,
             skipBackends: commander.skipBackends,
         }
     );

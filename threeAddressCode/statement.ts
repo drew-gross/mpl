@@ -260,7 +260,7 @@ export const writes = (tas: Statement): Register[] => {
             return [tas.destination];
         case 'addImmediate':
         case 'increment':
-            return [];
+            return [tas.register];
         case 'subtract':
         case 'add':
         case 'multiply':

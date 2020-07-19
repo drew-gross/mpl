@@ -41,6 +41,7 @@ import {
     BasicBlock,
     computeBlockLiveness,
     tafLiveness,
+    removeDeadStores,
 } from './controlFlowGraph';
 import { orderedSet, operatorCompare } from './util/ordered-set';
 import { set } from './util/set';
@@ -2020,7 +2021,7 @@ test('Assign registers for syscall-only functions', t => {
     });
 });
 
-test.only('Assign Registers for For', t => {
+test.only('Assign Registers for Old For', t => {
     const f = parseFunctionOrDie(`
         (function) main():
             ; 4b for length, 3 8b items
@@ -2058,9 +2059,21 @@ test.only('Assign Registers for For', t => {
             r:result_20 = sum_2; Load sum from global into register
             return r:result_20;; Return previous expressio
     `);
-    const assigned = assignRegisters(f, ['r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8']);
-    console.log(assigned.assignment.registerMap);
-    t.assert('list_16' in assigned.assignment.registerMap);
+    assignRegisters(f, ['r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8']);
+    t.pass();
+});
+
+// Regression test from when I broke this
+test('add/increment are writes', t => {
+    const f = parseFunctionOrDie(`
+        (function) main():
+            r:count = 0; Init
+            r:count += 4; Add
+            r:count++; Increment
+            return r:count;
+    `);
+    const rds = removeDeadStores(f, tafLiveness(f));
+    t.assert(rds === undefined); // undefined means nothing was removed
 });
 
 // Regression test from before we used hasSideEffects and used shitty heuristics for determining whether an instruction had side effects.

@@ -588,7 +588,10 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
 };
 
 // Returns a new function if anything changed
-const removeDeadStores = (taf: Function, liveness: Set<Register>[]): Function | undefined => {
+export const removeDeadStores = (
+    taf: Function,
+    liveness: Set<Register>[]
+): Function | undefined => {
     const newFunction: Function = { ...taf, instructions: [] };
     let anythingChanged: boolean = false;
     if (taf.instructions.length + 1 != liveness.length)
