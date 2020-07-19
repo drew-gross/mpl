@@ -15,7 +15,7 @@ import annotateSource from './annotateSource';
 import * as deepEqual from 'deep-equal';
 
 (async () => {
-            // Commander is dumb
+    // Commander is dumb
     let args = process.argv;
     const buildBinaries = !args.includes('--no-build-binaries');
     args = args.filter(arg => arg != '--no-build-binaries');
