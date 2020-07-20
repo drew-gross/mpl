@@ -136,6 +136,14 @@ const assignGlobal = (
     }
 };
 
+const get = (obj, key) => {
+    const result = obj[key];
+    if (result === undefined) {
+        debug('Failed get');
+    }
+    return result;
+};
+
 export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression<Statement> => {
     const {
         ast,
@@ -246,22 +254,25 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const list = makeTemporary('list');
             const loopLabel = makeLabel('loop');
             const computeList = recurse({ ast: ast.list, destination: list });
-            // TODO use this
+            debugger;
             const body = ast.body.map(statement => recurse({ ast: statement }));
-            // TODO this is super wrong, need to retrieve the index, and compute the max, etc.
-            return compileExpression<Statement>([computeList], ([makeList, ...statements]) => [
-                ...makeList,
-                { kind: 'label', name: loopLabel, why: 'loop' },
-                ...flatten(statements),
-                { kind: 'increment', register: index, why: 'i++' },
-                {
-                    kind: 'gotoIfNotEqual',
-                    lhs: index,
-                    rhs: max,
-                    label: loopLabel,
-                    why: 'not done',
-                },
-            ]);
+            return compileExpression<Statement>(
+                [computeList, ...body],
+                ([makeList, ...statements]) => [
+                    ...makeList,
+                    { kind: 'loadImmediate', destination: index, value: 0, why: 'i = 0' },
+                    { kind: 'label', name: loopLabel, why: 'loop' },
+                    ...flatten(statements),
+                    { kind: 'increment', register: index, why: 'i++' },
+                    {
+                        kind: 'gotoIfNotEqual',
+                        lhs: index,
+                        rhs: max,
+                        label: loopLabel,
+                        why: 'not done',
+                    },
+                ]
+            );
         }
         case 'callExpression': {
             const argumentRegisters: Register[] = [];
@@ -316,7 +327,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 callInstructions = [
                     {
                         kind: 'callByRegister',
-                        function: variablesInScope[functionName],
+                        function: get(variablesInScope, functionName),
                         arguments: argumentRegisters,
                         destination,
                         why: `Call by register ${functionName}`,
@@ -407,7 +418,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     ([rhs, assign]) => [...rhs, ...assign]
                 );
             } else if (lhs in variablesInScope) {
-                return recurse({ ast: ast.expression, destination: variablesInScope[lhs] });
+                return recurse({ ast: ast.expression, destination: get(variablesInScope, lhs) });
             } else {
                 throw debug('Declared variable was neither global nor local');
             }
@@ -488,7 +499,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         throw debug('todo');
                 }
             } else if (lhs in variablesInScope) {
-                return recurse({ ast: ast.expression, destination: variablesInScope[lhs] });
+                return recurse({ ast: ast.expression, destination: get(variablesInScope, lhs) });
             } else {
                 throw debug('Reassigned variable was neither global nor local');
             }
@@ -563,7 +574,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     ]);
                 }
             }
-            const identifierRegister = variablesInScope[identifierName];
+            const identifierRegister = get(variablesInScope, identifierName);
             return compileExpression<Statement>([], ([]) => [
                 {
                     kind: 'move',
