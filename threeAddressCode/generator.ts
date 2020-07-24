@@ -252,10 +252,17 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const index = makeTemporary('index');
             const max = makeTemporary('max');
             const list = makeTemporary('list');
+            const item = makeTemporary('item');
             const loopLabel = makeLabel('loop');
             const computeList = recurse({ ast: ast.list, destination: list });
+            const varName: string = (ast.var as unknown) as string;
             debugger;
-            const body = ast.body.map(statement => recurse({ ast: statement }));
+            const body = ast.body.map(statement =>
+                recurse({
+                    variablesInScope: { ...variablesInScope, [varName]: item },
+                    ast: statement,
+                })
+            );
             return compileExpression<Statement>(
                 [computeList, ...body],
                 ([makeList, ...statements]) => [
