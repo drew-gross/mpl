@@ -253,10 +253,11 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const max = makeTemporary('max');
             const list = makeTemporary('list');
             const item = makeTemporary('item');
+            const itemSize = makeTemporary('itemSize');
+            const itemAddress = makeTemporary('itemAddress');
             const loopLabel = makeLabel('loop');
             const computeList = recurse({ ast: ast.list, destination: list });
             const varName: string = (ast.var as unknown) as string;
-            debugger;
             const body = ast.body.map(statement =>
                 recurse({
                     variablesInScope: { ...variablesInScope, [varName]: item },
@@ -267,8 +268,15 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 [computeList, ...body],
                 ([makeList, ...statements]) => [
                     ...makeList,
-                    { kind: 'loadImmediate', destination: index, value: 0, why: 'i = 0' },
-                    { kind: 'label', name: loopLabel, why: 'loop' },
+                    ...ins(`
+                        ${s(index)} = 0; i = 0
+                    ${loopLabel}:;
+                        ${s(itemSize)} = ${targetInfo.bytesInWord}; TODO: should be type size
+                        ; Get this iteration's item
+                        ${s(itemAddress)} = ${s(index)} * ${s(itemSize)};
+                        ${s(itemAddress)} = ${s(list)} + ${s(itemAddress)};
+                        ${s(item)} = *(${s(itemAddress)} + ${targetInfo.bytesInWord});
+                    `),
                     ...flatten(statements),
                     { kind: 'increment', register: index, why: 'i++' },
                     {
