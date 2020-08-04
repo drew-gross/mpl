@@ -100,6 +100,18 @@ const astToJS = ({
             return ['[', join(items, ', '), ']'];
         case 'indexAccess':
             return ['(', ...recurse(ast.accessed), ')[(', ...recurse(ast.index), ')]'];
+        case 'forLoop':
+            const body: string[] = flatten(ast.body.map(recurse));
+            const listItems: string[] = recurse(ast.list);
+            return [
+                `const items = `,
+                ...listItems,
+                `;`,
+                `for (const i = 0; i < items.length; i++) {`,
+                `const item = items[i];`,
+                ...body,
+                `}`,
+            ];
         default:
             throw debug(`${(ast as any).kind} unhanlded in toJS`);
     }

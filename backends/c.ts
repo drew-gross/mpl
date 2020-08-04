@@ -1,3 +1,4 @@
+import flatten from '../util/list/flatten';
 import { Program } from '../threeAddressCode/Program';
 import * as Ast from '../ast';
 import { file as tmpFile } from 'tmp-promise';
@@ -328,6 +329,8 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             };
             return compileExpression([buildLiteral, assignItems], _ => [listLiteral]);
         }
+        case 'forLoop':
+            return compileExpression([], ([]) => ['TODO: not implemented']);
         default:
             throw debug(`${(ast as any).kind} unhandled in astToC`);
     }
