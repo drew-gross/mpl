@@ -86,7 +86,7 @@ const compileAssignment = (
 
 const registerTransferLangaugeToC = (rtlCode: string[], joiner: string): string => {
     rtlCode.forEach(line => {
-        if (typeof line !== 'string') debug('todo');
+        if (typeof line !== 'string') debug('bad type');
     });
     return join(rtlCode as string[], joiner);
 };
@@ -308,7 +308,8 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             const allocate = [
                 `struct list ${listLiteral};`,
                 `${listLiteral}.size = ${ast.items.length};`,
-                `${listLiteral}.data = my_malloc(${ast.items.length} * sizeof(uint8_t));`, // TODO actual type size
+                // TODO actual type size
+                `${listLiteral}.data = my_malloc(${ast.items.length} * sizeof(uint8_t));`,
             ];
             const buildItems = ast.items.map(recurse);
             const assignItems = compileExpression(buildItems, buildItemCodes =>
@@ -330,7 +331,14 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             return compileExpression([buildLiteral, assignItems], _ => [listLiteral]);
         }
         case 'forLoop':
-            return compileExpression([], ([]) => ['TODO: not implemented']);
+            const body = ast.body.map(recurse);
+            const listItems = recurse(ast.list);
+            return compileExpression(body, b => [
+                `for (uint64_t i = 0; i < ${(ast as any).list.value}.size; i++) {`,
+                `uint8_t ${ast.var} = ((uint8_t*)${(ast as any).list.value}.data)[i];`,
+                ...flatten(b),
+                `}`,
+            ]);
         default:
             throw debug(`${(ast as any).kind} unhandled in astToC`);
     }
@@ -672,14 +680,13 @@ const finishCompilation = async (
     }
     const sourceFile = await writeTempFile(cSource, 'program', 'c');
     const binaryFile = await tmpFile();
+    const command = `clang -Wall -Werror -Wno-error=unused-variable ${sourceFile.path} -o ${binaryFile.path}`;
     try {
         // TODO: Don't emit unused variables
-        await exec(
-            `clang -Wall -Werror -Wno-error=unused-variable ${sourceFile.path} -o ${binaryFile.path}`
-        );
+        await exec(command);
     } catch (e) {
         return {
-            error: `Failed to compile generated C code:\n${e.stderr}`,
+            error: `Failed to compile generated C code:\n${e.stderr}\nCommand:\n${command}`,
             intermediateFile: sourceFile,
         };
     }

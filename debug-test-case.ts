@@ -25,7 +25,7 @@ import * as deepEqual from 'deep-equal';
         .option('--no-execute', "Only produce binaries, don't execute them")
         .option(
             '--skip-backends [backends]',
-            "Don't run x64",
+            "Don't run [backend]",
             (val, memo) => {
                 (memo as any).push(val);
                 return memo;
