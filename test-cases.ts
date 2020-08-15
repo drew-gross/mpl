@@ -769,11 +769,43 @@ return isFive(5) ? 1 : 0;`,
         source: `
             numbers := [1, 2, 3];
             sum := 0;
-            for (number : sum) {
+            for (number : numbers) {
                 sum = sum + number;
             };
             return sum;
         `,
         exitCode: 6,
+    },
+    {
+        name: 'For With Non-Iterable',
+        source: `
+            sum := 0;
+            for (number : sum) {
+                sum = sum + number;
+            };
+            return sum;
+        `,
+        typeErrors: [
+            {
+                kind: 'nonListInFor',
+                lhsName: 'myFunc',
+                lhsType: {
+                    type: {
+                        kind: 'Function',
+                        arguments: [builtinTypes.Integer],
+                        returnType: builtinTypes.Boolean,
+                    },
+                },
+                rhsType: {
+                    type: {
+                        kind: 'Function',
+                        arguments: [builtinTypes.String],
+                        permissions: [],
+                        returnType: builtinTypes.Integer,
+                    },
+                },
+                sourceLocation: { line: 2, column: 13 },
+            },
+        ] as any,
     },
 ];

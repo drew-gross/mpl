@@ -940,7 +940,7 @@ const typeCheckStatement = (
             if (isTypeError(expressionType)) {
                 return { errors: expressionType, newVariables: [] };
             }
-            if (expressionType.type.type.kind == 'List') {
+            if (expressionType.type.type.kind != 'List') {
                 return {
                     errors: [
                         {

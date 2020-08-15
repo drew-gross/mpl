@@ -107,8 +107,8 @@ const astToJS = ({
                 `const items = `,
                 ...listItems,
                 `;`,
-                `for (const i = 0; i < items.length; i++) {`,
-                `const item = items[i];`,
+                `for (let i = 0; i < items.length; i++) {`,
+                `const ${ast.var} = items[i];`,
                 ...body,
                 `}`,
             ];

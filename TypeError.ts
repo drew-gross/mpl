@@ -72,6 +72,8 @@ export const toString = (e: TypeError): string => {
             return `Object of type ${typeToString(e.lhsType)} does not have member ${e.member}`;
         case 'unknownTypeForIdentifier':
             return `Could not find a type for ${e.identifierName}`;
+        case 'nonListInFor':
+            return `Iterating type ${typeToString(e.found)} which is not iterable`;
         default:
             throw debug(`need string for error: ${e.kind}`);
     }
