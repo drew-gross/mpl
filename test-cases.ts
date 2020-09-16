@@ -788,23 +788,8 @@ return isFive(5) ? 1 : 0;`,
         typeErrors: [
             {
                 kind: 'nonListInFor',
-                lhsName: 'myFunc',
-                lhsType: {
-                    type: {
-                        kind: 'Function',
-                        arguments: [builtinTypes.Integer],
-                        returnType: builtinTypes.Boolean,
-                    },
-                },
-                rhsType: {
-                    type: {
-                        kind: 'Function',
-                        arguments: [builtinTypes.String],
-                        permissions: [],
-                        returnType: builtinTypes.Integer,
-                    },
-                },
-                sourceLocation: { line: 2, column: 13 },
+                found: { type: { kind: 'Integer' } },
+                sourceLocation: { line: 3, column: 13 },
             },
         ] as any,
     },

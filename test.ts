@@ -2021,7 +2021,7 @@ test('Assign registers for syscall-only functions', t => {
     });
 });
 
-test.only('Assign Registers for Old For', t => {
+test('Assign Registers for Old For', t => {
     const f = parseFunctionOrDie(`
         (function) main():
             ; 4b for length, 3 8b items
