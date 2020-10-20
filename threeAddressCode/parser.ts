@@ -18,6 +18,7 @@ import {
     isListNode,
     isSeparatedListNode,
 } from '../parser-lib/parse';
+import renderParseError from '../parser-lib/renderParseError';
 
 export type TacToken =
     | 'global'
@@ -664,9 +665,13 @@ export const parseInstructionsOrDie = (tacString: string): Statement[] => {
         const parsed0: any = parsed[0];
         if ('kind' in parsed0) {
             return parsed as Statement[];
+        } else {
+            throw debug(
+                `error in parseInstructionsOrDie:\n${renderParseError(parsed0, tacString)}`
+            );
         }
     }
     debugger;
     parseInstructions(tacString);
-    throw debug('error in parseInstructionsOrDie: not array');
+    throw debug(`error in parseInstructionsOrDie: not array`);
 };

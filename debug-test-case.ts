@@ -13,6 +13,7 @@ import * as chalk from 'chalk';
 import * as commander from 'commander';
 import annotateSource from './annotateSource';
 import * as deepEqual from 'deep-equal';
+import renderParseError from './parser-lib/renderParseError';
 
 (async () => {
     // Commander is dumb
@@ -60,15 +61,7 @@ import * as deepEqual from 'deep-equal';
         console.log(`Failed to parse:`);
         let errorString: string = '';
         programInfo.parseErrors.forEach(e => {
-            // The semicolor the user forgot probably should go one space after where
-            // the error is.
-            const adjustedSourceLocation = e.sourceLocation;
-            adjustedSourceLocation.column += 1;
-            errorString += annotateSource(
-                testCase.source,
-                adjustedSourceLocation,
-                parseErrorToString(e)
-            );
+            errorString += renderParseError(e, testCase.source);
         });
         console.log(errorString);
         return;

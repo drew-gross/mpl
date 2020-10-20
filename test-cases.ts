@@ -170,6 +170,15 @@ return a;
         exitCode: 9,
     },
     {
+        name: 'Multiply by Literal',
+        source: `
+            a: Integer = 2;
+            b := a * 4;
+            return b;
+        `,
+        exitCode: 8,
+    },
+    {
         name: 'Function Returns Boolean',
         source: `
 isFive: Function<Integer, Boolean> = a: Integer => a == 5;

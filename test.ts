@@ -4,7 +4,7 @@ import { testPrograms, testModules } from './test-cases';
 import { TestModule, TestProgram, Test, mplTest, tacTest, moduleTest } from './test-case';
 import { parseInstructions } from './threeAddressCode/parser';
 import { parseProgram as parseTacProgram } from './threeAddressCode/Program';
-import annontateSource from './annotateSource';
+import annotateSource from './annotateSource';
 import { equal as typesAreEqual, builtinTypes, Type } from './types';
 import {
     Function,
@@ -1490,7 +1490,7 @@ test.failing('no structural typing', t => {
 test('pretty-parse-error', t => {
     // nominal test
     t.deepEqual(
-        annontateSource(
+        annotateSource(
             'contextBefore\n123456789\ncontextAfter',
             { line: 2, column: 4 },
             'message'
@@ -1500,38 +1500,38 @@ test('pretty-parse-error', t => {
 
     // line out of range too low
     t.deepEqual(
-        annontateSource('contextBefore\n123456789\ncontextAfter', { line: 0, column: 4 }, ''),
+        annotateSource('contextBefore\n123456789\ncontextAfter', { line: 0, column: 4 }, ''),
         null
     );
     // line out of range too high
     t.deepEqual(
-        annontateSource('contextBefore\n123456789\ncontextAfter', { line: 4, column: 4 }, ''),
+        annotateSource('contextBefore\n123456789\ncontextAfter', { line: 4, column: 4 }, ''),
         null
     );
     // column out of range too low
     t.deepEqual(
-        annontateSource('contextBefore\n123456789\ncontextAfter', { line: 2, column: 0 }, ''),
+        annotateSource('contextBefore\n123456789\ncontextAfter', { line: 2, column: 0 }, ''),
         null
     );
 
     // annotation is past line length
     t.deepEqual(
-        annontateSource('contextBefore\n123456789\ncontextAfter', { line: 2, column: 10 }, ''),
+        annotateSource('contextBefore\n123456789\ncontextAfter', { line: 2, column: 10 }, ''),
         'contextBefore\n123456789\n         ^ \ncontextAfter'
     );
 
     // First line
     t.deepEqual(
-        annontateSource('123456789\ncontextAfter', { line: 1, column: 1 }, 'm'),
+        annotateSource('123456789\ncontextAfter', { line: 1, column: 1 }, 'm'),
         '123456789\n^ m\ncontextAfter'
     );
     // Last line
     t.deepEqual(
-        annontateSource('contextBefore\n123456789', { line: 2, column: 9 }, 'm2'),
+        annotateSource('contextBefore\n123456789', { line: 2, column: 9 }, 'm2'),
         'contextBefore\n123456789\n        ^ m2'
     );
     // Only line
-    t.deepEqual(annontateSource('123456789', { line: 1, column: 1 }, 'm3'), '123456789\n^ m3');
+    t.deepEqual(annotateSource('123456789', { line: 1, column: 1 }, 'm3'), '123456789\n^ m3');
 });
 
 test('tac parser regression', t => {
@@ -1552,7 +1552,7 @@ test('tac parser regression', t => {
                         return e;
                     } else {
                         return (
-                            annontateSource(
+                            annotateSource(
                                 source,
                                 e.sourceLocation,
                                 `found ${e.found}, expected ${e.expected}`

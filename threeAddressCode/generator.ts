@@ -264,6 +264,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const max = makeTemporary('max');
             const loopLabel = makeLabel('loop');
             const itemAddress = makeTemporary('itemAddress');
+            const bytesInWord = makeTemporary('bytesInWord');
             return compileExpression<Statement>(
                 [listItems, ...body],
                 ([makeList, ...statements]) => [
@@ -272,9 +273,10 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         ${s(i)} = 0;
                     ${loopLabel}:;
                         ; Get this iteration's item
-                        ${s(itemAddress)} = ${s(i)} * ${targetInfo.bytesInWord};
+                        ${s(bytesInWord)} = ${targetInfo.bytesInWord};
+                        ${s(itemAddress)} = ${s(i)} * ${s(bytesInWord)};
                         ${s(itemAddress)} = ${s(list)} + ${s(itemAddress)};
-                        ${s(item)} = *(${s(itemAddress)} + ${targetInfo.bytesInWord});
+                        ${s(item)} = *(${s(itemAddress)} + ${s(bytesInWord)});
                     `),
                     ...flatten(statements),
                     { kind: 'increment', register: i, why: 'i++' },
