@@ -249,39 +249,38 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             );
         }
         case 'forLoop': {
-            const index = makeTemporary('index');
-            const max = makeTemporary('max');
-            const list = makeTemporary('list');
-            const item = makeTemporary('item');
-            const itemSize = makeTemporary('itemSize');
-            const itemAddress = makeTemporary('itemAddress');
-            const loopLabel = makeLabel('loop');
-            const computeList = recurse({ ast: ast.list, destination: list });
             const varName: string = (ast.var as unknown) as string;
+            const item = { name: varName };
             const body = ast.body.map(statement =>
                 recurse({
                     variablesInScope: { ...variablesInScope, [varName]: item },
                     ast: statement,
                 })
             );
+            const list = makeTemporary('list');
+            const listItems = recurse({ ast: ast.list, destination: list });
+
+            const i = makeTemporary('i');
+            const max = makeTemporary('max');
+            const loopLabel = makeLabel('loop');
+            const itemAddress = makeTemporary('itemAddress');
             return compileExpression<Statement>(
-                [computeList, ...body],
+                [listItems, ...body],
                 ([makeList, ...statements]) => [
                     ...makeList,
                     ...ins(`
-                        ${s(index)} = 0; i = 0
+                        ${s(i)} = 0;
                     ${loopLabel}:;
-                        ${s(itemSize)} = ${targetInfo.bytesInWord}; TODO: should be type size
                         ; Get this iteration's item
-                        ${s(itemAddress)} = ${s(index)} * ${s(itemSize)};
+                        ${s(itemAddress)} = ${s(i)} * ${targetInfo.bytesInWord};
                         ${s(itemAddress)} = ${s(list)} + ${s(itemAddress)};
                         ${s(item)} = *(${s(itemAddress)} + ${targetInfo.bytesInWord});
                     `),
                     ...flatten(statements),
-                    { kind: 'increment', register: index, why: 'i++' },
+                    { kind: 'increment', register: i, why: 'i++' },
                     {
                         kind: 'gotoIfNotEqual',
-                        lhs: index,
+                        lhs: i,
                         rhs: max,
                         label: loopLabel,
                         why: 'not done',

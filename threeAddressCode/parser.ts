@@ -332,7 +332,7 @@ const isRegister = (data: string): boolean => {
 };
 
 const parseRegister = (data: string): Register => {
-    if (!data.startsWith) debug('no startsWith');
+    if (typeof data !== 'string') debug('non-string passed to parseRegister');
     if (data.startsWith('r:')) {
         return new Register(data.substring(2));
     }
