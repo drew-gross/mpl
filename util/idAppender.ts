@@ -2,7 +2,12 @@ import idMaker from './idMaker';
 
 export default () => {
     const makeId = idMaker();
+    const idMakers = {};
     return (name: string): string => {
-        return `${name}_${makeId()}`;
+        if (name in idMakers) {
+            return `${name}_${idMakers[name]()}`;
+        }
+        idMakers[name] = idMaker();
+        return `${name}_`; // TODO: Remove the underscore and figure out why test fail
     };
 };

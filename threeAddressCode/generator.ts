@@ -276,7 +276,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         ${s(bytesInWord)} = ${targetInfo.bytesInWord};
                         ${s(itemAddress)} = ${s(i)} * ${s(bytesInWord)};
                         ${s(itemAddress)} = ${s(list)} + ${s(itemAddress)};
-                        ${s(item)} = *(${s(itemAddress)} + ${s(bytesInWord)});
+                        ${s(item)} = *(${s(itemAddress)} + ${targetInfo.bytesInWord});
                     `),
                     ...flatten(statements),
                     { kind: 'increment', register: i, why: 'i++' },
