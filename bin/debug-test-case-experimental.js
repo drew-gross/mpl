@@ -128,6 +128,10 @@ exports.toString = (e) => {
             return 'Missing final return statement';
         case 'objectDoesNotHaveMember':
             return `Object of type ${types_1.toString(e.lhsType)} does not have member ${e.member}`;
+        case 'unknownTypeForIdentifier':
+            return `Could not find a type for ${e.identifierName}`;
+        case 'nonListInFor':
+            return `Iterating type ${types_1.toString(e.found)} which is not iterable`;
         default:
             throw debug_1.default(`need string for error: ${e.kind}`);
     }
@@ -184,6 +188,10 @@ exports.astToString = (ast) => {
     switch (ast.kind) {
         case 'returnStatement':
             return `return ${exports.astToString(ast.expression)}`;
+        case 'forLoop':
+            return `for (${ast.var} : ${exports.astToString(ast.list)}) {
+                ${join_1.default(ast.body.map(exports.astToString), '\n')}
+            };`;
         case 'ternary':
             return `${exports.astToString(ast.condition)} ? ${exports.astToString(ast.ifTrue)} : ${exports.astToString(ast.ifFalse)}`;
         case 'equality':
@@ -398,6 +406,7 @@ exports.backends = [mips_1.default, js_1.default, c_1.default, x64_1.default];
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
+const flatten_1 = __webpack_require__(/*! ../util/list/flatten */ "./util/list/flatten.ts");
 const tmp_promise_1 = __webpack_require__(/*! tmp-promise */ "./node_modules/tmp-promise/index.js");
 const types_1 = __webpack_require__(/*! ../types */ "./types.ts");
 const child_process_promise_1 = __webpack_require__(/*! child-process-promise */ "./node_modules/child-process-promise/index.js");
@@ -411,6 +420,11 @@ const idAppender_1 = __webpack_require__(/*! ../util/idAppender */ "./util/idApp
 const writeTempFile_1 = __webpack_require__(/*! ../util/writeTempFile */ "./util/writeTempFile.ts");
 // Beginnings of experiment with tracing code from source to target
 const callFree = (target, reason) => `my_free(${target}); // ${reason}`;
+const mangleProduct = (p) => `_${Buffer.from(JSON.stringify(p))
+    .toString('base64')
+    .replace('/', '_')
+    .replace('+', '_')
+    .replace('=', '_')}`;
 // TODO: This returns a function, which is pretty janky. It looks like this because of the way function
 // pointer declarations work in C: the variable name appears in the middle of the declaration
 const mplTypeToCType = (type) => {
@@ -430,7 +444,7 @@ const mplTypeToCType = (type) => {
             const argumentsString = join_1.default(argumentTypes, ', ');
             return name => `${returnType} (*${name})(${argumentsString})`;
         case 'Product':
-            return name => `struct ${type.type.name} ${name}`;
+            return name => `struct ${mangleProduct(type.type)} ${name}`;
         case 'List':
             return name => `struct list ${name}`;
         default:
@@ -448,7 +462,7 @@ const compileAssignment = (destination, rhs) => {
 const registerTransferLangaugeToC = (rtlCode, joiner) => {
     rtlCode.forEach(line => {
         if (typeof line !== 'string')
-            debug_1.default('todo');
+            debug_1.default('bad type');
     });
     return join_1.default(rtlCode, joiner);
 };
@@ -476,7 +490,7 @@ const astToC = (input) => {
             const product = type.type;
             return backend_utils_1.compileExpression(memberExpressions, expr => [
                 '(struct ',
-                product.name,
+                mangleProduct(product),
                 ')',
                 '{',
                 ...expr.map((e, i) => `.${ast.members[i].name} = ${e},`),
@@ -653,6 +667,7 @@ const astToC = (input) => {
             const allocate = [
                 `struct list ${listLiteral};`,
                 `${listLiteral}.size = ${ast.items.length};`,
+                // TODO actual type size
                 `${listLiteral}.data = my_malloc(${ast.items.length} * sizeof(uint8_t));`,
             ];
             const buildItems = ast.items.map(recurse);
@@ -669,6 +684,14 @@ const astToC = (input) => {
             };
             return backend_utils_1.compileExpression([buildLiteral, assignItems], _ => [listLiteral]);
         }
+        case 'forLoop':
+            const body = ast.body.map(recurse);
+            return backend_utils_1.compileExpression(body, b => [
+                `for (uint64_t i = 0; i < ${ast.list.value}.size; i++) {`,
+                `uint8_t ${ast.var} = ((uint8_t*)${ast.list.value}.data)[i];`,
+                ...flatten_1.default(b),
+                `}`,
+            ]);
         default:
             throw debug_1.default(`${ast.kind} unhandled in astToC`);
     }
@@ -730,7 +753,7 @@ const productTypeMemberToCStructMember = ({ name, type }) => `${mplTypeToCDeclar
 const compile = ({ functions, program, types, globalDeclarations, stringLiterals, }) => {
     const CtypeDeclarations = types
         .filter(t => t.type.type.kind == 'Product')
-        .map(t => `struct ${t.name} {${join_1.default(t.type.type.members.map(productTypeMemberToCStructMember), '\n')}};`);
+        .map(t => `struct ${mangleProduct(t.type.type)} {${join_1.default(t.type.type.members.map(productTypeMemberToCStructMember), '\n')}};`);
     const Cfunctions = functions.map(({ name, parameters, statements, variables, returnType }) => makeCfunctionBody({
         name,
         parameters,
@@ -954,13 +977,14 @@ const finishCompilation = async (cSource, tac) => {
     }
     const sourceFile = await writeTempFile_1.default(cSource, 'program', 'c');
     const binaryFile = await tmp_promise_1.file();
+    const command = `clang -Wall -Werror -Wno-error=unused-variable ${sourceFile.path} -o ${binaryFile.path}`;
     try {
         // TODO: Don't emit unused variables
-        await child_process_promise_1.exec(`clang -Wall -Werror -Wno-error=unused-variable ${sourceFile.path} -o ${binaryFile.path}`);
+        await child_process_promise_1.exec(command);
     }
     catch (e) {
         return {
-            error: `Failed to compile generated C code:\n${e.stderr}`,
+            error: `Failed to compile generated C code:\n${e.stderr}\nCommand:\n${command}`,
             intermediateFile: sourceFile,
         };
     }
@@ -1083,6 +1107,18 @@ const astToJS = ({ ast, exitInsteadOfReturn, builtinFunctions, }) => {
             return ['[', join_1.default(items, ', '), ']'];
         case 'indexAccess':
             return ['(', ...recurse(ast.accessed), ')[(', ...recurse(ast.index), ')]'];
+        case 'forLoop':
+            const body = flatten_1.default(ast.body.map(recurse));
+            const listItems = recurse(ast.list);
+            return [
+                `const items = `,
+                ...listItems,
+                `;`,
+                `for (let i = 0; i < items.length; i++) {`,
+                `const ${ast.var} = items[i];`,
+                ...body,
+                `}`,
+            ];
         default:
             throw debug_1.default(`${ast.kind} unhanlded in toJS`);
     }
@@ -2133,7 +2169,7 @@ exports.spill = (taf, registerToSpill) => {
     return newFunction;
 };
 // Returns a new function if anything changed
-const removeDeadStores = (taf, liveness) => {
+exports.removeDeadStores = (taf, liveness) => {
     const newFunction = Object.assign(Object.assign({}, taf), { instructions: [] });
     let anythingChanged = false;
     if (taf.instructions.length + 1 != liveness.length)
@@ -2163,11 +2199,11 @@ const removeDeadStores = (taf, liveness) => {
 };
 exports.assignRegisters = (taf, colors) => {
     let liveness = exports.tafLiveness(taf);
-    let newFunction = removeDeadStores(taf, liveness);
+    let newFunction = exports.removeDeadStores(taf, liveness);
     while (newFunction) {
         taf = newFunction;
         liveness = exports.tafLiveness(taf);
-        newFunction = removeDeadStores(taf, liveness);
+        newFunction = exports.removeDeadStores(taf, liveness);
     }
     // http://web.cecs.pdx.edu/~mperkows/temp/register-allocation.pdf
     const rig = exports.registerInterferenceGraph(liveness, taf.arguments);
@@ -2272,21 +2308,26 @@ const writeTempFile_1 = __webpack_require__(/*! ./util/writeTempFile */ "./util/
 const inquirer_1 = __webpack_require__(/*! inquirer */ "./node_modules/inquirer/lib/inquirer.js");
 const dot = __webpack_require__(/*! graphlib-dot */ "./node_modules/graphlib-dot/index.js");
 const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
-const parseErrorToString_1 = __webpack_require__(/*! ./parser-lib/parseErrorToString */ "./parser-lib/parseErrorToString.ts");
 const TypeError_1 = __webpack_require__(/*! ./TypeError */ "./TypeError.ts");
 const chalk = __webpack_require__(/*! chalk */ "./node_modules/chalk/source/index.js");
 const commander = __webpack_require__(/*! commander */ "./node_modules/commander/index.js");
 const annotateSource_1 = __webpack_require__(/*! ./annotateSource */ "./annotateSource.ts");
 const deepEqual = __webpack_require__(/*! deep-equal */ "./node_modules/deep-equal/index.js");
+const renderParseError_1 = __webpack_require__(/*! ./parser-lib/renderParseError */ "./parser-lib/renderParseError.ts");
 (async () => {
+    // Commander is dumb
+    let args = process.argv;
+    const buildBinaries = !args.includes('--no-build-binaries');
+    args = args.filter(arg => arg != '--no-build-binaries');
     commander
         .arguments('<test_name>')
+        .allowUnknownOption()
         .option('--no-execute', "Only produce binaries, don't execute them")
-        .option('--skip-backends [backends]', "Don't run x64", (val, memo) => {
+        .option('--skip-backends [backends]', "Don't run [backend]", (val, memo) => {
         memo.push(val);
         return memo;
     }, [])
-        .parse(process.argv);
+        .parse(args);
     const testCase = test_cases_1.testPrograms.find(c => c.name == commander.args[0]);
     if (!testCase) {
         console.log(`Could not find a test case named "${commander.args[0]}"`);
@@ -2294,6 +2335,7 @@ const deepEqual = __webpack_require__(/*! deep-equal */ "./node_modules/deep-equ
     }
     const programInfo = await produceProgramInfo_1.default(testCase.source, testCase.stdin ? testCase.stdin : '', {
         includeExecutionResult: commander.execute,
+        buildBinaries,
         skipBackends: commander.skipBackends,
     });
     // TODO: Unify and improve error printing logic with test-utils and produceProgramInfo
@@ -2305,11 +2347,7 @@ const deepEqual = __webpack_require__(/*! deep-equal */ "./node_modules/deep-equ
         console.log(`Failed to parse:`);
         let errorString = '';
         programInfo.parseErrors.forEach(e => {
-            // The semicolor the user forgot probably should go one space after where
-            // the error is.
-            const adjustedSourceLocation = e.sourceLocation;
-            adjustedSourceLocation.column += 1;
-            errorString += annotateSource_1.default(testCase.source, adjustedSourceLocation, parseErrorToString_1.default(e));
+            errorString += renderParseError_1.default(e, testCase.source);
         });
         console.log(errorString);
         return;
@@ -2422,6 +2460,7 @@ const uniqueBy_1 = __webpack_require__(/*! ./util/list/uniqueBy */ "./util/list/
 const idMaker_1 = __webpack_require__(/*! ./util/idMaker */ "./util/idMaker.ts");
 const last_1 = __webpack_require__(/*! ./util/list/last */ "./util/list/last.ts");
 const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
+const never_1 = __webpack_require__(/*! ./util/never */ "./util/never.ts");
 const lex_1 = __webpack_require__(/*! ./parser-lib/lex */ "./parser-lib/lex.ts");
 exports.lex = lex_1.lex;
 const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
@@ -2518,6 +2557,7 @@ const transformAst = (nodeType, f, ast, recurseOnNew) => {
     }
 };
 const extractVariable = (ctx) => {
+    const kind = ctx.w.kind;
     switch (ctx.w.kind) {
         case 'reassignment':
         case 'declarationAssignment':
@@ -2538,8 +2578,10 @@ const extractVariable = (ctx) => {
         case 'returnStatement':
         case 'typeDeclaration':
             return undefined;
+        case 'forLoop':
+            throw debug_1.default("forLoop has muliple variables, doesn't work here");
         default:
-            throw debug_1.default(`${ctx.w.kind} unhandled in extractVariable`);
+            never_1.default(kind, 'extractVariable');
     }
 };
 const extractVariables = (ctx) => {
@@ -2561,8 +2603,20 @@ const extractVariables = (ctx) => {
                     variables.push(potentialVariable);
                 }
                 break;
+            case 'forLoop':
+                statement.body.forEach(s => {
+                    const vars = extractVariables({
+                        w: [s],
+                        availableVariables: mergeDeclarations(ctx.availableVariables, variables),
+                        availableTypes: ctx.availableTypes,
+                    });
+                    if (vars) {
+                        variables.push(...vars);
+                    }
+                });
+                break;
             default:
-                throw debug_1.default('todo');
+                never_1.default(statement, 'extractVariables');
         }
     });
     return variables;
@@ -2630,11 +2684,13 @@ const walkAst = (ast, nodeKinds, extractItem) => {
             return [...result, ...recurse(ast.accessed), ...recurse(ast.index)];
         case 'memberStyleCall':
             return [...result, ...recurse(ast.lhs), ...flatten_1.default(ast.params.map(recurse))];
+        case 'forLoop':
+            return [...result, ...recurse(ast.list), ...flatten_1.default(ast.body.map(recurse))];
         default:
             throw debug_1.default(`${ast.kind} unhandled in walkAst`);
     }
 };
-const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[1], ast, true);
+const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[0], ast, true);
 exports.removeBracketsFromAst = removeBracketsFromAst;
 const parseMpl = (tokens) => {
     const parseResult = parse_1.parse(grammar_1.grammar, 'program', tokens);
@@ -3029,7 +3085,6 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                 type: {
                     type: {
                         kind: 'Product',
-                        name: ast.typeName,
                         members: ast.members.map(({ name, expression }) => ({
                             name,
                             type: recurse(expression).type,
@@ -3254,8 +3309,35 @@ const typeCheckStatement = (ctx) => {
                 errors: [],
                 newVariables: [],
             };
+        case 'forLoop': {
+            const expressionType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.list }));
+            if (isTypeError(expressionType)) {
+                return { errors: expressionType, newVariables: [] };
+            }
+            if (expressionType.type.type.kind != 'List') {
+                return {
+                    errors: [
+                        {
+                            kind: 'nonListInFor',
+                            found: expressionType.type,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+            const newVariables = [];
+            for (const statement of ast.body) {
+                const statementType = typeCheckStatement(Object.assign(Object.assign({}, ctx), { w: statement }));
+                if (isTypeError(statementType)) {
+                    return { errors: statementType, newVariables: [] };
+                }
+                newVariables.push(...statementType.newVariables);
+            }
+            return { errors: [], newVariables };
+        }
         default:
-            throw debug_1.default(`${ast.kind} unhandled in typeCheckStatement`);
+            throw never_1.default(ast, 'typeCheckStatement');
     }
 };
 exports.typeCheckStatement = typeCheckStatement;
@@ -3298,15 +3380,17 @@ const inferFunction = (ctx) => {
     const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
     const statements = [];
     ctx.w.statements.forEach(statement => {
+        const statementsContext = {
+            w: [statement],
+            availableVariables: variablesFound,
+            availableTypes: ctx.availableTypes,
+        };
         const statementContext = {
             w: statement,
             availableVariables: variablesFound,
             availableTypes: ctx.availableTypes,
         };
-        const maybeNewVariable = extractVariable(statementContext);
-        if (maybeNewVariable) {
-            variablesFound.push(maybeNewVariable);
-        }
+        variablesFound.push(...extractVariables(statementsContext));
         statements.push(infer(statementContext));
     });
     const maybeReturnStatement = last_1.default(ctx.w.statements);
@@ -3340,6 +3424,14 @@ const infer = (ctx) => {
                 kind: 'returnStatement',
                 expression: recurse(ast.expression),
                 sourceLocation: ast.sourceLocation,
+            };
+        case 'forLoop':
+            return {
+                kind: 'forLoop',
+                sourceLocation: ast.sourceLocation,
+                var: ast.var,
+                list: recurse(ast.list),
+                body: ast.body.map(recurse),
             };
         case 'equality':
             const equalityType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.lhs }));
@@ -3513,7 +3605,7 @@ const infer = (ctx) => {
             throw debug_1.default(`${ast.kind} unhandled in infer`);
     }
 };
-const extractFunctionBody = node => {
+const extractFunctionBody = (node) => {
     if (node.type !== 'statement')
         debug_1.default('expected a statement');
     if (node.children.length === 3) {
@@ -3568,15 +3660,23 @@ const parseTypeLiteralComponent = (ast) => {
     };
 };
 const parseType = (ast) => {
-    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
+    if (parse_1.isSeparatedListNode(ast)) {
         throw debug_1.default('todo');
+    }
+    if (parse_1.isListNode(ast)) {
+        return {
+            type: {
+                kind: 'Product',
+                members: ast.items.map(parseTypeLiteralComponent),
+            },
+        };
     }
     switch (ast.type) {
         case 'typeWithArgs': {
             const name = ast.children[0].value;
             if (name != 'Function')
                 throw debug_1.default('Only functions support args right now');
-            const list = ast.children[2];
+            const list = ast.children[1];
             if (!parse_1.isSeparatedListNode(list))
                 throw debug_1.default('todo');
             const typeList = list.items.map(parseType);
@@ -3606,19 +3706,6 @@ const parseType = (ast) => {
                 default:
                     return { namedType: name };
             }
-        }
-        case 'typeLiteral': {
-            const node = ast.children[1];
-            if (!parse_1.isListNode(node)) {
-                throw debug_1.default('todo');
-            }
-            return {
-                type: {
-                    kind: 'Product',
-                    name: ast.type,
-                    members: node.items.map(parseTypeLiteralComponent),
-                },
-            };
         }
         case 'listType': {
             const node = ast.children[0];
@@ -3804,9 +3891,6 @@ const astFromParseResult = (ast) => {
             if ('namedType' in theType) {
                 throw debug_1.default("Shouldn't get here, delcaring types have to actually declare a type");
             }
-            if (theType.type.kind == 'Product') {
-                theType.type.name = name;
-            }
             return {
                 kind: 'typeDeclaration',
                 name,
@@ -3829,7 +3913,7 @@ const astFromParseResult = (ast) => {
             const typeName = typeNameNode.value;
             if (typeof typeName != 'string')
                 return 'WrongShapeAst';
-            const membersNode = ast.children[2];
+            const membersNode = ast.children[1];
             if (!parse_1.isListNode(membersNode)) {
                 throw debug_1.default('todo');
             }
@@ -3850,7 +3934,7 @@ const astFromParseResult = (ast) => {
                 return 'WrongShapeAst';
             }
             const memberName = anyAst.children[2].value;
-            const params = anyAst.children[4].items.map(astFromParseResult);
+            const params = anyAst.children[3].items.map(astFromParseResult);
             if (params == 'WrongShapeAst') {
                 return 'WrongShapeAst';
             }
@@ -3944,13 +4028,7 @@ const astFromParseResult = (ast) => {
             if (!hasType(ast.children[childIndex], 'fatArrow'))
                 debug_1.default('wrong');
             childIndex++;
-            if (!hasType(ast.children[childIndex], 'leftCurlyBrace'))
-                debug_1.default('wrong');
-            childIndex++;
             const body = extractFunctionBody(ast.children[childIndex]);
-            childIndex++;
-            if (!hasType(ast.children[childIndex], 'rightCurlyBrace'))
-                debug_1.default('wrong');
             childIndex++;
             if (childIndex !== ast.children.length)
                 debug_1.default('wrong');
@@ -3961,6 +4039,21 @@ const astFromParseResult = (ast) => {
                 parameters: parameters2,
                 sourceLocation: ast.sourceLocation,
             };
+        }
+        case 'forLoop': {
+            const a = ast;
+            const body = extractFunctionBody(a.children[2]);
+            const lst = astFromParseResult(a.children[1].children[2]);
+            if (lst == 'WrongShapeAst')
+                return lst;
+            const result = {
+                kind: 'forLoop',
+                var: a.children[1].children[0].value,
+                list: lst,
+                body,
+                sourceLocation: a.sourceLocation,
+            };
+            return result;
         }
         case 'booleanLiteral':
             return {
@@ -3975,7 +4068,7 @@ const astFromParseResult = (ast) => {
                 sourceLocation: ast.sourceLocation,
             };
         case 'listLiteral':
-            const items = ast.children[1];
+            const items = ast.children[0];
             if (!parse_1.isSeparatedListNode(items))
                 throw debug_1.default('todo');
             return {
@@ -3986,7 +4079,7 @@ const astFromParseResult = (ast) => {
         case 'indexAccess':
             return {
                 kind: 'indexAccess',
-                index: astFromParseResult(ast.children[2]),
+                index: astFromParseResult(ast.children[1]),
                 accessed: astFromParseResult(ast.children[0]),
                 sourceLocation: ast.sourceLocation,
             };
@@ -4146,6 +4239,7 @@ exports.tokenSpecs = [
     // TODO: Make a "keyword" utility function for the lexer. Also figure out why \b doesn't work here.
     { token: 'return[^A-z]', type: 'return', toString: () => 'return' },
     { token: 'export[^A-z]', type: 'export', toString: () => 'export' },
+    { token: 'for[^A-z]', type: 'for', toString: () => 'for' },
     { token: 'true|false', type: 'booleanLiteral', action: x => x.trim(), toString: x => x },
     { token: '[a-z]\\w*', type: 'identifier', action: x => x, toString: x => x },
     { token: '[A-Z][A-Za-z]*', type: 'typeIdentifier', action: x => x, toString: x => x },
@@ -4173,6 +4267,7 @@ exports.tokenSpecs = [
 const mplTerminal = token => parse_1.Terminal(token);
 const mplOptional = parser => parse_1.Optional(parser);
 const export_ = mplTerminal('export');
+const for_ = mplTerminal('for');
 const plus = mplTerminal('sum');
 const minus = mplTerminal('subtraction');
 const times = mplTerminal('product');
@@ -4199,6 +4294,10 @@ const stringLiteral = mplTerminal('stringLiteral');
 const lessThan = mplTerminal('lessThan');
 const greaterThan = mplTerminal('greaterThan');
 const memberAccess = mplTerminal('memberAccess');
+const rounds = { left: leftBracket, right: rightBracket };
+const curlies = { left: leftCurlyBrace, right: rightCurlyBrace };
+const squares = { left: leftSquareBracket, right: rightSquareBracket };
+const angles = { left: lessThan, right: greaterThan };
 exports.grammar = {
     program: parse_1.Sequence('program', ['functionBody']),
     function: parse_1.OneOf([
@@ -4214,9 +4313,7 @@ exports.grammar = {
             'argList',
             mplOptional(rightBracket),
             fatArrow,
-            leftCurlyBrace,
-            'functionBody',
-            rightCurlyBrace,
+            parse_1.NestedIn(curlies, 'functionBody'),
         ]),
     ]),
     argList: parse_1.SeparatedList(comma, 'arg'),
@@ -4238,19 +4335,20 @@ exports.grammar = {
         parse_1.Sequence('typeDeclaration', [typeIdentifier, colon, assignment, 'type']),
         parse_1.Sequence('reassignment', [identifier, assignment, 'expression']),
         parse_1.Sequence('returnStatement', [_return, 'expression']),
+        parse_1.Sequence('forLoop', [
+            for_,
+            parse_1.NestedIn(rounds, parse_1.Sequence('forCondition', [identifier, colon, 'expression'])),
+            parse_1.NestedIn(curlies, 'functionBody'),
+        ]),
     ]),
     typeList: parse_1.SeparatedList(comma, 'type'),
     type: parse_1.OneOf([
         parse_1.Sequence('listType', [typeIdentifier, leftSquareBracket, rightSquareBracket]),
-        parse_1.Sequence('typeWithArgs', [typeIdentifier, lessThan, 'typeList', greaterThan]),
+        parse_1.Sequence('typeWithArgs', [typeIdentifier, parse_1.NestedIn(angles, 'typeList')]),
         parse_1.Sequence('typeWithoutArgs', [typeIdentifier]),
         'typeLiteral',
     ]),
-    typeLiteral: parse_1.Sequence('typeLiteral', [
-        leftCurlyBrace,
-        parse_1.Many('typeLiteralComponent'),
-        rightCurlyBrace,
-    ]),
+    typeLiteral: parse_1.NestedIn(curlies, parse_1.Many('typeLiteralComponent')),
     typeLiteralComponent: parse_1.Sequence('typeLiteralComponent', [
         identifier,
         colon,
@@ -4259,9 +4357,7 @@ exports.grammar = {
     ]),
     objectLiteral: parse_1.Sequence('objectLiteral', [
         typeIdentifier,
-        leftCurlyBrace,
-        parse_1.Many('objectLiteralComponent'),
-        rightCurlyBrace,
+        parse_1.NestedIn(curlies, parse_1.Many('objectLiteralComponent')),
     ]),
     objectLiteralComponent: parse_1.Sequence('objectLiteralComponent', [
         identifier,
@@ -4290,9 +4386,7 @@ exports.grammar = {
             'simpleExpression',
             memberAccess,
             identifier,
-            leftBracket,
-            'paramList',
-            rightBracket,
+            parse_1.NestedIn(rounds, 'paramList'),
         ]),
         'memberAccess',
     ]),
@@ -4301,23 +4395,19 @@ exports.grammar = {
         'indexAccess',
     ]),
     indexAccess: parse_1.OneOf([
-        parse_1.Sequence('indexAccess', [
-            'simpleExpression',
-            leftSquareBracket,
-            'simpleExpression',
-            rightSquareBracket,
-        ]),
+        parse_1.Sequence('indexAccess', ['simpleExpression', parse_1.NestedIn(squares, 'simpleExpression')]),
         'listLiteral',
     ]),
     listLiteral: parse_1.OneOf([
-        parse_1.Sequence('listLiteral', [leftSquareBracket, 'listItems', rightSquareBracket]),
+        parse_1.Sequence('listLiteral', [parse_1.NestedIn(squares, 'listItems')]),
         'simpleExpression',
     ]),
     listItems: parse_1.SeparatedList(comma, 'expression'),
     simpleExpression: parse_1.OneOf([
-        parse_1.Sequence('bracketedExpression', [leftBracket, 'expression', rightBracket]),
+        parse_1.Sequence('bracketedExpression', [parse_1.NestedIn(rounds, 'expression')]),
         parse_1.Sequence('callExpression', [
             identifier,
+            // TODO: Make NestedIn(..., Optional(...)) work
             leftBracket,
             mplOptional('paramList'),
             rightBracket,
@@ -4348,20 +4438,26 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const frontend_1 = __webpack_require__(/*! ./frontend */ "./frontend.ts");
 const js_1 = __webpack_require__(/*! ./backends/js */ "./backends/js.ts");
 function mplLoader(source, context) {
-    const frontendOutput = frontend_1.compile(source);
-    if ('parseErrors' in frontendOutput ||
-        'typeErrors' in frontendOutput ||
-        'kind' in frontendOutput ||
-        'internalError' in frontendOutput) {
-        context.emitError(new Error(JSON.stringify(frontendOutput)));
+    try {
+        const frontendOutput = frontend_1.compile(source);
+        if ('parseErrors' in frontendOutput ||
+            'typeErrors' in frontendOutput ||
+            'kind' in frontendOutput ||
+            'internalError' in frontendOutput) {
+            context.emitError(new Error(JSON.stringify(frontendOutput)));
+            return;
+        }
+        const js = js_1.default.compile(frontendOutput);
+        if ('error' in js) {
+            context.emitError(new Error(JSON.stringify(js.error)));
+            return;
+        }
+        return js.target;
+    }
+    catch (e) {
+        context.emitError(new Error(JSON.stringify(e)));
         return;
     }
-    const js = js_1.default.compile(frontendOutput);
-    if ('error' in js) {
-        context.emitError(new Error(JSON.stringify(js.error)));
-        return;
-    }
-    return js.target;
 }
 exports.mplLoader = mplLoader;
 
@@ -74068,7 +74164,11 @@ const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 const graphlib_1 = __webpack_require__(/*! graphlib */ "./node_modules/graphlib/index.js");
 const lex_1 = __webpack_require__(/*! ./lex */ "./parser-lib/lex.ts");
 exports.isSeparatedListNode = (n) => 'items' in n && 'separators' in n;
-exports.isListNode = (n) => 'items' in n && !('separators' in n);
+exports.isListNode = (n) => {
+    if (!n)
+        throw debug_1.default('bad node');
+    return 'items' in n && !('separators' in n);
+};
 exports.parseResultIsError = (result) => result != 'missingOptional' && 'kind' in result && result.kind == 'parseError';
 const parseResultWithIndexIsLeaf = (r) => 'value' in r;
 // TODO also use a real sum type
@@ -74116,6 +74216,7 @@ exports.Optional = (parser) => ({
     parser,
 });
 exports.SeparatedList = (separator, item) => ({ kind: 'separatedList', separator, item });
+exports.NestedIn = (nesting, parser) => ({ kind: 'nested', in: nesting, parser });
 exports.Many = (item) => ({
     kind: 'many',
     item,
@@ -74163,6 +74264,9 @@ const parseSequence = (grammar, parser, tokens, index) => {
         }
         else if (p.kind == 'many') {
             result = parseMany(grammar, p, tokens, index);
+        }
+        else if (p.kind == 'nested') {
+            result = parseNested(grammar, p, tokens, index);
         }
         else {
             throw debug_1.default(`Invalid parser type: ${JSON.stringify(p)}`);
@@ -74236,6 +74340,9 @@ const parseAlternative = (grammar, alternatives, tokens, index) => {
                 }
             }
         }
+        else if (currentParser.kind == 'nested') {
+            throw debug_1.default('should figure out a way to do nested inside alternative - probably need a more generic framework');
+        }
         else if (currentParser.kind == 'sequence') {
             // Sequence. This is the complex one.
             // Next get the parser for the next item in the sequence based on how much progress we have made due
@@ -74276,6 +74383,10 @@ const parseAlternative = (grammar, alternatives, tokens, index) => {
                 else {
                     currentResult = optionalResult;
                 }
+                currentIndex = currentProgress.subParserIndex;
+            }
+            else if (currentParser.kind == 'nested') {
+                currentResult = parseNested(grammar, currentParser, tokens, tokenIndex);
                 currentIndex = currentProgress.subParserIndex;
             }
             else {
@@ -74417,6 +74528,21 @@ const parseSeparatedList = (grammar, sep, tokens, index) => {
         newIndex: next.newIndex,
     };
 };
+const parseNested = (grammar, nested, tokens, index) => {
+    const leftNest = parseAnything(grammar, nested.in.left, tokens, index);
+    if (exports.parseResultIsError(leftNest)) {
+        return leftNest;
+    }
+    const result = parseAnything(grammar, nested.parser, tokens, leftNest.newIndex);
+    if (exports.parseResultIsError(result)) {
+        return result;
+    }
+    const rightNest = parseAnything(grammar, nested.in.right, tokens, result.newIndex);
+    if (exports.parseResultIsError(rightNest)) {
+        return rightNest;
+    }
+    return Object.assign(Object.assign({}, result), { newIndex: rightNest.newIndex });
+};
 const parseMany = (grammar, many, tokens, index) => {
     const item = parseAnything(grammar, many.item, tokens, index);
     if (exports.parseResultIsError(item)) {
@@ -74447,6 +74573,9 @@ const parseAnything = (grammar, parser, tokens, index) => {
         }
         else if (parser.kind == 'many') {
             return parseMany(grammar, parser, tokens, index);
+        }
+        else if (parser.kind == 'nested') {
+            return parseNested(grammar, parser, tokens, index);
         }
         else {
             throw debug_1.default('bad type in parse');
@@ -74613,6 +74742,29 @@ exports.default = ({ expected, found, sourceLocation }) => {
 
 /***/ }),
 
+/***/ "./parser-lib/renderParseError.ts":
+/*!****************************************!*\
+  !*** ./parser-lib/renderParseError.ts ***!
+  \****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const parseErrorToString_1 = __webpack_require__(/*! ./parseErrorToString */ "./parser-lib/parseErrorToString.ts");
+const annotateSource_1 = __webpack_require__(/*! ../annotateSource */ "./annotateSource.ts");
+exports.default = (e, source) => {
+    // The semicolor the user forgot probably should go one space after where
+    // the error is.
+    const adjustedSourceLocation = Object.assign({}, e.sourceLocation);
+    adjustedSourceLocation.column += 1;
+    return annotateSource_1.default(source, adjustedSourceLocation, parseErrorToString_1.default(e));
+};
+
+
+/***/ }),
+
 /***/ "./produceProgramInfo.ts":
 /*!*******************************!*\
   !*** ./produceProgramInfo.ts ***!
@@ -74624,7 +74776,7 @@ exports.default = ({ expected, found, sourceLocation }) => {
 
 Object.defineProperty(exports, "__esModule", { value: true });
 const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
-const parser_1 = __webpack_require__(/*! ./threeAddressCode/parser */ "./threeAddressCode/parser.ts");
+const Program_1 = __webpack_require__(/*! ./threeAddressCode/Program */ "./threeAddressCode/Program.ts");
 const runtime_1 = __webpack_require__(/*! ./threeAddressCode/runtime */ "./threeAddressCode/runtime.ts");
 const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
 const writeTempFile_1 = __webpack_require__(/*! ./util/writeTempFile */ "./util/writeTempFile.ts");
@@ -74633,10 +74785,10 @@ const frontend_1 = __webpack_require__(/*! ./frontend */ "./frontend.ts");
 const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
 const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
 const ast_1 = __webpack_require__(/*! ./ast */ "./ast.ts");
-const Program_1 = __webpack_require__(/*! ./threeAddressCode/Program */ "./threeAddressCode/Program.ts");
+const Program_2 = __webpack_require__(/*! ./threeAddressCode/Program */ "./threeAddressCode/Program.ts");
 const generator_1 = __webpack_require__(/*! ./threeAddressCode/generator */ "./threeAddressCode/generator.ts");
 const backend_utils_1 = __webpack_require__(/*! ./backend-utils */ "./backend-utils.ts");
-exports.default = async (source, stdin, { includeExecutionResult, skipBackends }) => {
+exports.default = async (source, stdin, { includeExecutionResult, skipBackends, skipExecutors, buildBinaries }) => {
     const tokens = lex_1.lex(grammar_1.tokenSpecs, source);
     if ('kind' in tokens) {
         return tokens;
@@ -74672,7 +74824,7 @@ exports.default = async (source, stdin, { includeExecutionResult, skipBackends }
     frontendOutput.program.statements.forEach(statement => {
         structure += `---> ${ast_1.astToString(statement)}\n`;
     });
-    // Make three address code with random alignment, bytesInWord, and malloc/print impl. TODO: This is jank. Maybe three addree code should abstract over platform stuff?
+    // Make three address code with random alignment, bytesInWord, and malloc/print impl. TODO: This is jank. Maybe three address code should abstract over platform stuff?
     const threeAddressCode = generator_1.makeTargetProgram({
         backendInputs: frontendOutput,
         targetInfo: {
@@ -74686,39 +74838,47 @@ exports.default = async (source, stdin, { includeExecutionResult, skipBackends }
         },
     });
     // Do a roundtrip on three address code to string and back to check the parser for that
-    const stringForm = Program_1.toString(threeAddressCode);
-    const roundTripParsed = parser_1.parseProgram(stringForm);
+    const stringForm = Program_2.toString(threeAddressCode);
+    const roundTripParsed = Program_1.parseProgram(stringForm);
     const stdinFile = await writeTempFile_1.default(stdin, 'stdin', 'txt');
-    const backendResults = await Promise.all(backend_utils_1.backends.map(async ({ name, compile: compileFn, finishCompilation, executors }) => {
-        const targetSource = await compileFn(frontendOutput);
-        if ('error' in targetSource) {
-            return {
-                name,
-                compilationResult: targetSource,
-                executionResults: [{ error: 'Compilation Failed', executorName: 'N/A' }],
-            };
-        }
-        const compilationResult = await finishCompilation(targetSource.target, targetSource.tac);
-        // TODO: better way to report these specific errors. Probably muck with the type of ExecutionResult.
-        if ('error' in compilationResult) {
-            return {
-                name,
-                compilationResult,
-                executionResults: [{ error: 'Compilation failed', executorName: 'N/A' }],
-            };
-        }
-        else if (!includeExecutionResult || (skipBackends || []).includes(name)) {
-            return {
-                name,
-                compilationResult,
-                executionResults: [{ error: 'Not requested', executorName: 'N/A' }],
-            };
-        }
-        else {
-            const executionResults = await Promise.all(executors.map(async ({ execute }) => await execute(compilationResult.binaryFile.path, stdinFile.path)));
-            return { name, compilationResult, executionResults };
-        }
-    }));
+    let backendResults = [];
+    if (buildBinaries) {
+        backendResults = await Promise.all(backend_utils_1.backends.map(async ({ name, compile: compileFn, finishCompilation, executors }) => {
+            const targetSource = await compileFn(frontendOutput);
+            if ('error' in targetSource) {
+                return {
+                    name,
+                    compilationResult: targetSource,
+                    executionResults: [{ error: 'Compilation Failed', executorName: 'N/A' }],
+                };
+            }
+            const compilationResult = await finishCompilation(targetSource.target, targetSource.tac);
+            // TODO: better way to report these specific errors. Probably muck with the type of ExecutionResult.
+            if ('error' in compilationResult) {
+                return {
+                    name,
+                    compilationResult,
+                    executionResults: [{ error: 'Compilation failed', executorName: 'N/A' }],
+                };
+            }
+            else if (!includeExecutionResult || (skipBackends || []).includes(name)) {
+                return {
+                    name,
+                    compilationResult,
+                    executionResults: [{ error: 'Not requested', executorName: 'N/A' }],
+                };
+            }
+            else {
+                const executionResults = (await Promise.all(executors.map(async ({ execute }) => {
+                    if ((skipExecutors || []).includes(name)) {
+                        return;
+                    }
+                    return await execute(compilationResult.binaryFile.path, stdinFile.path);
+                }))).filter(Boolean);
+                return { name, compilationResult, executionResults };
+            }
+        }));
+    }
     return {
         tokens,
         ast,
@@ -74963,10 +75123,10 @@ const Register_1 = __webpack_require__(/*! ../threeAddressCode/Register */ "./th
 exports.stackUsageToString = (usage) => {
     const descriptions = [
         ...usage.callerSavedRegisters,
-        ...usage.arguments.map(r => r.toString()),
+        ...usage.arguments.map(Register_1.toString),
         ...usage.savedExtraRegisters,
         ...usage.savedUsedRegisters,
-        ...usage.spills.map(toString),
+        ...usage.spills.map(Register_1.toString),
     ];
     return `[${join_1.default(descriptions, ', ')}]`;
 };
@@ -75236,7 +75396,11 @@ exports.toTarget = ({ tas, functionArguments, targetInfo, stackOffset, stackFram
         case 'callByName': {
             return [
                 ...arrangeArgumentsForFunctionCall(tas.arguments, getRegister, targetInfo),
-                { kind: 'callByName', function: tas.function, why: 'actually call' },
+                {
+                    kind: 'callByName',
+                    function: tas.function,
+                    why: `actually call (${tas.why})`,
+                },
                 ...backend_utils_1.saveFunctionCallResult(tas.destination, getRegister, targetInfo.registers),
             ];
         }
@@ -75302,7 +75466,7 @@ const TypeError_1 = __webpack_require__(/*! ./TypeError */ "./TypeError.ts");
 const writeTempFile_1 = __webpack_require__(/*! ./util/writeTempFile */ "./util/writeTempFile.ts");
 const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
 const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
-const parser_1 = __webpack_require__(/*! ./threeAddressCode/parser */ "./threeAddressCode/parser.ts");
+const Function_1 = __webpack_require__(/*! ./threeAddressCode/Function */ "./threeAddressCode/Function.ts");
 const backend_utils_1 = __webpack_require__(/*! ./backend-utils */ "./backend-utils.ts");
 const produceProgramInfo_1 = __webpack_require__(/*! ./produceProgramInfo */ "./produceProgramInfo.ts");
 const mpl_loader_1 = __webpack_require__(/*! ./mpl-loader */ "./mpl-loader.ts");
@@ -75323,9 +75487,9 @@ const required = (errorMessage) => {
 exports.moduleTest = (t, m) => {
     const errors = [];
     const resultJs = mpl_loader_1.mplLoader(m.source, { emitError: e => errors.push(e) });
-    if (errors.length != 0) {
-        t.fail('got errors');
-    }
+    errors.forEach(e => {
+        t.fail(e.stack);
+    });
     t.deepEqual(m.resultJs, resultJs);
 };
 exports.mplTest = async (t, { source = required('test must have source code'), exitCode, typeErrors, parseErrors, stdout, ast, failing, name = undefined, stdin = '', }) => {
@@ -75340,6 +75504,8 @@ exports.mplTest = async (t, { source = required('test must have source code'), e
     // Make sure it parses
     const programInfo = await produceProgramInfo_1.default(source, stdin, {
         includeExecutionResult: true,
+        buildBinaries: true,
+        skipExecutors: ['mars'],
     });
     if ('kind' in programInfo) {
         error('failed to produce info');
@@ -75443,7 +75609,7 @@ generated source:
     t.pass();
 };
 exports.tacTest = async (t, { source, exitCode, printSubsteps = [], debugSubsteps = [], failing = [], stdin = '', }) => {
-    const parsed = parser_1.parseFunction(source);
+    const parsed = Function_1.parseFunction(source);
     if ('kind' in parsed) {
         t.fail(`LexError error: ${parsed}`);
         return;
@@ -75467,6 +75633,10 @@ exports.tacTest = async (t, { source, exitCode, printSubsteps = [], debugSubstep
             }
             const stdinFile = await writeTempFile_1.default(stdin, 'stdin', 'txt');
             await Promise.all(backend.executors.map(async ({ name, execute }) => {
+                // mars bogs down my computer when running all tests. TODO: try to make it work.
+                if (name == 'mars') {
+                    return;
+                }
                 const result = await execute(compilationResult.binaryFile.path, stdinFile.path);
                 if ('error' in result) {
                     t.fail(`${backend.name} execution with ${name} failed: ${result.error}`);
@@ -75538,6 +75708,20 @@ exports.testModules = [
         source: 'export three := 3;',
         resultJs: 'export const three = 3;',
         failing: true,
+    },
+    {
+        name: 'Sum',
+        source: `
+            export sum := (xs: Integer[]) => {
+                result := 0;
+                for (x : xs) {
+                    result = result + x;
+                }
+                return result;
+            }
+        `,
+        resultJs: '',
+        only: true,
     },
 ];
 exports.testPrograms = [
@@ -75654,6 +75838,15 @@ a = a * a;
 return a;
 `,
         exitCode: 9,
+    },
+    {
+        name: 'Multiply by Literal',
+        source: `
+            a: Integer = 2;
+            b := a * 4;
+            return b;
+        `,
+        exitCode: 8,
     },
     {
         name: 'Function Returns Boolean',
@@ -75788,10 +75981,9 @@ return isFive(5) ? 1 : 0;`,
         name: 'Explicitly Typed List',
         source: `
             myList: Boolean[] = [true];
-            return length(myList);
+            return myList[0] ? 1 : 2;
         `,
-        exitCode: 0,
-        failing: true,
+        exitCode: 1,
     },
     {
         name: 'Untyped Zero Item List',
@@ -75806,20 +75998,18 @@ return isFive(5) ? 1 : 0;`,
         name: 'Wrong Type List',
         source: `
             myList: Boolean[] = [5];
-            return length(myList);
+            return myList[0] ? 1 : 2;
         `,
         exitCode: 0,
         typeErrors: [
             {
                 kind: 'assignWrongType',
                 lhsName: 'myList',
-                // TODO: make this a list instead of nameref maybe?
-                lhsType: { kind: 'NameRef', namedType: 'Boolean[]' },
-                rhsType: { kind: 'List', of: { kind: 'Integer' } },
+                lhsType: { type: { kind: 'List', of: { type: { kind: 'Boolean' } } } },
+                rhsType: { type: { kind: 'List', of: { type: { kind: 'Integer' } } } },
                 sourceLocation: { column: 13, line: 2 },
             },
         ],
-        failing: true,
     },
     {
         name: 'One Item List',
@@ -76230,6 +76420,70 @@ return isFive(5) ? 1 : 0;`,
             },
         ],
     },
+    {
+        name: 'Reassign to Undeclared Identifier Inside Function',
+        source: `
+            foo := () => {
+                a := 1;
+                b = 2;
+                return a + b;
+            };
+            return foo();
+        `,
+        typeErrors: [
+            {
+                kind: 'assignUndeclaredIdentifer',
+                destinationName: 'b',
+                sourceLocation: { line: 4, column: 17 },
+            },
+            {
+                kind: 'unknownTypeForIdentifier',
+                identifierName: 'b',
+                sourceLocation: { line: 5, column: 28 },
+            },
+        ],
+    },
+    {
+        name: 'For',
+        source: `
+            numbers := [1, 2, 3];
+            sum := 0;
+            for (number : numbers) {
+                sum = sum + number;
+            };
+            return sum;
+        `,
+        exitCode: 6,
+    },
+    {
+        name: 'Large For',
+        source: `
+            numbers := [1, 2, 3, 2, 1, 2, 3];
+            sum := 10;
+            for (number : numbers) {
+                sum = sum + number;
+            };
+            return sum;
+        `,
+        exitCode: 24,
+    },
+    {
+        name: 'For With Non-Iterable',
+        source: `
+            sum := 0;
+            for (number : sum) {
+                sum = sum + number;
+            };
+            return sum;
+        `,
+        typeErrors: [
+            {
+                kind: 'nonListInFor',
+                found: { type: { kind: 'Integer' } },
+                sourceLocation: { line: 3, column: 13 },
+            },
+        ],
+    },
 ];
 
 
@@ -76245,16 +76499,117 @@ return isFive(5) ? 1 : 0;`,
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
+const Register_1 = __webpack_require__(/*! ./Register */ "./threeAddressCode/Register.ts");
 const Statement_1 = __webpack_require__(/*! ./Statement */ "./threeAddressCode/Statement.ts");
+const parser_1 = __webpack_require__(/*! ./parser */ "./threeAddressCode/parser.ts");
+const parse_1 = __webpack_require__(/*! ../parser-lib/parse */ "./parser-lib/parse.ts");
 const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
 const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 exports.toString = ({ name, instructions, arguments: args }) => {
     if (!args)
         debug_1.default('no args');
     return join_1.default([
-        `(function) ${name}(${join_1.default(args.map(arg => arg.toString()), ', ')}):`,
+        `(function) ${name}(${join_1.default(args.map(Register_1.toString), ', ')}):`,
         ...instructions.map(Statement_1.toString),
     ], '\n');
+};
+exports.functionFromParseResult = (ast) => {
+    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
+        throw debug_1.default('todo');
+    }
+    if (ast.type != 'function') {
+        throw debug_1.default('Need a function');
+    }
+    if (!('children' in ast)) {
+        debug_1.default('wrong shape ast');
+        throw debug_1.default('WrongShapeAst');
+    }
+    let childIndex = 0;
+    let child = ast.children[childIndex];
+    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
+        throw debug_1.default('todo');
+    }
+    if (child.type != 'function') {
+        debug_1.default('wrong shape ast');
+        throw debug_1.default('WrongShapeAst');
+    }
+    childIndex++;
+    child = ast.children[childIndex];
+    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
+        throw debug_1.default('todo');
+    }
+    if (child.type == 'spillSpec') {
+        childIndex++;
+    }
+    child = ast.children[childIndex];
+    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
+        throw debug_1.default('todo');
+    }
+    if (child.type != 'identifier') {
+        debug_1.default('wrong shape ast');
+        throw debug_1.default('WrongShapeAst');
+    }
+    const name = ast.children[childIndex].value;
+    childIndex++;
+    child = ast.children[childIndex];
+    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
+        throw debug_1.default('todo');
+    }
+    if (child.type != 'leftBracket') {
+        debug_1.default('wrong shape ast');
+        throw debug_1.default('WrongShapeAst');
+    }
+    childIndex++;
+    let args = [];
+    child = ast.children[childIndex];
+    if (parse_1.isSeparatedListNode(child)) {
+        args = parser_1.parseArgList(child);
+        childIndex++;
+    }
+    child = ast.children[childIndex];
+    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
+        throw debug_1.default('todo');
+    }
+    if (child.type != 'rightBracket') {
+        debug_1.default('wrong shape ast');
+        throw debug_1.default('WrongShapeAst');
+    }
+    childIndex++;
+    child = ast.children[childIndex];
+    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
+        throw debug_1.default('todo');
+    }
+    if (child.type != 'colon') {
+        debug_1.default('wrong shape ast');
+        throw debug_1.default('WrongShapeAst');
+    }
+    childIndex++;
+    child = ast.children[childIndex];
+    if (!parse_1.isListNode(child)) {
+        throw debug_1.default('todo');
+    }
+    const instructions = child.items.map(parser_1.instructionFromParseResult);
+    return { name, instructions, liveAtExit: [], arguments: args };
+};
+exports.parseFunction = (input) => {
+    const result = parse_1.parseString(parser_1.tokenSpecs, parser_1.grammar, 'function', input);
+    if ('errors' in result)
+        return result.errors;
+    return exports.functionFromParseResult(result);
+};
+exports.parseFunctionOrDie = (tacString) => {
+    const parsed = exports.parseFunction(tacString);
+    if ('kind' in parsed) {
+        debugger;
+        exports.parseFunction(tacString);
+        throw debug_1.default('error in parseFunctionOrDie');
+    }
+    if (Array.isArray(parsed)) {
+        debugger;
+        exports.parseFunction(tacString);
+        throw debug_1.default('error in parseFunctionOrDie');
+    }
+    return parsed;
 };
 
 
@@ -76270,8 +76625,11 @@ exports.toString = ({ name, instructions, arguments: args }) => {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
+const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 const Function_1 = __webpack_require__(/*! ./Function */ "./threeAddressCode/Function.ts");
 const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
+const parser_1 = __webpack_require__(/*! ./parser */ "./threeAddressCode/parser.ts");
+const parse_1 = __webpack_require__(/*! ../parser-lib/parse */ "./parser-lib/parse.ts");
 exports.toString = ({ globals, functions, main }) => {
     const globalStrings = Object.keys(globals).map(originalName => `(global) ${originalName}: ${globals[originalName].mangledName} ${globals[originalName].bytes}`);
     let mainStr = '';
@@ -76284,6 +76642,50 @@ ${mainStr}
 
 ${join_1.default(functions.map(Function_1.toString), '\n\n')}
 `;
+};
+const tacFromParseResult = (ast) => {
+    if (!ast)
+        debug_1.default('no type');
+    if (parse_1.isSeparatedListNode(ast))
+        throw debug_1.default('todo');
+    if (parse_1.isListNode(ast))
+        throw debug_1.default('todo');
+    if (ast.type !== 'program')
+        throw debug_1.default('todo');
+    const parsedGlobals = ast.children[0];
+    const parsedFunctions = ast.children[1];
+    if (!parse_1.isListNode(parsedGlobals))
+        throw debug_1.default('todo');
+    if (!parse_1.isListNode(parsedFunctions))
+        throw debug_1.default('todo');
+    const globals = {};
+    parsedGlobals.items.forEach((a) => {
+        globals[a.children[1].value] = {
+            mangledName: a.children[3].value,
+            bytes: a.children[4].value,
+        };
+    });
+    const allFunctions = parsedFunctions.items.map(Function_1.functionFromParseResult);
+    let main = undefined;
+    const functions = [];
+    allFunctions.forEach(f => {
+        if (f.name == 'main') {
+            if (main) {
+                throw debug_1.default('two mains');
+            }
+            main = f;
+        }
+        else {
+            functions.push(f);
+        }
+    });
+    return { globals, functions, main, stringLiterals: [] };
+};
+exports.parseProgram = (input) => {
+    const result = parse_1.parseString(parser_1.tokenSpecs, parser_1.grammar, 'program', input);
+    if ('errors' in result)
+        return result.errors;
+    return tacFromParseResult(result);
 };
 
 
@@ -76300,15 +76702,19 @@ ${join_1.default(functions.map(Function_1.toString), '\n\n')}
 
 Object.defineProperty(exports, "__esModule", { value: true });
 const compare_1 = __webpack_require__(/*! ../string/compare */ "./string/compare.ts");
+const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 class Register {
     constructor(name) {
         this.name = name;
     }
     toString() {
-        return `r:${this.name}`;
+        throw debug_1.default('deprecated');
     }
 }
 exports.Register = Register;
+exports.toString = (r) => {
+    return `r:${r.name}`;
+};
 exports.isEqual = (lhs, rhs) => lhs.name == rhs.name;
 exports.compare = (lhs, rhs) => compare_1.default(lhs.name, rhs.name);
 
@@ -76325,98 +76731,107 @@ exports.compare = (lhs, rhs) => compare_1.default(lhs.name, rhs.name);
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
+const Register_1 = __webpack_require__(/*! ./Register */ "./threeAddressCode/Register.ts");
 const filter_1 = __webpack_require__(/*! ../util/list/filter */ "./util/list/filter.ts");
 const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
 const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
+const sOrV = (data) => {
+    if (typeof data == 'number') {
+        return data.toString();
+    }
+    else {
+        return Register_1.toString(data);
+    }
+};
 const toStringWithoutComment = (tas) => {
     switch (tas.kind) {
         case 'empty':
             return '';
         case 'syscall': {
-            const args = tas.arguments.map(arg => arg.toString()).join(' ');
+            const args = tas.arguments.map(sOrV).join(' ');
             if (tas.destination) {
-                return `${tas.destination} = syscall ${tas.name} ${args}`;
+                return `${Register_1.toString(tas.destination)} = syscall ${tas.name} ${args}`;
             }
             else {
                 return `syscall ${tas.name} ${args}`;
             }
         }
         case 'move':
-            return `${tas.to} = ${tas.from}`;
+            return `${Register_1.toString(tas.to)} = ${Register_1.toString(tas.from)}`;
         case 'loadImmediate':
-            return `${tas.destination} = ${tas.value}`;
+            return `${Register_1.toString(tas.destination)} = ${tas.value}`;
         case 'addImmediate':
-            return `${tas.register} += ${tas.amount}`;
+            return `${Register_1.toString(tas.register)} += ${tas.amount}`;
         case 'subtract':
-            return `${tas.destination} = ${tas.lhs} - ${tas.rhs}`;
+            return `${Register_1.toString(tas.destination)} = ${Register_1.toString(tas.lhs)} - ${Register_1.toString(tas.rhs)}`;
         case 'add':
-            return `${tas.destination} = ${tas.lhs} + ${tas.rhs}`;
+            return `${Register_1.toString(tas.destination)} = ${Register_1.toString(tas.lhs)} + ${Register_1.toString(tas.rhs)}`;
         case 'multiply':
-            return `${tas.destination} = ${tas.lhs} * ${tas.rhs}`;
+            return `${Register_1.toString(tas.destination)} = ${Register_1.toString(tas.lhs)} * ${Register_1.toString(tas.rhs)}`;
         case 'increment':
-            return `${tas.register}++`;
+            return `${Register_1.toString(tas.register)}++`;
         case 'label':
         case 'functionLabel':
             return `${tas.name}:`;
         case 'goto':
             return `goto ${tas.label}`;
         case 'gotoIfEqual':
-            return `goto ${tas.label} if ${tas.lhs} == ${tas.rhs}`;
+            return `goto ${tas.label} if ${Register_1.toString(tas.lhs)} == ${Register_1.toString(tas.rhs)}`;
         case 'gotoIfNotEqual':
             if (typeof tas.rhs == 'number') {
-                return `goto ${tas.label} if ${tas.lhs} != ${tas.rhs}`;
+                return `goto ${tas.label} if ${Register_1.toString(tas.lhs)} != ${tas.rhs}`;
             }
-            return `goto ${tas.label} if ${tas.lhs} != ${tas.rhs}`;
+            return `goto ${tas.label} if ${Register_1.toString(tas.lhs)} != ${Register_1.toString(tas.rhs)}`;
         case 'gotoIfZero':
-            return `goto ${tas.label} if ${tas.register} == 0`;
+            return `goto ${tas.label} if ${Register_1.toString(tas.register)} == 0`;
         case 'gotoIfGreater':
-            return `goto ${tas.label} if ${tas.lhs} > ${tas.rhs}`;
+            return `goto ${tas.label} if ${Register_1.toString(tas.lhs)} > ${Register_1.toString(tas.rhs)}`;
         case 'storeGlobal':
-            return `*${tas.to} = ${tas.from}`;
+            return `*${tas.to} = ${Register_1.toString(tas.from)}`;
         case 'loadGlobal':
-            return `${tas.to} = ${tas.from}`;
+            return `${Register_1.toString(tas.to)} = ${tas.from}`;
         case 'loadSymbolAddress':
-            return `${tas.to} = &${tas.symbolName}`;
+            return `${Register_1.toString(tas.to)} = &${tas.symbolName}`;
         case 'storeMemory':
-            return `*(${tas.address} + ${tas.offset}) = ${tas.from}`;
+            return `*(${Register_1.toString(tas.address)} + ${tas.offset}) = ${Register_1.toString(tas.from)}`;
         case 'storeMemoryByte':
-            return `*${tas.address} = ${tas.contents}`;
+            return `*${Register_1.toString(tas.address)} = ${Register_1.toString(tas.contents)}`;
         case 'storeZeroToMemory':
-            return `*(${tas.address} + ${tas.offset}) = 0`;
+            return `*(${Register_1.toString(tas.address)} + ${tas.offset}) = 0`;
         case 'loadMemory':
-            return `${tas.to} = *(${tas.from} + ${tas.offset})`;
+            return `${Register_1.toString(tas.to)} = *(${Register_1.toString(tas.from)} + ${tas.offset})`;
         case 'loadMemoryByte':
-            return `${tas.to} = *${tas.address}`;
+            return `${Register_1.toString(tas.to)} = *${Register_1.toString(tas.address)}`;
         case 'callByRegister': {
             if (!tas.arguments)
                 throw debug_1.default('bad argumnets');
-            const args = join_1.default(tas.arguments.map(arg => arg.toString()), ', ');
+            const args = join_1.default(tas.arguments.map(sOrV), ', ');
             if (tas.destination) {
-                return `${tas.destination} = ${tas.function}(${args})`;
+                return `${Register_1.toString(tas.destination)} = ${Register_1.toString(tas.function)}(${args})`;
             }
             else {
-                return `${tas.function}(${args})`;
+                return `${Register_1.toString(tas.function)}(${args})`;
             }
         }
         case 'callByName': {
             if (!tas.arguments)
                 throw debug_1.default('bad argumnets');
-            const args = join_1.default(tas.arguments.map(arg => arg.toString()), ', ');
+            const args = join_1.default(tas.arguments.map(sOrV), ', ');
             if (tas.destination) {
-                return `${tas.destination} = ${tas.function}(${args})`;
+                return `${Register_1.toString(tas.destination)} = ${tas.function}(${args})`;
             }
             else {
                 return `${tas.function}(${args})`;
             }
         }
         case 'return':
-            return `return ${tas.register};`;
+            return `return ${Register_1.toString(tas.register)};`;
         case 'alloca':
-            return `${tas.register} = alloca(${tas.bytes})`;
+            return `${Register_1.toString(tas.register)} = alloca(${tas.bytes})`;
         case 'spill':
-            return `spill:${tas.register}`;
+            return `spill:${Register_1.toString(tas.register)}`;
         case 'unspill':
-            return `unspill:${tas.register}`;
+            return `unspill:${Register_1.toString(tas.register)}`;
     }
 };
 const preceedingWhitespace = (tas) => {
@@ -76514,7 +76929,7 @@ exports.writes = (tas) => {
             return [tas.destination];
         case 'addImmediate':
         case 'increment':
-            return [];
+            return [tas.register];
         case 'subtract':
         case 'add':
         case 'multiply':
@@ -76642,13 +77057,13 @@ const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, lhsInfo
     switch (lhsType.type.kind) {
         case 'Function':
         case 'Integer':
-            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`*${lhsInfo.newName} = ${rhsRegister}; Put ${lhsType.type.kind} into global`));
+            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`*${lhsInfo.newName} = ${Register_1.toString(rhsRegister)}; Put ${lhsType.type.kind} into global`));
         case 'String':
             return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`
-                    r:len = length(${rhsRegister}); Get string length
+                    r:len = length(${Register_1.toString(rhsRegister)}); Get string length
                     r:len++; Add one for null terminator
                     r:buffer = my_malloc(r:len); Allocate that much space
-                    string_copy(${rhsRegister}, r:buffer); Copy string into allocated space
+                    string_copy(${Register_1.toString(rhsRegister)}, r:buffer); Copy string into allocated space
                     *${lhsInfo.newName} = r:buffer; Store into global
                 `));
         case 'Product':
@@ -76658,12 +77073,12 @@ const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, lhsInfo
                 const offset = i * targetInfo.bytesInWord;
                 const memberTemporary = makeTemporary('member');
                 return parser_1.parseInstructionsOrDie(`
-                    ${memberTemporary} = *(${rhsRegister} + ${offset}); load ${m.name}
-                    *(${lhsAddress} + ${offset}) = ${memberTemporary}; store ${m.name}
+                    ${Register_1.toString(memberTemporary)} = *(${Register_1.toString(rhsRegister)} + ${offset}); load ${m.name}
+                    *(${Register_1.toString(lhsAddress)} + ${offset}) = ${Register_1.toString(memberTemporary)}; store ${m.name}
                 `);
             });
             return backend_utils_1.compileExpression([], ([]) => [
-                ...parser_1.parseInstructionsOrDie(`${lhsAddress} = &${lhsInfo.newName}; Get address of global`),
+                ...parser_1.parseInstructionsOrDie(`${Register_1.toString(lhsAddress)} = &${lhsInfo.newName}; Get address of global`),
                 ...flatten_1.default(copyMembers),
             ]);
         case 'List':
@@ -76676,20 +77091,20 @@ const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, lhsInfo
             const bytesInWord = targetInfo.bytesInWord;
             return backend_utils_1.compileExpression([], ([]) => [
                 ...parser_1.parseInstructionsOrDie(`
-                    ${remainingCount} = *(${rhsRegister} + 0); Get length of list
-                    ${sourceAddress} = ${rhsRegister}; Local copy of source data pointer
-                    ${itemSize} = ${bytesInWord}; For multiplying
-                    ${remainingCount} = ${remainingCount} * ${itemSize}; Count = count * size
-                    ${remainingCount} += ${bytesInWord}; Add place to store length of list
-                    ${targetAddress} = my_malloc(${remainingCount}); Malloc
-                    *${lhsInfo.newName} = ${targetAddress}; Store to global
+                    ${Register_1.toString(remainingCount)} = *(${Register_1.toString(rhsRegister)} + 0); Get length of list
+                    ${Register_1.toString(sourceAddress)} = ${Register_1.toString(rhsRegister)}; Local copy of source data pointer
+                    ${Register_1.toString(itemSize)} = ${bytesInWord}; For multiplying
+                    ${Register_1.toString(remainingCount)} = ${Register_1.toString(remainingCount)} * ${Register_1.toString(itemSize)}; Count = count * size
+                    ${Register_1.toString(remainingCount)} += ${bytesInWord}; Add place to store length of list
+                    ${Register_1.toString(targetAddress)} = my_malloc(${Register_1.toString(remainingCount)}); Malloc
+                    *${lhsInfo.newName} = ${Register_1.toString(targetAddress)}; Store to global
                 ${copyLoop}:; Copy loop
-                    ${temp} = *(${sourceAddress} + 0); Copy a byte
-                    *(${targetAddress} + 0) = ${temp}; Finish copy
-                    ${remainingCount} += ${-bytesInWord}; Bump pointers
-                    ${sourceAddress} += ${bytesInWord}; Bump pointers
-                    ${targetAddress} += ${bytesInWord}; Bump pointers
-                    goto ${copyLoop} if ${remainingCount} != 0; Not done
+                    ${Register_1.toString(temp)} = *(${Register_1.toString(sourceAddress)} + 0); Copy a byte
+                    *(${Register_1.toString(targetAddress)} + 0) = ${Register_1.toString(temp)}; Finish copy
+                    ${Register_1.toString(remainingCount)} += ${-bytesInWord}; Bump pointers
+                    ${Register_1.toString(sourceAddress)} += ${bytesInWord}; Bump pointers
+                    ${Register_1.toString(targetAddress)} += ${bytesInWord}; Bump pointers
+                    goto ${copyLoop} if ${Register_1.toString(remainingCount)} != 0; Not done
                 `),
             ]);
         default:
@@ -76697,29 +77112,36 @@ const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, lhsInfo
             throw debug_1.default(`${unhandled} unhandled in assignGlobal`);
     }
 };
+const get = (obj, key) => {
+    const result = obj[key];
+    if (result === undefined) {
+        debug_1.default('Failed get');
+    }
+    return result;
+};
 exports.astToThreeAddressCode = (input) => {
     const { ast, variablesInScope, destination, globalNameMap, stringLiterals, makeTemporary, makeLabel, types, targetInfo, } = input;
     const recurse = newInput => exports.astToThreeAddressCode(Object.assign(Object.assign({}, input), newInput));
     switch (ast.kind) {
         case 'number':
-            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${destination} = ${ast.value}; Load number literal`));
+            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${Register_1.toString(destination)} = ${ast.value}; Load number literal`));
         case 'booleanLiteral':
-            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${destination} = ${ast.value ? 1 : 0}; Load boolean literal`));
+            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${Register_1.toString(destination)} = ${ast.value ? 1 : 0}; Load boolean literal`));
         case 'stringLiteral': {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
             if (!stringLiteralData)
                 throw debug_1.default('todo');
-            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${destination} = &${backend_utils_1.stringLiteralName(stringLiteralData)}; Load string literal address`));
+            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${Register_1.toString(destination)} = &${backend_utils_1.stringLiteralName(stringLiteralData)}; Load string literal address`));
         }
         case 'functionLiteral':
-            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${destination} = &${ast.deanonymizedName}; Load function into register`));
+            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${Register_1.toString(destination)} = &${ast.deanonymizedName}; Load function into register`));
         case 'returnStatement':
             const result = makeTemporary('result');
             const subExpression = recurse({ ast: ast.expression, destination: result });
             const cleanupAndReturn = {
                 prepare: [],
                 execute: [],
-                cleanup: parser_1.parseInstructionsOrDie(`return ${result}; Return previous expression`),
+                cleanup: parser_1.parseInstructionsOrDie(`return ${Register_1.toString(result)}; Return previous expression`),
             };
             return backend_utils_1.compileExpression([cleanupAndReturn, subExpression], ([_, e1]) => e1);
         case 'subtraction': {
@@ -76730,7 +77152,7 @@ exports.astToThreeAddressCode = (input) => {
             return backend_utils_1.compileExpression([computeLhs, computeRhs], ([storeLeft, storeRight]) => [
                 ...storeLeft,
                 ...storeRight,
-                ...parser_1.parseInstructionsOrDie(`${destination} = ${lhs} - ${rhs}; Evaluate subtraction`),
+                ...parser_1.parseInstructionsOrDie(`${Register_1.toString(destination)} = ${Register_1.toString(lhs)} - ${Register_1.toString(rhs)}; Evaluate subtraction`),
             ]);
         }
         case 'addition': {
@@ -76741,7 +77163,7 @@ exports.astToThreeAddressCode = (input) => {
             return backend_utils_1.compileExpression([computeLhs, computeRhs], ([storeLeft, storeRight]) => [
                 ...storeLeft,
                 ...storeRight,
-                ...parser_1.parseInstructionsOrDie(`${destination} = ${lhs} + ${rhs}; Evaluate addition`),
+                ...parser_1.parseInstructionsOrDie(`${Register_1.toString(destination)} = ${Register_1.toString(lhs)} + ${Register_1.toString(rhs)}; Evaluate addition`),
             ]);
         }
         case 'ternary': {
@@ -76766,6 +77188,43 @@ exports.astToThreeAddressCode = (input) => {
                     `),
                 ...e3,
                 { kind: 'label', name: endOfTernaryLabel, why: 'End of ternary label' },
+            ]);
+        }
+        case 'forLoop': {
+            const varName = ast.var;
+            const item = { name: varName };
+            const body = ast.body.map(statement => recurse({
+                variablesInScope: Object.assign(Object.assign({}, variablesInScope), { [varName]: item }),
+                ast: statement,
+            }));
+            const list = makeTemporary('list');
+            const listItems = recurse({ ast: ast.list, destination: list });
+            const i = makeTemporary('i');
+            const max = makeTemporary('max');
+            const loopLabel = makeLabel('loop');
+            const itemAddress = makeTemporary('itemAddress');
+            const bytesInWord = makeTemporary('bytesInWord');
+            return backend_utils_1.compileExpression([listItems, ...body], ([makeList, ...statements]) => [
+                ...makeList,
+                ...parser_1.parseInstructionsOrDie(`
+                        ${Register_1.toString(i)} = 0;
+                        ${Register_1.toString(max)} = *(${Register_1.toString(list)} + 0); get list length
+                    ${loopLabel}:;
+                        ; Get this iteration's item
+                        ${Register_1.toString(bytesInWord)} = ${targetInfo.bytesInWord};
+                        ${Register_1.toString(itemAddress)} = ${Register_1.toString(i)} * ${Register_1.toString(bytesInWord)};
+                        ${Register_1.toString(itemAddress)} = ${Register_1.toString(list)} + ${Register_1.toString(itemAddress)};
+                        ${Register_1.toString(item)} = *(${Register_1.toString(itemAddress)} + ${targetInfo.bytesInWord});
+                    `),
+                ...flatten_1.default(statements),
+                { kind: 'increment', register: i, why: 'i++' },
+                {
+                    kind: 'gotoIfNotEqual',
+                    lhs: i,
+                    rhs: max,
+                    label: loopLabel,
+                    why: 'not done',
+                },
             ]);
         }
         case 'callExpression': {
@@ -76822,7 +77281,7 @@ exports.astToThreeAddressCode = (input) => {
                 callInstructions = [
                     {
                         kind: 'callByRegister',
-                        function: variablesInScope[functionName],
+                        function: get(variablesInScope, functionName),
                         arguments: argumentRegisters,
                         destination,
                         why: `Call by register ${functionName}`,
@@ -76897,7 +77356,7 @@ exports.astToThreeAddressCode = (input) => {
                 ], ([rhs, assign]) => [...rhs, ...assign]);
             }
             else if (lhs in variablesInScope) {
-                return recurse({ ast: ast.expression, destination: variablesInScope[lhs] });
+                return recurse({ ast: ast.expression, destination: get(variablesInScope, lhs) });
             }
             else {
                 throw debug_1.default('Declared variable was neither global nor local');
@@ -76980,7 +77439,7 @@ exports.astToThreeAddressCode = (input) => {
                 }
             }
             else if (lhs in variablesInScope) {
-                return recurse({ ast: ast.expression, destination: variablesInScope[lhs] });
+                return recurse({ ast: ast.expression, destination: get(variablesInScope, lhs) });
             }
             else {
                 throw debug_1.default('Reassigned variable was neither global nor local');
@@ -76995,26 +77454,26 @@ exports.astToThreeAddressCode = (input) => {
             const makeLhs = recurse({ ast: ast.lhs, destination: lhs });
             const makeRhs = recurse({ ast: ast.rhs, destination: rhs });
             const reqs = {
-                prepare: parser_1.parseInstructionsOrDie(`${allocated} = 0; Will set to true if we need to clean up`),
+                prepare: parser_1.parseInstructionsOrDie(`${Register_1.toString(allocated)} = 0; Will set to true if we need to clean up`),
                 execute: [],
                 cleanup: parser_1.parseInstructionsOrDie(`
-                    goto ${doneFree} if ${allocated} == 0; If we never allocated, we should never free
-                    my_free(${destination}); Free destination of concat (TODO: are we sure we aren't using it?)
+                    goto ${doneFree} if ${Register_1.toString(allocated)} == 0; If we never allocated, we should never free
+                    my_free(${Register_1.toString(destination)}); Free destination of concat (TODO: are we sure we aren't using it?)
                 ${doneFree}:; Done free
                 `),
             };
             return backend_utils_1.compileExpression([makeLhs, makeRhs, reqs], ([e1, e2, _]) => [
-                ...parser_1.parseInstructionsOrDie(`${combinedLength} = 1; Combined length. Start with 1 for null terminator.`),
+                ...parser_1.parseInstructionsOrDie(`${Register_1.toString(combinedLength)} = 1; Combined length. Start with 1 for null terminator.`),
                 ...e1,
                 ...e2,
                 ...parser_1.parseInstructionsOrDie(`
-                        r:lhsLength = length(${lhs}); Compute lhs length
-                        ${combinedLength} = ${combinedLength} + r:lhsLength; Accumulate it
-                        r:rhsLength = length(${rhs}); Compute rhs length
-                        ${combinedLength} = ${combinedLength} + r:rhsLength; Accumulate it
-                        ${destination} = my_malloc(${combinedLength}); Allocate space for new string
-                        ${allocated} = 1; Remind ourselves to decallocate
-                        string_concatenate(${lhs}, ${rhs}, ${destination}); Concatenate and put in new space
+                        r:lhsLength = length(${Register_1.toString(lhs)}); Compute lhs length
+                        ${Register_1.toString(combinedLength)} = ${Register_1.toString(combinedLength)} + r:lhsLength; Accumulate it
+                        r:rhsLength = length(${Register_1.toString(rhs)}); Compute rhs length
+                        ${Register_1.toString(combinedLength)} = ${Register_1.toString(combinedLength)} + r:rhsLength; Accumulate it
+                        ${Register_1.toString(destination)} = my_malloc(${Register_1.toString(combinedLength)}); Allocate space for new string
+                        ${Register_1.toString(allocated)} = 1; Remind ourselves to decallocate
+                        string_concatenate(${Register_1.toString(lhs)}, ${Register_1.toString(rhs)}, ${Register_1.toString(destination)}); Concatenate and put in new space
                     `),
             ]);
         }
@@ -77044,7 +77503,7 @@ exports.astToThreeAddressCode = (input) => {
                     ]);
                 }
             }
-            const identifierRegister = variablesInScope[identifierName];
+            const identifierRegister = get(variablesInScope, identifierName);
             return backend_utils_1.compileExpression([], ([]) => [
                 {
                     kind: 'move',
@@ -77125,10 +77584,10 @@ exports.astToThreeAddressCode = (input) => {
             const prepAndCleanup = {
                 prepare: parser_1.parseInstructionsOrDie(`
                     ; ${bytesInWord}b for length, ${ast.items.length} ${itemSize}b items
-                    ${dataPointer} = my_malloc(${byteCount}); allocate
-                    ${listLength} = ${ast.items.length}; save size
-                    *(${dataPointer} + 0) = ${listLength}; save list length
-                    ${destination} = ${dataPointer}; save memory for pointer
+                    ${Register_1.toString(dataPointer)} = my_malloc(${byteCount}); allocate
+                    ${Register_1.toString(listLength)} = ${ast.items.length}; save size
+                    *(${Register_1.toString(dataPointer)} + 0) = ${Register_1.toString(listLength)}; save list length
+                    ${Register_1.toString(destination)} = ${Register_1.toString(dataPointer)}; save memory for pointer
                 `),
                 execute: [],
                 cleanup: [
@@ -77172,12 +77631,12 @@ exports.astToThreeAddressCode = (input) => {
                 ...makeIndex,
                 ...makeAccess,
                 ...parser_1.parseInstructionsOrDie(`
-                        ${listLength} = *(${accessed} + 0); get list length
-                        goto ${outOfRange} if ${itemIndex} > ${listLength}; check OOB
-                        ${itemSize} = ${bytesInWord}; TODO: should be type size
-                        ${itemAddress} = ${itemIndex} * ${itemSize}; account for item size
-                        ${itemAddress} = ${itemAddress} + ${accessed}; offset from list base
-                        ${destination} = *(${itemAddress} + ${bytesInWord}); add word to adjust for length
+                        ${Register_1.toString(listLength)} = *(${Register_1.toString(accessed)} + 0); get list length
+                        goto ${outOfRange} if ${Register_1.toString(itemIndex)} > ${Register_1.toString(listLength)}; check OOB
+                        ${Register_1.toString(itemSize)} = ${bytesInWord}; TODO:) should be type size
+                        ${Register_1.toString(itemAddress)} = ${Register_1.toString(itemIndex)} * ${Register_1.toString(itemSize)}; account for item size
+                        ${Register_1.toString(itemAddress)} = ${Register_1.toString(itemAddress)} + ${Register_1.toString(accessed)}; offset from list base
+                        ${Register_1.toString(destination)} = *(${Register_1.toString(itemAddress)} + ${bytesInWord}); add word to adjust for length
                     ${outOfRange}:; TODO: exit on out of range
                     `),
             ]);
@@ -77356,7 +77815,8 @@ const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 const last_1 = __webpack_require__(/*! ../util/list/last */ "./util/list/last.ts");
 const Register_1 = __webpack_require__(/*! ./Register */ "./threeAddressCode/Register.ts");
 const parse_1 = __webpack_require__(/*! ../parser-lib/parse */ "./parser-lib/parse.ts");
-const tokenSpecs = [
+const renderParseError_1 = __webpack_require__(/*! ../parser-lib/renderParseError */ "./parser-lib/renderParseError.ts");
+exports.tokenSpecs = [
     { token: '\\(global\\)', type: 'global', toString: x => x },
     { token: '\\(function\\)', type: 'function', toString: x => x },
     {
@@ -77432,7 +77892,7 @@ const return_ = tacTerminal('return');
 const spillInstruction = tacTerminal('spillInstruction');
 const unspillInstruction = tacTerminal('unspillInstruction');
 const greaterThan = tacTerminal('greaterThan');
-const grammar = {
+exports.grammar = {
     program: parse_1.Sequence('program', [parse_1.Many('global'), parse_1.Many('function')]),
     global: parse_1.Sequence('global', [global_, identifier, colon, identifier, number]),
     function: parse_1.Sequence('function', [
@@ -77577,7 +78037,7 @@ const parseSyscallArgs = (ast) => {
         }
     });
 };
-const parseArgList = (ast) => ast.items.map((item) => {
+exports.parseArgList = (ast) => ast.items.map((item) => {
     if (parse_1.isSeparatedListNode(item) || parse_1.isListNode(item)) {
         throw debug_1.default('todo');
     }
@@ -77602,14 +78062,14 @@ const isRegister = (data) => {
     return false;
 };
 const parseRegister = (data) => {
-    if (!data.startsWith)
-        debug_1.default('no startsWith');
+    if (typeof data !== 'string')
+        debug_1.default('non-string passed to parseRegister');
     if (data.startsWith('r:')) {
         return new Register_1.Register(data.substring(2));
     }
     throw debug_1.default('invalid register name');
 };
-const instructionFromParseResult = (ast) => {
+exports.instructionFromParseResult = (ast) => {
     if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
         throw debug_1.default('todo');
     }
@@ -77787,7 +78247,7 @@ const instructionFromParseResult = (ast) => {
                 return {
                     kind: 'callByRegister',
                     function: parseRegister(a.children[2].value),
-                    arguments: a.children.length == 7 ? parseArgList(a.children[4]) : [],
+                    arguments: a.children.length == 7 ? exports.parseArgList(a.children[4]) : [],
                     destination: parseRegister(a.children[0].value),
                     why: stripComment(last_1.default(a.children).value),
                 };
@@ -77798,7 +78258,7 @@ const instructionFromParseResult = (ast) => {
                 return {
                     kind: 'callByRegister',
                     function: parseRegister(a.children[0].value),
-                    arguments: a.children.length == 5 ? parseArgList(a.children[2]) : [],
+                    arguments: a.children.length == 5 ? exports.parseArgList(a.children[2]) : [],
                     destination: null,
                     why: stripComment(last_1.default(a.children).value),
                 };
@@ -77811,7 +78271,7 @@ const instructionFromParseResult = (ast) => {
                 return {
                     kind: 'callByName',
                     function: a.children[2].value,
-                    arguments: a.children.length == 7 ? parseArgList(a.children[4]) : [],
+                    arguments: a.children.length == 7 ? exports.parseArgList(a.children[4]) : [],
                     destination: parseRegister(a.children[0].value),
                     why: stripComment(last_1.default(a.children).value),
                 };
@@ -77822,7 +78282,7 @@ const instructionFromParseResult = (ast) => {
                 return {
                     kind: 'callByName',
                     function: a.children[0].value,
-                    arguments: a.children.length == 5 ? parseArgList(a.children[2]) : [],
+                    arguments: a.children.length == 5 ? exports.parseArgList(a.children[2]) : [],
                     destination: null,
                     why: stripComment(last_1.default(a.children).value),
                 };
@@ -77917,155 +78377,14 @@ const instructionFromParseResult = (ast) => {
             throw debug_1.default(`${ast.type} unhandled in instructionFromParseResult`);
     }
 };
-const functionFromParseResult = (ast) => {
-    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
-        throw debug_1.default('todo');
-    }
-    if (ast.type != 'function') {
-        throw debug_1.default('Need a function');
-    }
-    if (!('children' in ast)) {
-        debug_1.default('wrong shape ast');
-        throw debug_1.default('WrongShapeAst');
-    }
-    let childIndex = 0;
-    let child = ast.children[childIndex];
-    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
-        throw debug_1.default('todo');
-    }
-    if (child.type != 'function') {
-        debug_1.default('wrong shape ast');
-        throw debug_1.default('WrongShapeAst');
-    }
-    childIndex++;
-    child = ast.children[childIndex];
-    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
-        throw debug_1.default('todo');
-    }
-    if (child.type == 'spillSpec') {
-        childIndex++;
-    }
-    child = ast.children[childIndex];
-    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
-        throw debug_1.default('todo');
-    }
-    if (child.type != 'identifier') {
-        debug_1.default('wrong shape ast');
-        throw debug_1.default('WrongShapeAst');
-    }
-    const name = ast.children[childIndex].value;
-    childIndex++;
-    child = ast.children[childIndex];
-    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
-        throw debug_1.default('todo');
-    }
-    if (child.type != 'leftBracket') {
-        debug_1.default('wrong shape ast');
-        throw debug_1.default('WrongShapeAst');
-    }
-    childIndex++;
-    let args = [];
-    child = ast.children[childIndex];
-    if (parse_1.isSeparatedListNode(child)) {
-        args = parseArgList(child);
-        childIndex++;
-    }
-    child = ast.children[childIndex];
-    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
-        throw debug_1.default('todo');
-    }
-    if (child.type != 'rightBracket') {
-        debug_1.default('wrong shape ast');
-        throw debug_1.default('WrongShapeAst');
-    }
-    childIndex++;
-    child = ast.children[childIndex];
-    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
-        throw debug_1.default('todo');
-    }
-    if (child.type != 'colon') {
-        debug_1.default('wrong shape ast');
-        throw debug_1.default('WrongShapeAst');
-    }
-    childIndex++;
-    child = ast.children[childIndex];
-    if (!parse_1.isListNode(child)) {
-        throw debug_1.default('todo');
-    }
-    const instructions = child.items.map(instructionFromParseResult);
-    return { name, instructions, liveAtExit: [], arguments: args };
-};
-const tacFromParseResult = (ast) => {
-    if (!ast)
-        debug_1.default('no type');
-    if (parse_1.isSeparatedListNode(ast))
-        throw debug_1.default('todo');
-    if (parse_1.isListNode(ast))
-        throw debug_1.default('todo');
-    if (ast.type !== 'program')
-        throw debug_1.default('todo');
-    const parsedGlobals = ast.children[0];
-    const parsedFunctions = ast.children[1];
-    if (!parse_1.isListNode(parsedGlobals))
-        throw debug_1.default('todo');
-    if (!parse_1.isListNode(parsedFunctions))
-        throw debug_1.default('todo');
-    const globals = {};
-    parsedGlobals.items.forEach((a) => {
-        globals[a.children[1].value] = {
-            mangledName: a.children[3].value,
-            bytes: a.children[4].value,
-        };
-    });
-    const allFunctions = parsedFunctions.items.map(functionFromParseResult);
-    let main = undefined;
-    const functions = [];
-    allFunctions.forEach(f => {
-        if (f.name == 'main') {
-            if (main) {
-                throw debug_1.default('two mains');
-            }
-            main = f;
-        }
-        else {
-            functions.push(f);
-        }
-    });
-    return { globals, functions, main, stringLiterals: [] };
-};
-exports.parseProgram = (input) => {
-    const result = parse_1.parseString(tokenSpecs, grammar, 'program', input);
-    if ('errors' in result)
-        return result.errors;
-    return tacFromParseResult(result);
-};
-exports.parseFunction = (input) => {
-    const result = parse_1.parseString(tokenSpecs, grammar, 'function', input);
-    if ('errors' in result)
-        return result.errors;
-    return functionFromParseResult(result);
-};
-exports.parseFunctionOrDie = (tacString) => {
-    const parsed = exports.parseFunction(tacString);
-    if ('kind' in parsed) {
-        debugger;
-        exports.parseFunction(tacString);
-        throw debug_1.default('error in parseFunctionOrDie');
-    }
-    if (Array.isArray(parsed)) {
-        debugger;
-        exports.parseFunction(tacString);
-        throw debug_1.default('error in parseFunctionOrDie');
-    }
-    return parsed;
-};
+// TODO: this probably belongs in Statement
 exports.parseInstructions = (input) => {
-    const result = parse_1.parseString(tokenSpecs, grammar, 'instructions', input);
+    const result = parse_1.parseString(exports.tokenSpecs, exports.grammar, 'instructions', input);
     if ('errors' in result)
         return result.errors;
     if (!parse_1.isListNode(result))
         throw debug_1.default('bad list');
-    return result.items.map(instructionFromParseResult);
+    return result.items.map(exports.instructionFromParseResult);
 };
 exports.parseInstructionsOrDie = (tacString) => {
     const parsed = exports.parseInstructions(tacString);
@@ -78081,10 +78400,13 @@ exports.parseInstructionsOrDie = (tacString) => {
         if ('kind' in parsed0) {
             return parsed;
         }
+        else {
+            throw debug_1.default(`error in parseInstructionsOrDie:\n${renderParseError_1.default(parsed0, tacString)}`);
+        }
     }
     debugger;
     exports.parseInstructions(tacString);
-    throw debug_1.default('error in parseInstructionsOrDie: not array');
+    throw debug_1.default(`error in parseInstructionsOrDie: not array`);
 };
 
 
@@ -78102,6 +78424,7 @@ exports.parseInstructionsOrDie = (tacString) => {
 Object.defineProperty(exports, "__esModule", { value: true });
 const runtime_strings_1 = __webpack_require__(/*! ../runtime-strings */ "./runtime-strings.ts");
 const parser_1 = __webpack_require__(/*! ./parser */ "./threeAddressCode/parser.ts");
+const Function_1 = __webpack_require__(/*! ./Function */ "./threeAddressCode/Function.ts");
 const Register_1 = __webpack_require__(/*! ./Register */ "./threeAddressCode/Register.ts");
 const switchableMallocImpl = (bytesInWord, makeSyscall) => ({
     name: 'my_malloc',
@@ -78186,7 +78509,7 @@ exports.mallocWithMmap = bytesInWord => switchableMallocImpl(bytesInWord, (amoun
     why: 'mmap',
     destination,
 }));
-exports.length = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.length = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) length(r:str):
             r:currentCharPtr = r:str; Make a copy of the arg that we can modify (TODO: disallow modifying arg)
             r:len = 0;
@@ -78199,7 +78522,7 @@ exports.length = bytesInWord => parser_1.parseFunctionOrDie(`
         length_return:; Done
             return r:len;
     `);
-exports.stringCopy = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.stringCopy = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) string_copy(r:source, r:destination):; Copy string pointer to by first argument to second argument
         string_copy_loop:; Copy a byte
             r:currentChar = *r:source; Load next char from string
@@ -78210,12 +78533,12 @@ exports.stringCopy = bytesInWord => parser_1.parseFunctionOrDie(`
             goto string_copy_loop; and go keep copying
         string_copy_return:; Done
     `);
-exports.printWithPrintRuntimeFunction = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.printWithPrintRuntimeFunction = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) print(r:str):
         r:result = syscall print r:str;
         return r:result;
     `);
-exports.printWithWriteRuntimeFunction = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.printWithWriteRuntimeFunction = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) print(r:str):
         r:len = length(r:str); Get str length
         r:result = syscall print 1 r:str r:len; 1: fd of stdout. r:str: ptr to data to write. r:len: length to write
@@ -78223,7 +78546,7 @@ exports.printWithWriteRuntimeFunction = bytesInWord => parser_1.parseFunctionOrD
    `);
 exports.readIntDirect = bytesInWord => 
 // TODO: Allow syscalls that don't have any arguments, cause this shouldn't have arguments
-parser_1.parseFunctionOrDie(`
+Function_1.parseFunctionOrDie(`
         (function) readInt(r:str):
               r:result = syscall readInt r:str;
               return r:result;
@@ -78231,7 +78554,7 @@ parser_1.parseFunctionOrDie(`
 exports.readIntThroughSyscall = bytesInWord => {
     const stdinFd = 0;
     const bufferSize = 10;
-    return parser_1.parseFunctionOrDie(`
+    return Function_1.parseFunctionOrDie(`
         (function) readInt():
             r:buffer = my_malloc(${bufferSize}); malloc 10 byte buffer because why not TODO
             r:readResult = syscall read ${stdinFd} r:buffer ${bufferSize};
@@ -78248,7 +78571,7 @@ exports.readIntThroughSyscall = bytesInWord => {
     `);
 };
 // TODO: figure out a way to verify that this is working
-exports.verifyNoLeaks = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.verifyNoLeaks = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) verify_no_leaks():
         r:currentBlockPointer = &first_block; Load first block address
         r:currentBlockPointer = *(r:currentBlockPointer + ${0 * bytesInWord}); Load first block pointer
@@ -78265,7 +78588,7 @@ exports.verifyNoLeaks = bytesInWord => parser_1.parseFunctionOrDie(`
         goto verify_no_leaks_loop; Check next block
     verify_no_leaks_return:; All done
     `);
-exports.stringConcatenateRuntimeFunction = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.stringConcatenateRuntimeFunction = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) string_concatenate(r:lhs, r:rhs, r:dest):
         write_left_loop:; Append left string
             r:currentChar = *r:lhs; Load byte from left
@@ -78283,7 +78606,7 @@ exports.stringConcatenateRuntimeFunction = bytesInWord => parser_1.parseFunction
             goto copy_from_right; Go copy next char
         concatenate_return:; Exit. TODO: repair input pointers?
     `);
-exports.stringEqualityRuntimeFunction = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.stringEqualityRuntimeFunction = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) stringEquality(r:lhs, r:rhs):
             r:result = 1; Result = true (will write false if diff found)
         stringEquality_loop:; Check a char
@@ -78301,7 +78624,7 @@ exports.stringEqualityRuntimeFunction = bytesInWord => parser_1.parseFunctionOrD
     `);
 // TODO: merge adjacent free blocks
 // TOOD: check if already free
-exports.myFreeRuntimeFunction = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.myFreeRuntimeFunction = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) my_free(r:ptr):
             r:zero = 0; Need a zero
             goto free_null_check_passed if r:ptr != r:zero; Not freeing null check passed
@@ -78316,7 +78639,7 @@ exports.myFreeRuntimeFunction = bytesInWord => parser_1.parseFunctionOrDie(`
     `);
 // TODO: return error if string doesn't contain an int
 exports.intFromString = bytesInWord => {
-    return parser_1.parseFunctionOrDie(`
+    return Function_1.parseFunctionOrDie(`
     (function) intFromString(r:in):
         r:result = 0; Accumulate into here
         r:input = r:in; Make a copy so we can modify it TODO is this necessary?
@@ -78436,13 +78759,14 @@ exports.equal = (a, b) => {
         return true;
     }
     if (a.type.kind == 'Product' && b.type.kind == 'Product') {
-        if (a.type.name != b.type.name)
-            return false;
         const bProduct = b.type;
         const allInLeftPresentInRight = a.type.members.every(memberA => bProduct.members.some(memberB => memberA.name == memberB.name && exports.equal(memberA.type, memberB.type)));
         const aProduct = a.type;
         const allInRightPresentInLeft = b.type.members.every(memberB => aProduct.members.some(memberA => memberA.name == memberB.name && exports.equal(memberA.type, memberB.type)));
         return allInLeftPresentInRight && allInRightPresentInLeft;
+    }
+    if (a.type.kind == 'List' && b.type.kind == 'List') {
+        return exports.equal(a.type.of, b.type.of);
     }
     return a.type.kind == b.type.kind;
 };
@@ -78621,9 +78945,13 @@ exports.default = async (dotText, svgPath, engine = 'dot') => {
 Object.defineProperty(exports, "__esModule", { value: true });
 const idMaker_1 = __webpack_require__(/*! ./idMaker */ "./util/idMaker.ts");
 exports.default = () => {
-    const makeId = idMaker_1.default();
+    const idMakers = {};
     return (name) => {
-        return `${name}_${makeId()}`;
+        if (name in idMakers) {
+            return `${name}_${idMakers[name]()}`;
+        }
+        idMakers[name] = idMaker_1.default();
+        return `${name}_`; // TODO: Remove the underscore and figure out why test fail
     };
 };
 
@@ -78806,6 +79134,24 @@ exports.default = (p, array) => {
         }
     }
     return result;
+};
+
+
+/***/ }),
+
+/***/ "./util/never.ts":
+/*!***********************!*\
+  !*** ./util/never.ts ***!
+  \***********************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const debug_1 = __webpack_require__(/*! ./debug */ "./util/debug.ts");
+exports.default = (n, f) => {
+    throw debug_1.default(`${JSON.stringify(n)} unhandled in ${f}`);
 };
 
 

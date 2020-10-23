@@ -189,6 +189,18 @@ const astToJS = ({ ast, exitInsteadOfReturn, builtinFunctions, }) => {
             return ['[', join_1.default(items, ', '), ']'];
         case 'indexAccess':
             return ['(', ...recurse(ast.accessed), ')[(', ...recurse(ast.index), ')]'];
+        case 'forLoop':
+            const body = flatten_1.default(ast.body.map(recurse));
+            const listItems = recurse(ast.list);
+            return [
+                `const items = `,
+                ...listItems,
+                `;`,
+                `for (let i = 0; i < items.length; i++) {`,
+                `const ${ast.var} = items[i];`,
+                ...body,
+                `}`,
+            ];
         default:
             throw debug_1.default(`${ast.kind} unhanlded in toJS`);
     }
@@ -291,6 +303,7 @@ const uniqueBy_1 = __webpack_require__(/*! ./util/list/uniqueBy */ "./util/list/
 const idMaker_1 = __webpack_require__(/*! ./util/idMaker */ "./util/idMaker.ts");
 const last_1 = __webpack_require__(/*! ./util/list/last */ "./util/list/last.ts");
 const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
+const never_1 = __webpack_require__(/*! ./util/never */ "./util/never.ts");
 const lex_1 = __webpack_require__(/*! ./parser-lib/lex */ "./parser-lib/lex.ts");
 exports.lex = lex_1.lex;
 const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
@@ -387,6 +400,7 @@ const transformAst = (nodeType, f, ast, recurseOnNew) => {
     }
 };
 const extractVariable = (ctx) => {
+    const kind = ctx.w.kind;
     switch (ctx.w.kind) {
         case 'reassignment':
         case 'declarationAssignment':
@@ -407,8 +421,10 @@ const extractVariable = (ctx) => {
         case 'returnStatement':
         case 'typeDeclaration':
             return undefined;
+        case 'forLoop':
+            throw debug_1.default("forLoop has muliple variables, doesn't work here");
         default:
-            throw debug_1.default(`${ctx.w.kind} unhandled in extractVariable`);
+            never_1.default(kind, 'extractVariable');
     }
 };
 const extractVariables = (ctx) => {
@@ -430,8 +446,20 @@ const extractVariables = (ctx) => {
                     variables.push(potentialVariable);
                 }
                 break;
+            case 'forLoop':
+                statement.body.forEach(s => {
+                    const vars = extractVariables({
+                        w: [s],
+                        availableVariables: mergeDeclarations(ctx.availableVariables, variables),
+                        availableTypes: ctx.availableTypes,
+                    });
+                    if (vars) {
+                        variables.push(...vars);
+                    }
+                });
+                break;
             default:
-                throw debug_1.default('todo');
+                never_1.default(statement, 'extractVariables');
         }
     });
     return variables;
@@ -499,11 +527,13 @@ const walkAst = (ast, nodeKinds, extractItem) => {
             return [...result, ...recurse(ast.accessed), ...recurse(ast.index)];
         case 'memberStyleCall':
             return [...result, ...recurse(ast.lhs), ...flatten_1.default(ast.params.map(recurse))];
+        case 'forLoop':
+            return [...result, ...recurse(ast.list), ...flatten_1.default(ast.body.map(recurse))];
         default:
             throw debug_1.default(`${ast.kind} unhandled in walkAst`);
     }
 };
-const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[1], ast, true);
+const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[0], ast, true);
 exports.removeBracketsFromAst = removeBracketsFromAst;
 const parseMpl = (tokens) => {
     const parseResult = parse_1.parse(grammar_1.grammar, 'program', tokens);
@@ -898,7 +928,6 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                 type: {
                     type: {
                         kind: 'Product',
-                        name: ast.typeName,
                         members: ast.members.map(({ name, expression }) => ({
                             name,
                             type: recurse(expression).type,
@@ -1123,8 +1152,35 @@ const typeCheckStatement = (ctx) => {
                 errors: [],
                 newVariables: [],
             };
+        case 'forLoop': {
+            const expressionType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.list }));
+            if (isTypeError(expressionType)) {
+                return { errors: expressionType, newVariables: [] };
+            }
+            if (expressionType.type.type.kind != 'List') {
+                return {
+                    errors: [
+                        {
+                            kind: 'nonListInFor',
+                            found: expressionType.type,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+            const newVariables = [];
+            for (const statement of ast.body) {
+                const statementType = typeCheckStatement(Object.assign(Object.assign({}, ctx), { w: statement }));
+                if (isTypeError(statementType)) {
+                    return { errors: statementType, newVariables: [] };
+                }
+                newVariables.push(...statementType.newVariables);
+            }
+            return { errors: [], newVariables };
+        }
         default:
-            throw debug_1.default(`${ast.kind} unhandled in typeCheckStatement`);
+            throw never_1.default(ast, 'typeCheckStatement');
     }
 };
 exports.typeCheckStatement = typeCheckStatement;
@@ -1167,15 +1223,17 @@ const inferFunction = (ctx) => {
     const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
     const statements = [];
     ctx.w.statements.forEach(statement => {
+        const statementsContext = {
+            w: [statement],
+            availableVariables: variablesFound,
+            availableTypes: ctx.availableTypes,
+        };
         const statementContext = {
             w: statement,
             availableVariables: variablesFound,
             availableTypes: ctx.availableTypes,
         };
-        const maybeNewVariable = extractVariable(statementContext);
-        if (maybeNewVariable) {
-            variablesFound.push(maybeNewVariable);
-        }
+        variablesFound.push(...extractVariables(statementsContext));
         statements.push(infer(statementContext));
     });
     const maybeReturnStatement = last_1.default(ctx.w.statements);
@@ -1209,6 +1267,14 @@ const infer = (ctx) => {
                 kind: 'returnStatement',
                 expression: recurse(ast.expression),
                 sourceLocation: ast.sourceLocation,
+            };
+        case 'forLoop':
+            return {
+                kind: 'forLoop',
+                sourceLocation: ast.sourceLocation,
+                var: ast.var,
+                list: recurse(ast.list),
+                body: ast.body.map(recurse),
             };
         case 'equality':
             const equalityType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.lhs }));
@@ -1382,7 +1448,7 @@ const infer = (ctx) => {
             throw debug_1.default(`${ast.kind} unhandled in infer`);
     }
 };
-const extractFunctionBody = node => {
+const extractFunctionBody = (node) => {
     if (node.type !== 'statement')
         debug_1.default('expected a statement');
     if (node.children.length === 3) {
@@ -1437,15 +1503,23 @@ const parseTypeLiteralComponent = (ast) => {
     };
 };
 const parseType = (ast) => {
-    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
+    if (parse_1.isSeparatedListNode(ast)) {
         throw debug_1.default('todo');
+    }
+    if (parse_1.isListNode(ast)) {
+        return {
+            type: {
+                kind: 'Product',
+                members: ast.items.map(parseTypeLiteralComponent),
+            },
+        };
     }
     switch (ast.type) {
         case 'typeWithArgs': {
             const name = ast.children[0].value;
             if (name != 'Function')
                 throw debug_1.default('Only functions support args right now');
-            const list = ast.children[2];
+            const list = ast.children[1];
             if (!parse_1.isSeparatedListNode(list))
                 throw debug_1.default('todo');
             const typeList = list.items.map(parseType);
@@ -1475,19 +1549,6 @@ const parseType = (ast) => {
                 default:
                     return { namedType: name };
             }
-        }
-        case 'typeLiteral': {
-            const node = ast.children[1];
-            if (!parse_1.isListNode(node)) {
-                throw debug_1.default('todo');
-            }
-            return {
-                type: {
-                    kind: 'Product',
-                    name: ast.type,
-                    members: node.items.map(parseTypeLiteralComponent),
-                },
-            };
         }
         case 'listType': {
             const node = ast.children[0];
@@ -1673,9 +1734,6 @@ const astFromParseResult = (ast) => {
             if ('namedType' in theType) {
                 throw debug_1.default("Shouldn't get here, delcaring types have to actually declare a type");
             }
-            if (theType.type.kind == 'Product') {
-                theType.type.name = name;
-            }
             return {
                 kind: 'typeDeclaration',
                 name,
@@ -1698,7 +1756,7 @@ const astFromParseResult = (ast) => {
             const typeName = typeNameNode.value;
             if (typeof typeName != 'string')
                 return 'WrongShapeAst';
-            const membersNode = ast.children[2];
+            const membersNode = ast.children[1];
             if (!parse_1.isListNode(membersNode)) {
                 throw debug_1.default('todo');
             }
@@ -1719,7 +1777,7 @@ const astFromParseResult = (ast) => {
                 return 'WrongShapeAst';
             }
             const memberName = anyAst.children[2].value;
-            const params = anyAst.children[4].items.map(astFromParseResult);
+            const params = anyAst.children[3].items.map(astFromParseResult);
             if (params == 'WrongShapeAst') {
                 return 'WrongShapeAst';
             }
@@ -1813,13 +1871,7 @@ const astFromParseResult = (ast) => {
             if (!hasType(ast.children[childIndex], 'fatArrow'))
                 debug_1.default('wrong');
             childIndex++;
-            if (!hasType(ast.children[childIndex], 'leftCurlyBrace'))
-                debug_1.default('wrong');
-            childIndex++;
             const body = extractFunctionBody(ast.children[childIndex]);
-            childIndex++;
-            if (!hasType(ast.children[childIndex], 'rightCurlyBrace'))
-                debug_1.default('wrong');
             childIndex++;
             if (childIndex !== ast.children.length)
                 debug_1.default('wrong');
@@ -1830,6 +1882,21 @@ const astFromParseResult = (ast) => {
                 parameters: parameters2,
                 sourceLocation: ast.sourceLocation,
             };
+        }
+        case 'forLoop': {
+            const a = ast;
+            const body = extractFunctionBody(a.children[2]);
+            const lst = astFromParseResult(a.children[1].children[2]);
+            if (lst == 'WrongShapeAst')
+                return lst;
+            const result = {
+                kind: 'forLoop',
+                var: a.children[1].children[0].value,
+                list: lst,
+                body,
+                sourceLocation: a.sourceLocation,
+            };
+            return result;
         }
         case 'booleanLiteral':
             return {
@@ -1844,7 +1911,7 @@ const astFromParseResult = (ast) => {
                 sourceLocation: ast.sourceLocation,
             };
         case 'listLiteral':
-            const items = ast.children[1];
+            const items = ast.children[0];
             if (!parse_1.isSeparatedListNode(items))
                 throw debug_1.default('todo');
             return {
@@ -1855,7 +1922,7 @@ const astFromParseResult = (ast) => {
         case 'indexAccess':
             return {
                 kind: 'indexAccess',
-                index: astFromParseResult(ast.children[2]),
+                index: astFromParseResult(ast.children[1]),
                 accessed: astFromParseResult(ast.children[0]),
                 sourceLocation: ast.sourceLocation,
             };
@@ -2015,6 +2082,7 @@ exports.tokenSpecs = [
     // TODO: Make a "keyword" utility function for the lexer. Also figure out why \b doesn't work here.
     { token: 'return[^A-z]', type: 'return', toString: () => 'return' },
     { token: 'export[^A-z]', type: 'export', toString: () => 'export' },
+    { token: 'for[^A-z]', type: 'for', toString: () => 'for' },
     { token: 'true|false', type: 'booleanLiteral', action: x => x.trim(), toString: x => x },
     { token: '[a-z]\\w*', type: 'identifier', action: x => x, toString: x => x },
     { token: '[A-Z][A-Za-z]*', type: 'typeIdentifier', action: x => x, toString: x => x },
@@ -2042,6 +2110,7 @@ exports.tokenSpecs = [
 const mplTerminal = token => parse_1.Terminal(token);
 const mplOptional = parser => parse_1.Optional(parser);
 const export_ = mplTerminal('export');
+const for_ = mplTerminal('for');
 const plus = mplTerminal('sum');
 const minus = mplTerminal('subtraction');
 const times = mplTerminal('product');
@@ -2068,6 +2137,10 @@ const stringLiteral = mplTerminal('stringLiteral');
 const lessThan = mplTerminal('lessThan');
 const greaterThan = mplTerminal('greaterThan');
 const memberAccess = mplTerminal('memberAccess');
+const rounds = { left: leftBracket, right: rightBracket };
+const curlies = { left: leftCurlyBrace, right: rightCurlyBrace };
+const squares = { left: leftSquareBracket, right: rightSquareBracket };
+const angles = { left: lessThan, right: greaterThan };
 exports.grammar = {
     program: parse_1.Sequence('program', ['functionBody']),
     function: parse_1.OneOf([
@@ -2083,9 +2156,7 @@ exports.grammar = {
             'argList',
             mplOptional(rightBracket),
             fatArrow,
-            leftCurlyBrace,
-            'functionBody',
-            rightCurlyBrace,
+            parse_1.NestedIn(curlies, 'functionBody'),
         ]),
     ]),
     argList: parse_1.SeparatedList(comma, 'arg'),
@@ -2107,19 +2178,20 @@ exports.grammar = {
         parse_1.Sequence('typeDeclaration', [typeIdentifier, colon, assignment, 'type']),
         parse_1.Sequence('reassignment', [identifier, assignment, 'expression']),
         parse_1.Sequence('returnStatement', [_return, 'expression']),
+        parse_1.Sequence('forLoop', [
+            for_,
+            parse_1.NestedIn(rounds, parse_1.Sequence('forCondition', [identifier, colon, 'expression'])),
+            parse_1.NestedIn(curlies, 'functionBody'),
+        ]),
     ]),
     typeList: parse_1.SeparatedList(comma, 'type'),
     type: parse_1.OneOf([
         parse_1.Sequence('listType', [typeIdentifier, leftSquareBracket, rightSquareBracket]),
-        parse_1.Sequence('typeWithArgs', [typeIdentifier, lessThan, 'typeList', greaterThan]),
+        parse_1.Sequence('typeWithArgs', [typeIdentifier, parse_1.NestedIn(angles, 'typeList')]),
         parse_1.Sequence('typeWithoutArgs', [typeIdentifier]),
         'typeLiteral',
     ]),
-    typeLiteral: parse_1.Sequence('typeLiteral', [
-        leftCurlyBrace,
-        parse_1.Many('typeLiteralComponent'),
-        rightCurlyBrace,
-    ]),
+    typeLiteral: parse_1.NestedIn(curlies, parse_1.Many('typeLiteralComponent')),
     typeLiteralComponent: parse_1.Sequence('typeLiteralComponent', [
         identifier,
         colon,
@@ -2128,9 +2200,7 @@ exports.grammar = {
     ]),
     objectLiteral: parse_1.Sequence('objectLiteral', [
         typeIdentifier,
-        leftCurlyBrace,
-        parse_1.Many('objectLiteralComponent'),
-        rightCurlyBrace,
+        parse_1.NestedIn(curlies, parse_1.Many('objectLiteralComponent')),
     ]),
     objectLiteralComponent: parse_1.Sequence('objectLiteralComponent', [
         identifier,
@@ -2159,9 +2229,7 @@ exports.grammar = {
             'simpleExpression',
             memberAccess,
             identifier,
-            leftBracket,
-            'paramList',
-            rightBracket,
+            parse_1.NestedIn(rounds, 'paramList'),
         ]),
         'memberAccess',
     ]),
@@ -2170,23 +2238,19 @@ exports.grammar = {
         'indexAccess',
     ]),
     indexAccess: parse_1.OneOf([
-        parse_1.Sequence('indexAccess', [
-            'simpleExpression',
-            leftSquareBracket,
-            'simpleExpression',
-            rightSquareBracket,
-        ]),
+        parse_1.Sequence('indexAccess', ['simpleExpression', parse_1.NestedIn(squares, 'simpleExpression')]),
         'listLiteral',
     ]),
     listLiteral: parse_1.OneOf([
-        parse_1.Sequence('listLiteral', [leftSquareBracket, 'listItems', rightSquareBracket]),
+        parse_1.Sequence('listLiteral', [parse_1.NestedIn(squares, 'listItems')]),
         'simpleExpression',
     ]),
     listItems: parse_1.SeparatedList(comma, 'expression'),
     simpleExpression: parse_1.OneOf([
-        parse_1.Sequence('bracketedExpression', [leftBracket, 'expression', rightBracket]),
+        parse_1.Sequence('bracketedExpression', [parse_1.NestedIn(rounds, 'expression')]),
         parse_1.Sequence('callExpression', [
             identifier,
+            // TODO: Make NestedIn(..., Optional(...)) work
             leftBracket,
             mplOptional('paramList'),
             rightBracket,
@@ -2217,20 +2281,26 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const frontend_1 = __webpack_require__(/*! ./frontend */ "./frontend.ts");
 const js_1 = __webpack_require__(/*! ./backends/js */ "./backends/js.ts");
 function mplLoader(source, context) {
-    const frontendOutput = frontend_1.compile(source);
-    if ('parseErrors' in frontendOutput ||
-        'typeErrors' in frontendOutput ||
-        'kind' in frontendOutput ||
-        'internalError' in frontendOutput) {
-        context.emitError(new Error(JSON.stringify(frontendOutput)));
+    try {
+        const frontendOutput = frontend_1.compile(source);
+        if ('parseErrors' in frontendOutput ||
+            'typeErrors' in frontendOutput ||
+            'kind' in frontendOutput ||
+            'internalError' in frontendOutput) {
+            context.emitError(new Error(JSON.stringify(frontendOutput)));
+            return;
+        }
+        const js = js_1.default.compile(frontendOutput);
+        if ('error' in js) {
+            context.emitError(new Error(JSON.stringify(js.error)));
+            return;
+        }
+        return js.target;
+    }
+    catch (e) {
+        context.emitError(new Error(JSON.stringify(e)));
         return;
     }
-    const js = js_1.default.compile(frontendOutput);
-    if ('error' in js) {
-        context.emitError(new Error(JSON.stringify(js.error)));
-        return;
-    }
-    return js.target;
 }
 exports.mplLoader = mplLoader;
 
@@ -25019,7 +25089,11 @@ const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 const graphlib_1 = __webpack_require__(/*! graphlib */ "./node_modules/graphlib/index.js");
 const lex_1 = __webpack_require__(/*! ./lex */ "./parser-lib/lex.ts");
 exports.isSeparatedListNode = (n) => 'items' in n && 'separators' in n;
-exports.isListNode = (n) => 'items' in n && !('separators' in n);
+exports.isListNode = (n) => {
+    if (!n)
+        throw debug_1.default('bad node');
+    return 'items' in n && !('separators' in n);
+};
 exports.parseResultIsError = (result) => result != 'missingOptional' && 'kind' in result && result.kind == 'parseError';
 const parseResultWithIndexIsLeaf = (r) => 'value' in r;
 // TODO also use a real sum type
@@ -25067,6 +25141,7 @@ exports.Optional = (parser) => ({
     parser,
 });
 exports.SeparatedList = (separator, item) => ({ kind: 'separatedList', separator, item });
+exports.NestedIn = (nesting, parser) => ({ kind: 'nested', in: nesting, parser });
 exports.Many = (item) => ({
     kind: 'many',
     item,
@@ -25114,6 +25189,9 @@ const parseSequence = (grammar, parser, tokens, index) => {
         }
         else if (p.kind == 'many') {
             result = parseMany(grammar, p, tokens, index);
+        }
+        else if (p.kind == 'nested') {
+            result = parseNested(grammar, p, tokens, index);
         }
         else {
             throw debug_1.default(`Invalid parser type: ${JSON.stringify(p)}`);
@@ -25187,6 +25265,9 @@ const parseAlternative = (grammar, alternatives, tokens, index) => {
                 }
             }
         }
+        else if (currentParser.kind == 'nested') {
+            throw debug_1.default('should figure out a way to do nested inside alternative - probably need a more generic framework');
+        }
         else if (currentParser.kind == 'sequence') {
             // Sequence. This is the complex one.
             // Next get the parser for the next item in the sequence based on how much progress we have made due
@@ -25227,6 +25308,10 @@ const parseAlternative = (grammar, alternatives, tokens, index) => {
                 else {
                     currentResult = optionalResult;
                 }
+                currentIndex = currentProgress.subParserIndex;
+            }
+            else if (currentParser.kind == 'nested') {
+                currentResult = parseNested(grammar, currentParser, tokens, tokenIndex);
                 currentIndex = currentProgress.subParserIndex;
             }
             else {
@@ -25368,6 +25453,21 @@ const parseSeparatedList = (grammar, sep, tokens, index) => {
         newIndex: next.newIndex,
     };
 };
+const parseNested = (grammar, nested, tokens, index) => {
+    const leftNest = parseAnything(grammar, nested.in.left, tokens, index);
+    if (exports.parseResultIsError(leftNest)) {
+        return leftNest;
+    }
+    const result = parseAnything(grammar, nested.parser, tokens, leftNest.newIndex);
+    if (exports.parseResultIsError(result)) {
+        return result;
+    }
+    const rightNest = parseAnything(grammar, nested.in.right, tokens, result.newIndex);
+    if (exports.parseResultIsError(rightNest)) {
+        return rightNest;
+    }
+    return Object.assign(Object.assign({}, result), { newIndex: rightNest.newIndex });
+};
 const parseMany = (grammar, many, tokens, index) => {
     const item = parseAnything(grammar, many.item, tokens, index);
     if (exports.parseResultIsError(item)) {
@@ -25398,6 +25498,9 @@ const parseAnything = (grammar, parser, tokens, index) => {
         }
         else if (parser.kind == 'many') {
             return parseMany(grammar, parser, tokens, index);
+        }
+        else if (parser.kind == 'nested') {
+            return parseNested(grammar, parser, tokens, index);
         }
         else {
             throw debug_1.default('bad type in parse');
@@ -25630,13 +25733,14 @@ exports.equal = (a, b) => {
         return true;
     }
     if (a.type.kind == 'Product' && b.type.kind == 'Product') {
-        if (a.type.name != b.type.name)
-            return false;
         const bProduct = b.type;
         const allInLeftPresentInRight = a.type.members.every(memberA => bProduct.members.some(memberB => memberA.name == memberB.name && exports.equal(memberA.type, memberB.type)));
         const aProduct = a.type;
         const allInRightPresentInLeft = b.type.members.every(memberB => aProduct.members.some(memberA => memberA.name == memberB.name && exports.equal(memberA.type, memberB.type)));
         return allInLeftPresentInRight && allInRightPresentInLeft;
+    }
+    if (a.type.kind == 'List' && b.type.kind == 'List') {
+        return exports.equal(a.type.of, b.type.of);
     }
     return a.type.kind == b.type.kind;
 };
@@ -25873,6 +25977,24 @@ exports.default = (p, array) => {
         }
     }
     return result;
+};
+
+
+/***/ }),
+
+/***/ "./util/never.ts":
+/*!***********************!*\
+  !*** ./util/never.ts ***!
+  \***********************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const debug_1 = __webpack_require__(/*! ./debug */ "./util/debug.ts");
+exports.default = (n, f) => {
+    throw debug_1.default(`${JSON.stringify(n)} unhandled in ${f}`);
 };
 
 

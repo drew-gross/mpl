@@ -81,11 +81,11 @@ const required = (errorMessage: string): any => {
 };
 
 export const moduleTest = (t, m: TestModule) => {
-    const errors: string[] = [];
+    const errors: Error[] = [];
     const resultJs = mplLoader(m.source, { emitError: e => errors.push(e) });
-    if (errors.length != 0) {
-        t.fail('got errors');
-    }
+    errors.forEach(e => {
+        t.fail(e.stack);
+    });
     t.deepEqual(m.resultJs, resultJs);
 };
 

@@ -52,6 +52,19 @@ export const testModules: TestModule[] = [
         resultJs: 'export const three = 3;',
         failing: true, // TODO: Export constants
     },
+    {
+        name: 'Sum',
+        source: `
+            export sum := (xs: Integer[]) => {
+                result := 0;
+                for (x : xs) {
+                    result = result + x;
+                }
+                return result;
+            }
+        `,
+        resultJs: '',
+    },
 ];
 
 export const testPrograms: TestProgram[] = [
