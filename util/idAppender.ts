@@ -1,7 +1,6 @@
 import idMaker from './idMaker';
 
 export default () => {
-    const makeId = idMaker();
     const idMakers = {};
     return (name: string): string => {
         if (name in idMakers) {

@@ -332,7 +332,6 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
         }
         case 'forLoop':
             const body = ast.body.map(recurse);
-            const listItems = recurse(ast.list);
             return compileExpression(body, b => [
                 `for (uint64_t i = 0; i < ${(ast as any).list.value}.size; i++) {`,
                 `uint8_t ${ast.var} = ((uint8_t*)${(ast as any).list.value}.data)[i];`,

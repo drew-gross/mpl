@@ -786,6 +786,18 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 6,
     },
     {
+        name: 'Large For',
+        source: `
+            numbers := [1, 2, 3, 2, 1, 2, 3];
+            sum := 10;
+            for (number : numbers) {
+                sum = sum + number;
+            };
+            return sum;
+        `,
+        exitCode: 24,
+    },
+    {
         name: 'For With Non-Iterable',
         source: `
             sum := 0;

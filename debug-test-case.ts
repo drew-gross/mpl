@@ -7,7 +7,6 @@ import writeTempFile from './util/writeTempFile';
 import { prompt } from 'inquirer';
 import * as dot from 'graphlib-dot';
 import { toDotFile } from './parser-lib/parse';
-import parseErrorToString from './parser-lib/parseErrorToString';
 import { toString as typeErrorToString } from './TypeError';
 import * as chalk from 'chalk';
 import * as commander from 'commander';
