@@ -271,6 +271,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     ...makeList,
                     ...ins(`
                         ${s(i)} = 0;
+                        ${s(max)} = *(${s(list)} + 0); get list length
                     ${loopLabel}:;
                         ; Get this iteration's item
                         ${s(bytesInWord)} = ${targetInfo.bytesInWord};

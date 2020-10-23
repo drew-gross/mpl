@@ -344,7 +344,11 @@ export const toTarget = <TargetRegister>({
         case 'callByName': {
             return [
                 ...arrangeArgumentsForFunctionCall(tas.arguments, getRegister, targetInfo),
-                { kind: 'callByName', function: tas.function, why: 'actually call' },
+                {
+                    kind: 'callByName',
+                    function: tas.function,
+                    why: `actually call (${tas.why})`,
+                },
                 ...saveFunctionCallResult(tas.destination, getRegister, targetInfo.registers),
             ];
         }
