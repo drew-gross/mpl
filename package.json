@@ -21,7 +21,7 @@
         "test-case": "npm run compile-tests && node --stack_size=1000000 ./built/debug-test-case.js",
         "test-case-debug": "npm run compile-tests && node  --stack_size=1000000 --inspect --inspect-brk ./built/debug-test-case.js",
         "test-case-profile": "tsc && node_modules/.bin/0x ./built/debug-test-case.js",
-        "compile": "webpack --mode development --env",
+        "compile": "webpack --mode development --env compile",
         "compile-tests": "webpack --mode development --env tests",
         "compile-commit": "webpack --mode development --env commit",
         "compile-experimental": "webpack --mode development --env experimental",
