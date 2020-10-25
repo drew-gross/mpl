@@ -1,5 +1,6 @@
 import debug from './util/debug';
-import { StringLiteralData, Backend, GlobalVariable } from './api';
+import { Type } from './types';
+import { StringLiteralData, Backend, VariableDeclaration } from './api';
 import flatten from './util/list/flatten';
 import { Statement } from './threeAddressCode/Statement';
 import { Statement as TargetStatement } from './targetCode/Statement';
@@ -187,13 +188,15 @@ export const makeExecutable = <TargetRegister>(
 
 // TODO: Move map to outside?
 export const freeGlobalsInstructions = (
-    globals: GlobalVariable[],
+    globals: VariableDeclaration[],
     makeTemporary,
     globalNameMap
 ): Statement[] => {
     const instructions: Statement[] = flatten(
         globals
-            .filter(declaration => ['String', 'List'].includes(declaration.type.type.kind))
+            .filter(declaration =>
+                ['String', 'List'].includes((declaration.type as Type).type.kind)
+            )
             .map(declaration => {
                 const globalStringAddress = makeTemporary('gobalStringAddress');
                 return [

@@ -26,14 +26,14 @@ import { Register, toString as s } from './Register';
 import {
     FrontendOutput,
     Function as ApiFunction,
-    GlobalVariable,
+    VariableDeclaration,
     StringLiteralData,
 } from '../api';
 import { Statement } from './statement';
 import { parseInstructionsOrDie as ins } from './parser';
 
-// TODO: merge this with GlobalVariable?
-export type GlobalInfo = { newName: string; originalDeclaration: GlobalVariable };
+// TODO: merge this with VariableDeclaration?
+export type GlobalInfo = { newName: string; originalDeclaration: VariableDeclaration };
 
 export type BackendOptions = {
     ast: Ast.Ast;
@@ -67,13 +67,13 @@ const assignGlobal = (
     availableTypes: TypeDeclaration[]
 ) => {
     const lhsType = lhsInfo.originalDeclaration.type;
-    switch (lhsType.type.kind) {
+    switch ((lhsType as Type).type.kind) {
         case 'Function':
         case 'Integer':
             return compileExpression<Statement>([], ([]) =>
                 ins(
                     `*${lhsInfo.newName} = ${s(rhsRegister)}; Put ${
-                        lhsType.type.kind
+                        (lhsType as Type).type.kind
                     } into global`
                 )
             );
@@ -89,7 +89,7 @@ const assignGlobal = (
             );
         case 'Product':
             const lhsAddress = makeTemporary('lhsAddress');
-            const copyMembers: Statement[][] = lhsType.type.members.map((m, i) => {
+            const copyMembers: Statement[][] = (lhsType as any).type.members.map((m, i) => {
                 // TODO: Should add up sizes of preceeding members
                 const offset = i * targetInfo.bytesInWord;
                 const memberTemporary = makeTemporary('member');
@@ -131,7 +131,7 @@ const assignGlobal = (
                 `),
             ]);
         default:
-            const unhandled = lhsInfo.originalDeclaration.type.type.kind;
+            const unhandled = (lhsInfo.originalDeclaration.type as Type).type.kind;
             throw debug(`${unhandled} unhandled in assignGlobal`);
     }
 };
@@ -446,7 +446,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 const reassignmentRhs = makeTemporary('reassignment_rhs');
                 const rhs = recurse({ ast: ast.expression, destination: reassignmentRhs });
                 const declaration = globalNameMap[lhs];
-                switch (declaration.originalDeclaration.type.type.kind) {
+                switch ((declaration.originalDeclaration.type as Type).type.kind) {
                     case 'Function':
                     case 'Integer':
                         return compileExpression<Statement>([rhs], ([e1]) => [
@@ -571,7 +571,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             const identifierName = ast.value;
             if (identifierName in globalNameMap) {
                 const info = globalNameMap[identifierName];
-                if (info.originalDeclaration.type.type.kind == 'Product') {
+                if ((info.originalDeclaration.type as Type).type.kind == 'Product') {
                     return compileExpression<Statement>([], ([]) => [
                         {
                             kind: 'loadSymbolAddress',
@@ -836,7 +836,7 @@ export const makeTargetProgram = ({
         };
         globals[declaration.name] = {
             mangledName,
-            bytes: typeSize(targetInfo, declaration.type, types),
+            bytes: typeSize(targetInfo, (declaration as any).type, types),
         };
     });
 

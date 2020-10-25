@@ -493,9 +493,9 @@ const compile = ({
         returnType: { type: { kind: 'Integer' } }, // Main can only ever return integer
         beforeExit: [
             ...globalDeclarations
-                .filter(d => ['String', 'List'].includes(d.type.type.kind))
+                .filter(d => ['String', 'List'].includes((d.type as Type).type.kind))
                 .map(d => {
-                    if (d.type.type.kind == 'String') {
+                    if ((d.type as Type).type.kind == 'String') {
                         return `my_free(${d.name}); // Free global string`;
                     } else {
                         return `my_free(${d.name}.data); // Free global list`;
@@ -505,7 +505,7 @@ const compile = ({
         ],
     });
     const Cdeclarations = globalDeclarations
-        .map(declaration => mplTypeToCDeclaration(declaration.type, declaration.name))
+        .map(declaration => mplTypeToCDeclaration(declaration.type as Type, declaration.name))
         .map(cDeclaration => `${cDeclaration};`);
 
     return {

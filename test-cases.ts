@@ -383,6 +383,17 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 3,
     },
     {
+        name: 'Function Accepts Temporary List',
+        source: `
+            acceptsList := (xs: Integer[]) => {
+                return 3;
+            };
+            return acceptsList([1]);
+        `,
+        exitCode: 3,
+        failing: true,
+    },
+    {
         name: 'List Out Of Bounds Access',
         source: `
             myList := [11, 22];

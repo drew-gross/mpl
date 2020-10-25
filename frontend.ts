@@ -26,7 +26,6 @@ import {
     FrontendOutput,
     StringLiteralData,
     ExportedVariable,
-    GlobalVariable,
 } from './api';
 import { TypeError } from './TypeError';
 import * as Ast from './ast';
@@ -999,7 +998,7 @@ const typeCheckFunction = (ctx: WithContext<UninferredFunction>) => {
 
 const assignmentToGlobalDeclaration = (
     ctx: WithContext<Ast.UninferredDeclarationAssignment>
-): GlobalVariable => {
+): VariableDeclaration => {
     const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
     return {
@@ -1844,7 +1843,7 @@ const compile = (
         return { typeErrors: flatTypeErrors };
     }
 
-    const globalDeclarations: GlobalVariable[] = program.statements
+    const globalDeclarations: VariableDeclaration[] = program.statements
         .filter(
             s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment'
         )

@@ -1,4 +1,5 @@
 import debug from './util/debug';
+import { Type } from './types';
 import { parseProgram as parseTacProgram } from './threeAddressCode/Program';
 import {
     mallocWithSbrk,
@@ -86,7 +87,7 @@ export default async (
     structure += 'Program:\n';
     structure += '-> Globals:\n';
     frontendOutput.globalDeclarations.forEach(declaration => {
-        structure += `---> ${declaration.type.type.kind} ${declaration.name}\n`;
+        structure += `---> ${(declaration.type as Type).type.kind} ${declaration.name}\n`;
     });
     structure += '-> Statements:\n';
     if (Array.isArray(frontendOutput.program)) {
