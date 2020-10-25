@@ -23,17 +23,12 @@ import {
     freeGlobalsInstructions,
 } from '../backend-utils';
 import { Register, toString as s } from './Register';
-import {
-    FrontendOutput,
-    Function as ApiFunction,
-    VariableDeclaration,
-    StringLiteralData,
-} from '../api';
+import { FrontendOutput, Function as ApiFunction, Variable, StringLiteralData } from '../api';
 import { Statement } from './statement';
 import { parseInstructionsOrDie as ins } from './parser';
 
-// TODO: merge this with VariableDeclaration?
-export type GlobalInfo = { newName: string; originalDeclaration: VariableDeclaration };
+// TODO: merge this with Variable?
+export type GlobalInfo = { newName: string; originalDeclaration: Variable };
 
 export type BackendOptions = {
     ast: Ast.Ast;

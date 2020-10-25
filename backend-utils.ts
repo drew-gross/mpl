@@ -1,6 +1,6 @@
 import debug from './util/debug';
 import { Type } from './types';
-import { StringLiteralData, Backend, VariableDeclaration } from './api';
+import { StringLiteralData, Backend, Variable } from './api';
 import flatten from './util/list/flatten';
 import { Statement } from './threeAddressCode/Statement';
 import { Statement as TargetStatement } from './targetCode/Statement';
@@ -188,7 +188,7 @@ export const makeExecutable = <TargetRegister>(
 
 // TODO: Move map to outside?
 export const freeGlobalsInstructions = (
-    globals: VariableDeclaration[],
+    globals: Variable[],
     makeTemporary,
     globalNameMap
 ): Statement[] => {

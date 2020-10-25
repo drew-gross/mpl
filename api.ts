@@ -4,7 +4,7 @@ import { Type, TypeDeclaration, TypeReference } from './types';
 import { FileResult } from 'fs-extra';
 import { Program } from './threeAddressCode/Program';
 
-export type VariableDeclaration = {
+export type Variable = {
     name: string;
     type: Type | TypeReference;
     exported: boolean;
@@ -14,14 +14,14 @@ export type UninferredFunction = {
     // TODO: Don't export this (or rethink it)
     name: string;
     statements: UninferredStatement[];
-    variables: VariableDeclaration[];
-    parameters: VariableDeclaration[];
+    variables: Variable[];
+    parameters: Variable[];
 };
 export type Function = {
     name: string;
     statements: Statement[];
-    variables: VariableDeclaration[];
-    parameters: VariableDeclaration[];
+    variables: Variable[];
+    parameters: Variable[];
     returnType: Type;
 };
 export type StringLiteralData = { id: number; value: string };
@@ -32,9 +32,9 @@ export type ExportedVariable = {
 export type FrontendOutput = {
     types: TypeDeclaration[];
     functions: Function[];
-    builtinFunctions: VariableDeclaration[];
+    builtinFunctions: Variable[];
     program: Function | ExportedVariable[];
-    globalDeclarations: VariableDeclaration[];
+    globalDeclarations: Variable[];
     stringLiterals: StringLiteralData[];
 };
 export type ExecutionResult =

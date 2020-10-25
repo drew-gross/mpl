@@ -2,7 +2,7 @@ import debug from './util/debug';
 import join from './util/join';
 import sum from './util/list/sum';
 // const { sum } = require('./mpl/sum.mpl');
-import { VariableDeclaration } from './api';
+import { Variable } from './api';
 import { RegisterAgnosticTargetInfo } from './TargetInfo';
 import { TypeError } from './TypeError';
 import * as deepEqual from 'deep-equal';
@@ -75,7 +75,7 @@ export const resolveOrError = (
     unresolved: Type | TypeReference,
     availableTypes,
     sourceLocation
-): Type | { errors: TypeError[]; newVariables: VariableDeclaration[] } => {
+): Type | { errors: TypeError[]; newVariables: Variable[] } => {
     const resolved = resolveIfNecessary(unresolved, availableTypes);
     if (!resolved) {
         return {
@@ -142,7 +142,7 @@ export const builtinTypes: { [index: string]: Type } = {
 };
 
 // TODO: Require these to be imported in user code
-export const builtinFunctions: VariableDeclaration[] = [
+export const builtinFunctions: Variable[] = [
     {
         name: 'length',
         type: {

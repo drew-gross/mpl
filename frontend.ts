@@ -20,7 +20,7 @@ import {
     TypeReference,
 } from './types';
 import {
-    VariableDeclaration,
+    Variable,
     Function,
     UninferredFunction,
     FrontendOutput,
@@ -114,9 +114,7 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean): MplAst =
     }
 };
 
-const extractVariable = (
-    ctx: WithContext<Ast.UninferredStatement>
-): VariableDeclaration | undefined => {
+const extractVariable = (ctx: WithContext<Ast.UninferredStatement>): Variable | undefined => {
     const kind = ctx.w.kind;
     switch (ctx.w.kind) {
         case 'reassignment':
@@ -148,10 +146,8 @@ const extractVariable = (
     }
 };
 
-const extractVariables = (
-    ctx: WithContext<Ast.UninferredStatement[]>
-): VariableDeclaration[] => {
-    const variables: VariableDeclaration[] = [];
+const extractVariables = (ctx: WithContext<Ast.UninferredStatement[]>): Variable[] => {
+    const variables: Variable[] = [];
     ctx.w.forEach((statement: Ast.UninferredStatement) => {
         switch (statement.kind) {
             case 'returnStatement':
@@ -796,7 +792,7 @@ export const typeOfExpression = (
 
 const typeCheckStatement = (
     ctx: WithContext<Ast.UninferredStatement>
-): { errors: TypeError[]; newVariables: VariableDeclaration[] } => {
+): { errors: TypeError[]; newVariables: Variable[] } => {
     const { w, availableTypes, availableVariables } = ctx;
     const ast = w;
     if (!ast.kind) debug('!ast.kind');
@@ -951,7 +947,7 @@ const typeCheckStatement = (
                     newVariables: [],
                 };
             }
-            const newVariables: VariableDeclaration[] = [];
+            const newVariables: Variable[] = [];
             for (const statement of ast.body) {
                 const statementType = typeCheckStatement({ ...ctx, w: statement });
                 if (isTypeError(statementType)) {
@@ -966,10 +962,7 @@ const typeCheckStatement = (
     }
 };
 
-const mergeDeclarations = (
-    left: VariableDeclaration[],
-    right: VariableDeclaration[]
-): VariableDeclaration[] => {
+const mergeDeclarations = (left: Variable[], right: Variable[]): Variable[] => {
     const result = [...right];
     left.forEach(declaration => {
         if (!result.some(({ name }) => name == declaration.name)) {
@@ -998,7 +991,7 @@ const typeCheckFunction = (ctx: WithContext<UninferredFunction>) => {
 
 const assignmentToGlobalDeclaration = (
     ctx: WithContext<Ast.UninferredDeclarationAssignment>
-): VariableDeclaration => {
+): Variable => {
     const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
     return {
@@ -1015,7 +1008,7 @@ const assignmentToGlobalDeclaration = (
 type WithContext<T> = {
     w: T;
     availableTypes: TypeDeclaration[];
-    availableVariables: VariableDeclaration[];
+    availableVariables: Variable[];
 };
 
 const inferFunction = (ctx: WithContext<UninferredFunction>): Function | TypeError[] => {
@@ -1260,7 +1253,7 @@ const extractFunctionBody = (node): any[] => {
 };
 
 // TODO: Replace extractParameterList with SeparatedList
-const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
+const extractParameterList = (ast: MplAst): Variable[] => {
     if (isSeparatedListNode(ast)) {
         return flatten(
             ast.items.map(i => {
@@ -1616,9 +1609,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 childIndex++;
                 hasBrackets = true;
             }
-            const parameters: VariableDeclaration[] = extractParameterList(
-                ast.children[childIndex]
-            );
+            const parameters: Variable[] = extractParameterList(ast.children[childIndex]);
             childIndex++;
 
             if (hasBrackets) {
@@ -1652,9 +1643,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 hasBrackets = true;
                 childIndex++;
             }
-            const parameters2: VariableDeclaration[] = extractParameterList(
-                ast.children[childIndex]
-            );
+            const parameters2: Variable[] = extractParameterList(ast.children[childIndex]);
             childIndex++;
 
             if (hasBrackets) {
@@ -1843,7 +1832,7 @@ const compile = (
         return { typeErrors: flatTypeErrors };
     }
 
-    const globalDeclarations: VariableDeclaration[] = program.statements
+    const globalDeclarations: Variable[] = program.statements
         .filter(
             s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment'
         )

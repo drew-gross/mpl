@@ -1,4 +1,4 @@
-import { VariableDeclaration } from './api';
+import { Variable } from './api';
 import SourceLocation from './parser-lib/sourceLocation';
 import { Type, TypeReference } from './types';
 import debug from './util/debug';
@@ -39,7 +39,7 @@ export type ReturnStatement = {
 export type ForLoop = {
     kind: 'forLoop';
     sourceLocation: SourceLocation;
-    var: VariableDeclaration;
+    var: Variable;
     list: Ast;
     body: Statement[];
 };
@@ -241,7 +241,7 @@ export type UninferredFunctionLiteral = {
     sourceLocation: SourceLocation;
     deanonymizedName: string;
     body: UninferredStatement[];
-    parameters: VariableDeclaration[];
+    parameters: Variable[];
 };
 
 export type UninferredAddition = {
@@ -290,7 +290,7 @@ export type UninferredTypeDeclaration = {
 export type UninferredForLoop = {
     kind: 'forLoop';
     sourceLocation: SourceLocation;
-    var: VariableDeclaration;
+    var: Variable;
     list: UninferredExpression;
     body: UninferredStatement[];
 };

@@ -2,18 +2,12 @@ import { Program } from '../threeAddressCode/Program';
 import writeTempFile from '../util/writeTempFile';
 import flatten from '../util/list/flatten';
 import execAndGetResult from '../util/execAndGetResult';
-import {
-    FrontendOutput,
-    ExecutionResult,
-    CompilationResult,
-    Backend,
-    VariableDeclaration,
-} from '../api';
+import { FrontendOutput, ExecutionResult, CompilationResult, Backend, Variable } from '../api';
 import * as Ast from '../ast';
 import debug from '../util/debug';
 import join from '../util/join';
 
-const needsAwait = (decl: VariableDeclaration | undefined) => {
+const needsAwait = (decl: Variable | undefined) => {
     if (!decl) return false;
     if ('namedType' in decl.type) throw debug('TODO get a real type here');
     if (decl.type.type.kind != 'Function') return false;
@@ -28,7 +22,7 @@ const astToJS = ({
 }: {
     ast: Ast.Ast;
     exitInsteadOfReturn: boolean;
-    builtinFunctions: VariableDeclaration[];
+    builtinFunctions: Variable[];
 }): string[] => {
     if (!ast) debugger;
     const recurse = newInput =>

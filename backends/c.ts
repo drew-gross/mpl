@@ -3,7 +3,7 @@ import { Program } from '../threeAddressCode/Program';
 import * as Ast from '../ast';
 import { file as tmpFile } from 'tmp-promise';
 import {
-    VariableDeclaration,
+    Variable,
     FrontendOutput,
     ExecutionResult,
     StringLiteralData,
@@ -67,7 +67,7 @@ const mplTypeToCDeclaration = (type: Type, name: string): string => mplTypeToCTy
 
 type BackendInput = {
     ast: Ast.Ast;
-    declarations: VariableDeclaration[];
+    declarations: Variable[];
     stringLiterals: StringLiteralData[];
     makeTemporary: (string) => string;
     predeclaredVariables: string[];
@@ -349,14 +349,14 @@ const stringLiteralName = ({ id, value }: StringLiteralData) =>
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `char *${stringLiteralName(literal)} = "${literal.value}";`;
 
-type SignatureBuilder = (name: String, parameters: VariableDeclaration[]) => string;
+type SignatureBuilder = (name: String, parameters: Variable[]) => string;
 
 type MakeCFunctionBodyInputs = {
     name: any;
-    parameters: VariableDeclaration[];
+    parameters: Variable[];
     statements: Ast.Statement[];
-    variables: VariableDeclaration[];
-    globalDeclarations: VariableDeclaration[];
+    variables: Variable[];
+    globalDeclarations: Variable[];
     stringLiterals: StringLiteralData[];
     buildSignature: SignatureBuilder;
     returnType: Type;
