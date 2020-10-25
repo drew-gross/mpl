@@ -363,6 +363,16 @@ type MakeCFunctionBodyInputs = {
     beforeExit?: string[];
 };
 
+const freeVariable = (v: Variable) => {
+    if (typesAreEqual(v.type as Type, builtinTypes.String)) {
+        return callFree(v.name, 'Freeing Stack String at end of function');
+    } else if ((v.type as Type).type.kind == 'List') {
+        return callFree(`${v.name}.data`, 'Freeing Stack String at end of function');
+    } else {
+        throw debug('dont know how to free');
+    }
+};
+
 const makeCfunctionBody = ({
     name,
     parameters,
@@ -403,16 +413,7 @@ const makeCfunctionBody = ({
             if ('namedType' in s.type) throw debug('TODO get a real type here');
             return typesAreEqual(s.type, builtinTypes.String) || s.type.type.kind == 'List';
         })
-        .map(s2 => {
-            const s: any = s2;
-            if (typesAreEqual(s.type, builtinTypes.String)) {
-                return callFree(s.name, 'Freeing Stack String at end of function');
-            } else if (s.type.type.kind == 'List') {
-                return callFree(`${s.name}.data`, 'Freeing Stack String at end of function');
-            } else {
-                throw debug('...');
-            }
-        });
+        .map(freeVariable);
     const returnCode = astToC({
         ast: returnStatement.expression,
         stringLiterals,
@@ -494,13 +495,7 @@ const compile = ({
         beforeExit: [
             ...globalDeclarations
                 .filter(d => ['String', 'List'].includes((d.type as Type).type.kind))
-                .map(d => {
-                    if ((d.type as Type).type.kind == 'String') {
-                        return `my_free(${d.name}); // Free global string`;
-                    } else {
-                        return `my_free(${d.name}.data); // Free global list`;
-                    }
-                }),
+                .map(freeVariable),
             'verify_no_leaks();',
         ],
     });
