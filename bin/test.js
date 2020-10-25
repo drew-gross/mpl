@@ -1,4229 +1,31 @@
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory(require("ava"), (function webpackLoadOptionalExternalModule() { try { return require("spawn-sync"); } catch(e) {} }()));
+		module.exports = factory((function webpackLoadOptionalExternalModule() { try { return require("spawn-sync"); } catch(e) {} }()), require("ava"));
 	else if(typeof define === 'function' && define.amd)
-		define(["ava", "spawn-sync"], factory);
+		define(["spawn-sync", "ava"], factory);
 	else if(typeof exports === 'object')
-		exports["mplLoader"] = factory(require("ava"), (function webpackLoadOptionalExternalModule() { try { return require("spawn-sync"); } catch(e) {} }()));
+		exports["mplLoader"] = factory((function webpackLoadOptionalExternalModule() { try { return require("spawn-sync"); } catch(e) {} }()), require("ava"));
 	else
-		root["mplLoader"] = factory(root["ava"], root["spawn-sync"]);
-})(global, function(__WEBPACK_EXTERNAL_MODULE_ava__, __WEBPACK_EXTERNAL_MODULE_spawn_sync__) {
-return /******/ (function(modules) { // webpackBootstrap
-/******/ 	// The module cache
-/******/ 	var installedModules = {};
-/******/
-/******/ 	// The require function
-/******/ 	function __webpack_require__(moduleId) {
-/******/
-/******/ 		// Check if module is in cache
-/******/ 		if(installedModules[moduleId]) {
-/******/ 			return installedModules[moduleId].exports;
-/******/ 		}
-/******/ 		// Create a new module (and put it into the cache)
-/******/ 		var module = installedModules[moduleId] = {
-/******/ 			i: moduleId,
-/******/ 			l: false,
-/******/ 			exports: {}
-/******/ 		};
-/******/
-/******/ 		// Execute the module function
-/******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
-/******/
-/******/ 		// Flag the module as loaded
-/******/ 		module.l = true;
-/******/
-/******/ 		// Return the exports of the module
-/******/ 		return module.exports;
-/******/ 	}
-/******/
-/******/
-/******/ 	// expose the modules object (__webpack_modules__)
-/******/ 	__webpack_require__.m = modules;
-/******/
-/******/ 	// expose the module cache
-/******/ 	__webpack_require__.c = installedModules;
-/******/
-/******/ 	// define getter function for harmony exports
-/******/ 	__webpack_require__.d = function(exports, name, getter) {
-/******/ 		if(!__webpack_require__.o(exports, name)) {
-/******/ 			Object.defineProperty(exports, name, { enumerable: true, get: getter });
-/******/ 		}
-/******/ 	};
-/******/
-/******/ 	// define __esModule on exports
-/******/ 	__webpack_require__.r = function(exports) {
-/******/ 		if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
-/******/ 			Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-/******/ 		}
-/******/ 		Object.defineProperty(exports, '__esModule', { value: true });
-/******/ 	};
-/******/
-/******/ 	// create a fake namespace object
-/******/ 	// mode & 1: value is a module id, require it
-/******/ 	// mode & 2: merge all properties of value into the ns
-/******/ 	// mode & 4: return value when already ns object
-/******/ 	// mode & 8|1: behave like require
-/******/ 	__webpack_require__.t = function(value, mode) {
-/******/ 		if(mode & 1) value = __webpack_require__(value);
-/******/ 		if(mode & 8) return value;
-/******/ 		if((mode & 4) && typeof value === 'object' && value && value.__esModule) return value;
-/******/ 		var ns = Object.create(null);
-/******/ 		__webpack_require__.r(ns);
-/******/ 		Object.defineProperty(ns, 'default', { enumerable: true, value: value });
-/******/ 		if(mode & 2 && typeof value != 'string') for(var key in value) __webpack_require__.d(ns, key, function(key) { return value[key]; }.bind(null, key));
-/******/ 		return ns;
-/******/ 	};
-/******/
-/******/ 	// getDefaultExport function for compatibility with non-harmony modules
-/******/ 	__webpack_require__.n = function(module) {
-/******/ 		var getter = module && module.__esModule ?
-/******/ 			function getDefault() { return module['default']; } :
-/******/ 			function getModuleExports() { return module; };
-/******/ 		__webpack_require__.d(getter, 'a', getter);
-/******/ 		return getter;
-/******/ 	};
-/******/
-/******/ 	// Object.prototype.hasOwnProperty.call
-/******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
-/******/
-/******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "";
-/******/
-/******/
-/******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = "./test.ts");
-/******/ })
-/************************************************************************/
-/******/ ({
-
-/***/ "./TypeError.ts":
-/*!**********************!*\
-  !*** ./TypeError.ts ***!
-  \**********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
-const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
-exports.toString = (e) => {
-    switch (e.kind) {
-        case 'assignUndeclaredIdentifer':
-            return `Unknown identifier ${e.destinationName}`;
-        case 'unknownIdentifier':
-            return `Unknown identifier ${e.name}`;
-        case 'unknownType':
-            return `Unknown type ${e.name}`;
-        case 'wrongNumberOfArguments':
-            return `Wrong number of arguments for ${e.targetFunction}. Expected ${e.expectedArgumentCount}, found ${e.passedArgumentCount}`;
-        case 'assignWrongType':
-            return `Wrong type for ${e.lhsName}. Expected ${types_1.toString(e.lhsType)}, found ${types_1.toString(e.rhsType)}.`;
-        case 'wrongArgumentType':
-            return `Wrong argument type for ${e.targetFunction}. Expected ${types_1.toString(e.expectedType)}, found ${types_1.toString(e.passedType)}.`;
-        case 'topLevelStatementsInModule':
-            return `Modules may not have top level statements.`;
-        case 'missingReturn':
-            return 'Missing final return statement';
-        case 'objectDoesNotHaveMember':
-            return `Object of type ${types_1.toString(e.lhsType)} does not have member ${e.member}`;
-        default:
-            throw debug_1.default(`need string for error: ${e.kind}`);
-    }
-};
-
-
-/***/ }),
-
-/***/ "./annotateSource.ts":
-/*!***************************!*\
-  !*** ./annotateSource.ts ***!
-  \***************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
-// Return a pretty representation of the source with the source location highlighted.
-// Subject to change. Returns null if you provide bad input (e.g. source location
-// outside of provided source)
-exports.default = (source, { line, column }, message) => {
-    const lines = source.split('\n');
-    if (line <= 0 || line >= lines.length + 1)
-        return null;
-    const contextBefore = lines[line - 2];
-    const contextAfter = lines[line];
-    const mainLine = lines[line - 1];
-    if (column <= 0)
-        return null;
-    const pointerLine = ' '.repeat(column - 1) + `^ ${message}`;
-    return join_1.default([contextBefore, mainLine, pointerLine, contextAfter].filter(l => l !== undefined), '\n');
-};
-
-
-/***/ }),
-
-/***/ "./ast.ts":
-/*!****************!*\
-  !*** ./ast.ts ***!
-  \****************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
-const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
-exports.astToString = (ast) => {
-    if (!ast)
-        debug_1.default('Null ast in astToString');
-    switch (ast.kind) {
-        case 'returnStatement':
-            return `return ${exports.astToString(ast.expression)}`;
-        case 'ternary':
-            return `${exports.astToString(ast.condition)} ? ${exports.astToString(ast.ifTrue)} : ${exports.astToString(ast.ifFalse)}`;
-        case 'equality':
-            return `${exports.astToString(ast.lhs)} == ${exports.astToString(ast.rhs)}`;
-        case 'identifier':
-            return ast.value;
-        case 'number':
-            return ast.value.toString();
-        case 'callExpression':
-            const args = join_1.default(ast.arguments.map(exports.astToString), ', ');
-            return `${ast.name}(${args})`;
-        case 'functionLiteral':
-            return ast.deanonymizedName;
-        case 'product':
-            return `${exports.astToString(ast.lhs)} * ${exports.astToString(ast.rhs)}`;
-        case 'addition':
-            return `${exports.astToString(ast.lhs)} + ${exports.astToString(ast.rhs)}`;
-        case 'subtraction':
-            return `${exports.astToString(ast.lhs)} - ${exports.astToString(ast.rhs)}`;
-        case 'stringLiteral':
-            return `"${ast.value}"`;
-        case 'booleanLiteral':
-            return ast.value ? 'True' : 'False';
-        case 'concatenation':
-            return `${ast.lhs} ++ ${ast.rhs}`;
-        case 'typedDeclarationAssignment':
-            return `${ast.destination}: ${ast.type.type.kind} = ${exports.astToString(ast.expression)};`;
-        case 'typeDeclaration':
-            return `(${ast.kind})`; // TODO: Figure out what parts of type declaration should go in AST vs uninferred AST.
-        case 'reassignment':
-            return `${ast.destination} = ${exports.astToString(ast.expression)};`;
-        case 'objectLiteral':
-            const members = ast.members.map(({ name, expression }) => `${name}: ${exports.astToString(expression)}`);
-            return `{ ${join_1.default(members, ', ')} }`;
-        case 'memberAccess':
-            return `(${exports.astToString(ast.lhs)}).${ast.rhs}`;
-        case 'listLiteral':
-            return `[${join_1.default(ast.items.map(exports.astToString), ', ')}]`;
-        case 'indexAccess':
-            return `(${exports.astToString(ast.accessed)})[${exports.astToString(ast.index)}]`;
-        default:
-            throw debug_1.default(`${ast.kind} unhandled in astToString`);
-    }
-};
-
-
-/***/ }),
-
-/***/ "./backend-utils.ts":
-/*!**************************!*\
-  !*** ./backend-utils.ts ***!
-  \**************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
-const flatten_1 = __webpack_require__(/*! ./util/list/flatten */ "./util/list/flatten.ts");
-const Function_1 = __webpack_require__(/*! ./targetCode/Function */ "./targetCode/Function.ts");
-const StackUsage_1 = __webpack_require__(/*! ./targetCode/StackUsage */ "./targetCode/StackUsage.ts");
-const Register_1 = __webpack_require__(/*! ./threeAddressCode/Register */ "./threeAddressCode/Register.ts");
-const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
-const mips_1 = __webpack_require__(/*! ./backends/mips */ "./backends/mips.ts");
-const js_1 = __webpack_require__(/*! ./backends/js */ "./backends/js.ts");
-const c_1 = __webpack_require__(/*! ./backends/c */ "./backends/c.ts");
-const x64_1 = __webpack_require__(/*! ./backends/x64 */ "./backends/x64.ts");
-exports.preceedingWhitespace = (tas) => {
-    switch (tas.kind) {
-        case 'label':
-            return '';
-        case 'functionLabel':
-            return '\n\n';
-        default:
-            return '    ';
-    }
-};
-exports.compileExpression = (subExpressions, expressionCompiler) => ({
-    prepare: flatten_1.default(subExpressions.map(input => input.prepare)),
-    execute: expressionCompiler(subExpressions.map(input => input.execute)),
-    cleanup: flatten_1.default(subExpressions.reverse().map(input => input.cleanup)),
-});
-exports.stringLiteralName = ({ id, value }) => `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
-exports.saveFunctionCallResult = (destination, getRegister, registers) => {
-    if (!destination) {
-        return [];
-    }
-    return [
-        {
-            kind: 'move',
-            from: registers.functionResult,
-            to: getRegister(destination),
-            why: 'save result',
-        },
-    ];
-};
-const functionToString = (commentChar, { name, instructions, stackUsage }) => {
-    if (!name)
-        debug_1.default('no name here');
-    return `
-${name}: ${commentChar} stack: ${StackUsage_1.stackUsageToString(stackUsage)}
-${join_1.default(instructions, '\n')}`;
-};
-exports.executableToString = (commentChar, { main, functions }) => {
-    // Main needs to be first for MARS, which just executes from the top of the file
-    return `
-${functionToString(commentChar, main)}
-${join_1.default(functions.map(f => functionToString(commentChar, f)), '\n')}`;
-};
-exports.makeExecutable = ({ functions, main }, { syscallNumbers }, targetRegisterInfo, translator, includeCleanup) => {
-    if (!main)
-        throw debug_1.default('no main');
-    const targetFunctions = functions.map(f => Function_1.toTarget({
-        threeAddressFunction: f,
-        targetInfo: targetRegisterInfo,
-        finalCleanup: [{ kind: 'return', why: 'The Final Return!' }],
-        isMain: false,
-    }));
-    const targetMain = Function_1.toTarget({
-        threeAddressFunction: main,
-        targetInfo: targetRegisterInfo,
-        finalCleanup: [
-            // TODO: push/pop exit code is jank and should be removed.
-            {
-                kind: 'push',
-                register: targetRegisterInfo.registers.functionResult,
-                why: "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
-            },
-            ...(includeCleanup
-                ? [
-                    {
-                        kind: 'callByName',
-                        function: 'free_globals',
-                        why: 'free_globals',
-                    },
-                    {
-                        kind: 'callByName',
-                        function: 'verify_no_leaks',
-                        why: 'verify_no_leaks',
-                    },
-                ]
-                : []),
-            {
-                kind: 'pop',
-                register: targetRegisterInfo.registers.syscallArgument[0],
-                why: 'restore exit code',
-            },
-            {
-                kind: 'loadImmediate',
-                destination: targetRegisterInfo.registers.syscallSelectAndResult,
-                value: syscallNumbers.exit,
-                why: 'prepare to exit',
-            },
-            { kind: 'syscall', why: 'exit' },
-        ],
-        isMain: true,
-    });
-    return {
-        main: {
-            instructions: flatten_1.default(targetMain.instructions.map(translator)),
-            stackUsage: targetMain.stackUsage,
-        },
-        functions: targetFunctions.map(({ name, instructions, stackUsage }) => ({
-            name,
-            stackUsage,
-            instructions: flatten_1.default(instructions.map(translator)),
-        })),
-    };
-};
-// TODO: Move map to outside?
-exports.freeGlobalsInstructions = (globals, makeTemporary, globalNameMap) => {
-    const instructions = flatten_1.default(globals
-        .filter(declaration => ['String', 'List'].includes(declaration.type.type.kind))
-        .map(declaration => {
-        const globalStringAddress = makeTemporary('gobalStringAddress');
-        return [
-            {
-                kind: 'loadGlobal',
-                from: globalNameMap[declaration.name].newName,
-                to: globalStringAddress,
-                why: 'Load global string so we can free it',
-            },
-            {
-                kind: 'callByName',
-                function: 'my_free',
-                arguments: [globalStringAddress],
-                destination: null,
-                why: 'Free global string at end of program',
-            },
-        ];
-    }));
-    instructions.push({
-        kind: 'return',
-        register: new Register_1.Register('dummyReturn'),
-        why: 'Need to not have an empty function, otherwise verifyingOverlappingJoin fails. TODO: fix that.',
-    });
-    return instructions;
-};
-exports.backends = [mips_1.default, js_1.default, c_1.default, x64_1.default];
-
-
-/***/ }),
-
-/***/ "./backends/c.ts":
-/*!***********************!*\
-  !*** ./backends/c.ts ***!
-  \***********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const tmp_promise_1 = __webpack_require__(/*! tmp-promise */ "./node_modules/tmp-promise/index.js");
-const types_1 = __webpack_require__(/*! ../types */ "./types.ts");
-const child_process_promise_1 = __webpack_require__(/*! child-process-promise */ "./node_modules/child-process-promise/index.js");
-const execAndGetResult_1 = __webpack_require__(/*! ../util/execAndGetResult */ "./util/execAndGetResult.ts");
-const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
-const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
-const backend_utils_1 = __webpack_require__(/*! ../backend-utils */ "./backend-utils.ts");
-const runtime_strings_1 = __webpack_require__(/*! ../runtime-strings */ "./runtime-strings.ts");
-const frontend_1 = __webpack_require__(/*! ../frontend */ "./frontend.ts");
-const idAppender_1 = __webpack_require__(/*! ../util/idAppender */ "./util/idAppender.ts");
-const writeTempFile_1 = __webpack_require__(/*! ../util/writeTempFile */ "./util/writeTempFile.ts");
-// Beginnings of experiment with tracing code from source to target
-const callFree = (target, reason) => `my_free(${target}); // ${reason}`;
-// TODO: This returns a function, which is pretty janky. It looks like this because of the way function
-// pointer declarations work in C: the variable name appears in the middle of the declaration
-const mplTypeToCType = (type) => {
-    switch (type.type.kind) {
-        case 'Integer':
-            return name => `uint8_t ${name}`;
-        case 'Boolean':
-            return name => `bool ${name}`;
-        case 'String':
-            return name => `char *${name}`;
-        case 'Function':
-            if ('namedType' in type.type.returnType) {
-                throw debug_1.default('figure this out');
-            }
-            const returnType = mplTypeToCType(type.type.returnType)('');
-            const argumentTypes = type.type.arguments.map(mplTypeToCType).map(f => f(''));
-            const argumentsString = join_1.default(argumentTypes, ', ');
-            return name => `${returnType} (*${name})(${argumentsString})`;
-        case 'Product':
-            return name => `struct ${type.type.name} ${name}`;
-        case 'List':
-            return name => `struct list ${name}`;
-        default:
-            throw debug_1.default(`${type.kind} unhandled in mplTypeToCType`);
-    }
-};
-const mplTypeToCDeclaration = (type, name) => mplTypeToCType(type)(name);
-const compileAssignment = (destination, rhs) => {
-    return {
-        prepare: rhs.prepare,
-        execute: [`${destination} = `, ...rhs.execute, ';'],
-        cleanup: rhs.cleanup,
-    };
-};
-const registerTransferLangaugeToC = (rtlCode, joiner) => {
-    rtlCode.forEach(line => {
-        if (typeof line !== 'string')
-            debug_1.default('todo');
-    });
-    return join_1.default(rtlCode, joiner);
-};
-const astToC = (input) => {
-    const { ast, stringLiterals, declarations, makeTemporary, predeclaredVariables } = input;
-    const recurse = newAst => astToC(Object.assign(Object.assign({}, input), { ast: newAst }));
-    const binaryOperator = (operator) => {
-        const lhs = recurse(ast.lhs);
-        const rhs = recurse(ast.rhs);
-        return backend_utils_1.compileExpression([lhs, rhs], ([e1, e2]) => [...e1, operator, ...e2]);
-    };
-    switch (ast.kind) {
-        case 'returnStatement': {
-            const subExpression = recurse(ast.expression);
-            return backend_utils_1.compileExpression([subExpression], ([e1]) => ['return', ...e1, ';']);
-        }
-        case 'number':
-            return backend_utils_1.compileExpression([], ([]) => [ast.value.toString()]);
-        case 'objectLiteral':
-            const memberExpressions = ast.members.map(m => recurse(m.expression));
-            const type = ast.type;
-            if (type.type.kind != 'Product') {
-                throw debug_1.default('need a produduct');
-            }
-            const product = type.type;
-            return backend_utils_1.compileExpression(memberExpressions, expr => [
-                '(struct ',
-                product.name,
-                ')',
-                '{',
-                ...expr.map((e, i) => `.${ast.members[i].name} = ${e},`),
-                '}',
-            ]);
-        case 'memberAccess': {
-            const lhs = recurse(ast.lhs);
-            return backend_utils_1.compileExpression([lhs], ([e1]) => ['(', ...e1, ').', ast.rhs]);
-        }
-        case 'product':
-            return binaryOperator('*');
-        case 'addition':
-            return binaryOperator('+');
-        case 'subtraction':
-            return binaryOperator('-');
-        case 'concatenation': {
-            const lhs = recurse(ast.lhs);
-            const rhs = recurse(ast.rhs);
-            const temporaryName = makeTemporary('temporary_string');
-            const lhsName = makeTemporary('concat_lhs');
-            const rhsName = makeTemporary('concat_rhs');
-            const prepAndCleanup = {
-                prepare: [
-                    `char *${lhsName} = ${registerTransferLangaugeToC(lhs.execute, ' ')};`,
-                    `char *${rhsName} = ${registerTransferLangaugeToC(rhs.execute, ' ')};`,
-                    `char *${temporaryName} = my_malloc(length(${lhsName}) + length(${rhsName}) + 1);`,
-                    `string_concatenate(${lhsName}, ${rhsName}, ${temporaryName});`,
-                ],
-                execute: [],
-                cleanup: [callFree(temporaryName, 'Free temporary from concatenation')],
-            };
-            return backend_utils_1.compileExpression([lhs, rhs, prepAndCleanup], ([_1, _2, _3]) => [
-                temporaryName,
-            ]);
-        }
-        // TODO: Unify these somehow typedDeclarationAssignment and reassignment
-        case 'typedDeclarationAssignment': {
-            const lhs = ast.destination;
-            const rhs = recurse(ast.expression);
-            const declaration = declarations.find(d => d.name === lhs);
-            if (!declaration)
-                throw debug_1.default('todo');
-            if ('namedType' in declaration.type)
-                throw debug_1.default('TODO: get a real type here');
-            switch (declaration.type.type.kind) {
-                case 'Function':
-                case 'Integer':
-                case 'Product':
-                    if (predeclaredVariables.includes(declaration.name)) {
-                        return compileAssignment(declaration.name, rhs);
-                    }
-                    else {
-                        return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
-                    }
-                case 'String':
-                    const rhsWillAlloc = backend_utils_1.compileExpression([rhs], ([e1]) => [
-                        'string_copy(',
-                        ...e1,
-                        ', my_malloc(length(',
-                        ...e1,
-                        ') + 1))',
-                    ]);
-                    if (predeclaredVariables.includes(declaration.name)) {
-                        return compileAssignment(declaration.name, rhsWillAlloc);
-                    }
-                    else {
-                        return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhsWillAlloc);
-                    }
-                case 'List':
-                    // TODO: Pretty sure I need to copy the list
-                    if (predeclaredVariables.includes(declaration.name)) {
-                        return compileAssignment(declaration.name, rhs);
-                    }
-                    else {
-                        return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
-                    }
-                default:
-                    throw debug_1.default(`${declaration.type.type.kind} unhandled in typedDeclarationAssignment`);
-            }
-        }
-        case 'reassignment': {
-            const lhs = ast.destination;
-            const rhs = recurse(ast.expression);
-            const declaration = declarations.find(d => d.name === lhs);
-            if (!declaration)
-                throw debug_1.default('todo');
-            if ('namedType' in declaration.type)
-                throw debug_1.default('todo');
-            switch (declaration.type.type.kind) {
-                case 'Function':
-                case 'Integer':
-                    return compileAssignment(lhs, rhs);
-                case 'String':
-                    // Free old value, copy new value.
-                    const savedOldValue = makeTemporary('saved_old');
-                    const temporaryName = makeTemporary('reassign_temporary');
-                    const assign = {
-                        prepare: [
-                            `char *${savedOldValue} = ${declaration.name};`,
-                            `char *${temporaryName} = ${registerTransferLangaugeToC(rhs.execute, ' ')};`,
-                        ],
-                        execute: [`my_malloc(length(${temporaryName}))`],
-                        cleanup: [
-                            `string_copy(${temporaryName}, ${declaration.name});`,
-                            callFree(savedOldValue, 'free inaccessible value after reassignment'),
-                        ],
-                    };
-                    const expression = backend_utils_1.compileExpression([rhs, assign], 
-                    // Can ignore rhs because it is executed during assign.
-                    ([executeRhs, executeAssign]) => executeAssign);
-                    return compileAssignment(declaration.name, expression);
-                default:
-                    throw debug_1.default(`${JSON.stringify(declaration.type)} unhandled C reassignment`);
-            }
-        }
-        case 'functionLiteral':
-            return backend_utils_1.compileExpression([], ([]) => [`&${ast.deanonymizedName}`]);
-        case 'callExpression': {
-            const argumentsC = ast.arguments.map(argument => recurse(argument));
-            return backend_utils_1.compileExpression(argumentsC, argCode => [
-                `(*${ast.name})(`,
-                join_1.default(argCode.map(code => registerTransferLangaugeToC(code, ' ')), ', '),
-                ')',
-            ]);
-        }
-        case 'identifier':
-            return backend_utils_1.compileExpression([], ([]) => [ast.value]);
-        case 'ternary': {
-            const comparatorC = recurse(ast.condition);
-            const ifTrueC = recurse(ast.ifTrue);
-            const ifFalseC = recurse(ast.ifFalse);
-            return backend_utils_1.compileExpression([comparatorC, ifTrueC, ifFalseC], ([compare, ifTrue, ifFalse]) => [...compare, '?', ...ifTrue, ':', ...ifFalse]);
-        }
-        case 'equality': {
-            const lhs = recurse(ast.lhs);
-            const rhs = recurse(ast.rhs);
-            if (ast.type.type.kind == 'String') {
-                return backend_utils_1.compileExpression([lhs, rhs], ([e1, e2]) => [
-                    'string_compare(',
-                    ...e1,
-                    ',',
-                    ...e2,
-                    ')',
-                ]);
-            }
-            else {
-                return backend_utils_1.compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '==', ...e2]);
-            }
-        }
-        case 'booleanLiteral':
-            return backend_utils_1.compileExpression([], ([]) => [ast.value ? '1' : '0']);
-        case 'stringLiteral':
-            const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
-            if (!stringLiteralData)
-                throw debug_1.default('todo');
-            return backend_utils_1.compileExpression([], ([]) => [stringLiteralName(stringLiteralData)]);
-        case 'typeDeclaration':
-            return backend_utils_1.compileExpression([], ([]) => []);
-        case 'indexAccess': {
-            const index = recurse(ast.index);
-            const accessed = recurse(ast.accessed);
-            // TODO: OOB assertions
-            return backend_utils_1.compileExpression([index, accessed], ([indexCode, accessedCode]) => [
-                `((uint8_t*)`,
-                ...accessedCode,
-                '.data)[',
-                ...indexCode,
-                ']',
-            ]);
-        }
-        case 'listLiteral': {
-            const listLiteral = makeTemporary('listLiteral');
-            // Prepare by allocating the memory and putting the data in it
-            const allocate = [
-                `struct list ${listLiteral};`,
-                `${listLiteral}.size = ${ast.items.length};`,
-                `${listLiteral}.data = my_malloc(${ast.items.length} * sizeof(uint8_t));`,
-            ];
-            const buildItems = ast.items.map(recurse);
-            const assignItems = backend_utils_1.compileExpression(buildItems, buildItemCodes => buildItemCodes.map((buildItem, index) => `((uint8_t*)${listLiteral}.data)[${index}] = ${buildItem};`));
-            const buildLiteral = {
-                prepare: [
-                    ...allocate,
-                    ...assignItems.prepare,
-                    ...assignItems.execute,
-                    ...assignItems.cleanup,
-                ],
-                execute: [],
-                cleanup: [],
-            };
-            return backend_utils_1.compileExpression([buildLiteral, assignItems], _ => [listLiteral]);
-        }
-        default:
-            throw debug_1.default(`${ast.kind} unhandled in astToC`);
-    }
-    return debug_1.default('todo');
-};
-const stringLiteralName = ({ id, value }) => `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
-const stringLiteralDeclaration = (literal) => `char *${stringLiteralName(literal)} = "${literal.value}";`;
-const makeCfunctionBody = ({ name, parameters, statements, variables, globalDeclarations, stringLiterals, buildSignature, returnType, beforeExit = [], }) => {
-    const nonReturnStatements = statements.slice(0, statements.length - 1);
-    const returnStatement = statements[statements.length - 1];
-    if (returnStatement.kind !== 'returnStatement')
-        throw debug_1.default('todo');
-    const makeTemporary = idAppender_1.default();
-    const globalVariableNames = globalDeclarations.map(d => d.name);
-    const body = nonReturnStatements.map(statement => {
-        const statementLogic = astToC({
-            ast: statement,
-            stringLiterals,
-            declarations: frontend_1.mergeDeclarations(variables, globalDeclarations),
-            makeTemporary,
-            predeclaredVariables: globalVariableNames,
-        });
-        return join_1.default([
-            registerTransferLangaugeToC(statementLogic.prepare, '\n'),
-            registerTransferLangaugeToC(statementLogic.execute, ' '),
-            registerTransferLangaugeToC(statementLogic.cleanup, '\n'),
-        ], '\n');
-    });
-    const endOfFunctionFrees = variables
-        .filter(s => !globalVariableNames.includes(s.name))
-        .filter(s => !parameters.map(d => d.name).includes(s.name))
-        .filter(s => {
-        if ('namedType' in s.type)
-            throw debug_1.default('TODO get a real type here');
-        return types_1.equal(s.type, types_1.builtinTypes.String);
-    })
-        .map(s => callFree(s.name, 'Freeing Stack String at end of function'));
-    const returnCode = astToC({
-        ast: returnStatement.expression,
-        stringLiterals,
-        declarations: frontend_1.mergeDeclarations(variables, globalDeclarations),
-        makeTemporary,
-        predeclaredVariables: globalVariableNames,
-    });
-    return join_1.default([
-        buildSignature(name, parameters),
-        '{',
-        ...body,
-        ...returnCode.prepare,
-        `${mplTypeToCDeclaration(returnType, 'result')} = ${registerTransferLangaugeToC(returnCode.execute, ' ')};`,
-        ...returnCode.cleanup,
-        ...endOfFunctionFrees,
-        ...beforeExit,
-        `return result;`,
-        '}',
-    ], '\n');
-};
-const productTypeMemberToCStructMember = ({ name, type }) => `${mplTypeToCDeclaration(type, '')} ${name};`;
-const compile = ({ functions, program, types, globalDeclarations, stringLiterals, }) => {
-    const CtypeDeclarations = types
-        .filter(t => t.type.type.kind == 'Product')
-        .map(t => `struct ${t.name} {${join_1.default(t.type.type.members.map(productTypeMemberToCStructMember), '\n')}};`);
-    const Cfunctions = functions.map(({ name, parameters, statements, variables, returnType }) => makeCfunctionBody({
-        name,
-        parameters,
-        statements,
-        variables,
-        globalDeclarations,
-        stringLiterals,
-        buildSignature: (functionName, params) => {
-            const parameterDeclarations = params.map(p => {
-                if ('namedType' in p.type)
-                    throw debug_1.default('TODO: get a read type here');
-                return mplTypeToCDeclaration(p.type, p.name);
-            });
-            const cReturnType = mplTypeToCType(returnType)('');
-            return `${cReturnType} ${functionName}(${join_1.default(parameterDeclarations, ', ')})`;
-        },
-        returnType,
-    }));
-    if (Array.isArray(program)) {
-        throw debug_1.default("C backend doesn't support modules.");
-    }
-    const Cprogram = makeCfunctionBody({
-        name: 'main',
-        parameters: [],
-        statements: program.statements,
-        variables: program.variables,
-        globalDeclarations,
-        stringLiterals,
-        buildSignature: (_1, _2) => 'int main(int argc, char **argv)',
-        returnType: { type: { kind: 'Integer' } },
-        beforeExit: [
-            ...globalDeclarations
-                .filter(d => ['String', 'List'].includes(d.type.type.kind))
-                .map(d => {
-                if (d.type.type.kind == 'String') {
-                    return `my_free(${d.name}); // Free global string`;
-                }
-                else {
-                    return `my_free(${d.name}.data); // Free global list`;
-                }
-            }),
-            'verify_no_leaks();',
-        ],
-    });
-    const Cdeclarations = globalDeclarations
-        .map(declaration => mplTypeToCDeclaration(declaration.type, declaration.name))
-        .map(cDeclaration => `${cDeclaration};`);
-    return {
-        target: `
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <unistd.h>
-
-struct list {
-    size_t size;
-    void *data;
-};
-
-struct block_info {
-    size_t size;
-    struct block_info *next_block; // NULL means no next block.
-    bool free;
-};
-
-struct block_info *first_block = NULL; // Set to null because in the beginning, there are no blocks
-
-bool done_searching_for_block(struct block_info *block, size_t requested_size) {
-    if (block == NULL) {
-        return true;
-    }
-    if (block->free && block->size >= requested_size) {
-        return true;
-    }
-    return false;
-}
-
-void *my_malloc(size_t requested_size) {
-    // Error out if we request zero bytes, that should never happen
-    if (requested_size == 0) {
-        printf("${runtime_strings_1.errors.allocatedZero.value}");
-        exit(-1);
-    }
-
-    struct block_info *current_block = first_block;
-    struct block_info *previous_block = NULL;
-
-    // Find the first free block that is large enough
-    while (!done_searching_for_block(current_block, requested_size)) {
-        previous_block = current_block;
-        current_block = current_block->next_block;
-    }
-
-    if (current_block == NULL) {
-        // No large enough blocks. Use sbrk to create a new one TODO: Switch to mmap on mac, sbrk is deprecated
-        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        struct block_info *newly_allocated = (struct block_info*)sbrk(requested_size + sizeof(struct block_info));
-        if (newly_allocated == (void*)-1) {
-            printf("${runtime_strings_1.errors.allocationFailed.value}");
-            exit(-1); // TODO: Come up with an alloc failure strategy
-        }
-
-        if (first_block == NULL) {
-            // First alloc!
-            first_block = newly_allocated;
-        } else if (previous_block != NULL) {
-            previous_block->next_block = newly_allocated;
-        }
-        newly_allocated->size = requested_size;
-        newly_allocated->next_block = NULL;
-        newly_allocated->free = false;
-        // Return pointer to the space after the block info (+1 actually adds sizeof(struct block_info))
-        return newly_allocated + 1;
-    } else {
-        // Found an existing block, mark it as not free (TODO: Split it)
-        current_block->free = false;
-        // Return pointer to the space after the block info (+1 actually adds sizeof(struct block_info))
-        return current_block + 1;
-    }
-}
-
-void my_free(void *pointer) {
-    if (pointer == NULL) {
-        printf("${runtime_strings_1.errors.freeNull.value}");
-        exit(-1);
-    }
-    // TODO: Merge blocks
-    // Get a pointer to the space after the block info (-1 actually subtracts sizeof(struct block_info))
-    struct block_info *block_to_free = ((struct block_info *)pointer) - 1;
-    if (block_to_free->free) {
-        printf("${runtime_strings_1.errors.doubleFree.value}");
-        exit(-1);
-    }
-    block_to_free->free = true;
-}
-
-// Run through blocks and make sure they are free. For debugging.
-void verify_no_leaks() {
-    struct block_info *current_block = first_block;
-    while (current_block != NULL) {
-        if (!current_block->free) {
-            printf("${runtime_strings_1.errors.leaksDetected.value}");
-            exit(-1);
-        }
-        current_block = current_block->next_block;
-    }
-}
-
-int length(char *str) {
-    int len = 0;
-    while (*str++ && ++len) {}
-    return len;
-}
-
-int print(char *str) {
-    int result = printf("%s", str);
-    if (result < 0) {
-        printf("${runtime_strings_1.errors.printFailed.value}");
-        exit(-1);
-    }
-    return result;
-}
-
-char *string_copy(char *in, char *out) {
-    char *original_out = out;
-    while ((*out++ = *in++)) {}
-    return original_out;
-}
-
-bool string_compare(char *in, char *out) {
-    while (*in == *out) {
-        if (*in == 0) {
-            return true;
-        }
-        in++;
-        out++;
-    }
-    return false;
-}
-
-char *string_concatenate(char *left, char *right, char *out) {
-    char *original_out = out;
-    char next;
-    while ((next = *left)) {
-        *out = next;
-        out++;
-        left++;
-    }
-    while ((next = *right)) {
-        *out = next;
-        out++;
-        right++;
-    }
-    *out = 0;
-    return original_out;
-}
-
-int readInt() {
-    int result;
-    int success = scanf("%d", &result);
-    if (success != 1) {
-        printf("${runtime_strings_1.errors.readIntFailed.value}"); // TODO: readInt returns optional
-        exit(-1);
-    }
-    return result;
-}
-
-${join_1.default(CtypeDeclarations, '\n')}
-${join_1.default(stringLiterals.map(stringLiteralDeclaration), '\n')}
-${join_1.default(Cdeclarations, '\n')}
-${join_1.default(Cfunctions, '\n')}
-${Cprogram}
-`,
-        tac: undefined,
-    };
-};
-const finishCompilation = async (cSource, tac) => {
-    if (tac !== undefined) {
-        debug_1.default('why tac');
-    }
-    const sourceFile = await writeTempFile_1.default(cSource, 'program', 'c');
-    const binaryFile = await tmp_promise_1.file();
-    try {
-        // TODO: Don't emit unused variables
-        await child_process_promise_1.exec(`clang -Wall -Werror -Wno-error=unused-variable ${sourceFile.path} -o ${binaryFile.path}`);
-    }
-    catch (e) {
-        return {
-            error: `Failed to compile generated C code:\n${e.stderr}`,
-            intermediateFile: sourceFile,
-        };
-    }
-    return {
-        source: cSource,
-        sourceFile,
-        binaryFile,
-        threeAddressCodeFile: undefined,
-    };
-};
-const execute = async (executablePath, stdinPath) => {
-    try {
-        return Object.assign(Object.assign({}, (await execAndGetResult_1.default(`${executablePath} < ${stdinPath}`))), { executorName: 'clang', runInstructions: `${executablePath} < ${stdinPath}`, debugInstructions: 'No debug instructions for C yet. Try one of the online GDB things.' });
-    }
-    catch (e) {
-        return { error: e, executorName: 'clang' };
-    }
-};
-const cBackend = {
-    name: 'c',
-    compile,
-    finishCompilation,
-    executors: [{ execute, name: 'clang' }],
-};
-exports.default = cBackend;
-
-
-/***/ }),
-
-/***/ "./backends/js.ts":
-/*!************************!*\
-  !*** ./backends/js.ts ***!
-  \************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const writeTempFile_1 = __webpack_require__(/*! ../util/writeTempFile */ "./util/writeTempFile.ts");
-const flatten_1 = __webpack_require__(/*! ../util/list/flatten */ "./util/list/flatten.ts");
-const execAndGetResult_1 = __webpack_require__(/*! ../util/execAndGetResult */ "./util/execAndGetResult.ts");
-const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
-const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
-const needsAwait = (decl) => {
-    if (!decl)
-        return false;
-    if ('namedType' in decl.type)
-        throw debug_1.default('TODO get a real type here');
-    if (decl.type.type.kind != 'Function')
-        return false;
-    if (decl.type.type.permissions.includes('stdout'))
-        return true;
-    return false;
-};
-const astToJS = ({ ast, exitInsteadOfReturn, builtinFunctions, }) => {
-    if (!ast)
-        debugger;
-    const recurse = newInput => astToJS({ ast: newInput, exitInsteadOfReturn, builtinFunctions });
-    switch (ast.kind) {
-        case 'returnStatement': {
-            if (exitInsteadOfReturn) {
-                return [`process.exit(${recurse(ast.expression).join(' ')})`];
-            }
-            else {
-                return [`return `, ...recurse(ast.expression)];
-            }
-        }
-        case 'number':
-            return [ast.value.toString()];
-        case 'product':
-            return [...recurse(ast.lhs), '*', ...recurse(ast.rhs)];
-        case 'subtraction':
-            return [...recurse(ast.lhs), '-', ...recurse(ast.rhs)];
-        case 'addition':
-            return [...recurse(ast.lhs), '+', ...recurse(ast.rhs)];
-        case 'reassignment':
-            return [ast.destination, '=', ...recurse(ast.expression), ';'];
-        case 'typedDeclarationAssignment':
-            return [`let ${ast.destination} = `, ...recurse(ast.expression), ';'];
-        case 'functionLiteral':
-            return [ast.deanonymizedName];
-        case 'callExpression':
-            const functionName = ast.name;
-            const functionDecl = builtinFunctions.find(({ name, type }) => name == functionName);
-            const jsArguments = ast.arguments.map(argument => recurse(argument));
-            const awaitStr = needsAwait(functionDecl) ? 'await' : '';
-            return [
-                awaitStr + ` ${ast.name}(`,
-                join_1.default(jsArguments.map(argument => join_1.default(argument, ' ')), ', '),
-                `)`,
-            ];
-        case 'identifier':
-            return [ast.value];
-        case 'ternary':
-            return [
-                ...recurse(ast.condition),
-                '?',
-                ...recurse(ast.ifTrue),
-                ':',
-                ...recurse(ast.ifFalse),
-            ];
-        case 'equality':
-            return [...recurse(ast.lhs), '==', ...recurse(ast.rhs)];
-        case 'booleanLiteral':
-            return [ast.value ? 'true' : 'false'];
-        case 'stringLiteral':
-            return [`"${ast.value}"`];
-        case 'concatenation':
-            return ['(', ...recurse(ast.lhs), ').concat(', ...recurse(ast.rhs), ')'];
-        case 'typeDeclaration':
-            return [''];
-        case 'objectLiteral':
-            const members = ast.members.map(({ name, expression }) => `${name}: ${recurse(expression)}`);
-            return ['{', join_1.default(members, ','), '}'];
-        case 'memberAccess':
-            return ['(', ...recurse(ast.lhs), ').', ast.rhs];
-        case 'listLiteral':
-            const items = ast.items.map(item => join_1.default(recurse(item), ', '));
-            return ['[', join_1.default(items, ', '), ']'];
-        case 'indexAccess':
-            return ['(', ...recurse(ast.accessed), ')[(', ...recurse(ast.index), ')]'];
-        default:
-            throw debug_1.default(`${ast.kind} unhanlded in toJS`);
-    }
-};
-const compile = ({ functions, builtinFunctions, program, globalDeclarations, }) => {
-    const JSfunctions = functions.map(({ name, parameters, statements }) => {
-        const prefix = `const ${name} = (${join_1.default(parameters.map(parameter => parameter.name), ', ')}) => {`;
-        const suffix = `}`;
-        const body = statements.map(statement => {
-            return join_1.default(astToJS({ ast: statement, exitInsteadOfReturn: false, builtinFunctions }), ' ');
-        });
-        return [prefix, ...body, suffix].join(' ');
-    });
-    if (Array.isArray(program)) {
-        // Must be a module
-        const exp = program.map(v => {
-            return `export const ${v.exportedName} = ${v.declaredName};`;
-        });
-        return {
-            target: `
-                ${join_1.default(JSfunctions, '\n')}
-                ${join_1.default(exp, '\n')}
-            `,
-            tac: undefined,
-        };
-    }
-    const JS = flatten_1.default(program.statements.map(child => astToJS({ ast: child, builtinFunctions, exitInsteadOfReturn: true })));
-    return {
-        target: `
-const readline = require('readline');
-
-const length = str => str.length;
-const print = str => process.stdout.write(str);
-
-const readInt = async () => {
-    return new Promise((resolve, reject) => {
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-        });
-        rl.on('line', line => {
-            rl.close();
-            resolve(line);
-        });
-    });
-};
-
-(async () => {
-    ${join_1.default(JSfunctions, '\n')}
-    ${join_1.default(JS, '\n')}
-})();`,
-        tac: undefined,
-    };
-};
-const finishCompilation = async (jsSource, tac) => {
-    if (tac !== undefined) {
-        debug_1.default('why tac');
-    }
-    const sourceFile = await writeTempFile_1.default(jsSource, 'program', 'js');
-    const binaryFile = sourceFile;
-    return {
-        source: jsSource,
-        sourceFile,
-        binaryFile,
-        threeAddressCodeFile: undefined,
-    };
-};
-const execute = async (executablePath, stdinPath) => {
-    try {
-        const runInstructions = `node ${executablePath} < ${stdinPath}`;
-        return Object.assign(Object.assign({}, (await execAndGetResult_1.default(runInstructions))), { executorName: 'node', runInstructions, debugInstructions: `./node_modules/.bin/node --inspect --inspect-brk ${executablePath}` });
-    }
-    catch (e) {
-        return { error: e.msg, executorName: 'node' };
-    }
-};
-const jsBackend = {
-    name: 'js',
-    compile,
-    finishCompilation,
-    executors: [{ execute, name: 'node' }],
-};
-exports.default = jsBackend;
-
-
-/***/ }),
-
-/***/ "./backends/mips.ts":
-/*!**************************!*\
-  !*** ./backends/mips.ts ***!
-  \**************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const writeTempFile_1 = __webpack_require__(/*! ../util/writeTempFile */ "./util/writeTempFile.ts");
-const runtime_strings_1 = __webpack_require__(/*! ../runtime-strings */ "./runtime-strings.ts");
-const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
-const execAndGetResult_1 = __webpack_require__(/*! ../util/execAndGetResult */ "./util/execAndGetResult.ts");
-const backend_utils_1 = __webpack_require__(/*! ../backend-utils */ "./backend-utils.ts");
-const generator_1 = __webpack_require__(/*! ../threeAddressCode/generator */ "./threeAddressCode/generator.ts");
-const Program_1 = __webpack_require__(/*! ../threeAddressCode/Program */ "./threeAddressCode/Program.ts");
-const runtime_1 = __webpack_require__(/*! ../threeAddressCode/runtime */ "./threeAddressCode/runtime.ts");
-const bytesInWord = 4;
-const threeAddressCodeToMipsWithoutComment = (tas) => {
-    switch (tas.kind) {
-        case 'comment':
-            return [''];
-        case 'syscall':
-            return ['syscall'];
-        case 'move':
-            return [`move ${tas.to}, ${tas.from}`];
-        case 'loadImmediate':
-            return [`li ${tas.destination}, ${tas.value}`];
-        case 'multiply':
-            return [`mult ${tas.lhs}, ${tas.rhs}`, `mflo ${tas.destination}`];
-        case 'addImmediate':
-            return [`addiu ${tas.register}, ${tas.register}, ${tas.amount}`];
-        case 'add':
-            return [`add ${tas.destination}, ${tas.lhs}, ${tas.rhs}`];
-        case 'subtract':
-            return [`sub ${tas.destination}, ${tas.lhs}, ${tas.rhs}`];
-        case 'increment':
-            return [`addiu ${tas.register}, ${tas.register}, 1`];
-        case 'label':
-            return [`L${tas.name}:`];
-        case 'functionLabel':
-            return [`${tas.name}:`];
-        case 'goto':
-            return [`b L${tas.label}`];
-        case 'gotoIfEqual':
-            return [`beq ${tas.lhs}, ${tas.rhs}, L${tas.label}`];
-        case 'gotoIfNotEqual':
-            return [`bne ${tas.lhs}, ${tas.rhs}, L${tas.label}`];
-        case 'gotoIfZero':
-            return [`beq ${tas.register}, 0, L${tas.label}`];
-        case 'gotoIfGreater':
-            return [`bgt ${tas.lhs}, ${tas.rhs}, L${tas.label}`];
-        case 'loadSymbolAddress':
-            return [`la ${tas.to}, ${tas.symbolName}`];
-        case 'loadGlobal':
-            return [`lw ${tas.to}, ${tas.from}`];
-        case 'storeGlobal':
-            return [`sw ${tas.from}, ${tas.to}`];
-        case 'loadMemory':
-            return [`lw ${tas.to}, ${tas.offset}(${tas.from})`];
-        case 'loadMemoryByte':
-            return [`lb ${tas.to}, (${tas.address})`];
-        case 'storeMemory':
-            return [`sw ${tas.from}, ${tas.offset}(${tas.address})`];
-        case 'storeZeroToMemory':
-            return [`sw $0, ${tas.offset}(${tas.address})`];
-        case 'storeMemoryByte':
-            return [`sb ${tas.contents}, (${tas.address})`];
-        case 'callByRegister':
-            return [`jalr ${tas.function}`];
-        case 'callByName':
-            return [`jal ${tas.function}`];
-        case 'return':
-            return [`jr $ra`];
-        case 'push':
-            return [`addiu, $sp, $sp, -4`, `sw ${tas.register}, ($sp)`];
-        case 'pop':
-            return [`lw ${tas.register}, ($sp)`, `addiu $sp, $sp, 4`];
-        case 'loadStackOffset':
-            return [
-                `move ${tas.register}, $sp`,
-                `addiu ${tas.register}, ${tas.register}, ${-tas.offset}`,
-            ];
-        case 'stackStore':
-            return [`sw ${tas.register}, ${tas.offset * bytesInWord}($sp)`];
-        case 'stackLoad':
-            if (Number.isNaN(tas.offset * bytesInWord))
-                throw debug_1.default('nan!');
-            return [`lw ${tas.register}, ${tas.offset * bytesInWord}($sp)`];
-        case 'stackReserve':
-            return [`addiu $sp, $sp, ${-(tas.words * bytesInWord)}`];
-        case 'stackRelease':
-            return [`addiu $sp, $sp, ${tas.words * bytesInWord}`];
-        default:
-            throw debug_1.default(`${tas.kind} unhandled in threeAddressCodeToMipsWithoutComment`);
-    }
-};
-const threeAddressCodeToMips = (tas) => threeAddressCodeToMipsWithoutComment(tas).map(asm => `${backend_utils_1.preceedingWhitespace(tas)}${asm} # ${tas.why.trim()}`); // TODO: trim shouldn't be necessarary, the comment should just not have trailing newlines
-const stringLiteralDeclaration = (literal) => `${backend_utils_1.stringLiteralName(literal)}: .asciiz "${literal.value}"`;
-const globalDeclaration = (name, bytes) => `${name}: .space ${bytes}`;
-const mipsTarget = {
-    bytesInWord: 4,
-    syscallNumbers: {
-        printInt: 1,
-        readInt: 5,
-        print: 4,
-        sbrk: 9,
-        // mmap: 0, // There is no mmap. Should be unused on mips.
-        exit: 17,
-    },
-    functionImpls: {
-        mallocImpl: runtime_1.mallocWithSbrk(bytesInWord),
-        printImpl: runtime_1.printWithPrintRuntimeFunction(bytesInWord),
-        readIntImpl: runtime_1.readIntDirect(bytesInWord),
-    },
-};
-const mipsRegisters = {
-    extraSavedRegisters: ['$ra'],
-    callerSavedRegisters: [],
-    registersClobberedBySyscall: [],
-    registers: {
-        generalPurpose: ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'],
-        functionArgument: ['$s0', '$s1', '$s2'],
-        functionResult: '$a0',
-        syscallArgument: ['$a0', '$a1'],
-        syscallSelectAndResult: '$v0',
-    },
-    translator: threeAddressCodeToMips,
-    registerAgnosticInfo: mipsTarget,
-};
-const tacToExecutable = (tac, includeCleanup) => {
-    const executable = backend_utils_1.makeExecutable(tac, mipsTarget, mipsRegisters, threeAddressCodeToMips, includeCleanup);
-    executable.main.name = 'main';
-    return {
-        target: `
-.data
-${Object.values(tac.globals)
-            .map(({ mangledName, bytes }) => globalDeclaration(mangledName, bytes))
-            .join('\n')}
-${tac.stringLiterals.map(stringLiteralDeclaration).join('\n')}
-${Object.keys(runtime_strings_1.errors)
-            .map(key => `${runtime_strings_1.errors[key].name}: .asciiz "${runtime_strings_1.errors[key].value}"`)
-            .join('\n')}
-
-# First block pointer. Block: size, next, free
-first_block: .word 0
-
-.text
-${backend_utils_1.executableToString('#', executable)}
-`,
-        tac,
-    };
-};
-const compile = (inputs) => {
-    const tac = generator_1.makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget });
-    const target = compileTac(tac, true);
-    if (typeof target != 'string')
-        return target;
-    return { target, tac };
-};
-const compileTac = (tac, includeCleanup) => {
-    return tacToExecutable(tac, includeCleanup).target;
-};
-const finishCompilation = async (mipsSource, tac) => {
-    const threeAddressCodeFile = tac
-        ? await writeTempFile_1.default(Program_1.toString(tac), 'three-address-code-mips', 'txt')
-        : undefined;
-    const sourceFile = await writeTempFile_1.default(mipsSource, 'program', 'mips');
-    return {
-        source: mipsSource,
-        sourceFile,
-        binaryFile: sourceFile,
-        threeAddressCodeFile,
-        threeAddressCode: {},
-    };
-};
-const spimExecutor = async (executablePath, stdinPath) => {
-    // This string is always printed with spim starts. Strip it from stdout.
-    const exceptionsLoadedPreamble = 'Loaded: /usr/local/Cellar/spim/9.1.17/share/exceptions.s\n';
-    try {
-        const result = await execAndGetResult_1.default(`spim -file ${executablePath} < ${stdinPath}`);
-        if ('error' in result) {
-            return { error: `Spim error: ${result.error}`, executorName: 'spim' };
-        }
-        if (result.stderr !== '') {
-            return { error: `Spim error: ${result.stderr}`, executorName: 'spim' };
-        }
-        const trimmedStdout = result.stdout.slice(exceptionsLoadedPreamble.length);
-        return {
-            exitCode: result.exitCode,
-            stdout: trimmedStdout,
-            executorName: 'spim',
-            runInstructions: `spim -file ${executablePath} < ${stdinPath}`,
-            debugInstructions: `./QtSpim.app/Contents/MacOS/QtSpim ${executablePath}`,
-        };
-    }
-    catch (e) {
-        return { error: `Exception: ${e.message}`, executorName: 'spim' };
-    }
-};
-const marsExecutor = async (executablePath, stdinPath) => {
-    try {
-        const result = await execAndGetResult_1.default(`java -jar Mars4_5.jar nc ${executablePath} < ${stdinPath}`);
-        if ('error' in result) {
-            return { error: `MARS error: ${result.error}`, executorName: 'mars' };
-        }
-        // MARS adds an extra trailing newline that we don't expect. Remove it.
-        const trimmedStdout = result.stdout.slice(0, result.stdout.length - 1);
-        return {
-            exitCode: result.exitCode,
-            stdout: trimmedStdout,
-            executorName: 'mars',
-            runInstructions: `java -jar Mars4_5.jar nc ${executablePath} < ${stdinPath}`,
-            debugInstructions: `java -jar Mars4_5.jar # then open ${executablePath}`,
-        };
-    }
-    catch (e) {
-        return { error: `Exception: ${e.message}`, executorName: 'mars' };
-    }
-};
-const mipsBackend = {
-    name: 'mips',
-    compile,
-    compileTac,
-    finishCompilation,
-    targetInfo: mipsTarget,
-    executors: [
-        { execute: spimExecutor, name: 'spim' },
-        { execute: marsExecutor, name: 'mars' },
-    ],
-};
-exports.default = mipsBackend;
-
-
-/***/ }),
-
-/***/ "./backends/x64.ts":
-/*!*************************!*\
-  !*** ./backends/x64.ts ***!
-  \*************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const writeTempFile_1 = __webpack_require__(/*! ../util/writeTempFile */ "./util/writeTempFile.ts");
-const child_process_promise_1 = __webpack_require__(/*! child-process-promise */ "./node_modules/child-process-promise/index.js");
-const runtime_strings_1 = __webpack_require__(/*! ../runtime-strings */ "./runtime-strings.ts");
-const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
-const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
-const backend_utils_1 = __webpack_require__(/*! ../backend-utils */ "./backend-utils.ts");
-const generator_1 = __webpack_require__(/*! ../threeAddressCode/generator */ "./threeAddressCode/generator.ts");
-const Program_1 = __webpack_require__(/*! ../threeAddressCode/Program */ "./threeAddressCode/Program.ts");
-const runtime_1 = __webpack_require__(/*! ../threeAddressCode/runtime */ "./threeAddressCode/runtime.ts");
-const tmp_promise_1 = __webpack_require__(/*! tmp-promise */ "./node_modules/tmp-promise/index.js");
-const execAndGetResult_1 = __webpack_require__(/*! ../util/execAndGetResult */ "./util/execAndGetResult.ts");
-const threeAddressCodeToX64WithoutComment = (tas) => {
-    switch (tas.kind) {
-        case 'comment':
-            return [''];
-        case 'loadImmediate':
-            return [`mov ${tas.destination}, ${tas.value}`];
-        case 'move':
-            return [`mov ${tas.to}, ${tas.from}`];
-        case 'subtract':
-            if (tas.lhs == tas.destination) {
-                return [`sub ${tas.destination}, ${tas.rhs}`];
-            }
-            if (tas.rhs == tas.destination) {
-                return [
-                    `mov rax, ${tas.rhs}`,
-                    `mov ${tas.destination}, ${tas.lhs}`,
-                    `sub ${tas.destination}, rax`,
-                ];
-            }
-            return [`mov ${tas.destination}, ${tas.lhs}`, `sub ${tas.destination}, ${tas.rhs}`];
-        case 'add':
-            if (tas.lhs == tas.destination) {
-                return [`add ${tas.destination}, ${tas.rhs}`];
-            }
-            if (tas.rhs == tas.destination) {
-                return [`add ${tas.destination}, ${tas.lhs}`];
-            }
-            return [`mov ${tas.destination}, ${tas.lhs}`, `add ${tas.destination}, ${tas.rhs}`];
-        case 'multiply':
-            return [
-                `mov rax, ${tas.lhs}`,
-                `mul ${tas.rhs}`,
-                `mov ${tas.destination}, rax`,
-            ];
-        case 'increment':
-            return [`inc ${tas.register};`];
-        case 'addImmediate':
-            return [`add ${tas.register}, ${tas.amount}`];
-        case 'gotoIfEqual':
-            return [`cmp ${tas.lhs}, ${tas.rhs}`, `je ${tas.label}`];
-        case 'gotoIfNotEqual':
-            return [`cmp ${tas.lhs}, ${tas.rhs}`, `jne ${tas.label}`];
-        case 'gotoIfZero':
-            return [`cmp ${tas.register}, 0`, `jz ${tas.label}`];
-        case 'gotoIfGreater':
-            return [`cmp ${tas.lhs}, ${tas.rhs}`, `jg ${tas.label}`];
-        case 'goto':
-            return [`jmp ${tas.label}`];
-        case 'label':
-            return [`${tas.name}:`];
-        case 'functionLabel':
-            return [`${tas.name}:`];
-        case 'storeGlobal':
-            return [`mov [rel ${tas.to}], ${tas.from}`];
-        case 'loadGlobal':
-            return [`mov ${tas.to}, [rel ${tas.from}]`];
-        case 'loadMemoryByte':
-            return [`movsx ${tas.to}, byte [${tas.address}]`];
-        case 'loadSymbolAddress':
-            return [`lea ${tas.to}, [rel ${tas.symbolName}]`];
-        case 'loadMemory':
-            return [`mov ${tas.to}, [${tas.from}+${tas.offset}]`];
-        case 'storeMemory':
-            return [`mov [${tas.address}+${tas.offset}], ${tas.from}`];
-        case 'storeZeroToMemory':
-            return [`mov byte [${tas.address}+${tas.offset}], 0`];
-        case 'storeMemoryByte':
-            return [`mov byte [${tas.address}], ${tas.contents}b`];
-        case 'callByRegister':
-            return [`call ${tas.function}`];
-        case 'callByName':
-            return [`call ${tas.function}`];
-        case 'return':
-            return [`ret`];
-        case 'syscall':
-            return ['syscall'];
-        case 'push':
-            return [`push ${tas.register}`];
-        case 'pop':
-            return [`pop ${tas.register}`];
-        case 'loadStackOffset':
-            return [`mov ${tas.register}, rsp`, `add ${tas.register}, -${tas.offset}`];
-        case 'stackLoad':
-            // TODO: Be consistent about where bytes in word gets multiplied
-            return [`mov ${tas.register}, [rsp+${tas.offset * bytesInWord}]`];
-        case 'stackStore':
-            // TODO: Be consistent about where bytes in word gets multiplied
-            return [`mov [rsp+${tas.offset * bytesInWord}], ${tas.register}`];
-        case 'stackReserve':
-            return [`add rsp, -${tas.words * bytesInWord}`];
-        case 'stackRelease':
-            return [`add rsp, ${tas.words * bytesInWord}`];
-        default:
-            throw debug_1.default(`${tas.kind} unhandled in threeAddressCodeToX64WithoutComment`);
-    }
-};
-const threeAddressCodeToX64 = (tas) => threeAddressCodeToX64WithoutComment(tas).map(asm => `${backend_utils_1.preceedingWhitespace(tas)}${asm}; ${tas.why.trim()}`);
-const bytesInWord = 8;
-const stringLiteralDeclaration = (literal) => `${backend_utils_1.stringLiteralName(literal)}: db "${literal.value}", 0;`;
-const x64Target = {
-    bytesInWord,
-    syscallNumbers: {
-        // printInt: XXX, // Should be unused on x64
-        print: 0x02000004,
-        sbrk: 0x02000045,
-        exit: 0x02000001,
-        mmap: 0x020000c5,
-        read: 0x02000003,
-    },
-    functionImpls: {
-        mallocImpl: runtime_1.mallocWithMmap(bytesInWord),
-        readIntImpl: runtime_1.readIntThroughSyscall(bytesInWord),
-        printImpl: runtime_1.printWithWriteRuntimeFunction(bytesInWord),
-    },
-};
-const x64RegisterInfo = {
-    extraSavedRegisters: [],
-    callerSavedRegisters: ['unknown', 'implicit return address'],
-    registersClobberedBySyscall: ['r11'],
-    registers: {
-        generalPurpose: ['r11', 'r12', 'r13', 'r14', 'r15', 'rdi', 'rsi', 'rbx'],
-        functionArgument: ['r8', 'r9', 'r10'],
-        functionResult: 'rax',
-        syscallArgument: ['rdi', 'rsi', 'rdx', 'r10', 'r8', 'r9'],
-        syscallSelectAndResult: 'rax',
-    },
-    translator: threeAddressCodeToX64,
-    registerAgnosticInfo: x64Target,
-};
-const tacToExecutable = (tac, includeCleanup) => {
-    const executable = backend_utils_1.makeExecutable(tac, x64Target, x64RegisterInfo, threeAddressCodeToX64, includeCleanup);
-    executable.main.name = 'start';
-    return {
-        target: `
-global start
-
-section .text
-${backend_utils_1.executableToString(';', executable)}
-section .data
-first_block: dq 0
-${join_1.default(tac.stringLiterals.map(stringLiteralDeclaration), '\n')}
-section .bss
-${Object.values(tac.globals)
-            .map(({ mangledName, bytes }) => `${mangledName}: resq ${bytes / bytesInWord}`)
-            .join('\n')}
-${Object.keys(runtime_strings_1.errors)
-            .map(key => `${runtime_strings_1.errors[key].name}: db "${runtime_strings_1.errors[key].value}", 0`)
-            .join('\n')}
-`,
-        tac,
-    };
-};
-const compile = (inputs) => {
-    const tac = generator_1.makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target });
-    const target = compileTac(tac, true);
-    if (typeof target != 'string')
-        return target;
-    return { target, tac };
-};
-const compileTac = (tac, includeCleanup) => {
-    return tacToExecutable(tac, includeCleanup).target;
-};
-const finishCompilation = async (x64source, tac) => {
-    const threeAddressCodeFile = tac
-        ? await writeTempFile_1.default(Program_1.toString(tac), 'three-address-core-x64', 'txt')
-        : undefined;
-    const sourceFile = await writeTempFile_1.default(x64source, 'program', 'x64');
-    const linkerInputPath = await tmp_promise_1.file({ template: 'object-XXXXXX.o', dir: '/tmp' });
-    const binaryFile = await tmp_promise_1.file({ template: 'binary-XXXXXX.out', dir: '/tmp' });
-    try {
-        await child_process_promise_1.exec(`nasm -fmacho64 -o ${linkerInputPath.path} ${sourceFile.path}`);
-        // TODO: Cross compiling or something? IDK. Dependency on system linker sucks.
-        await child_process_promise_1.exec(`ld ${linkerInputPath.path} -o ${binaryFile.path} -macosx_version_min 10.6 -lSystem`);
-        return {
-            source: x64source,
-            sourceFile,
-            binaryFile,
-            threeAddressCodeFile,
-            threeAddressCode: {},
-        };
-    }
-    catch (e) {
-        return { error: `Exception: ${e.message}` };
-    }
-};
-const execute = async (exePath, stdinPath) => {
-    const runInstructions = `${exePath} < ${stdinPath}`;
-    return Object.assign(Object.assign({}, (await execAndGetResult_1.default(runInstructions))), { executorName: 'local', runInstructions, debugInstructions: `lldb ${exePath}; break set -n start; settings set target.input-path ${stdinPath}; run; gui` });
-};
-const x64Backend = {
-    name: 'x64',
-    compile,
-    compileTac,
-    finishCompilation,
-    executors: [{ execute, name: 'local' }],
-    targetInfo: x64Target,
-};
-exports.default = x64Backend;
-
-
-/***/ }),
-
-/***/ "./controlFlowGraph.ts":
-/*!*****************************!*\
-  !*** ./controlFlowGraph.ts ***!
-  \*****************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const comparisonResult_1 = __webpack_require__(/*! ./util/comparisonResult */ "./util/comparisonResult.ts");
-const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
-const last_1 = __webpack_require__(/*! ./util/list/last */ "./util/list/last.ts");
-const set_1 = __webpack_require__(/*! ./util/set */ "./util/set.ts");
-const ordered_set_1 = __webpack_require__(/*! ./util/ordered-set */ "./util/ordered-set.ts");
-const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
-const idAppender_1 = __webpack_require__(/*! ./util/idAppender */ "./util/idAppender.ts");
-const Register_1 = __webpack_require__(/*! ./threeAddressCode/Register */ "./threeAddressCode/Register.ts");
-const Statement_1 = __webpack_require__(/*! ./threeAddressCode/Statement */ "./threeAddressCode/Statement.ts");
-const blockBehaviour = (tas) => {
-    switch (tas.kind) {
-        case 'empty':
-        case 'syscall':
-        case 'move':
-        case 'loadImmediate':
-        case 'addImmediate':
-        case 'subtract':
-        case 'add':
-        case 'multiply':
-        case 'increment':
-        case 'storeGlobal':
-        case 'loadGlobal':
-        case 'storeMemory':
-        case 'storeMemoryByte':
-        case 'storeZeroToMemory':
-        case 'loadMemory':
-        case 'loadMemoryByte':
-        case 'loadSymbolAddress':
-        case 'callByName':
-        case 'callByRegister':
-        case 'alloca':
-        case 'spill':
-        case 'unspill':
-            return 'midBlock';
-        case 'label':
-        case 'functionLabel':
-            return 'beginBlock';
-        case 'return':
-        case 'goto':
-        case 'gotoIfEqual':
-        case 'gotoIfNotEqual':
-        case 'gotoIfZero':
-        case 'gotoIfGreater':
-            return 'endBlock';
-        default:
-            throw debug_1.default(`${tas.kind} unhanldes in blockBehaviour`);
-    }
-};
-const blockName = (rtl) => {
-    if (rtl.length == 0)
-        throw debug_1.default('empty rtl in blockName');
-    const rtx = rtl[0];
-    switch (rtx.kind) {
-        case 'label':
-        case 'functionLabel':
-            return rtx.name;
-        case 'goto':
-        case 'gotoIfEqual':
-        case 'gotoIfNotEqual':
-        case 'gotoIfZero':
-        case 'gotoIfGreater':
-            return rtx.label;
-        default:
-            return '';
-    }
-};
-const blockExits = (rtl) => {
-    const rtx = last_1.default(rtl);
-    if (!rtx)
-        throw debug_1.default('empty rtl');
-    switch (rtx.kind) {
-        case 'goto':
-            return { blockName: rtx.label, next: false, exit: false };
-        case 'gotoIfEqual':
-        case 'gotoIfNotEqual':
-        case 'gotoIfZero':
-        case 'gotoIfGreater':
-            return { blockName: rtx.label, next: true, exit: false };
-        case 'return':
-            return { blockName: false, next: false, exit: true };
-        case 'empty':
-        case 'syscall':
-        case 'move':
-        case 'loadImmediate':
-        case 'addImmediate':
-        case 'subtract':
-        case 'add':
-        case 'multiply':
-        case 'increment':
-        case 'label':
-        case 'functionLabel':
-        case 'storeGlobal':
-        case 'loadGlobal':
-        case 'storeMemory':
-        case 'storeMemoryByte':
-        case 'storeZeroToMemory':
-        case 'loadMemory':
-        case 'loadMemoryByte':
-        case 'loadSymbolAddress':
-        case 'callByName':
-        case 'callByRegister':
-            return { blockName: false, next: true, exit: false };
-        default:
-            throw debug_1.default('Unrecognized Statement kind in blockExits');
-    }
-};
-exports.toDotFile = ({ blocks, connections, labelToIndexMap, exits, }) => {
-    let dotText = 'digraph {\n';
-    dotText += `Entry [style="invis"]\n`;
-    dotText += `Entry -> node_0\n`;
-    blocks.forEach(({ name, instructions }, index) => {
-        const label = join_1.default(instructions.map(Statement_1.toString), '\\n')
-            .replace(/"/g, '\\"')
-            .replace(/:/g, '\\:');
-        dotText += `node_${index} [shape="box", label="${label}"]`;
-    });
-    dotText += `Exit [style="invis"]\n`;
-    exits.forEach(exit => {
-        dotText += `node_${exit} -> Exit\n`;
-    });
-    connections.forEach(({ from, to }) => {
-        dotText += `node_${from} -> node_${to}\n`;
-    });
-    dotText += '}';
-    return dotText;
-};
-exports.controlFlowGraph = (rtl) => {
-    const blocks = [];
-    let currentBlock = [];
-    rtl.forEach(rtx => {
-        const change = blockBehaviour(rtx);
-        if (change == 'midBlock') {
-            currentBlock.push(rtx);
-        }
-        else if (change == 'endBlock') {
-            currentBlock.push(rtx);
-            blocks.push({
-                instructions: currentBlock,
-                name: blockName(currentBlock),
-            });
-            currentBlock = [];
-        }
-        else if (change == 'beginBlock') {
-            if (currentBlock.length > 0) {
-                blocks.push({
-                    instructions: currentBlock,
-                    name: blockName(currentBlock),
-                });
-            }
-            currentBlock = [rtx];
-        }
-    });
-    if (currentBlock.length > 0) {
-        blocks.push({
-            instructions: currentBlock,
-            name: blockName(currentBlock),
-        });
-    }
-    const labelToIndexMap = {};
-    blocks.forEach((block, index) => {
-        const firstRtx = block.instructions[0];
-        if (firstRtx.kind == 'label' || firstRtx.kind == 'functionLabel') {
-            labelToIndexMap[firstRtx.name] = index;
-        }
-    });
-    const connections = [];
-    const exits = [];
-    blocks.forEach((block, index) => {
-        const { blockName: exitedName, next, exit } = blockExits(block.instructions);
-        if (exitedName) {
-            connections.push({ from: index, to: labelToIndexMap[exitedName] });
-        }
-        if (next) {
-            connections.push({ from: index, to: index + 1 });
-        }
-        if (exit) {
-            exits.push(index);
-        }
-    });
-    return {
-        blocks,
-        connections,
-        labelToIndexMap,
-        exits,
-    };
-};
-// TODO: Args should not be necessary
-exports.computeBlockLiveness = (block, args) => {
-    return block.instructions
-        .slice()
-        .reverse()
-        .reduce((liveness, next) => {
-        const newLiveness = liveness[0].copy();
-        const newlyLive = Statement_1.reads(next, args);
-        const newlyDead = Statement_1.writes(next);
-        newlyDead.forEach(item => {
-            newLiveness.remove(item);
-        });
-        newlyLive.forEach(item => {
-            newLiveness.add(item);
-        });
-        return [newLiveness, ...liveness];
-    }, [set_1.set(Register_1.isEqual)]);
-};
-// Returns whether entry liveness changed
-const propagateBlockLiveness = (block, liveness, liveAtExit) => {
-    let changeEntry = false;
-    liveAtExit.forEach(item => {
-        for (let i = liveness.length - 1; i >= 0; i--) {
-            if (i < block.instructions.length) {
-                const newlyDead = set_1.fromList(Register_1.isEqual, Statement_1.writes(block.instructions[i]));
-                if (newlyDead.has(item)) {
-                    return;
-                }
-            }
-            if (i == 0 && !liveness[i].has(item)) {
-                changeEntry = true;
-            }
-            liveness[i].add(item);
-        }
-    });
-    return changeEntry;
-};
-const verifyingOverlappingJoin = (blocks) => {
-    const result = [];
-    // Block building results in the end of each block having the same last element as the first
-    // item of the next block. Put the blocks together in a way that accounts for this. TODO: maybe
-    // refactor the code so this isn't necessary?
-    blocks.forEach((block, index) => {
-        if (block.length == 0)
-            debug_1.default('empty block');
-        result.push(...block);
-        if (index == blocks.length - 1)
-            return;
-        result.pop();
-    });
-    return result;
-};
-// TODO: Maybe treat function resuls specially somehow? Its kinda always live but that feels too special-casey.
-exports.tafLiveness = (taf) => {
-    const cfg = exports.controlFlowGraph(taf.instructions);
-    const blockLiveness = cfg.blocks.map(block => exports.computeBlockLiveness(block, taf.arguments));
-    const lastBlock = last_1.default(blockLiveness);
-    if (lastBlock) {
-        const lastStatementLiveness = last_1.default(lastBlock);
-        if (lastStatementLiveness) {
-            taf.liveAtExit.forEach(r => {
-                lastStatementLiveness.add(r);
-            });
-        }
-    }
-    const remainingToPropagate = blockLiveness.map((b, i) => ({
-        entryLiveness: b[0],
-        index: i,
-    }));
-    while (remainingToPropagate.length > 0) {
-        const { entryLiveness, index } = remainingToPropagate.shift();
-        const preceedingNodeIndices = cfg.connections
-            .filter(({ to }) => to == index)
-            .map(n => n.from);
-        preceedingNodeIndices.forEach(idx => {
-            const changed = propagateBlockLiveness(cfg.blocks[idx], blockLiveness[idx], entryLiveness);
-            if (changed) {
-                remainingToPropagate.push({ entryLiveness: blockLiveness[idx][0], index: idx });
-            }
-        });
-    }
-    const overallLiveness = verifyingOverlappingJoin(blockLiveness);
-    if (taf.instructions.length + 1 != overallLiveness.length) {
-        throw debug_1.default('overallLiveness length mimatch');
-    }
-    return overallLiveness;
-};
-const interferenceCompare = (lhs, rhs) => {
-    const r1Comparison = Register_1.compare(lhs.r1, rhs.r1);
-    if (r1Comparison != comparisonResult_1.default.EQ) {
-        return r1Comparison;
-    }
-    return Register_1.compare(lhs.r2, rhs.r2);
-};
-const interferenceInvolvesRegister = (interference, r) => Register_1.isEqual(interference.r1, r) || Register_1.isEqual(interference.r2, r);
-const otherRegister = (interference, r) => {
-    if (Register_1.isEqual(interference.r1, r)) {
-        return interference.r2;
-    }
-    if (Register_1.isEqual(interference.r2, r)) {
-        return interference.r1;
-    }
-    return undefined;
-};
-exports.registerInterferenceGraph = (liveness, argumentRegisters) => {
-    const registerIsArgument = register => argumentRegisters.some(arg => Register_1.isEqual(arg, register));
-    const localRegisters = set_1.join(Register_1.isEqual, liveness);
-    localRegisters.removeWithPredicate(local => typeof local == 'string' || registerIsArgument(local));
-    const result = {
-        localRegisters: ordered_set_1.orderedSet(Register_1.compare),
-        interferences: ordered_set_1.orderedSet(interferenceCompare),
-    };
-    liveness.forEach(registers => {
-        registers.forEach(i => {
-            registers.forEach(j => {
-                if (typeof i != 'string' && typeof j != 'string') {
-                    // We don't reuse arguments right now even if we could
-                    if (registerIsArgument(i) || registerIsArgument(j)) {
-                        return;
-                    }
-                    result.localRegisters.add(i);
-                    result.localRegisters.add(j);
-                    // Register always interfere with themselves, this doesn't need to be tracked
-                    if (Register_1.isEqual(i, j)) {
-                        return;
-                    }
-                    result.interferences.add({ r1: i, r2: j });
-                }
-            });
-        });
-    });
-    return result;
-};
-exports.spill = (taf, registerToSpill) => {
-    if (typeof registerToSpill == 'string')
-        throw debug_1.default("Can't spill special registers");
-    const registerName = idAppender_1.default();
-    const newFunction = {
-        instructions: [],
-        arguments: taf.arguments,
-        liveAtExit: taf.liveAtExit,
-        name: taf.name,
-    };
-    // When we spill a register, we replace every read of that register with an unspill to a new register that
-    // exists only as long as that read, and replace every write the write followed by a spill, so that the
-    // lifetime of the spilled register is very short. Each read or write needs to create a new register to spill
-    // from or to (we call that register a fragment) and this function creates a new fragment for each read/write.
-    const makeFragment = () => new Register_1.Register(registerName(`${registerToSpill.name}_spill`));
-    taf.instructions.forEach(instruction => {
-        // TODO: Come up with some way to do this generically without unpacking the instruction. A refactor that required the implementation of spilling for callByName/callByRegister was hard to debug due to this not being generic.
-        switch (instruction.kind) {
-            case 'empty': {
-                newFunction.instructions.push(instruction);
-                break;
-            }
-            case 'loadImmediate': {
-                // TODO: seems weird to spill a constant? Could just reload instead. Oh well, will fix later.
-                if (Register_1.isEqual(instruction.destination, registerToSpill)) {
-                    const fragment = makeFragment();
-                    newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { destination: fragment }));
-                    newFunction.instructions.push({
-                        kind: 'spill',
-                        register: fragment,
-                        why: 'spill',
-                    });
-                }
-                else {
-                    newFunction.instructions.push(instruction);
-                }
-                break;
-            }
-            case 'add':
-            case 'multiply': {
-                let newLhs = instruction.lhs;
-                let newRhs = instruction.rhs;
-                if (Register_1.isEqual(instruction.lhs, registerToSpill)) {
-                    newLhs = makeFragment();
-                    newFunction.instructions.push({
-                        kind: 'unspill',
-                        register: instruction.lhs,
-                        to: newLhs,
-                        why: 'unspill',
-                    });
-                }
-                if (Register_1.isEqual(instruction.rhs, registerToSpill)) {
-                    newRhs = makeFragment();
-                    newFunction.instructions.push({
-                        kind: 'unspill',
-                        register: instruction.rhs,
-                        to: newRhs,
-                        why: 'unspill',
-                    });
-                }
-                let newDestination = instruction.destination;
-                if (Register_1.isEqual(instruction.destination, registerToSpill)) {
-                    newDestination = makeFragment();
-                    newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { lhs: newLhs, rhs: newRhs, destination: newDestination }));
-                    newFunction.instructions.push({
-                        kind: 'spill',
-                        register: newDestination,
-                        why: 'spill',
-                    });
-                }
-                else {
-                    newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { lhs: newLhs, rhs: newRhs }));
-                }
-                break;
-            }
-            case 'move': {
-                // TODO: seems weird to spill a move. Maybe should _replace_ the move or sommething?
-                let newSource = instruction.from;
-                if (Register_1.isEqual(instruction.from, registerToSpill)) {
-                    newSource = makeFragment();
-                    newFunction.instructions.push({
-                        kind: 'unspill',
-                        register: instruction.from,
-                        to: newSource,
-                        why: 'unspill',
-                    });
-                }
-                if (Register_1.isEqual(instruction.to, registerToSpill)) {
-                    const newDestination = makeFragment();
-                    newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { to: newDestination, from: newSource }));
-                    newFunction.instructions.push({
-                        kind: 'spill',
-                        register: newDestination,
-                        why: 'spill',
-                    });
-                }
-                else {
-                    newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { from: newSource }));
-                }
-                break;
-            }
-            case 'unspill':
-            case 'spill':
-                if (Register_1.isEqual(instruction.register, registerToSpill)) {
-                    throw debug_1.default('repsill');
-                }
-                newFunction.instructions.push(instruction);
-                break;
-            case 'syscall':
-            case 'callByName': {
-                // TODO: Implement proper spilling for callByName and callByRegister (and probs syscalls)
-                const newArguments = [];
-                instruction.arguments.forEach(arg => {
-                    if (typeof arg != 'string' &&
-                        typeof arg != 'number' &&
-                        Register_1.isEqual(arg, registerToSpill)) {
-                        const newSource = makeFragment();
-                        newArguments.push(newSource);
-                        newFunction.instructions.push({
-                            kind: 'unspill',
-                            register: arg,
-                            to: newSource,
-                            why: 'unspill arg',
-                        });
-                    }
-                    else {
-                        newArguments.push(arg);
-                    }
-                });
-                newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { arguments: newArguments }));
-                break;
-            }
-            case 'loadSymbolAddress':
-                if (Register_1.isEqual(instruction.to, registerToSpill)) {
-                    const newDestination = makeFragment();
-                    newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { to: newDestination }));
-                    newFunction.instructions.push({
-                        kind: 'spill',
-                        register: newDestination,
-                        why: 'spill',
-                    });
-                }
-                else {
-                    newFunction.instructions.push(instruction);
-                }
-                break;
-            case 'return':
-                if (Register_1.isEqual(instruction.register, registerToSpill)) {
-                    const newReturnVal = makeFragment();
-                    newFunction.instructions.push({
-                        kind: 'unspill',
-                        register: instruction.register,
-                        to: newReturnVal,
-                        why: 'unspill ret val',
-                    });
-                    newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { register: newReturnVal }));
-                }
-                else {
-                    newFunction.instructions.push(instruction);
-                }
-                break;
-            default:
-                if (Statement_1.reads(instruction, taf.arguments).includes(registerToSpill) ||
-                    Statement_1.writes(instruction).includes(registerToSpill)) {
-                    throw debug_1.default(`${instruction.kind} unhandled in spill`);
-                }
-                else {
-                    newFunction.instructions.push(instruction);
-                }
-        }
-    });
-    return newFunction;
-};
-// Returns a new function if anything changed
-const removeDeadStores = (taf, liveness) => {
-    const newFunction = Object.assign(Object.assign({}, taf), { instructions: [] });
-    let anythingChanged = false;
-    if (taf.instructions.length + 1 != liveness.length)
-        throw debug_1.default('Liveness length != taf length + 1');
-    for (let i = 0; i < taf.instructions.length; i++) {
-        const currentInstruction = taf.instructions[i];
-        // Any instruction with side effects needs to stay until we can prove that the side effects don't matter.
-        if (Statement_1.hasSideEffects(currentInstruction)) {
-            newFunction.instructions.push(currentInstruction);
-            continue;
-        }
-        const targets = Statement_1.writes(currentInstruction);
-        // If there are written registers and none of them are live, omit the write.
-        // TODO: Treat function result and arguments less special-casey somehow. Maybe put it into liveness computing. NOTE: Writes to arguments are not dead because length is implemented in a way where the arguments are destroyed and repaired (TODO: verify this). TODO: probably should check if any target is a register?
-        const isLiveWrite = targets.some(target => liveness[i + 1].has(target));
-        if (isLiveWrite) {
-            newFunction.instructions.push(taf.instructions[i]);
-        }
-        else {
-            anythingChanged = true;
-        }
-    }
-    if (!anythingChanged) {
-        return undefined;
-    }
-    return newFunction;
-};
-exports.assignRegisters = (taf, colors) => {
-    let liveness = exports.tafLiveness(taf);
-    let newFunction = removeDeadStores(taf, liveness);
-    while (newFunction) {
-        taf = newFunction;
-        liveness = exports.tafLiveness(taf);
-        newFunction = removeDeadStores(taf, liveness);
-    }
-    // http://web.cecs.pdx.edu/~mperkows/temp/register-allocation.pdf
-    const rig = exports.registerInterferenceGraph(liveness, taf.arguments);
-    const registersToAssign = rig.localRegisters.copy();
-    const interferences = rig.interferences.copy();
-    const colorableStack = [];
-    while (registersToAssign.size() > 0) {
-        // We are looking for one node ...
-        let colorableRegister = registersToAssign.extractOne(register => {
-            // ... that we haven't already colored ...
-            if (!colorableStack.every(alreadyColored => !Register_1.isEqual(register, alreadyColored))) {
-                return false;
-            }
-            // ... that interferes with a number of nodes ...
-            let interferenceCount = 0;
-            interferences.forEach(interference => {
-                if (interferenceInvolvesRegister(interference, register)) {
-                    interferenceCount++;
-                }
-            });
-            // ... that is less than the number of available registers ...
-            if (interferenceCount >= colors.length) {
-                return false;
-            }
-            return true;
-        });
-        // ... or we choose a node to spill if we can't find one we can color ...
-        if (!colorableRegister) {
-            colorableRegister = registersToAssign.extractOne(_ => true);
-        }
-        if (!colorableRegister) {
-            throw debug_1.default('Should have found a register of some sort.');
-        }
-        // ... and put it on the top of the colorable stack ...
-        colorableStack.push(colorableRegister);
-        // ... and remove it from the "to assign" list.
-        interferences.removeWithPredicate(interference => {
-            if (!colorableRegister) {
-                throw debug_1.default('Should have found a register of some sort.');
-            }
-            return interferenceInvolvesRegister(interference, colorableRegister);
-        });
-        registersToAssign.remove(colorableRegister);
-    }
-    const result = { registerMap: {}, spilled: [] };
-    let needToSpill = undefined;
-    colorableStack.reverse().forEach(register => {
-        if (needToSpill)
-            return;
-        // Try each color in order
-        const color = colors.find(c => {
-            // Check we if have a neighbour with this color already
-            return rig.interferences.toList().every(interference => {
-                const other = otherRegister(interference, register);
-                if (!other) {
-                    return true;
-                }
-                if (result.registerMap[other.name] == c) {
-                    return false;
-                }
-                return true;
-            });
-        });
-        if (!color && !(typeof register === 'string')) {
-            needToSpill = register;
-            return;
-        }
-        else if (!color) {
-            throw debug_1.default('no color found for special register???');
-        }
-        if (!register)
-            throw debug_1.default('invalid register');
-        result.registerMap[register.name] = color;
-    });
-    if (needToSpill) {
-        debugger;
-        const spilled = exports.spill(taf, needToSpill);
-        return exports.assignRegisters(spilled, colors);
-    }
-    return { assignment: result, newFunction: taf };
-};
-
-
-/***/ }),
-
-/***/ "./frontend.ts":
-/*!*********************!*\
-  !*** ./frontend.ts ***!
-  \*********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const flatten_1 = __webpack_require__(/*! ./util/list/flatten */ "./util/list/flatten.ts");
-const uniqueBy_1 = __webpack_require__(/*! ./util/list/uniqueBy */ "./util/list/uniqueBy.ts");
-const idMaker_1 = __webpack_require__(/*! ./util/idMaker */ "./util/idMaker.ts");
-const last_1 = __webpack_require__(/*! ./util/list/last */ "./util/list/last.ts");
-const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
-const lex_1 = __webpack_require__(/*! ./parser-lib/lex */ "./parser-lib/lex.ts");
-exports.lex = lex_1.lex;
-const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
-const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
-const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
-/* tslint:disable */
-const { add } = __webpack_require__(/*! ./mpl/add.mpl */ "./mpl/add.mpl");
-/* tslint:enable */
-// TODO move this to parser lit
-const hasType = (ast, type) => 'type' in ast && ast.type == type;
-const repairAssociativity = (nodeType, ast) => {
-    // Let this slide because TokenType overlaps InteriorNodeType right now
-    if (ast.type === nodeType && !ast.children) /*debug('todo')*/
-        return ast;
-    if (ast.type === nodeType) {
-        if (!ast.children[2])
-            debug_1.default('todo');
-        if (ast.children[2].type === nodeType) {
-            return {
-                type: nodeType,
-                children: [
-                    {
-                        type: nodeType,
-                        children: [
-                            repairAssociativity(nodeType, ast.children[0]),
-                            ast.children[2].children[1],
-                            repairAssociativity(nodeType, ast.children[2].children[0]),
-                        ],
-                        sourceLocation: ast.sourceLocation,
-                    },
-                    ast.children[1],
-                    repairAssociativity(nodeType, ast.children[2].children[2]),
-                ],
-                sourceLocation: ast.sourceLocation,
-            };
-        }
-        else {
-            return {
-                type: ast.type,
-                children: ast.children.map(child => repairAssociativity(nodeType, child)),
-                sourceLocation: ast.sourceLocation,
-            };
-        }
-    }
-    else if ('children' in ast) {
-        return {
-            type: ast.type,
-            children: ast.children.map(child => repairAssociativity(nodeType, child)),
-            sourceLocation: ast.sourceLocation,
-        };
-    }
-    else {
-        return ast;
-    }
-};
-const transformAst = (nodeType, f, ast, recurseOnNew) => {
-    if (parse_1.isSeparatedListNode(ast)) {
-        return {
-            items: ast.items.map(i => transformAst(nodeType, f, i, recurseOnNew)),
-            separators: ast.separators.map(i => transformAst(nodeType, f, i, recurseOnNew)),
-        };
-    }
-    else if (parse_1.isListNode(ast)) {
-        return { items: ast.items.map(i => transformAst(nodeType, f, i, recurseOnNew)) };
-    }
-    else if (ast.type === nodeType) {
-        const newNode = f(ast);
-        if ('children' in newNode) {
-            // If we aren't supposed to recurse, don't re-tranform the node we just made
-            if (recurseOnNew) {
-                return transformAst(nodeType, f, newNode, recurseOnNew);
-            }
-            else {
-                return {
-                    type: newNode.type,
-                    children: newNode.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
-                    sourceLocation: ast.sourceLocation,
-                };
-            }
-        }
-        else {
-            return newNode;
-        }
-    }
-    else if ('children' in ast) {
-        return {
-            type: ast.type,
-            children: ast.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
-            sourceLocation: ast.sourceLocation,
-        };
-    }
-    else {
-        return ast;
-    }
-};
-const extractVariable = (ctx) => {
-    switch (ctx.w.kind) {
-        case 'reassignment':
-        case 'declarationAssignment':
-            // Recursive functions can refer to the left side on the right side, so to extract
-            // the left side, we need to know about the right side. Probably, this just shouldn't return
-            // a type. TODO: allow more types of recursive functions than just single int...
-            return {
-                name: ctx.w.destination,
-                type: exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression })).type,
-                exported: false,
-            };
-        case 'typedDeclarationAssignment':
-            return {
-                name: ctx.w.destination,
-                type: exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }), types_1.resolveIfNecessary(ctx.w.type, ctx.availableTypes)).type,
-                exported: false,
-            };
-        case 'returnStatement':
-        case 'typeDeclaration':
-            return undefined;
-        default:
-            throw debug_1.default(`${ctx.w.kind} unhandled in extractVariable`);
-    }
-};
-const extractVariables = (ctx) => {
-    const variables = [];
-    ctx.w.forEach((statement) => {
-        switch (statement.kind) {
-            case 'returnStatement':
-            case 'reassignment':
-            case 'typeDeclaration':
-                break;
-            case 'declarationAssignment':
-            case 'typedDeclarationAssignment':
-                const potentialVariable = extractVariable({
-                    w: statement,
-                    availableVariables: mergeDeclarations(ctx.availableVariables, variables),
-                    availableTypes: ctx.availableTypes,
-                });
-                if (potentialVariable) {
-                    variables.push(potentialVariable);
-                }
-                break;
-            default:
-                throw debug_1.default('todo');
-        }
-    });
-    return variables;
-};
-const functionObjectFromAst = (ctx) => ({
-    name: ctx.w.deanonymizedName,
-    statements: ctx.w.body,
-    variables: [
-        ...ctx.w.parameters,
-        ...extractVariables({
-            w: ctx.w.body,
-            availableVariables: mergeDeclarations(ctx.availableVariables, ctx.w.parameters),
-            availableTypes: ctx.availableTypes,
-        }),
-    ],
-    parameters: ctx.w.parameters,
-});
-const walkAst = (ast, nodeKinds, extractItem) => {
-    const recurse = ast2 => walkAst(ast2, nodeKinds, extractItem);
-    let result = [];
-    if (nodeKinds.includes(ast.kind)) {
-        result = [extractItem(ast)];
-    }
-    switch (ast.kind) {
-        case 'returnStatement':
-        case 'typedDeclarationAssignment':
-        case 'declarationAssignment':
-        case 'reassignment':
-            return [...result, ...recurse(ast.expression)];
-        case 'product':
-        case 'addition':
-        case 'subtraction':
-        case 'equality':
-        case 'concatenation':
-            return [...result, ...recurse(ast.lhs), ...recurse(ast.rhs)];
-        case 'callExpression':
-            return [...result, ...flatten_1.default(ast.arguments.map(recurse))];
-        case 'ternary':
-            return [
-                ...result,
-                ...recurse(ast.condition)
-                    .concat(recurse(ast.ifTrue))
-                    .concat(recurse(ast.ifFalse)),
-            ];
-        case 'program':
-            return [...result, ...flatten_1.default(ast.statements.map(recurse))];
-        case 'functionLiteral':
-            return [...result, ...flatten_1.default(ast.body.map(recurse))];
-        case 'objectLiteral':
-            return [
-                ...result,
-                ...flatten_1.default(ast.members.map(member => recurse(member.expression))),
-            ];
-        case 'memberAccess':
-            return [...result, ...recurse(ast.lhs)];
-        case 'number':
-        case 'identifier':
-        case 'stringLiteral':
-        case 'booleanLiteral':
-        case 'typeDeclaration':
-            return result;
-        case 'listLiteral':
-            return [...result, ...flatten_1.default(ast.items.map(recurse))];
-        case 'indexAccess':
-            return [...result, ...recurse(ast.accessed), ...recurse(ast.index)];
-        case 'memberStyleCall':
-            return [...result, ...recurse(ast.lhs), ...flatten_1.default(ast.params.map(recurse))];
-        default:
-            throw debug_1.default(`${ast.kind} unhandled in walkAst`);
-    }
-};
-const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[1], ast, true);
-exports.removeBracketsFromAst = removeBracketsFromAst;
-const parseMpl = (tokens) => {
-    const parseResult = parse_1.parse(grammar_1.grammar, 'program', tokens);
-    if (parse_1.parseResultIsError(parseResult)) {
-        // TODO: Just get the parser to give us good errors directly instead of taking the first
-        return [parseResult.errors[0]];
-    }
-    let ast = parseResult;
-    ast = repairAssociativity('subtraction', ast);
-    ast = repairAssociativity('addition', ast);
-    ast = repairAssociativity('product', ast);
-    // Bracketed expressions -> nothing. Must happen after associativity repair or we will break
-    // associativity of brackets.
-    ast = removeBracketsFromAst(ast);
-    return ast;
-};
-exports.parseMpl = parseMpl;
-const isTypeError = (val) => Array.isArray(val);
-const combineErrors = (potentialErrors) => {
-    const result = [];
-    potentialErrors.forEach(e => {
-        if (isTypeError(e)) {
-            result.push(...e);
-        }
-    });
-    return result.length > 0 ? result : null;
-};
-// TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer() maybe?
-exports.typeOfExpression = (ctx, expectedType = undefined) => {
-    const recurse = ast2 => exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast2 }));
-    const { w, availableVariables, availableTypes } = ctx;
-    const ast = w;
-    switch (ast.kind) {
-        case 'number':
-            return { type: types_1.builtinTypes.Integer, extractedFunctions: [] };
-        case 'addition':
-        case 'product':
-        case 'subtraction': {
-            const leftType = recurse(ast.lhs);
-            const rightType = recurse(ast.rhs);
-            const combinedErrors = combineErrors([leftType, rightType]);
-            if (combinedErrors) {
-                return combinedErrors;
-            }
-            const lt = leftType;
-            const rt = rightType;
-            if (!types_1.equal(lt.type, types_1.builtinTypes.Integer)) {
-                return [
-                    {
-                        kind: 'wrongTypeForOperator',
-                        operator: ast.kind,
-                        expected: 'Integer',
-                        found: lt.type,
-                        side: 'left',
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            if (!types_1.equal(rt.type, types_1.builtinTypes.Integer)) {
-                return [
-                    {
-                        kind: 'wrongTypeForOperator',
-                        operator: ast.kind,
-                        expected: 'Integer',
-                        found: rt.type,
-                        side: 'right',
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            return {
-                type: types_1.builtinTypes.Integer,
-                extractedFunctions: [...lt.extractedFunctions, ...rt.extractedFunctions],
-            };
-        }
-        case 'equality': {
-            const leftType = recurse(ast.lhs);
-            const rightType = recurse(ast.rhs);
-            const combinedErrors = combineErrors([leftType, rightType]);
-            if (combinedErrors) {
-                return combinedErrors;
-            }
-            const lt = leftType;
-            const rt = rightType;
-            if (!types_1.equal(lt.type, rt.type)) {
-                return [
-                    {
-                        kind: 'typeMismatchForOperator',
-                        leftType: lt.type,
-                        rightType: rt.type,
-                        operator: 'equality',
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            return { type: types_1.builtinTypes.Boolean, extractedFunctions: [] };
-        }
-        case 'concatenation': {
-            const leftType = recurse(ast.lhs);
-            const rightType = recurse(ast.rhs);
-            const combinedErrors = combineErrors([leftType, rightType]);
-            if (combinedErrors) {
-                return combinedErrors;
-            }
-            const lt = leftType;
-            const rt = rightType;
-            if (lt.type.type.kind !== 'String') {
-                return [
-                    {
-                        kind: 'wrongTypeForOperator',
-                        found: lt.type,
-                        expected: 'String',
-                        operator: 'concatenation',
-                        side: 'left',
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            if (rt.type.type.kind !== 'String') {
-                return [
-                    {
-                        kind: 'wrongTypeForOperator',
-                        found: rt.type,
-                        expected: 'String',
-                        operator: 'concatenation',
-                        side: 'right',
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            return {
-                type: types_1.builtinTypes.String,
-                extractedFunctions: [...lt.extractedFunctions, ...rt.extractedFunctions],
-            };
-        }
-        case 'functionLiteral':
-            const functionObject = functionObjectFromAst(Object.assign(Object.assign({}, ctx), { w: ast }));
-            const f = inferFunction({
-                w: functionObject,
-                availableVariables: mergeDeclarations(ctx.availableVariables, functionObject.variables),
-                availableTypes: ctx.availableTypes,
-            });
-            if (isTypeError(f)) {
-                return f;
-            }
-            return {
-                type: {
-                    type: {
-                        kind: 'Function',
-                        arguments: ast.parameters
-                            .map(p => p.type)
-                            .map(t => {
-                            const resolved = types_1.resolveIfNecessary(t, ctx.availableTypes);
-                            if (!resolved) {
-                                throw debug_1.default('bag argument. This should be a better error.');
-                            }
-                            return resolved;
-                        }),
-                        permissions: [],
-                        returnType: f.returnType,
-                    },
-                },
-                extractedFunctions: [f],
-            };
-        case 'callExpression': {
-            const argTypes = ast.arguments.map(argument => recurse(argument));
-            const argTypeErrors = [];
-            argTypes.forEach(argType => {
-                if (isTypeError(argType)) {
-                    argTypeErrors.push(...argType);
-                }
-            });
-            if (argTypeErrors.length > 0) {
-                return argTypeErrors;
-            }
-            const functionName = ast.name;
-            const declaration = availableVariables.find(({ name }) => functionName == name);
-            if (!declaration) {
-                return [
-                    {
-                        kind: 'unknownIdentifier',
-                        name: functionName,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            const functionType = declaration.type;
-            if (!functionType)
-                throw debug_1.default('bad function! This should be a better error.');
-            if ('namedType' in functionType) {
-                throw debug_1.default('nameRef function! This should be supported.');
-            }
-            if (functionType.type.kind !== 'Function') {
-                return [
-                    {
-                        kind: 'calledNonFunction',
-                        identifierName: functionName,
-                        actualType: functionType,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            if (argTypes.length !== functionType.type.arguments.length) {
-                return [
-                    {
-                        kind: 'wrongNumberOfArguments',
-                        targetFunction: functionName,
-                        passedArgumentCount: argTypes.length,
-                        expectedArgumentCount: functionType.type.arguments.length,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            for (let i = 0; i < argTypes.length; i++) {
-                const resolved = types_1.resolveOrError(functionType.type.arguments[i], ctx.availableTypes, ast.sourceLocation);
-                if ('errors' in resolved) {
-                    return resolved.errors;
-                }
-                if (!types_1.equal(argTypes[i].type, resolved)) {
-                    return [
-                        {
-                            kind: 'wrongArgumentType',
-                            targetFunction: functionName,
-                            passedType: argTypes[i].type,
-                            expectedType: functionType.type.arguments[i],
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ];
-                }
-            }
-            const returnType = types_1.resolveOrError(functionType.type.returnType, ctx.availableTypes, ast.sourceLocation);
-            if ('errors' in returnType) {
-                return returnType.errors;
-            }
-            return { type: returnType, extractedFunctions: [] };
-        }
-        case 'memberStyleCall': {
-            const callArgTypes = ast.params.map(recurse);
-            const argTypeErrors = [];
-            callArgTypes.forEach(argType => {
-                if (isTypeError(argType)) {
-                    argTypeErrors.push(...argType);
-                }
-            });
-            if (argTypeErrors.length > 0) {
-                return argTypeErrors;
-            }
-            const thisArgType = recurse(ast.lhs);
-            if (isTypeError(thisArgType)) {
-                return thisArgType;
-            }
-            const functionName = ast.memberName;
-            const declaration = availableVariables.find(({ name }) => functionName == name);
-            if (!declaration) {
-                return [
-                    {
-                        kind: 'unknownIdentifier',
-                        name: functionName,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            const functionType = declaration.type;
-            if (!functionType)
-                throw debug_1.default('bad function! This should be a better error.');
-            if ('namedType' in functionType) {
-                throw debug_1.default('nameRef function! This should be supported.');
-            }
-            if (functionType.type.kind !== 'Function') {
-                return [
-                    {
-                        kind: 'calledNonFunction',
-                        identifierName: functionName,
-                        actualType: functionType,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            const allArgTypes = [thisArgType, ...callArgTypes];
-            if (allArgTypes.length !== functionType.type.arguments.length) {
-                return [
-                    {
-                        kind: 'wrongNumberOfArguments',
-                        targetFunction: functionName,
-                        passedArgumentCount: allArgTypes.length,
-                        expectedArgumentCount: functionType.type.arguments.length,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            // TODO: this is probably wrong, we need check agains the LHS type
-            for (let i = 0; i < allArgTypes.length; i++) {
-                const resolved = types_1.resolveOrError(functionType.type.arguments[i], ctx.availableTypes, ast.sourceLocation);
-                if ('errors' in resolved) {
-                    return resolved.errors;
-                }
-                if (!types_1.equal(allArgTypes[i].type, resolved)) {
-                    return [
-                        {
-                            kind: 'wrongArgumentType',
-                            targetFunction: functionName,
-                            passedType: allArgTypes[i].type,
-                            expectedType: functionType.type.arguments[i],
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ];
-                }
-            }
-            const returnType = types_1.resolveOrError(functionType.type.returnType, ctx.availableTypes, ast.sourceLocation);
-            if ('errors' in returnType) {
-                return returnType.errors;
-            }
-            return { type: returnType, extractedFunctions: [] };
-        }
-        case 'identifier': {
-            const unresolved = availableVariables.find(({ name }) => ast.value == name);
-            if (!unresolved) {
-                return [
-                    {
-                        kind: 'unknownTypeForIdentifier',
-                        identifierName: ast.value,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            const declaration = types_1.resolveIfNecessary(unresolved.type, availableTypes);
-            if (!declaration) {
-                return [
-                    {
-                        kind: 'couldNotFindType',
-                        name: unresolved.type.namedType,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            return { type: declaration, extractedFunctions: [] };
-        }
-        case 'ternary': {
-            const conditionType = recurse(ast.condition);
-            const trueBranchType = recurse(ast.ifTrue);
-            const falseBranchType = recurse(ast.ifFalse);
-            const combinedErrors = combineErrors([
-                conditionType,
-                trueBranchType,
-                falseBranchType,
-            ]);
-            if (combinedErrors ||
-                isTypeError(trueBranchType) ||
-                isTypeError(falseBranchType) ||
-                isTypeError(conditionType)) {
-                if (combinedErrors) {
-                    return combinedErrors;
-                }
-                else {
-                    return [];
-                }
-            }
-            if (!types_1.equal(conditionType.type, types_1.builtinTypes.Boolean)) {
-                return [
-                    {
-                        kind: 'wrongTypeForOperator',
-                        found: conditionType.type,
-                        expected: 'Boolean',
-                        operator: 'Ternary',
-                        side: 'left',
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            if (!types_1.equal(trueBranchType.type, falseBranchType.type)) {
-                return [
-                    {
-                        kind: 'ternaryBranchMismatch',
-                        trueBranchType: trueBranchType.type,
-                        falseBranchType: falseBranchType.type,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            return trueBranchType;
-        }
-        case 'booleanLiteral':
-            return { type: types_1.builtinTypes.Boolean, extractedFunctions: [] };
-        case 'stringLiteral':
-            return { type: types_1.builtinTypes.String, extractedFunctions: [] };
-        case 'objectLiteral':
-            const memberTypes = ast.members.map(({ expression }) => recurse(expression));
-            const typeErrors = flatten_1.default(memberTypes.filter(isTypeError));
-            if (!(typeErrors.length == 0))
-                return typeErrors;
-            return {
-                type: {
-                    type: {
-                        kind: 'Product',
-                        name: ast.typeName,
-                        members: ast.members.map(({ name, expression }) => ({
-                            name,
-                            type: recurse(expression).type,
-                        })),
-                    },
-                    original: { namedType: ast.typeName },
-                },
-                extractedFunctions: [],
-            };
-        case 'memberAccess':
-            const lhsType = recurse(ast.lhs);
-            if (isTypeError(lhsType)) {
-                return lhsType;
-            }
-            const resolvedLhs = lhsType.type;
-            if (resolvedLhs.type.kind != 'Product') {
-                return [
-                    {
-                        kind: 'invalidMemberAccess',
-                        found: lhsType.type,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            const accessedMember = resolvedLhs.type.members.find(m => m.name == ast.rhs);
-            if (!accessedMember) {
-                return [
-                    {
-                        kind: 'objectDoesNotHaveMember',
-                        lhsType: lhsType.type,
-                        member: ast.rhs,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            return { type: accessedMember.type, extractedFunctions: [] };
-        case 'listLiteral':
-            let innerType;
-            const extractedFunctions = [];
-            for (const item of ast.items) {
-                const result = recurse(item);
-                if (isTypeError(result)) {
-                    return result;
-                }
-                if (!innerType) {
-                    innerType = result.type;
-                }
-                else if (!types_1.equal(innerType, result.type)) {
-                    return [{ kind: 'nonhomogenousList', sourceLocation: ast.sourceLocation }];
-                }
-                extractedFunctions.push(...result.extractedFunctions);
-            }
-            if (!innerType) {
-                if (expectedType) {
-                    return { type: expectedType, extractedFunctions };
-                }
-                return [{ kind: 'uninferrableEmptyList', sourceLocation: ast.sourceLocation }];
-            }
-            return { type: { type: { kind: 'List', of: innerType } }, extractedFunctions };
-        case 'indexAccess':
-            const accessedType = recurse(ast.accessed);
-            if (isTypeError(accessedType)) {
-                return accessedType;
-            }
-            if (accessedType.type.type.kind != 'List') {
-                return [
-                    {
-                        kind: 'indexAccessNonList',
-                        accessed: accessedType.type,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            const indexType = recurse(ast.index);
-            if (isTypeError(indexType)) {
-                return indexType;
-            }
-            if (indexType.type.type.kind != 'Integer') {
-                return [
-                    {
-                        kind: 'nonIntegerIndex',
-                        index: indexType.type,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            return {
-                type: accessedType.type.type.of,
-                extractedFunctions: [
-                    ...accessedType.extractedFunctions,
-                    ...indexType.extractedFunctions,
-                ],
-            };
-        default:
-            throw debug_1.default(`${ast.kind} unhandled in typeOfExpression`);
-    }
-};
-const typeCheckStatement = (ctx) => {
-    const { w, availableTypes, availableVariables } = ctx;
-    const ast = w;
-    if (!ast.kind)
-        debug_1.default('!ast.kind');
-    switch (ast.kind) {
-        case 'returnStatement': {
-            const result = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression }));
-            if (isTypeError(result)) {
-                return { errors: result, newVariables: [] };
-            }
-            return { errors: [], newVariables: [] };
-        }
-        case 'declarationAssignment': {
-            const rightType = exports.typeOfExpression({
-                w: ast.expression,
-                availableTypes,
-                availableVariables: mergeDeclarations(availableVariables, [
-                    {
-                        name: ast.destination,
-                        type: {
-                            type: {
-                                kind: 'Function',
-                                arguments: [{ type: { kind: 'Integer' } }],
-                                permissions: [],
-                                returnType: { type: { kind: 'Integer' } },
-                            },
-                        },
-                        exported: false,
-                    },
-                ]),
-            });
-            if (isTypeError(rightType)) {
-                return { errors: rightType, newVariables: [] };
-            }
-            // Left type is inferred as right type
-            return {
-                errors: [],
-                newVariables: [{ name: ast.destination, type: rightType.type, exported: false }],
-            };
-        }
-        case 'reassignment': {
-            const rightType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression }));
-            if (isTypeError(rightType)) {
-                return { errors: rightType, newVariables: [] };
-            }
-            const unresolvedLeftType = availableVariables.find(v => v.name == ast.destination);
-            if (!unresolvedLeftType) {
-                return {
-                    errors: [
-                        {
-                            kind: 'assignUndeclaredIdentifer',
-                            destinationName: ast.destination,
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ],
-                    newVariables: [],
-                };
-            }
-            const leftType = types_1.resolveIfNecessary(unresolvedLeftType.type, availableTypes);
-            if (!leftType) {
-                return {
-                    errors: [
-                        {
-                            kind: 'couldNotFindType',
-                            name: unresolvedLeftType.name,
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ],
-                    newVariables: [],
-                };
-            }
-            if (!types_1.equal(leftType, rightType.type)) {
-                return {
-                    errors: [
-                        {
-                            kind: 'assignWrongType',
-                            lhsName: ast.destination,
-                            lhsType: leftType,
-                            rhsType: rightType.type,
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ],
-                    newVariables: [],
-                };
-            }
-            return { errors: [], newVariables: [] };
-        }
-        case 'typedDeclarationAssignment': {
-            // Check that type of var being assigned to matches type being assigned
-            const destinationType = ast.type;
-            const resolvedDestination = types_1.resolveOrError(destinationType, availableTypes, ast.sourceLocation);
-            if ('errors' in resolvedDestination) {
-                return resolvedDestination;
-            }
-            const expressionType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression, availableVariables: mergeDeclarations(availableVariables, [
-                    { name: ast.destination, type: destinationType, exported: false },
-                ]) }), resolvedDestination);
-            if (isTypeError(expressionType)) {
-                return { errors: expressionType, newVariables: [] };
-            }
-            if (!types_1.equal(expressionType.type, resolvedDestination)) {
-                return {
-                    errors: [
-                        {
-                            kind: 'assignWrongType',
-                            lhsName: ast.destination,
-                            lhsType: resolvedDestination,
-                            rhsType: expressionType.type,
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ],
-                    newVariables: [],
-                };
-            }
-            return {
-                errors: [],
-                newVariables: [
-                    { name: ast.destination, type: destinationType, exported: false },
-                ],
-            };
-        }
-        case 'typeDeclaration':
-            return {
-                errors: [],
-                newVariables: [],
-            };
-        default:
-            throw debug_1.default(`${ast.kind} unhandled in typeCheckStatement`);
-    }
-};
-exports.typeCheckStatement = typeCheckStatement;
-const mergeDeclarations = (left, right) => {
-    const result = [...right];
-    left.forEach(declaration => {
-        if (!result.some(({ name }) => name == declaration.name)) {
-            result.unshift(declaration);
-        }
-    });
-    return result;
-};
-exports.mergeDeclarations = mergeDeclarations;
-const typeCheckFunction = (ctx) => {
-    let availableVariables = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
-    const allErrors = [];
-    ctx.w.statements.forEach(statement => {
-        if (allErrors.length == 0) {
-            const { errors, newVariables } = typeCheckStatement(Object.assign(Object.assign({}, ctx), { w: statement, availableVariables }));
-            availableVariables = mergeDeclarations(availableVariables, newVariables);
-            allErrors.push(...errors);
-        }
-    });
-    return { typeErrors: allErrors, identifiers: availableVariables };
-};
-const assignmentToGlobalDeclaration = (ctx) => {
-    const result = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }));
-    if (isTypeError(result))
-        throw debug_1.default('isTypeError in assignmentToGlobalDeclaration');
-    return {
-        name: ctx.w.destination,
-        type: result.type,
-        exported: ctx.w.exported,
-        mangledName: ctx.w.expression.kind == 'functionLiteral'
-            ? ctx.w.expression.deanonymizedName
-            : ctx.w.destination,
-    };
-};
-const inferFunction = (ctx) => {
-    const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
-    const statements = [];
-    ctx.w.statements.forEach(statement => {
-        const statementContext = {
-            w: statement,
-            availableVariables: variablesFound,
-            availableTypes: ctx.availableTypes,
-        };
-        const maybeNewVariable = extractVariable(statementContext);
-        if (maybeNewVariable) {
-            variablesFound.push(maybeNewVariable);
-        }
-        statements.push(infer(statementContext));
-    });
-    const maybeReturnStatement = last_1.default(ctx.w.statements);
-    if (!maybeReturnStatement) {
-        return [{ kind: 'missingReturn', sourceLocation: { line: 0, column: 0 } }];
-    }
-    if (maybeReturnStatement.kind != 'returnStatement') {
-        return [{ kind: 'missingReturn', sourceLocation: maybeReturnStatement.sourceLocation }];
-    }
-    const returnStatement = maybeReturnStatement;
-    const returnType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { availableVariables: variablesFound, w: returnStatement.expression }));
-    if (isTypeError(returnType)) {
-        return returnType;
-    }
-    return {
-        name: ctx.w.name,
-        statements,
-        variables: ctx.w.variables,
-        parameters: ctx.w.parameters,
-        returnType: returnType.type,
-    };
-};
-// TODO: merge this with typecheck maybe?
-const infer = (ctx) => {
-    const recurse = ast2 => infer(Object.assign(Object.assign({}, ctx), { w: ast2 }));
-    const { w, availableVariables, availableTypes } = ctx;
-    const ast = w;
-    switch (ast.kind) {
-        case 'returnStatement':
-            return {
-                kind: 'returnStatement',
-                expression: recurse(ast.expression),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'equality':
-            const equalityType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.lhs }));
-            if (isTypeError(equalityType))
-                throw debug_1.default('couldNotFindType');
-            return {
-                kind: 'equality',
-                sourceLocation: ast.sourceLocation,
-                lhs: recurse(ast.lhs),
-                rhs: recurse(ast.rhs),
-                type: equalityType.type,
-            };
-        case 'product':
-            return {
-                kind: ast.kind,
-                sourceLocation: ast.sourceLocation,
-                lhs: recurse(ast.lhs),
-                rhs: recurse(ast.rhs),
-            };
-        case 'addition':
-            return {
-                kind: ast.kind,
-                sourceLocation: ast.sourceLocation,
-                lhs: recurse(ast.lhs),
-                rhs: recurse(ast.rhs),
-            };
-        case 'subtraction':
-            return {
-                kind: ast.kind,
-                sourceLocation: ast.sourceLocation,
-                lhs: recurse(ast.lhs),
-                rhs: recurse(ast.rhs),
-            };
-        case 'concatenation':
-            return {
-                kind: ast.kind,
-                sourceLocation: ast.sourceLocation,
-                lhs: recurse(ast.lhs),
-                rhs: recurse(ast.rhs),
-            };
-        case 'typedDeclarationAssignment':
-            const resolved = types_1.resolveIfNecessary(ast.type, availableTypes);
-            if (!resolved)
-                throw debug_1.default("resolution shouldn't fail here");
-            return {
-                kind: 'typedDeclarationAssignment',
-                sourceLocation: ast.sourceLocation,
-                expression: recurse(ast.expression),
-                type: resolved,
-                destination: ast.destination,
-            };
-        case 'declarationAssignment':
-            const type = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression }));
-            if (isTypeError(type))
-                throw debug_1.default("type error when there shouldn't be");
-            return {
-                kind: 'typedDeclarationAssignment',
-                sourceLocation: ast.sourceLocation,
-                expression: recurse(ast.expression),
-                type: type.type,
-                destination: ast.destination,
-            };
-        case 'reassignment':
-            return {
-                kind: 'reassignment',
-                sourceLocation: ast.sourceLocation,
-                expression: recurse(ast.expression),
-                destination: ast.destination,
-            };
-        case 'callExpression':
-            return {
-                kind: 'callExpression',
-                sourceLocation: ast.sourceLocation,
-                name: ast.name,
-                arguments: ast.arguments.map(recurse),
-            };
-        case 'memberStyleCall':
-            return {
-                kind: 'callExpression',
-                sourceLocation: ast.sourceLocation,
-                name: ast.memberName,
-                arguments: [recurse(ast.lhs), ...ast.params.map(recurse)],
-            };
-        case 'ternary':
-            return {
-                kind: 'ternary',
-                sourceLocation: ast.sourceLocation,
-                condition: recurse(ast.condition),
-                ifTrue: recurse(ast.ifTrue),
-                ifFalse: recurse(ast.ifFalse),
-            };
-        case 'functionLiteral':
-            return {
-                kind: 'functionLiteral',
-                sourceLocation: ast.sourceLocation,
-                deanonymizedName: ast.deanonymizedName,
-            };
-        case 'typeDeclaration':
-            // TODO: maybe just strip declarations before inferring.
-            return { kind: 'typeDeclaration', sourceLocation: ast.sourceLocation };
-        case 'objectLiteral':
-            const declaredType = availableTypes.find(t => t.name == ast.typeName);
-            if (!declaredType) {
-                throw debug_1.default(`type ${ast.typeName} not found`);
-            }
-            return {
-                kind: 'objectLiteral',
-                sourceLocation: ast.sourceLocation,
-                type: declaredType.type,
-                members: ast.members.map(({ name, expression }) => ({
-                    name,
-                    expression: recurse(expression),
-                })),
-            };
-        case 'memberAccess':
-            const accessedObject = recurse(ast.lhs);
-            const accessedType = exports.typeOfExpression({
-                w: ast.lhs,
-                availableVariables,
-                availableTypes,
-            });
-            if (isTypeError(accessedType)) {
-                throw debug_1.default("shouldn't be a type error here");
-            }
-            return {
-                kind: 'memberAccess',
-                sourceLocation: ast.sourceLocation,
-                lhs: accessedObject,
-                rhs: ast.rhs,
-                lhsType: accessedType.type,
-            };
-        case 'listLiteral':
-            let itemType = undefined;
-            const items = [];
-            for (const item of ast.items) {
-                const newItem = recurse(item);
-                items.push(newItem);
-                if (itemType === undefined) {
-                    const maybeItemType = exports.typeOfExpression({
-                        w: item,
-                        availableVariables,
-                        availableTypes,
-                    });
-                    if (isTypeError(maybeItemType)) {
-                        throw debug_1.default("shouldn't be type error here");
-                    }
-                    itemType = maybeItemType.type;
-                }
-            }
-            if (!itemType)
-                throw debug_1.default('no itemType');
-            return {
-                kind: 'listLiteral',
-                sourceLocation: ast.sourceLocation,
-                type: { type: { kind: 'List', of: itemType } },
-                items,
-            };
-        case 'indexAccess':
-            return {
-                kind: 'indexAccess',
-                sourceLocation: ast.sourceLocation,
-                accessed: recurse(ast.accessed),
-                index: recurse(ast.index),
-            };
-        case 'number':
-        case 'identifier':
-        case 'booleanLiteral':
-        case 'stringLiteral':
-            return ast;
-        default:
-            throw debug_1.default(`${ast.kind} unhandled in infer`);
-    }
-};
-const extractFunctionBody = node => {
-    if (node.type !== 'statement')
-        debug_1.default('expected a statement');
-    if (node.children.length === 3) {
-        return [astFromParseResult(node.children[0]), ...extractFunctionBody(node.children[2])];
-    }
-    else {
-        return [astFromParseResult(node.children[0])];
-    }
-};
-// TODO: Replace extractParameterList with SeparatedList
-const extractParameterList = (ast) => {
-    if (parse_1.isSeparatedListNode(ast)) {
-        return flatten_1.default(ast.items.map(i => {
-            if (parse_1.isSeparatedListNode(i) || !('children' in i)) {
-                throw debug_1.default('todo');
-            }
-            const child2 = i.children[2];
-            if (parse_1.isSeparatedListNode(child2) || parse_1.isListNode(child2)) {
-                throw debug_1.default('todo');
-            }
-            if (child2.type == 'typeWithoutArgs') {
-                return [
-                    {
-                        name: i.children[0].value,
-                        type: parseType(child2),
-                        exported: false,
-                    },
-                ];
-            }
-            else {
-                throw debug_1.default('wrong children length');
-            }
-        }));
-    }
-    else {
-        throw debug_1.default(`${ast.type} unhandledi extractParameterList`);
-    }
-};
-const parseTypeLiteralComponent = (ast) => {
-    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
-        throw debug_1.default('todo');
-    }
-    if (ast.type != 'typeLiteralComponent')
-        throw debug_1.default('wrong as type');
-    const unresolved = parseType(ast.children[2]);
-    const resolved = types_1.resolveIfNecessary(unresolved, []);
-    if (!resolved)
-        throw debug_1.default('need to make products work as components of other products');
-    return {
-        name: ast.children[0].value,
-        type: resolved,
-    };
-};
-const parseType = (ast) => {
-    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
-        throw debug_1.default('todo');
-    }
-    switch (ast.type) {
-        case 'typeWithArgs': {
-            const name = ast.children[0].value;
-            if (name != 'Function')
-                throw debug_1.default('Only functions support args right now');
-            const list = ast.children[2];
-            if (!parse_1.isSeparatedListNode(list))
-                throw debug_1.default('todo');
-            const typeList = list.items.map(parseType);
-            return {
-                type: {
-                    kind: name,
-                    arguments: typeList.slice(0, typeList.length - 1),
-                    returnType: typeList[typeList.length - 1],
-                },
-            };
-        }
-        case 'typeWithoutArgs': {
-            const node = ast.children[0];
-            if (parse_1.isSeparatedListNode(node) || parse_1.isListNode(node)) {
-                throw debug_1.default('todo');
-            }
-            if (node.type != 'typeIdentifier')
-                throw debug_1.default('Failed to parse type');
-            const name = node.value;
-            if (typeof name != 'string')
-                throw debug_1.default('Failed to parse type');
-            switch (name) {
-                case 'String':
-                case 'Integer':
-                case 'Boolean':
-                    return { type: { kind: name } };
-                default:
-                    return { namedType: name };
-            }
-        }
-        case 'typeLiteral': {
-            const node = ast.children[1];
-            if (!parse_1.isListNode(node)) {
-                throw debug_1.default('todo');
-            }
-            return {
-                type: {
-                    kind: 'Product',
-                    name: ast.type,
-                    members: node.items.map(parseTypeLiteralComponent),
-                },
-            };
-        }
-        case 'listType': {
-            const node = ast.children[0];
-            if (parse_1.isSeparatedListNode(node) || parse_1.isListNode(node) || node.type != 'typeIdentifier') {
-                throw debug_1.default('expected a type');
-            }
-            const listOf = { type: { kind: node.value } };
-            return { type: { kind: 'List', of: listOf } };
-        }
-        default:
-            throw debug_1.default(`${ast.type} unhandled in parseType`);
-    }
-};
-const parseObjectMember = (ast) => {
-    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
-        throw debug_1.default('todo');
-    }
-    if (ast.type != 'objectLiteralComponent') {
-        {
-            throw debug_1.default('wsa');
-            return 'WrongShapeAst';
-        }
-    }
-    const expression = astFromParseResult(ast.children[2]);
-    if (expression == 'WrongShapeAst') {
-        {
-            throw debug_1.default('wsa');
-            return 'WrongShapeAst';
-        }
-    }
-    const result = {
-        name: ast.children[0].value,
-        expression: expression,
-    };
-    return result;
-};
-let functionId = add(-1, 1);
-const astFromParseResult = (ast) => {
-    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
-        throw debug_1.default('todo');
-    }
-    switch (ast.type) {
-        case 'returnStatement':
-            return {
-                kind: 'returnStatement',
-                expression: astFromParseResult(ast.children[1]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'number':
-            if (ast.value === undefined)
-                throw debug_1.default('ast.value === undefined');
-            return {
-                kind: 'number',
-                value: ast.value,
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'identifier':
-            if (!ast.value)
-                throw debug_1.default('!ast.value');
-            return {
-                kind: 'identifier',
-                value: ast.value,
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'product':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'product',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'ternary':
-            return {
-                kind: 'ternary',
-                condition: astFromParseResult(ast.children[0]),
-                ifTrue: astFromParseResult(ast.children[2]),
-                ifFalse: astFromParseResult(ast.children[4]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'equality':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'equality',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'paramList':
-            throw debug_1.default('paramList in astFromParseResult'); // Should have been caught in "callExpression"
-        case 'callExpression':
-            const child2 = ast.children[2];
-            if (!parse_1.isSeparatedListNode(child2)) {
-                throw debug_1.default('todo');
-            }
-            return {
-                kind: 'callExpression',
-                name: ast.children[0].value,
-                arguments: child2.items.map(astFromParseResult),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'subtraction':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'subtraction',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'addition':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'addition',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'reassignment':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'reassignment',
-                destination: ast.children[0].value,
-                expression: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'declaration': {
-            let childIndex = 0;
-            let exported = false;
-            if (ast.children[childIndex].type == 'export') {
-                exported = true;
-                childIndex++;
-            }
-            const destination = ast.children[childIndex].value;
-            childIndex++;
-            const destinationNode = ast.children[childIndex];
-            if (parse_1.isSeparatedListNode(destinationNode) || parse_1.isListNode(destinationNode)) {
-                throw debug_1.default('todo');
-            }
-            if (destinationNode.type != 'colon')
-                debug_1.default('expected a colon');
-            childIndex++;
-            let type = undefined;
-            const maybeTypeNode = ast.children[childIndex];
-            if (parse_1.isSeparatedListNode(maybeTypeNode) || parse_1.isListNode(maybeTypeNode)) {
-                throw debug_1.default('todo');
-            }
-            if (['typeWithArgs', 'typeWithoutArgs', 'typeLiteral', 'listType'].includes(maybeTypeNode.type)) {
-                type = parseType(maybeTypeNode);
-                childIndex++;
-            }
-            if (ast.children[childIndex].type != 'assignment')
-                debug_1.default('expected assignment');
-            childIndex++;
-            const expression = astFromParseResult(ast.children[childIndex]);
-            if (type) {
-                return {
-                    kind: 'typedDeclarationAssignment',
-                    destination,
-                    expression: expression,
-                    type,
-                    exported,
-                    sourceLocation: ast.sourceLocation,
-                };
-            }
-            else {
-                return {
-                    kind: 'declarationAssignment',
-                    destination,
-                    expression: expression,
-                    exported,
-                    sourceLocation: ast.sourceLocation,
-                };
-            }
-        }
-        case 'typeDeclaration':
-            const theType = parseType(ast.children[3]);
-            const name = ast.children[0].value;
-            if ('namedType' in theType) {
-                throw debug_1.default("Shouldn't get here, delcaring types have to actually declare a type");
-            }
-            if (theType.type.kind == 'Product') {
-                theType.type.name = name;
-            }
-            return {
-                kind: 'typeDeclaration',
-                name,
-                type: theType,
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'stringLiteral':
-            return {
-                kind: 'stringLiteral',
-                value: ast.value,
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'objectLiteral':
-            const typeNameNode = ast.children[0];
-            if (parse_1.isSeparatedListNode(typeNameNode) || parse_1.isListNode(typeNameNode)) {
-                throw debug_1.default('todo');
-            }
-            if (typeNameNode.type != 'typeIdentifier')
-                return 'WrongShapeAst';
-            const typeName = typeNameNode.value;
-            if (typeof typeName != 'string')
-                return 'WrongShapeAst';
-            const membersNode = ast.children[2];
-            if (!parse_1.isListNode(membersNode)) {
-                throw debug_1.default('todo');
-            }
-            const members = membersNode.items.map(parseObjectMember);
-            if (members.some(m => m == 'WrongShapeAst'))
-                return 'WrongShapeAst';
-            return {
-                kind: 'objectLiteral',
-                typeName,
-                members: members,
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'memberStyleCall': {
-            const anyAst = ast;
-            const lhsNode = anyAst.children[0];
-            const lhs = astFromParseResult(lhsNode);
-            if (lhs == 'WrongShapeAst') {
-                return 'WrongShapeAst';
-            }
-            const memberName = anyAst.children[2].value;
-            const params = anyAst.children[4].items.map(astFromParseResult);
-            if (params == 'WrongShapeAst') {
-                return 'WrongShapeAst';
-            }
-            const r = {
-                kind: 'memberStyleCall',
-                lhs: lhs,
-                memberName,
-                params: params,
-                sourceLocation: ast.sourceLocation,
-            };
-            return r;
-        }
-        case 'memberAccess': {
-            const anyAst = ast;
-            const lhsNode = anyAst.children[0];
-            const lhs = astFromParseResult(lhsNode);
-            return {
-                kind: 'memberAccess',
-                lhs,
-                rhs: anyAst.children[2].value,
-                sourceLocation: ast.sourceLocation,
-            };
-        }
-        case 'concatenation':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'concatenation',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'equality':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'equality',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'function': {
-            functionId++;
-            let childIndex = 0;
-            let hasBrackets = false;
-            if (hasType(ast.children[0], 'leftBracket')) {
-                childIndex++;
-                hasBrackets = true;
-            }
-            const parameters = extractParameterList(ast.children[childIndex]);
-            childIndex++;
-            if (hasBrackets) {
-                if (!hasType(ast.children[childIndex], 'rightBracket')) {
-                    debug_1.default('mismatched brackets');
-                }
-                childIndex++;
-            }
-            if (!hasType(ast.children[childIndex], 'fatArrow'))
-                debug_1.default('wrong');
-            childIndex++;
-            return {
-                kind: 'functionLiteral',
-                deanonymizedName: `anonymous_${functionId}`,
-                body: [
-                    {
-                        kind: 'returnStatement',
-                        expression: astFromParseResult(ast.children[childIndex]),
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ],
-                parameters,
-                sourceLocation: ast.sourceLocation,
-            };
-        }
-        case 'functionWithBlock': {
-            functionId++;
-            let childIndex = 0;
-            let hasBrackets = false;
-            if (hasType(ast.children[childIndex], 'leftBracket')) {
-                hasBrackets = true;
-                childIndex++;
-            }
-            const parameters2 = extractParameterList(ast.children[childIndex]);
-            childIndex++;
-            if (hasBrackets) {
-                if (!hasType(ast.children[childIndex], 'rightBracket')) {
-                    debug_1.default('brackets mismatched');
-                }
-                childIndex++;
-            }
-            if (!hasType(ast.children[childIndex], 'fatArrow'))
-                debug_1.default('wrong');
-            childIndex++;
-            if (!hasType(ast.children[childIndex], 'leftCurlyBrace'))
-                debug_1.default('wrong');
-            childIndex++;
-            const body = extractFunctionBody(ast.children[childIndex]);
-            childIndex++;
-            if (!hasType(ast.children[childIndex], 'rightCurlyBrace'))
-                debug_1.default('wrong');
-            childIndex++;
-            if (childIndex !== ast.children.length)
-                debug_1.default('wrong');
-            return {
-                kind: 'functionLiteral',
-                deanonymizedName: `anonymous_${functionId}`,
-                body,
-                parameters: parameters2,
-                sourceLocation: ast.sourceLocation,
-            };
-        }
-        case 'booleanLiteral':
-            return {
-                kind: 'booleanLiteral',
-                value: ast.value == 'true',
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'program':
-            return {
-                kind: 'program',
-                statements: extractFunctionBody(ast.children[0]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'listLiteral':
-            const items = ast.children[1];
-            if (!parse_1.isSeparatedListNode(items))
-                throw debug_1.default('todo');
-            return {
-                kind: 'listLiteral',
-                items: items.items.map(astFromParseResult),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'indexAccess':
-            return {
-                kind: 'indexAccess',
-                index: astFromParseResult(ast.children[2]),
-                accessed: astFromParseResult(ast.children[0]),
-                sourceLocation: ast.sourceLocation,
-            };
-        default:
-            throw debug_1.default(`${ast.type} unhandled in astFromParseResult`);
-    }
-};
-exports.astFromParseResult = astFromParseResult;
-const compile = (source) => {
-    functionId = 0;
-    const tokens = lex_1.lex(grammar_1.tokenSpecs, source);
-    if ('kind' in tokens) {
-        return tokens;
-    }
-    const parseResult = parseMpl(tokens);
-    if (Array.isArray(parseResult)) {
-        return { parseErrors: parseResult };
-    }
-    const ast = astFromParseResult(parseResult);
-    if (ast == 'WrongShapeAst') {
-        return { internalError: 'Wrong shape AST' };
-    }
-    if (ast.kind !== 'program') {
-        return { internalError: 'AST was not a program' };
-    }
-    const exportedDeclarations = ast.statements.filter(s => (s.kind == 'typedDeclarationAssignment' || s.kind == 'declarationAssignment') &&
-        s.exported);
-    const topLevelStatements = ast.statements.filter(s => s.kind != 'typedDeclarationAssignment' && s.kind != 'declarationAssignment');
-    if (exportedDeclarations.length > 0 && topLevelStatements.length > 0) {
-        return {
-            typeErrors: [
-                {
-                    kind: 'topLevelStatementsInModule',
-                    sourceLocation: topLevelStatements[0].sourceLocation,
-                },
-            ],
-        };
-    }
-    const availableTypes = walkAst(ast, ['typeDeclaration'], n => n);
-    let availableVariables = types_1.builtinFunctions;
-    const program = {
-        name: 'main_program',
-        statements: ast.statements,
-        variables: extractVariables({ w: ast.statements, availableVariables, availableTypes }),
-        parameters: [],
-    };
-    const functions = walkAst(ast, ['functionLiteral'], astNode => functionObjectFromAst({ w: astNode, availableVariables, availableTypes }));
-    const stringLiteralIdMaker = idMaker_1.default();
-    const nonUniqueStringLiterals = walkAst(ast, ['stringLiteral'], (astNode) => ({ id: stringLiteralIdMaker(), value: astNode.value }));
-    const stringLiterals = uniqueBy_1.default(s => s.value, nonUniqueStringLiterals);
-    const programTypeCheck = typeCheckFunction({
-        w: program,
-        availableVariables,
-        availableTypes,
-    });
-    availableVariables = mergeDeclarations(availableVariables, programTypeCheck.identifiers);
-    const typeErrors = functions.map(f => typeCheckFunction({ w: f, availableVariables, availableTypes }).typeErrors);
-    typeErrors.push(programTypeCheck.typeErrors);
-    let flatTypeErrors = flatten_1.default(typeErrors);
-    if (flatTypeErrors.length > 0) {
-        return { typeErrors: flatTypeErrors };
-    }
-    const typedFunctions = [];
-    functions.forEach(f => {
-        const functionOrTypeError = inferFunction({ w: f, availableVariables, availableTypes });
-        if (isTypeError(functionOrTypeError)) {
-            typeErrors.push(functionOrTypeError);
-        }
-        else {
-            typedFunctions.push(Object.assign(Object.assign({}, f), { returnType: functionOrTypeError.returnType, statements: f.statements.map(s => infer({
-                    w: s,
-                    availableVariables: mergeDeclarations(availableVariables, f.variables),
-                    availableTypes,
-                })) }));
-        }
-    });
-    flatTypeErrors = flatten_1.default(typeErrors);
-    if (flatTypeErrors.length > 0) {
-        return { typeErrors: flatTypeErrors };
-    }
-    const globalDeclarations = program.statements
-        .filter(s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment')
-        .map(assignment => assignmentToGlobalDeclaration({
-        w: assignment,
-        availableVariables,
-        availableTypes,
-    }));
-    let inferredProgram = undefined;
-    if (exportedDeclarations.length == 0) {
-        const maybeInferredProgram = inferFunction({
-            w: program,
-            availableVariables,
-            availableTypes,
-        });
-        if (isTypeError(maybeInferredProgram)) {
-            return { typeErrors: maybeInferredProgram };
-        }
-        inferredProgram = maybeInferredProgram;
-        if (!types_1.equal(inferredProgram.returnType, types_1.builtinTypes.Integer)) {
-            const returnStatement = last_1.default(inferredProgram.statements);
-            return {
-                typeErrors: [
-                    {
-                        kind: 'wrongTypeReturn',
-                        expressionType: inferredProgram.returnType,
-                        sourceLocation: returnStatement
-                            ? returnStatement.sourceLocation
-                            : { line: 1, column: 1 },
-                    },
-                ],
-            };
-        }
-    }
-    else {
-        inferredProgram = globalDeclarations.map(d => ({
-            exportedName: d.name,
-            declaredName: d.mangledName || '',
-        }));
-    }
-    return {
-        types: availableTypes,
-        functions: typedFunctions,
-        builtinFunctions: types_1.builtinFunctions,
-        program: inferredProgram,
-        globalDeclarations,
-        stringLiterals,
-    };
-};
-exports.compile = compile;
-
-
-/***/ }),
-
-/***/ "./grammar.ts":
-/*!********************!*\
-  !*** ./grammar.ts ***!
-  \********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
-exports.tokenSpecs = [
-    {
-        token: '"[^"]*"',
-        type: 'stringLiteral',
-        action: x => {
-            const trimmed = x.trim();
-            const quotesRemoved = trimmed.substring(1, trimmed.length - 1);
-            return quotesRemoved;
-        },
-        toString: x => x,
-    },
-    { token: ',', type: 'comma', toString: () => ', ' },
-    // TODO: Make a "keyword" utility function for the lexer. Also figure out why \b doesn't work here.
-    { token: 'return[^A-z]', type: 'return', toString: () => 'return' },
-    { token: 'export[^A-z]', type: 'export', toString: () => 'export' },
-    { token: 'true|false', type: 'booleanLiteral', action: x => x.trim(), toString: x => x },
-    { token: '[a-z]\\w*', type: 'identifier', action: x => x, toString: x => x },
-    { token: '[A-Z][A-Za-z]*', type: 'typeIdentifier', action: x => x, toString: x => x },
-    { token: ';', type: 'statementSeparator', toString: _ => ';' },
-    { token: '=>', type: 'fatArrow', toString: _ => '=>' },
-    { token: '==', type: 'equality', toString: _ => '==' },
-    { token: '=', type: 'assignment', toString: _ => '=' },
-    { token: '\\d+', type: 'number', action: parseInt, toString: x => x.toString() },
-    { token: '\\+\\+', type: 'concatenation', toString: _ => '++' },
-    { token: '\\+', type: 'sum', toString: _ => '+' },
-    { token: '\\*', type: 'product', toString: _ => '*' },
-    { token: '\\-', type: 'subtraction', toString: _ => '-' },
-    { token: '\\(', type: 'leftBracket', toString: _ => '(' },
-    { token: '\\)', type: 'rightBracket', toString: _ => ')' },
-    { token: '{', type: 'leftCurlyBrace', toString: _ => '{' },
-    { token: '}', type: 'rightCurlyBrace', toString: _ => '}' },
-    { token: '\\[', type: 'leftSquareBracket', toString: _ => '[' },
-    { token: '\\]', type: 'rightSquareBracket', toString: _ => ']' },
-    { token: '\\:', type: 'colon', toString: _ => ':' },
-    { token: '\\?', type: 'ternaryOperator', toString: _ => '?' },
-    { token: '<', type: 'lessThan', toString: _ => '<' },
-    { token: '>', type: 'greaterThan', toString: _ => '>' },
-    { token: '\\.', type: 'memberAccess', toString: _ => '.' },
-];
-const mplTerminal = token => parse_1.Terminal(token);
-const mplOptional = parser => parse_1.Optional(parser);
-const export_ = mplTerminal('export');
-const plus = mplTerminal('sum');
-const minus = mplTerminal('subtraction');
-const times = mplTerminal('product');
-const leftBracket = mplTerminal('leftBracket');
-const rightBracket = mplTerminal('rightBracket');
-const int = mplTerminal('number');
-const identifier = mplTerminal('identifier');
-const colon = mplTerminal('colon');
-const ternaryOperator = mplTerminal('ternaryOperator');
-const typeIdentifier = mplTerminal('typeIdentifier');
-const assignment = mplTerminal('assignment');
-const _return = mplTerminal('return');
-const statementSeparator = mplTerminal('statementSeparator');
-const fatArrow = mplTerminal('fatArrow');
-const leftCurlyBrace = mplTerminal('leftCurlyBrace');
-const rightCurlyBrace = mplTerminal('rightCurlyBrace');
-const leftSquareBracket = mplTerminal('leftSquareBracket');
-const rightSquareBracket = mplTerminal('rightSquareBracket');
-const comma = mplTerminal('comma');
-const concatenation = mplTerminal('concatenation');
-const equality = mplTerminal('equality');
-const boolean = mplTerminal('booleanLiteral');
-const stringLiteral = mplTerminal('stringLiteral');
-const lessThan = mplTerminal('lessThan');
-const greaterThan = mplTerminal('greaterThan');
-const memberAccess = mplTerminal('memberAccess');
-exports.grammar = {
-    program: parse_1.Sequence('program', ['functionBody']),
-    function: parse_1.OneOf([
-        parse_1.Sequence('function', [
-            mplOptional(leftBracket),
-            'argList',
-            mplOptional(rightBracket),
-            fatArrow,
-            'expression',
-        ]),
-        parse_1.Sequence('functionWithBlock', [
-            mplOptional(leftBracket),
-            'argList',
-            mplOptional(rightBracket),
-            fatArrow,
-            leftCurlyBrace,
-            'functionBody',
-            rightCurlyBrace,
-        ]),
-    ]),
-    argList: parse_1.SeparatedList(comma, 'arg'),
-    arg: parse_1.Sequence('arg', [identifier, colon, 'type']),
-    functionBody: parse_1.Sequence('statement', [
-        'statement',
-        statementSeparator,
-        mplOptional('functionBody'),
-    ]),
-    statement: parse_1.OneOf([
-        parse_1.Sequence('declaration', [
-            mplOptional(export_),
-            identifier,
-            colon,
-            mplOptional('type'),
-            assignment,
-            'expression',
-        ]),
-        parse_1.Sequence('typeDeclaration', [typeIdentifier, colon, assignment, 'type']),
-        parse_1.Sequence('reassignment', [identifier, assignment, 'expression']),
-        parse_1.Sequence('returnStatement', [_return, 'expression']),
-    ]),
-    typeList: parse_1.SeparatedList(comma, 'type'),
-    type: parse_1.OneOf([
-        parse_1.Sequence('listType', [typeIdentifier, leftSquareBracket, rightSquareBracket]),
-        parse_1.Sequence('typeWithArgs', [typeIdentifier, lessThan, 'typeList', greaterThan]),
-        parse_1.Sequence('typeWithoutArgs', [typeIdentifier]),
-        'typeLiteral',
-    ]),
-    typeLiteral: parse_1.Sequence('typeLiteral', [
-        leftCurlyBrace,
-        parse_1.Many('typeLiteralComponent'),
-        rightCurlyBrace,
-    ]),
-    typeLiteralComponent: parse_1.Sequence('typeLiteralComponent', [
-        identifier,
-        colon,
-        'type',
-        statementSeparator,
-    ]),
-    objectLiteral: parse_1.Sequence('objectLiteral', [
-        typeIdentifier,
-        leftCurlyBrace,
-        parse_1.Many('objectLiteralComponent'),
-        rightCurlyBrace,
-    ]),
-    objectLiteralComponent: parse_1.Sequence('objectLiteralComponent', [
-        identifier,
-        colon,
-        'expression',
-        comma,
-    ]),
-    expression: 'ternary',
-    ternary: parse_1.OneOf([
-        parse_1.Sequence('ternary', ['addition', ternaryOperator, 'addition', colon, 'addition']),
-        'addition',
-    ]),
-    addition: parse_1.OneOf([parse_1.Sequence('addition', ['subtraction', plus, 'addition']), 'subtraction']),
-    subtraction: parse_1.OneOf([parse_1.Sequence('subtraction', ['product', minus, 'subtraction']), 'product']),
-    product: parse_1.OneOf([parse_1.Sequence('product', ['equality', times, 'product']), 'equality']),
-    equality: parse_1.OneOf([
-        parse_1.Sequence('equality', ['concatenation', equality, 'equality']),
-        'concatenation',
-    ]),
-    concatenation: parse_1.OneOf([
-        parse_1.Sequence('concatenation', ['memberAccess', concatenation, 'concatenation']),
-        'memberStyleCall',
-    ]),
-    memberStyleCall: parse_1.OneOf([
-        parse_1.Sequence('memberStyleCall', [
-            'simpleExpression',
-            memberAccess,
-            identifier,
-            leftBracket,
-            'paramList',
-            rightBracket,
-        ]),
-        'memberAccess',
-    ]),
-    memberAccess: parse_1.OneOf([
-        parse_1.Sequence('memberAccess', ['simpleExpression', memberAccess, identifier]),
-        'indexAccess',
-    ]),
-    indexAccess: parse_1.OneOf([
-        parse_1.Sequence('indexAccess', [
-            'simpleExpression',
-            leftSquareBracket,
-            'simpleExpression',
-            rightSquareBracket,
-        ]),
-        'listLiteral',
-    ]),
-    listLiteral: parse_1.OneOf([
-        parse_1.Sequence('listLiteral', [leftSquareBracket, 'listItems', rightSquareBracket]),
-        'simpleExpression',
-    ]),
-    listItems: parse_1.SeparatedList(comma, 'expression'),
-    simpleExpression: parse_1.OneOf([
-        parse_1.Sequence('bracketedExpression', [leftBracket, 'expression', rightBracket]),
-        parse_1.Sequence('callExpression', [
-            identifier,
-            leftBracket,
-            mplOptional('paramList'),
-            rightBracket,
-        ]),
-        int,
-        boolean,
-        stringLiteral,
-        'function',
-        'objectLiteral',
-        identifier,
-    ]),
-    paramList: parse_1.SeparatedList(comma, 'expression'),
-};
-
-
-/***/ }),
-
-/***/ "./mpl-loader.ts":
-/*!***********************!*\
-  !*** ./mpl-loader.ts ***!
-  \***********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const frontend_1 = __webpack_require__(/*! ./frontend */ "./frontend.ts");
-const js_1 = __webpack_require__(/*! ./backends/js */ "./backends/js.ts");
-function mplLoader(source, context) {
-    const frontendOutput = frontend_1.compile(source);
-    if ('parseErrors' in frontendOutput ||
-        'typeErrors' in frontendOutput ||
-        'kind' in frontendOutput ||
-        'internalError' in frontendOutput) {
-        context.emitError(new Error(JSON.stringify(frontendOutput)));
-        return;
-    }
-    const js = js_1.default.compile(frontendOutput);
-    if ('error' in js) {
-        context.emitError(new Error(JSON.stringify(js.error)));
-        return;
-    }
-    return js.target;
-}
-exports.mplLoader = mplLoader;
-
-
-/***/ }),
+		root["mplLoader"] = factory(root["spawn-sync"], root["ava"]);
+})(global, function(__WEBPACK_EXTERNAL_MODULE_spawn_sync__, __WEBPACK_EXTERNAL_MODULE_ava__) {
+return /******/ (() => { // webpackBootstrap
+/******/ 	var __webpack_modules__ = ({
 
 /***/ "./mpl/add.mpl":
 /*!*********************!*\
   !*** ./mpl/add.mpl ***!
   \*********************/
-/*! exports provided: add */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
+/*! namespace exports */
+/*! export add [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_require__.r, __webpack_exports__, __webpack_require__.d, __webpack_require__.* */
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "add", function() { return add; });
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "add": () => /* binding */ add
+/* harmony export */ });
 
                 const anonymous_1 = (a, b) => { return  a + b }
                 const add = anonymous_1;
@@ -4235,8 +37,10 @@ __webpack_require__.r(__webpack_exports__);
 /*!*********************************************!*\
   !*** ./node_modules/at-least-node/index.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module) => {
 
 module.exports = r => {
   const n = process.versions.node.split('.').map(x => parseInt(x, 10))
@@ -4251,8 +55,10 @@ module.exports = r => {
 /*!**********************************************!*\
   !*** ./node_modules/balanced-match/index.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module) => {
 
 module.exports = balanced;
 function balanced(a, b, str) {
@@ -4320,8 +126,10 @@ function range(a, b, str) {
 /*!***********************************************!*\
   !*** ./node_modules/brace-expansion/index.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var concatMap = __webpack_require__(/*! concat-map */ "./node_modules/concat-map/index.js");
 var balanced = __webpack_require__(/*! balanced-match */ "./node_modules/balanced-match/index.js");
@@ -4532,8 +340,14 @@ function expand(str, isTop) {
 /*!*****************************************************!*\
   !*** ./node_modules/child-process-promise/index.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! dynamic exports */
+/*! export exec [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! export execFile [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! export fork [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! export spawn [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_require__, module */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -4551,8 +365,10 @@ if (__webpack_require__(/*! node-version */ "./node_modules/node-version/index.j
 /*!*************************************************************************!*\
   !*** ./node_modules/child-process-promise/lib-es5/ChildProcessError.js ***!
   \*************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 29:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -4591,8 +407,10 @@ module.exports = ChildProcessError;
 /*!***************************************************************************!*\
   !*** ./node_modules/child-process-promise/lib-es5/ChildProcessPromise.js ***!
   \***************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 87:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -4689,8 +507,14 @@ module.exports = ChildProcessPromise;
 /*!*************************************************************!*\
   !*** ./node_modules/child-process-promise/lib-es5/index.js ***!
   \*************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export exec [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export execFile [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export fork [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export spawn [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
@@ -4866,8 +690,10 @@ exports.fork = fork;
 /*!*********************************************************************!*\
   !*** ./node_modules/child-process-promise/lib/ChildProcessError.js ***!
   \*********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -4895,8 +721,10 @@ module.exports = ChildProcessError;
 /*!***********************************************************************!*\
   !*** ./node_modules/child-process-promise/lib/ChildProcessPromise.js ***!
   \***********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 62:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -4969,8 +797,14 @@ module.exports = ChildProcessPromise;
 /*!*********************************************************!*\
   !*** ./node_modules/child-process-promise/lib/index.js ***!
   \*********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export exec [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export execFile [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export fork [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export spawn [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5145,8 +979,10 @@ exports.fork = fork;
 /*!******************************************!*\
   !*** ./node_modules/concat-map/index.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module) => {
 
 module.exports = function (xs, fn) {
     var res = [];
@@ -5169,8 +1005,10 @@ var isArray = Array.isArray || function (xs) {
 /*!*******************************************!*\
   !*** ./node_modules/cross-spawn/index.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 54:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5240,8 +1078,14 @@ module.exports._enoent = enoent;
 /*!************************************************!*\
   !*** ./node_modules/cross-spawn/lib/enoent.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export hookChildProcess [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export notFoundError [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export verifyENOENT [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export verifyENOENTSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: module, __webpack_require__ */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5325,8 +1169,10 @@ module.exports.notFoundError = notFoundError;
 /*!********************************************************!*\
   !*** ./node_modules/cross-spawn/lib/hasBrokenSpawn.js ***!
   \********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -5348,8 +1194,10 @@ module.exports = (function () {
 /*!***********************************************!*\
   !*** ./node_modules/cross-spawn/lib/parse.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 140:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5500,8 +1348,10 @@ module.exports = parse;
 /*!********************************************************!*\
   !*** ./node_modules/cross-spawn/lib/resolveCommand.js ***!
   \********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 31:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5543,8 +1393,10 @@ module.exports = resolveCommand;
 /*!******************************************!*\
   !*** ./node_modules/deep-equal/index.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 356:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var objectKeys = __webpack_require__(/*! object-keys */ "./node_modules/object-keys/index.js");
 var isArguments = __webpack_require__(/*! is-arguments */ "./node_modules/is-arguments/index.js");
@@ -5557,7 +1409,7 @@ var whichBoxedPrimitive = __webpack_require__(/*! which-boxed-primitive */ "./no
 var GetIntrinsic = __webpack_require__(/*! es-abstract/GetIntrinsic */ "./node_modules/es-abstract/GetIntrinsic.js");
 var callBound = __webpack_require__(/*! es-abstract/helpers/callBound */ "./node_modules/es-abstract/helpers/callBound.js");
 var whichCollection = __webpack_require__(/*! which-collection */ "./node_modules/which-collection/index.js");
-var getIterator = __webpack_require__(/*! es-get-iterator */ "./node_modules/es-get-iterator/index.js");
+var getIterator = __webpack_require__(/*! es-get-iterator */ "./node_modules/es-get-iterator/node.js");
 var getSideChannel = __webpack_require__(/*! side-channel */ "./node_modules/side-channel/index.js");
 
 var $getTime = callBound('Date.prototype.getTime');
@@ -5912,8 +1764,10 @@ module.exports = function deepEqual(a, b, opts) {
 /*!***************************************************************!*\
   !*** ./node_modules/deep-equal/node_modules/isarray/index.js ***!
   \***************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module) => {
 
 var toString = {}.toString;
 
@@ -5928,8 +1782,10 @@ module.exports = Array.isArray || function (arr) {
 /*!*************************************************!*\
   !*** ./node_modules/define-properties/index.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 58:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5998,8 +1854,10 @@ module.exports = defineProperties;
 /*!**************************************************!*\
   !*** ./node_modules/es-abstract/GetIntrinsic.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 193:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6228,8 +2086,10 @@ module.exports = function GetIntrinsic(name, allowMissing) {
 /*!******************************************************!*\
   !*** ./node_modules/es-abstract/helpers/callBind.js ***!
   \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 11:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6257,8 +2117,10 @@ module.exports.apply = function applyBind() {
 /*!*******************************************************!*\
   !*** ./node_modules/es-abstract/helpers/callBound.js ***!
   \*******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 9:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6280,227 +2142,27 @@ module.exports = function callBoundIntrinsic(name, allowMissing) {
 
 /***/ }),
 
-/***/ "./node_modules/es-get-iterator/index.js":
-/*!***********************************************!*\
-  !*** ./node_modules/es-get-iterator/index.js ***!
-  \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ "./node_modules/es-get-iterator/node.js":
+/*!**********************************************!*\
+  !*** ./node_modules/es-get-iterator/node.js ***!
+  \**********************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
 
-/* eslint global-require: 0 */
-// the code is structured this way so that bundlers can
-// alias out `has-symbols` to `() => true` or `() => false` if your target
-// environments' Symbol capabilities are known, and then use
-// dead code elimination on the rest of this module.
-//
-// Similarly, `isarray` can be aliased to `Array.isArray` if
-// available in all target environments.
+// this should only run in node >= 13.2, so it
+// does not need any of the intense fallbacks that old node/browsers do
 
-var isArguments = __webpack_require__(/*! is-arguments */ "./node_modules/is-arguments/index.js");
-
-if (__webpack_require__(/*! has-symbols */ "./node_modules/has-symbols/index.js")() || __webpack_require__(/*! has-symbols/shams */ "./node_modules/has-symbols/shams.js")()) {
-	var $iterator = Symbol.iterator;
-	// Symbol is available natively or shammed
-	// natively:
-	//  - Chrome >= 38
-	//  - Edge 12-14?, Edge >= 15 for sure
-	//  - FF >= 36
-	//  - Safari >= 9
-	//  - node >= 0.12
-	module.exports = function getIterator(iterable) {
-		// alternatively, `iterable[$iterator]?.()`
-		if (iterable != null && typeof iterable[$iterator] !== 'undefined') {
-			return iterable[$iterator]();
-		}
-		if (isArguments(iterable)) {
-			// arguments objects lack Symbol.iterator
-			// - node 0.12
-			return Array.prototype[$iterator].call(iterable);
-		}
-	};
-} else {
-	// Symbol is not available, native or shammed
-	var isArray = __webpack_require__(/*! isarray */ "./node_modules/es-get-iterator/node_modules/isarray/index.js");
-	var isString = __webpack_require__(/*! is-string */ "./node_modules/is-string/index.js");
-	var GetIntrinsic = __webpack_require__(/*! es-abstract/GetIntrinsic */ "./node_modules/es-abstract/GetIntrinsic.js");
-	var $Map = GetIntrinsic('%Map%', true);
-	var $Set = GetIntrinsic('%Set%', true);
-	var callBound = __webpack_require__(/*! es-abstract/helpers/callBound */ "./node_modules/es-abstract/helpers/callBound.js");
-	var $arrayPush = callBound('Array.prototype.push');
-	var $charCodeAt = callBound('String.prototype.charCodeAt');
-	var $stringSlice = callBound('String.prototype.slice');
-
-	var advanceStringIndex = function advanceStringIndex(S, index) {
-		var length = S.length;
-		if ((index + 1) >= length) {
-			return index + 1;
-		}
-
-		var first = $charCodeAt(S, index);
-		if (first < 0xD800 || first > 0xDBFF) {
-			return index + 1;
-		}
-
-		var second = $charCodeAt(S, index + 1);
-		if (second < 0xDC00 || second > 0xDFFF) {
-			return index + 1;
-		}
-
-		return index + 2;
-	};
-
-	var getArrayIterator = function getArrayIterator(arraylike) {
-		var i = 0;
-		return {
-			next: function next() {
-				var done = i >= arraylike.length;
-				var value;
-				if (!done) {
-					value = arraylike[i];
-					i += 1;
-				}
-				return {
-					done: done,
-					value: value
-				};
-			}
-		};
-	};
-
-	var getNonCollectionIterator = function getNonCollectionIterator(iterable) {
-		if (isArray(iterable) || isArguments(iterable)) {
-			return getArrayIterator(iterable);
-		}
-		if (isString(iterable)) {
-			var i = 0;
-			return {
-				next: function next() {
-					var nextIndex = advanceStringIndex(iterable, i);
-					var value = $stringSlice(iterable, i, nextIndex);
-					i = nextIndex;
-					return {
-						done: nextIndex > iterable.length,
-						value: value
-					};
-				}
-			};
-		}
-	};
-
-	if (!$Map && !$Set) {
-		// the only language iterables are Array, String, arguments
-		// - Safari <= 6.0
-		// - Chrome < 38
-		// - node < 0.12
-		// - FF < 13
-		// - IE < 11
-		// - Edge < 11
-
-		module.exports = getNonCollectionIterator;
-	} else {
-		// either Map or Set are available, but Symbol is not
-		// - es6-shim on an ES5 browser
-		// - Safari 6.2 (maybe 6.1?)
-		// - FF v[13, 36)
-		// - IE 11
-		// - Edge 11
-		// - Safari v[6, 9)
-
-		var isMap = __webpack_require__(/*! is-map */ "./node_modules/is-map/index.js");
-		var isSet = __webpack_require__(/*! is-set */ "./node_modules/is-set/index.js");
-
-		// Firefox >= 27, IE 11, Safari 6.2 - 9, Edge 11, es6-shim in older envs, all have forEach
-		var $mapForEach = callBound('Map.prototype.forEach', true);
-		var $setForEach = callBound('Set.prototype.forEach', true);
-		if (typeof process === 'undefined' || !process.versions || !process.versions.node) { // "if is not node"
-
-			// Firefox 17 - 26 has `.iterator()`, whose iterator `.next()` either
-			// returns a value, or throws a StopIteration object. These browsers
-			// do not have any other mechanism for iteration.
-			var $mapIterator = callBound('Map.prototype.iterator', true);
-			var $setIterator = callBound('Set.prototype.iterator', true);
-			var getStopIterationIterator = function (iterator) {
-				var done = false;
-				return {
-					next: function next() {
-						try {
-							return {
-								done: done,
-								value: done ? undefined : iterator.next()
-							};
-						} catch (e) {
-							done = true;
-							return {
-								done: true,
-								value: undefined
-							};
-						}
-					}
-				};
-			};
-		}
-		// Firefox 27-35, and some older es6-shim versions, use a string "@@iterator" property
-		// this returns a proper iterator object, so we should use it instead of forEach.
-		// newer es6-shim versions use a string "_es6-shim iterator_" property.
-		var $mapAtAtIterator = callBound('Map.prototype.@@iterator', true) || callBound('Map.prototype._es6-shim iterator_', true);
-		var $setAtAtIterator = callBound('Set.prototype.@@iterator', true) || callBound('Set.prototype._es6-shim iterator_', true);
-
-		var getCollectionIterator = function getCollectionIterator(iterable) {
-			if (isMap(iterable)) {
-				if ($mapIterator) {
-					return getStopIterationIterator($mapIterator(iterable));
-				}
-				if ($mapAtAtIterator) {
-					return $mapAtAtIterator(iterable);
-				}
-				if ($mapForEach) {
-					var entries = [];
-					$mapForEach(iterable, function (v, k) {
-						$arrayPush(entries, [k, v]);
-					});
-					return getArrayIterator(entries);
-				}
-			}
-			if (isSet(iterable)) {
-				if ($setIterator) {
-					return getStopIterationIterator($setIterator(iterable));
-				}
-				if ($setAtAtIterator) {
-					return $setAtAtIterator(iterable);
-				}
-				if ($setForEach) {
-					var values = [];
-					$setForEach(iterable, function (v) {
-						$arrayPush(values, v);
-					});
-					return getArrayIterator(values);
-				}
-			}
-		};
-
-		module.exports = function getIterator(iterable) {
-			return getCollectionIterator(iterable) || getNonCollectionIterator(iterable);
-		};
+var $iterator = Symbol.iterator;
+module.exports = function getIterator(iterable) {
+	// alternatively, `iterable[$iterator]?.()`
+	if (iterable != null && typeof iterable[$iterator] !== 'undefined') {
+		return iterable[$iterator]();
 	}
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/es-get-iterator/node_modules/isarray/index.js":
-/*!********************************************************************!*\
-  !*** ./node_modules/es-get-iterator/node_modules/isarray/index.js ***!
-  \********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-var toString = {}.toString;
-
-module.exports = Array.isArray || function (arr) {
-  return toString.call(arr) == '[object Array]';
 };
 
 
@@ -6510,8 +2172,10 @@ module.exports = Array.isArray || function (arr) {
 /*!**********************************************************!*\
   !*** ./node_modules/fs-extra/lib/copy-sync/copy-sync.js ***!
   \**********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 166:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6688,8 +2352,10 @@ module.exports = copySync
 /*!******************************************************!*\
   !*** ./node_modules/fs-extra/lib/copy-sync/index.js ***!
   \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6705,8 +2371,10 @@ module.exports = {
 /*!************************************************!*\
   !*** ./node_modules/fs-extra/lib/copy/copy.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 232:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6949,8 +2617,10 @@ module.exports = copy
 /*!*************************************************!*\
   !*** ./node_modules/fs-extra/lib/copy/index.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6967,8 +2637,10 @@ module.exports = {
 /*!**************************************************!*\
   !*** ./node_modules/fs-extra/lib/empty/index.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 43:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7027,8 +2699,10 @@ module.exports = {
 /*!**************************************************!*\
   !*** ./node_modules/fs-extra/lib/ensure/file.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 66:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7108,8 +2782,10 @@ module.exports = {
 /*!***************************************************!*\
   !*** ./node_modules/fs-extra/lib/ensure/index.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7143,8 +2819,10 @@ module.exports = {
 /*!**************************************************!*\
   !*** ./node_modules/fs-extra/lib/ensure/link.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 58:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7216,8 +2894,10 @@ module.exports = {
 /*!***********************************************************!*\
   !*** ./node_modules/fs-extra/lib/ensure/symlink-paths.js ***!
   \***********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 96:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7327,8 +3007,10 @@ module.exports = {
 /*!**********************************************************!*\
   !*** ./node_modules/fs-extra/lib/ensure/symlink-type.js ***!
   \**********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 28:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7370,8 +3052,10 @@ module.exports = {
 /*!*****************************************************!*\
   !*** ./node_modules/fs-extra/lib/ensure/symlink.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 60:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7445,8 +3129,11 @@ module.exports = {
 /*!***********************************************!*\
   !*** ./node_modules/fs-extra/lib/fs/index.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, __webpack_exports__ */
+/*! CommonJS bailout: exports is used directly at 55:2-9 */
+/*! CommonJS bailout: exports is used directly at 60:2-9 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7585,8 +3272,10 @@ if (typeof fs.realpath.native === 'function') {
 /*!********************************************!*\
   !*** ./node_modules/fs-extra/lib/index.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7612,9 +3301,9 @@ module.exports = {
 // ExperimentalWarning before fs.promises is actually accessed.
 const fs = __webpack_require__(/*! fs */ "fs")
 if (Object.getOwnPropertyDescriptor(fs, 'promises')) {
-  Object.defineProperty(module.exports, 'promises', {
+  Object.defineProperty(module.exports, "promises", ({
     get () { return fs.promises }
-  })
+  }))
 }
 
 
@@ -7624,8 +3313,10 @@ if (Object.getOwnPropertyDescriptor(fs, 'promises')) {
 /*!*************************************************!*\
   !*** ./node_modules/fs-extra/lib/json/index.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7652,8 +3343,10 @@ module.exports = jsonFile
 /*!****************************************************!*\
   !*** ./node_modules/fs-extra/lib/json/jsonfile.js ***!
   \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7675,8 +3368,10 @@ module.exports = {
 /*!************************************************************!*\
   !*** ./node_modules/fs-extra/lib/json/output-json-sync.js ***!
   \************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 12:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7699,8 +3394,10 @@ module.exports = outputJsonSync
 /*!*******************************************************!*\
   !*** ./node_modules/fs-extra/lib/json/output-json.js ***!
   \*******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 12:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7723,8 +3420,10 @@ module.exports = outputJson
 /*!***************************************************!*\
   !*** ./node_modules/fs-extra/lib/mkdirs/index.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7749,8 +3448,12 @@ module.exports = {
 /*!******************************************************!*\
   !*** ./node_modules/fs-extra/lib/mkdirs/make-dir.js ***!
   \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export makeDir [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export makeDirSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: module, __webpack_require__ */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 // Adapted from https://github.com/sindresorhus/make-dir
@@ -7903,8 +3606,10 @@ module.exports.makeDirSync = (input, options) => {
 /*!******************************************************!*\
   !*** ./node_modules/fs-extra/lib/move-sync/index.js ***!
   \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7920,8 +3625,10 @@ module.exports = {
 /*!**********************************************************!*\
   !*** ./node_modules/fs-extra/lib/move-sync/move-sync.js ***!
   \**********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 47:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7979,8 +3686,10 @@ module.exports = moveSync
 /*!*************************************************!*\
   !*** ./node_modules/fs-extra/lib/move/index.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -7997,8 +3706,10 @@ module.exports = {
 /*!************************************************!*\
   !*** ./node_modules/fs-extra/lib/move/move.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 65:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -8074,8 +3785,10 @@ module.exports = move
 /*!***************************************************!*\
   !*** ./node_modules/fs-extra/lib/output/index.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 37:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -8126,8 +3839,10 @@ module.exports = {
 /*!********************************************************!*\
   !*** ./node_modules/fs-extra/lib/path-exists/index.js ***!
   \********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 9:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -8150,8 +3865,10 @@ module.exports = {
 /*!***************************************************!*\
   !*** ./node_modules/fs-extra/lib/remove/index.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -8171,8 +3888,10 @@ module.exports = {
 /*!****************************************************!*\
   !*** ./node_modules/fs-extra/lib/remove/rimraf.js ***!
   \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 313:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -8497,8 +4216,10 @@ rimraf.sync = rimrafSync
 /*!************************************************!*\
   !*** ./node_modules/fs-extra/lib/util/stat.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 133:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -8648,8 +4369,10 @@ module.exports = {
 /*!**************************************************!*\
   !*** ./node_modules/fs-extra/lib/util/utimes.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -8686,8 +4409,10 @@ module.exports = {
 /*!*****************************************************************!*\
   !*** ./node_modules/fs-extra/node_modules/graceful-fs/clone.js ***!
   \*****************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -8717,8 +4442,11 @@ function clone (obj) {
 /*!***********************************************************************!*\
   !*** ./node_modules/fs-extra/node_modules/graceful-fs/graceful-fs.js ***!
   \***********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 88:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 90:4-18 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var fs = __webpack_require__(/*! fs */ "fs")
 var polyfills = __webpack_require__(/*! ./polyfills.js */ "./node_modules/fs-extra/node_modules/graceful-fs/polyfills.js")
@@ -9074,8 +4802,10 @@ function retry () {
 /*!**************************************************************************!*\
   !*** ./node_modules/fs-extra/node_modules/graceful-fs/legacy-streams.js ***!
   \**************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Stream = __webpack_require__(/*! stream */ "stream").Stream
 
@@ -9203,8 +4933,10 @@ function legacy (fs) {
 /*!*********************************************************************!*\
   !*** ./node_modules/fs-extra/node_modules/graceful-fs/polyfills.js ***!
   \*********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var constants = __webpack_require__(/*! constants */ "constants")
 
@@ -9556,8 +5288,10 @@ function patch (fs) {
 /*!*******************************************!*\
   !*** ./node_modules/fs.realpath/index.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = realpath
 realpath.realpath = realpath
@@ -9633,8 +5367,12 @@ function unmonkeypatch () {
 /*!*****************************************!*\
   !*** ./node_modules/fs.realpath/old.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export realpath [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export realpathSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -9947,8 +5685,10 @@ exports.realpath = function realpath(p, cache, cb) {
 /*!******************************************************!*\
   !*** ./node_modules/function-bind/implementation.js ***!
   \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 10:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -10011,8 +5751,10 @@ module.exports = function bind(that) {
 /*!*********************************************!*\
   !*** ./node_modules/function-bind/index.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -10028,8 +5770,10 @@ module.exports = Function.prototype.bind || implementation;
 /*!*****************************************!*\
   !*** ./node_modules/get-value/index.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 8:0-14 */
+/***/ ((module) => {
 
 /*!
  * get-value <https://github.com/jonschlinkert/get-value>
@@ -10089,8 +5833,10 @@ function toString(val) {
 /*!****************************************!*\
   !*** ./node_modules/graceful-fs/fs.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -10122,8 +5868,11 @@ function clone (obj) {
 /*!*************************************************!*\
   !*** ./node_modules/graceful-fs/graceful-fs.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 27:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 29:2-16 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var fs = __webpack_require__(/*! fs */ "fs")
 var polyfills = __webpack_require__(/*! ./polyfills.js */ "./node_modules/graceful-fs/polyfills.js")
@@ -10395,8 +6144,10 @@ function retry () {
 /*!****************************************************!*\
   !*** ./node_modules/graceful-fs/legacy-streams.js ***!
   \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Stream = __webpack_require__(/*! stream */ "stream").Stream
 
@@ -10524,8 +6275,10 @@ function legacy (fs) {
 /*!***********************************************!*\
   !*** ./node_modules/graceful-fs/polyfills.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 24:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var fs = __webpack_require__(/*! ./fs.js */ "./node_modules/graceful-fs/fs.js")
 var constants = __webpack_require__(/*! constants */ "constants")
@@ -10865,8 +6618,10 @@ function chownErOk (er) {
 /*!****************************************!*\
   !*** ./node_modules/graphlib/index.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 33:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 /**
  * Copyright (c) 2014, Chris Pettitt
@@ -10914,8 +6669,10 @@ module.exports = {
 /*!*****************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/components.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 
@@ -10952,8 +6709,10 @@ function components(g) {
 /*!**********************************************!*\
   !*** ./node_modules/graphlib/lib/alg/dfs.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 
@@ -11005,8 +6764,10 @@ function doDfs(g, v, postorder, visited, navigation, acc) {
 /*!*******************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/dijkstra-all.js ***!
   \*******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var dijkstra = __webpack_require__(/*! ./dijkstra */ "./node_modules/graphlib/lib/alg/dijkstra.js");
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
@@ -11026,8 +6787,10 @@ function dijkstraAll(g, weightFunc, edgeFunc) {
 /*!***************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/dijkstra.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 var PriorityQueue = __webpack_require__(/*! ../data/priority-queue */ "./node_modules/graphlib/lib/data/priority-queue.js");
@@ -11091,8 +6854,10 @@ function runDijkstra(g, source, weightFn, edgeFn) {
 /*!******************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/find-cycles.js ***!
   \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 var tarjan = __webpack_require__(/*! ./tarjan */ "./node_modules/graphlib/lib/alg/tarjan.js");
@@ -11112,8 +6877,10 @@ function findCycles(g) {
 /*!*********************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/floyd-warshall.js ***!
   \*********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 
@@ -11173,8 +6940,10 @@ function runFloydWarshall(g, weightFn, edgeFn) {
 /*!************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/index.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = {
   components: __webpack_require__(/*! ./components */ "./node_modules/graphlib/lib/alg/components.js"),
@@ -11197,8 +6966,10 @@ module.exports = {
 /*!*****************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/is-acyclic.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var topsort = __webpack_require__(/*! ./topsort */ "./node_modules/graphlib/lib/alg/topsort.js");
 
@@ -11223,8 +6994,10 @@ function isAcyclic(g) {
 /*!****************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/postorder.js ***!
   \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var dfs = __webpack_require__(/*! ./dfs */ "./node_modules/graphlib/lib/alg/dfs.js");
 
@@ -11241,8 +7014,10 @@ function postorder(g, vs) {
 /*!***************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/preorder.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var dfs = __webpack_require__(/*! ./dfs */ "./node_modules/graphlib/lib/alg/dfs.js");
 
@@ -11259,8 +7034,10 @@ function preorder(g, vs) {
 /*!***********************************************!*\
   !*** ./node_modules/graphlib/lib/alg/prim.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 var Graph = __webpack_require__(/*! ../graph */ "./node_modules/graphlib/lib/graph.js");
@@ -11322,8 +7099,10 @@ function prim(g, weightFunc) {
 /*!*************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/tarjan.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 
@@ -11380,8 +7159,10 @@ function tarjan(g) {
 /*!**************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/topsort.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 
@@ -11425,8 +7206,10 @@ CycleException.prototype = new Error(); // must be an instance of Error to pass 
 /*!**********************************************************!*\
   !*** ./node_modules/graphlib/lib/data/priority-queue.js ***!
   \**********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 
@@ -11588,8 +7371,10 @@ PriorityQueue.prototype._swap = function(i, j) {
 /*!********************************************!*\
   !*** ./node_modules/graphlib/lib/graph.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -12132,8 +7917,10 @@ function edgeObjToId(isDirected, edgeObj) {
 /*!********************************************!*\
   !*** ./node_modules/graphlib/lib/index.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 2:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 // Includes only the "core" of graphlib
 module.exports = {
@@ -12148,8 +7935,10 @@ module.exports = {
 /*!*******************************************!*\
   !*** ./node_modules/graphlib/lib/json.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ./lodash */ "./node_modules/graphlib/lib/lodash.js");
 var Graph = __webpack_require__(/*! ./graph */ "./node_modules/graphlib/lib/graph.js");
@@ -12225,8 +8014,10 @@ function read(json) {
 /*!*********************************************!*\
   !*** ./node_modules/graphlib/lib/lodash.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 34:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 /* global window */
 
@@ -12270,8 +8061,10 @@ module.exports = lodash;
 /*!**********************************************!*\
   !*** ./node_modules/graphlib/lib/version.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module) => {
 
 module.exports = '2.1.8';
 
@@ -12282,8 +8075,10 @@ module.exports = '2.1.8';
 /*!*******************************************!*\
   !*** ./node_modules/has-symbols/index.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -12307,8 +8102,10 @@ module.exports = function hasNativeSymbols() {
 /*!*******************************************!*\
   !*** ./node_modules/has-symbols/shams.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -12361,8 +8158,10 @@ module.exports = function hasSymbols() {
 /*!*****************************************!*\
   !*** ./node_modules/has-value/index.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 /*!
@@ -12392,8 +8191,10 @@ module.exports = function(obj, prop, noZero) {
 /*!******************************************!*\
   !*** ./node_modules/has-values/index.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 10:0-14 */
+/***/ ((module) => {
 
 "use strict";
 /*!
@@ -12440,8 +8241,10 @@ module.exports = function hasValue(o, noZero) {
 /*!***************************************!*\
   !*** ./node_modules/has/src/index.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -12457,8 +8260,10 @@ module.exports = bind.call(Function.call, Object.prototype.hasOwnProperty);
 /*!*******************************************!*\
   !*** ./node_modules/inflight/inflight.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var wrappy = __webpack_require__(/*! wrappy */ "./node_modules/wrappy/wrappy.js")
 var reqs = Object.create(null)
@@ -12522,8 +8327,10 @@ function slice (args) {
 /*!*******************************************!*\
   !*** ./node_modules/inherits/inherits.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 4:2-16 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 try {
   var util = __webpack_require__(/*! util */ "util");
@@ -12540,8 +8347,11 @@ try {
 /*!***************************************************!*\
   !*** ./node_modules/inherits/inherits_browser.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 3:2-16 */
+/*! CommonJS bailout: module.exports is used directly at 16:2-16 */
+/***/ ((module) => {
 
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
@@ -12574,8 +8384,10 @@ if (typeof Object.create === 'function') {
 /*!********************************************!*\
   !*** ./node_modules/is-arguments/index.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 31:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -12617,8 +8429,11 @@ module.exports = supportsStandardArguments ? isStandardArguments : isLegacyArgum
 /*!*****************************************!*\
   !*** ./node_modules/is-bigint/index.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 14:1-15 */
+/*! CommonJS bailout: module.exports is used directly at 33:1-15 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -12654,7 +8469,7 @@ if (typeof BigInt === 'function') {
 	};
 } else {
 	module.exports = function isBigInt(value) {
-		return  false && false;
+		return  false && 0;
 	};
 }
 
@@ -12665,8 +8480,10 @@ if (typeof BigInt === 'function') {
 /*!*************************************************!*\
   !*** ./node_modules/is-boolean-object/index.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -12702,8 +8519,10 @@ module.exports = function isBoolean(value) {
 /*!**********************************************!*\
   !*** ./node_modules/is-date-object/index.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -12736,8 +8555,10 @@ module.exports = function isDateObject(value) {
 /*!**************************************!*\
   !*** ./node_modules/is-map/index.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -12790,8 +8611,10 @@ module.exports = exported || function isMap(x) {
 /*!************************************************!*\
   !*** ./node_modules/is-number-object/index.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -12826,8 +8649,10 @@ module.exports = function isNumberObject(value) {
 /*!***********************************************!*\
   !*** ./node_modules/is-plain-object/index.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 /*!
@@ -12875,8 +8700,10 @@ module.exports = function isPlainObject(o) {
 /*!*********************************************************************!*\
   !*** ./node_modules/is-plain-object/node_modules/isobject/index.js ***!
   \*********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 10:0-14 */
+/***/ ((module) => {
 
 "use strict";
 /*!
@@ -12899,8 +8726,10 @@ module.exports = function isObject(val) {
 /*!****************************************!*\
   !*** ./node_modules/is-regex/index.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 24:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -12950,8 +8779,10 @@ module.exports = function isRegex(value) {
 /*!**************************************!*\
   !*** ./node_modules/is-set/index.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -13004,8 +8835,10 @@ module.exports = exported || function isSet(x) {
 /*!*****************************************!*\
   !*** ./node_modules/is-string/index.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -13040,8 +8873,11 @@ module.exports = function isString(value) {
 /*!*****************************************!*\
   !*** ./node_modules/is-symbol/index.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:1-15 */
+/*! CommonJS bailout: module.exports is used directly at 31:1-15 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -13076,7 +8912,7 @@ if (hasSymbols) {
 
 	module.exports = function isSymbol(value) {
 		// this environment does not support Symbols.
-		return  false && false;
+		return  false && 0;
 	};
 }
 
@@ -13087,8 +8923,10 @@ if (hasSymbols) {
 /*!******************************************!*\
   !*** ./node_modules/is-weakmap/index.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -13141,8 +8979,11 @@ module.exports = exported || function isWeakMap(x) {
 /*!******************************************!*\
   !*** ./node_modules/is-weakset/index.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 20:1-15 */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -13195,8 +9036,10 @@ module.exports = exported || function isWeakSet(x) {
 /*!***************************************!*\
   !*** ./node_modules/isarray/index.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module) => {
 
 var toString = {}.toString;
 
@@ -13211,8 +9054,10 @@ module.exports = Array.isArray || function (arr) {
 /*!*************************************!*\
   !*** ./node_modules/isexe/index.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 9:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var fs = __webpack_require__(/*! fs */ "fs")
 var core
@@ -13279,8 +9124,10 @@ function sync (path, options) {
 /*!************************************!*\
   !*** ./node_modules/isexe/mode.js ***!
   \************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = isexe
 isexe.sync = sync
@@ -13331,8 +9178,10 @@ function checkMode (stat, options) {
 /*!***************************************!*\
   !*** ./node_modules/isexe/windows.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = isexe
 isexe.sync = sync
@@ -13384,8 +9233,10 @@ function sync (path, options) {
 /*!****************************************!*\
   !*** ./node_modules/isobject/index.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 12:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 /*!
@@ -13410,8 +9261,10 @@ module.exports = function isObject(val) {
 /*!****************************************!*\
   !*** ./node_modules/jsonfile/index.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 88:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 let _fs
 try {
@@ -13509,8 +9362,10 @@ module.exports = jsonfile
 /*!****************************************!*\
   !*** ./node_modules/jsonfile/utils.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 15:0-14 */
+/***/ ((module) => {
 
 function stringify (obj, options = {}) {
   const EOL = options.EOL || '\n'
@@ -13535,8 +9390,10 @@ module.exports = { stringify, stripBom }
 /*!******************************************!*\
   !*** ./node_modules/lodash/_DataView.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getNative = __webpack_require__(/*! ./_getNative */ "./node_modules/lodash/_getNative.js"),
     root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
@@ -13553,8 +9410,10 @@ module.exports = DataView;
 /*!**************************************!*\
   !*** ./node_modules/lodash/_Hash.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 32:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var hashClear = __webpack_require__(/*! ./_hashClear */ "./node_modules/lodash/_hashClear.js"),
     hashDelete = __webpack_require__(/*! ./_hashDelete */ "./node_modules/lodash/_hashDelete.js"),
@@ -13596,8 +9455,10 @@ module.exports = Hash;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_ListCache.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 32:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var listCacheClear = __webpack_require__(/*! ./_listCacheClear */ "./node_modules/lodash/_listCacheClear.js"),
     listCacheDelete = __webpack_require__(/*! ./_listCacheDelete */ "./node_modules/lodash/_listCacheDelete.js"),
@@ -13639,8 +9500,10 @@ module.exports = ListCache;
 /*!*************************************!*\
   !*** ./node_modules/lodash/_Map.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getNative = __webpack_require__(/*! ./_getNative */ "./node_modules/lodash/_getNative.js"),
     root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
@@ -13657,8 +9520,10 @@ module.exports = Map;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_MapCache.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 32:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var mapCacheClear = __webpack_require__(/*! ./_mapCacheClear */ "./node_modules/lodash/_mapCacheClear.js"),
     mapCacheDelete = __webpack_require__(/*! ./_mapCacheDelete */ "./node_modules/lodash/_mapCacheDelete.js"),
@@ -13700,8 +9565,10 @@ module.exports = MapCache;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_Promise.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getNative = __webpack_require__(/*! ./_getNative */ "./node_modules/lodash/_getNative.js"),
     root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
@@ -13718,8 +9585,10 @@ module.exports = Promise;
 /*!*************************************!*\
   !*** ./node_modules/lodash/_Set.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getNative = __webpack_require__(/*! ./_getNative */ "./node_modules/lodash/_getNative.js"),
     root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
@@ -13736,8 +9605,10 @@ module.exports = Set;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_SetCache.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 27:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var MapCache = __webpack_require__(/*! ./_MapCache */ "./node_modules/lodash/_MapCache.js"),
     setCacheAdd = __webpack_require__(/*! ./_setCacheAdd */ "./node_modules/lodash/_setCacheAdd.js"),
@@ -13774,8 +9645,10 @@ module.exports = SetCache;
 /*!***************************************!*\
   !*** ./node_modules/lodash/_Stack.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 27:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var ListCache = __webpack_require__(/*! ./_ListCache */ "./node_modules/lodash/_ListCache.js"),
     stackClear = __webpack_require__(/*! ./_stackClear */ "./node_modules/lodash/_stackClear.js"),
@@ -13812,8 +9685,10 @@ module.exports = Stack;
 /*!****************************************!*\
   !*** ./node_modules/lodash/_Symbol.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
 
@@ -13829,8 +9704,10 @@ module.exports = Symbol;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_Uint8Array.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
 
@@ -13846,8 +9723,10 @@ module.exports = Uint8Array;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_WeakMap.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getNative = __webpack_require__(/*! ./_getNative */ "./node_modules/lodash/_getNative.js"),
     root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
@@ -13864,8 +9743,10 @@ module.exports = WeakMap;
 /*!***************************************!*\
   !*** ./node_modules/lodash/_apply.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module) => {
 
 /**
  * A faster alternative to `Function#apply`, this function invokes `func`
@@ -13896,8 +9777,10 @@ module.exports = apply;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_arrayEach.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module) => {
 
 /**
  * A specialized version of `_.forEach` for arrays without support for
@@ -13929,8 +9812,10 @@ module.exports = arrayEach;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_arrayFilter.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 25:0-14 */
+/***/ ((module) => {
 
 /**
  * A specialized version of `_.filter` for arrays without support for
@@ -13965,8 +9850,10 @@ module.exports = arrayFilter;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_arrayIncludes.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIndexOf = __webpack_require__(/*! ./_baseIndexOf */ "./node_modules/lodash/_baseIndexOf.js");
 
@@ -13993,8 +9880,10 @@ module.exports = arrayIncludes;
 /*!***************************************************!*\
   !*** ./node_modules/lodash/_arrayIncludesWith.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module) => {
 
 /**
  * This function is like `arrayIncludes` except that it accepts a comparator.
@@ -14026,8 +9915,10 @@ module.exports = arrayIncludesWith;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_arrayLikeKeys.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 49:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseTimes = __webpack_require__(/*! ./_baseTimes */ "./node_modules/lodash/_baseTimes.js"),
     isArguments = __webpack_require__(/*! ./isArguments */ "./node_modules/lodash/isArguments.js"),
@@ -14086,8 +9977,10 @@ module.exports = arrayLikeKeys;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_arrayMap.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module) => {
 
 /**
  * A specialized version of `_.map` for arrays without support for iteratee
@@ -14118,8 +10011,10 @@ module.exports = arrayMap;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_arrayPush.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module) => {
 
 /**
  * Appends the elements of `values` to `array`.
@@ -14149,8 +10044,10 @@ module.exports = arrayPush;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_arrayReduce.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 /**
  * A specialized version of `_.reduce` for arrays without support for
@@ -14186,8 +10083,10 @@ module.exports = arrayReduce;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_arraySome.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module) => {
 
 /**
  * A specialized version of `_.some` for arrays without support for iteratee
@@ -14220,8 +10119,10 @@ module.exports = arraySome;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_asciiSize.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 12:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseProperty = __webpack_require__(/*! ./_baseProperty */ "./node_modules/lodash/_baseProperty.js");
 
@@ -14243,8 +10144,10 @@ module.exports = asciiSize;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_assignValue.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 28:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseAssignValue = __webpack_require__(/*! ./_baseAssignValue */ "./node_modules/lodash/_baseAssignValue.js"),
     eq = __webpack_require__(/*! ./eq */ "./node_modules/lodash/eq.js");
@@ -14282,8 +10185,10 @@ module.exports = assignValue;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_assocIndexOf.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var eq = __webpack_require__(/*! ./eq */ "./node_modules/lodash/eq.js");
 
@@ -14314,8 +10219,10 @@ module.exports = assocIndexOf;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseAssign.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var copyObject = __webpack_require__(/*! ./_copyObject */ "./node_modules/lodash/_copyObject.js"),
     keys = __webpack_require__(/*! ./keys */ "./node_modules/lodash/keys.js");
@@ -14342,8 +10249,10 @@ module.exports = baseAssign;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_baseAssignIn.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var copyObject = __webpack_require__(/*! ./_copyObject */ "./node_modules/lodash/_copyObject.js"),
     keysIn = __webpack_require__(/*! ./keysIn */ "./node_modules/lodash/keysIn.js");
@@ -14370,8 +10279,10 @@ module.exports = baseAssignIn;
 /*!*************************************************!*\
   !*** ./node_modules/lodash/_baseAssignValue.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 25:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var defineProperty = __webpack_require__(/*! ./_defineProperty */ "./node_modules/lodash/_defineProperty.js");
 
@@ -14406,8 +10317,10 @@ module.exports = baseAssignValue;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_baseClone.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 165:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Stack = __webpack_require__(/*! ./_Stack */ "./node_modules/lodash/_Stack.js"),
     arrayEach = __webpack_require__(/*! ./_arrayEach */ "./node_modules/lodash/_arrayEach.js"),
@@ -14582,8 +10495,10 @@ module.exports = baseClone;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseCreate.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 30:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isObject = __webpack_require__(/*! ./isObject */ "./node_modules/lodash/isObject.js");
 
@@ -14623,8 +10538,10 @@ module.exports = baseCreate;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_baseEach.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseForOwn = __webpack_require__(/*! ./_baseForOwn */ "./node_modules/lodash/_baseForOwn.js"),
     createBaseEach = __webpack_require__(/*! ./_createBaseEach */ "./node_modules/lodash/_createBaseEach.js");
@@ -14648,8 +10565,10 @@ module.exports = baseEach;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseFilter.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseEach = __webpack_require__(/*! ./_baseEach */ "./node_modules/lodash/_baseEach.js");
 
@@ -14680,8 +10599,10 @@ module.exports = baseFilter;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_baseFindIndex.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 24:0-14 */
+/***/ ((module) => {
 
 /**
  * The base implementation of `_.findIndex` and `_.findLastIndex` without
@@ -14715,8 +10636,10 @@ module.exports = baseFindIndex;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_baseFlatten.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 38:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayPush = __webpack_require__(/*! ./_arrayPush */ "./node_modules/lodash/_arrayPush.js"),
     isFlattenable = __webpack_require__(/*! ./_isFlattenable */ "./node_modules/lodash/_isFlattenable.js");
@@ -14764,8 +10687,10 @@ module.exports = baseFlatten;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_baseFor.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var createBaseFor = __webpack_require__(/*! ./_createBaseFor */ "./node_modules/lodash/_createBaseFor.js");
 
@@ -14791,8 +10716,10 @@ module.exports = baseFor;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseForOwn.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseFor = __webpack_require__(/*! ./_baseFor */ "./node_modules/lodash/_baseFor.js"),
     keys = __webpack_require__(/*! ./keys */ "./node_modules/lodash/keys.js");
@@ -14818,8 +10745,10 @@ module.exports = baseForOwn;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_baseGet.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 24:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var castPath = __webpack_require__(/*! ./_castPath */ "./node_modules/lodash/_castPath.js"),
     toKey = __webpack_require__(/*! ./_toKey */ "./node_modules/lodash/_toKey.js");
@@ -14853,8 +10782,10 @@ module.exports = baseGet;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_baseGetAllKeys.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayPush = __webpack_require__(/*! ./_arrayPush */ "./node_modules/lodash/_arrayPush.js"),
     isArray = __webpack_require__(/*! ./isArray */ "./node_modules/lodash/isArray.js");
@@ -14884,8 +10815,10 @@ module.exports = baseGetAllKeys;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseGetTag.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 28:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Symbol = __webpack_require__(/*! ./_Symbol */ "./node_modules/lodash/_Symbol.js"),
     getRawTag = __webpack_require__(/*! ./_getRawTag */ "./node_modules/lodash/_getRawTag.js"),
@@ -14923,8 +10856,10 @@ module.exports = baseGetTag;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_baseHas.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 19:0-14 */
+/***/ ((module) => {
 
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
@@ -14953,8 +10888,10 @@ module.exports = baseHas;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_baseHasIn.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 13:0-14 */
+/***/ ((module) => {
 
 /**
  * The base implementation of `_.hasIn` without support for deep paths.
@@ -14977,8 +10914,10 @@ module.exports = baseHasIn;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_baseIndexOf.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseFindIndex = __webpack_require__(/*! ./_baseFindIndex */ "./node_modules/lodash/_baseFindIndex.js"),
     baseIsNaN = __webpack_require__(/*! ./_baseIsNaN */ "./node_modules/lodash/_baseIsNaN.js"),
@@ -15008,8 +10947,10 @@ module.exports = baseIndexOf;
 /*!*************************************************!*\
   !*** ./node_modules/lodash/_baseIsArguments.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGetTag = __webpack_require__(/*! ./_baseGetTag */ "./node_modules/lodash/_baseGetTag.js"),
     isObjectLike = __webpack_require__(/*! ./isObjectLike */ "./node_modules/lodash/isObjectLike.js");
@@ -15037,8 +10978,10 @@ module.exports = baseIsArguments;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_baseIsEqual.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 28:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsEqualDeep = __webpack_require__(/*! ./_baseIsEqualDeep */ "./node_modules/lodash/_baseIsEqualDeep.js"),
     isObjectLike = __webpack_require__(/*! ./isObjectLike */ "./node_modules/lodash/isObjectLike.js");
@@ -15076,8 +11019,10 @@ module.exports = baseIsEqual;
 /*!*************************************************!*\
   !*** ./node_modules/lodash/_baseIsEqualDeep.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 83:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Stack = __webpack_require__(/*! ./_Stack */ "./node_modules/lodash/_Stack.js"),
     equalArrays = __webpack_require__(/*! ./_equalArrays */ "./node_modules/lodash/_equalArrays.js"),
@@ -15170,8 +11115,10 @@ module.exports = baseIsEqualDeep;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_baseIsMap.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getTag = __webpack_require__(/*! ./_getTag */ "./node_modules/lodash/_getTag.js"),
     isObjectLike = __webpack_require__(/*! ./isObjectLike */ "./node_modules/lodash/isObjectLike.js");
@@ -15199,8 +11146,10 @@ module.exports = baseIsMap;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_baseIsMatch.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 62:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Stack = __webpack_require__(/*! ./_Stack */ "./node_modules/lodash/_Stack.js"),
     baseIsEqual = __webpack_require__(/*! ./_baseIsEqual */ "./node_modules/lodash/_baseIsEqual.js");
@@ -15272,8 +11221,10 @@ module.exports = baseIsMatch;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_baseIsNaN.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 12:0-14 */
+/***/ ((module) => {
 
 /**
  * The base implementation of `_.isNaN` without support for number objects.
@@ -15295,8 +11246,10 @@ module.exports = baseIsNaN;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_baseIsNative.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 47:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isFunction = __webpack_require__(/*! ./isFunction */ "./node_modules/lodash/isFunction.js"),
     isMasked = __webpack_require__(/*! ./_isMasked */ "./node_modules/lodash/_isMasked.js"),
@@ -15353,8 +11306,10 @@ module.exports = baseIsNative;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_baseIsSet.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getTag = __webpack_require__(/*! ./_getTag */ "./node_modules/lodash/_getTag.js"),
     isObjectLike = __webpack_require__(/*! ./isObjectLike */ "./node_modules/lodash/isObjectLike.js");
@@ -15382,8 +11337,10 @@ module.exports = baseIsSet;
 /*!**************************************************!*\
   !*** ./node_modules/lodash/_baseIsTypedArray.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 60:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGetTag = __webpack_require__(/*! ./_baseGetTag */ "./node_modules/lodash/_baseGetTag.js"),
     isLength = __webpack_require__(/*! ./isLength */ "./node_modules/lodash/isLength.js"),
@@ -15453,8 +11410,10 @@ module.exports = baseIsTypedArray;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_baseIteratee.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 31:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseMatches = __webpack_require__(/*! ./_baseMatches */ "./node_modules/lodash/_baseMatches.js"),
     baseMatchesProperty = __webpack_require__(/*! ./_baseMatchesProperty */ "./node_modules/lodash/_baseMatchesProperty.js"),
@@ -15495,8 +11454,10 @@ module.exports = baseIteratee;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_baseKeys.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 30:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isPrototype = __webpack_require__(/*! ./_isPrototype */ "./node_modules/lodash/_isPrototype.js"),
     nativeKeys = __webpack_require__(/*! ./_nativeKeys */ "./node_modules/lodash/_nativeKeys.js");
@@ -15536,8 +11497,10 @@ module.exports = baseKeys;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseKeysIn.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 33:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isObject = __webpack_require__(/*! ./isObject */ "./node_modules/lodash/isObject.js"),
     isPrototype = __webpack_require__(/*! ./_isPrototype */ "./node_modules/lodash/_isPrototype.js"),
@@ -15580,8 +11543,10 @@ module.exports = baseKeysIn;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_baseMap.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseEach = __webpack_require__(/*! ./_baseEach */ "./node_modules/lodash/_baseEach.js"),
     isArrayLike = __webpack_require__(/*! ./isArrayLike */ "./node_modules/lodash/isArrayLike.js");
@@ -15613,8 +11578,10 @@ module.exports = baseMap;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_baseMatches.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsMatch = __webpack_require__(/*! ./_baseIsMatch */ "./node_modules/lodash/_baseIsMatch.js"),
     getMatchData = __webpack_require__(/*! ./_getMatchData */ "./node_modules/lodash/_getMatchData.js"),
@@ -15646,8 +11613,10 @@ module.exports = baseMatches;
 /*!*****************************************************!*\
   !*** ./node_modules/lodash/_baseMatchesProperty.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 33:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsEqual = __webpack_require__(/*! ./_baseIsEqual */ "./node_modules/lodash/_baseIsEqual.js"),
     get = __webpack_require__(/*! ./get */ "./node_modules/lodash/get.js"),
@@ -15690,8 +11659,10 @@ module.exports = baseMatchesProperty;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_baseProperty.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module) => {
 
 /**
  * The base implementation of `_.property` without support for deep paths.
@@ -15715,8 +11686,10 @@ module.exports = baseProperty;
 /*!**************************************************!*\
   !*** ./node_modules/lodash/_basePropertyDeep.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGet = __webpack_require__(/*! ./_baseGet */ "./node_modules/lodash/_baseGet.js");
 
@@ -15742,8 +11715,10 @@ module.exports = basePropertyDeep;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseReduce.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module) => {
 
 /**
  * The base implementation of `_.reduce` and `_.reduceRight`, without support
@@ -15776,8 +11751,10 @@ module.exports = baseReduce;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_baseRest.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var identity = __webpack_require__(/*! ./identity */ "./node_modules/lodash/identity.js"),
     overRest = __webpack_require__(/*! ./_overRest */ "./node_modules/lodash/_overRest.js"),
@@ -15804,8 +11781,10 @@ module.exports = baseRest;
 /*!*************************************************!*\
   !*** ./node_modules/lodash/_baseSetToString.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var constant = __webpack_require__(/*! ./constant */ "./node_modules/lodash/constant.js"),
     defineProperty = __webpack_require__(/*! ./_defineProperty */ "./node_modules/lodash/_defineProperty.js"),
@@ -15837,8 +11816,10 @@ module.exports = baseSetToString;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_baseTimes.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module) => {
 
 /**
  * The base implementation of `_.times` without support for iteratee shorthands
@@ -15868,8 +11849,10 @@ module.exports = baseTimes;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_baseToString.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 37:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Symbol = __webpack_require__(/*! ./_Symbol */ "./node_modules/lodash/_Symbol.js"),
     arrayMap = __webpack_require__(/*! ./_arrayMap */ "./node_modules/lodash/_arrayMap.js"),
@@ -15916,8 +11899,10 @@ module.exports = baseToString;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_baseUnary.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module) => {
 
 /**
  * The base implementation of `_.unary` without support for storing metadata.
@@ -15941,8 +11926,10 @@ module.exports = baseUnary;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_baseUniq.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 72:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var SetCache = __webpack_require__(/*! ./_SetCache */ "./node_modules/lodash/_SetCache.js"),
     arrayIncludes = __webpack_require__(/*! ./_arrayIncludes */ "./node_modules/lodash/_arrayIncludes.js"),
@@ -16024,8 +12011,10 @@ module.exports = baseUniq;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseValues.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 19:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayMap = __webpack_require__(/*! ./_arrayMap */ "./node_modules/lodash/_arrayMap.js");
 
@@ -16054,8 +12043,10 @@ module.exports = baseValues;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_cacheHas.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 13:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if a `cache` value for `key` exists.
@@ -16078,8 +12069,10 @@ module.exports = cacheHas;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_castFunction.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var identity = __webpack_require__(/*! ./identity */ "./node_modules/lodash/identity.js");
 
@@ -16103,8 +12096,10 @@ module.exports = castFunction;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_castPath.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isArray = __webpack_require__(/*! ./isArray */ "./node_modules/lodash/isArray.js"),
     isKey = __webpack_require__(/*! ./_isKey */ "./node_modules/lodash/_isKey.js"),
@@ -16135,8 +12130,10 @@ module.exports = castPath;
 /*!**************************************************!*\
   !*** ./node_modules/lodash/_cloneArrayBuffer.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Uint8Array = __webpack_require__(/*! ./_Uint8Array */ "./node_modules/lodash/_Uint8Array.js");
 
@@ -16162,16 +12159,21 @@ module.exports = cloneArrayBuffer;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_cloneBuffer.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_exports__, module.loaded, module.id, module, __webpack_require__.nmd, __webpack_require__, __webpack_require__.* */
+/*! CommonJS bailout: exports is used directly at 4:48-55 */
+/*! CommonJS bailout: exports is used directly at 4:80-87 */
+/*! CommonJS bailout: module.exports is used directly at 35:0-14 */
+/***/ ((module, exports, __webpack_require__) => {
 
-/* WEBPACK VAR INJECTION */(function(module) {var root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
+/* module decorator */ module = __webpack_require__.nmd(module);
+var root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
 
 /** Detect free variable `exports`. */
 var freeExports =  true && exports && !exports.nodeType && exports;
 
 /** Detect free variable `module`. */
-var freeModule = freeExports && typeof module == 'object' && module && !module.nodeType && module;
+var freeModule = freeExports && "object" == 'object' && module && !module.nodeType && module;
 
 /** Detect the popular CommonJS extension `module.exports`. */
 var moduleExports = freeModule && freeModule.exports === freeExports;
@@ -16201,7 +12203,6 @@ function cloneBuffer(buffer, isDeep) {
 
 module.exports = cloneBuffer;
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../webpack/buildin/module.js */ "./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 
@@ -16209,8 +12210,10 @@ module.exports = cloneBuffer;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_cloneDataView.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var cloneArrayBuffer = __webpack_require__(/*! ./_cloneArrayBuffer */ "./node_modules/lodash/_cloneArrayBuffer.js");
 
@@ -16236,8 +12239,10 @@ module.exports = cloneDataView;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_cloneRegExp.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module) => {
 
 /** Used to match `RegExp` flags from their coerced string values. */
 var reFlags = /\w*$/;
@@ -16264,8 +12269,10 @@ module.exports = cloneRegExp;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_cloneSymbol.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Symbol = __webpack_require__(/*! ./_Symbol */ "./node_modules/lodash/_Symbol.js");
 
@@ -16293,8 +12300,10 @@ module.exports = cloneSymbol;
 /*!*************************************************!*\
   !*** ./node_modules/lodash/_cloneTypedArray.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var cloneArrayBuffer = __webpack_require__(/*! ./_cloneArrayBuffer */ "./node_modules/lodash/_cloneArrayBuffer.js");
 
@@ -16320,8 +12329,10 @@ module.exports = cloneTypedArray;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_copyArray.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module) => {
 
 /**
  * Copies the values of `source` to `array`.
@@ -16351,8 +12362,10 @@ module.exports = copyArray;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_copyObject.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 40:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var assignValue = __webpack_require__(/*! ./_assignValue */ "./node_modules/lodash/_assignValue.js"),
     baseAssignValue = __webpack_require__(/*! ./_baseAssignValue */ "./node_modules/lodash/_baseAssignValue.js");
@@ -16402,8 +12415,10 @@ module.exports = copyObject;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_copySymbols.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var copyObject = __webpack_require__(/*! ./_copyObject */ "./node_modules/lodash/_copyObject.js"),
     getSymbols = __webpack_require__(/*! ./_getSymbols */ "./node_modules/lodash/_getSymbols.js");
@@ -16429,8 +12444,10 @@ module.exports = copySymbols;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_copySymbolsIn.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var copyObject = __webpack_require__(/*! ./_copyObject */ "./node_modules/lodash/_copyObject.js"),
     getSymbolsIn = __webpack_require__(/*! ./_getSymbolsIn */ "./node_modules/lodash/_getSymbolsIn.js");
@@ -16456,8 +12473,10 @@ module.exports = copySymbolsIn;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_coreJsData.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
 
@@ -16473,8 +12492,10 @@ module.exports = coreJsData;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_createBaseEach.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 32:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isArrayLike = __webpack_require__(/*! ./isArrayLike */ "./node_modules/lodash/isArrayLike.js");
 
@@ -16516,8 +12537,10 @@ module.exports = createBaseEach;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_createBaseFor.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 25:0-14 */
+/***/ ((module) => {
 
 /**
  * Creates a base function for methods like `_.forIn` and `_.forOwn`.
@@ -16552,8 +12575,10 @@ module.exports = createBaseFor;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_createSet.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 19:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Set = __webpack_require__(/*! ./_Set */ "./node_modules/lodash/_Set.js"),
     noop = __webpack_require__(/*! ./noop */ "./node_modules/lodash/noop.js"),
@@ -16582,8 +12607,10 @@ module.exports = createSet;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_defineProperty.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 11:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getNative = __webpack_require__(/*! ./_getNative */ "./node_modules/lodash/_getNative.js");
 
@@ -16604,8 +12631,10 @@ module.exports = defineProperty;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_equalArrays.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 83:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var SetCache = __webpack_require__(/*! ./_SetCache */ "./node_modules/lodash/_SetCache.js"),
     arraySome = __webpack_require__(/*! ./_arraySome */ "./node_modules/lodash/_arraySome.js"),
@@ -16698,8 +12727,10 @@ module.exports = equalArrays;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_equalByTag.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 112:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Symbol = __webpack_require__(/*! ./_Symbol */ "./node_modules/lodash/_Symbol.js"),
     Uint8Array = __webpack_require__(/*! ./_Uint8Array */ "./node_modules/lodash/_Uint8Array.js"),
@@ -16821,8 +12852,10 @@ module.exports = equalByTag;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_equalObjects.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 89:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getAllKeys = __webpack_require__(/*! ./_getAllKeys */ "./node_modules/lodash/_getAllKeys.js");
 
@@ -16921,8 +12954,10 @@ module.exports = equalObjects;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_freeGlobal.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module) => {
 
 /** Detect free variable `global` from Node.js. */
 var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
@@ -16936,8 +12971,10 @@ module.exports = freeGlobal;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_getAllKeys.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGetAllKeys = __webpack_require__(/*! ./_baseGetAllKeys */ "./node_modules/lodash/_baseGetAllKeys.js"),
     getSymbols = __webpack_require__(/*! ./_getSymbols */ "./node_modules/lodash/_getSymbols.js"),
@@ -16963,8 +13000,10 @@ module.exports = getAllKeys;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_getAllKeysIn.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGetAllKeys = __webpack_require__(/*! ./_baseGetAllKeys */ "./node_modules/lodash/_baseGetAllKeys.js"),
     getSymbolsIn = __webpack_require__(/*! ./_getSymbolsIn */ "./node_modules/lodash/_getSymbolsIn.js"),
@@ -16991,8 +13030,10 @@ module.exports = getAllKeysIn;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_getMapData.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isKeyable = __webpack_require__(/*! ./_isKeyable */ "./node_modules/lodash/_isKeyable.js");
 
@@ -17020,8 +13061,10 @@ module.exports = getMapData;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_getMatchData.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 24:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isStrictComparable = __webpack_require__(/*! ./_isStrictComparable */ "./node_modules/lodash/_isStrictComparable.js"),
     keys = __webpack_require__(/*! ./keys */ "./node_modules/lodash/keys.js");
@@ -17055,8 +13098,10 @@ module.exports = getMatchData;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_getNative.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsNative = __webpack_require__(/*! ./_baseIsNative */ "./node_modules/lodash/_baseIsNative.js"),
     getValue = __webpack_require__(/*! ./_getValue */ "./node_modules/lodash/_getValue.js");
@@ -17083,8 +13128,10 @@ module.exports = getNative;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_getPrototype.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var overArg = __webpack_require__(/*! ./_overArg */ "./node_modules/lodash/_overArg.js");
 
@@ -17100,8 +13147,10 @@ module.exports = getPrototype;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_getRawTag.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 46:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Symbol = __webpack_require__(/*! ./_Symbol */ "./node_modules/lodash/_Symbol.js");
 
@@ -17157,8 +13206,10 @@ module.exports = getRawTag;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_getSymbols.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 30:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayFilter = __webpack_require__(/*! ./_arrayFilter */ "./node_modules/lodash/_arrayFilter.js"),
     stubArray = __webpack_require__(/*! ./stubArray */ "./node_modules/lodash/stubArray.js");
@@ -17198,8 +13249,10 @@ module.exports = getSymbols;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_getSymbolsIn.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 25:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayPush = __webpack_require__(/*! ./_arrayPush */ "./node_modules/lodash/_arrayPush.js"),
     getPrototype = __webpack_require__(/*! ./_getPrototype */ "./node_modules/lodash/_getPrototype.js"),
@@ -17234,8 +13287,10 @@ module.exports = getSymbolsIn;
 /*!****************************************!*\
   !*** ./node_modules/lodash/_getTag.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 58:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var DataView = __webpack_require__(/*! ./_DataView */ "./node_modules/lodash/_DataView.js"),
     Map = __webpack_require__(/*! ./_Map */ "./node_modules/lodash/_Map.js"),
@@ -17303,8 +13358,10 @@ module.exports = getTag;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_getValue.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 13:0-14 */
+/***/ ((module) => {
 
 /**
  * Gets the value at `key` of `object`.
@@ -17327,8 +13384,10 @@ module.exports = getValue;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_hasPath.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 39:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var castPath = __webpack_require__(/*! ./_castPath */ "./node_modules/lodash/_castPath.js"),
     isArguments = __webpack_require__(/*! ./isArguments */ "./node_modules/lodash/isArguments.js"),
@@ -17377,8 +13436,10 @@ module.exports = hasPath;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_hasUnicode.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 /** Used to compose unicode character classes. */
 var rsAstralRange = '\\ud800-\\udfff',
@@ -17414,8 +13475,10 @@ module.exports = hasUnicode;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_hashClear.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 15:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var nativeCreate = __webpack_require__(/*! ./_nativeCreate */ "./node_modules/lodash/_nativeCreate.js");
 
@@ -17440,8 +13503,10 @@ module.exports = hashClear;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_hashDelete.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module) => {
 
 /**
  * Removes `key` and its value from the hash.
@@ -17468,8 +13533,10 @@ module.exports = hashDelete;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_hashGet.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 30:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var nativeCreate = __webpack_require__(/*! ./_nativeCreate */ "./node_modules/lodash/_nativeCreate.js");
 
@@ -17509,8 +13576,10 @@ module.exports = hashGet;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_hashHas.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var nativeCreate = __webpack_require__(/*! ./_nativeCreate */ "./node_modules/lodash/_nativeCreate.js");
 
@@ -17543,8 +13612,10 @@ module.exports = hashHas;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_hashSet.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var nativeCreate = __webpack_require__(/*! ./_nativeCreate */ "./node_modules/lodash/_nativeCreate.js");
 
@@ -17577,8 +13648,10 @@ module.exports = hashSet;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_initCloneArray.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
@@ -17614,8 +13687,10 @@ module.exports = initCloneArray;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_initCloneByTag.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 77:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var cloneArrayBuffer = __webpack_require__(/*! ./_cloneArrayBuffer */ "./node_modules/lodash/_cloneArrayBuffer.js"),
     cloneDataView = __webpack_require__(/*! ./_cloneDataView */ "./node_modules/lodash/_cloneDataView.js"),
@@ -17702,8 +13777,10 @@ module.exports = initCloneByTag;
 /*!*************************************************!*\
   !*** ./node_modules/lodash/_initCloneObject.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseCreate = __webpack_require__(/*! ./_baseCreate */ "./node_modules/lodash/_baseCreate.js"),
     getPrototype = __webpack_require__(/*! ./_getPrototype */ "./node_modules/lodash/_getPrototype.js"),
@@ -17731,8 +13808,10 @@ module.exports = initCloneObject;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_isFlattenable.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Symbol = __webpack_require__(/*! ./_Symbol */ "./node_modules/lodash/_Symbol.js"),
     isArguments = __webpack_require__(/*! ./isArguments */ "./node_modules/lodash/isArguments.js"),
@@ -17762,8 +13841,10 @@ module.exports = isFlattenable;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_isIndex.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 25:0-14 */
+/***/ ((module) => {
 
 /** Used as references for various `Number` constants. */
 var MAX_SAFE_INTEGER = 9007199254740991;
@@ -17798,8 +13879,10 @@ module.exports = isIndex;
 /*!***************************************!*\
   !*** ./node_modules/lodash/_isKey.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 29:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isArray = __webpack_require__(/*! ./isArray */ "./node_modules/lodash/isArray.js"),
     isSymbol = __webpack_require__(/*! ./isSymbol */ "./node_modules/lodash/isSymbol.js");
@@ -17838,8 +13921,10 @@ module.exports = isKey;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_isKeyable.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 15:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if `value` is suitable for use as unique object key.
@@ -17864,8 +13949,10 @@ module.exports = isKeyable;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_isMasked.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var coreJsData = __webpack_require__(/*! ./_coreJsData */ "./node_modules/lodash/_coreJsData.js");
 
@@ -17895,8 +13982,10 @@ module.exports = isMasked;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_isPrototype.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module) => {
 
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
@@ -17924,8 +14013,10 @@ module.exports = isPrototype;
 /*!****************************************************!*\
   !*** ./node_modules/lodash/_isStrictComparable.js ***!
   \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 15:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isObject = __webpack_require__(/*! ./isObject */ "./node_modules/lodash/isObject.js");
 
@@ -17950,8 +14041,10 @@ module.exports = isStrictComparable;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_listCacheClear.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 13:0-14 */
+/***/ ((module) => {
 
 /**
  * Removes all key-value entries from the list cache.
@@ -17974,8 +14067,10 @@ module.exports = listCacheClear;
 /*!*************************************************!*\
   !*** ./node_modules/lodash/_listCacheDelete.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 35:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var assocIndexOf = __webpack_require__(/*! ./_assocIndexOf */ "./node_modules/lodash/_assocIndexOf.js");
 
@@ -18020,8 +14115,10 @@ module.exports = listCacheDelete;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_listCacheGet.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 19:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var assocIndexOf = __webpack_require__(/*! ./_assocIndexOf */ "./node_modules/lodash/_assocIndexOf.js");
 
@@ -18050,8 +14147,10 @@ module.exports = listCacheGet;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_listCacheHas.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var assocIndexOf = __webpack_require__(/*! ./_assocIndexOf */ "./node_modules/lodash/_assocIndexOf.js");
 
@@ -18077,8 +14176,10 @@ module.exports = listCacheHas;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_listCacheSet.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var assocIndexOf = __webpack_require__(/*! ./_assocIndexOf */ "./node_modules/lodash/_assocIndexOf.js");
 
@@ -18114,8 +14215,10 @@ module.exports = listCacheSet;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_mapCacheClear.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Hash = __webpack_require__(/*! ./_Hash */ "./node_modules/lodash/_Hash.js"),
     ListCache = __webpack_require__(/*! ./_ListCache */ "./node_modules/lodash/_ListCache.js"),
@@ -18146,8 +14249,10 @@ module.exports = mapCacheClear;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_mapCacheDelete.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getMapData = __webpack_require__(/*! ./_getMapData */ "./node_modules/lodash/_getMapData.js");
 
@@ -18175,8 +14280,10 @@ module.exports = mapCacheDelete;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_mapCacheGet.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getMapData = __webpack_require__(/*! ./_getMapData */ "./node_modules/lodash/_getMapData.js");
 
@@ -18202,8 +14309,10 @@ module.exports = mapCacheGet;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_mapCacheHas.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getMapData = __webpack_require__(/*! ./_getMapData */ "./node_modules/lodash/_getMapData.js");
 
@@ -18229,8 +14338,10 @@ module.exports = mapCacheHas;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_mapCacheSet.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getMapData = __webpack_require__(/*! ./_getMapData */ "./node_modules/lodash/_getMapData.js");
 
@@ -18262,8 +14373,10 @@ module.exports = mapCacheSet;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_mapToArray.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module) => {
 
 /**
  * Converts `map` to its key-value pairs.
@@ -18291,8 +14404,10 @@ module.exports = mapToArray;
 /*!*********************************************************!*\
   !*** ./node_modules/lodash/_matchesStrictComparable.js ***!
   \*********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module) => {
 
 /**
  * A specialized version of `matchesProperty` for source values suitable
@@ -18322,8 +14437,10 @@ module.exports = matchesStrictComparable;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_memoizeCapped.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var memoize = __webpack_require__(/*! ./memoize */ "./node_modules/lodash/memoize.js");
 
@@ -18359,8 +14476,10 @@ module.exports = memoizeCapped;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_nativeCreate.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getNative = __webpack_require__(/*! ./_getNative */ "./node_modules/lodash/_getNative.js");
 
@@ -18376,8 +14495,10 @@ module.exports = nativeCreate;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_nativeKeys.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var overArg = __webpack_require__(/*! ./_overArg */ "./node_modules/lodash/_overArg.js");
 
@@ -18393,8 +14514,10 @@ module.exports = nativeKeys;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_nativeKeysIn.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module) => {
 
 /**
  * This function is like
@@ -18424,16 +14547,21 @@ module.exports = nativeKeysIn;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_nodeUtil.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_exports__, module.loaded, module.id, module, __webpack_require__.nmd, __webpack_require__, __webpack_require__.* */
+/*! CommonJS bailout: exports is used directly at 4:48-55 */
+/*! CommonJS bailout: exports is used directly at 4:80-87 */
+/*! CommonJS bailout: module.exports is used directly at 30:0-14 */
+/***/ ((module, exports, __webpack_require__) => {
 
-/* WEBPACK VAR INJECTION */(function(module) {var freeGlobal = __webpack_require__(/*! ./_freeGlobal */ "./node_modules/lodash/_freeGlobal.js");
+/* module decorator */ module = __webpack_require__.nmd(module);
+var freeGlobal = __webpack_require__(/*! ./_freeGlobal */ "./node_modules/lodash/_freeGlobal.js");
 
 /** Detect free variable `exports`. */
 var freeExports =  true && exports && !exports.nodeType && exports;
 
 /** Detect free variable `module`. */
-var freeModule = freeExports && typeof module == 'object' && module && !module.nodeType && module;
+var freeModule = freeExports && "object" == 'object' && module && !module.nodeType && module;
 
 /** Detect the popular CommonJS extension `module.exports`. */
 var moduleExports = freeModule && freeModule.exports === freeExports;
@@ -18458,7 +14586,6 @@ var nodeUtil = (function() {
 
 module.exports = nodeUtil;
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../webpack/buildin/module.js */ "./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 
@@ -18466,8 +14593,10 @@ module.exports = nodeUtil;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_objectToString.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module) => {
 
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
@@ -18499,8 +14628,10 @@ module.exports = objectToString;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_overArg.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 15:0-14 */
+/***/ ((module) => {
 
 /**
  * Creates a unary function that invokes `func` with its argument transformed.
@@ -18525,8 +14656,10 @@ module.exports = overArg;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_overRest.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 36:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var apply = __webpack_require__(/*! ./_apply */ "./node_modules/lodash/_apply.js");
 
@@ -18572,8 +14705,10 @@ module.exports = overRest;
 /*!**************************************!*\
   !*** ./node_modules/lodash/_root.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 9:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var freeGlobal = __webpack_require__(/*! ./_freeGlobal */ "./node_modules/lodash/_freeGlobal.js");
 
@@ -18592,8 +14727,10 @@ module.exports = root;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_setCacheAdd.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 19:0-14 */
+/***/ ((module) => {
 
 /** Used to stand-in for `undefined` hash values. */
 var HASH_UNDEFINED = '__lodash_hash_undefined__';
@@ -18622,8 +14759,10 @@ module.exports = setCacheAdd;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_setCacheHas.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if `value` is in the array cache.
@@ -18647,8 +14786,10 @@ module.exports = setCacheHas;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_setToArray.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module) => {
 
 /**
  * Converts `set` to an array of its values.
@@ -18676,8 +14817,10 @@ module.exports = setToArray;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_setToString.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseSetToString = __webpack_require__(/*! ./_baseSetToString */ "./node_modules/lodash/_baseSetToString.js"),
     shortOut = __webpack_require__(/*! ./_shortOut */ "./node_modules/lodash/_shortOut.js");
@@ -18701,8 +14844,10 @@ module.exports = setToString;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_shortOut.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 37:0-14 */
+/***/ ((module) => {
 
 /** Used to detect hot functions by number of calls within a span of milliseconds. */
 var HOT_COUNT = 800,
@@ -18749,8 +14894,10 @@ module.exports = shortOut;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_stackClear.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 15:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var ListCache = __webpack_require__(/*! ./_ListCache */ "./node_modules/lodash/_ListCache.js");
 
@@ -18775,8 +14922,10 @@ module.exports = stackClear;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_stackDelete.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module) => {
 
 /**
  * Removes `key` and its value from the stack.
@@ -18804,8 +14953,10 @@ module.exports = stackDelete;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_stackGet.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module) => {
 
 /**
  * Gets the stack value for `key`.
@@ -18829,8 +14980,10 @@ module.exports = stackGet;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_stackHas.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if a stack value for `key` exists.
@@ -18854,8 +15007,10 @@ module.exports = stackHas;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_stackSet.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 34:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var ListCache = __webpack_require__(/*! ./_ListCache */ "./node_modules/lodash/_ListCache.js"),
     Map = __webpack_require__(/*! ./_Map */ "./node_modules/lodash/_Map.js"),
@@ -18899,8 +15054,10 @@ module.exports = stackSet;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_strictIndexOf.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module) => {
 
 /**
  * A specialized version of `_.indexOf` which performs strict equality
@@ -18933,8 +15090,10 @@ module.exports = strictIndexOf;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_stringSize.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var asciiSize = __webpack_require__(/*! ./_asciiSize */ "./node_modules/lodash/_asciiSize.js"),
     hasUnicode = __webpack_require__(/*! ./_hasUnicode */ "./node_modules/lodash/_hasUnicode.js"),
@@ -18962,8 +15121,10 @@ module.exports = stringSize;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_stringToPath.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 27:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var memoizeCapped = __webpack_require__(/*! ./_memoizeCapped */ "./node_modules/lodash/_memoizeCapped.js");
 
@@ -19000,8 +15161,10 @@ module.exports = stringToPath;
 /*!***************************************!*\
   !*** ./node_modules/lodash/_toKey.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isSymbol = __webpack_require__(/*! ./isSymbol */ "./node_modules/lodash/isSymbol.js");
 
@@ -19032,8 +15195,10 @@ module.exports = toKey;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_toSource.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 /** Used for built-in method references. */
 var funcProto = Function.prototype;
@@ -19069,8 +15234,10 @@ module.exports = toSource;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_unicodeSize.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 44:0-14 */
+/***/ ((module) => {
 
 /** Used to compose unicode character classes. */
 var rsAstralRange = '\\ud800-\\udfff',
@@ -19124,8 +15291,10 @@ module.exports = unicodeSize;
 /*!**************************************!*\
   !*** ./node_modules/lodash/clone.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 36:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseClone = __webpack_require__(/*! ./_baseClone */ "./node_modules/lodash/_baseClone.js");
 
@@ -19171,8 +15340,10 @@ module.exports = clone;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/constant.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 /**
  * Creates a function that returns `value`.
@@ -19208,8 +15379,10 @@ module.exports = constant;
 /*!*************************************!*\
   !*** ./node_modules/lodash/each.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] -> ./node_modules/lodash/forEach.js */
+/*! runtime requirements: module, __webpack_require__ */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = __webpack_require__(/*! ./forEach */ "./node_modules/lodash/forEach.js");
 
@@ -19220,8 +15393,10 @@ module.exports = __webpack_require__(/*! ./forEach */ "./node_modules/lodash/for
 /*!***********************************!*\
   !*** ./node_modules/lodash/eq.js ***!
   \***********************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 37:0-14 */
+/***/ ((module) => {
 
 /**
  * Performs a
@@ -19268,8 +15443,10 @@ module.exports = eq;
 /*!***************************************!*\
   !*** ./node_modules/lodash/filter.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 48:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayFilter = __webpack_require__(/*! ./_arrayFilter */ "./node_modules/lodash/_arrayFilter.js"),
     baseFilter = __webpack_require__(/*! ./_baseFilter */ "./node_modules/lodash/_baseFilter.js"),
@@ -19327,8 +15504,10 @@ module.exports = filter;
 /*!****************************************!*\
   !*** ./node_modules/lodash/forEach.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 41:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayEach = __webpack_require__(/*! ./_arrayEach */ "./node_modules/lodash/_arrayEach.js"),
     baseEach = __webpack_require__(/*! ./_baseEach */ "./node_modules/lodash/_baseEach.js"),
@@ -19379,8 +15558,10 @@ module.exports = forEach;
 /*!************************************!*\
   !*** ./node_modules/lodash/get.js ***!
   \************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 33:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGet = __webpack_require__(/*! ./_baseGet */ "./node_modules/lodash/_baseGet.js");
 
@@ -19423,8 +15604,10 @@ module.exports = get;
 /*!************************************!*\
   !*** ./node_modules/lodash/has.js ***!
   \************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 35:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseHas = __webpack_require__(/*! ./_baseHas */ "./node_modules/lodash/_baseHas.js"),
     hasPath = __webpack_require__(/*! ./_hasPath */ "./node_modules/lodash/_hasPath.js");
@@ -19469,8 +15652,10 @@ module.exports = has;
 /*!**************************************!*\
   !*** ./node_modules/lodash/hasIn.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 34:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseHasIn = __webpack_require__(/*! ./_baseHasIn */ "./node_modules/lodash/_baseHasIn.js"),
     hasPath = __webpack_require__(/*! ./_hasPath */ "./node_modules/lodash/_hasPath.js");
@@ -19514,8 +15699,10 @@ module.exports = hasIn;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/identity.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module) => {
 
 /**
  * This method returns the first argument it receives.
@@ -19546,8 +15733,10 @@ module.exports = identity;
 /*!********************************************!*\
   !*** ./node_modules/lodash/isArguments.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 36:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsArguments = __webpack_require__(/*! ./_baseIsArguments */ "./node_modules/lodash/_baseIsArguments.js"),
     isObjectLike = __webpack_require__(/*! ./isObjectLike */ "./node_modules/lodash/isObjectLike.js");
@@ -19593,8 +15782,10 @@ module.exports = isArguments;
 /*!****************************************!*\
   !*** ./node_modules/lodash/isArray.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if `value` is classified as an `Array` object.
@@ -19630,8 +15821,10 @@ module.exports = isArray;
 /*!********************************************!*\
   !*** ./node_modules/lodash/isArrayLike.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 33:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isFunction = __webpack_require__(/*! ./isFunction */ "./node_modules/lodash/isFunction.js"),
     isLength = __webpack_require__(/*! ./isLength */ "./node_modules/lodash/isLength.js");
@@ -19674,8 +15867,10 @@ module.exports = isArrayLike;
 /*!**************************************************!*\
   !*** ./node_modules/lodash/isArrayLikeObject.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 33:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isArrayLike = __webpack_require__(/*! ./isArrayLike */ "./node_modules/lodash/isArrayLike.js"),
     isObjectLike = __webpack_require__(/*! ./isObjectLike */ "./node_modules/lodash/isObjectLike.js");
@@ -19718,17 +15913,22 @@ module.exports = isArrayLikeObject;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/isBuffer.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_exports__, module.loaded, module.id, module, __webpack_require__.nmd, __webpack_require__, __webpack_require__.* */
+/*! CommonJS bailout: exports is used directly at 5:48-55 */
+/*! CommonJS bailout: exports is used directly at 5:80-87 */
+/*! CommonJS bailout: module.exports is used directly at 38:0-14 */
+/***/ ((module, exports, __webpack_require__) => {
 
-/* WEBPACK VAR INJECTION */(function(module) {var root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js"),
+/* module decorator */ module = __webpack_require__.nmd(module);
+var root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js"),
     stubFalse = __webpack_require__(/*! ./stubFalse */ "./node_modules/lodash/stubFalse.js");
 
 /** Detect free variable `exports`. */
 var freeExports =  true && exports && !exports.nodeType && exports;
 
 /** Detect free variable `module`. */
-var freeModule = freeExports && typeof module == 'object' && module && !module.nodeType && module;
+var freeModule = freeExports && "object" == 'object' && module && !module.nodeType && module;
 
 /** Detect the popular CommonJS extension `module.exports`. */
 var moduleExports = freeModule && freeModule.exports === freeExports;
@@ -19760,7 +15960,6 @@ var isBuffer = nativeIsBuffer || stubFalse;
 
 module.exports = isBuffer;
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../webpack/buildin/module.js */ "./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 
@@ -19768,8 +15967,10 @@ module.exports = isBuffer;
 /*!****************************************!*\
   !*** ./node_modules/lodash/isEmpty.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 77:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseKeys = __webpack_require__(/*! ./_baseKeys */ "./node_modules/lodash/_baseKeys.js"),
     getTag = __webpack_require__(/*! ./_getTag */ "./node_modules/lodash/_getTag.js"),
@@ -19856,8 +16057,10 @@ module.exports = isEmpty;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/isFunction.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 37:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGetTag = __webpack_require__(/*! ./_baseGetTag */ "./node_modules/lodash/_baseGetTag.js"),
     isObject = __webpack_require__(/*! ./isObject */ "./node_modules/lodash/isObject.js");
@@ -19904,8 +16107,10 @@ module.exports = isFunction;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/isLength.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 35:0-14 */
+/***/ ((module) => {
 
 /** Used as references for various `Number` constants. */
 var MAX_SAFE_INTEGER = 9007199254740991;
@@ -19950,8 +16155,10 @@ module.exports = isLength;
 /*!**************************************!*\
   !*** ./node_modules/lodash/isMap.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 27:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsMap = __webpack_require__(/*! ./_baseIsMap */ "./node_modules/lodash/_baseIsMap.js"),
     baseUnary = __webpack_require__(/*! ./_baseUnary */ "./node_modules/lodash/_baseUnary.js"),
@@ -19988,8 +16195,10 @@ module.exports = isMap;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/isObject.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 31:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if `value` is the
@@ -20030,8 +16239,10 @@ module.exports = isObject;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/isObjectLike.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 29:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if `value` is object-like. A value is object-like if it's not `null`
@@ -20070,8 +16281,10 @@ module.exports = isObjectLike;
 /*!**************************************!*\
   !*** ./node_modules/lodash/isSet.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 27:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsSet = __webpack_require__(/*! ./_baseIsSet */ "./node_modules/lodash/_baseIsSet.js"),
     baseUnary = __webpack_require__(/*! ./_baseUnary */ "./node_modules/lodash/_baseUnary.js"),
@@ -20108,8 +16321,10 @@ module.exports = isSet;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/isString.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 30:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGetTag = __webpack_require__(/*! ./_baseGetTag */ "./node_modules/lodash/_baseGetTag.js"),
     isArray = __webpack_require__(/*! ./isArray */ "./node_modules/lodash/isArray.js"),
@@ -20149,8 +16364,10 @@ module.exports = isString;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/isSymbol.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 29:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGetTag = __webpack_require__(/*! ./_baseGetTag */ "./node_modules/lodash/_baseGetTag.js"),
     isObjectLike = __webpack_require__(/*! ./isObjectLike */ "./node_modules/lodash/isObjectLike.js");
@@ -20189,8 +16406,10 @@ module.exports = isSymbol;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/isTypedArray.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 27:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsTypedArray = __webpack_require__(/*! ./_baseIsTypedArray */ "./node_modules/lodash/_baseIsTypedArray.js"),
     baseUnary = __webpack_require__(/*! ./_baseUnary */ "./node_modules/lodash/_baseUnary.js"),
@@ -20227,8 +16446,10 @@ module.exports = isTypedArray;
 /*!********************************************!*\
   !*** ./node_modules/lodash/isUndefined.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if `value` is `undefined`.
@@ -20260,8 +16481,10 @@ module.exports = isUndefined;
 /*!*************************************!*\
   !*** ./node_modules/lodash/keys.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 37:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayLikeKeys = __webpack_require__(/*! ./_arrayLikeKeys */ "./node_modules/lodash/_arrayLikeKeys.js"),
     baseKeys = __webpack_require__(/*! ./_baseKeys */ "./node_modules/lodash/_baseKeys.js"),
@@ -20308,8 +16531,10 @@ module.exports = keys;
 /*!***************************************!*\
   !*** ./node_modules/lodash/keysIn.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 32:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayLikeKeys = __webpack_require__(/*! ./_arrayLikeKeys */ "./node_modules/lodash/_arrayLikeKeys.js"),
     baseKeysIn = __webpack_require__(/*! ./_baseKeysIn */ "./node_modules/lodash/_baseKeysIn.js"),
@@ -20351,8 +16576,10 @@ module.exports = keysIn;
 /*!************************************!*\
   !*** ./node_modules/lodash/map.js ***!
   \************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 53:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayMap = __webpack_require__(/*! ./_arrayMap */ "./node_modules/lodash/_arrayMap.js"),
     baseIteratee = __webpack_require__(/*! ./_baseIteratee */ "./node_modules/lodash/_baseIteratee.js"),
@@ -20415,8 +16642,10 @@ module.exports = map;
 /*!****************************************!*\
   !*** ./node_modules/lodash/memoize.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 73:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var MapCache = __webpack_require__(/*! ./_MapCache */ "./node_modules/lodash/_MapCache.js");
 
@@ -20499,8 +16728,10 @@ module.exports = memoize;
 /*!*************************************!*\
   !*** ./node_modules/lodash/noop.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module) => {
 
 /**
  * This method returns `undefined`.
@@ -20527,8 +16758,10 @@ module.exports = noop;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/property.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 32:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseProperty = __webpack_require__(/*! ./_baseProperty */ "./node_modules/lodash/_baseProperty.js"),
     basePropertyDeep = __webpack_require__(/*! ./_basePropertyDeep */ "./node_modules/lodash/_basePropertyDeep.js"),
@@ -20570,8 +16803,10 @@ module.exports = property;
 /*!***************************************!*\
   !*** ./node_modules/lodash/reduce.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 51:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayReduce = __webpack_require__(/*! ./_arrayReduce */ "./node_modules/lodash/_arrayReduce.js"),
     baseEach = __webpack_require__(/*! ./_baseEach */ "./node_modules/lodash/_baseEach.js"),
@@ -20632,8 +16867,10 @@ module.exports = reduce;
 /*!*************************************!*\
   !*** ./node_modules/lodash/size.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 46:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseKeys = __webpack_require__(/*! ./_baseKeys */ "./node_modules/lodash/_baseKeys.js"),
     getTag = __webpack_require__(/*! ./_getTag */ "./node_modules/lodash/_getTag.js"),
@@ -20689,8 +16926,10 @@ module.exports = size;
 /*!******************************************!*\
   !*** ./node_modules/lodash/stubArray.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module) => {
 
 /**
  * This method returns a new empty array.
@@ -20723,8 +16962,10 @@ module.exports = stubArray;
 /*!******************************************!*\
   !*** ./node_modules/lodash/stubFalse.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module) => {
 
 /**
  * This method returns `false`.
@@ -20752,8 +16993,10 @@ module.exports = stubFalse;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/toString.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 28:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseToString = __webpack_require__(/*! ./_baseToString */ "./node_modules/lodash/_baseToString.js");
 
@@ -20791,8 +17034,10 @@ module.exports = toString;
 /*!******************************************!*\
   !*** ./node_modules/lodash/transform.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 65:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayEach = __webpack_require__(/*! ./_arrayEach */ "./node_modules/lodash/_arrayEach.js"),
     baseCreate = __webpack_require__(/*! ./_baseCreate */ "./node_modules/lodash/_baseCreate.js"),
@@ -20867,8 +17112,10 @@ module.exports = transform;
 /*!**************************************!*\
   !*** ./node_modules/lodash/union.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseFlatten = __webpack_require__(/*! ./_baseFlatten */ "./node_modules/lodash/_baseFlatten.js"),
     baseRest = __webpack_require__(/*! ./_baseRest */ "./node_modules/lodash/_baseRest.js"),
@@ -20904,8 +17151,10 @@ module.exports = union;
 /*!***************************************!*\
   !*** ./node_modules/lodash/values.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 34:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseValues = __webpack_require__(/*! ./_baseValues */ "./node_modules/lodash/_baseValues.js"),
     keys = __webpack_require__(/*! ./keys */ "./node_modules/lodash/keys.js");
@@ -20949,8 +17198,10 @@ module.exports = values;
 /*!*************************************************!*\
   !*** ./node_modules/lru-cache/lib/lru-cache.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = LRUCache
 
@@ -21429,8 +17680,10 @@ function Entry (key, value, length, now, maxAge) {
 /*!********************************************!*\
   !*** ./node_modules/node-version/index.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module) => {
 
 /*!
  * node-version
@@ -21460,8 +17713,10 @@ module.exports = (function() {
 /*!**********************************************!*\
   !*** ./node_modules/object-inspect/index.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var hasMap = typeof Map === 'function' && Map.prototype;
 var mapSizeDescriptor = Object.getOwnPropertyDescriptor && hasMap ? Object.getOwnPropertyDescriptor(Map.prototype, 'size') : null;
@@ -21778,8 +18033,10 @@ function arrObjKeys(obj, inspect) {
 /*!*****************************************************!*\
   !*** ./node_modules/object-inspect/util.inspect.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module, __webpack_require__ */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = __webpack_require__(/*! util */ "util").inspect;
 
@@ -21790,8 +18047,10 @@ module.exports = __webpack_require__(/*! util */ "util").inspect;
 /*!*****************************************!*\
   !*** ./node_modules/object-is/index.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 9:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -21823,8 +18082,10 @@ module.exports = function is(a, b) {
 /*!****************************************************!*\
   !*** ./node_modules/object-keys/implementation.js ***!
   \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 122:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -21957,8 +18218,10 @@ module.exports = keysShim;
 /*!*******************************************!*\
   !*** ./node_modules/object-keys/index.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 32:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -22001,8 +18264,10 @@ module.exports = keysShim;
 /*!*************************************************!*\
   !*** ./node_modules/object-keys/isArguments.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -22030,8 +18295,10 @@ module.exports = function isArguments(value) {
 /*!*****************************************!*\
   !*** ./node_modules/omit-deep/index.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -22083,8 +18350,10 @@ module.exports = function omitDeep(value, keys) {
 /*!***********************************!*\
   !*** ./node_modules/once/once.js ***!
   \***********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 2:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var wrappy = __webpack_require__(/*! wrappy */ "./node_modules/wrappy/wrappy.js")
 module.exports = wrappy(once)
@@ -22136,8 +18405,10 @@ function onceStrict (fn) {
 /*!************************************************!*\
   !*** ./node_modules/path-is-absolute/index.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -22168,8 +18439,12 @@ module.exports.win32 = win32;
 /*!**************************************************!*\
   !*** ./node_modules/promise-polyfill/promise.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, top-level-this-exports */
+/*! CommonJS bailout: this is used directly at 233:3-7 */
+/*! CommonJS bailout: module.exports is used directly at 227:39-53 */
+/*! CommonJS bailout: module.exports is used directly at 228:4-18 */
+/***/ (function(module) {
 
 (function (root) {
 
@@ -22412,8 +18687,10 @@ module.exports.win32 = win32;
 /*!***************************************!*\
   !*** ./node_modules/pseudomap/map.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:2-16 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 if (process.env.npm_package_name === 'pseudomap' &&
     process.env.npm_lifecycle_script === 'test')
@@ -22432,8 +18709,10 @@ if (typeof Map === 'function' && !process.env.TEST_PSEUDOMAP) {
 /*!*********************************************!*\
   !*** ./node_modules/pseudomap/pseudomap.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module) => {
 
 var hasOwnProperty = Object.prototype.hasOwnProperty
 
@@ -22556,8 +18835,10 @@ function set (data, k, v) {
 /*!***************************************************************!*\
   !*** ./node_modules/regexp.prototype.flags/implementation.js ***!
   \***************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -22598,8 +18879,10 @@ module.exports = function flags() {
 /*!******************************************************!*\
   !*** ./node_modules/regexp.prototype.flags/index.js ***!
   \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -22628,8 +18911,10 @@ module.exports = flagsBound;
 /*!*********************************************************!*\
   !*** ./node_modules/regexp.prototype.flags/polyfill.js ***!
   \*********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 9:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -22660,8 +18945,10 @@ module.exports = function getPolyfill() {
 /*!*****************************************************!*\
   !*** ./node_modules/regexp.prototype.flags/shim.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 11:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -22698,8 +18985,10 @@ module.exports = function shimFlags() {
 /*!******************************************!*\
   !*** ./node_modules/seedrandom/index.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 60:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 // A library of seedable RNGs implemented in Javascript.
 //
@@ -22769,10 +19058,13 @@ module.exports = sr;
 /*!*********************************************!*\
   !*** ./node_modules/seedrandom/lib/alea.js ***!
   \*********************************************/
-/*! no static exports found */
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: top-level-this-exports, module.loaded, module.id, module, __webpack_require__.nmd, __webpack_require__.amdD, __webpack_require__.amdO, __webpack_require__, __webpack_exports__, __webpack_require__.* */
+/*! CommonJS bailout: this is used directly at 109:2-6 */
 /***/ (function(module, exports, __webpack_require__) {
 
-/* WEBPACK VAR INJECTION */(function(module) {var __WEBPACK_AMD_DEFINE_RESULT__;// A port of an algorithm by Johannes Baagøe <baagoe@baagoe.com>, 2010
+/* module decorator */ module = __webpack_require__.nmd(module);
+var __WEBPACK_AMD_DEFINE_RESULT__;// A port of an algorithm by Johannes Baagøe <baagoe@baagoe.com>, 2010
 // http://baagoe.com/en/RandomMusings/javascript/
 // https://github.com/nquinlan/better-random-numbers-for-javascript-mirror
 // Original work is under MIT license -
@@ -22873,9 +19165,9 @@ function Mash() {
 
 if (module && module.exports) {
   module.exports = impl;
-} else if (__webpack_require__(/*! !webpack amd define */ "./node_modules/webpack/buildin/amd-define.js") && __webpack_require__(/*! !webpack amd options */ "./node_modules/webpack/buildin/amd-options.js")) {
+} else if (__webpack_require__.amdD && __webpack_require__.amdO) {
   !(__WEBPACK_AMD_DEFINE_RESULT__ = (function() { return impl; }).call(exports, __webpack_require__, exports, module),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 } else {
   this.alea = impl;
 }
@@ -22883,12 +19175,11 @@ if (module && module.exports) {
 })(
   this,
    true && module,    // present in node.js
-  __webpack_require__(/*! !webpack amd define */ "./node_modules/webpack/buildin/amd-define.js")   // present with an AMD loader
+  __webpack_require__.amdD   // present with an AMD loader
 );
 
 
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../webpack/buildin/module.js */ "./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 
@@ -22896,10 +19187,13 @@ if (module && module.exports) {
 /*!***********************************************!*\
   !*** ./node_modules/seedrandom/lib/tychei.js ***!
   \***********************************************/
-/*! no static exports found */
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: top-level-this-exports, module.loaded, module.id, module, __webpack_require__.nmd, __webpack_require__.amdD, __webpack_require__.amdO, __webpack_require__, __webpack_exports__, __webpack_require__.* */
+/*! CommonJS bailout: this is used directly at 98:2-6 */
 /***/ (function(module, exports, __webpack_require__) {
 
-/* WEBPACK VAR INJECTION */(function(module) {var __WEBPACK_AMD_DEFINE_RESULT__;// A Javascript implementaion of the "Tyche-i" prng algorithm by
+/* module decorator */ module = __webpack_require__.nmd(module);
+var __WEBPACK_AMD_DEFINE_RESULT__;// A Javascript implementaion of the "Tyche-i" prng algorithm by
 // Samuel Neves and Filipe Araujo.
 // See https://eden.dei.uc.pt/~sneves/pubs/2011-snfa2.pdf
 
@@ -22989,9 +19283,9 @@ function impl(seed, opts) {
 
 if (module && module.exports) {
   module.exports = impl;
-} else if (__webpack_require__(/*! !webpack amd define */ "./node_modules/webpack/buildin/amd-define.js") && __webpack_require__(/*! !webpack amd options */ "./node_modules/webpack/buildin/amd-options.js")) {
+} else if (__webpack_require__.amdD && __webpack_require__.amdO) {
   !(__WEBPACK_AMD_DEFINE_RESULT__ = (function() { return impl; }).call(exports, __webpack_require__, exports, module),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 } else {
   this.tychei = impl;
 }
@@ -22999,12 +19293,11 @@ if (module && module.exports) {
 })(
   this,
    true && module,    // present in node.js
-  __webpack_require__(/*! !webpack amd define */ "./node_modules/webpack/buildin/amd-define.js")   // present with an AMD loader
+  __webpack_require__.amdD   // present with an AMD loader
 );
 
 
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../webpack/buildin/module.js */ "./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 
@@ -23012,10 +19305,13 @@ if (module && module.exports) {
 /*!***********************************************!*\
   !*** ./node_modules/seedrandom/lib/xor128.js ***!
   \***********************************************/
-/*! no static exports found */
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: top-level-this-exports, module.loaded, module.id, module, __webpack_require__.nmd, __webpack_require__.amdD, __webpack_require__.amdO, __webpack_require__, __webpack_exports__, __webpack_require__.* */
+/*! CommonJS bailout: this is used directly at 76:2-6 */
 /***/ (function(module, exports, __webpack_require__) {
 
-/* WEBPACK VAR INJECTION */(function(module) {var __WEBPACK_AMD_DEFINE_RESULT__;// A Javascript implementaion of the "xor128" prng algorithm by
+/* module decorator */ module = __webpack_require__.nmd(module);
+var __WEBPACK_AMD_DEFINE_RESULT__;// A Javascript implementaion of the "xor128" prng algorithm by
 // George Marsaglia.  See http://www.jstatsoft.org/v08/i14/paper
 
 (function(global, module, define) {
@@ -23083,9 +19379,9 @@ function impl(seed, opts) {
 
 if (module && module.exports) {
   module.exports = impl;
-} else if (__webpack_require__(/*! !webpack amd define */ "./node_modules/webpack/buildin/amd-define.js") && __webpack_require__(/*! !webpack amd options */ "./node_modules/webpack/buildin/amd-options.js")) {
+} else if (__webpack_require__.amdD && __webpack_require__.amdO) {
   !(__WEBPACK_AMD_DEFINE_RESULT__ = (function() { return impl; }).call(exports, __webpack_require__, exports, module),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 } else {
   this.xor128 = impl;
 }
@@ -23093,12 +19389,11 @@ if (module && module.exports) {
 })(
   this,
    true && module,    // present in node.js
-  __webpack_require__(/*! !webpack amd define */ "./node_modules/webpack/buildin/amd-define.js")   // present with an AMD loader
+  __webpack_require__.amdD   // present with an AMD loader
 );
 
 
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../webpack/buildin/module.js */ "./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 
@@ -23106,10 +19401,13 @@ if (module && module.exports) {
 /*!************************************************!*\
   !*** ./node_modules/seedrandom/lib/xor4096.js ***!
   \************************************************/
-/*! no static exports found */
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: top-level-this-exports, module.loaded, module.id, module, __webpack_require__.nmd, __webpack_require__.amdD, __webpack_require__.amdO, __webpack_require__, __webpack_exports__, __webpack_require__.* */
+/*! CommonJS bailout: this is used directly at 143:2-6 */
 /***/ (function(module, exports, __webpack_require__) {
 
-/* WEBPACK VAR INJECTION */(function(module) {var __WEBPACK_AMD_DEFINE_RESULT__;// A Javascript implementaion of Richard Brent's Xorgens xor4096 algorithm.
+/* module decorator */ module = __webpack_require__.nmd(module);
+var __WEBPACK_AMD_DEFINE_RESULT__;// A Javascript implementaion of Richard Brent's Xorgens xor4096 algorithm.
 //
 // This fast non-cryptographic random number generator is designed for
 // use in Monte-Carlo algorithms. It combines a long-period xorshift
@@ -23244,9 +19542,9 @@ function impl(seed, opts) {
 
 if (module && module.exports) {
   module.exports = impl;
-} else if (__webpack_require__(/*! !webpack amd define */ "./node_modules/webpack/buildin/amd-define.js") && __webpack_require__(/*! !webpack amd options */ "./node_modules/webpack/buildin/amd-options.js")) {
+} else if (__webpack_require__.amdD && __webpack_require__.amdO) {
   !(__WEBPACK_AMD_DEFINE_RESULT__ = (function() { return impl; }).call(exports, __webpack_require__, exports, module),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 } else {
   this.xor4096 = impl;
 }
@@ -23254,10 +19552,9 @@ if (module && module.exports) {
 })(
   this,                                     // window object or global
    true && module,    // present in node.js
-  __webpack_require__(/*! !webpack amd define */ "./node_modules/webpack/buildin/amd-define.js")   // present with an AMD loader
+  __webpack_require__.amdD   // present with an AMD loader
 );
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../webpack/buildin/module.js */ "./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 
@@ -23265,10 +19562,13 @@ if (module && module.exports) {
 /*!**************************************************!*\
   !*** ./node_modules/seedrandom/lib/xorshift7.js ***!
   \**************************************************/
-/*! no static exports found */
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: top-level-this-exports, module.loaded, module.id, module, __webpack_require__.nmd, __webpack_require__.amdD, __webpack_require__.amdO, __webpack_require__, __webpack_exports__, __webpack_require__.* */
+/*! CommonJS bailout: this is used directly at 93:2-6 */
 /***/ (function(module, exports, __webpack_require__) {
 
-/* WEBPACK VAR INJECTION */(function(module) {var __WEBPACK_AMD_DEFINE_RESULT__;// A Javascript implementaion of the "xorshift7" algorithm by
+/* module decorator */ module = __webpack_require__.nmd(module);
+var __WEBPACK_AMD_DEFINE_RESULT__;// A Javascript implementaion of the "xorshift7" algorithm by
 // François Panneton and Pierre L'ecuyer:
 // "On the Xorgshift Random Number Generators"
 // http://saluc.engr.uconn.edu/refs/crypto/rng/panneton05onthexorshift.pdf
@@ -23353,9 +19653,9 @@ function impl(seed, opts) {
 
 if (module && module.exports) {
   module.exports = impl;
-} else if (__webpack_require__(/*! !webpack amd define */ "./node_modules/webpack/buildin/amd-define.js") && __webpack_require__(/*! !webpack amd options */ "./node_modules/webpack/buildin/amd-options.js")) {
+} else if (__webpack_require__.amdD && __webpack_require__.amdO) {
   !(__WEBPACK_AMD_DEFINE_RESULT__ = (function() { return impl; }).call(exports, __webpack_require__, exports, module),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 } else {
   this.xorshift7 = impl;
 }
@@ -23363,11 +19663,10 @@ if (module && module.exports) {
 })(
   this,
    true && module,    // present in node.js
-  __webpack_require__(/*! !webpack amd define */ "./node_modules/webpack/buildin/amd-define.js")   // present with an AMD loader
+  __webpack_require__.amdD   // present with an AMD loader
 );
 
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../webpack/buildin/module.js */ "./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 
@@ -23375,10 +19674,13 @@ if (module && module.exports) {
 /*!***********************************************!*\
   !*** ./node_modules/seedrandom/lib/xorwow.js ***!
   \***********************************************/
-/*! no static exports found */
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: top-level-this-exports, module.loaded, module.id, module, __webpack_require__.nmd, __webpack_require__.amdD, __webpack_require__.amdO, __webpack_require__, __webpack_exports__, __webpack_require__.* */
+/*! CommonJS bailout: this is used directly at 81:2-6 */
 /***/ (function(module, exports, __webpack_require__) {
 
-/* WEBPACK VAR INJECTION */(function(module) {var __WEBPACK_AMD_DEFINE_RESULT__;// A Javascript implementaion of the "xorwow" prng algorithm by
+/* module decorator */ module = __webpack_require__.nmd(module);
+var __WEBPACK_AMD_DEFINE_RESULT__;// A Javascript implementaion of the "xorwow" prng algorithm by
 // George Marsaglia.  See http://www.jstatsoft.org/v08/i14/paper
 
 (function(global, module, define) {
@@ -23451,9 +19753,9 @@ function impl(seed, opts) {
 
 if (module && module.exports) {
   module.exports = impl;
-} else if (__webpack_require__(/*! !webpack amd define */ "./node_modules/webpack/buildin/amd-define.js") && __webpack_require__(/*! !webpack amd options */ "./node_modules/webpack/buildin/amd-options.js")) {
+} else if (__webpack_require__.amdD && __webpack_require__.amdO) {
   !(__WEBPACK_AMD_DEFINE_RESULT__ = (function() { return impl; }).call(exports, __webpack_require__, exports, module),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 } else {
   this.xorwow = impl;
 }
@@ -23461,12 +19763,11 @@ if (module && module.exports) {
 })(
   this,
    true && module,    // present in node.js
-  __webpack_require__(/*! !webpack amd define */ "./node_modules/webpack/buildin/amd-define.js")   // present with an AMD loader
+  __webpack_require__.amdD   // present with an AMD loader
 );
 
 
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../webpack/buildin/module.js */ "./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 
@@ -23474,8 +19775,11 @@ if (module && module.exports) {
 /*!***********************************************!*\
   !*** ./node_modules/seedrandom/seedrandom.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__, __webpack_exports__ */
+/*! CommonJS bailout: module.exports is used directly at 236:35-49 */
+/*! CommonJS bailout: module.exports is used directly at 237:2-16 */
+/***/ ((module, exports, __webpack_require__) => {
 
 var __WEBPACK_AMD_DEFINE_RESULT__;/*
 Copyright 2014 David Bau.
@@ -23720,7 +20024,7 @@ if ( true && module.exports) {
   } catch (ex) {}
 } else if (true) {
   !(__WEBPACK_AMD_DEFINE_RESULT__ = (function() { return seedrandom; }).call(exports, __webpack_require__, exports, module),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 }
 
 // End anonymous scope, and pass initial values.
@@ -23736,8 +20040,10 @@ if ( true && module.exports) {
 /*!********************************************!*\
   !*** ./node_modules/shuffle-seed/index.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var seedrandom = __webpack_require__(/*! seedrandom */ "./node_modules/seedrandom/index.js");
 var self = __webpack_require__(/*! ./shuffle-seed */ "./node_modules/shuffle-seed/shuffle-seed.js");
@@ -23752,8 +20058,11 @@ module.exports = self;
 /*!***************************************************!*\
   !*** ./node_modules/shuffle-seed/shuffle-seed.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, top-level-this-exports */
+/*! CommonJS bailout: this is used directly at 74:7-11 */
+/*! CommonJS bailout: module.exports is used directly at 70:2-16 */
+/***/ (function(module) {
 
 ;(function() {
 	var self = {};
@@ -23835,8 +20144,10 @@ module.exports = self;
 /*!********************************************!*\
   !*** ./node_modules/side-channel/index.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 46:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -23954,8 +20265,22 @@ module.exports = function getSideChannel() {
 /*!*******************************************!*\
   !*** ./node_modules/tmp-promise/index.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export dir [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export dirSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export file [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export fileSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export setGracefulCleanup [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tmpName [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tmpNameSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tmpdir [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export withDir [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export withFile [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports.file(...) prevents optimization as module.exports is passed as call context at 14:38-57 */
+/*! CommonJS bailout: module.exports.dir(...) prevents optimization as module.exports is passed as call context at 33:34-52 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const {promisify} = __webpack_require__(/*! util */ "util");
 const tmp = __webpack_require__(/*! tmp */ "./node_modules/tmp-promise/node_modules/tmp/lib/tmp.js");
@@ -24013,8 +20338,19 @@ module.exports.setGracefulCleanup = tmp.setGracefulCleanup;
 /*!**************************************************************!*\
   !*** ./node_modules/tmp-promise/node_modules/glob/common.js ***!
   \**************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export alphasort [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export alphasorti [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export childrenIgnored [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export finish [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export isIgnored [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export makeAbs [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export mark [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export ownProp [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export setopts [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 exports.alphasort = alphasort
 exports.alphasorti = alphasorti
@@ -24264,8 +20600,10 @@ function childrenIgnored (self, path) {
 /*!************************************************************!*\
   !*** ./node_modules/tmp-promise/node_modules/glob/glob.js ***!
   \************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 41:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 // Approach:
 //
@@ -25065,8 +21403,10 @@ Glob.prototype._stat2 = function (f, abs, er, stat, cb) {
 /*!************************************************************!*\
   !*** ./node_modules/tmp-promise/node_modules/glob/sync.js ***!
   \************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = globSync
 globSync.GlobSync = GlobSync
@@ -25562,8 +21902,10 @@ GlobSync.prototype._makeAbs = function (f) {
 /*!**********************************************************************!*\
   !*** ./node_modules/tmp-promise/node_modules/minimatch/minimatch.js ***!
   \**********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = minimatch
 minimatch.Minimatch = Minimatch
@@ -26496,8 +22838,18 @@ function regExpEscape (s) {
 /*!**************************************************************!*\
   !*** ./node_modules/tmp-promise/node_modules/tmp/lib/tmp.js ***!
   \**************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export dir [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export dirSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export file [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export fileSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export setGracefulCleanup [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tmpName [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tmpNameSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tmpdir [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: module, __webpack_require__ */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 /*!
  * Tmp
@@ -27243,13 +23595,13 @@ _safely_install_sigint_listener();
 
 // evaluate os.tmpdir() lazily, mainly for simplifying testing but it also will
 // allow users to reconfigure the temporary directory
-Object.defineProperty(module.exports, 'tmpdir', {
+Object.defineProperty(module.exports, "tmpdir", ({
   enumerable: true,
   configurable: false,
   get: function () {
     return _getTmpDir();
   }
-});
+}));
 
 module.exports.dir = dir;
 module.exports.dirSync = dirSync;
@@ -27269,8 +23621,10 @@ module.exports.setGracefulCleanup = setGracefulCleanup;
 /*!*********************************************************************************!*\
   !*** ./node_modules/tmp-promise/node_modules/tmp/node_modules/rimraf/rimraf.js ***!
   \*********************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = rimraf
 rimraf.sync = rimrafSync
@@ -27648,812 +24002,4339 @@ function rmkidsSync (p, options) {
 
 /***/ }),
 
-/***/ "./node_modules/universalify/index.js":
-/*!********************************************!*\
-  !*** ./node_modules/universalify/index.js ***!
-  \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ "./TypeError.ts":
+/*!**********************!*\
+  !*** ./TypeError.ts ***!
+  \**********************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export toString [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-
-exports.fromCallback = function (fn) {
-  return Object.defineProperty(function (...args) {
-    if (typeof args[args.length - 1] === 'function') fn.apply(this, args)
-    else {
-      return new Promise((resolve, reject) => {
-        fn.apply(
-          this,
-          args.concat([(err, res) => err ? reject(err) : resolve(res)])
-        )
-      })
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.toString = void 0;
+const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
+const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
+exports.toString = (e) => {
+    switch (e.kind) {
+        case 'assignUndeclaredIdentifer':
+            return `Unknown identifier ${e.destinationName}`;
+        case 'unknownIdentifier':
+            return `Unknown identifier ${e.name}`;
+        case 'unknownType':
+            return `Unknown type ${e.name}`;
+        case 'wrongNumberOfArguments':
+            return `Wrong number of arguments for ${e.targetFunction}. Expected ${e.expectedArgumentCount}, found ${e.passedArgumentCount}`;
+        case 'assignWrongType':
+            return `Wrong type for ${e.lhsName}. Expected ${types_1.toString(e.lhsType)}, found ${types_1.toString(e.rhsType)}.`;
+        case 'wrongArgumentType':
+            return `Wrong argument type for ${e.targetFunction}. Expected ${types_1.toString(e.expectedType)}, found ${types_1.toString(e.passedType)}.`;
+        case 'topLevelStatementsInModule':
+            return `Modules may not have top level statements.`;
+        case 'missingReturn':
+            return 'Missing final return statement';
+        case 'objectDoesNotHaveMember':
+            return `Object of type ${types_1.toString(e.lhsType)} does not have member ${e.member}`;
+        case 'unknownTypeForIdentifier':
+            return `Could not find a type for ${e.identifierName}`;
+        case 'nonListInFor':
+            return `Iterating type ${types_1.toString(e.found)} which is not iterable`;
+        default:
+            throw debug_1.default(`need string for error: ${e.kind}`);
     }
-  }, 'name', { value: fn.name })
-}
-
-exports.fromPromise = function (fn) {
-  return Object.defineProperty(function (...args) {
-    const cb = args[args.length - 1]
-    if (typeof cb !== 'function') return fn.apply(this, args)
-    else fn.apply(this, args.slice(0, -1)).then(r => cb(null, r), cb)
-  }, 'name', { value: fn.name })
-}
+};
 
 
 /***/ }),
 
-/***/ "./node_modules/unset-value/index.js":
-/*!*******************************************!*\
-  !*** ./node_modules/unset-value/index.js ***!
-  \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ "./annotateSource.ts":
+/*!***************************!*\
+  !*** ./annotateSource.ts ***!
+  \***************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
-/*!
- * unset-value <https://github.com/jonschlinkert/unset-value>
- *
- * Copyright (c) 2015, 2017, Jon Schlinkert.
- * Released under the MIT License.
- */
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
+// Return a pretty representation of the source with the source location highlighted.
+// Subject to change. Returns null if you provide bad input (e.g. source location
+// outside of provided source)
+exports.default = (source, { line, column }, message) => {
+    const lines = source.split('\n');
+    if (line <= 0 || line >= lines.length + 1)
+        return null;
+    const contextBefore = lines[line - 2];
+    const contextAfter = lines[line];
+    const mainLine = lines[line - 1];
+    if (column <= 0)
+        return null;
+    const pointerLine = ' '.repeat(column - 1) + `^ ${message}`;
+    return join_1.default([contextBefore, mainLine, pointerLine, contextAfter].filter(l => l !== undefined), '\n');
+};
 
 
+/***/ }),
 
-var isObject = __webpack_require__(/*! isobject */ "./node_modules/unset-value/node_modules/isobject/index.js");
-var has = __webpack_require__(/*! has-value */ "./node_modules/has-value/index.js");
+/***/ "./ast.ts":
+/*!****************!*\
+  !*** ./ast.ts ***!
+  \****************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export astToString [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 11:29-48 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 13:40-59 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 17:22-41 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 17:62-81 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 17:99-118 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 19:22-41 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 19:57-76 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 30:22-41 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 30:56-75 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 32:22-41 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 32:56-75 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 34:22-41 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 34:56-75 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 42:66-85 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 46:43-62 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 48:82-101 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 51:23-42 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 55:23-42 */
+/*! CommonJS bailout: exports.astToString(...) prevents optimization as exports is passed as call context at 55:61-80 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
-module.exports = function unset(obj, prop) {
-  if (!isObject(obj)) {
-    throw new TypeError('expected an object.');
-  }
-  if (obj.hasOwnProperty(prop)) {
-    delete obj[prop];
-    return true;
-  }
+"use strict";
 
-  if (has(obj, prop)) {
-    var segs = prop.split('.');
-    var last = segs.pop();
-    while (segs.length && segs[segs.length - 1].slice(-1) === '\\') {
-      last = segs.pop().slice(0, -1) + '.' + last;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.astToString = void 0;
+const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
+const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
+exports.astToString = (ast) => {
+    if (!ast)
+        debug_1.default('Null ast in astToString');
+    switch (ast.kind) {
+        case 'returnStatement':
+            return `return ${exports.astToString(ast.expression)}`;
+        case 'forLoop':
+            return `for (${ast.var} : ${exports.astToString(ast.list)}) {
+                ${join_1.default(ast.body.map(exports.astToString), '\n')}
+            };`;
+        case 'ternary':
+            return `${exports.astToString(ast.condition)} ? ${exports.astToString(ast.ifTrue)} : ${exports.astToString(ast.ifFalse)}`;
+        case 'equality':
+            return `${exports.astToString(ast.lhs)} == ${exports.astToString(ast.rhs)}`;
+        case 'identifier':
+            return ast.value;
+        case 'number':
+            return ast.value.toString();
+        case 'callExpression':
+            const args = join_1.default(ast.arguments.map(exports.astToString), ', ');
+            return `${ast.name}(${args})`;
+        case 'functionLiteral':
+            return ast.deanonymizedName;
+        case 'product':
+            return `${exports.astToString(ast.lhs)} * ${exports.astToString(ast.rhs)}`;
+        case 'addition':
+            return `${exports.astToString(ast.lhs)} + ${exports.astToString(ast.rhs)}`;
+        case 'subtraction':
+            return `${exports.astToString(ast.lhs)} - ${exports.astToString(ast.rhs)}`;
+        case 'stringLiteral':
+            return `"${ast.value}"`;
+        case 'booleanLiteral':
+            return ast.value ? 'True' : 'False';
+        case 'concatenation':
+            return `${ast.lhs} ++ ${ast.rhs}`;
+        case 'typedDeclarationAssignment':
+            return `${ast.destination}: ${ast.type.type.kind} = ${exports.astToString(ast.expression)};`;
+        case 'typeDeclaration':
+            return `(${ast.kind})`; // TODO: Figure out what parts of type declaration should go in AST vs uninferred AST.
+        case 'reassignment':
+            return `${ast.destination} = ${exports.astToString(ast.expression)};`;
+        case 'objectLiteral':
+            const members = ast.members.map(({ name, expression }) => `${name}: ${exports.astToString(expression)}`);
+            return `{ ${join_1.default(members, ', ')} }`;
+        case 'memberAccess':
+            return `(${exports.astToString(ast.lhs)}).${ast.rhs}`;
+        case 'listLiteral':
+            return `[${join_1.default(ast.items.map(exports.astToString), ', ')}]`;
+        case 'indexAccess':
+            return `(${exports.astToString(ast.accessed)})[${exports.astToString(ast.index)}]`;
+        default:
+            throw debug_1.default(`${ast.kind} unhandled in astToString`);
     }
-    while (segs.length) obj = obj[prop = segs.shift()];
-    return (delete obj[last]);
-  }
-  return true;
 };
 
 
 /***/ }),
 
-/***/ "./node_modules/unset-value/node_modules/isobject/index.js":
-/*!*****************************************************************!*\
-  !*** ./node_modules/unset-value/node_modules/isobject/index.js ***!
-  \*****************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-/*!
- * isobject <https://github.com/jonschlinkert/isobject>
- *
- * Copyright (c) 2014-2017, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-
-
-module.exports = function isObject(val) {
-  return val != null && typeof val === 'object' && Array.isArray(val) === false;
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/webpack/buildin/amd-define.js":
-/*!***************************************!*\
-  !*** (webpack)/buildin/amd-define.js ***!
-  \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = function() {
-	throw new Error("define cannot be used indirect");
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/webpack/buildin/amd-options.js":
-/*!****************************************!*\
-  !*** (webpack)/buildin/amd-options.js ***!
-  \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-/* WEBPACK VAR INJECTION */(function(__webpack_amd_options__) {/* globals __webpack_amd_options__ */
-module.exports = __webpack_amd_options__;
-
-/* WEBPACK VAR INJECTION */}.call(this, {}))
-
-/***/ }),
-
-/***/ "./node_modules/webpack/buildin/module.js":
-/*!***********************************!*\
-  !*** (webpack)/buildin/module.js ***!
-  \***********************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = function(module) {
-	if (!module.webpackPolyfill) {
-		module.deprecate = function() {};
-		module.paths = [];
-		// module.parent = undefined by default
-		if (!module.children) module.children = [];
-		Object.defineProperty(module, "loaded", {
-			enumerable: true,
-			get: function() {
-				return module.l;
-			}
-		});
-		Object.defineProperty(module, "id", {
-			enumerable: true,
-			get: function() {
-				return module.i;
-			}
-		});
-		module.webpackPolyfill = 1;
-	}
-	return module;
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/which-boxed-primitive/index.js":
-/*!*****************************************************!*\
-  !*** ./node_modules/which-boxed-primitive/index.js ***!
-  \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ "./backend-utils.ts":
+/*!**************************!*\
+  !*** ./backend-utils.ts ***!
+  \**************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export backends [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export compileExpression [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export executableToString [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export freeGlobalsInstructions [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export makeExecutable [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export preceedingWhitespace [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export saveFunctionCallResult [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export stringLiteralName [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-
-var isString = __webpack_require__(/*! is-string */ "./node_modules/is-string/index.js");
-var isNumber = __webpack_require__(/*! is-number-object */ "./node_modules/is-number-object/index.js");
-var isBoolean = __webpack_require__(/*! is-boolean-object */ "./node_modules/is-boolean-object/index.js");
-var isSymbol = __webpack_require__(/*! is-symbol */ "./node_modules/is-symbol/index.js");
-var isBigInt = __webpack_require__(/*! is-bigint */ "./node_modules/is-bigint/index.js");
-
-// eslint-disable-next-line consistent-return
-module.exports = function whichBoxedPrimitive(value) {
-	// eslint-disable-next-line eqeqeq
-	if (value == null || (typeof value !== 'object' && typeof value !== 'function')) {
-		return null;
-	}
-	if (isString(value)) {
-		return 'String';
-	}
-	if (isNumber(value)) {
-		return 'Number';
-	}
-	if (isBoolean(value)) {
-		return 'Boolean';
-	}
-	if (isSymbol(value)) {
-		return 'Symbol';
-	}
-	if (isBigInt(value)) {
-		return 'BigInt';
-	}
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/which-collection/index.js":
-/*!************************************************!*\
-  !*** ./node_modules/which-collection/index.js ***!
-  \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var isMap = __webpack_require__(/*! is-map */ "./node_modules/is-map/index.js");
-var isSet = __webpack_require__(/*! is-set */ "./node_modules/is-set/index.js");
-var isWeakMap = __webpack_require__(/*! is-weakmap */ "./node_modules/is-weakmap/index.js");
-var isWeakSet = __webpack_require__(/*! is-weakset */ "./node_modules/is-weakset/index.js");
-
-module.exports = function whichCollection(value) {
-	if (value && typeof value === 'object') {
-		if (isMap(value)) {
-			return 'Map';
-		}
-		if (isSet(value)) {
-			return 'Set';
-		}
-		if (isWeakMap(value)) {
-			return 'WeakMap';
-		}
-		if (isWeakSet(value)) {
-			return 'WeakSet';
-		}
-	}
-	return false;
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/which/which.js":
-/*!*************************************!*\
-  !*** ./node_modules/which/which.js ***!
-  \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports = which
-which.sync = whichSync
-
-var isWindows = process.platform === 'win32' ||
-    process.env.OSTYPE === 'cygwin' ||
-    process.env.OSTYPE === 'msys'
-
-var path = __webpack_require__(/*! path */ "path")
-var COLON = isWindows ? ';' : ':'
-var isexe = __webpack_require__(/*! isexe */ "./node_modules/isexe/index.js")
-
-function getNotFoundError (cmd) {
-  var er = new Error('not found: ' + cmd)
-  er.code = 'ENOENT'
-
-  return er
-}
-
-function getPathInfo (cmd, opt) {
-  var colon = opt.colon || COLON
-  var pathEnv = opt.path || process.env.PATH || ''
-  var pathExt = ['']
-
-  pathEnv = pathEnv.split(colon)
-
-  var pathExtExe = ''
-  if (isWindows) {
-    pathEnv.unshift(process.cwd())
-    pathExtExe = (opt.pathExt || process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM')
-    pathExt = pathExtExe.split(colon)
-
-
-    // Always test the cmd itself first.  isexe will check to make sure
-    // it's found in the pathExt set.
-    if (cmd.indexOf('.') !== -1 && pathExt[0] !== '')
-      pathExt.unshift('')
-  }
-
-  // If it has a slash, then we don't bother searching the pathenv.
-  // just check the file itself, and that's it.
-  if (cmd.match(/\//) || isWindows && cmd.match(/\\/))
-    pathEnv = ['']
-
-  return {
-    env: pathEnv,
-    ext: pathExt,
-    extExe: pathExtExe
-  }
-}
-
-function which (cmd, opt, cb) {
-  if (typeof opt === 'function') {
-    cb = opt
-    opt = {}
-  }
-
-  var info = getPathInfo(cmd, opt)
-  var pathEnv = info.env
-  var pathExt = info.ext
-  var pathExtExe = info.extExe
-  var found = []
-
-  ;(function F (i, l) {
-    if (i === l) {
-      if (opt.all && found.length)
-        return cb(null, found)
-      else
-        return cb(getNotFoundError(cmd))
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.backends = exports.freeGlobalsInstructions = exports.makeExecutable = exports.executableToString = exports.saveFunctionCallResult = exports.stringLiteralName = exports.compileExpression = exports.preceedingWhitespace = void 0;
+const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
+const flatten_1 = __webpack_require__(/*! ./util/list/flatten */ "./util/list/flatten.ts");
+const Function_1 = __webpack_require__(/*! ./targetCode/Function */ "./targetCode/Function.ts");
+const StackUsage_1 = __webpack_require__(/*! ./targetCode/StackUsage */ "./targetCode/StackUsage.ts");
+const Register_1 = __webpack_require__(/*! ./threeAddressCode/Register */ "./threeAddressCode/Register.ts");
+const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
+const mips_1 = __webpack_require__(/*! ./backends/mips */ "./backends/mips.ts");
+const js_1 = __webpack_require__(/*! ./backends/js */ "./backends/js.ts");
+const c_1 = __webpack_require__(/*! ./backends/c */ "./backends/c.ts");
+const x64_1 = __webpack_require__(/*! ./backends/x64 */ "./backends/x64.ts");
+exports.preceedingWhitespace = (tas) => {
+    switch (tas.kind) {
+        case 'label':
+            return '';
+        case 'functionLabel':
+            return '\n\n';
+        default:
+            return '    ';
     }
-
-    var pathPart = pathEnv[i]
-    if (pathPart.charAt(0) === '"' && pathPart.slice(-1) === '"')
-      pathPart = pathPart.slice(1, -1)
-
-    var p = path.join(pathPart, cmd)
-    if (!pathPart && (/^\.[\\\/]/).test(cmd)) {
-      p = cmd.slice(0, 2) + p
+};
+exports.compileExpression = (subExpressions, expressionCompiler) => ({
+    prepare: flatten_1.default(subExpressions.map(input => input.prepare)),
+    execute: expressionCompiler(subExpressions.map(input => input.execute)),
+    cleanup: flatten_1.default(subExpressions.reverse().map(input => input.cleanup)),
+});
+exports.stringLiteralName = ({ id, value }) => `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
+exports.saveFunctionCallResult = (destination, getRegister, registers) => {
+    if (!destination) {
+        return [];
     }
-    ;(function E (ii, ll) {
-      if (ii === ll) return F(i + 1, l)
-      var ext = pathExt[ii]
-      isexe(p + ext, { pathExt: pathExtExe }, function (er, is) {
-        if (!er && is) {
-          if (opt.all)
-            found.push(p + ext)
-          else
-            return cb(null, p + ext)
+    return [
+        {
+            kind: 'move',
+            from: registers.functionResult,
+            to: getRegister(destination),
+            why: 'save result',
+        },
+    ];
+};
+const functionToString = (commentChar, { name, instructions, stackUsage }) => {
+    if (!name)
+        debug_1.default('no name here');
+    return `
+${name}: ${commentChar} stack: ${StackUsage_1.stackUsageToString(stackUsage)}
+${join_1.default(instructions, '\n')}`;
+};
+exports.executableToString = (commentChar, { main, functions }) => {
+    // Main needs to be first for MARS, which just executes from the top of the file
+    return `
+${functionToString(commentChar, main)}
+${join_1.default(functions.map(f => functionToString(commentChar, f)), '\n')}`;
+};
+exports.makeExecutable = ({ functions, main }, { syscallNumbers }, targetRegisterInfo, translator, includeCleanup) => {
+    if (!main)
+        throw debug_1.default('no main');
+    const targetFunctions = functions.map(f => Function_1.toTarget({
+        threeAddressFunction: f,
+        targetInfo: targetRegisterInfo,
+        finalCleanup: [{ kind: 'return', why: 'The Final Return!' }],
+        isMain: false,
+    }));
+    const targetMain = Function_1.toTarget({
+        threeAddressFunction: main,
+        targetInfo: targetRegisterInfo,
+        finalCleanup: [
+            // TODO: push/pop exit code is jank and should be removed.
+            {
+                kind: 'push',
+                register: targetRegisterInfo.registers.functionResult,
+                why: "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
+            },
+            ...(includeCleanup
+                ? [
+                    {
+                        kind: 'callByName',
+                        function: 'free_globals',
+                        why: 'free_globals',
+                    },
+                    {
+                        kind: 'callByName',
+                        function: 'verify_no_leaks',
+                        why: 'verify_no_leaks',
+                    },
+                ]
+                : []),
+            {
+                kind: 'pop',
+                register: targetRegisterInfo.registers.syscallArgument[0],
+                why: 'restore exit code',
+            },
+            {
+                kind: 'loadImmediate',
+                destination: targetRegisterInfo.registers.syscallSelectAndResult,
+                value: syscallNumbers.exit,
+                why: 'prepare to exit',
+            },
+            { kind: 'syscall', why: 'exit' },
+        ],
+        isMain: true,
+    });
+    return {
+        main: {
+            instructions: flatten_1.default(targetMain.instructions.map(translator)),
+            stackUsage: targetMain.stackUsage,
+        },
+        functions: targetFunctions.map(({ name, instructions, stackUsage }) => ({
+            name,
+            stackUsage,
+            instructions: flatten_1.default(instructions.map(translator)),
+        })),
+    };
+};
+// TODO: Move map to outside?
+exports.freeGlobalsInstructions = (globals, makeTemporary, globalNameMap) => {
+    const instructions = flatten_1.default(globals
+        .filter(declaration => ['String', 'List'].includes(declaration.type.type.kind))
+        .map(declaration => {
+        const globalStringAddress = makeTemporary('gobalStringAddress');
+        return [
+            {
+                kind: 'loadGlobal',
+                from: globalNameMap[declaration.name].newName,
+                to: globalStringAddress,
+                why: 'Load global string so we can free it',
+            },
+            {
+                kind: 'callByName',
+                function: 'my_free',
+                arguments: [globalStringAddress],
+                destination: null,
+                why: 'Free global string at end of program',
+            },
+        ];
+    }));
+    instructions.push({
+        kind: 'return',
+        register: new Register_1.Register('dummyReturn'),
+        why: 'Need to not have an empty function, otherwise verifyingOverlappingJoin fails. TODO: fix that.',
+    });
+    return instructions;
+};
+exports.backends = [mips_1.default, js_1.default, c_1.default, x64_1.default];
+
+
+/***/ }),
+
+/***/ "./backends/c.ts":
+/*!***********************!*\
+  !*** ./backends/c.ts ***!
+  \***********************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const flatten_1 = __webpack_require__(/*! ../util/list/flatten */ "./util/list/flatten.ts");
+const tmp_promise_1 = __webpack_require__(/*! tmp-promise */ "./node_modules/tmp-promise/index.js");
+const types_1 = __webpack_require__(/*! ../types */ "./types.ts");
+const child_process_promise_1 = __webpack_require__(/*! child-process-promise */ "./node_modules/child-process-promise/index.js");
+const execAndGetResult_1 = __webpack_require__(/*! ../util/execAndGetResult */ "./util/execAndGetResult.ts");
+const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
+const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
+const backend_utils_1 = __webpack_require__(/*! ../backend-utils */ "./backend-utils.ts");
+const runtime_strings_1 = __webpack_require__(/*! ../runtime-strings */ "./runtime-strings.ts");
+const frontend_1 = __webpack_require__(/*! ../frontend */ "./frontend.ts");
+const idAppender_1 = __webpack_require__(/*! ../util/idAppender */ "./util/idAppender.ts");
+const writeTempFile_1 = __webpack_require__(/*! ../util/writeTempFile */ "./util/writeTempFile.ts");
+// Beginnings of experiment with tracing code from source to target
+const callFree = (target, reason) => `my_free(${target}); // ${reason}`;
+const mangleProduct = (p) => `_${Buffer.from(JSON.stringify(p))
+    .toString('base64')
+    .replace('/', '_')
+    .replace('+', '_')
+    .replace('=', '_')}`;
+// TODO: This returns a function, which is pretty janky. It looks like this because of the way function
+// pointer declarations work in C: the variable name appears in the middle of the declaration
+const mplTypeToCType = (type) => {
+    switch (type.type.kind) {
+        case 'Integer':
+            return name => `uint8_t ${name}`;
+        case 'Boolean':
+            return name => `bool ${name}`;
+        case 'String':
+            return name => `char *${name}`;
+        case 'Function':
+            if ('namedType' in type.type.returnType) {
+                throw debug_1.default('figure this out');
+            }
+            const returnType = mplTypeToCType(type.type.returnType)('');
+            const argumentTypes = type.type.arguments.map(mplTypeToCType).map(f => f(''));
+            const argumentsString = join_1.default(argumentTypes, ', ');
+            return name => `${returnType} (*${name})(${argumentsString})`;
+        case 'Product':
+            return name => `struct ${mangleProduct(type.type)} ${name}`;
+        case 'List':
+            return name => `struct list ${name}`;
+        default:
+            throw debug_1.default(`${type.kind} unhandled in mplTypeToCType`);
+    }
+};
+const mplTypeToCDeclaration = (type, name) => mplTypeToCType(type)(name);
+const compileAssignment = (destination, rhs) => {
+    return {
+        prepare: rhs.prepare,
+        execute: [`${destination} = `, ...rhs.execute, ';'],
+        cleanup: rhs.cleanup,
+    };
+};
+const registerTransferLangaugeToC = (rtlCode, joiner) => {
+    rtlCode.forEach(line => {
+        if (typeof line !== 'string')
+            debug_1.default('bad type');
+    });
+    return join_1.default(rtlCode, joiner);
+};
+const astToC = (input) => {
+    const { ast, stringLiterals, declarations, makeTemporary, predeclaredVariables } = input;
+    const recurse = newAst => astToC(Object.assign(Object.assign({}, input), { ast: newAst }));
+    const binaryOperator = (operator) => {
+        const lhs = recurse(ast.lhs);
+        const rhs = recurse(ast.rhs);
+        return backend_utils_1.compileExpression([lhs, rhs], ([e1, e2]) => [...e1, operator, ...e2]);
+    };
+    switch (ast.kind) {
+        case 'returnStatement': {
+            const subExpression = recurse(ast.expression);
+            return backend_utils_1.compileExpression([subExpression], ([e1]) => ['return', ...e1, ';']);
         }
-        return E(ii + 1, ll)
-      })
-    })(0, pathExt.length)
-  })(0, pathEnv.length)
-}
-
-function whichSync (cmd, opt) {
-  opt = opt || {}
-
-  var info = getPathInfo(cmd, opt)
-  var pathEnv = info.env
-  var pathExt = info.ext
-  var pathExtExe = info.extExe
-  var found = []
-
-  for (var i = 0, l = pathEnv.length; i < l; i ++) {
-    var pathPart = pathEnv[i]
-    if (pathPart.charAt(0) === '"' && pathPart.slice(-1) === '"')
-      pathPart = pathPart.slice(1, -1)
-
-    var p = path.join(pathPart, cmd)
-    if (!pathPart && /^\.[\\\/]/.test(cmd)) {
-      p = cmd.slice(0, 2) + p
-    }
-    for (var j = 0, ll = pathExt.length; j < ll; j ++) {
-      var cur = p + pathExt[j]
-      var is
-      try {
-        is = isexe.sync(cur, { pathExt: pathExtExe })
-        if (is) {
-          if (opt.all)
-            found.push(cur)
-          else
-            return cur
+        case 'number':
+            return backend_utils_1.compileExpression([], ([]) => [ast.value.toString()]);
+        case 'objectLiteral':
+            const memberExpressions = ast.members.map(m => recurse(m.expression));
+            const type = ast.type;
+            if (type.type.kind != 'Product') {
+                throw debug_1.default('need a produduct');
+            }
+            const product = type.type;
+            return backend_utils_1.compileExpression(memberExpressions, expr => [
+                '(struct ',
+                mangleProduct(product),
+                ')',
+                '{',
+                ...expr.map((e, i) => `.${ast.members[i].name} = ${e},`),
+                '}',
+            ]);
+        case 'memberAccess': {
+            const lhs = recurse(ast.lhs);
+            return backend_utils_1.compileExpression([lhs], ([e1]) => ['(', ...e1, ').', ast.rhs]);
         }
-      } catch (ex) {}
+        case 'product':
+            return binaryOperator('*');
+        case 'addition':
+            return binaryOperator('+');
+        case 'subtraction':
+            return binaryOperator('-');
+        case 'concatenation': {
+            const lhs = recurse(ast.lhs);
+            const rhs = recurse(ast.rhs);
+            const temporaryName = makeTemporary('temporary_string');
+            const lhsName = makeTemporary('concat_lhs');
+            const rhsName = makeTemporary('concat_rhs');
+            const prepAndCleanup = {
+                prepare: [
+                    `char *${lhsName} = ${registerTransferLangaugeToC(lhs.execute, ' ')};`,
+                    `char *${rhsName} = ${registerTransferLangaugeToC(rhs.execute, ' ')};`,
+                    `char *${temporaryName} = my_malloc(length(${lhsName}) + length(${rhsName}) + 1);`,
+                    `string_concatenate(${lhsName}, ${rhsName}, ${temporaryName});`,
+                ],
+                execute: [],
+                cleanup: [callFree(temporaryName, 'Free temporary from concatenation')],
+            };
+            return backend_utils_1.compileExpression([lhs, rhs, prepAndCleanup], ([_1, _2, _3]) => [
+                temporaryName,
+            ]);
+        }
+        // TODO: Unify these somehow typedDeclarationAssignment and reassignment
+        case 'typedDeclarationAssignment': {
+            const lhs = ast.destination;
+            const rhs = recurse(ast.expression);
+            const declaration = declarations.find(d => d.name === lhs);
+            if (!declaration)
+                throw debug_1.default('todo');
+            if ('namedType' in declaration.type)
+                throw debug_1.default('TODO: get a real type here');
+            switch (declaration.type.type.kind) {
+                case 'Function':
+                case 'Integer':
+                case 'Product':
+                    if (predeclaredVariables.includes(declaration.name)) {
+                        return compileAssignment(declaration.name, rhs);
+                    }
+                    else {
+                        return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
+                    }
+                case 'String':
+                    const rhsWillAlloc = backend_utils_1.compileExpression([rhs], ([e1]) => [
+                        'string_copy(',
+                        ...e1,
+                        ', my_malloc(length(',
+                        ...e1,
+                        ') + 1))',
+                    ]);
+                    if (predeclaredVariables.includes(declaration.name)) {
+                        return compileAssignment(declaration.name, rhsWillAlloc);
+                    }
+                    else {
+                        return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhsWillAlloc);
+                    }
+                case 'List':
+                    // TODO: Pretty sure I need to copy the list
+                    if (predeclaredVariables.includes(declaration.name)) {
+                        return compileAssignment(declaration.name, rhs);
+                    }
+                    else {
+                        return compileAssignment(mplTypeToCDeclaration(declaration.type, lhs), rhs);
+                    }
+                default:
+                    throw debug_1.default(`${declaration.type.type.kind} unhandled in typedDeclarationAssignment`);
+            }
+        }
+        case 'reassignment': {
+            const lhs = ast.destination;
+            const rhs = recurse(ast.expression);
+            const declaration = declarations.find(d => d.name === lhs);
+            if (!declaration)
+                throw debug_1.default('todo');
+            if ('namedType' in declaration.type)
+                throw debug_1.default('todo');
+            switch (declaration.type.type.kind) {
+                case 'Function':
+                case 'Integer':
+                    return compileAssignment(lhs, rhs);
+                case 'String':
+                    // Free old value, copy new value.
+                    const savedOldValue = makeTemporary('saved_old');
+                    const temporaryName = makeTemporary('reassign_temporary');
+                    const assign = {
+                        prepare: [
+                            `char *${savedOldValue} = ${declaration.name};`,
+                            `char *${temporaryName} = ${registerTransferLangaugeToC(rhs.execute, ' ')};`,
+                        ],
+                        execute: [`my_malloc(length(${temporaryName}))`],
+                        cleanup: [
+                            `string_copy(${temporaryName}, ${declaration.name});`,
+                            callFree(savedOldValue, 'free inaccessible value after reassignment'),
+                        ],
+                    };
+                    const expression = backend_utils_1.compileExpression([rhs, assign], 
+                    // Can ignore rhs because it is executed during assign.
+                    ([executeRhs, executeAssign]) => executeAssign);
+                    return compileAssignment(declaration.name, expression);
+                default:
+                    throw debug_1.default(`${JSON.stringify(declaration.type)} unhandled C reassignment`);
+            }
+        }
+        case 'functionLiteral':
+            return backend_utils_1.compileExpression([], ([]) => [`&${ast.deanonymizedName}`]);
+        case 'callExpression': {
+            const argumentsC = ast.arguments.map(argument => recurse(argument));
+            return backend_utils_1.compileExpression(argumentsC, argCode => [
+                `(*${ast.name})(`,
+                join_1.default(argCode.map(code => registerTransferLangaugeToC(code, ' ')), ', '),
+                ')',
+            ]);
+        }
+        case 'identifier':
+            return backend_utils_1.compileExpression([], ([]) => [ast.value]);
+        case 'ternary': {
+            const comparatorC = recurse(ast.condition);
+            const ifTrueC = recurse(ast.ifTrue);
+            const ifFalseC = recurse(ast.ifFalse);
+            return backend_utils_1.compileExpression([comparatorC, ifTrueC, ifFalseC], ([compare, ifTrue, ifFalse]) => [...compare, '?', ...ifTrue, ':', ...ifFalse]);
+        }
+        case 'equality': {
+            const lhs = recurse(ast.lhs);
+            const rhs = recurse(ast.rhs);
+            if (ast.type.type.kind == 'String') {
+                return backend_utils_1.compileExpression([lhs, rhs], ([e1, e2]) => [
+                    'string_compare(',
+                    ...e1,
+                    ',',
+                    ...e2,
+                    ')',
+                ]);
+            }
+            else {
+                return backend_utils_1.compileExpression([lhs, rhs], ([e1, e2]) => [...e1, '==', ...e2]);
+            }
+        }
+        case 'booleanLiteral':
+            return backend_utils_1.compileExpression([], ([]) => [ast.value ? '1' : '0']);
+        case 'stringLiteral':
+            const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
+            if (!stringLiteralData)
+                throw debug_1.default('todo');
+            return backend_utils_1.compileExpression([], ([]) => [stringLiteralName(stringLiteralData)]);
+        case 'typeDeclaration':
+            return backend_utils_1.compileExpression([], ([]) => []);
+        case 'indexAccess': {
+            const index = recurse(ast.index);
+            const accessed = recurse(ast.accessed);
+            // TODO: OOB assertions
+            return backend_utils_1.compileExpression([index, accessed], ([indexCode, accessedCode]) => [
+                `((uint8_t*)`,
+                ...accessedCode,
+                '.data)[',
+                ...indexCode,
+                ']',
+            ]);
+        }
+        case 'listLiteral': {
+            const listLiteral = makeTemporary('listLiteral');
+            // Prepare by allocating the memory and putting the data in it
+            const allocate = [
+                `struct list ${listLiteral};`,
+                `${listLiteral}.size = ${ast.items.length};`,
+                // TODO actual type size
+                `${listLiteral}.data = my_malloc(${ast.items.length} * sizeof(uint8_t));`,
+            ];
+            const buildItems = ast.items.map(recurse);
+            const assignItems = backend_utils_1.compileExpression(buildItems, buildItemCodes => buildItemCodes.map((buildItem, index) => `((uint8_t*)${listLiteral}.data)[${index}] = ${buildItem};`));
+            const buildLiteral = {
+                prepare: [
+                    ...allocate,
+                    ...assignItems.prepare,
+                    ...assignItems.execute,
+                    ...assignItems.cleanup,
+                ],
+                execute: [],
+                cleanup: [],
+            };
+            return backend_utils_1.compileExpression([buildLiteral, assignItems], _ => [listLiteral]);
+        }
+        case 'forLoop':
+            const body = ast.body.map(recurse);
+            return backend_utils_1.compileExpression(body, b => [
+                `for (uint64_t i = 0; i < ${ast.list.value}.size; i++) {`,
+                `uint8_t ${ast.var} = ((uint8_t*)${ast.list.value}.data)[i];`,
+                ...flatten_1.default(b),
+                `}`,
+            ]);
+        default:
+            throw debug_1.default(`${ast.kind} unhandled in astToC`);
     }
-  }
-
-  if (opt.all && found.length)
-    return found
-
-  throw getNotFoundError(cmd)
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/wrappy/wrappy.js":
-/*!***************************************!*\
-  !*** ./node_modules/wrappy/wrappy.js ***!
-  \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-// Returns a wrapper function that returns a wrapped callback
-// The wrapper function should do some stuff, and return a
-// presumably different callback function.
-// This makes sure that own properties are retained, so that
-// decorations and such are not lost along the way.
-module.exports = wrappy
-function wrappy (fn, cb) {
-  if (fn && cb) return wrappy(fn)(cb)
-
-  if (typeof fn !== 'function')
-    throw new TypeError('need wrapper function')
-
-  Object.keys(fn).forEach(function (k) {
-    wrapper[k] = fn[k]
-  })
-
-  return wrapper
-
-  function wrapper() {
-    var args = new Array(arguments.length)
-    for (var i = 0; i < args.length; i++) {
-      args[i] = arguments[i]
-    }
-    var ret = fn.apply(this, args)
-    var cb = args[args.length-1]
-    if (typeof ret === 'function' && ret !== cb) {
-      Object.keys(cb).forEach(function (k) {
-        ret[k] = cb[k]
-      })
-    }
-    return ret
-  }
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/yallist/yallist.js":
-/*!*****************************************!*\
-  !*** ./node_modules/yallist/yallist.js ***!
-  \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = Yallist
-
-Yallist.Node = Node
-Yallist.create = Yallist
-
-function Yallist (list) {
-  var self = this
-  if (!(self instanceof Yallist)) {
-    self = new Yallist()
-  }
-
-  self.tail = null
-  self.head = null
-  self.length = 0
-
-  if (list && typeof list.forEach === 'function') {
-    list.forEach(function (item) {
-      self.push(item)
+    return debug_1.default('todo');
+};
+const stringLiteralName = ({ id, value }) => `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
+const stringLiteralDeclaration = (literal) => `char *${stringLiteralName(literal)} = "${literal.value}";`;
+const makeCfunctionBody = ({ name, parameters, statements, variables, globalDeclarations, stringLiterals, buildSignature, returnType, beforeExit = [], }) => {
+    const nonReturnStatements = statements.slice(0, statements.length - 1);
+    const returnStatement = statements[statements.length - 1];
+    if (returnStatement.kind !== 'returnStatement')
+        throw debug_1.default('todo');
+    const makeTemporary = idAppender_1.default();
+    const globalVariableNames = globalDeclarations.map(d => d.name);
+    const body = nonReturnStatements.map(statement => {
+        const statementLogic = astToC({
+            ast: statement,
+            stringLiterals,
+            declarations: frontend_1.mergeDeclarations(variables, globalDeclarations),
+            makeTemporary,
+            predeclaredVariables: globalVariableNames,
+        });
+        return join_1.default([
+            registerTransferLangaugeToC(statementLogic.prepare, '\n'),
+            registerTransferLangaugeToC(statementLogic.execute, ' '),
+            registerTransferLangaugeToC(statementLogic.cleanup, '\n'),
+        ], '\n');
+    });
+    const endOfFunctionFrees = variables
+        .filter(s => !globalVariableNames.includes(s.name))
+        .filter(s => !parameters.map(d => d.name).includes(s.name))
+        .filter(s => {
+        if ('namedType' in s.type)
+            throw debug_1.default('TODO get a real type here');
+        return types_1.equal(s.type, types_1.builtinTypes.String) || s.type.type.kind == 'List';
     })
-  } else if (arguments.length > 0) {
-    for (var i = 0, l = arguments.length; i < l; i++) {
-      self.push(arguments[i])
+        .map(s2 => {
+        const s = s2;
+        if (types_1.equal(s.type, types_1.builtinTypes.String)) {
+            return callFree(s.name, 'Freeing Stack String at end of function');
+        }
+        else if (s.type.type.kind == 'List') {
+            return callFree(`${s.name}.data`, 'Freeing Stack String at end of function');
+        }
+        else {
+            throw debug_1.default('...');
+        }
+    });
+    const returnCode = astToC({
+        ast: returnStatement.expression,
+        stringLiterals,
+        declarations: frontend_1.mergeDeclarations(variables, globalDeclarations),
+        makeTemporary,
+        predeclaredVariables: globalVariableNames,
+    });
+    return join_1.default([
+        buildSignature(name, parameters),
+        '{',
+        ...body,
+        ...returnCode.prepare,
+        `${mplTypeToCDeclaration(returnType, 'rrresult')} = ${registerTransferLangaugeToC(returnCode.execute, ' ')};`,
+        ...returnCode.cleanup,
+        ...endOfFunctionFrees,
+        ...beforeExit,
+        `return rrresult;`,
+        '}',
+    ], '\n');
+};
+const productTypeMemberToCStructMember = ({ name, type }) => `${mplTypeToCDeclaration(type, '')} ${name};`;
+const compile = ({ functions, program, types, globalDeclarations, stringLiterals, }) => {
+    const CtypeDeclarations = types
+        .filter(t => t.type.type.kind == 'Product')
+        .map(t => `struct ${mangleProduct(t.type.type)} {${join_1.default(t.type.type.members.map(productTypeMemberToCStructMember), '\n')}};`);
+    const Cfunctions = functions.map(({ name, parameters, statements, variables, returnType }) => makeCfunctionBody({
+        name,
+        parameters,
+        statements,
+        variables,
+        globalDeclarations,
+        stringLiterals,
+        buildSignature: (functionName, params) => {
+            const parameterDeclarations = params.map(p => {
+                if ('namedType' in p.type)
+                    throw debug_1.default('TODO: get a read type here');
+                return mplTypeToCDeclaration(p.type, p.name);
+            });
+            const cReturnType = mplTypeToCType(returnType)('');
+            return `${cReturnType} ${functionName}(${join_1.default(parameterDeclarations, ', ')})`;
+        },
+        returnType,
+    }));
+    if (Array.isArray(program)) {
+        throw debug_1.default("C backend doesn't support modules.");
     }
-  }
+    const Cprogram = makeCfunctionBody({
+        name: 'main',
+        parameters: [],
+        statements: program.statements,
+        variables: program.variables,
+        globalDeclarations,
+        stringLiterals,
+        buildSignature: (_1, _2) => 'int main(int argc, char **argv)',
+        returnType: { type: { kind: 'Integer' } },
+        beforeExit: [
+            ...globalDeclarations
+                .filter(d => ['String', 'List'].includes(d.type.type.kind))
+                .map(d => {
+                if (d.type.type.kind == 'String') {
+                    return `my_free(${d.name}); // Free global string`;
+                }
+                else {
+                    return `my_free(${d.name}.data); // Free global list`;
+                }
+            }),
+            'verify_no_leaks();',
+        ],
+    });
+    const Cdeclarations = globalDeclarations
+        .map(declaration => mplTypeToCDeclaration(declaration.type, declaration.name))
+        .map(cDeclaration => `${cDeclaration};`);
+    return {
+        target: `
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <unistd.h>
 
-  return self
+struct list {
+    size_t size;
+    void *data;
+};
+
+struct block_info {
+    size_t size;
+    struct block_info *next_block; // NULL means no next block.
+    bool free;
+};
+
+struct block_info *first_block = NULL; // Set to null because in the beginning, there are no blocks
+
+bool done_searching_for_block(struct block_info *block, size_t requested_size) {
+    if (block == NULL) {
+        return true;
+    }
+    if (block->free && block->size >= requested_size) {
+        return true;
+    }
+    return false;
 }
 
-Yallist.prototype.removeNode = function (node) {
-  if (node.list !== this) {
-    throw new Error('removing node which does not belong to this list')
-  }
+void *my_malloc(size_t requested_size) {
+    // Error out if we request zero bytes, that should never happen
+    if (requested_size == 0) {
+        printf("${runtime_strings_1.errors.allocatedZero.value}");
+        exit(-1);
+    }
 
-  var next = node.next
-  var prev = node.prev
+    struct block_info *current_block = first_block;
+    struct block_info *previous_block = NULL;
 
-  if (next) {
-    next.prev = prev
-  }
+    // Find the first free block that is large enough
+    while (!done_searching_for_block(current_block, requested_size)) {
+        previous_block = current_block;
+        current_block = current_block->next_block;
+    }
 
-  if (prev) {
-    prev.next = next
-  }
+    if (current_block == NULL) {
+        // No large enough blocks. Use sbrk to create a new one TODO: Switch to mmap on mac, sbrk is deprecated
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        struct block_info *newly_allocated = (struct block_info*)sbrk(requested_size + sizeof(struct block_info));
+        if (newly_allocated == (void*)-1) {
+            printf("${runtime_strings_1.errors.allocationFailed.value}");
+            exit(-1); // TODO: Come up with an alloc failure strategy
+        }
 
-  if (node === this.head) {
-    this.head = next
-  }
-  if (node === this.tail) {
-    this.tail = prev
-  }
-
-  node.list.length--
-  node.next = null
-  node.prev = null
-  node.list = null
+        if (first_block == NULL) {
+            // First alloc!
+            first_block = newly_allocated;
+        } else if (previous_block != NULL) {
+            previous_block->next_block = newly_allocated;
+        }
+        newly_allocated->size = requested_size;
+        newly_allocated->next_block = NULL;
+        newly_allocated->free = false;
+        // Return pointer to the space after the block info (+1 actually adds sizeof(struct block_info))
+        return newly_allocated + 1;
+    } else {
+        // Found an existing block, mark it as not free (TODO: Split it)
+        current_block->free = false;
+        // Return pointer to the space after the block info (+1 actually adds sizeof(struct block_info))
+        return current_block + 1;
+    }
 }
 
-Yallist.prototype.unshiftNode = function (node) {
-  if (node === this.head) {
-    return
-  }
-
-  if (node.list) {
-    node.list.removeNode(node)
-  }
-
-  var head = this.head
-  node.list = this
-  node.next = head
-  if (head) {
-    head.prev = node
-  }
-
-  this.head = node
-  if (!this.tail) {
-    this.tail = node
-  }
-  this.length++
+void my_free(void *pointer) {
+    if (pointer == NULL) {
+        printf("${runtime_strings_1.errors.freeNull.value}");
+        exit(-1);
+    }
+    // TODO: Merge blocks
+    // Get a pointer to the space after the block info (-1 actually subtracts sizeof(struct block_info))
+    struct block_info *block_to_free = ((struct block_info *)pointer) - 1;
+    if (block_to_free->free) {
+        printf("${runtime_strings_1.errors.doubleFree.value}");
+        exit(-1);
+    }
+    block_to_free->free = true;
 }
 
-Yallist.prototype.pushNode = function (node) {
-  if (node === this.tail) {
-    return
-  }
-
-  if (node.list) {
-    node.list.removeNode(node)
-  }
-
-  var tail = this.tail
-  node.list = this
-  node.prev = tail
-  if (tail) {
-    tail.next = node
-  }
-
-  this.tail = node
-  if (!this.head) {
-    this.head = node
-  }
-  this.length++
+// Run through blocks and make sure they are free. For debugging.
+void verify_no_leaks() {
+    struct block_info *current_block = first_block;
+    while (current_block != NULL) {
+        if (!current_block->free) {
+            printf("${runtime_strings_1.errors.leaksDetected.value}");
+            exit(-1);
+        }
+        current_block = current_block->next_block;
+    }
 }
 
-Yallist.prototype.push = function () {
-  for (var i = 0, l = arguments.length; i < l; i++) {
-    push(this, arguments[i])
-  }
-  return this.length
+int length(char *str) {
+    int len = 0;
+    while (*str++ && ++len) {}
+    return len;
 }
 
-Yallist.prototype.unshift = function () {
-  for (var i = 0, l = arguments.length; i < l; i++) {
-    unshift(this, arguments[i])
-  }
-  return this.length
+int print(char *str) {
+    int result = printf("%s", str);
+    if (result < 0) {
+        printf("${runtime_strings_1.errors.printFailed.value}");
+        exit(-1);
+    }
+    return result;
 }
 
-Yallist.prototype.pop = function () {
-  if (!this.tail) {
-    return undefined
-  }
-
-  var res = this.tail.value
-  this.tail = this.tail.prev
-  if (this.tail) {
-    this.tail.next = null
-  } else {
-    this.head = null
-  }
-  this.length--
-  return res
+char *string_copy(char *in, char *out) {
+    char *original_out = out;
+    while ((*out++ = *in++)) {}
+    return original_out;
 }
 
-Yallist.prototype.shift = function () {
-  if (!this.head) {
-    return undefined
-  }
-
-  var res = this.head.value
-  this.head = this.head.next
-  if (this.head) {
-    this.head.prev = null
-  } else {
-    this.tail = null
-  }
-  this.length--
-  return res
+bool string_compare(char *in, char *out) {
+    while (*in == *out) {
+        if (*in == 0) {
+            return true;
+        }
+        in++;
+        out++;
+    }
+    return false;
 }
 
-Yallist.prototype.forEach = function (fn, thisp) {
-  thisp = thisp || this
-  for (var walker = this.head, i = 0; walker !== null; i++) {
-    fn.call(thisp, walker.value, i, this)
-    walker = walker.next
-  }
+char *string_concatenate(char *left, char *right, char *out) {
+    char *original_out = out;
+    char next;
+    while ((next = *left)) {
+        *out = next;
+        out++;
+        left++;
+    }
+    while ((next = *right)) {
+        *out = next;
+        out++;
+        right++;
+    }
+    *out = 0;
+    return original_out;
 }
 
-Yallist.prototype.forEachReverse = function (fn, thisp) {
-  thisp = thisp || this
-  for (var walker = this.tail, i = this.length - 1; walker !== null; i--) {
-    fn.call(thisp, walker.value, i, this)
-    walker = walker.prev
-  }
+int readInt() {
+    int result;
+    int success = scanf("%d", &result);
+    if (success != 1) {
+        printf("${runtime_strings_1.errors.readIntFailed.value}"); // TODO: readInt returns optional
+        exit(-1);
+    }
+    return result;
 }
 
-Yallist.prototype.get = function (n) {
-  for (var i = 0, walker = this.head; walker !== null && i < n; i++) {
-    // abort out of the list early if we hit a cycle
-    walker = walker.next
-  }
-  if (i === n && walker !== null) {
-    return walker.value
-  }
+${join_1.default(CtypeDeclarations, '\n')}
+${join_1.default(stringLiterals.map(stringLiteralDeclaration), '\n')}
+${join_1.default(Cdeclarations, '\n')}
+${join_1.default(Cfunctions, '\n')}
+${Cprogram}
+`,
+        tac: undefined,
+    };
+};
+const finishCompilation = async (cSource, tac) => {
+    if (tac !== undefined) {
+        debug_1.default('why tac');
+    }
+    const sourceFile = await writeTempFile_1.default(cSource, 'program', 'c');
+    const binaryFile = await tmp_promise_1.file();
+    const command = `clang -Wall -Werror -Wno-error=unused-variable ${sourceFile.path} -o ${binaryFile.path}`;
+    try {
+        // TODO: Don't emit unused variables
+        await child_process_promise_1.exec(command);
+    }
+    catch (e) {
+        return {
+            error: `Failed to compile generated C code:\n${e.stderr}\nCommand:\n${command}`,
+            intermediateFile: sourceFile,
+        };
+    }
+    return {
+        source: cSource,
+        sourceFile,
+        binaryFile,
+        threeAddressCodeFile: undefined,
+    };
+};
+const execute = async (executablePath, stdinPath) => {
+    try {
+        return Object.assign(Object.assign({}, (await execAndGetResult_1.default(`${executablePath} < ${stdinPath}`))), { executorName: 'clang', runInstructions: `${executablePath} < ${stdinPath}`, debugInstructions: 'No debug instructions for C yet. Try one of the online GDB things.' });
+    }
+    catch (e) {
+        return { error: e, executorName: 'clang' };
+    }
+};
+const cBackend = {
+    name: 'c',
+    compile,
+    finishCompilation,
+    executors: [{ execute, name: 'clang' }],
+};
+exports.default = cBackend;
+
+
+/***/ }),
+
+/***/ "./backends/js.ts":
+/*!************************!*\
+  !*** ./backends/js.ts ***!
+  \************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const writeTempFile_1 = __webpack_require__(/*! ../util/writeTempFile */ "./util/writeTempFile.ts");
+const flatten_1 = __webpack_require__(/*! ../util/list/flatten */ "./util/list/flatten.ts");
+const execAndGetResult_1 = __webpack_require__(/*! ../util/execAndGetResult */ "./util/execAndGetResult.ts");
+const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
+const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
+const needsAwait = (decl) => {
+    if (!decl)
+        return false;
+    if ('namedType' in decl.type)
+        throw debug_1.default('TODO get a real type here');
+    if (decl.type.type.kind != 'Function')
+        return false;
+    if (decl.type.type.permissions.includes('stdout'))
+        return true;
+    return false;
+};
+const astToJS = ({ ast, exitInsteadOfReturn, builtinFunctions, }) => {
+    if (!ast)
+        debugger;
+    const recurse = newInput => astToJS({ ast: newInput, exitInsteadOfReturn, builtinFunctions });
+    switch (ast.kind) {
+        case 'returnStatement': {
+            if (exitInsteadOfReturn) {
+                return [`process.exit(${recurse(ast.expression).join(' ')})`];
+            }
+            else {
+                return [`return `, ...recurse(ast.expression)];
+            }
+        }
+        case 'number':
+            return [ast.value.toString()];
+        case 'product':
+            return [...recurse(ast.lhs), '*', ...recurse(ast.rhs)];
+        case 'subtraction':
+            return [...recurse(ast.lhs), '-', ...recurse(ast.rhs)];
+        case 'addition':
+            return [...recurse(ast.lhs), '+', ...recurse(ast.rhs)];
+        case 'reassignment':
+            return [ast.destination, '=', ...recurse(ast.expression), ';'];
+        case 'typedDeclarationAssignment':
+            return [`let ${ast.destination} = `, ...recurse(ast.expression), ';'];
+        case 'functionLiteral':
+            return [ast.deanonymizedName];
+        case 'callExpression':
+            const functionName = ast.name;
+            const functionDecl = builtinFunctions.find(({ name, type }) => name == functionName);
+            const jsArguments = ast.arguments.map(argument => recurse(argument));
+            const awaitStr = needsAwait(functionDecl) ? 'await' : '';
+            return [
+                awaitStr + ` ${ast.name}(`,
+                join_1.default(jsArguments.map(argument => join_1.default(argument, ' ')), ', '),
+                `)`,
+            ];
+        case 'identifier':
+            return [ast.value];
+        case 'ternary':
+            return [
+                ...recurse(ast.condition),
+                '?',
+                ...recurse(ast.ifTrue),
+                ':',
+                ...recurse(ast.ifFalse),
+            ];
+        case 'equality':
+            return [...recurse(ast.lhs), '==', ...recurse(ast.rhs)];
+        case 'booleanLiteral':
+            return [ast.value ? 'true' : 'false'];
+        case 'stringLiteral':
+            return [`"${ast.value}"`];
+        case 'concatenation':
+            return ['(', ...recurse(ast.lhs), ').concat(', ...recurse(ast.rhs), ')'];
+        case 'typeDeclaration':
+            return [''];
+        case 'objectLiteral':
+            const members = ast.members.map(({ name, expression }) => `${name}: ${recurse(expression)}`);
+            return ['{', join_1.default(members, ','), '}'];
+        case 'memberAccess':
+            return ['(', ...recurse(ast.lhs), ').', ast.rhs];
+        case 'listLiteral':
+            const items = ast.items.map(item => join_1.default(recurse(item), ', '));
+            return ['[', join_1.default(items, ', '), ']'];
+        case 'indexAccess':
+            return ['(', ...recurse(ast.accessed), ')[(', ...recurse(ast.index), ')]'];
+        case 'forLoop':
+            const body = flatten_1.default(ast.body.map(recurse));
+            const listItems = recurse(ast.list);
+            return [
+                `const items = `,
+                ...listItems,
+                `;`,
+                `for (let i = 0; i < items.length; i++) {`,
+                `const ${ast.var} = items[i];`,
+                ...body,
+                `}`,
+            ];
+        default:
+            throw debug_1.default(`${ast.kind} unhanlded in toJS`);
+    }
+};
+const compile = ({ functions, builtinFunctions, program, globalDeclarations, }) => {
+    const JSfunctions = functions.map(({ name, parameters, statements }) => {
+        const prefix = `const ${name} = (${join_1.default(parameters.map(parameter => parameter.name), ', ')}) => {`;
+        const suffix = `}`;
+        const body = statements.map(statement => {
+            return join_1.default(astToJS({ ast: statement, exitInsteadOfReturn: false, builtinFunctions }), ' ');
+        });
+        return [prefix, ...body, suffix].join(' ');
+    });
+    if (Array.isArray(program)) {
+        // Must be a module
+        const exp = program.map(v => {
+            return `export const ${v.exportedName} = ${v.declaredName};`;
+        });
+        return {
+            target: `
+                ${join_1.default(JSfunctions, '\n')}
+                ${join_1.default(exp, '\n')}
+            `,
+            tac: undefined,
+        };
+    }
+    const JS = flatten_1.default(program.statements.map(child => astToJS({ ast: child, builtinFunctions, exitInsteadOfReturn: true })));
+    return {
+        target: `
+const readline = require('readline');
+
+const length = str => str.length;
+const print = str => process.stdout.write(str);
+
+const readInt = async () => {
+    return new Promise((resolve, reject) => {
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+        });
+        rl.on('line', line => {
+            rl.close();
+            resolve(line);
+        });
+    });
+};
+
+(async () => {
+    ${join_1.default(JSfunctions, '\n')}
+    ${join_1.default(JS, '\n')}
+})();`,
+        tac: undefined,
+    };
+};
+const finishCompilation = async (jsSource, tac) => {
+    if (tac !== undefined) {
+        debug_1.default('why tac');
+    }
+    const sourceFile = await writeTempFile_1.default(jsSource, 'program', 'js');
+    const binaryFile = sourceFile;
+    return {
+        source: jsSource,
+        sourceFile,
+        binaryFile,
+        threeAddressCodeFile: undefined,
+    };
+};
+const execute = async (executablePath, stdinPath) => {
+    try {
+        const runInstructions = `node ${executablePath} < ${stdinPath}`;
+        return Object.assign(Object.assign({}, (await execAndGetResult_1.default(runInstructions))), { executorName: 'node', runInstructions, debugInstructions: `./node_modules/.bin/node --inspect --inspect-brk ${executablePath}` });
+    }
+    catch (e) {
+        return { error: e.msg, executorName: 'node' };
+    }
+};
+const jsBackend = {
+    name: 'js',
+    compile,
+    finishCompilation,
+    executors: [{ execute, name: 'node' }],
+};
+exports.default = jsBackend;
+
+
+/***/ }),
+
+/***/ "./backends/mips.ts":
+/*!**************************!*\
+  !*** ./backends/mips.ts ***!
+  \**************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const writeTempFile_1 = __webpack_require__(/*! ../util/writeTempFile */ "./util/writeTempFile.ts");
+const runtime_strings_1 = __webpack_require__(/*! ../runtime-strings */ "./runtime-strings.ts");
+const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
+const execAndGetResult_1 = __webpack_require__(/*! ../util/execAndGetResult */ "./util/execAndGetResult.ts");
+const backend_utils_1 = __webpack_require__(/*! ../backend-utils */ "./backend-utils.ts");
+const generator_1 = __webpack_require__(/*! ../threeAddressCode/generator */ "./threeAddressCode/generator.ts");
+const Program_1 = __webpack_require__(/*! ../threeAddressCode/Program */ "./threeAddressCode/Program.ts");
+const runtime_1 = __webpack_require__(/*! ../threeAddressCode/runtime */ "./threeAddressCode/runtime.ts");
+const bytesInWord = 4;
+const threeAddressCodeToMipsWithoutComment = (tas) => {
+    switch (tas.kind) {
+        case 'comment':
+            return [''];
+        case 'syscall':
+            return ['syscall'];
+        case 'move':
+            return [`move ${tas.to}, ${tas.from}`];
+        case 'loadImmediate':
+            return [`li ${tas.destination}, ${tas.value}`];
+        case 'multiply':
+            return [`mult ${tas.lhs}, ${tas.rhs}`, `mflo ${tas.destination}`];
+        case 'addImmediate':
+            return [`addiu ${tas.register}, ${tas.register}, ${tas.amount}`];
+        case 'add':
+            return [`add ${tas.destination}, ${tas.lhs}, ${tas.rhs}`];
+        case 'subtract':
+            return [`sub ${tas.destination}, ${tas.lhs}, ${tas.rhs}`];
+        case 'increment':
+            return [`addiu ${tas.register}, ${tas.register}, 1`];
+        case 'label':
+            return [`L${tas.name}:`];
+        case 'functionLabel':
+            return [`${tas.name}:`];
+        case 'goto':
+            return [`b L${tas.label}`];
+        case 'gotoIfEqual':
+            return [`beq ${tas.lhs}, ${tas.rhs}, L${tas.label}`];
+        case 'gotoIfNotEqual':
+            return [`bne ${tas.lhs}, ${tas.rhs}, L${tas.label}`];
+        case 'gotoIfZero':
+            return [`beq ${tas.register}, 0, L${tas.label}`];
+        case 'gotoIfGreater':
+            return [`bgt ${tas.lhs}, ${tas.rhs}, L${tas.label}`];
+        case 'loadSymbolAddress':
+            return [`la ${tas.to}, ${tas.symbolName}`];
+        case 'loadGlobal':
+            return [`lw ${tas.to}, ${tas.from}`];
+        case 'storeGlobal':
+            return [`sw ${tas.from}, ${tas.to}`];
+        case 'loadMemory':
+            return [`lw ${tas.to}, ${tas.offset}(${tas.from})`];
+        case 'loadMemoryByte':
+            return [`lb ${tas.to}, (${tas.address})`];
+        case 'storeMemory':
+            return [`sw ${tas.from}, ${tas.offset}(${tas.address})`];
+        case 'storeZeroToMemory':
+            return [`sw $0, ${tas.offset}(${tas.address})`];
+        case 'storeMemoryByte':
+            return [`sb ${tas.contents}, (${tas.address})`];
+        case 'callByRegister':
+            return [`jalr ${tas.function}`];
+        case 'callByName':
+            return [`jal ${tas.function}`];
+        case 'return':
+            return [`jr $ra`];
+        case 'push':
+            return [`addiu, $sp, $sp, -4`, `sw ${tas.register}, ($sp)`];
+        case 'pop':
+            return [`lw ${tas.register}, ($sp)`, `addiu $sp, $sp, 4`];
+        case 'loadStackOffset':
+            return [
+                `move ${tas.register}, $sp`,
+                `addiu ${tas.register}, ${tas.register}, ${-tas.offset}`,
+            ];
+        case 'stackStore':
+            return [`sw ${tas.register}, ${tas.offset * bytesInWord}($sp)`];
+        case 'stackLoad':
+            if (Number.isNaN(tas.offset * bytesInWord))
+                throw debug_1.default('nan!');
+            return [`lw ${tas.register}, ${tas.offset * bytesInWord}($sp)`];
+        case 'stackReserve':
+            return [`addiu $sp, $sp, ${-(tas.words * bytesInWord)}`];
+        case 'stackRelease':
+            return [`addiu $sp, $sp, ${tas.words * bytesInWord}`];
+        default:
+            throw debug_1.default(`${tas.kind} unhandled in threeAddressCodeToMipsWithoutComment`);
+    }
+};
+const threeAddressCodeToMips = (tas) => threeAddressCodeToMipsWithoutComment(tas).map(asm => `${backend_utils_1.preceedingWhitespace(tas)}${asm} # ${tas.why.trim()}`); // TODO: trim shouldn't be necessarary, the comment should just not have trailing newlines
+const stringLiteralDeclaration = (literal) => `${backend_utils_1.stringLiteralName(literal)}: .asciiz "${literal.value}"`;
+const globalDeclaration = (name, bytes) => `${name}: .space ${bytes}`;
+const mipsTarget = {
+    bytesInWord: 4,
+    syscallNumbers: {
+        printInt: 1,
+        readInt: 5,
+        print: 4,
+        sbrk: 9,
+        // mmap: 0, // There is no mmap. Should be unused on mips.
+        exit: 17,
+    },
+    functionImpls: {
+        mallocImpl: runtime_1.mallocWithSbrk(bytesInWord),
+        printImpl: runtime_1.printWithPrintRuntimeFunction(bytesInWord),
+        readIntImpl: runtime_1.readIntDirect(bytesInWord),
+    },
+};
+const mipsRegisters = {
+    extraSavedRegisters: ['$ra'],
+    callerSavedRegisters: [],
+    registersClobberedBySyscall: [],
+    registers: {
+        generalPurpose: ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'],
+        functionArgument: ['$s0', '$s1', '$s2'],
+        functionResult: '$a0',
+        syscallArgument: ['$a0', '$a1'],
+        syscallSelectAndResult: '$v0',
+    },
+    translator: threeAddressCodeToMips,
+    registerAgnosticInfo: mipsTarget,
+};
+const tacToExecutable = (tac, includeCleanup) => {
+    const executable = backend_utils_1.makeExecutable(tac, mipsTarget, mipsRegisters, threeAddressCodeToMips, includeCleanup);
+    executable.main.name = 'main';
+    return {
+        target: `
+.data
+${Object.values(tac.globals)
+            .map(({ mangledName, bytes }) => globalDeclaration(mangledName, bytes))
+            .join('\n')}
+${tac.stringLiterals.map(stringLiteralDeclaration).join('\n')}
+${Object.keys(runtime_strings_1.errors)
+            .map(key => `${runtime_strings_1.errors[key].name}: .asciiz "${runtime_strings_1.errors[key].value}"`)
+            .join('\n')}
+
+# First block pointer. Block: size, next, free
+first_block: .word 0
+
+.text
+${backend_utils_1.executableToString('#', executable)}
+`,
+        tac,
+    };
+};
+const compile = (inputs) => {
+    const tac = generator_1.makeTargetProgram({ backendInputs: inputs, targetInfo: mipsTarget });
+    const target = compileTac(tac, true);
+    if (typeof target != 'string')
+        return target;
+    return { target, tac };
+};
+const compileTac = (tac, includeCleanup) => {
+    return tacToExecutable(tac, includeCleanup).target;
+};
+const finishCompilation = async (mipsSource, tac) => {
+    const threeAddressCodeFile = tac
+        ? await writeTempFile_1.default(Program_1.toString(tac), 'three-address-code-mips', 'txt')
+        : undefined;
+    const sourceFile = await writeTempFile_1.default(mipsSource, 'program', 'mips');
+    return {
+        source: mipsSource,
+        sourceFile,
+        binaryFile: sourceFile,
+        threeAddressCodeFile,
+        threeAddressCode: {},
+    };
+};
+const spimExecutor = async (executablePath, stdinPath) => {
+    // This string is always printed with spim starts. Strip it from stdout.
+    const exceptionsLoadedPreamble = 'Loaded: /usr/local/Cellar/spim/9.1.17/share/exceptions.s\n';
+    try {
+        const result = await execAndGetResult_1.default(`spim -file ${executablePath} < ${stdinPath}`);
+        if ('error' in result) {
+            return { error: `Spim error: ${result.error}`, executorName: 'spim' };
+        }
+        if (result.stderr !== '') {
+            return { error: `Spim error: ${result.stderr}`, executorName: 'spim' };
+        }
+        const trimmedStdout = result.stdout.slice(exceptionsLoadedPreamble.length);
+        return {
+            exitCode: result.exitCode,
+            stdout: trimmedStdout,
+            executorName: 'spim',
+            runInstructions: `spim -file ${executablePath} < ${stdinPath}`,
+            debugInstructions: `./QtSpim.app/Contents/MacOS/QtSpim ${executablePath}`,
+        };
+    }
+    catch (e) {
+        return { error: `Exception: ${e.message}`, executorName: 'spim' };
+    }
+};
+const marsExecutor = async (executablePath, stdinPath) => {
+    try {
+        const result = await execAndGetResult_1.default(`java -jar Mars4_5.jar nc ${executablePath} < ${stdinPath}`);
+        if ('error' in result) {
+            return { error: `MARS error: ${result.error}`, executorName: 'mars' };
+        }
+        // MARS adds an extra trailing newline that we don't expect. Remove it.
+        const trimmedStdout = result.stdout.slice(0, result.stdout.length - 1);
+        return {
+            exitCode: result.exitCode,
+            stdout: trimmedStdout,
+            executorName: 'mars',
+            runInstructions: `java -jar Mars4_5.jar nc ${executablePath} < ${stdinPath}`,
+            debugInstructions: `java -jar Mars4_5.jar # then open ${executablePath}`,
+        };
+    }
+    catch (e) {
+        return { error: `Exception: ${e.message}`, executorName: 'mars' };
+    }
+};
+const mipsBackend = {
+    name: 'mips',
+    compile,
+    compileTac,
+    finishCompilation,
+    targetInfo: mipsTarget,
+    executors: [
+        { execute: spimExecutor, name: 'spim' },
+        { execute: marsExecutor, name: 'mars' },
+    ],
+};
+exports.default = mipsBackend;
+
+
+/***/ }),
+
+/***/ "./backends/x64.ts":
+/*!*************************!*\
+  !*** ./backends/x64.ts ***!
+  \*************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const writeTempFile_1 = __webpack_require__(/*! ../util/writeTempFile */ "./util/writeTempFile.ts");
+const child_process_promise_1 = __webpack_require__(/*! child-process-promise */ "./node_modules/child-process-promise/index.js");
+const runtime_strings_1 = __webpack_require__(/*! ../runtime-strings */ "./runtime-strings.ts");
+const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
+const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
+const backend_utils_1 = __webpack_require__(/*! ../backend-utils */ "./backend-utils.ts");
+const generator_1 = __webpack_require__(/*! ../threeAddressCode/generator */ "./threeAddressCode/generator.ts");
+const Program_1 = __webpack_require__(/*! ../threeAddressCode/Program */ "./threeAddressCode/Program.ts");
+const runtime_1 = __webpack_require__(/*! ../threeAddressCode/runtime */ "./threeAddressCode/runtime.ts");
+const tmp_promise_1 = __webpack_require__(/*! tmp-promise */ "./node_modules/tmp-promise/index.js");
+const execAndGetResult_1 = __webpack_require__(/*! ../util/execAndGetResult */ "./util/execAndGetResult.ts");
+const threeAddressCodeToX64WithoutComment = (tas) => {
+    switch (tas.kind) {
+        case 'comment':
+            return [''];
+        case 'loadImmediate':
+            return [`mov ${tas.destination}, ${tas.value}`];
+        case 'move':
+            return [`mov ${tas.to}, ${tas.from}`];
+        case 'subtract':
+            if (tas.lhs == tas.destination) {
+                return [`sub ${tas.destination}, ${tas.rhs}`];
+            }
+            if (tas.rhs == tas.destination) {
+                return [
+                    `mov rax, ${tas.rhs}`,
+                    `mov ${tas.destination}, ${tas.lhs}`,
+                    `sub ${tas.destination}, rax`,
+                ];
+            }
+            return [`mov ${tas.destination}, ${tas.lhs}`, `sub ${tas.destination}, ${tas.rhs}`];
+        case 'add':
+            if (tas.lhs == tas.destination) {
+                return [`add ${tas.destination}, ${tas.rhs}`];
+            }
+            if (tas.rhs == tas.destination) {
+                return [`add ${tas.destination}, ${tas.lhs}`];
+            }
+            return [`mov ${tas.destination}, ${tas.lhs}`, `add ${tas.destination}, ${tas.rhs}`];
+        case 'multiply':
+            return [
+                `mov rax, ${tas.lhs}`,
+                `mul ${tas.rhs}`,
+                `mov ${tas.destination}, rax`,
+            ];
+        case 'increment':
+            return [`inc ${tas.register};`];
+        case 'addImmediate':
+            return [`add ${tas.register}, ${tas.amount}`];
+        case 'gotoIfEqual':
+            return [`cmp ${tas.lhs}, ${tas.rhs}`, `je ${tas.label}`];
+        case 'gotoIfNotEqual':
+            return [`cmp ${tas.lhs}, ${tas.rhs}`, `jne ${tas.label}`];
+        case 'gotoIfZero':
+            return [`cmp ${tas.register}, 0`, `jz ${tas.label}`];
+        case 'gotoIfGreater':
+            return [`cmp ${tas.lhs}, ${tas.rhs}`, `jg ${tas.label}`];
+        case 'goto':
+            return [`jmp ${tas.label}`];
+        case 'label':
+            return [`${tas.name}:`];
+        case 'functionLabel':
+            return [`${tas.name}:`];
+        case 'storeGlobal':
+            return [`mov [rel ${tas.to}], ${tas.from}`];
+        case 'loadGlobal':
+            return [`mov ${tas.to}, [rel ${tas.from}]`];
+        case 'loadMemoryByte':
+            return [`movsx ${tas.to}, byte [${tas.address}]`];
+        case 'loadSymbolAddress':
+            return [`lea ${tas.to}, [rel ${tas.symbolName}]`];
+        case 'loadMemory':
+            return [`mov ${tas.to}, [${tas.from}+${tas.offset}]`];
+        case 'storeMemory':
+            return [`mov [${tas.address}+${tas.offset}], ${tas.from}`];
+        case 'storeZeroToMemory':
+            return [`mov byte [${tas.address}+${tas.offset}], 0`];
+        case 'storeMemoryByte':
+            return [`mov byte [${tas.address}], ${tas.contents}b`];
+        case 'callByRegister':
+            return [`call ${tas.function}`];
+        case 'callByName':
+            return [`call ${tas.function}`];
+        case 'return':
+            return [`ret`];
+        case 'syscall':
+            return ['syscall'];
+        case 'push':
+            return [`push ${tas.register}`];
+        case 'pop':
+            return [`pop ${tas.register}`];
+        case 'loadStackOffset':
+            return [`mov ${tas.register}, rsp`, `add ${tas.register}, -${tas.offset}`];
+        case 'stackLoad':
+            // TODO: Be consistent about where bytes in word gets multiplied
+            return [`mov ${tas.register}, [rsp+${tas.offset * bytesInWord}]`];
+        case 'stackStore':
+            // TODO: Be consistent about where bytes in word gets multiplied
+            return [`mov [rsp+${tas.offset * bytesInWord}], ${tas.register}`];
+        case 'stackReserve':
+            return [`add rsp, -${tas.words * bytesInWord}`];
+        case 'stackRelease':
+            return [`add rsp, ${tas.words * bytesInWord}`];
+        default:
+            throw debug_1.default(`${tas.kind} unhandled in threeAddressCodeToX64WithoutComment`);
+    }
+};
+const threeAddressCodeToX64 = (tas) => threeAddressCodeToX64WithoutComment(tas).map(asm => `${backend_utils_1.preceedingWhitespace(tas)}${asm}; ${tas.why.trim()}`);
+const bytesInWord = 8;
+const stringLiteralDeclaration = (literal) => `${backend_utils_1.stringLiteralName(literal)}: db "${literal.value}", 0;`;
+const x64Target = {
+    bytesInWord,
+    syscallNumbers: {
+        // printInt: XXX, // Should be unused on x64
+        print: 0x02000004,
+        sbrk: 0x02000045,
+        exit: 0x02000001,
+        mmap: 0x020000c5,
+        read: 0x02000003,
+    },
+    functionImpls: {
+        mallocImpl: runtime_1.mallocWithMmap(bytesInWord),
+        readIntImpl: runtime_1.readIntThroughSyscall(bytesInWord),
+        printImpl: runtime_1.printWithWriteRuntimeFunction(bytesInWord),
+    },
+};
+const x64RegisterInfo = {
+    extraSavedRegisters: [],
+    callerSavedRegisters: ['unknown', 'implicit return address'],
+    registersClobberedBySyscall: ['r11'],
+    registers: {
+        generalPurpose: ['r11', 'r12', 'r13', 'r14', 'r15', 'rdi', 'rsi', 'rbx'],
+        functionArgument: ['r8', 'r9', 'r10'],
+        functionResult: 'rax',
+        syscallArgument: ['rdi', 'rsi', 'rdx', 'r10', 'r8', 'r9'],
+        syscallSelectAndResult: 'rax',
+    },
+    translator: threeAddressCodeToX64,
+    registerAgnosticInfo: x64Target,
+};
+const tacToExecutable = (tac, includeCleanup) => {
+    const executable = backend_utils_1.makeExecutable(tac, x64Target, x64RegisterInfo, threeAddressCodeToX64, includeCleanup);
+    executable.main.name = 'start';
+    return {
+        target: `
+global start
+
+section .text
+${backend_utils_1.executableToString(';', executable)}
+section .data
+first_block: dq 0
+${join_1.default(tac.stringLiterals.map(stringLiteralDeclaration), '\n')}
+section .bss
+${Object.values(tac.globals)
+            .map(({ mangledName, bytes }) => `${mangledName}: resq ${bytes / bytesInWord}`)
+            .join('\n')}
+${Object.keys(runtime_strings_1.errors)
+            .map(key => `${runtime_strings_1.errors[key].name}: db "${runtime_strings_1.errors[key].value}", 0`)
+            .join('\n')}
+`,
+        tac,
+    };
+};
+const compile = (inputs) => {
+    const tac = generator_1.makeTargetProgram({ backendInputs: inputs, targetInfo: x64Target });
+    const target = compileTac(tac, true);
+    if (typeof target != 'string')
+        return target;
+    return { target, tac };
+};
+const compileTac = (tac, includeCleanup) => {
+    return tacToExecutable(tac, includeCleanup).target;
+};
+const finishCompilation = async (x64source, tac) => {
+    const threeAddressCodeFile = tac
+        ? await writeTempFile_1.default(Program_1.toString(tac), 'three-address-core-x64', 'txt')
+        : undefined;
+    const sourceFile = await writeTempFile_1.default(x64source, 'program', 'x64');
+    const linkerInputPath = await tmp_promise_1.file({ template: 'object-XXXXXX.o', dir: '/tmp' });
+    const binaryFile = await tmp_promise_1.file({ template: 'binary-XXXXXX.out', dir: '/tmp' });
+    try {
+        await child_process_promise_1.exec(`nasm -fmacho64 -o ${linkerInputPath.path} ${sourceFile.path}`);
+        // TODO: Cross compiling or something? IDK. Dependency on system linker sucks.
+        await child_process_promise_1.exec(`ld ${linkerInputPath.path} -o ${binaryFile.path} -macosx_version_min 10.6 -lSystem`);
+        return {
+            source: x64source,
+            sourceFile,
+            binaryFile,
+            threeAddressCodeFile,
+            threeAddressCode: {},
+        };
+    }
+    catch (e) {
+        return { error: `Exception: ${e.message}` };
+    }
+};
+const execute = async (exePath, stdinPath) => {
+    const runInstructions = `${exePath} < ${stdinPath}`;
+    return Object.assign(Object.assign({}, (await execAndGetResult_1.default(runInstructions))), { executorName: 'local', runInstructions, debugInstructions: `lldb ${exePath}; break set -n start; settings set target.input-path ${stdinPath}; run; gui` });
+};
+const x64Backend = {
+    name: 'x64',
+    compile,
+    compileTac,
+    finishCompilation,
+    executors: [{ execute, name: 'local' }],
+    targetInfo: x64Target,
+};
+exports.default = x64Backend;
+
+
+/***/ }),
+
+/***/ "./controlFlowGraph.ts":
+/*!*****************************!*\
+  !*** ./controlFlowGraph.ts ***!
+  \*****************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export assignRegisters [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export computeBlockLiveness [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export controlFlowGraph [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export registerInterferenceGraph [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export removeDeadStores [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export spill [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tafLiveness [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export toDotFile [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/*! CommonJS bailout: exports.controlFlowGraph(...) prevents optimization as exports is passed as call context at 244:16-40 */
+/*! CommonJS bailout: exports.computeBlockLiveness(...) prevents optimization as exports is passed as call context at 245:50-78 */
+/*! CommonJS bailout: exports.tafLiveness(...) prevents optimization as exports is passed as call context at 526:19-38 */
+/*! CommonJS bailout: exports.removeDeadStores(...) prevents optimization as exports is passed as call context at 527:22-46 */
+/*! CommonJS bailout: exports.tafLiveness(...) prevents optimization as exports is passed as call context at 530:19-38 */
+/*! CommonJS bailout: exports.removeDeadStores(...) prevents optimization as exports is passed as call context at 531:22-46 */
+/*! CommonJS bailout: exports.registerInterferenceGraph(...) prevents optimization as exports is passed as call context at 534:16-49 */
+/*! CommonJS bailout: exports.spill(...) prevents optimization as exports is passed as call context at 608:24-37 */
+/*! CommonJS bailout: exports.assignRegisters(...) prevents optimization as exports is passed as call context at 609:15-38 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.assignRegisters = exports.removeDeadStores = exports.spill = exports.registerInterferenceGraph = exports.tafLiveness = exports.computeBlockLiveness = exports.controlFlowGraph = exports.toDotFile = void 0;
+const comparisonResult_1 = __webpack_require__(/*! ./util/comparisonResult */ "./util/comparisonResult.ts");
+const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
+const last_1 = __webpack_require__(/*! ./util/list/last */ "./util/list/last.ts");
+const set_1 = __webpack_require__(/*! ./util/set */ "./util/set.ts");
+const ordered_set_1 = __webpack_require__(/*! ./util/ordered-set */ "./util/ordered-set.ts");
+const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
+const idAppender_1 = __webpack_require__(/*! ./util/idAppender */ "./util/idAppender.ts");
+const Register_1 = __webpack_require__(/*! ./threeAddressCode/Register */ "./threeAddressCode/Register.ts");
+const Statement_1 = __webpack_require__(/*! ./threeAddressCode/Statement */ "./threeAddressCode/Statement.ts");
+const blockBehaviour = (tas) => {
+    switch (tas.kind) {
+        case 'empty':
+        case 'syscall':
+        case 'move':
+        case 'loadImmediate':
+        case 'addImmediate':
+        case 'subtract':
+        case 'add':
+        case 'multiply':
+        case 'increment':
+        case 'storeGlobal':
+        case 'loadGlobal':
+        case 'storeMemory':
+        case 'storeMemoryByte':
+        case 'storeZeroToMemory':
+        case 'loadMemory':
+        case 'loadMemoryByte':
+        case 'loadSymbolAddress':
+        case 'callByName':
+        case 'callByRegister':
+        case 'alloca':
+        case 'spill':
+        case 'unspill':
+            return 'midBlock';
+        case 'label':
+        case 'functionLabel':
+            return 'beginBlock';
+        case 'return':
+        case 'goto':
+        case 'gotoIfEqual':
+        case 'gotoIfNotEqual':
+        case 'gotoIfZero':
+        case 'gotoIfGreater':
+            return 'endBlock';
+        default:
+            throw debug_1.default(`${tas.kind} unhanldes in blockBehaviour`);
+    }
+};
+const blockName = (rtl) => {
+    if (rtl.length == 0)
+        throw debug_1.default('empty rtl in blockName');
+    const rtx = rtl[0];
+    switch (rtx.kind) {
+        case 'label':
+        case 'functionLabel':
+            return rtx.name;
+        case 'goto':
+        case 'gotoIfEqual':
+        case 'gotoIfNotEqual':
+        case 'gotoIfZero':
+        case 'gotoIfGreater':
+            return rtx.label;
+        default:
+            return '';
+    }
+};
+const blockExits = (rtl) => {
+    const rtx = last_1.default(rtl);
+    if (!rtx)
+        throw debug_1.default('empty rtl');
+    switch (rtx.kind) {
+        case 'goto':
+            return { blockName: rtx.label, next: false, exit: false };
+        case 'gotoIfEqual':
+        case 'gotoIfNotEqual':
+        case 'gotoIfZero':
+        case 'gotoIfGreater':
+            return { blockName: rtx.label, next: true, exit: false };
+        case 'return':
+            return { blockName: false, next: false, exit: true };
+        case 'empty':
+        case 'syscall':
+        case 'move':
+        case 'loadImmediate':
+        case 'addImmediate':
+        case 'subtract':
+        case 'add':
+        case 'multiply':
+        case 'increment':
+        case 'label':
+        case 'functionLabel':
+        case 'storeGlobal':
+        case 'loadGlobal':
+        case 'storeMemory':
+        case 'storeMemoryByte':
+        case 'storeZeroToMemory':
+        case 'loadMemory':
+        case 'loadMemoryByte':
+        case 'loadSymbolAddress':
+        case 'callByName':
+        case 'callByRegister':
+            return { blockName: false, next: true, exit: false };
+        default:
+            throw debug_1.default('Unrecognized Statement kind in blockExits');
+    }
+};
+exports.toDotFile = ({ blocks, connections, labelToIndexMap, exits, }) => {
+    let dotText = 'digraph {\n';
+    dotText += `Entry [style="invis"]\n`;
+    dotText += `Entry -> node_0\n`;
+    blocks.forEach(({ name, instructions }, index) => {
+        const label = join_1.default(instructions.map(Statement_1.toString), '\\n')
+            .replace(/"/g, '\\"')
+            .replace(/:/g, '\\:');
+        dotText += `node_${index} [shape="box", label="${label}"]`;
+    });
+    dotText += `Exit [style="invis"]\n`;
+    exits.forEach(exit => {
+        dotText += `node_${exit} -> Exit\n`;
+    });
+    connections.forEach(({ from, to }) => {
+        dotText += `node_${from} -> node_${to}\n`;
+    });
+    dotText += '}';
+    return dotText;
+};
+exports.controlFlowGraph = (rtl) => {
+    const blocks = [];
+    let currentBlock = [];
+    rtl.forEach(rtx => {
+        const change = blockBehaviour(rtx);
+        if (change == 'midBlock') {
+            currentBlock.push(rtx);
+        }
+        else if (change == 'endBlock') {
+            currentBlock.push(rtx);
+            blocks.push({
+                instructions: currentBlock,
+                name: blockName(currentBlock),
+            });
+            currentBlock = [];
+        }
+        else if (change == 'beginBlock') {
+            if (currentBlock.length > 0) {
+                blocks.push({
+                    instructions: currentBlock,
+                    name: blockName(currentBlock),
+                });
+            }
+            currentBlock = [rtx];
+        }
+    });
+    if (currentBlock.length > 0) {
+        blocks.push({
+            instructions: currentBlock,
+            name: blockName(currentBlock),
+        });
+    }
+    const labelToIndexMap = {};
+    blocks.forEach((block, index) => {
+        const firstRtx = block.instructions[0];
+        if (firstRtx.kind == 'label' || firstRtx.kind == 'functionLabel') {
+            labelToIndexMap[firstRtx.name] = index;
+        }
+    });
+    const connections = [];
+    const exits = [];
+    blocks.forEach((block, index) => {
+        const { blockName: exitedName, next, exit } = blockExits(block.instructions);
+        if (exitedName) {
+            connections.push({ from: index, to: labelToIndexMap[exitedName] });
+        }
+        if (next) {
+            connections.push({ from: index, to: index + 1 });
+        }
+        if (exit) {
+            exits.push(index);
+        }
+    });
+    return {
+        blocks,
+        connections,
+        labelToIndexMap,
+        exits,
+    };
+};
+// TODO: Args should not be necessary
+exports.computeBlockLiveness = (block, args) => {
+    return block.instructions
+        .slice()
+        .reverse()
+        .reduce((liveness, next) => {
+        const newLiveness = liveness[0].copy();
+        const newlyLive = Statement_1.reads(next, args);
+        const newlyDead = Statement_1.writes(next);
+        newlyDead.forEach(item => {
+            newLiveness.remove(item);
+        });
+        newlyLive.forEach(item => {
+            newLiveness.add(item);
+        });
+        return [newLiveness, ...liveness];
+    }, [set_1.set(Register_1.isEqual)]);
+};
+// Returns whether entry liveness changed
+const propagateBlockLiveness = (block, liveness, liveAtExit) => {
+    let changeEntry = false;
+    liveAtExit.forEach(item => {
+        for (let i = liveness.length - 1; i >= 0; i--) {
+            if (i < block.instructions.length) {
+                const newlyDead = set_1.fromList(Register_1.isEqual, Statement_1.writes(block.instructions[i]));
+                if (newlyDead.has(item)) {
+                    return;
+                }
+            }
+            if (i == 0 && !liveness[i].has(item)) {
+                changeEntry = true;
+            }
+            liveness[i].add(item);
+        }
+    });
+    return changeEntry;
+};
+const verifyingOverlappingJoin = (blocks) => {
+    const result = [];
+    // Block building results in the end of each block having the same last element as the first
+    // item of the next block. Put the blocks together in a way that accounts for this. TODO: maybe
+    // refactor the code so this isn't necessary?
+    blocks.forEach((block, index) => {
+        if (block.length == 0)
+            debug_1.default('empty block');
+        result.push(...block);
+        if (index == blocks.length - 1)
+            return;
+        result.pop();
+    });
+    return result;
+};
+// TODO: Maybe treat function resuls specially somehow? Its kinda always live but that feels too special-casey.
+exports.tafLiveness = (taf) => {
+    const cfg = exports.controlFlowGraph(taf.instructions);
+    const blockLiveness = cfg.blocks.map(block => exports.computeBlockLiveness(block, taf.arguments));
+    const lastBlock = last_1.default(blockLiveness);
+    if (lastBlock) {
+        const lastStatementLiveness = last_1.default(lastBlock);
+        if (lastStatementLiveness) {
+            taf.liveAtExit.forEach(r => {
+                lastStatementLiveness.add(r);
+            });
+        }
+    }
+    const remainingToPropagate = blockLiveness.map((b, i) => ({
+        entryLiveness: b[0],
+        index: i,
+    }));
+    while (remainingToPropagate.length > 0) {
+        const { entryLiveness, index } = remainingToPropagate.shift();
+        const preceedingNodeIndices = cfg.connections
+            .filter(({ to }) => to == index)
+            .map(n => n.from);
+        preceedingNodeIndices.forEach(idx => {
+            const changed = propagateBlockLiveness(cfg.blocks[idx], blockLiveness[idx], entryLiveness);
+            if (changed) {
+                remainingToPropagate.push({ entryLiveness: blockLiveness[idx][0], index: idx });
+            }
+        });
+    }
+    const overallLiveness = verifyingOverlappingJoin(blockLiveness);
+    if (taf.instructions.length + 1 != overallLiveness.length) {
+        throw debug_1.default('overallLiveness length mimatch');
+    }
+    return overallLiveness;
+};
+const interferenceCompare = (lhs, rhs) => {
+    const r1Comparison = Register_1.compare(lhs.r1, rhs.r1);
+    if (r1Comparison != comparisonResult_1.default.EQ) {
+        return r1Comparison;
+    }
+    return Register_1.compare(lhs.r2, rhs.r2);
+};
+const interferenceInvolvesRegister = (interference, r) => Register_1.isEqual(interference.r1, r) || Register_1.isEqual(interference.r2, r);
+const otherRegister = (interference, r) => {
+    if (Register_1.isEqual(interference.r1, r)) {
+        return interference.r2;
+    }
+    if (Register_1.isEqual(interference.r2, r)) {
+        return interference.r1;
+    }
+    return undefined;
+};
+exports.registerInterferenceGraph = (liveness, argumentRegisters) => {
+    const registerIsArgument = register => argumentRegisters.some(arg => Register_1.isEqual(arg, register));
+    const localRegisters = set_1.join(Register_1.isEqual, liveness);
+    localRegisters.removeWithPredicate(local => typeof local == 'string' || registerIsArgument(local));
+    const result = {
+        localRegisters: ordered_set_1.orderedSet(Register_1.compare),
+        interferences: ordered_set_1.orderedSet(interferenceCompare),
+    };
+    liveness.forEach(registers => {
+        registers.forEach(i => {
+            registers.forEach(j => {
+                if (typeof i != 'string' && typeof j != 'string') {
+                    // We don't reuse arguments right now even if we could
+                    if (registerIsArgument(i) || registerIsArgument(j)) {
+                        return;
+                    }
+                    result.localRegisters.add(i);
+                    result.localRegisters.add(j);
+                    // Register always interfere with themselves, this doesn't need to be tracked
+                    if (Register_1.isEqual(i, j)) {
+                        return;
+                    }
+                    result.interferences.add({ r1: i, r2: j });
+                }
+            });
+        });
+    });
+    return result;
+};
+exports.spill = (taf, registerToSpill) => {
+    if (typeof registerToSpill == 'string')
+        throw debug_1.default("Can't spill special registers");
+    const registerName = idAppender_1.default();
+    const newFunction = {
+        instructions: [],
+        arguments: taf.arguments,
+        liveAtExit: taf.liveAtExit,
+        name: taf.name,
+    };
+    // When we spill a register, we replace every read of that register with an unspill to a new register that
+    // exists only as long as that read, and replace every write the write followed by a spill, so that the
+    // lifetime of the spilled register is very short. Each read or write needs to create a new register to spill
+    // from or to (we call that register a fragment) and this function creates a new fragment for each read/write.
+    const makeFragment = () => new Register_1.Register(registerName(`${registerToSpill.name}_spill`));
+    taf.instructions.forEach(instruction => {
+        // TODO: Come up with some way to do this generically without unpacking the instruction. A refactor that required the implementation of spilling for callByName/callByRegister was hard to debug due to this not being generic.
+        switch (instruction.kind) {
+            case 'empty': {
+                newFunction.instructions.push(instruction);
+                break;
+            }
+            case 'loadImmediate': {
+                // TODO: seems weird to spill a constant? Could just reload instead. Oh well, will fix later.
+                if (Register_1.isEqual(instruction.destination, registerToSpill)) {
+                    const fragment = makeFragment();
+                    newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { destination: fragment }));
+                    newFunction.instructions.push({
+                        kind: 'spill',
+                        register: fragment,
+                        why: 'spill',
+                    });
+                }
+                else {
+                    newFunction.instructions.push(instruction);
+                }
+                break;
+            }
+            case 'add':
+            case 'multiply': {
+                let newLhs = instruction.lhs;
+                let newRhs = instruction.rhs;
+                if (Register_1.isEqual(instruction.lhs, registerToSpill)) {
+                    newLhs = makeFragment();
+                    newFunction.instructions.push({
+                        kind: 'unspill',
+                        register: instruction.lhs,
+                        to: newLhs,
+                        why: 'unspill',
+                    });
+                }
+                if (Register_1.isEqual(instruction.rhs, registerToSpill)) {
+                    newRhs = makeFragment();
+                    newFunction.instructions.push({
+                        kind: 'unspill',
+                        register: instruction.rhs,
+                        to: newRhs,
+                        why: 'unspill',
+                    });
+                }
+                let newDestination = instruction.destination;
+                if (Register_1.isEqual(instruction.destination, registerToSpill)) {
+                    newDestination = makeFragment();
+                    newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { lhs: newLhs, rhs: newRhs, destination: newDestination }));
+                    newFunction.instructions.push({
+                        kind: 'spill',
+                        register: newDestination,
+                        why: 'spill',
+                    });
+                }
+                else {
+                    newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { lhs: newLhs, rhs: newRhs }));
+                }
+                break;
+            }
+            case 'move': {
+                // TODO: seems weird to spill a move. Maybe should _replace_ the move or sommething?
+                let newSource = instruction.from;
+                if (Register_1.isEqual(instruction.from, registerToSpill)) {
+                    newSource = makeFragment();
+                    newFunction.instructions.push({
+                        kind: 'unspill',
+                        register: instruction.from,
+                        to: newSource,
+                        why: 'unspill',
+                    });
+                }
+                if (Register_1.isEqual(instruction.to, registerToSpill)) {
+                    const newDestination = makeFragment();
+                    newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { to: newDestination, from: newSource }));
+                    newFunction.instructions.push({
+                        kind: 'spill',
+                        register: newDestination,
+                        why: 'spill',
+                    });
+                }
+                else {
+                    newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { from: newSource }));
+                }
+                break;
+            }
+            case 'unspill':
+            case 'spill':
+                if (Register_1.isEqual(instruction.register, registerToSpill)) {
+                    throw debug_1.default('repsill');
+                }
+                newFunction.instructions.push(instruction);
+                break;
+            case 'syscall':
+            case 'callByName': {
+                // TODO: Implement proper spilling for callByName and callByRegister (and probs syscalls)
+                const newArguments = [];
+                instruction.arguments.forEach(arg => {
+                    if (typeof arg != 'string' &&
+                        typeof arg != 'number' &&
+                        Register_1.isEqual(arg, registerToSpill)) {
+                        const newSource = makeFragment();
+                        newArguments.push(newSource);
+                        newFunction.instructions.push({
+                            kind: 'unspill',
+                            register: arg,
+                            to: newSource,
+                            why: 'unspill arg',
+                        });
+                    }
+                    else {
+                        newArguments.push(arg);
+                    }
+                });
+                newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { arguments: newArguments }));
+                break;
+            }
+            case 'loadSymbolAddress':
+                if (Register_1.isEqual(instruction.to, registerToSpill)) {
+                    const newDestination = makeFragment();
+                    newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { to: newDestination }));
+                    newFunction.instructions.push({
+                        kind: 'spill',
+                        register: newDestination,
+                        why: 'spill',
+                    });
+                }
+                else {
+                    newFunction.instructions.push(instruction);
+                }
+                break;
+            case 'return':
+                if (Register_1.isEqual(instruction.register, registerToSpill)) {
+                    const newReturnVal = makeFragment();
+                    newFunction.instructions.push({
+                        kind: 'unspill',
+                        register: instruction.register,
+                        to: newReturnVal,
+                        why: 'unspill ret val',
+                    });
+                    newFunction.instructions.push(Object.assign(Object.assign({}, instruction), { register: newReturnVal }));
+                }
+                else {
+                    newFunction.instructions.push(instruction);
+                }
+                break;
+            default:
+                if (Statement_1.reads(instruction, taf.arguments).includes(registerToSpill) ||
+                    Statement_1.writes(instruction).includes(registerToSpill)) {
+                    throw debug_1.default(`${instruction.kind} unhandled in spill`);
+                }
+                else {
+                    newFunction.instructions.push(instruction);
+                }
+        }
+    });
+    return newFunction;
+};
+// Returns a new function if anything changed
+exports.removeDeadStores = (taf, liveness) => {
+    const newFunction = Object.assign(Object.assign({}, taf), { instructions: [] });
+    let anythingChanged = false;
+    if (taf.instructions.length + 1 != liveness.length)
+        throw debug_1.default('Liveness length != taf length + 1');
+    for (let i = 0; i < taf.instructions.length; i++) {
+        const currentInstruction = taf.instructions[i];
+        // Any instruction with side effects needs to stay until we can prove that the side effects don't matter.
+        if (Statement_1.hasSideEffects(currentInstruction)) {
+            newFunction.instructions.push(currentInstruction);
+            continue;
+        }
+        const targets = Statement_1.writes(currentInstruction);
+        // If there are written registers and none of them are live, omit the write.
+        // TODO: Treat function result and arguments less special-casey somehow. Maybe put it into liveness computing. NOTE: Writes to arguments are not dead because length is implemented in a way where the arguments are destroyed and repaired (TODO: verify this). TODO: probably should check if any target is a register?
+        const isLiveWrite = targets.some(target => liveness[i + 1].has(target));
+        if (isLiveWrite) {
+            newFunction.instructions.push(taf.instructions[i]);
+        }
+        else {
+            anythingChanged = true;
+        }
+    }
+    if (!anythingChanged) {
+        return undefined;
+    }
+    return newFunction;
+};
+exports.assignRegisters = (taf, colors) => {
+    let liveness = exports.tafLiveness(taf);
+    let newFunction = exports.removeDeadStores(taf, liveness);
+    while (newFunction) {
+        taf = newFunction;
+        liveness = exports.tafLiveness(taf);
+        newFunction = exports.removeDeadStores(taf, liveness);
+    }
+    // http://web.cecs.pdx.edu/~mperkows/temp/register-allocation.pdf
+    const rig = exports.registerInterferenceGraph(liveness, taf.arguments);
+    const registersToAssign = rig.localRegisters.copy();
+    const interferences = rig.interferences.copy();
+    const colorableStack = [];
+    while (registersToAssign.size() > 0) {
+        // We are looking for one node ...
+        let colorableRegister = registersToAssign.extractOne(register => {
+            // ... that we haven't already colored ...
+            if (!colorableStack.every(alreadyColored => !Register_1.isEqual(register, alreadyColored))) {
+                return false;
+            }
+            // ... that interferes with a number of nodes ...
+            let interferenceCount = 0;
+            interferences.forEach(interference => {
+                if (interferenceInvolvesRegister(interference, register)) {
+                    interferenceCount++;
+                }
+            });
+            // ... that is less than the number of available registers ...
+            if (interferenceCount >= colors.length) {
+                return false;
+            }
+            return true;
+        });
+        // ... or we choose a node to spill if we can't find one we can color ...
+        if (!colorableRegister) {
+            colorableRegister = registersToAssign.extractOne(_ => true);
+        }
+        if (!colorableRegister) {
+            throw debug_1.default('Should have found a register of some sort.');
+        }
+        // ... and put it on the top of the colorable stack ...
+        colorableStack.push(colorableRegister);
+        // ... and remove it from the "to assign" list.
+        interferences.removeWithPredicate(interference => {
+            if (!colorableRegister) {
+                throw debug_1.default('Should have found a register of some sort.');
+            }
+            return interferenceInvolvesRegister(interference, colorableRegister);
+        });
+        registersToAssign.remove(colorableRegister);
+    }
+    const result = { registerMap: {}, spilled: [] };
+    let needToSpill = undefined;
+    colorableStack.reverse().forEach(register => {
+        if (needToSpill)
+            return;
+        // Try each color in order
+        const color = colors.find(c => {
+            // Check we if have a neighbour with this color already
+            return rig.interferences.toList().every(interference => {
+                const other = otherRegister(interference, register);
+                if (!other) {
+                    return true;
+                }
+                if (result.registerMap[other.name] == c) {
+                    return false;
+                }
+                return true;
+            });
+        });
+        if (!color && !(typeof register === 'string')) {
+            needToSpill = register;
+            return;
+        }
+        else if (!color) {
+            throw debug_1.default('no color found for special register???');
+        }
+        if (!register)
+            throw debug_1.default('invalid register');
+        result.registerMap[register.name] = color;
+    });
+    if (needToSpill) {
+        debugger;
+        const spilled = exports.spill(taf, needToSpill);
+        return exports.assignRegisters(spilled, colors);
+    }
+    return { assignment: result, newFunction: taf };
+};
+
+
+/***/ }),
+
+/***/ "./frontend.ts":
+/*!*********************!*\
+  !*** ./frontend.ts ***!
+  \*********************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export astFromParseResult [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export compile [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export lex [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export mergeDeclarations [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export parseMpl [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export removeBracketsFromAst [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export typeCheckStatement [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export typeOfExpression [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 115:22-46 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 121:22-46 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 269:28-52 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 738:27-51 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 745:30-54 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 773:30-54 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 826:35-59 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 859:35-59 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 913:19-43 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 950:23-47 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 983:33-57 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 1033:25-49 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 1097:33-57 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 1119:42-66 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.mergeDeclarations = exports.astFromParseResult = exports.typeCheckStatement = exports.removeBracketsFromAst = exports.compile = exports.lex = exports.parseMpl = exports.typeOfExpression = void 0;
+const flatten_1 = __webpack_require__(/*! ./util/list/flatten */ "./util/list/flatten.ts");
+const uniqueBy_1 = __webpack_require__(/*! ./util/list/uniqueBy */ "./util/list/uniqueBy.ts");
+const idMaker_1 = __webpack_require__(/*! ./util/idMaker */ "./util/idMaker.ts");
+const last_1 = __webpack_require__(/*! ./util/list/last */ "./util/list/last.ts");
+const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
+const never_1 = __webpack_require__(/*! ./util/never */ "./util/never.ts");
+const lex_1 = __webpack_require__(/*! ./parser-lib/lex */ "./parser-lib/lex.ts");
+Object.defineProperty(exports, "lex", ({ enumerable: true, get: function () { return lex_1.lex; } }));
+const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
+const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
+const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
+/* tslint:disable */
+const { add } = __webpack_require__(/*! ./mpl/add.mpl */ "./mpl/add.mpl");
+/* tslint:enable */
+// TODO move this to parser lit
+const hasType = (ast, type) => 'type' in ast && ast.type == type;
+const repairAssociativity = (nodeType, ast) => {
+    // Let this slide because TokenType overlaps InteriorNodeType right now
+    if (ast.type === nodeType && !ast.children) /*debug('todo')*/
+        return ast;
+    if (ast.type === nodeType) {
+        if (!ast.children[2])
+            debug_1.default('todo');
+        if (ast.children[2].type === nodeType) {
+            return {
+                type: nodeType,
+                children: [
+                    {
+                        type: nodeType,
+                        children: [
+                            repairAssociativity(nodeType, ast.children[0]),
+                            ast.children[2].children[1],
+                            repairAssociativity(nodeType, ast.children[2].children[0]),
+                        ],
+                        sourceLocation: ast.sourceLocation,
+                    },
+                    ast.children[1],
+                    repairAssociativity(nodeType, ast.children[2].children[2]),
+                ],
+                sourceLocation: ast.sourceLocation,
+            };
+        }
+        else {
+            return {
+                type: ast.type,
+                children: ast.children.map(child => repairAssociativity(nodeType, child)),
+                sourceLocation: ast.sourceLocation,
+            };
+        }
+    }
+    else if ('children' in ast) {
+        return {
+            type: ast.type,
+            children: ast.children.map(child => repairAssociativity(nodeType, child)),
+            sourceLocation: ast.sourceLocation,
+        };
+    }
+    else {
+        return ast;
+    }
+};
+const transformAst = (nodeType, f, ast, recurseOnNew) => {
+    if (parse_1.isSeparatedListNode(ast)) {
+        return {
+            items: ast.items.map(i => transformAst(nodeType, f, i, recurseOnNew)),
+            separators: ast.separators.map(i => transformAst(nodeType, f, i, recurseOnNew)),
+        };
+    }
+    else if (parse_1.isListNode(ast)) {
+        return { items: ast.items.map(i => transformAst(nodeType, f, i, recurseOnNew)) };
+    }
+    else if (ast.type === nodeType) {
+        const newNode = f(ast);
+        if ('children' in newNode) {
+            // If we aren't supposed to recurse, don't re-tranform the node we just made
+            if (recurseOnNew) {
+                return transformAst(nodeType, f, newNode, recurseOnNew);
+            }
+            else {
+                return {
+                    type: newNode.type,
+                    children: newNode.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
+                    sourceLocation: ast.sourceLocation,
+                };
+            }
+        }
+        else {
+            return newNode;
+        }
+    }
+    else if ('children' in ast) {
+        return {
+            type: ast.type,
+            children: ast.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
+            sourceLocation: ast.sourceLocation,
+        };
+    }
+    else {
+        return ast;
+    }
+};
+const extractVariable = (ctx) => {
+    const kind = ctx.w.kind;
+    switch (ctx.w.kind) {
+        case 'reassignment':
+        case 'declarationAssignment':
+            // Recursive functions can refer to the left side on the right side, so to extract
+            // the left side, we need to know about the right side. Probably, this just shouldn't return
+            // a type. TODO: allow more types of recursive functions than just single int...
+            return {
+                name: ctx.w.destination,
+                type: exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression })).type,
+                exported: false,
+            };
+        case 'typedDeclarationAssignment':
+            return {
+                name: ctx.w.destination,
+                type: exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }), types_1.resolveIfNecessary(ctx.w.type, ctx.availableTypes)).type,
+                exported: false,
+            };
+        case 'returnStatement':
+        case 'typeDeclaration':
+            return undefined;
+        case 'forLoop':
+            throw debug_1.default("forLoop has muliple variables, doesn't work here");
+        default:
+            never_1.default(kind, 'extractVariable');
+    }
+};
+const extractVariables = (ctx) => {
+    const variables = [];
+    ctx.w.forEach((statement) => {
+        switch (statement.kind) {
+            case 'returnStatement':
+            case 'reassignment':
+            case 'typeDeclaration':
+                break;
+            case 'declarationAssignment':
+            case 'typedDeclarationAssignment':
+                const potentialVariable = extractVariable({
+                    w: statement,
+                    availableVariables: mergeDeclarations(ctx.availableVariables, variables),
+                    availableTypes: ctx.availableTypes,
+                });
+                if (potentialVariable) {
+                    variables.push(potentialVariable);
+                }
+                break;
+            case 'forLoop':
+                statement.body.forEach(s => {
+                    const vars = extractVariables({
+                        w: [s],
+                        availableVariables: mergeDeclarations(ctx.availableVariables, variables),
+                        availableTypes: ctx.availableTypes,
+                    });
+                    if (vars) {
+                        variables.push(...vars);
+                    }
+                });
+                break;
+            default:
+                never_1.default(statement, 'extractVariables');
+        }
+    });
+    return variables;
+};
+const functionObjectFromAst = (ctx) => ({
+    name: ctx.w.deanonymizedName,
+    statements: ctx.w.body,
+    variables: [
+        ...ctx.w.parameters,
+        ...extractVariables({
+            w: ctx.w.body,
+            availableVariables: mergeDeclarations(ctx.availableVariables, ctx.w.parameters),
+            availableTypes: ctx.availableTypes,
+        }),
+    ],
+    parameters: ctx.w.parameters,
+});
+const walkAst = (ast, nodeKinds, extractItem) => {
+    const recurse = ast2 => walkAst(ast2, nodeKinds, extractItem);
+    let result = [];
+    if (nodeKinds.includes(ast.kind)) {
+        result = [extractItem(ast)];
+    }
+    switch (ast.kind) {
+        case 'returnStatement':
+        case 'typedDeclarationAssignment':
+        case 'declarationAssignment':
+        case 'reassignment':
+            return [...result, ...recurse(ast.expression)];
+        case 'product':
+        case 'addition':
+        case 'subtraction':
+        case 'equality':
+        case 'concatenation':
+            return [...result, ...recurse(ast.lhs), ...recurse(ast.rhs)];
+        case 'callExpression':
+            return [...result, ...flatten_1.default(ast.arguments.map(recurse))];
+        case 'ternary':
+            return [
+                ...result,
+                ...recurse(ast.condition)
+                    .concat(recurse(ast.ifTrue))
+                    .concat(recurse(ast.ifFalse)),
+            ];
+        case 'program':
+            return [...result, ...flatten_1.default(ast.statements.map(recurse))];
+        case 'functionLiteral':
+            return [...result, ...flatten_1.default(ast.body.map(recurse))];
+        case 'objectLiteral':
+            return [
+                ...result,
+                ...flatten_1.default(ast.members.map(member => recurse(member.expression))),
+            ];
+        case 'memberAccess':
+            return [...result, ...recurse(ast.lhs)];
+        case 'number':
+        case 'identifier':
+        case 'stringLiteral':
+        case 'booleanLiteral':
+        case 'typeDeclaration':
+            return result;
+        case 'listLiteral':
+            return [...result, ...flatten_1.default(ast.items.map(recurse))];
+        case 'indexAccess':
+            return [...result, ...recurse(ast.accessed), ...recurse(ast.index)];
+        case 'memberStyleCall':
+            return [...result, ...recurse(ast.lhs), ...flatten_1.default(ast.params.map(recurse))];
+        case 'forLoop':
+            return [...result, ...recurse(ast.list), ...flatten_1.default(ast.body.map(recurse))];
+        default:
+            throw debug_1.default(`${ast.kind} unhandled in walkAst`);
+    }
+};
+const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[0], ast, true);
+exports.removeBracketsFromAst = removeBracketsFromAst;
+const parseMpl = (tokens) => {
+    const parseResult = parse_1.parse(grammar_1.grammar, 'program', tokens);
+    if (parse_1.parseResultIsError(parseResult)) {
+        // TODO: Just get the parser to give us good errors directly instead of taking the first
+        return [parseResult.errors[0]];
+    }
+    let ast = parseResult;
+    ast = repairAssociativity('subtraction', ast);
+    ast = repairAssociativity('addition', ast);
+    ast = repairAssociativity('product', ast);
+    // Bracketed expressions -> nothing. Must happen after associativity repair or we will break
+    // associativity of brackets.
+    ast = removeBracketsFromAst(ast);
+    return ast;
+};
+exports.parseMpl = parseMpl;
+const isTypeError = (val) => Array.isArray(val);
+const combineErrors = (potentialErrors) => {
+    const result = [];
+    potentialErrors.forEach(e => {
+        if (isTypeError(e)) {
+            result.push(...e);
+        }
+    });
+    return result.length > 0 ? result : null;
+};
+// TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer() maybe?
+exports.typeOfExpression = (ctx, expectedType = undefined) => {
+    const recurse = ast2 => exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast2 }));
+    const { w, availableVariables, availableTypes } = ctx;
+    const ast = w;
+    switch (ast.kind) {
+        case 'number':
+            return { type: types_1.builtinTypes.Integer, extractedFunctions: [] };
+        case 'addition':
+        case 'product':
+        case 'subtraction': {
+            const leftType = recurse(ast.lhs);
+            const rightType = recurse(ast.rhs);
+            const combinedErrors = combineErrors([leftType, rightType]);
+            if (combinedErrors) {
+                return combinedErrors;
+            }
+            const lt = leftType;
+            const rt = rightType;
+            if (!types_1.equal(lt.type, types_1.builtinTypes.Integer)) {
+                return [
+                    {
+                        kind: 'wrongTypeForOperator',
+                        operator: ast.kind,
+                        expected: 'Integer',
+                        found: lt.type,
+                        side: 'left',
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            if (!types_1.equal(rt.type, types_1.builtinTypes.Integer)) {
+                return [
+                    {
+                        kind: 'wrongTypeForOperator',
+                        operator: ast.kind,
+                        expected: 'Integer',
+                        found: rt.type,
+                        side: 'right',
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return {
+                type: types_1.builtinTypes.Integer,
+                extractedFunctions: [...lt.extractedFunctions, ...rt.extractedFunctions],
+            };
+        }
+        case 'equality': {
+            const leftType = recurse(ast.lhs);
+            const rightType = recurse(ast.rhs);
+            const combinedErrors = combineErrors([leftType, rightType]);
+            if (combinedErrors) {
+                return combinedErrors;
+            }
+            const lt = leftType;
+            const rt = rightType;
+            if (!types_1.equal(lt.type, rt.type)) {
+                return [
+                    {
+                        kind: 'typeMismatchForOperator',
+                        leftType: lt.type,
+                        rightType: rt.type,
+                        operator: 'equality',
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return { type: types_1.builtinTypes.Boolean, extractedFunctions: [] };
+        }
+        case 'concatenation': {
+            const leftType = recurse(ast.lhs);
+            const rightType = recurse(ast.rhs);
+            const combinedErrors = combineErrors([leftType, rightType]);
+            if (combinedErrors) {
+                return combinedErrors;
+            }
+            const lt = leftType;
+            const rt = rightType;
+            if (lt.type.type.kind !== 'String') {
+                return [
+                    {
+                        kind: 'wrongTypeForOperator',
+                        found: lt.type,
+                        expected: 'String',
+                        operator: 'concatenation',
+                        side: 'left',
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            if (rt.type.type.kind !== 'String') {
+                return [
+                    {
+                        kind: 'wrongTypeForOperator',
+                        found: rt.type,
+                        expected: 'String',
+                        operator: 'concatenation',
+                        side: 'right',
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return {
+                type: types_1.builtinTypes.String,
+                extractedFunctions: [...lt.extractedFunctions, ...rt.extractedFunctions],
+            };
+        }
+        case 'functionLiteral':
+            const functionObject = functionObjectFromAst(Object.assign(Object.assign({}, ctx), { w: ast }));
+            const f = inferFunction({
+                w: functionObject,
+                availableVariables: mergeDeclarations(ctx.availableVariables, functionObject.variables),
+                availableTypes: ctx.availableTypes,
+            });
+            if (isTypeError(f)) {
+                return f;
+            }
+            return {
+                type: {
+                    type: {
+                        kind: 'Function',
+                        arguments: ast.parameters
+                            .map(p => p.type)
+                            .map(t => {
+                            const resolved = types_1.resolveIfNecessary(t, ctx.availableTypes);
+                            if (!resolved) {
+                                throw debug_1.default('bag argument. This should be a better error.');
+                            }
+                            return resolved;
+                        }),
+                        permissions: [],
+                        returnType: f.returnType,
+                    },
+                },
+                extractedFunctions: [f],
+            };
+        case 'callExpression': {
+            const argTypes = ast.arguments.map(argument => recurse(argument));
+            const argTypeErrors = [];
+            argTypes.forEach(argType => {
+                if (isTypeError(argType)) {
+                    argTypeErrors.push(...argType);
+                }
+            });
+            if (argTypeErrors.length > 0) {
+                return argTypeErrors;
+            }
+            const functionName = ast.name;
+            const declaration = availableVariables.find(({ name }) => functionName == name);
+            if (!declaration) {
+                return [
+                    {
+                        kind: 'unknownIdentifier',
+                        name: functionName,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            const functionType = declaration.type;
+            if (!functionType)
+                throw debug_1.default('bad function! This should be a better error.');
+            if ('namedType' in functionType) {
+                throw debug_1.default('nameRef function! This should be supported.');
+            }
+            if (functionType.type.kind !== 'Function') {
+                return [
+                    {
+                        kind: 'calledNonFunction',
+                        identifierName: functionName,
+                        actualType: functionType,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            if (argTypes.length !== functionType.type.arguments.length) {
+                return [
+                    {
+                        kind: 'wrongNumberOfArguments',
+                        targetFunction: functionName,
+                        passedArgumentCount: argTypes.length,
+                        expectedArgumentCount: functionType.type.arguments.length,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            for (let i = 0; i < argTypes.length; i++) {
+                const resolved = types_1.resolveOrError(functionType.type.arguments[i], ctx.availableTypes, ast.sourceLocation);
+                if ('errors' in resolved) {
+                    return resolved.errors;
+                }
+                if (!types_1.equal(argTypes[i].type, resolved)) {
+                    return [
+                        {
+                            kind: 'wrongArgumentType',
+                            targetFunction: functionName,
+                            passedType: argTypes[i].type,
+                            expectedType: functionType.type.arguments[i],
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ];
+                }
+            }
+            const returnType = types_1.resolveOrError(functionType.type.returnType, ctx.availableTypes, ast.sourceLocation);
+            if ('errors' in returnType) {
+                return returnType.errors;
+            }
+            return { type: returnType, extractedFunctions: [] };
+        }
+        case 'memberStyleCall': {
+            const callArgTypes = ast.params.map(recurse);
+            const argTypeErrors = [];
+            callArgTypes.forEach(argType => {
+                if (isTypeError(argType)) {
+                    argTypeErrors.push(...argType);
+                }
+            });
+            if (argTypeErrors.length > 0) {
+                return argTypeErrors;
+            }
+            const thisArgType = recurse(ast.lhs);
+            if (isTypeError(thisArgType)) {
+                return thisArgType;
+            }
+            const functionName = ast.memberName;
+            const declaration = availableVariables.find(({ name }) => functionName == name);
+            if (!declaration) {
+                return [
+                    {
+                        kind: 'unknownIdentifier',
+                        name: functionName,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            const functionType = declaration.type;
+            if (!functionType)
+                throw debug_1.default('bad function! This should be a better error.');
+            if ('namedType' in functionType) {
+                throw debug_1.default('nameRef function! This should be supported.');
+            }
+            if (functionType.type.kind !== 'Function') {
+                return [
+                    {
+                        kind: 'calledNonFunction',
+                        identifierName: functionName,
+                        actualType: functionType,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            const allArgTypes = [thisArgType, ...callArgTypes];
+            if (allArgTypes.length !== functionType.type.arguments.length) {
+                return [
+                    {
+                        kind: 'wrongNumberOfArguments',
+                        targetFunction: functionName,
+                        passedArgumentCount: allArgTypes.length,
+                        expectedArgumentCount: functionType.type.arguments.length,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            // TODO: this is probably wrong, we need check agains the LHS type
+            for (let i = 0; i < allArgTypes.length; i++) {
+                const resolved = types_1.resolveOrError(functionType.type.arguments[i], ctx.availableTypes, ast.sourceLocation);
+                if ('errors' in resolved) {
+                    return resolved.errors;
+                }
+                if (!types_1.equal(allArgTypes[i].type, resolved)) {
+                    return [
+                        {
+                            kind: 'wrongArgumentType',
+                            targetFunction: functionName,
+                            passedType: allArgTypes[i].type,
+                            expectedType: functionType.type.arguments[i],
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ];
+                }
+            }
+            const returnType = types_1.resolveOrError(functionType.type.returnType, ctx.availableTypes, ast.sourceLocation);
+            if ('errors' in returnType) {
+                return returnType.errors;
+            }
+            return { type: returnType, extractedFunctions: [] };
+        }
+        case 'identifier': {
+            const unresolved = availableVariables.find(({ name }) => ast.value == name);
+            if (!unresolved) {
+                return [
+                    {
+                        kind: 'unknownTypeForIdentifier',
+                        identifierName: ast.value,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            const declaration = types_1.resolveIfNecessary(unresolved.type, availableTypes);
+            if (!declaration) {
+                return [
+                    {
+                        kind: 'couldNotFindType',
+                        name: unresolved.type.namedType,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return { type: declaration, extractedFunctions: [] };
+        }
+        case 'ternary': {
+            const conditionType = recurse(ast.condition);
+            const trueBranchType = recurse(ast.ifTrue);
+            const falseBranchType = recurse(ast.ifFalse);
+            const combinedErrors = combineErrors([
+                conditionType,
+                trueBranchType,
+                falseBranchType,
+            ]);
+            if (combinedErrors ||
+                isTypeError(trueBranchType) ||
+                isTypeError(falseBranchType) ||
+                isTypeError(conditionType)) {
+                if (combinedErrors) {
+                    return combinedErrors;
+                }
+                else {
+                    return [];
+                }
+            }
+            if (!types_1.equal(conditionType.type, types_1.builtinTypes.Boolean)) {
+                return [
+                    {
+                        kind: 'wrongTypeForOperator',
+                        found: conditionType.type,
+                        expected: 'Boolean',
+                        operator: 'Ternary',
+                        side: 'left',
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            if (!types_1.equal(trueBranchType.type, falseBranchType.type)) {
+                return [
+                    {
+                        kind: 'ternaryBranchMismatch',
+                        trueBranchType: trueBranchType.type,
+                        falseBranchType: falseBranchType.type,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return trueBranchType;
+        }
+        case 'booleanLiteral':
+            return { type: types_1.builtinTypes.Boolean, extractedFunctions: [] };
+        case 'stringLiteral':
+            return { type: types_1.builtinTypes.String, extractedFunctions: [] };
+        case 'objectLiteral':
+            const memberTypes = ast.members.map(({ expression }) => recurse(expression));
+            const typeErrors = flatten_1.default(memberTypes.filter(isTypeError));
+            if (!(typeErrors.length == 0))
+                return typeErrors;
+            return {
+                type: {
+                    type: {
+                        kind: 'Product',
+                        members: ast.members.map(({ name, expression }) => ({
+                            name,
+                            type: recurse(expression).type,
+                        })),
+                    },
+                    original: { namedType: ast.typeName },
+                },
+                extractedFunctions: [],
+            };
+        case 'memberAccess':
+            const lhsType = recurse(ast.lhs);
+            if (isTypeError(lhsType)) {
+                return lhsType;
+            }
+            const resolvedLhs = lhsType.type;
+            if (resolvedLhs.type.kind != 'Product') {
+                return [
+                    {
+                        kind: 'invalidMemberAccess',
+                        found: lhsType.type,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            const accessedMember = resolvedLhs.type.members.find(m => m.name == ast.rhs);
+            if (!accessedMember) {
+                return [
+                    {
+                        kind: 'objectDoesNotHaveMember',
+                        lhsType: lhsType.type,
+                        member: ast.rhs,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return { type: accessedMember.type, extractedFunctions: [] };
+        case 'listLiteral':
+            let innerType;
+            const extractedFunctions = [];
+            for (const item of ast.items) {
+                const result = recurse(item);
+                if (isTypeError(result)) {
+                    return result;
+                }
+                if (!innerType) {
+                    innerType = result.type;
+                }
+                else if (!types_1.equal(innerType, result.type)) {
+                    return [{ kind: 'nonhomogenousList', sourceLocation: ast.sourceLocation }];
+                }
+                extractedFunctions.push(...result.extractedFunctions);
+            }
+            if (!innerType) {
+                if (expectedType) {
+                    return { type: expectedType, extractedFunctions };
+                }
+                return [{ kind: 'uninferrableEmptyList', sourceLocation: ast.sourceLocation }];
+            }
+            return { type: { type: { kind: 'List', of: innerType } }, extractedFunctions };
+        case 'indexAccess':
+            const accessedType = recurse(ast.accessed);
+            if (isTypeError(accessedType)) {
+                return accessedType;
+            }
+            if (accessedType.type.type.kind != 'List') {
+                return [
+                    {
+                        kind: 'indexAccessNonList',
+                        accessed: accessedType.type,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            const indexType = recurse(ast.index);
+            if (isTypeError(indexType)) {
+                return indexType;
+            }
+            if (indexType.type.type.kind != 'Integer') {
+                return [
+                    {
+                        kind: 'nonIntegerIndex',
+                        index: indexType.type,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return {
+                type: accessedType.type.type.of,
+                extractedFunctions: [
+                    ...accessedType.extractedFunctions,
+                    ...indexType.extractedFunctions,
+                ],
+            };
+        default:
+            throw debug_1.default(`${ast.kind} unhandled in typeOfExpression`);
+    }
+};
+const typeCheckStatement = (ctx) => {
+    const { w, availableTypes, availableVariables } = ctx;
+    const ast = w;
+    if (!ast.kind)
+        debug_1.default('!ast.kind');
+    switch (ast.kind) {
+        case 'returnStatement': {
+            const result = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression }));
+            if (isTypeError(result)) {
+                return { errors: result, newVariables: [] };
+            }
+            return { errors: [], newVariables: [] };
+        }
+        case 'declarationAssignment': {
+            const rightType = exports.typeOfExpression({
+                w: ast.expression,
+                availableTypes,
+                availableVariables: mergeDeclarations(availableVariables, [
+                    {
+                        name: ast.destination,
+                        type: {
+                            type: {
+                                kind: 'Function',
+                                arguments: [{ type: { kind: 'Integer' } }],
+                                permissions: [],
+                                returnType: { type: { kind: 'Integer' } },
+                            },
+                        },
+                        exported: false,
+                    },
+                ]),
+            });
+            if (isTypeError(rightType)) {
+                return { errors: rightType, newVariables: [] };
+            }
+            // Left type is inferred as right type
+            return {
+                errors: [],
+                newVariables: [{ name: ast.destination, type: rightType.type, exported: false }],
+            };
+        }
+        case 'reassignment': {
+            const rightType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression }));
+            if (isTypeError(rightType)) {
+                return { errors: rightType, newVariables: [] };
+            }
+            const unresolvedLeftType = availableVariables.find(v => v.name == ast.destination);
+            if (!unresolvedLeftType) {
+                return {
+                    errors: [
+                        {
+                            kind: 'assignUndeclaredIdentifer',
+                            destinationName: ast.destination,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+            const leftType = types_1.resolveIfNecessary(unresolvedLeftType.type, availableTypes);
+            if (!leftType) {
+                return {
+                    errors: [
+                        {
+                            kind: 'couldNotFindType',
+                            name: unresolvedLeftType.name,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+            if (!types_1.equal(leftType, rightType.type)) {
+                return {
+                    errors: [
+                        {
+                            kind: 'assignWrongType',
+                            lhsName: ast.destination,
+                            lhsType: leftType,
+                            rhsType: rightType.type,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+            return { errors: [], newVariables: [] };
+        }
+        case 'typedDeclarationAssignment': {
+            // Check that type of var being assigned to matches type being assigned
+            const destinationType = ast.type;
+            const resolvedDestination = types_1.resolveOrError(destinationType, availableTypes, ast.sourceLocation);
+            if ('errors' in resolvedDestination) {
+                return resolvedDestination;
+            }
+            const expressionType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression, availableVariables: mergeDeclarations(availableVariables, [
+                    { name: ast.destination, type: destinationType, exported: false },
+                ]) }), resolvedDestination);
+            if (isTypeError(expressionType)) {
+                return { errors: expressionType, newVariables: [] };
+            }
+            if (!types_1.equal(expressionType.type, resolvedDestination)) {
+                return {
+                    errors: [
+                        {
+                            kind: 'assignWrongType',
+                            lhsName: ast.destination,
+                            lhsType: resolvedDestination,
+                            rhsType: expressionType.type,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+            return {
+                errors: [],
+                newVariables: [
+                    { name: ast.destination, type: destinationType, exported: false },
+                ],
+            };
+        }
+        case 'typeDeclaration':
+            return {
+                errors: [],
+                newVariables: [],
+            };
+        case 'forLoop': {
+            const expressionType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.list }));
+            if (isTypeError(expressionType)) {
+                return { errors: expressionType, newVariables: [] };
+            }
+            if (expressionType.type.type.kind != 'List') {
+                return {
+                    errors: [
+                        {
+                            kind: 'nonListInFor',
+                            found: expressionType.type,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+            const newVariables = [];
+            for (const statement of ast.body) {
+                const statementType = typeCheckStatement(Object.assign(Object.assign({}, ctx), { w: statement }));
+                if (isTypeError(statementType)) {
+                    return { errors: statementType, newVariables: [] };
+                }
+                newVariables.push(...statementType.newVariables);
+            }
+            return { errors: [], newVariables };
+        }
+        default:
+            throw never_1.default(ast, 'typeCheckStatement');
+    }
+};
+exports.typeCheckStatement = typeCheckStatement;
+const mergeDeclarations = (left, right) => {
+    const result = [...right];
+    left.forEach(declaration => {
+        if (!result.some(({ name }) => name == declaration.name)) {
+            result.unshift(declaration);
+        }
+    });
+    return result;
+};
+exports.mergeDeclarations = mergeDeclarations;
+const typeCheckFunction = (ctx) => {
+    let availableVariables = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
+    const allErrors = [];
+    ctx.w.statements.forEach(statement => {
+        if (allErrors.length == 0) {
+            const { errors, newVariables } = typeCheckStatement(Object.assign(Object.assign({}, ctx), { w: statement, availableVariables }));
+            availableVariables = mergeDeclarations(availableVariables, newVariables);
+            allErrors.push(...errors);
+        }
+    });
+    return { typeErrors: allErrors, identifiers: availableVariables };
+};
+const assignmentToGlobalDeclaration = (ctx) => {
+    const result = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }));
+    if (isTypeError(result))
+        throw debug_1.default('isTypeError in assignmentToGlobalDeclaration');
+    return {
+        name: ctx.w.destination,
+        type: result.type,
+        exported: ctx.w.exported,
+        mangledName: ctx.w.expression.kind == 'functionLiteral'
+            ? ctx.w.expression.deanonymizedName
+            : ctx.w.destination,
+    };
+};
+const inferFunction = (ctx) => {
+    const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
+    const statements = [];
+    ctx.w.statements.forEach(statement => {
+        const statementsContext = {
+            w: [statement],
+            availableVariables: variablesFound,
+            availableTypes: ctx.availableTypes,
+        };
+        const statementContext = {
+            w: statement,
+            availableVariables: variablesFound,
+            availableTypes: ctx.availableTypes,
+        };
+        variablesFound.push(...extractVariables(statementsContext));
+        statements.push(infer(statementContext));
+    });
+    const maybeReturnStatement = last_1.default(ctx.w.statements);
+    if (!maybeReturnStatement) {
+        return [{ kind: 'missingReturn', sourceLocation: { line: 0, column: 0 } }];
+    }
+    if (maybeReturnStatement.kind != 'returnStatement') {
+        return [{ kind: 'missingReturn', sourceLocation: maybeReturnStatement.sourceLocation }];
+    }
+    const returnStatement = maybeReturnStatement;
+    const returnType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { availableVariables: variablesFound, w: returnStatement.expression }));
+    if (isTypeError(returnType)) {
+        return returnType;
+    }
+    return {
+        name: ctx.w.name,
+        statements,
+        variables: ctx.w.variables,
+        parameters: ctx.w.parameters,
+        returnType: returnType.type,
+    };
+};
+// TODO: merge this with typecheck maybe?
+const infer = (ctx) => {
+    const recurse = ast2 => infer(Object.assign(Object.assign({}, ctx), { w: ast2 }));
+    const { w, availableVariables, availableTypes } = ctx;
+    const ast = w;
+    switch (ast.kind) {
+        case 'returnStatement':
+            return {
+                kind: 'returnStatement',
+                expression: recurse(ast.expression),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'forLoop':
+            return {
+                kind: 'forLoop',
+                sourceLocation: ast.sourceLocation,
+                var: ast.var,
+                list: recurse(ast.list),
+                body: ast.body.map(recurse),
+            };
+        case 'equality':
+            const equalityType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.lhs }));
+            if (isTypeError(equalityType))
+                throw debug_1.default('couldNotFindType');
+            return {
+                kind: 'equality',
+                sourceLocation: ast.sourceLocation,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+                type: equalityType.type,
+            };
+        case 'product':
+            return {
+                kind: ast.kind,
+                sourceLocation: ast.sourceLocation,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+            };
+        case 'addition':
+            return {
+                kind: ast.kind,
+                sourceLocation: ast.sourceLocation,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+            };
+        case 'subtraction':
+            return {
+                kind: ast.kind,
+                sourceLocation: ast.sourceLocation,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+            };
+        case 'concatenation':
+            return {
+                kind: ast.kind,
+                sourceLocation: ast.sourceLocation,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+            };
+        case 'typedDeclarationAssignment':
+            const resolved = types_1.resolveIfNecessary(ast.type, availableTypes);
+            if (!resolved)
+                throw debug_1.default("resolution shouldn't fail here");
+            return {
+                kind: 'typedDeclarationAssignment',
+                sourceLocation: ast.sourceLocation,
+                expression: recurse(ast.expression),
+                type: resolved,
+                destination: ast.destination,
+            };
+        case 'declarationAssignment':
+            const type = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression }));
+            if (isTypeError(type))
+                throw debug_1.default("type error when there shouldn't be");
+            return {
+                kind: 'typedDeclarationAssignment',
+                sourceLocation: ast.sourceLocation,
+                expression: recurse(ast.expression),
+                type: type.type,
+                destination: ast.destination,
+            };
+        case 'reassignment':
+            return {
+                kind: 'reassignment',
+                sourceLocation: ast.sourceLocation,
+                expression: recurse(ast.expression),
+                destination: ast.destination,
+            };
+        case 'callExpression':
+            return {
+                kind: 'callExpression',
+                sourceLocation: ast.sourceLocation,
+                name: ast.name,
+                arguments: ast.arguments.map(recurse),
+            };
+        case 'memberStyleCall':
+            return {
+                kind: 'callExpression',
+                sourceLocation: ast.sourceLocation,
+                name: ast.memberName,
+                arguments: [recurse(ast.lhs), ...ast.params.map(recurse)],
+            };
+        case 'ternary':
+            return {
+                kind: 'ternary',
+                sourceLocation: ast.sourceLocation,
+                condition: recurse(ast.condition),
+                ifTrue: recurse(ast.ifTrue),
+                ifFalse: recurse(ast.ifFalse),
+            };
+        case 'functionLiteral':
+            return {
+                kind: 'functionLiteral',
+                sourceLocation: ast.sourceLocation,
+                deanonymizedName: ast.deanonymizedName,
+            };
+        case 'typeDeclaration':
+            // TODO: maybe just strip declarations before inferring.
+            return { kind: 'typeDeclaration', sourceLocation: ast.sourceLocation };
+        case 'objectLiteral':
+            const declaredType = availableTypes.find(t => t.name == ast.typeName);
+            if (!declaredType) {
+                throw debug_1.default(`type ${ast.typeName} not found`);
+            }
+            return {
+                kind: 'objectLiteral',
+                sourceLocation: ast.sourceLocation,
+                type: declaredType.type,
+                members: ast.members.map(({ name, expression }) => ({
+                    name,
+                    expression: recurse(expression),
+                })),
+            };
+        case 'memberAccess':
+            const accessedObject = recurse(ast.lhs);
+            const accessedType = exports.typeOfExpression({
+                w: ast.lhs,
+                availableVariables,
+                availableTypes,
+            });
+            if (isTypeError(accessedType)) {
+                throw debug_1.default("shouldn't be a type error here");
+            }
+            return {
+                kind: 'memberAccess',
+                sourceLocation: ast.sourceLocation,
+                lhs: accessedObject,
+                rhs: ast.rhs,
+                lhsType: accessedType.type,
+            };
+        case 'listLiteral':
+            let itemType = undefined;
+            const items = [];
+            for (const item of ast.items) {
+                const newItem = recurse(item);
+                items.push(newItem);
+                if (itemType === undefined) {
+                    const maybeItemType = exports.typeOfExpression({
+                        w: item,
+                        availableVariables,
+                        availableTypes,
+                    });
+                    if (isTypeError(maybeItemType)) {
+                        throw debug_1.default("shouldn't be type error here");
+                    }
+                    itemType = maybeItemType.type;
+                }
+            }
+            if (!itemType)
+                throw debug_1.default('no itemType');
+            return {
+                kind: 'listLiteral',
+                sourceLocation: ast.sourceLocation,
+                type: { type: { kind: 'List', of: itemType } },
+                items,
+            };
+        case 'indexAccess':
+            return {
+                kind: 'indexAccess',
+                sourceLocation: ast.sourceLocation,
+                accessed: recurse(ast.accessed),
+                index: recurse(ast.index),
+            };
+        case 'number':
+        case 'identifier':
+        case 'booleanLiteral':
+        case 'stringLiteral':
+            return ast;
+        default:
+            throw debug_1.default(`${ast.kind} unhandled in infer`);
+    }
+};
+const extractFunctionBody = (node) => {
+    if (node.type !== 'statement')
+        debug_1.default('expected a statement');
+    if (node.children.length === 3) {
+        return [astFromParseResult(node.children[0]), ...extractFunctionBody(node.children[2])];
+    }
+    else {
+        return [astFromParseResult(node.children[0])];
+    }
+};
+// TODO: Replace extractParameterList with SeparatedList
+const extractParameterList = (ast) => {
+    if (parse_1.isSeparatedListNode(ast)) {
+        return flatten_1.default(ast.items.map(i => {
+            if (parse_1.isSeparatedListNode(i) || !('children' in i)) {
+                throw debug_1.default('todo');
+            }
+            const child2 = i.children[2];
+            if (parse_1.isSeparatedListNode(child2) || parse_1.isListNode(child2)) {
+                throw debug_1.default('todo');
+            }
+            return [
+                {
+                    name: i.children[0].value,
+                    type: parseType(child2),
+                    exported: false,
+                },
+            ];
+        }));
+    }
+    else {
+        throw debug_1.default(`${ast.type} unhandledi extractParameterList`);
+    }
+};
+const parseTypeLiteralComponent = (ast) => {
+    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
+        throw debug_1.default('todo');
+    }
+    if (ast.type != 'typeLiteralComponent')
+        throw debug_1.default('wrong as type');
+    const unresolved = parseType(ast.children[2]);
+    const resolved = types_1.resolveIfNecessary(unresolved, []);
+    if (!resolved)
+        throw debug_1.default('need to make products work as components of other products');
+    return {
+        name: ast.children[0].value,
+        type: resolved,
+    };
+};
+const parseType = (ast) => {
+    if (parse_1.isSeparatedListNode(ast)) {
+        throw debug_1.default('todo');
+    }
+    if (parse_1.isListNode(ast)) {
+        return {
+            type: {
+                kind: 'Product',
+                members: ast.items.map(parseTypeLiteralComponent),
+            },
+        };
+    }
+    switch (ast.type) {
+        case 'typeWithArgs': {
+            const name = ast.children[0].value;
+            if (name != 'Function')
+                throw debug_1.default('Only functions support args right now');
+            const list = ast.children[1];
+            if (!parse_1.isSeparatedListNode(list))
+                throw debug_1.default('todo');
+            const typeList = list.items.map(parseType);
+            return {
+                type: {
+                    kind: name,
+                    arguments: typeList.slice(0, typeList.length - 1),
+                    returnType: typeList[typeList.length - 1],
+                },
+            };
+        }
+        case 'typeWithoutArgs': {
+            const node = ast.children[0];
+            if (parse_1.isSeparatedListNode(node) || parse_1.isListNode(node)) {
+                throw debug_1.default('todo');
+            }
+            if (node.type != 'typeIdentifier')
+                throw debug_1.default('Failed to parse type');
+            const name = node.value;
+            if (typeof name != 'string')
+                throw debug_1.default('Failed to parse type');
+            switch (name) {
+                case 'String':
+                case 'Integer':
+                case 'Boolean':
+                    return { type: { kind: name } };
+                default:
+                    return { namedType: name };
+            }
+        }
+        case 'listType': {
+            const node = ast.children[0];
+            if (parse_1.isSeparatedListNode(node) || parse_1.isListNode(node) || node.type != 'typeIdentifier') {
+                throw debug_1.default('expected a type');
+            }
+            const listOf = { type: { kind: node.value } };
+            return { type: { kind: 'List', of: listOf } };
+        }
+        default:
+            throw debug_1.default(`${ast.type} unhandled in parseType`);
+    }
+};
+const parseObjectMember = (ast) => {
+    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
+        throw debug_1.default('todo');
+    }
+    if (ast.type != 'objectLiteralComponent') {
+        {
+            throw debug_1.default('wsa');
+            return 'WrongShapeAst';
+        }
+    }
+    const expression = astFromParseResult(ast.children[2]);
+    if (expression == 'WrongShapeAst') {
+        {
+            throw debug_1.default('wsa');
+            return 'WrongShapeAst';
+        }
+    }
+    const result = {
+        name: ast.children[0].value,
+        expression: expression,
+    };
+    return result;
+};
+let functionId = add(-1, 1);
+const astFromParseResult = (ast) => {
+    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
+        throw debug_1.default('todo');
+    }
+    switch (ast.type) {
+        case 'returnStatement':
+            return {
+                kind: 'returnStatement',
+                expression: astFromParseResult(ast.children[1]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'number':
+            if (ast.value === undefined)
+                throw debug_1.default('ast.value === undefined');
+            return {
+                kind: 'number',
+                value: ast.value,
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'identifier':
+            if (!ast.value)
+                throw debug_1.default('!ast.value');
+            return {
+                kind: 'identifier',
+                value: ast.value,
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'product':
+            if (!('children' in ast))
+                throw debug_1.default('children not in ast in astFromParseResult');
+            return {
+                kind: 'product',
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'ternary':
+            return {
+                kind: 'ternary',
+                condition: astFromParseResult(ast.children[0]),
+                ifTrue: astFromParseResult(ast.children[2]),
+                ifFalse: astFromParseResult(ast.children[4]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'equality':
+            if (!('children' in ast))
+                throw debug_1.default('children not in ast in astFromParseResult');
+            return {
+                kind: 'equality',
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'paramList':
+            throw debug_1.default('paramList in astFromParseResult'); // Should have been caught in "callExpression"
+        case 'callExpression':
+            const child2 = ast.children[2];
+            if (!parse_1.isSeparatedListNode(child2)) {
+                throw debug_1.default('todo');
+            }
+            return {
+                kind: 'callExpression',
+                name: ast.children[0].value,
+                arguments: child2.items.map(astFromParseResult),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'subtraction':
+            if (!('children' in ast))
+                throw debug_1.default('children not in ast in astFromParseResult');
+            return {
+                kind: 'subtraction',
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'addition':
+            if (!('children' in ast))
+                throw debug_1.default('children not in ast in astFromParseResult');
+            return {
+                kind: 'addition',
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'reassignment':
+            if (!('children' in ast))
+                throw debug_1.default('children not in ast in astFromParseResult');
+            return {
+                kind: 'reassignment',
+                destination: ast.children[0].value,
+                expression: astFromParseResult(ast.children[2]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'declaration': {
+            let childIndex = 0;
+            let exported = false;
+            if (ast.children[childIndex].type == 'export') {
+                exported = true;
+                childIndex++;
+            }
+            const destination = ast.children[childIndex].value;
+            childIndex++;
+            const destinationNode = ast.children[childIndex];
+            if (parse_1.isSeparatedListNode(destinationNode) || parse_1.isListNode(destinationNode)) {
+                throw debug_1.default('todo');
+            }
+            if (destinationNode.type != 'colon')
+                debug_1.default('expected a colon');
+            childIndex++;
+            let type = undefined;
+            const maybeTypeNode = ast.children[childIndex];
+            if (parse_1.isSeparatedListNode(maybeTypeNode) || parse_1.isListNode(maybeTypeNode)) {
+                throw debug_1.default('todo');
+            }
+            if (['typeWithArgs', 'typeWithoutArgs', 'typeLiteral', 'listType'].includes(maybeTypeNode.type)) {
+                type = parseType(maybeTypeNode);
+                childIndex++;
+            }
+            if (ast.children[childIndex].type != 'assignment')
+                debug_1.default('expected assignment');
+            childIndex++;
+            const expression = astFromParseResult(ast.children[childIndex]);
+            if (type) {
+                return {
+                    kind: 'typedDeclarationAssignment',
+                    destination,
+                    expression: expression,
+                    type,
+                    exported,
+                    sourceLocation: ast.sourceLocation,
+                };
+            }
+            else {
+                return {
+                    kind: 'declarationAssignment',
+                    destination,
+                    expression: expression,
+                    exported,
+                    sourceLocation: ast.sourceLocation,
+                };
+            }
+        }
+        case 'typeDeclaration':
+            const theType = parseType(ast.children[3]);
+            const name = ast.children[0].value;
+            if ('namedType' in theType) {
+                throw debug_1.default("Shouldn't get here, delcaring types have to actually declare a type");
+            }
+            return {
+                kind: 'typeDeclaration',
+                name,
+                type: theType,
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'stringLiteral':
+            return {
+                kind: 'stringLiteral',
+                value: ast.value,
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'objectLiteral':
+            const typeNameNode = ast.children[0];
+            if (parse_1.isSeparatedListNode(typeNameNode) || parse_1.isListNode(typeNameNode)) {
+                throw debug_1.default('todo');
+            }
+            if (typeNameNode.type != 'typeIdentifier')
+                return 'WrongShapeAst';
+            const typeName = typeNameNode.value;
+            if (typeof typeName != 'string')
+                return 'WrongShapeAst';
+            const membersNode = ast.children[1];
+            if (!parse_1.isListNode(membersNode)) {
+                throw debug_1.default('todo');
+            }
+            const members = membersNode.items.map(parseObjectMember);
+            if (members.some(m => m == 'WrongShapeAst'))
+                return 'WrongShapeAst';
+            return {
+                kind: 'objectLiteral',
+                typeName,
+                members: members,
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'memberStyleCall': {
+            const anyAst = ast;
+            const lhsNode = anyAst.children[0];
+            const lhs = astFromParseResult(lhsNode);
+            if (lhs == 'WrongShapeAst') {
+                return 'WrongShapeAst';
+            }
+            const memberName = anyAst.children[2].value;
+            const params = anyAst.children[3].items.map(astFromParseResult);
+            if (params == 'WrongShapeAst') {
+                return 'WrongShapeAst';
+            }
+            const r = {
+                kind: 'memberStyleCall',
+                lhs: lhs,
+                memberName,
+                params: params,
+                sourceLocation: ast.sourceLocation,
+            };
+            return r;
+        }
+        case 'memberAccess': {
+            const anyAst = ast;
+            const lhsNode = anyAst.children[0];
+            const lhs = astFromParseResult(lhsNode);
+            return {
+                kind: 'memberAccess',
+                lhs,
+                rhs: anyAst.children[2].value,
+                sourceLocation: ast.sourceLocation,
+            };
+        }
+        case 'concatenation':
+            if (!('children' in ast))
+                throw debug_1.default('children not in ast in astFromParseResult');
+            return {
+                kind: 'concatenation',
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'equality':
+            if (!('children' in ast))
+                throw debug_1.default('children not in ast in astFromParseResult');
+            return {
+                kind: 'equality',
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'function': {
+            functionId++;
+            let childIndex = 0;
+            let hasBrackets = false;
+            if (hasType(ast.children[0], 'leftBracket')) {
+                childIndex++;
+                hasBrackets = true;
+            }
+            const parameters = extractParameterList(ast.children[childIndex]);
+            childIndex++;
+            if (hasBrackets) {
+                if (!hasType(ast.children[childIndex], 'rightBracket')) {
+                    debug_1.default('mismatched brackets');
+                }
+                childIndex++;
+            }
+            if (!hasType(ast.children[childIndex], 'fatArrow'))
+                debug_1.default('wrong');
+            childIndex++;
+            return {
+                kind: 'functionLiteral',
+                deanonymizedName: `anonymous_${functionId}`,
+                body: [
+                    {
+                        kind: 'returnStatement',
+                        expression: astFromParseResult(ast.children[childIndex]),
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ],
+                parameters,
+                sourceLocation: ast.sourceLocation,
+            };
+        }
+        case 'functionWithBlock': {
+            functionId++;
+            let childIndex = 0;
+            let hasBrackets = false;
+            if (hasType(ast.children[childIndex], 'leftBracket')) {
+                hasBrackets = true;
+                childIndex++;
+            }
+            const parameters2 = extractParameterList(ast.children[childIndex]);
+            childIndex++;
+            if (hasBrackets) {
+                if (!hasType(ast.children[childIndex], 'rightBracket')) {
+                    debug_1.default('brackets mismatched');
+                }
+                childIndex++;
+            }
+            if (!hasType(ast.children[childIndex], 'fatArrow'))
+                debug_1.default('wrong');
+            childIndex++;
+            const body = extractFunctionBody(ast.children[childIndex]);
+            childIndex++;
+            if (childIndex !== ast.children.length)
+                debug_1.default('wrong');
+            return {
+                kind: 'functionLiteral',
+                deanonymizedName: `anonymous_${functionId}`,
+                body,
+                parameters: parameters2,
+                sourceLocation: ast.sourceLocation,
+            };
+        }
+        case 'forLoop': {
+            const a = ast;
+            const body = extractFunctionBody(a.children[2]);
+            const lst = astFromParseResult(a.children[1].children[2]);
+            if (lst == 'WrongShapeAst')
+                return lst;
+            const result = {
+                kind: 'forLoop',
+                var: a.children[1].children[0].value,
+                list: lst,
+                body,
+                sourceLocation: a.sourceLocation,
+            };
+            return result;
+        }
+        case 'booleanLiteral':
+            return {
+                kind: 'booleanLiteral',
+                value: ast.value == 'true',
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'program':
+            return {
+                kind: 'program',
+                statements: extractFunctionBody(ast.children[0]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'listLiteral':
+            const items = ast.children[0];
+            if (!parse_1.isSeparatedListNode(items))
+                throw debug_1.default('todo');
+            return {
+                kind: 'listLiteral',
+                items: items.items.map(astFromParseResult),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'indexAccess':
+            return {
+                kind: 'indexAccess',
+                index: astFromParseResult(ast.children[1]),
+                accessed: astFromParseResult(ast.children[0]),
+                sourceLocation: ast.sourceLocation,
+            };
+        default:
+            throw debug_1.default(`${ast.type} unhandled in astFromParseResult`);
+    }
+};
+exports.astFromParseResult = astFromParseResult;
+const compile = (source) => {
+    functionId = 0;
+    const tokens = lex_1.lex(grammar_1.tokenSpecs, source);
+    if ('kind' in tokens) {
+        return tokens;
+    }
+    const parseResult = parseMpl(tokens);
+    if (Array.isArray(parseResult)) {
+        return { parseErrors: parseResult };
+    }
+    const ast = astFromParseResult(parseResult);
+    if (ast == 'WrongShapeAst') {
+        return { internalError: 'Wrong shape AST' };
+    }
+    if (ast.kind !== 'program') {
+        return { internalError: 'AST was not a program' };
+    }
+    const exportedDeclarations = ast.statements.filter(s => (s.kind == 'typedDeclarationAssignment' || s.kind == 'declarationAssignment') &&
+        s.exported);
+    const topLevelStatements = ast.statements.filter(s => s.kind != 'typedDeclarationAssignment' && s.kind != 'declarationAssignment');
+    if (exportedDeclarations.length > 0 && topLevelStatements.length > 0) {
+        return {
+            typeErrors: [
+                {
+                    kind: 'topLevelStatementsInModule',
+                    sourceLocation: topLevelStatements[0].sourceLocation,
+                },
+            ],
+        };
+    }
+    const availableTypes = walkAst(ast, ['typeDeclaration'], n => n);
+    let availableVariables = types_1.builtinFunctions;
+    const program = {
+        name: 'main_program',
+        statements: ast.statements,
+        variables: extractVariables({ w: ast.statements, availableVariables, availableTypes }),
+        parameters: [],
+    };
+    const functions = walkAst(ast, ['functionLiteral'], astNode => functionObjectFromAst({ w: astNode, availableVariables, availableTypes }));
+    const stringLiteralIdMaker = idMaker_1.default();
+    const nonUniqueStringLiterals = walkAst(ast, ['stringLiteral'], (astNode) => ({ id: stringLiteralIdMaker(), value: astNode.value }));
+    const stringLiterals = uniqueBy_1.default(s => s.value, nonUniqueStringLiterals);
+    const programTypeCheck = typeCheckFunction({
+        w: program,
+        availableVariables,
+        availableTypes,
+    });
+    availableVariables = mergeDeclarations(availableVariables, programTypeCheck.identifiers);
+    const typeErrors = functions.map(f => typeCheckFunction({ w: f, availableVariables, availableTypes }).typeErrors);
+    typeErrors.push(programTypeCheck.typeErrors);
+    let flatTypeErrors = flatten_1.default(typeErrors);
+    if (flatTypeErrors.length > 0) {
+        return { typeErrors: flatTypeErrors };
+    }
+    const typedFunctions = [];
+    functions.forEach(f => {
+        const functionOrTypeError = inferFunction({ w: f, availableVariables, availableTypes });
+        if (isTypeError(functionOrTypeError)) {
+            typeErrors.push(functionOrTypeError);
+        }
+        else {
+            typedFunctions.push(Object.assign(Object.assign({}, f), { returnType: functionOrTypeError.returnType, statements: f.statements.map(s => infer({
+                    w: s,
+                    availableVariables: mergeDeclarations(availableVariables, f.variables),
+                    availableTypes,
+                })) }));
+        }
+    });
+    flatTypeErrors = flatten_1.default(typeErrors);
+    if (flatTypeErrors.length > 0) {
+        return { typeErrors: flatTypeErrors };
+    }
+    const globalDeclarations = program.statements
+        .filter(s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment')
+        .map(assignment => assignmentToGlobalDeclaration({
+        w: assignment,
+        availableVariables,
+        availableTypes,
+    }));
+    let inferredProgram = undefined;
+    if (exportedDeclarations.length == 0) {
+        const maybeInferredProgram = inferFunction({
+            w: program,
+            availableVariables,
+            availableTypes,
+        });
+        if (isTypeError(maybeInferredProgram)) {
+            return { typeErrors: maybeInferredProgram };
+        }
+        inferredProgram = maybeInferredProgram;
+        if (!types_1.equal(inferredProgram.returnType, types_1.builtinTypes.Integer)) {
+            const returnStatement = last_1.default(inferredProgram.statements);
+            return {
+                typeErrors: [
+                    {
+                        kind: 'wrongTypeReturn',
+                        expressionType: inferredProgram.returnType,
+                        sourceLocation: returnStatement
+                            ? returnStatement.sourceLocation
+                            : { line: 1, column: 1 },
+                    },
+                ],
+            };
+        }
+    }
+    else {
+        inferredProgram = globalDeclarations.map(d => ({
+            exportedName: d.name,
+            declaredName: d.mangledName || '',
+        }));
+    }
+    return {
+        types: availableTypes,
+        functions: typedFunctions,
+        builtinFunctions: types_1.builtinFunctions,
+        program: inferredProgram,
+        globalDeclarations,
+        stringLiterals,
+    };
+};
+exports.compile = compile;
+
+
+/***/ }),
+
+/***/ "./grammar.ts":
+/*!********************!*\
+  !*** ./grammar.ts ***!
+  \********************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export grammar [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tokenSpecs [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.grammar = exports.tokenSpecs = void 0;
+const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
+exports.tokenSpecs = [
+    {
+        token: '"[^"]*"',
+        type: 'stringLiteral',
+        action: x => {
+            const trimmed = x.trim();
+            const quotesRemoved = trimmed.substring(1, trimmed.length - 1);
+            return quotesRemoved;
+        },
+        toString: x => x,
+    },
+    { token: ',', type: 'comma', toString: () => ', ' },
+    // TODO: Make a "keyword" utility function for the lexer. Also figure out why \b doesn't work here.
+    { token: 'return[^A-z]', type: 'return', toString: () => 'return' },
+    { token: 'export[^A-z]', type: 'export', toString: () => 'export' },
+    { token: 'for[^A-z]', type: 'for', toString: () => 'for' },
+    { token: 'true|false', type: 'booleanLiteral', action: x => x.trim(), toString: x => x },
+    { token: '[a-z]\\w*', type: 'identifier', action: x => x, toString: x => x },
+    { token: '[A-Z][A-Za-z]*', type: 'typeIdentifier', action: x => x, toString: x => x },
+    { token: ';', type: 'statementSeparator', toString: _ => ';' },
+    { token: '=>', type: 'fatArrow', toString: _ => '=>' },
+    { token: '==', type: 'equality', toString: _ => '==' },
+    { token: '=', type: 'assignment', toString: _ => '=' },
+    { token: '\\d+', type: 'number', action: parseInt, toString: x => x.toString() },
+    { token: '\\+\\+', type: 'concatenation', toString: _ => '++' },
+    { token: '\\+', type: 'sum', toString: _ => '+' },
+    { token: '\\*', type: 'product', toString: _ => '*' },
+    { token: '\\-', type: 'subtraction', toString: _ => '-' },
+    { token: '\\(', type: 'leftBracket', toString: _ => '(' },
+    { token: '\\)', type: 'rightBracket', toString: _ => ')' },
+    { token: '{', type: 'leftCurlyBrace', toString: _ => '{' },
+    { token: '}', type: 'rightCurlyBrace', toString: _ => '}' },
+    { token: '\\[', type: 'leftSquareBracket', toString: _ => '[' },
+    { token: '\\]', type: 'rightSquareBracket', toString: _ => ']' },
+    { token: '\\:', type: 'colon', toString: _ => ':' },
+    { token: '\\?', type: 'ternaryOperator', toString: _ => '?' },
+    { token: '<', type: 'lessThan', toString: _ => '<' },
+    { token: '>', type: 'greaterThan', toString: _ => '>' },
+    { token: '\\.', type: 'memberAccess', toString: _ => '.' },
+];
+const mplTerminal = token => parse_1.Terminal(token);
+const mplOptional = parser => parse_1.Optional(parser);
+const export_ = mplTerminal('export');
+const for_ = mplTerminal('for');
+const plus = mplTerminal('sum');
+const minus = mplTerminal('subtraction');
+const times = mplTerminal('product');
+const leftBracket = mplTerminal('leftBracket');
+const rightBracket = mplTerminal('rightBracket');
+const int = mplTerminal('number');
+const identifier = mplTerminal('identifier');
+const colon = mplTerminal('colon');
+const ternaryOperator = mplTerminal('ternaryOperator');
+const typeIdentifier = mplTerminal('typeIdentifier');
+const assignment = mplTerminal('assignment');
+const _return = mplTerminal('return');
+const statementSeparator = mplTerminal('statementSeparator');
+const fatArrow = mplTerminal('fatArrow');
+const leftCurlyBrace = mplTerminal('leftCurlyBrace');
+const rightCurlyBrace = mplTerminal('rightCurlyBrace');
+const leftSquareBracket = mplTerminal('leftSquareBracket');
+const rightSquareBracket = mplTerminal('rightSquareBracket');
+const comma = mplTerminal('comma');
+const concatenation = mplTerminal('concatenation');
+const equality = mplTerminal('equality');
+const boolean = mplTerminal('booleanLiteral');
+const stringLiteral = mplTerminal('stringLiteral');
+const lessThan = mplTerminal('lessThan');
+const greaterThan = mplTerminal('greaterThan');
+const memberAccess = mplTerminal('memberAccess');
+const rounds = { left: leftBracket, right: rightBracket };
+const curlies = { left: leftCurlyBrace, right: rightCurlyBrace };
+const squares = { left: leftSquareBracket, right: rightSquareBracket };
+const angles = { left: lessThan, right: greaterThan };
+exports.grammar = {
+    program: parse_1.Sequence('program', ['functionBody']),
+    function: parse_1.OneOf([
+        parse_1.Sequence('function', [
+            mplOptional(leftBracket),
+            'argList',
+            mplOptional(rightBracket),
+            fatArrow,
+            'expression',
+        ]),
+        parse_1.Sequence('functionWithBlock', [
+            mplOptional(leftBracket),
+            'argList',
+            mplOptional(rightBracket),
+            fatArrow,
+            parse_1.NestedIn(curlies, 'functionBody'),
+        ]),
+    ]),
+    argList: parse_1.SeparatedList(comma, 'arg'),
+    arg: parse_1.Sequence('arg', [identifier, colon, 'type']),
+    functionBody: parse_1.Sequence('statement', [
+        'statement',
+        statementSeparator,
+        mplOptional('functionBody'),
+    ]),
+    statement: parse_1.OneOf([
+        parse_1.Sequence('declaration', [
+            mplOptional(export_),
+            identifier,
+            colon,
+            mplOptional('type'),
+            assignment,
+            'expression',
+        ]),
+        parse_1.Sequence('typeDeclaration', [typeIdentifier, colon, assignment, 'type']),
+        parse_1.Sequence('reassignment', [identifier, assignment, 'expression']),
+        parse_1.Sequence('returnStatement', [_return, 'expression']),
+        parse_1.Sequence('forLoop', [
+            for_,
+            parse_1.NestedIn(rounds, parse_1.Sequence('forCondition', [identifier, colon, 'expression'])),
+            parse_1.NestedIn(curlies, 'functionBody'),
+        ]),
+    ]),
+    typeList: parse_1.SeparatedList(comma, 'type'),
+    type: parse_1.OneOf([
+        parse_1.Sequence('listType', [typeIdentifier, leftSquareBracket, rightSquareBracket]),
+        parse_1.Sequence('typeWithArgs', [typeIdentifier, parse_1.NestedIn(angles, 'typeList')]),
+        parse_1.Sequence('typeWithoutArgs', [typeIdentifier]),
+        'typeLiteral',
+    ]),
+    typeLiteral: parse_1.NestedIn(curlies, parse_1.Many('typeLiteralComponent')),
+    typeLiteralComponent: parse_1.Sequence('typeLiteralComponent', [
+        identifier,
+        colon,
+        'type',
+        statementSeparator,
+    ]),
+    objectLiteral: parse_1.Sequence('objectLiteral', [
+        typeIdentifier,
+        parse_1.NestedIn(curlies, parse_1.Many('objectLiteralComponent')),
+    ]),
+    objectLiteralComponent: parse_1.Sequence('objectLiteralComponent', [
+        identifier,
+        colon,
+        'expression',
+        comma,
+    ]),
+    expression: 'ternary',
+    ternary: parse_1.OneOf([
+        parse_1.Sequence('ternary', ['addition', ternaryOperator, 'addition', colon, 'addition']),
+        'addition',
+    ]),
+    addition: parse_1.OneOf([parse_1.Sequence('addition', ['subtraction', plus, 'addition']), 'subtraction']),
+    subtraction: parse_1.OneOf([parse_1.Sequence('subtraction', ['product', minus, 'subtraction']), 'product']),
+    product: parse_1.OneOf([parse_1.Sequence('product', ['equality', times, 'product']), 'equality']),
+    equality: parse_1.OneOf([
+        parse_1.Sequence('equality', ['concatenation', equality, 'equality']),
+        'concatenation',
+    ]),
+    concatenation: parse_1.OneOf([
+        parse_1.Sequence('concatenation', ['memberAccess', concatenation, 'concatenation']),
+        'memberStyleCall',
+    ]),
+    memberStyleCall: parse_1.OneOf([
+        parse_1.Sequence('memberStyleCall', [
+            'simpleExpression',
+            memberAccess,
+            identifier,
+            parse_1.NestedIn(rounds, 'paramList'),
+        ]),
+        'memberAccess',
+    ]),
+    memberAccess: parse_1.OneOf([
+        parse_1.Sequence('memberAccess', ['simpleExpression', memberAccess, identifier]),
+        'indexAccess',
+    ]),
+    indexAccess: parse_1.OneOf([
+        parse_1.Sequence('indexAccess', ['simpleExpression', parse_1.NestedIn(squares, 'simpleExpression')]),
+        'listLiteral',
+    ]),
+    listLiteral: parse_1.OneOf([
+        parse_1.Sequence('listLiteral', [parse_1.NestedIn(squares, 'listItems')]),
+        'simpleExpression',
+    ]),
+    listItems: parse_1.SeparatedList(comma, 'expression'),
+    simpleExpression: parse_1.OneOf([
+        parse_1.Sequence('bracketedExpression', [parse_1.NestedIn(rounds, 'expression')]),
+        parse_1.Sequence('callExpression', [
+            identifier,
+            // TODO: Make NestedIn(..., Optional(...)) work
+            leftBracket,
+            mplOptional('paramList'),
+            rightBracket,
+        ]),
+        int,
+        boolean,
+        stringLiteral,
+        'function',
+        'objectLiteral',
+        identifier,
+    ]),
+    paramList: parse_1.SeparatedList(comma, 'expression'),
+};
+
+
+/***/ }),
+
+/***/ "./mpl-loader.ts":
+/*!***********************!*\
+  !*** ./mpl-loader.ts ***!
+  \***********************/
+/*! flagged exports */
+/*! export __esModule [provided] [maybe used in mpl-loader-raw (runtime-defined)] [usage prevents renaming] */
+/*! export mplLoader [provided] [maybe used in mpl-loader-raw (runtime-defined)] [usage prevents renaming] */
+/*! other exports [not provided] [maybe used in mpl-loader-raw (runtime-defined)] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.mplLoader = void 0;
+const frontend_1 = __webpack_require__(/*! ./frontend */ "./frontend.ts");
+const js_1 = __webpack_require__(/*! ./backends/js */ "./backends/js.ts");
+function mplLoader(source, context) {
+    try {
+        const frontendOutput = frontend_1.compile(source);
+        if ('parseErrors' in frontendOutput ||
+            'typeErrors' in frontendOutput ||
+            'kind' in frontendOutput ||
+            'internalError' in frontendOutput) {
+            context.emitError(new Error(JSON.stringify(frontendOutput)));
+            return;
+        }
+        const js = js_1.default.compile(frontendOutput);
+        if ('error' in js) {
+            context.emitError(new Error(JSON.stringify(js.error)));
+            return;
+        }
+        return js.target;
+    }
+    catch (e) {
+        context.emitError(new Error(JSON.stringify(e)));
+        return;
+    }
 }
-
-Yallist.prototype.getReverse = function (n) {
-  for (var i = 0, walker = this.tail; walker !== null && i < n; i++) {
-    // abort out of the list early if we hit a cycle
-    walker = walker.prev
-  }
-  if (i === n && walker !== null) {
-    return walker.value
-  }
-}
-
-Yallist.prototype.map = function (fn, thisp) {
-  thisp = thisp || this
-  var res = new Yallist()
-  for (var walker = this.head; walker !== null;) {
-    res.push(fn.call(thisp, walker.value, this))
-    walker = walker.next
-  }
-  return res
-}
-
-Yallist.prototype.mapReverse = function (fn, thisp) {
-  thisp = thisp || this
-  var res = new Yallist()
-  for (var walker = this.tail; walker !== null;) {
-    res.push(fn.call(thisp, walker.value, this))
-    walker = walker.prev
-  }
-  return res
-}
-
-Yallist.prototype.reduce = function (fn, initial) {
-  var acc
-  var walker = this.head
-  if (arguments.length > 1) {
-    acc = initial
-  } else if (this.head) {
-    walker = this.head.next
-    acc = this.head.value
-  } else {
-    throw new TypeError('Reduce of empty list with no initial value')
-  }
-
-  for (var i = 0; walker !== null; i++) {
-    acc = fn(acc, walker.value, i)
-    walker = walker.next
-  }
-
-  return acc
-}
-
-Yallist.prototype.reduceReverse = function (fn, initial) {
-  var acc
-  var walker = this.tail
-  if (arguments.length > 1) {
-    acc = initial
-  } else if (this.tail) {
-    walker = this.tail.prev
-    acc = this.tail.value
-  } else {
-    throw new TypeError('Reduce of empty list with no initial value')
-  }
-
-  for (var i = this.length - 1; walker !== null; i--) {
-    acc = fn(acc, walker.value, i)
-    walker = walker.prev
-  }
-
-  return acc
-}
-
-Yallist.prototype.toArray = function () {
-  var arr = new Array(this.length)
-  for (var i = 0, walker = this.head; walker !== null; i++) {
-    arr[i] = walker.value
-    walker = walker.next
-  }
-  return arr
-}
-
-Yallist.prototype.toArrayReverse = function () {
-  var arr = new Array(this.length)
-  for (var i = 0, walker = this.tail; walker !== null; i++) {
-    arr[i] = walker.value
-    walker = walker.prev
-  }
-  return arr
-}
-
-Yallist.prototype.slice = function (from, to) {
-  to = to || this.length
-  if (to < 0) {
-    to += this.length
-  }
-  from = from || 0
-  if (from < 0) {
-    from += this.length
-  }
-  var ret = new Yallist()
-  if (to < from || to < 0) {
-    return ret
-  }
-  if (from < 0) {
-    from = 0
-  }
-  if (to > this.length) {
-    to = this.length
-  }
-  for (var i = 0, walker = this.head; walker !== null && i < from; i++) {
-    walker = walker.next
-  }
-  for (; walker !== null && i < to; i++, walker = walker.next) {
-    ret.push(walker.value)
-  }
-  return ret
-}
-
-Yallist.prototype.sliceReverse = function (from, to) {
-  to = to || this.length
-  if (to < 0) {
-    to += this.length
-  }
-  from = from || 0
-  if (from < 0) {
-    from += this.length
-  }
-  var ret = new Yallist()
-  if (to < from || to < 0) {
-    return ret
-  }
-  if (from < 0) {
-    from = 0
-  }
-  if (to > this.length) {
-    to = this.length
-  }
-  for (var i = this.length, walker = this.tail; walker !== null && i > to; i--) {
-    walker = walker.prev
-  }
-  for (; walker !== null && i > from; i--, walker = walker.prev) {
-    ret.push(walker.value)
-  }
-  return ret
-}
-
-Yallist.prototype.reverse = function () {
-  var head = this.head
-  var tail = this.tail
-  for (var walker = head; walker !== null; walker = walker.prev) {
-    var p = walker.prev
-    walker.prev = walker.next
-    walker.next = p
-  }
-  this.head = tail
-  this.tail = head
-  return this
-}
-
-function push (self, item) {
-  self.tail = new Node(item, self.tail, null, self)
-  if (!self.head) {
-    self.head = self.tail
-  }
-  self.length++
-}
-
-function unshift (self, item) {
-  self.head = new Node(item, null, self.head, self)
-  if (!self.tail) {
-    self.tail = self.head
-  }
-  self.length++
-}
-
-function Node (value, prev, next, list) {
-  if (!(this instanceof Node)) {
-    return new Node(value, prev, next, list)
-  }
-
-  this.list = list
-  this.value = value
-
-  if (prev) {
-    prev.next = this
-    this.prev = prev
-  } else {
-    this.prev = null
-  }
-
-  if (next) {
-    next.prev = this
-    this.next = next
-  } else {
-    this.next = null
-  }
-}
+exports.mplLoader = mplLoader;
 
 
 /***/ }),
@@ -28462,12 +28343,17 @@ function Node (value, prev, next, list) {
 /*!***************************!*\
   !*** ./parser-lib/lex.ts ***!
   \***************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export lex [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.lex = void 0;
 const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 exports.lex = (tokenSpecs, input) => {
     // Source location tracking
@@ -28526,18 +28412,65 @@ exports.lex = (tokenSpecs, input) => {
 /*!*****************************!*\
   !*** ./parser-lib/parse.ts ***!
   \*****************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export Many [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export NestedIn [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export OneOf [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export Optional [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export SeparatedList [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export Sequence [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export Terminal [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export isListNode [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export isSeparatedListNode [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export parse [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export parseResultIsError [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export parseString [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export stripSourceLocation [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export toDotFile [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 41:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 116:12-38 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 159:21-47 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 177:21-47 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 196:16-42 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 238:16-42 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 261:20-46 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 283:24-50 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 295:24-50 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 310:24-50 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 326:25-51 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 356:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 360:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 364:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 375:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 379:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 383:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 390:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 394:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 437:8-34 */
+/*! CommonJS bailout: exports.isSeparatedListNode(...) prevents optimization as exports is passed as call context at 496:12-39 */
+/*! CommonJS bailout: exports.isListNode(...) prevents optimization as exports is passed as call context at 502:17-35 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 535:8-34 */
+/*! CommonJS bailout: exports.parse(...) prevents optimization as exports is passed as call context at 560:19-32 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 561:8-34 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseString = exports.parse = exports.toDotFile = exports.Terminal = exports.Many = exports.NestedIn = exports.SeparatedList = exports.Optional = exports.OneOf = exports.Sequence = exports.stripSourceLocation = exports.parseResultIsError = exports.isListNode = exports.isSeparatedListNode = void 0;
 const last_1 = __webpack_require__(/*! ../util/list/last */ "./util/list/last.ts");
 const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 const graphlib_1 = __webpack_require__(/*! graphlib */ "./node_modules/graphlib/index.js");
 const lex_1 = __webpack_require__(/*! ./lex */ "./parser-lib/lex.ts");
 exports.isSeparatedListNode = (n) => 'items' in n && 'separators' in n;
-exports.isListNode = (n) => 'items' in n && !('separators' in n);
+exports.isListNode = (n) => {
+    if (!n)
+        throw debug_1.default('bad node');
+    return 'items' in n && !('separators' in n);
+};
 exports.parseResultIsError = (result) => result != 'missingOptional' && 'kind' in result && result.kind == 'parseError';
 const parseResultWithIndexIsLeaf = (r) => 'value' in r;
 // TODO also use a real sum type
@@ -28585,6 +28518,7 @@ exports.Optional = (parser) => ({
     parser,
 });
 exports.SeparatedList = (separator, item) => ({ kind: 'separatedList', separator, item });
+exports.NestedIn = (nesting, parser) => ({ kind: 'nested', in: nesting, parser });
 exports.Many = (item) => ({
     kind: 'many',
     item,
@@ -28632,6 +28566,9 @@ const parseSequence = (grammar, parser, tokens, index) => {
         }
         else if (p.kind == 'many') {
             result = parseMany(grammar, p, tokens, index);
+        }
+        else if (p.kind == 'nested') {
+            result = parseNested(grammar, p, tokens, index);
         }
         else {
             throw debug_1.default(`Invalid parser type: ${JSON.stringify(p)}`);
@@ -28705,6 +28642,9 @@ const parseAlternative = (grammar, alternatives, tokens, index) => {
                 }
             }
         }
+        else if (currentParser.kind == 'nested') {
+            throw debug_1.default('should figure out a way to do nested inside alternative - probably need a more generic framework');
+        }
         else if (currentParser.kind == 'sequence') {
             // Sequence. This is the complex one.
             // Next get the parser for the next item in the sequence based on how much progress we have made due
@@ -28745,6 +28685,10 @@ const parseAlternative = (grammar, alternatives, tokens, index) => {
                 else {
                     currentResult = optionalResult;
                 }
+                currentIndex = currentProgress.subParserIndex;
+            }
+            else if (currentParser.kind == 'nested') {
+                currentResult = parseNested(grammar, currentParser, tokens, tokenIndex);
                 currentIndex = currentProgress.subParserIndex;
             }
             else {
@@ -28886,6 +28830,21 @@ const parseSeparatedList = (grammar, sep, tokens, index) => {
         newIndex: next.newIndex,
     };
 };
+const parseNested = (grammar, nested, tokens, index) => {
+    const leftNest = parseAnything(grammar, nested.in.left, tokens, index);
+    if (exports.parseResultIsError(leftNest)) {
+        return leftNest;
+    }
+    const result = parseAnything(grammar, nested.parser, tokens, leftNest.newIndex);
+    if (exports.parseResultIsError(result)) {
+        return result;
+    }
+    const rightNest = parseAnything(grammar, nested.in.right, tokens, result.newIndex);
+    if (exports.parseResultIsError(rightNest)) {
+        return rightNest;
+    }
+    return Object.assign(Object.assign({}, result), { newIndex: rightNest.newIndex });
+};
 const parseMany = (grammar, many, tokens, index) => {
     const item = parseAnything(grammar, many.item, tokens, index);
     if (exports.parseResultIsError(item)) {
@@ -28917,12 +28876,17 @@ const parseAnything = (grammar, parser, tokens, index) => {
         else if (parser.kind == 'many') {
             return parseMany(grammar, parser, tokens, index);
         }
+        else if (parser.kind == 'nested') {
+            return parseNested(grammar, parser, tokens, index);
+        }
         else {
             throw debug_1.default('bad type in parse');
         }
     }
     catch (e) {
         if (e instanceof RangeError) {
+            debugger;
+            parseAnything(grammar, parser, tokens, index);
             debug_1.default('range error');
         }
         throw e;
@@ -29063,18 +29027,72 @@ exports.parseString = (tokens, grammar, rule, input) => {
 
 /***/ }),
 
+/***/ "./parser-lib/parseErrorToString.ts":
+/*!******************************************!*\
+  !*** ./parser-lib/parseErrorToString.ts ***!
+  \******************************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.default = ({ expected, found, sourceLocation }) => {
+    const line = sourceLocation.line;
+    const col = sourceLocation.column;
+    return `Expected ${expected} but found ${found} at ${line}:${col}`;
+};
+
+
+/***/ }),
+
+/***/ "./parser-lib/renderParseError.ts":
+/*!****************************************!*\
+  !*** ./parser-lib/renderParseError.ts ***!
+  \****************************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const parseErrorToString_1 = __webpack_require__(/*! ./parseErrorToString */ "./parser-lib/parseErrorToString.ts");
+const annotateSource_1 = __webpack_require__(/*! ../annotateSource */ "./annotateSource.ts");
+exports.default = (e, source) => {
+    // The semicolor the user forgot probably should go one space after where
+    // the error is.
+    const adjustedSourceLocation = Object.assign({}, e.sourceLocation);
+    adjustedSourceLocation.column += 1;
+    return annotateSource_1.default(source, adjustedSourceLocation, parseErrorToString_1.default(e));
+};
+
+
+/***/ }),
+
 /***/ "./produceProgramInfo.ts":
 /*!*******************************!*\
   !*** ./produceProgramInfo.ts ***!
   \*******************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
-const parser_1 = __webpack_require__(/*! ./threeAddressCode/parser */ "./threeAddressCode/parser.ts");
+const Program_1 = __webpack_require__(/*! ./threeAddressCode/Program */ "./threeAddressCode/Program.ts");
 const runtime_1 = __webpack_require__(/*! ./threeAddressCode/runtime */ "./threeAddressCode/runtime.ts");
 const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
 const writeTempFile_1 = __webpack_require__(/*! ./util/writeTempFile */ "./util/writeTempFile.ts");
@@ -29083,14 +29101,15 @@ const frontend_1 = __webpack_require__(/*! ./frontend */ "./frontend.ts");
 const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
 const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
 const ast_1 = __webpack_require__(/*! ./ast */ "./ast.ts");
-const Program_1 = __webpack_require__(/*! ./threeAddressCode/Program */ "./threeAddressCode/Program.ts");
+const Program_2 = __webpack_require__(/*! ./threeAddressCode/Program */ "./threeAddressCode/Program.ts");
 const generator_1 = __webpack_require__(/*! ./threeAddressCode/generator */ "./threeAddressCode/generator.ts");
 const backend_utils_1 = __webpack_require__(/*! ./backend-utils */ "./backend-utils.ts");
-exports.default = async (source, stdin, { includeExecutionResult, skipBackends }) => {
+exports.default = async (source, stdin, { includeExecutionResult, skipBackends, skipExecutors, buildBinaries }) => {
     const tokens = lex_1.lex(grammar_1.tokenSpecs, source);
     if ('kind' in tokens) {
         return tokens;
     }
+    debugger;
     const ast = frontend_1.parseMpl(tokens);
     if (Array.isArray(ast)) {
         return { parseErrors: ast };
@@ -29122,7 +29141,7 @@ exports.default = async (source, stdin, { includeExecutionResult, skipBackends }
     frontendOutput.program.statements.forEach(statement => {
         structure += `---> ${ast_1.astToString(statement)}\n`;
     });
-    // Make three address code with random alignment, bytesInWord, and malloc/print impl. TODO: This is jank. Maybe three addree code should abstract over platform stuff?
+    // Make three address code with random alignment, bytesInWord, and malloc/print impl. TODO: This is jank. Maybe three address code should abstract over platform stuff?
     const threeAddressCode = generator_1.makeTargetProgram({
         backendInputs: frontendOutput,
         targetInfo: {
@@ -29136,39 +29155,47 @@ exports.default = async (source, stdin, { includeExecutionResult, skipBackends }
         },
     });
     // Do a roundtrip on three address code to string and back to check the parser for that
-    const stringForm = Program_1.toString(threeAddressCode);
-    const roundTripParsed = parser_1.parseProgram(stringForm);
+    const stringForm = Program_2.toString(threeAddressCode);
+    const roundTripParsed = Program_1.parseProgram(stringForm);
     const stdinFile = await writeTempFile_1.default(stdin, 'stdin', 'txt');
-    const backendResults = await Promise.all(backend_utils_1.backends.map(async ({ name, compile: compileFn, finishCompilation, executors }) => {
-        const targetSource = await compileFn(frontendOutput);
-        if ('error' in targetSource) {
-            return {
-                name,
-                compilationResult: targetSource,
-                executionResults: [{ error: 'Compilation Failed', executorName: 'N/A' }],
-            };
-        }
-        const compilationResult = await finishCompilation(targetSource.target, targetSource.tac);
-        // TODO: better way to report these specific errors. Probably muck with the type of ExecutionResult.
-        if ('error' in compilationResult) {
-            return {
-                name,
-                compilationResult,
-                executionResults: [{ error: 'Compilation failed', executorName: 'N/A' }],
-            };
-        }
-        else if (!includeExecutionResult || (skipBackends || []).includes(name)) {
-            return {
-                name,
-                compilationResult,
-                executionResults: [{ error: 'Not requested', executorName: 'N/A' }],
-            };
-        }
-        else {
-            const executionResults = await Promise.all(executors.map(async ({ execute }) => await execute(compilationResult.binaryFile.path, stdinFile.path)));
-            return { name, compilationResult, executionResults };
-        }
-    }));
+    let backendResults = [];
+    if (buildBinaries) {
+        backendResults = await Promise.all(backend_utils_1.backends.map(async ({ name, compile: compileFn, finishCompilation, executors }) => {
+            const targetSource = await compileFn(frontendOutput);
+            if ('error' in targetSource) {
+                return {
+                    name,
+                    compilationResult: targetSource,
+                    executionResults: [{ error: 'Compilation Failed', executorName: 'N/A' }],
+                };
+            }
+            const compilationResult = await finishCompilation(targetSource.target, targetSource.tac);
+            // TODO: better way to report these specific errors. Probably muck with the type of ExecutionResult.
+            if ('error' in compilationResult) {
+                return {
+                    name,
+                    compilationResult,
+                    executionResults: [{ error: 'Compilation failed', executorName: 'N/A' }],
+                };
+            }
+            else if (!includeExecutionResult || (skipBackends || []).includes(name)) {
+                return {
+                    name,
+                    compilationResult,
+                    executionResults: [{ error: 'Not requested', executorName: 'N/A' }],
+                };
+            }
+            else {
+                const executionResults = (await Promise.all(executors.map(async ({ execute }) => {
+                    if ((skipExecutors || []).includes(name)) {
+                        return;
+                    }
+                    return await execute(compilationResult.binaryFile.path, stdinFile.path);
+                }))).filter(Boolean);
+                return { name, compilationResult, executionResults };
+            }
+        }));
+    }
     return {
         tokens,
         ast,
@@ -29187,12 +29214,17 @@ exports.default = async (source, stdin, { includeExecutionResult, skipBackends }
 /*!****************************!*\
   !*** ./runtime-strings.ts ***!
   \****************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export errors [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.errors = void 0;
 exports.errors = {
     freeNull: { name: 'tried_to_free_null', value: 'Tried to free null pointer! Exiting.' },
     doubleFree: { name: 'double_free', value: 'Double free detected! Exiting.' },
@@ -29216,12 +29248,16 @@ exports.errors = {
 /*!***************************!*\
   !*** ./string/compare.ts ***!
   \***************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.default = (lhs, rhs) => Math.sign(lhs.localeCompare(rhs));
 
 
@@ -29231,12 +29267,17 @@ exports.default = (lhs, rhs) => Math.sign(lhs.localeCompare(rhs));
 /*!********************************!*\
   !*** ./targetCode/Function.ts ***!
   \********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export toTarget [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.toTarget = void 0;
 const uniqueCmp_1 = __webpack_require__(/*! ../util/list/uniqueCmp */ "./util/list/uniqueCmp.ts");
 const Statement_1 = __webpack_require__(/*! ../threeAddressCode/Statement */ "./threeAddressCode/Statement.ts");
 const Register_1 = __webpack_require__(/*! ../threeAddressCode/Register */ "./threeAddressCode/Register.ts");
@@ -29401,22 +29442,32 @@ exports.toTarget = ({ threeAddressFunction, targetInfo, finalCleanup, isMain, })
 /*!**********************************!*\
   !*** ./targetCode/StackUsage.ts ***!
   \**********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export calleeReserveCount [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export offset [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export savedExtraOffset [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export savedUsedOffset [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export stackUsageToString [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/*! CommonJS bailout: exports.calleeReserveCount(...) prevents optimization as exports is passed as call context at 22:15-41 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.calleeReserveCount = exports.savedUsedOffset = exports.savedExtraOffset = exports.offset = exports.stackUsageToString = void 0;
 const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
 const Register_1 = __webpack_require__(/*! ../threeAddressCode/Register */ "./threeAddressCode/Register.ts");
 exports.stackUsageToString = (usage) => {
     const descriptions = [
         ...usage.callerSavedRegisters,
-        ...usage.arguments.map(r => r.toString()),
+        ...usage.arguments.map(Register_1.toString),
         ...usage.savedExtraRegisters,
         ...usage.savedUsedRegisters,
-        ...usage.spills.map(toString),
+        ...usage.spills.map(Register_1.toString),
     ];
     return `[${join_1.default(descriptions, ', ')}]`;
 };
@@ -29457,12 +29508,18 @@ exports.calleeReserveCount = (usage) => usage.arguments.length +
 /*!*********************************!*\
   !*** ./targetCode/Statement.ts ***!
   \*********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export argumentLocation [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export toTarget [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.toTarget = exports.argumentLocation = void 0;
 const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 const Register_1 = __webpack_require__(/*! ../threeAddressCode/Register */ "./threeAddressCode/Register.ts");
 const backend_utils_1 = __webpack_require__(/*! ../backend-utils */ "./backend-utils.ts");
@@ -29686,7 +29743,11 @@ exports.toTarget = ({ tas, functionArguments, targetInfo, stackOffset, stackFram
         case 'callByName': {
             return [
                 ...arrangeArgumentsForFunctionCall(tas.arguments, getRegister, targetInfo),
-                { kind: 'callByName', function: tas.function, why: 'actually call' },
+                {
+                    kind: 'callByName',
+                    function: tas.function,
+                    why: `actually call (${tas.why})`,
+                },
                 ...backend_utils_1.saveFunctionCallResult(tas.destination, getRegister, targetInfo.registers),
             ];
         }
@@ -29741,18 +29802,27 @@ exports.toTarget = ({ tas, functionArguments, targetInfo, stackOffset, stackFram
 /*!**********************!*\
   !*** ./test-case.ts ***!
   \**********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export moduleTest [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export mplTest [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export passed [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tacTest [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/*! CommonJS bailout: exports.passed(...) prevents optimization as exports is passed as call context at 118:55-69 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.tacTest = exports.mplTest = exports.moduleTest = exports.passed = void 0;
 const omitDeep = __webpack_require__(/*! omit-deep */ "./node_modules/omit-deep/index.js");
 const TypeError_1 = __webpack_require__(/*! ./TypeError */ "./TypeError.ts");
 const writeTempFile_1 = __webpack_require__(/*! ./util/writeTempFile */ "./util/writeTempFile.ts");
 const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
 const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
-const parser_1 = __webpack_require__(/*! ./threeAddressCode/parser */ "./threeAddressCode/parser.ts");
+const Function_1 = __webpack_require__(/*! ./threeAddressCode/Function */ "./threeAddressCode/Function.ts");
 const backend_utils_1 = __webpack_require__(/*! ./backend-utils */ "./backend-utils.ts");
 const produceProgramInfo_1 = __webpack_require__(/*! ./produceProgramInfo */ "./produceProgramInfo.ts");
 const mpl_loader_1 = __webpack_require__(/*! ./mpl-loader */ "./mpl-loader.ts");
@@ -29773,9 +29843,9 @@ const required = (errorMessage) => {
 exports.moduleTest = (t, m) => {
     const errors = [];
     const resultJs = mpl_loader_1.mplLoader(m.source, { emitError: e => errors.push(e) });
-    if (errors.length != 0) {
-        t.fail('got errors');
-    }
+    errors.forEach(e => {
+        t.fail(e.stack);
+    });
     t.deepEqual(m.resultJs, resultJs);
 };
 exports.mplTest = async (t, { source = required('test must have source code'), exitCode, typeErrors, parseErrors, stdout, ast, failing, name = undefined, stdin = '', }) => {
@@ -29790,6 +29860,8 @@ exports.mplTest = async (t, { source = required('test must have source code'), e
     // Make sure it parses
     const programInfo = await produceProgramInfo_1.default(source, stdin, {
         includeExecutionResult: true,
+        buildBinaries: true,
+        skipExecutors: ['mars'],
     });
     if ('kind' in programInfo) {
         error('failed to produce info');
@@ -29893,7 +29965,7 @@ generated source:
     t.pass();
 };
 exports.tacTest = async (t, { source, exitCode, printSubsteps = [], debugSubsteps = [], failing = [], stdin = '', }) => {
-    const parsed = parser_1.parseFunction(source);
+    const parsed = Function_1.parseFunction(source);
     if ('kind' in parsed) {
         t.fail(`LexError error: ${parsed}`);
         return;
@@ -29917,6 +29989,10 @@ exports.tacTest = async (t, { source, exitCode, printSubsteps = [], debugSubstep
             }
             const stdinFile = await writeTempFile_1.default(stdin, 'stdin', 'txt');
             await Promise.all(backend.executors.map(async ({ name, execute }) => {
+                // mars bogs down my computer when running all tests. TODO: try to make it work.
+                if (name == 'mars') {
+                    return;
+                }
                 const result = await execute(compilationResult.binaryFile.path, stdinFile.path);
                 if ('error' in result) {
                     t.fail(`${backend.name} execution with ${name} failed: ${result.error}`);
@@ -29941,12 +30017,18 @@ exports.tacTest = async (t, { source, exitCode, printSubsteps = [], debugSubstep
 /*!***********************!*\
   !*** ./test-cases.ts ***!
   \***********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export testModules [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export testPrograms [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.testPrograms = exports.testModules = void 0;
 const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
 const range_1 = __webpack_require__(/*! ./util/list/range */ "./util/list/range.ts");
 const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
@@ -29988,6 +30070,20 @@ exports.testModules = [
         source: 'export three := 3;',
         resultJs: 'export const three = 3;',
         failing: true,
+    },
+    {
+        name: 'Sum',
+        source: `
+            export sum := (xs: Integer[]) => {
+                result := 0;
+                for (x : xs) {
+                    result = result + x;
+                };
+                return result;
+            };
+        `,
+        resultJs: '',
+        infiniteLooping: true,
     },
 ];
 exports.testPrograms = [
@@ -30104,6 +30200,15 @@ a = a * a;
 return a;
 `,
         exitCode: 9,
+    },
+    {
+        name: 'Multiply by Literal',
+        source: `
+            a: Integer = 2;
+            b := a * 4;
+            return b;
+        `,
+        exitCode: 8,
     },
     {
         name: 'Function Returns Boolean',
@@ -30238,10 +30343,9 @@ return isFive(5) ? 1 : 0;`,
         name: 'Explicitly Typed List',
         source: `
             myList: Boolean[] = [true];
-            return length(myList);
+            return myList[0] ? 1 : 2;
         `,
-        exitCode: 0,
-        failing: true,
+        exitCode: 1,
     },
     {
         name: 'Untyped Zero Item List',
@@ -30256,20 +30360,18 @@ return isFive(5) ? 1 : 0;`,
         name: 'Wrong Type List',
         source: `
             myList: Boolean[] = [5];
-            return length(myList);
+            return myList[0] ? 1 : 2;
         `,
         exitCode: 0,
         typeErrors: [
             {
                 kind: 'assignWrongType',
                 lhsName: 'myList',
-                // TODO: make this a list instead of nameref maybe?
-                lhsType: { kind: 'NameRef', namedType: 'Boolean[]' },
-                rhsType: { kind: 'List', of: { kind: 'Integer' } },
+                lhsType: { type: { kind: 'List', of: { type: { kind: 'Boolean' } } } },
+                rhsType: { type: { kind: 'List', of: { type: { kind: 'Integer' } } } },
                 sourceLocation: { column: 13, line: 2 },
             },
         ],
-        failing: true,
     },
     {
         name: 'One Item List',
@@ -30286,6 +30388,28 @@ return isFive(5) ? 1 : 0;`,
             return myList[0] + myList[1];
         `,
         exitCode: 33,
+    },
+    {
+        name: 'Function Accepts List',
+        source: `
+            acceptsList := (xs: Integer[]) => {
+                return 3;
+            };
+            xs := [1];
+            return acceptsList(xs);
+        `,
+        exitCode: 3,
+    },
+    {
+        name: 'Function Accepts Temporary List',
+        source: `
+            acceptsList := (xs: Integer[]) => {
+                return 3;
+            };
+            return acceptsList([1]);
+        `,
+        exitCode: 3,
+        failing: true,
     },
     {
         name: 'List Out Of Bounds Access',
@@ -30573,11 +30697,11 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 11,
     },
     {
-        name: 'Variable Named Result',
+        name: 'Reserved Name',
         source: `
             foo := () => {
-                result := 10;
-                return result;
+                rrresult := 10;
+                return rrresult;
             };
             return foo();
         `,
@@ -30680,6 +30804,85 @@ return isFive(5) ? 1 : 0;`,
             },
         ],
     },
+    {
+        name: 'Reassign to Undeclared Identifier Inside Function',
+        source: `
+            foo := () => {
+                a := 1;
+                b = 2;
+                return a + b;
+            };
+            return foo();
+        `,
+        typeErrors: [
+            {
+                kind: 'assignUndeclaredIdentifer',
+                destinationName: 'b',
+                sourceLocation: { line: 4, column: 17 },
+            },
+            {
+                kind: 'unknownTypeForIdentifier',
+                identifierName: 'b',
+                sourceLocation: { line: 5, column: 28 },
+            },
+        ],
+    },
+    {
+        name: 'For',
+        source: `
+            numbers := [1, 2, 3];
+            sum := 0;
+            for (number : numbers) {
+                sum = sum + number;
+            };
+            return sum;
+        `,
+        exitCode: 6,
+    },
+    {
+        name: 'Large For',
+        source: `
+            numbers := [1, 2, 3, 2, 1, 2, 3];
+            sum := 10;
+            for (number : numbers) {
+                sum = sum + number;
+            };
+            return sum;
+        `,
+        exitCode: 24,
+    },
+    {
+        name: 'For With Non-Iterable',
+        source: `
+            sum := 0;
+            for (number : sum) {
+                sum = sum + number;
+            };
+            return sum;
+        `,
+        typeErrors: [
+            {
+                kind: 'nonListInFor',
+                found: { type: { kind: 'Integer' } },
+                sourceLocation: { line: 3, column: 13 },
+            },
+        ],
+    },
+    {
+        name: 'For in Function',
+        source: `
+            sum := () => {
+                xs := [3, 4, 5];
+                result := 0;
+                for (x : xs) {
+                    result = result + x;
+                };
+                return result;
+            };
+            return sum();
+        `,
+        exitCode: 12,
+    },
 ];
 
 
@@ -30689,19 +30892,24 @@ return isFive(5) ? 1 : 0;`,
 /*!*****************!*\
   !*** ./test.ts ***!
   \*****************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [maybe used in test (runtime-defined)] [usage prevents renaming] */
+/*! other exports [not provided] [maybe used in test (runtime-defined)] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 const uniqueCmp_1 = __webpack_require__(/*! ./util/list/uniqueCmp */ "./util/list/uniqueCmp.ts");
 const uniqueBy_1 = __webpack_require__(/*! ./util/list/uniqueBy */ "./util/list/uniqueBy.ts");
 const test_cases_1 = __webpack_require__(/*! ./test-cases */ "./test-cases.ts");
 const test_case_1 = __webpack_require__(/*! ./test-case */ "./test-case.ts");
 const parser_1 = __webpack_require__(/*! ./threeAddressCode/parser */ "./threeAddressCode/parser.ts");
+const Program_1 = __webpack_require__(/*! ./threeAddressCode/Program */ "./threeAddressCode/Program.ts");
 const annotateSource_1 = __webpack_require__(/*! ./annotateSource */ "./annotateSource.ts");
 const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
+const Function_1 = __webpack_require__(/*! ./threeAddressCode/Function */ "./threeAddressCode/Function.ts");
 const Register_1 = __webpack_require__(/*! ./threeAddressCode/Register */ "./threeAddressCode/Register.ts");
 const threeAddressCodeRuntime = __webpack_require__(/*! ./threeAddressCode/runtime */ "./threeAddressCode/runtime.ts");
 const ava_1 = __webpack_require__(/*! ava */ "ava");
@@ -31042,6 +31250,53 @@ ava_1.default('ast for assignment then return', t => {
     };
     const astWithSemicolon = parse_1.stripSourceLocation(frontend_2.removeBracketsFromAst(parse_1.parse(grammar_1.grammar, 'program', lex_1.lex(grammar_1.tokenSpecs, 'constThree := a: Integer => 3; return 10;'))));
     t.deepEqual(astWithSemicolon, expected);
+});
+ava_1.default('parse for', t => {
+    const source = `
+        for (a : b) {
+            a = b;
+        };
+    `;
+    const ast = parse_1.parse(grammar_1.grammar, 'program', lex_1.lex(grammar_1.tokenSpecs, source));
+    t.deepEqual(parse_1.stripSourceLocation(ast), {
+        type: 'program',
+        children: [
+            {
+                type: 'statement',
+                children: [
+                    {
+                        type: 'forLoop',
+                        children: [
+                            { value: null, type: 'for' },
+                            {
+                                type: 'forCondition',
+                                children: [
+                                    { value: 'a', type: 'identifier' },
+                                    { value: null, type: 'colon' },
+                                    { value: 'b', type: 'identifier' },
+                                ],
+                            },
+                            {
+                                type: 'statement',
+                                children: [
+                                    {
+                                        type: 'reassignment',
+                                        children: [
+                                            { value: 'a', type: 'identifier' },
+                                            { value: null, type: 'assignment' },
+                                            { value: 'b', type: 'identifier' },
+                                        ],
+                                    },
+                                    { value: null, type: 'statementSeparator' },
+                                ],
+                            },
+                        ],
+                    },
+                    { value: null, type: 'statementSeparator' },
+                ],
+            },
+        ],
+    });
 });
 ava_1.default('lowering of bracketedExpressions', t => {
     const lexResult = lex_1.lex(grammar_1.tokenSpecs, 'return (8 * ((7)));');
@@ -31589,22 +31844,6 @@ hello = hello ++ "!";
 return length(hello);`,
     exitCode: 11,
 });
-ava_1.default('reassign to undeclared identifier inside function', test_case_1.mplTest, {
-    source: `
-foo := () => {
-    a := 1;
-    b = 2;
-    return a + b;
-};
-return foo();`,
-    typeErrors: [
-        {
-            kind: 'assignUndeclaredIdentifer',
-            destinationName: 'b',
-            sourceLocation: { line: 4, column: 5 },
-        },
-    ],
-});
 ava_1.default('reassigning wrong type inside function', test_case_1.mplTest, {
     source: `
 foo := () => {
@@ -31657,14 +31896,11 @@ ava_1.default('computeBlockLiveness basic test', t => {
             r:v = r:r;
         `),
     };
-    const liveness = controlFlowGraph_1.computeBlockLiveness(block, []).map(l => l.toList().sort());
-    const expected = [
-        [new Register_1.Register('l'), new Register_1.Register('l2'), new Register_1.Register('r')],
-        [new Register_1.Register('l'), new Register_1.Register('l2'), new Register_1.Register('d')],
-        [new Register_1.Register('r'), new Register_1.Register('l')],
-        [new Register_1.Register('r')],
-        [],
-    ].map(e => e.sort());
+    const liveness = controlFlowGraph_1.computeBlockLiveness(block, []).map(l => l
+        .toList()
+        .map(x => x.name)
+        .sort());
+    const expected = [['l', 'l2', 'r'], ['l', 'l2', 'd'], ['r', 'l'], ['r'], []].map(e => e.sort());
     t.deepEqual(liveness, expected);
 });
 ava_1.default('computeBlockLiveness read and write in one', t => {
@@ -31687,10 +31923,13 @@ ava_1.default('computeBlockLiveness read and write in one', t => {
         ],
     };
     const liveness = controlFlowGraph_1.computeBlockLiveness(block, []);
-    const expected = [[new Register_1.Register('r'), new Register_1.Register('d')], [new Register_1.Register('r')], []];
+    const expected = [['r', 'd'], ['r'], []];
     t.deepEqual(liveness.length, expected.length);
     expected.forEach((e, i) => {
-        t.deepEqual(e.sort(), liveness[i].toList().sort());
+        t.deepEqual(e.sort(), liveness[i]
+            .toList()
+            .map(x => x.name)
+            .sort());
     });
 });
 ava_1.default('liveness analysis basic test', t => {
@@ -31911,6 +32150,9 @@ ava_1.default('type equality', t => {
 ava_1.default('equal types are equal', t => {
     t.assert(types_1.equal({ type: { kind: 'Integer' } }, { type: { kind: 'Integer' } }));
 });
+ava_1.default('list type equality', t => {
+    t.assert(!types_1.equal({ type: { kind: 'List', of: { type: { kind: 'Boolean' } } } }, { type: { kind: 'List', of: { type: { kind: 'Integer' } } } }));
+});
 ava_1.default('type of objectLiteral', t => {
     const ast = {
         kind: 'objectLiteral',
@@ -31944,7 +32186,6 @@ ava_1.default('type of objectLiteral', t => {
                 type: {
                     type: {
                         kind: 'Product',
-                        name: 'BoolPair',
                         members: [
                             { name: 'first', type: { type: { kind: 'Boolean' } } },
                             { name: 'second', type: { type: { kind: 'Boolean' } } },
@@ -31958,7 +32199,6 @@ ava_1.default('type of objectLiteral', t => {
         type: {
             type: {
                 kind: 'Product',
-                name: 'BoolPair',
                 members: [
                     { name: 'first', type: { type: { kind: 'Boolean' } } },
                     { name: 'second', type: { type: { kind: 'Boolean' } } },
@@ -31970,11 +32210,11 @@ ava_1.default('type of objectLiteral', t => {
     };
     t.deepEqual(type, expectedType);
 });
-ava_1.default('no structural typing', t => {
+// TODO: rethink how product types work
+ava_1.default.failing('no structural typing', t => {
     const leftType = {
         type: {
             kind: 'Product',
-            name: 'BoolPair1',
             members: [
                 { name: 'first', type: { type: { kind: 'Boolean' } } },
                 { name: 'second', type: { type: { kind: 'Boolean' } } },
@@ -31984,7 +32224,6 @@ ava_1.default('no structural typing', t => {
     const rightType = {
         type: {
             kind: 'Product',
-            name: 'BoolPair2',
             members: [
                 { name: 'first', type: { type: { kind: 'Boolean' } } },
                 { name: 'second', type: { type: { kind: 'Boolean' } } },
@@ -32019,7 +32258,7 @@ ava_1.default('tac parser regression', t => {
 (function) stringEquality():
     r:result = 1; Comment
 `;
-    const result = parser_1.parseProgram(source);
+    const result = Program_1.parseProgram(source);
     if (Array.isArray(result)) {
         t.fail(join_1.default(result.map(e => {
             if (typeof e === 'string') {
@@ -32446,6 +32685,59 @@ ava_1.default('Assign registers for syscall-only functions', t => {
         newFunction: f,
     });
 });
+ava_1.default('Assign Registers for Old For', t => {
+    const f = Function_1.parseFunctionOrDie(`
+        (function) main():
+            ; 4b for length, 3 8b items
+            r:dataPointer_3 = my_malloc(28); allocate
+            r:listLength_4 = 3; save size
+            *(r:dataPointer_3 + 0) = r:listLength_4; save list length
+            r:assignment_rhs_2 = r:dataPointer_3; save memory for pointer
+            r:item_0_5 = 1; Load number litera
+            *(r:dataPointer_3 + 4) = r:item_0_5; Store this item in the list
+            r:item_1_6 = 2; Load number litera
+            *(r:dataPointer_3 + 8) = r:item_1_6; Store this item in the list
+            r:item_2_7 = 3; Load number litera
+            *(r:dataPointer_3 + 12) = r:item_2_7; Store this item in the list
+            r:remainingCount_8 = *(r:assignment_rhs_2 + 0); Get length of list
+            r:sourceAddress_11 = r:assignment_rhs_2; Local copy of source data pointer
+            r:itemSize_10 = 4; For multiplying
+            r:remainingCount_8 = r:remainingCount_8 * r:itemSize_10; Count = count * size
+            r:remainingCount_8 += 4; Add place to store length of list
+            r:targetAddress_9 = my_malloc(r:remainingCount_8); Malloc
+            *numbers_1 = r:targetAddress_9; Store to global
+        copyLoop_1:; Copy loop
+            r:temp_12 = *(r:sourceAddress_11 + 0); Copy a byte
+            *(r:targetAddress_9 + 0) = r:temp_12; Finish copy
+            r:remainingCount_8 += -4; Bump pointers
+            r:sourceAddress_11 += 4; Bump pointers
+            r:targetAddress_9 += 4; Bump pointers
+            goto copyLoop_1 if r:remainingCount_8 != 0; Not done
+            my_free(r:dataPointer_3); free temporary list
+            r:assignment_rhs_13 = 0; Load number litera
+            *sum_2 = r:assignment_rhs_13; Put Integer into globa
+            r:list_16 = sum_2; Load sum from global into register
+        loop_2:; loop
+            r:index_14++; i++
+            goto loop_2 if r:index_14 != r:max_15; not done
+            r:result_20 = sum_2; Load sum from global into register
+            return r:result_20;; Return previous expressio
+    `);
+    controlFlowGraph_1.assignRegisters(f, ['r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8']);
+    t.pass();
+});
+// Regression test from when I broke this
+ava_1.default('add/increment are writes', t => {
+    const f = Function_1.parseFunctionOrDie(`
+        (function) main():
+            r:count = 0; Init
+            r:count += 4; Add
+            r:count++; Increment
+            return r:count;
+    `);
+    const rds = controlFlowGraph_1.removeDeadStores(f, controlFlowGraph_1.tafLiveness(f));
+    t.assert(rds === undefined); // undefined means nothing was removed
+});
 // Regression test from before we used hasSideEffects and used shitty heuristics for determining whether an instruction had side effects.
 ava_1.default("Functions calls with side effects don't get removed for being dead", t => {
     const f = {
@@ -32524,6 +32816,26 @@ ava_1.default("Control flow instructions don't get removed for having no writes"
     const assigned = controlFlowGraph_1.assignRegisters(f, [{ name: 'r1' }, { name: 'r2' }, { name: 'r3' }]);
     t.assert('one' in assigned.assignment.registerMap);
     t.assert('two' in assigned.assignment.registerMap);
+});
+ava_1.default('functionToString', t => {
+    const f = {
+        name: 'main',
+        instructions: [
+            {
+                kind: 'callByName',
+                function: 'my_malloc',
+                arguments: [28],
+                destination: {
+                    name: 'dataPointer_3',
+                },
+                why: 'allocate',
+            },
+        ],
+        liveAtExit: [],
+        arguments: [],
+    };
+    t.deepEqual(Function_1.toString(f), `(function) main():
+    r:dataPointer_3 = my_malloc(28); allocate`);
 });
 ava_1.default('Range', t => {
     t.deepEqual(range_1.default(6, 9), [6, 7, 8]);
@@ -32791,22 +33103,135 @@ node_0 -> null_7 [style="invis"]
 /*!**************************************!*\
   !*** ./threeAddressCode/Function.ts ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export functionFromParseResult [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export parseFunction [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export parseFunctionOrDie [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export toString [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/*! CommonJS bailout: exports.functionFromParseResult(...) prevents optimization as exports is passed as call context at 100:11-42 */
+/*! CommonJS bailout: exports.parseFunction(...) prevents optimization as exports is passed as call context at 103:19-40 */
+/*! CommonJS bailout: exports.parseFunction(...) prevents optimization as exports is passed as call context at 106:8-29 */
+/*! CommonJS bailout: exports.parseFunction(...) prevents optimization as exports is passed as call context at 111:8-29 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseFunctionOrDie = exports.parseFunction = exports.functionFromParseResult = exports.toString = void 0;
+const Register_1 = __webpack_require__(/*! ./Register */ "./threeAddressCode/Register.ts");
 const Statement_1 = __webpack_require__(/*! ./Statement */ "./threeAddressCode/Statement.ts");
+const parser_1 = __webpack_require__(/*! ./parser */ "./threeAddressCode/parser.ts");
+const parse_1 = __webpack_require__(/*! ../parser-lib/parse */ "./parser-lib/parse.ts");
 const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
 const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 exports.toString = ({ name, instructions, arguments: args }) => {
     if (!args)
         debug_1.default('no args');
     return join_1.default([
-        `(function) ${name}(${join_1.default(args.map(arg => arg.toString()), ', ')}):`,
+        `(function) ${name}(${join_1.default(args.map(Register_1.toString), ', ')}):`,
         ...instructions.map(Statement_1.toString),
     ], '\n');
+};
+exports.functionFromParseResult = (ast) => {
+    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
+        throw debug_1.default('todo');
+    }
+    if (ast.type != 'function') {
+        throw debug_1.default('Need a function');
+    }
+    if (!('children' in ast)) {
+        debug_1.default('wrong shape ast');
+        throw debug_1.default('WrongShapeAst');
+    }
+    let childIndex = 0;
+    let child = ast.children[childIndex];
+    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
+        throw debug_1.default('todo');
+    }
+    if (child.type != 'function') {
+        debug_1.default('wrong shape ast');
+        throw debug_1.default('WrongShapeAst');
+    }
+    childIndex++;
+    child = ast.children[childIndex];
+    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
+        throw debug_1.default('todo');
+    }
+    if (child.type == 'spillSpec') {
+        childIndex++;
+    }
+    child = ast.children[childIndex];
+    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
+        throw debug_1.default('todo');
+    }
+    if (child.type != 'identifier') {
+        debug_1.default('wrong shape ast');
+        throw debug_1.default('WrongShapeAst');
+    }
+    const name = ast.children[childIndex].value;
+    childIndex++;
+    child = ast.children[childIndex];
+    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
+        throw debug_1.default('todo');
+    }
+    if (child.type != 'leftBracket') {
+        debug_1.default('wrong shape ast');
+        throw debug_1.default('WrongShapeAst');
+    }
+    childIndex++;
+    let args = [];
+    child = ast.children[childIndex];
+    if (parse_1.isSeparatedListNode(child)) {
+        args = parser_1.parseArgList(child);
+        childIndex++;
+    }
+    child = ast.children[childIndex];
+    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
+        throw debug_1.default('todo');
+    }
+    if (child.type != 'rightBracket') {
+        debug_1.default('wrong shape ast');
+        throw debug_1.default('WrongShapeAst');
+    }
+    childIndex++;
+    child = ast.children[childIndex];
+    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
+        throw debug_1.default('todo');
+    }
+    if (child.type != 'colon') {
+        debug_1.default('wrong shape ast');
+        throw debug_1.default('WrongShapeAst');
+    }
+    childIndex++;
+    child = ast.children[childIndex];
+    if (!parse_1.isListNode(child)) {
+        throw debug_1.default('todo');
+    }
+    const instructions = child.items.map(parser_1.instructionFromParseResult);
+    return { name, instructions, liveAtExit: [], arguments: args };
+};
+exports.parseFunction = (input) => {
+    const result = parse_1.parseString(parser_1.tokenSpecs, parser_1.grammar, 'function', input);
+    if ('errors' in result)
+        return result.errors;
+    return exports.functionFromParseResult(result);
+};
+exports.parseFunctionOrDie = (tacString) => {
+    const parsed = exports.parseFunction(tacString);
+    if ('kind' in parsed) {
+        debugger;
+        exports.parseFunction(tacString);
+        throw debug_1.default('error in parseFunctionOrDie');
+    }
+    if (Array.isArray(parsed)) {
+        debugger;
+        exports.parseFunction(tacString);
+        throw debug_1.default('error in parseFunctionOrDie');
+    }
+    return parsed;
 };
 
 
@@ -32816,14 +33241,23 @@ exports.toString = ({ name, instructions, arguments: args }) => {
 /*!*************************************!*\
   !*** ./threeAddressCode/Program.ts ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export parseProgram [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export toString [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseProgram = exports.toString = void 0;
+const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 const Function_1 = __webpack_require__(/*! ./Function */ "./threeAddressCode/Function.ts");
 const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
+const parser_1 = __webpack_require__(/*! ./parser */ "./threeAddressCode/parser.ts");
+const parse_1 = __webpack_require__(/*! ../parser-lib/parse */ "./parser-lib/parse.ts");
 exports.toString = ({ globals, functions, main }) => {
     const globalStrings = Object.keys(globals).map(originalName => `(global) ${originalName}: ${globals[originalName].mangledName} ${globals[originalName].bytes}`);
     let mainStr = '';
@@ -32837,6 +33271,50 @@ ${mainStr}
 ${join_1.default(functions.map(Function_1.toString), '\n\n')}
 `;
 };
+const tacFromParseResult = (ast) => {
+    if (!ast)
+        debug_1.default('no type');
+    if (parse_1.isSeparatedListNode(ast))
+        throw debug_1.default('todo');
+    if (parse_1.isListNode(ast))
+        throw debug_1.default('todo');
+    if (ast.type !== 'program')
+        throw debug_1.default('todo');
+    const parsedGlobals = ast.children[0];
+    const parsedFunctions = ast.children[1];
+    if (!parse_1.isListNode(parsedGlobals))
+        throw debug_1.default('todo');
+    if (!parse_1.isListNode(parsedFunctions))
+        throw debug_1.default('todo');
+    const globals = {};
+    parsedGlobals.items.forEach((a) => {
+        globals[a.children[1].value] = {
+            mangledName: a.children[3].value,
+            bytes: a.children[4].value,
+        };
+    });
+    const allFunctions = parsedFunctions.items.map(Function_1.functionFromParseResult);
+    let main = undefined;
+    const functions = [];
+    allFunctions.forEach(f => {
+        if (f.name == 'main') {
+            if (main) {
+                throw debug_1.default('two mains');
+            }
+            main = f;
+        }
+        else {
+            functions.push(f);
+        }
+    });
+    return { globals, functions, main, stringLiterals: [] };
+};
+exports.parseProgram = (input) => {
+    const result = parse_1.parseString(parser_1.tokenSpecs, parser_1.grammar, 'program', input);
+    if ('errors' in result)
+        return result.errors;
+    return tacFromParseResult(result);
+};
 
 
 /***/ }),
@@ -32845,22 +33323,34 @@ ${join_1.default(functions.map(Function_1.toString), '\n\n')}
 /*!**************************************!*\
   !*** ./threeAddressCode/Register.ts ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export Register [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export compare [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export isEqual [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export toString [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.compare = exports.isEqual = exports.toString = exports.Register = void 0;
 const compare_1 = __webpack_require__(/*! ../string/compare */ "./string/compare.ts");
+const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 class Register {
     constructor(name) {
         this.name = name;
     }
     toString() {
-        return `r:${this.name}`;
+        throw debug_1.default('deprecated');
     }
 }
 exports.Register = Register;
+exports.toString = (r) => {
+    return `r:${r.name}`;
+};
 exports.isEqual = (lhs, rhs) => lhs.name == rhs.name;
 exports.compare = (lhs, rhs) => compare_1.default(lhs.name, rhs.name);
 
@@ -32871,104 +33361,121 @@ exports.compare = (lhs, rhs) => compare_1.default(lhs.name, rhs.name);
 /*!***************************************!*\
   !*** ./threeAddressCode/Statement.ts ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export hasSideEffects [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export reads [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export toString [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! export writes [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.hasSideEffects = exports.writes = exports.reads = exports.toString = void 0;
+const Register_1 = __webpack_require__(/*! ./Register */ "./threeAddressCode/Register.ts");
 const filter_1 = __webpack_require__(/*! ../util/list/filter */ "./util/list/filter.ts");
 const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
 const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
+const sOrV = (data) => {
+    if (typeof data == 'number') {
+        return data.toString();
+    }
+    else {
+        return Register_1.toString(data);
+    }
+};
 const toStringWithoutComment = (tas) => {
     switch (tas.kind) {
         case 'empty':
             return '';
         case 'syscall': {
-            const args = tas.arguments.map(arg => arg.toString()).join(' ');
+            const args = tas.arguments.map(sOrV).join(' ');
             if (tas.destination) {
-                return `${tas.destination} = syscall ${tas.name} ${args}`;
+                return `${Register_1.toString(tas.destination)} = syscall ${tas.name} ${args}`;
             }
             else {
                 return `syscall ${tas.name} ${args}`;
             }
         }
         case 'move':
-            return `${tas.to} = ${tas.from}`;
+            return `${Register_1.toString(tas.to)} = ${Register_1.toString(tas.from)}`;
         case 'loadImmediate':
-            return `${tas.destination} = ${tas.value}`;
+            return `${Register_1.toString(tas.destination)} = ${tas.value}`;
         case 'addImmediate':
-            return `${tas.register} += ${tas.amount}`;
+            return `${Register_1.toString(tas.register)} += ${tas.amount}`;
         case 'subtract':
-            return `${tas.destination} = ${tas.lhs} - ${tas.rhs}`;
+            return `${Register_1.toString(tas.destination)} = ${Register_1.toString(tas.lhs)} - ${Register_1.toString(tas.rhs)}`;
         case 'add':
-            return `${tas.destination} = ${tas.lhs} + ${tas.rhs}`;
+            return `${Register_1.toString(tas.destination)} = ${Register_1.toString(tas.lhs)} + ${Register_1.toString(tas.rhs)}`;
         case 'multiply':
-            return `${tas.destination} = ${tas.lhs} * ${tas.rhs}`;
+            return `${Register_1.toString(tas.destination)} = ${Register_1.toString(tas.lhs)} * ${Register_1.toString(tas.rhs)}`;
         case 'increment':
-            return `${tas.register}++`;
+            return `${Register_1.toString(tas.register)}++`;
         case 'label':
         case 'functionLabel':
             return `${tas.name}:`;
         case 'goto':
             return `goto ${tas.label}`;
         case 'gotoIfEqual':
-            return `goto ${tas.label} if ${tas.lhs} == ${tas.rhs}`;
+            return `goto ${tas.label} if ${Register_1.toString(tas.lhs)} == ${Register_1.toString(tas.rhs)}`;
         case 'gotoIfNotEqual':
             if (typeof tas.rhs == 'number') {
-                return `goto ${tas.label} if ${tas.lhs} != ${tas.rhs}`;
+                return `goto ${tas.label} if ${Register_1.toString(tas.lhs)} != ${tas.rhs}`;
             }
-            return `goto ${tas.label} if ${tas.lhs} != ${tas.rhs}`;
+            return `goto ${tas.label} if ${Register_1.toString(tas.lhs)} != ${Register_1.toString(tas.rhs)}`;
         case 'gotoIfZero':
-            return `goto ${tas.label} if ${tas.register} == 0`;
+            return `goto ${tas.label} if ${Register_1.toString(tas.register)} == 0`;
         case 'gotoIfGreater':
-            return `goto ${tas.label} if ${tas.lhs} > ${tas.rhs}`;
+            return `goto ${tas.label} if ${Register_1.toString(tas.lhs)} > ${Register_1.toString(tas.rhs)}`;
         case 'storeGlobal':
-            return `*${tas.to} = ${tas.from}`;
+            return `*${tas.to} = ${Register_1.toString(tas.from)}`;
         case 'loadGlobal':
-            return `${tas.to} = ${tas.from}`;
+            return `${Register_1.toString(tas.to)} = ${tas.from}`;
         case 'loadSymbolAddress':
-            return `${tas.to} = &${tas.symbolName}`;
+            return `${Register_1.toString(tas.to)} = &${tas.symbolName}`;
         case 'storeMemory':
-            return `*(${tas.address} + ${tas.offset}) = ${tas.from}`;
+            return `*(${Register_1.toString(tas.address)} + ${tas.offset}) = ${Register_1.toString(tas.from)}`;
         case 'storeMemoryByte':
-            return `*${tas.address} = ${tas.contents}`;
+            return `*${Register_1.toString(tas.address)} = ${Register_1.toString(tas.contents)}`;
         case 'storeZeroToMemory':
-            return `*(${tas.address} + ${tas.offset}) = 0`;
+            return `*(${Register_1.toString(tas.address)} + ${tas.offset}) = 0`;
         case 'loadMemory':
-            return `${tas.to} = *(${tas.from} + ${tas.offset})`;
+            return `${Register_1.toString(tas.to)} = *(${Register_1.toString(tas.from)} + ${tas.offset})`;
         case 'loadMemoryByte':
-            return `${tas.to} = *${tas.address}`;
+            return `${Register_1.toString(tas.to)} = *${Register_1.toString(tas.address)}`;
         case 'callByRegister': {
             if (!tas.arguments)
                 throw debug_1.default('bad argumnets');
-            const args = join_1.default(tas.arguments.map(arg => arg.toString()), ', ');
+            const args = join_1.default(tas.arguments.map(sOrV), ', ');
             if (tas.destination) {
-                return `${tas.destination} = ${tas.function}(${args})`;
+                return `${Register_1.toString(tas.destination)} = ${Register_1.toString(tas.function)}(${args})`;
             }
             else {
-                return `${tas.function}(${args})`;
+                return `${Register_1.toString(tas.function)}(${args})`;
             }
         }
         case 'callByName': {
             if (!tas.arguments)
                 throw debug_1.default('bad argumnets');
-            const args = join_1.default(tas.arguments.map(arg => arg.toString()), ', ');
+            const args = join_1.default(tas.arguments.map(sOrV), ', ');
             if (tas.destination) {
-                return `${tas.destination} = ${tas.function}(${args})`;
+                return `${Register_1.toString(tas.destination)} = ${tas.function}(${args})`;
             }
             else {
                 return `${tas.function}(${args})`;
             }
         }
         case 'return':
-            return `return ${tas.register};`;
+            return `return ${Register_1.toString(tas.register)};`;
         case 'alloca':
-            return `${tas.register} = alloca(${tas.bytes})`;
+            return `${Register_1.toString(tas.register)} = alloca(${tas.bytes})`;
         case 'spill':
-            return `spill:${tas.register}`;
+            return `spill:${Register_1.toString(tas.register)}`;
         case 'unspill':
-            return `unspill:${tas.register}`;
+            return `unspill:${Register_1.toString(tas.register)}`;
     }
 };
 const preceedingWhitespace = (tas) => {
@@ -33066,7 +33573,7 @@ exports.writes = (tas) => {
             return [tas.destination];
         case 'addImmediate':
         case 'increment':
-            return [];
+            return [tas.register];
         case 'subtract':
         case 'add':
         case 'multiply':
@@ -33166,12 +33673,23 @@ exports.hasSideEffects = (tas) => {
 /*!***************************************!*\
   !*** ./threeAddressCode/generator.ts ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export astToThreeAddressCode [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export constructFunction [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export makeTargetProgram [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/*! CommonJS bailout: exports.astToThreeAddressCode(...) prevents optimization as exports is passed as call context at 90:32-61 */
+/*! CommonJS bailout: exports.astToThreeAddressCode(...) prevents optimization as exports is passed as call context at 630:32-61 */
+/*! CommonJS bailout: exports.constructFunction(...) prevents optimization as exports is passed as call context at 669:45-70 */
+/*! CommonJS bailout: exports.astToThreeAddressCode(...) prevents optimization as exports is passed as call context at 674:32-61 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.makeTargetProgram = exports.constructFunction = exports.astToThreeAddressCode = void 0;
 const runtime_1 = __webpack_require__(/*! ./runtime */ "./threeAddressCode/runtime.ts");
 const idAppender_1 = __webpack_require__(/*! ../util/idAppender */ "./util/idAppender.ts");
 const flatten_1 = __webpack_require__(/*! ../util/list/flatten */ "./util/list/flatten.ts");
@@ -33194,13 +33712,13 @@ const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, lhsInfo
     switch (lhsType.type.kind) {
         case 'Function':
         case 'Integer':
-            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`*${lhsInfo.newName} = ${rhsRegister}; Put ${lhsType.type.kind} into global`));
+            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`*${lhsInfo.newName} = ${Register_1.toString(rhsRegister)}; Put ${lhsType.type.kind} into global`));
         case 'String':
             return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`
-                    r:len = length(${rhsRegister}); Get string length
+                    r:len = length(${Register_1.toString(rhsRegister)}); Get string length
                     r:len++; Add one for null terminator
                     r:buffer = my_malloc(r:len); Allocate that much space
-                    string_copy(${rhsRegister}, r:buffer); Copy string into allocated space
+                    string_copy(${Register_1.toString(rhsRegister)}, r:buffer); Copy string into allocated space
                     *${lhsInfo.newName} = r:buffer; Store into global
                 `));
         case 'Product':
@@ -33210,12 +33728,12 @@ const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, lhsInfo
                 const offset = i * targetInfo.bytesInWord;
                 const memberTemporary = makeTemporary('member');
                 return parser_1.parseInstructionsOrDie(`
-                    ${memberTemporary} = *(${rhsRegister} + ${offset}); load ${m.name}
-                    *(${lhsAddress} + ${offset}) = ${memberTemporary}; store ${m.name}
+                    ${Register_1.toString(memberTemporary)} = *(${Register_1.toString(rhsRegister)} + ${offset}); load ${m.name}
+                    *(${Register_1.toString(lhsAddress)} + ${offset}) = ${Register_1.toString(memberTemporary)}; store ${m.name}
                 `);
             });
             return backend_utils_1.compileExpression([], ([]) => [
-                ...parser_1.parseInstructionsOrDie(`${lhsAddress} = &${lhsInfo.newName}; Get address of global`),
+                ...parser_1.parseInstructionsOrDie(`${Register_1.toString(lhsAddress)} = &${lhsInfo.newName}; Get address of global`),
                 ...flatten_1.default(copyMembers),
             ]);
         case 'List':
@@ -33228,20 +33746,20 @@ const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, lhsInfo
             const bytesInWord = targetInfo.bytesInWord;
             return backend_utils_1.compileExpression([], ([]) => [
                 ...parser_1.parseInstructionsOrDie(`
-                    ${remainingCount} = *(${rhsRegister} + 0); Get length of list
-                    ${sourceAddress} = ${rhsRegister}; Local copy of source data pointer
-                    ${itemSize} = ${bytesInWord}; For multiplying
-                    ${remainingCount} = ${remainingCount} * ${itemSize}; Count = count * size
-                    ${remainingCount} += ${bytesInWord}; Add place to store length of list
-                    ${targetAddress} = my_malloc(${remainingCount}); Malloc
-                    *${lhsInfo.newName} = ${targetAddress}; Store to global
+                    ${Register_1.toString(remainingCount)} = *(${Register_1.toString(rhsRegister)} + 0); Get length of list
+                    ${Register_1.toString(sourceAddress)} = ${Register_1.toString(rhsRegister)}; Local copy of source data pointer
+                    ${Register_1.toString(itemSize)} = ${bytesInWord}; For multiplying
+                    ${Register_1.toString(remainingCount)} = ${Register_1.toString(remainingCount)} * ${Register_1.toString(itemSize)}; Count = count * size
+                    ${Register_1.toString(remainingCount)} += ${bytesInWord}; Add place to store length of list
+                    ${Register_1.toString(targetAddress)} = my_malloc(${Register_1.toString(remainingCount)}); Malloc
+                    *${lhsInfo.newName} = ${Register_1.toString(targetAddress)}; Store to global
                 ${copyLoop}:; Copy loop
-                    ${temp} = *(${sourceAddress} + 0); Copy a byte
-                    *(${targetAddress} + 0) = ${temp}; Finish copy
-                    ${remainingCount} += ${-bytesInWord}; Bump pointers
-                    ${sourceAddress} += ${bytesInWord}; Bump pointers
-                    ${targetAddress} += ${bytesInWord}; Bump pointers
-                    goto ${copyLoop} if ${remainingCount} != 0; Not done
+                    ${Register_1.toString(temp)} = *(${Register_1.toString(sourceAddress)} + 0); Copy a byte
+                    *(${Register_1.toString(targetAddress)} + 0) = ${Register_1.toString(temp)}; Finish copy
+                    ${Register_1.toString(remainingCount)} += ${-bytesInWord}; Bump pointers
+                    ${Register_1.toString(sourceAddress)} += ${bytesInWord}; Bump pointers
+                    ${Register_1.toString(targetAddress)} += ${bytesInWord}; Bump pointers
+                    goto ${copyLoop} if ${Register_1.toString(remainingCount)} != 0; Not done
                 `),
             ]);
         default:
@@ -33249,29 +33767,36 @@ const assignGlobal = (makeTemporary, makeLabel, rhsRegister, targetInfo, lhsInfo
             throw debug_1.default(`${unhandled} unhandled in assignGlobal`);
     }
 };
+const get = (obj, key) => {
+    const result = obj[key];
+    if (result === undefined) {
+        debug_1.default('Failed get');
+    }
+    return result;
+};
 exports.astToThreeAddressCode = (input) => {
     const { ast, variablesInScope, destination, globalNameMap, stringLiterals, makeTemporary, makeLabel, types, targetInfo, } = input;
     const recurse = newInput => exports.astToThreeAddressCode(Object.assign(Object.assign({}, input), newInput));
     switch (ast.kind) {
         case 'number':
-            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${destination} = ${ast.value}; Load number literal`));
+            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${Register_1.toString(destination)} = ${ast.value}; Load number literal`));
         case 'booleanLiteral':
-            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${destination} = ${ast.value ? 1 : 0}; Load boolean literal`));
+            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${Register_1.toString(destination)} = ${ast.value ? 1 : 0}; Load boolean literal`));
         case 'stringLiteral': {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
             if (!stringLiteralData)
                 throw debug_1.default('todo');
-            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${destination} = &${backend_utils_1.stringLiteralName(stringLiteralData)}; Load string literal address`));
+            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${Register_1.toString(destination)} = &${backend_utils_1.stringLiteralName(stringLiteralData)}; Load string literal address`));
         }
         case 'functionLiteral':
-            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${destination} = &${ast.deanonymizedName}; Load function into register`));
+            return backend_utils_1.compileExpression([], ([]) => parser_1.parseInstructionsOrDie(`${Register_1.toString(destination)} = &${ast.deanonymizedName}; Load function into register`));
         case 'returnStatement':
             const result = makeTemporary('result');
             const subExpression = recurse({ ast: ast.expression, destination: result });
             const cleanupAndReturn = {
                 prepare: [],
                 execute: [],
-                cleanup: parser_1.parseInstructionsOrDie(`return ${result}; Return previous expression`),
+                cleanup: parser_1.parseInstructionsOrDie(`return ${Register_1.toString(result)}; Return previous expression`),
             };
             return backend_utils_1.compileExpression([cleanupAndReturn, subExpression], ([_, e1]) => e1);
         case 'subtraction': {
@@ -33282,7 +33807,7 @@ exports.astToThreeAddressCode = (input) => {
             return backend_utils_1.compileExpression([computeLhs, computeRhs], ([storeLeft, storeRight]) => [
                 ...storeLeft,
                 ...storeRight,
-                ...parser_1.parseInstructionsOrDie(`${destination} = ${lhs} - ${rhs}; Evaluate subtraction`),
+                ...parser_1.parseInstructionsOrDie(`${Register_1.toString(destination)} = ${Register_1.toString(lhs)} - ${Register_1.toString(rhs)}; Evaluate subtraction`),
             ]);
         }
         case 'addition': {
@@ -33293,7 +33818,7 @@ exports.astToThreeAddressCode = (input) => {
             return backend_utils_1.compileExpression([computeLhs, computeRhs], ([storeLeft, storeRight]) => [
                 ...storeLeft,
                 ...storeRight,
-                ...parser_1.parseInstructionsOrDie(`${destination} = ${lhs} + ${rhs}; Evaluate addition`),
+                ...parser_1.parseInstructionsOrDie(`${Register_1.toString(destination)} = ${Register_1.toString(lhs)} + ${Register_1.toString(rhs)}; Evaluate addition`),
             ]);
         }
         case 'ternary': {
@@ -33318,6 +33843,43 @@ exports.astToThreeAddressCode = (input) => {
                     `),
                 ...e3,
                 { kind: 'label', name: endOfTernaryLabel, why: 'End of ternary label' },
+            ]);
+        }
+        case 'forLoop': {
+            const varName = ast.var;
+            const item = { name: varName };
+            const body = ast.body.map(statement => recurse({
+                variablesInScope: Object.assign(Object.assign({}, variablesInScope), { [varName]: item }),
+                ast: statement,
+            }));
+            const list = makeTemporary('list');
+            const listItems = recurse({ ast: ast.list, destination: list });
+            const i = makeTemporary('i');
+            const max = makeTemporary('max');
+            const loopLabel = makeLabel('loop');
+            const itemAddress = makeTemporary('itemAddress');
+            const bytesInWord = makeTemporary('bytesInWord');
+            return backend_utils_1.compileExpression([listItems, ...body], ([makeList, ...statements]) => [
+                ...makeList,
+                ...parser_1.parseInstructionsOrDie(`
+                        ${Register_1.toString(i)} = 0;
+                        ${Register_1.toString(max)} = *(${Register_1.toString(list)} + 0); get list length
+                    ${loopLabel}:;
+                        ; Get this iteration's item
+                        ${Register_1.toString(bytesInWord)} = ${targetInfo.bytesInWord};
+                        ${Register_1.toString(itemAddress)} = ${Register_1.toString(i)} * ${Register_1.toString(bytesInWord)};
+                        ${Register_1.toString(itemAddress)} = ${Register_1.toString(list)} + ${Register_1.toString(itemAddress)};
+                        ${Register_1.toString(item)} = *(${Register_1.toString(itemAddress)} + ${targetInfo.bytesInWord});
+                    `),
+                ...flatten_1.default(statements),
+                { kind: 'increment', register: i, why: 'i++' },
+                {
+                    kind: 'gotoIfNotEqual',
+                    lhs: i,
+                    rhs: max,
+                    label: loopLabel,
+                    why: 'not done',
+                },
             ]);
         }
         case 'callExpression': {
@@ -33374,7 +33936,7 @@ exports.astToThreeAddressCode = (input) => {
                 callInstructions = [
                     {
                         kind: 'callByRegister',
-                        function: variablesInScope[functionName],
+                        function: get(variablesInScope, functionName),
                         arguments: argumentRegisters,
                         destination,
                         why: `Call by register ${functionName}`,
@@ -33449,7 +34011,7 @@ exports.astToThreeAddressCode = (input) => {
                 ], ([rhs, assign]) => [...rhs, ...assign]);
             }
             else if (lhs in variablesInScope) {
-                return recurse({ ast: ast.expression, destination: variablesInScope[lhs] });
+                return recurse({ ast: ast.expression, destination: get(variablesInScope, lhs) });
             }
             else {
                 throw debug_1.default('Declared variable was neither global nor local');
@@ -33532,7 +34094,7 @@ exports.astToThreeAddressCode = (input) => {
                 }
             }
             else if (lhs in variablesInScope) {
-                return recurse({ ast: ast.expression, destination: variablesInScope[lhs] });
+                return recurse({ ast: ast.expression, destination: get(variablesInScope, lhs) });
             }
             else {
                 throw debug_1.default('Reassigned variable was neither global nor local');
@@ -33547,26 +34109,26 @@ exports.astToThreeAddressCode = (input) => {
             const makeLhs = recurse({ ast: ast.lhs, destination: lhs });
             const makeRhs = recurse({ ast: ast.rhs, destination: rhs });
             const reqs = {
-                prepare: parser_1.parseInstructionsOrDie(`${allocated} = 0; Will set to true if we need to clean up`),
+                prepare: parser_1.parseInstructionsOrDie(`${Register_1.toString(allocated)} = 0; Will set to true if we need to clean up`),
                 execute: [],
                 cleanup: parser_1.parseInstructionsOrDie(`
-                    goto ${doneFree} if ${allocated} == 0; If we never allocated, we should never free
-                    my_free(${destination}); Free destination of concat (TODO: are we sure we aren't using it?)
+                    goto ${doneFree} if ${Register_1.toString(allocated)} == 0; If we never allocated, we should never free
+                    my_free(${Register_1.toString(destination)}); Free destination of concat (TODO: are we sure we aren't using it?)
                 ${doneFree}:; Done free
                 `),
             };
             return backend_utils_1.compileExpression([makeLhs, makeRhs, reqs], ([e1, e2, _]) => [
-                ...parser_1.parseInstructionsOrDie(`${combinedLength} = 1; Combined length. Start with 1 for null terminator.`),
+                ...parser_1.parseInstructionsOrDie(`${Register_1.toString(combinedLength)} = 1; Combined length. Start with 1 for null terminator.`),
                 ...e1,
                 ...e2,
                 ...parser_1.parseInstructionsOrDie(`
-                        r:lhsLength = length(${lhs}); Compute lhs length
-                        ${combinedLength} = ${combinedLength} + r:lhsLength; Accumulate it
-                        r:rhsLength = length(${rhs}); Compute rhs length
-                        ${combinedLength} = ${combinedLength} + r:rhsLength; Accumulate it
-                        ${destination} = my_malloc(${combinedLength}); Allocate space for new string
-                        ${allocated} = 1; Remind ourselves to decallocate
-                        string_concatenate(${lhs}, ${rhs}, ${destination}); Concatenate and put in new space
+                        r:lhsLength = length(${Register_1.toString(lhs)}); Compute lhs length
+                        ${Register_1.toString(combinedLength)} = ${Register_1.toString(combinedLength)} + r:lhsLength; Accumulate it
+                        r:rhsLength = length(${Register_1.toString(rhs)}); Compute rhs length
+                        ${Register_1.toString(combinedLength)} = ${Register_1.toString(combinedLength)} + r:rhsLength; Accumulate it
+                        ${Register_1.toString(destination)} = my_malloc(${Register_1.toString(combinedLength)}); Allocate space for new string
+                        ${Register_1.toString(allocated)} = 1; Remind ourselves to decallocate
+                        string_concatenate(${Register_1.toString(lhs)}, ${Register_1.toString(rhs)}, ${Register_1.toString(destination)}); Concatenate and put in new space
                     `),
             ]);
         }
@@ -33596,7 +34158,7 @@ exports.astToThreeAddressCode = (input) => {
                     ]);
                 }
             }
-            const identifierRegister = variablesInScope[identifierName];
+            const identifierRegister = get(variablesInScope, identifierName);
             return backend_utils_1.compileExpression([], ([]) => [
                 {
                     kind: 'move',
@@ -33677,10 +34239,10 @@ exports.astToThreeAddressCode = (input) => {
             const prepAndCleanup = {
                 prepare: parser_1.parseInstructionsOrDie(`
                     ; ${bytesInWord}b for length, ${ast.items.length} ${itemSize}b items
-                    ${dataPointer} = my_malloc(${byteCount}); allocate
-                    ${listLength} = ${ast.items.length}; save size
-                    *(${dataPointer} + 0) = ${listLength}; save list length
-                    ${destination} = ${dataPointer}; save memory for pointer
+                    ${Register_1.toString(dataPointer)} = my_malloc(${byteCount}); allocate
+                    ${Register_1.toString(listLength)} = ${ast.items.length}; save size
+                    *(${Register_1.toString(dataPointer)} + 0) = ${Register_1.toString(listLength)}; save list length
+                    ${Register_1.toString(destination)} = ${Register_1.toString(dataPointer)}; save memory for pointer
                 `),
                 execute: [],
                 cleanup: [
@@ -33724,12 +34286,12 @@ exports.astToThreeAddressCode = (input) => {
                 ...makeIndex,
                 ...makeAccess,
                 ...parser_1.parseInstructionsOrDie(`
-                        ${listLength} = *(${accessed} + 0); get list length
-                        goto ${outOfRange} if ${itemIndex} > ${listLength}; check OOB
-                        ${itemSize} = ${bytesInWord}; TODO: should be type size
-                        ${itemAddress} = ${itemIndex} * ${itemSize}; account for item size
-                        ${itemAddress} = ${itemAddress} + ${accessed}; offset from list base
-                        ${destination} = *(${itemAddress} + ${bytesInWord}); add word to adjust for length
+                        ${Register_1.toString(listLength)} = *(${Register_1.toString(accessed)} + 0); get list length
+                        goto ${outOfRange} if ${Register_1.toString(itemIndex)} > ${Register_1.toString(listLength)}; check OOB
+                        ${Register_1.toString(itemSize)} = ${bytesInWord}; TODO:) should be type size
+                        ${Register_1.toString(itemAddress)} = ${Register_1.toString(itemIndex)} * ${Register_1.toString(itemSize)}; account for item size
+                        ${Register_1.toString(itemAddress)} = ${Register_1.toString(itemAddress)} + ${Register_1.toString(accessed)}; offset from list base
+                        ${Register_1.toString(destination)} = *(${Register_1.toString(itemAddress)} + ${bytesInWord}); add word to adjust for length
                     ${outOfRange}:; TODO: exit on out of range
                     `),
             ]);
@@ -33898,17 +34460,35 @@ exports.makeTargetProgram = ({ backendInputs, targetInfo, }) => {
 /*!************************************!*\
   !*** ./threeAddressCode/parser.ts ***!
   \************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export grammar [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export instructionFromParseResult [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export parseArgList [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export parseInstructions [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export parseInstructionsOrDie [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tokenSpecs [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/*! CommonJS bailout: exports.parseArgList(...) prevents optimization as exports is passed as call context at 440:56-76 */
+/*! CommonJS bailout: exports.parseArgList(...) prevents optimization as exports is passed as call context at 451:56-76 */
+/*! CommonJS bailout: exports.parseArgList(...) prevents optimization as exports is passed as call context at 464:56-76 */
+/*! CommonJS bailout: exports.parseArgList(...) prevents optimization as exports is passed as call context at 475:56-76 */
+/*! CommonJS bailout: exports.parseInstructions(...) prevents optimization as exports is passed as call context at 580:19-44 */
+/*! CommonJS bailout: exports.parseInstructions(...) prevents optimization as exports is passed as call context at 583:8-33 */
+/*! CommonJS bailout: exports.parseInstructions(...) prevents optimization as exports is passed as call context at 598:4-29 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseInstructionsOrDie = exports.parseInstructions = exports.instructionFromParseResult = exports.parseArgList = exports.grammar = exports.tokenSpecs = void 0;
 const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
 const last_1 = __webpack_require__(/*! ../util/list/last */ "./util/list/last.ts");
 const Register_1 = __webpack_require__(/*! ./Register */ "./threeAddressCode/Register.ts");
 const parse_1 = __webpack_require__(/*! ../parser-lib/parse */ "./parser-lib/parse.ts");
-const tokenSpecs = [
+const renderParseError_1 = __webpack_require__(/*! ../parser-lib/renderParseError */ "./parser-lib/renderParseError.ts");
+exports.tokenSpecs = [
     { token: '\\(global\\)', type: 'global', toString: x => x },
     { token: '\\(function\\)', type: 'function', toString: x => x },
     {
@@ -33984,7 +34564,7 @@ const return_ = tacTerminal('return');
 const spillInstruction = tacTerminal('spillInstruction');
 const unspillInstruction = tacTerminal('unspillInstruction');
 const greaterThan = tacTerminal('greaterThan');
-const grammar = {
+exports.grammar = {
     program: parse_1.Sequence('program', [parse_1.Many('global'), parse_1.Many('function')]),
     global: parse_1.Sequence('global', [global_, identifier, colon, identifier, number]),
     function: parse_1.Sequence('function', [
@@ -34129,7 +34709,7 @@ const parseSyscallArgs = (ast) => {
         }
     });
 };
-const parseArgList = (ast) => ast.items.map((item) => {
+exports.parseArgList = (ast) => ast.items.map((item) => {
     if (parse_1.isSeparatedListNode(item) || parse_1.isListNode(item)) {
         throw debug_1.default('todo');
     }
@@ -34154,14 +34734,14 @@ const isRegister = (data) => {
     return false;
 };
 const parseRegister = (data) => {
-    if (!data.startsWith)
-        debug_1.default('no startsWith');
+    if (typeof data !== 'string')
+        debug_1.default('non-string passed to parseRegister');
     if (data.startsWith('r:')) {
         return new Register_1.Register(data.substring(2));
     }
     throw debug_1.default('invalid register name');
 };
-const instructionFromParseResult = (ast) => {
+exports.instructionFromParseResult = (ast) => {
     if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
         throw debug_1.default('todo');
     }
@@ -34339,7 +34919,7 @@ const instructionFromParseResult = (ast) => {
                 return {
                     kind: 'callByRegister',
                     function: parseRegister(a.children[2].value),
-                    arguments: a.children.length == 7 ? parseArgList(a.children[4]) : [],
+                    arguments: a.children.length == 7 ? exports.parseArgList(a.children[4]) : [],
                     destination: parseRegister(a.children[0].value),
                     why: stripComment(last_1.default(a.children).value),
                 };
@@ -34350,7 +34930,7 @@ const instructionFromParseResult = (ast) => {
                 return {
                     kind: 'callByRegister',
                     function: parseRegister(a.children[0].value),
-                    arguments: a.children.length == 5 ? parseArgList(a.children[2]) : [],
+                    arguments: a.children.length == 5 ? exports.parseArgList(a.children[2]) : [],
                     destination: null,
                     why: stripComment(last_1.default(a.children).value),
                 };
@@ -34363,7 +34943,7 @@ const instructionFromParseResult = (ast) => {
                 return {
                     kind: 'callByName',
                     function: a.children[2].value,
-                    arguments: a.children.length == 7 ? parseArgList(a.children[4]) : [],
+                    arguments: a.children.length == 7 ? exports.parseArgList(a.children[4]) : [],
                     destination: parseRegister(a.children[0].value),
                     why: stripComment(last_1.default(a.children).value),
                 };
@@ -34374,7 +34954,7 @@ const instructionFromParseResult = (ast) => {
                 return {
                     kind: 'callByName',
                     function: a.children[0].value,
-                    arguments: a.children.length == 5 ? parseArgList(a.children[2]) : [],
+                    arguments: a.children.length == 5 ? exports.parseArgList(a.children[2]) : [],
                     destination: null,
                     why: stripComment(last_1.default(a.children).value),
                 };
@@ -34469,155 +35049,14 @@ const instructionFromParseResult = (ast) => {
             throw debug_1.default(`${ast.type} unhandled in instructionFromParseResult`);
     }
 };
-const functionFromParseResult = (ast) => {
-    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
-        throw debug_1.default('todo');
-    }
-    if (ast.type != 'function') {
-        throw debug_1.default('Need a function');
-    }
-    if (!('children' in ast)) {
-        debug_1.default('wrong shape ast');
-        throw debug_1.default('WrongShapeAst');
-    }
-    let childIndex = 0;
-    let child = ast.children[childIndex];
-    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
-        throw debug_1.default('todo');
-    }
-    if (child.type != 'function') {
-        debug_1.default('wrong shape ast');
-        throw debug_1.default('WrongShapeAst');
-    }
-    childIndex++;
-    child = ast.children[childIndex];
-    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
-        throw debug_1.default('todo');
-    }
-    if (child.type == 'spillSpec') {
-        childIndex++;
-    }
-    child = ast.children[childIndex];
-    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
-        throw debug_1.default('todo');
-    }
-    if (child.type != 'identifier') {
-        debug_1.default('wrong shape ast');
-        throw debug_1.default('WrongShapeAst');
-    }
-    const name = ast.children[childIndex].value;
-    childIndex++;
-    child = ast.children[childIndex];
-    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
-        throw debug_1.default('todo');
-    }
-    if (child.type != 'leftBracket') {
-        debug_1.default('wrong shape ast');
-        throw debug_1.default('WrongShapeAst');
-    }
-    childIndex++;
-    let args = [];
-    child = ast.children[childIndex];
-    if (parse_1.isSeparatedListNode(child)) {
-        args = parseArgList(child);
-        childIndex++;
-    }
-    child = ast.children[childIndex];
-    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
-        throw debug_1.default('todo');
-    }
-    if (child.type != 'rightBracket') {
-        debug_1.default('wrong shape ast');
-        throw debug_1.default('WrongShapeAst');
-    }
-    childIndex++;
-    child = ast.children[childIndex];
-    if (parse_1.isSeparatedListNode(child) || parse_1.isListNode(child)) {
-        throw debug_1.default('todo');
-    }
-    if (child.type != 'colon') {
-        debug_1.default('wrong shape ast');
-        throw debug_1.default('WrongShapeAst');
-    }
-    childIndex++;
-    child = ast.children[childIndex];
-    if (!parse_1.isListNode(child)) {
-        throw debug_1.default('todo');
-    }
-    const instructions = child.items.map(instructionFromParseResult);
-    return { name, instructions, liveAtExit: [], arguments: args };
-};
-const tacFromParseResult = (ast) => {
-    if (!ast)
-        debug_1.default('no type');
-    if (parse_1.isSeparatedListNode(ast))
-        throw debug_1.default('todo');
-    if (parse_1.isListNode(ast))
-        throw debug_1.default('todo');
-    if (ast.type !== 'program')
-        throw debug_1.default('todo');
-    const parsedGlobals = ast.children[0];
-    const parsedFunctions = ast.children[1];
-    if (!parse_1.isListNode(parsedGlobals))
-        throw debug_1.default('todo');
-    if (!parse_1.isListNode(parsedFunctions))
-        throw debug_1.default('todo');
-    const globals = {};
-    parsedGlobals.items.forEach((a) => {
-        globals[a.children[1].value] = {
-            mangledName: a.children[3].value,
-            bytes: a.children[4].value,
-        };
-    });
-    const allFunctions = parsedFunctions.items.map(functionFromParseResult);
-    let main = undefined;
-    const functions = [];
-    allFunctions.forEach(f => {
-        if (f.name == 'main') {
-            if (main) {
-                throw debug_1.default('two mains');
-            }
-            main = f;
-        }
-        else {
-            functions.push(f);
-        }
-    });
-    return { globals, functions, main, stringLiterals: [] };
-};
-exports.parseProgram = (input) => {
-    const result = parse_1.parseString(tokenSpecs, grammar, 'program', input);
-    if ('errors' in result)
-        return result.errors;
-    return tacFromParseResult(result);
-};
-exports.parseFunction = (input) => {
-    const result = parse_1.parseString(tokenSpecs, grammar, 'function', input);
-    if ('errors' in result)
-        return result.errors;
-    return functionFromParseResult(result);
-};
-exports.parseFunctionOrDie = (tacString) => {
-    const parsed = exports.parseFunction(tacString);
-    if ('kind' in parsed) {
-        debugger;
-        exports.parseFunction(tacString);
-        throw debug_1.default('error in parseFunctionOrDie');
-    }
-    if (Array.isArray(parsed)) {
-        debugger;
-        exports.parseFunction(tacString);
-        throw debug_1.default('error in parseFunctionOrDie');
-    }
-    return parsed;
-};
+// TODO: this probably belongs in Statement
 exports.parseInstructions = (input) => {
-    const result = parse_1.parseString(tokenSpecs, grammar, 'instructions', input);
+    const result = parse_1.parseString(exports.tokenSpecs, exports.grammar, 'instructions', input);
     if ('errors' in result)
         return result.errors;
     if (!parse_1.isListNode(result))
         throw debug_1.default('bad list');
-    return result.items.map(instructionFromParseResult);
+    return result.items.map(exports.instructionFromParseResult);
 };
 exports.parseInstructionsOrDie = (tacString) => {
     const parsed = exports.parseInstructions(tacString);
@@ -34633,10 +35072,13 @@ exports.parseInstructionsOrDie = (tacString) => {
         if ('kind' in parsed0) {
             return parsed;
         }
+        else {
+            throw debug_1.default(`error in parseInstructionsOrDie:\n${renderParseError_1.default(parsed0, tacString)}`);
+        }
     }
     debugger;
     exports.parseInstructions(tacString);
-    throw debug_1.default('error in parseInstructionsOrDie: not array');
+    throw debug_1.default(`error in parseInstructionsOrDie: not array`);
 };
 
 
@@ -34646,14 +35088,33 @@ exports.parseInstructionsOrDie = (tacString) => {
 /*!*************************************!*\
   !*** ./threeAddressCode/runtime.ts ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export allRuntimeFunctions [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export intFromString [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export length [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export mallocWithMmap [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export mallocWithSbrk [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export myFreeRuntimeFunction [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export printWithPrintRuntimeFunction [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export printWithWriteRuntimeFunction [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export readIntDirect [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export readIntThroughSyscall [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export stringConcatenateRuntimeFunction [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export stringCopy [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export stringEqualityRuntimeFunction [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export verifyNoLeaks [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.allRuntimeFunctions = exports.intFromString = exports.myFreeRuntimeFunction = exports.stringEqualityRuntimeFunction = exports.stringConcatenateRuntimeFunction = exports.verifyNoLeaks = exports.readIntThroughSyscall = exports.readIntDirect = exports.printWithWriteRuntimeFunction = exports.printWithPrintRuntimeFunction = exports.stringCopy = exports.length = exports.mallocWithMmap = exports.mallocWithSbrk = void 0;
 const runtime_strings_1 = __webpack_require__(/*! ../runtime-strings */ "./runtime-strings.ts");
 const parser_1 = __webpack_require__(/*! ./parser */ "./threeAddressCode/parser.ts");
+const Function_1 = __webpack_require__(/*! ./Function */ "./threeAddressCode/Function.ts");
 const Register_1 = __webpack_require__(/*! ./Register */ "./threeAddressCode/Register.ts");
 const switchableMallocImpl = (bytesInWord, makeSyscall) => ({
     name: 'my_malloc',
@@ -34738,7 +35199,7 @@ exports.mallocWithMmap = bytesInWord => switchableMallocImpl(bytesInWord, (amoun
     why: 'mmap',
     destination,
 }));
-exports.length = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.length = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) length(r:str):
             r:currentCharPtr = r:str; Make a copy of the arg that we can modify (TODO: disallow modifying arg)
             r:len = 0;
@@ -34751,7 +35212,7 @@ exports.length = bytesInWord => parser_1.parseFunctionOrDie(`
         length_return:; Done
             return r:len;
     `);
-exports.stringCopy = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.stringCopy = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) string_copy(r:source, r:destination):; Copy string pointer to by first argument to second argument
         string_copy_loop:; Copy a byte
             r:currentChar = *r:source; Load next char from string
@@ -34762,12 +35223,12 @@ exports.stringCopy = bytesInWord => parser_1.parseFunctionOrDie(`
             goto string_copy_loop; and go keep copying
         string_copy_return:; Done
     `);
-exports.printWithPrintRuntimeFunction = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.printWithPrintRuntimeFunction = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) print(r:str):
         r:result = syscall print r:str;
         return r:result;
     `);
-exports.printWithWriteRuntimeFunction = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.printWithWriteRuntimeFunction = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) print(r:str):
         r:len = length(r:str); Get str length
         r:result = syscall print 1 r:str r:len; 1: fd of stdout. r:str: ptr to data to write. r:len: length to write
@@ -34775,7 +35236,7 @@ exports.printWithWriteRuntimeFunction = bytesInWord => parser_1.parseFunctionOrD
    `);
 exports.readIntDirect = bytesInWord => 
 // TODO: Allow syscalls that don't have any arguments, cause this shouldn't have arguments
-parser_1.parseFunctionOrDie(`
+Function_1.parseFunctionOrDie(`
         (function) readInt(r:str):
               r:result = syscall readInt r:str;
               return r:result;
@@ -34783,7 +35244,7 @@ parser_1.parseFunctionOrDie(`
 exports.readIntThroughSyscall = bytesInWord => {
     const stdinFd = 0;
     const bufferSize = 10;
-    return parser_1.parseFunctionOrDie(`
+    return Function_1.parseFunctionOrDie(`
         (function) readInt():
             r:buffer = my_malloc(${bufferSize}); malloc 10 byte buffer because why not TODO
             r:readResult = syscall read ${stdinFd} r:buffer ${bufferSize};
@@ -34800,7 +35261,7 @@ exports.readIntThroughSyscall = bytesInWord => {
     `);
 };
 // TODO: figure out a way to verify that this is working
-exports.verifyNoLeaks = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.verifyNoLeaks = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) verify_no_leaks():
         r:currentBlockPointer = &first_block; Load first block address
         r:currentBlockPointer = *(r:currentBlockPointer + ${0 * bytesInWord}); Load first block pointer
@@ -34817,7 +35278,7 @@ exports.verifyNoLeaks = bytesInWord => parser_1.parseFunctionOrDie(`
         goto verify_no_leaks_loop; Check next block
     verify_no_leaks_return:; All done
     `);
-exports.stringConcatenateRuntimeFunction = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.stringConcatenateRuntimeFunction = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) string_concatenate(r:lhs, r:rhs, r:dest):
         write_left_loop:; Append left string
             r:currentChar = *r:lhs; Load byte from left
@@ -34835,7 +35296,7 @@ exports.stringConcatenateRuntimeFunction = bytesInWord => parser_1.parseFunction
             goto copy_from_right; Go copy next char
         concatenate_return:; Exit. TODO: repair input pointers?
     `);
-exports.stringEqualityRuntimeFunction = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.stringEqualityRuntimeFunction = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) stringEquality(r:lhs, r:rhs):
             r:result = 1; Result = true (will write false if diff found)
         stringEquality_loop:; Check a char
@@ -34853,7 +35314,7 @@ exports.stringEqualityRuntimeFunction = bytesInWord => parser_1.parseFunctionOrD
     `);
 // TODO: merge adjacent free blocks
 // TOOD: check if already free
-exports.myFreeRuntimeFunction = bytesInWord => parser_1.parseFunctionOrDie(`
+exports.myFreeRuntimeFunction = bytesInWord => Function_1.parseFunctionOrDie(`
     (function) my_free(r:ptr):
             r:zero = 0; Need a zero
             goto free_null_check_passed if r:ptr != r:zero; Not freeing null check passed
@@ -34868,7 +35329,7 @@ exports.myFreeRuntimeFunction = bytesInWord => parser_1.parseFunctionOrDie(`
     `);
 // TODO: return error if string doesn't contain an int
 exports.intFromString = bytesInWord => {
-    return parser_1.parseFunctionOrDie(`
+    return Function_1.parseFunctionOrDie(`
     (function) intFromString(r:in):
         r:result = 0; Accumulate into here
         r:input = r:in; Make a copy so we can modify it TODO is this necessary?
@@ -34907,12 +35368,33 @@ exports.allRuntimeFunctions = [
 /*!******************!*\
   !*** ./types.ts ***!
   \******************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export builtinFunctions [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export builtinTypes [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export equal [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export resolve [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export resolveIfNecessary [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export resolveOrError [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export toString [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! export typeSize [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/*! CommonJS bailout: exports.toString(...) prevents optimization as exports is passed as call context at 19:67-83 */
+/*! CommonJS bailout: exports.toString(...) prevents optimization as exports is passed as call context at 22:22-38 */
+/*! CommonJS bailout: exports.resolve(...) prevents optimization as exports is passed as call context at 38:89-104 */
+/*! CommonJS bailout: exports.resolveIfNecessary(...) prevents optimization as exports is passed as call context at 40:21-47 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 72:17-30 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 80:137-150 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 82:137-150 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 86:15-28 */
+/*! CommonJS bailout: exports.typeSize(...) prevents optimization as exports is passed as call context at 140:60-76 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.typeSize = exports.builtinFunctions = exports.builtinTypes = exports.equal = exports.resolveOrError = exports.resolveIfNecessary = exports.resolve = exports.toString = void 0;
 const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
 const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
 const sum_1 = __webpack_require__(/*! ./util/list/sum */ "./util/list/sum.ts");
@@ -34988,13 +35470,14 @@ exports.equal = (a, b) => {
         return true;
     }
     if (a.type.kind == 'Product' && b.type.kind == 'Product') {
-        if (a.type.name != b.type.name)
-            return false;
         const bProduct = b.type;
         const allInLeftPresentInRight = a.type.members.every(memberA => bProduct.members.some(memberB => memberA.name == memberB.name && exports.equal(memberA.type, memberB.type)));
         const aProduct = a.type;
         const allInRightPresentInLeft = b.type.members.every(memberB => aProduct.members.some(memberA => memberA.name == memberB.name && exports.equal(memberA.type, memberB.type)));
         return allInLeftPresentInRight && allInRightPresentInLeft;
+    }
+    if (a.type.kind == 'List' && b.type.kind == 'List') {
+        return exports.equal(a.type.of, b.type.of);
     }
     return a.type.kind == b.type.kind;
 };
@@ -35066,12 +35549,16 @@ exports.typeSize = (targetInfo, type, typeDeclarations) => {
 /*!**********************************!*\
   !*** ./util/comparisonResult.ts ***!
   \**********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 var ComparisonResult;
 (function (ComparisonResult) {
     ComparisonResult[ComparisonResult["LT"] = -1] = "LT";
@@ -35087,12 +35574,16 @@ exports.default = ComparisonResult;
 /*!***********************!*\
   !*** ./util/debug.ts ***!
   \***********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.default = (why) => {
     debugger;
     throw why;
@@ -35105,12 +35596,16 @@ exports.default = (why) => {
 /*!**********************************!*\
   !*** ./util/execAndGetResult.ts ***!
   \**********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 const child_process_promise_1 = __webpack_require__(/*! child-process-promise */ "./node_modules/child-process-promise/index.js");
 exports.default = async (command) => {
     try {
@@ -35134,17 +35629,25 @@ exports.default = async (command) => {
 /*!****************************!*\
   !*** ./util/idAppender.ts ***!
   \****************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 const idMaker_1 = __webpack_require__(/*! ./idMaker */ "./util/idMaker.ts");
 exports.default = () => {
-    const makeId = idMaker_1.default();
+    const idMakers = {};
     return (name) => {
-        return `${name}_${makeId()}`;
+        if (name in idMakers) {
+            return `${name}_${idMakers[name]()}`;
+        }
+        idMakers[name] = idMaker_1.default();
+        return `${name}_`; // TODO: Remove the underscore and figure out why test fail
     };
 };
 
@@ -35155,12 +35658,16 @@ exports.default = () => {
 /*!*************************!*\
   !*** ./util/idMaker.ts ***!
   \*************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.default = () => {
     let id = 0;
     return () => {
@@ -35176,12 +35683,16 @@ exports.default = () => {
 /*!**********************!*\
   !*** ./util/join.ts ***!
   \**********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.default = (strings, joiner) => strings.join(joiner);
 
 
@@ -35191,12 +35702,16 @@ exports.default = (strings, joiner) => strings.join(joiner);
 /*!****************************!*\
   !*** ./util/list/drain.ts ***!
   \****************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 const debug_1 = __webpack_require__(/*! ../../util/debug */ "./util/debug.ts");
 // Remove items from array, starting at the front, processing them with fn, until array is empty. fn may add new items to array.
 exports.default = (array, fn) => {
@@ -35215,12 +35730,17 @@ exports.default = (array, fn) => {
 /*!*****************************!*\
   !*** ./util/list/filter.ts ***!
   \*****************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export filter [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.filter = void 0;
 exports.filter = (array, predicate) => array.filter(predicate);
 
 
@@ -35230,12 +35750,16 @@ exports.filter = (array, predicate) => array.filter(predicate);
 /*!******************************!*\
   !*** ./util/list/flatten.ts ***!
   \******************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.default = (array) => array.reduce((a, b) => a.concat(b), []);
 
 
@@ -35245,12 +35769,16 @@ exports.default = (array) => array.reduce((a, b) => a.concat(b), []);
 /*!***************************!*\
   !*** ./util/list/last.ts ***!
   \***************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.default = (array) => {
     if (array.length == 0) {
         return null;
@@ -35267,12 +35795,16 @@ exports.default = (array) => {
 /*!****************************!*\
   !*** ./util/list/range.ts ***!
   \****************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.default = (lower, upper) => Array.from({ length: upper - lower }, (v, k) => k + lower);
 
 
@@ -35282,12 +35814,16 @@ exports.default = (lower, upper) => Array.from({ length: upper - lower }, (v, k)
 /*!**************************!*\
   !*** ./util/list/sum.ts ***!
   \**************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.default = (array) => array.reduce((a, b) => a + b, 0);
 
 
@@ -35297,12 +35833,16 @@ exports.default = (array) => array.reduce((a, b) => a + b, 0);
 /*!*******************************!*\
   !*** ./util/list/uniqueBy.ts ***!
   \*******************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 const uniqueCmp_1 = __webpack_require__(/*! ./uniqueCmp */ "./util/list/uniqueCmp.ts");
 exports.default = (p, array) => uniqueCmp_1.default((x, y) => p(x) === p(y), array);
 
@@ -35313,12 +35853,16 @@ exports.default = (p, array) => uniqueCmp_1.default((x, y) => p(x) === p(y), arr
 /*!********************************!*\
   !*** ./util/list/uniqueCmp.ts ***!
   \********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.default = (p, array) => {
     const result = [];
     for (const item of array) {
@@ -35332,16 +35876,45 @@ exports.default = (p, array) => {
 
 /***/ }),
 
+/***/ "./util/never.ts":
+/*!***********************!*\
+  !*** ./util/never.ts ***!
+  \***********************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const debug_1 = __webpack_require__(/*! ./debug */ "./util/debug.ts");
+exports.default = (n, f) => {
+    throw debug_1.default(`${JSON.stringify(n)} unhandled in ${f}`);
+};
+
+
+/***/ }),
+
 /***/ "./util/ordered-set.ts":
 /*!*****************************!*\
   !*** ./util/ordered-set.ts ***!
   \*****************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export operatorCompare [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export orderedSet [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/*! CommonJS bailout: exports.orderedSet(...) prevents optimization as exports is passed as call context at 280:25-43 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.orderedSet = exports.operatorCompare = void 0;
 const debug_1 = __webpack_require__(/*! ./debug */ "./util/debug.ts");
 const comparisonResult_1 = __webpack_require__(/*! ./comparisonResult */ "./util/comparisonResult.ts");
 exports.operatorCompare = (x, y) => {
@@ -35763,13 +36336,23 @@ exports.orderedSet = (cmp) => {
 /*!*********************!*\
   !*** ./util/set.ts ***!
   \*********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export fromList [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export join [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export set [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/*! CommonJS bailout: exports.set(...) prevents optimization as exports is passed as call context at 37:25-36 */
+/*! CommonJS bailout: exports.set(...) prevents optimization as exports is passed as call context at 55:19-30 */
+/*! CommonJS bailout: exports.set(...) prevents optimization as exports is passed as call context at 60:19-30 */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 // Flat array based set structure. Not sorted.
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.join = exports.fromList = exports.set = void 0;
 exports.set = (isEqual) => {
     let data = [];
     const self = {
@@ -35839,12 +36422,16 @@ exports.join = (isEqual, sets) => {
 /*!*******************************!*\
   !*** ./util/writeTempFile.ts ***!
   \*******************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 const tmp_promise_1 = __webpack_require__(/*! tmp-promise */ "./node_modules/tmp-promise/index.js");
 const fs_extra_1 = __webpack_require__(/*! fs-extra */ "./node_modules/fs-extra/lib/index.js");
 // Write the provided contents to a temporary file with the provided extension. Return the created file object.
@@ -35857,14 +36444,784 @@ exports.default = async (contents, name, extension) => {
 
 /***/ }),
 
+/***/ "./node_modules/universalify/index.js":
+/*!********************************************!*\
+  !*** ./node_modules/universalify/index.js ***!
+  \********************************************/
+/*! default exports */
+/*! export fromCallback [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export fromPromise [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+
+exports.fromCallback = function (fn) {
+  return Object.defineProperty(function (...args) {
+    if (typeof args[args.length - 1] === 'function') fn.apply(this, args)
+    else {
+      return new Promise((resolve, reject) => {
+        fn.apply(
+          this,
+          args.concat([(err, res) => err ? reject(err) : resolve(res)])
+        )
+      })
+    }
+  }, 'name', { value: fn.name })
+}
+
+exports.fromPromise = function (fn) {
+  return Object.defineProperty(function (...args) {
+    const cb = args[args.length - 1]
+    if (typeof cb !== 'function') return fn.apply(this, args)
+    else fn.apply(this, args.slice(0, -1)).then(r => cb(null, r), cb)
+  }, 'name', { value: fn.name })
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/unset-value/index.js":
+/*!*******************************************!*\
+  !*** ./node_modules/unset-value/index.js ***!
+  \*******************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 13:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+/*!
+ * unset-value <https://github.com/jonschlinkert/unset-value>
+ *
+ * Copyright (c) 2015, 2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+
+
+var isObject = __webpack_require__(/*! isobject */ "./node_modules/unset-value/node_modules/isobject/index.js");
+var has = __webpack_require__(/*! has-value */ "./node_modules/has-value/index.js");
+
+module.exports = function unset(obj, prop) {
+  if (!isObject(obj)) {
+    throw new TypeError('expected an object.');
+  }
+  if (obj.hasOwnProperty(prop)) {
+    delete obj[prop];
+    return true;
+  }
+
+  if (has(obj, prop)) {
+    var segs = prop.split('.');
+    var last = segs.pop();
+    while (segs.length && segs[segs.length - 1].slice(-1) === '\\') {
+      last = segs.pop().slice(0, -1) + '.' + last;
+    }
+    while (segs.length) obj = obj[prop = segs.shift()];
+    return (delete obj[last]);
+  }
+  return true;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/unset-value/node_modules/isobject/index.js":
+/*!*****************************************************************!*\
+  !*** ./node_modules/unset-value/node_modules/isobject/index.js ***!
+  \*****************************************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 10:0-14 */
+/***/ ((module) => {
+
+"use strict";
+/*!
+ * isobject <https://github.com/jonschlinkert/isobject>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+
+
+module.exports = function isObject(val) {
+  return val != null && typeof val === 'object' && Array.isArray(val) === false;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/which-boxed-primitive/index.js":
+/*!*****************************************************!*\
+  !*** ./node_modules/which-boxed-primitive/index.js ***!
+  \*****************************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 10:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var isString = __webpack_require__(/*! is-string */ "./node_modules/is-string/index.js");
+var isNumber = __webpack_require__(/*! is-number-object */ "./node_modules/is-number-object/index.js");
+var isBoolean = __webpack_require__(/*! is-boolean-object */ "./node_modules/is-boolean-object/index.js");
+var isSymbol = __webpack_require__(/*! is-symbol */ "./node_modules/is-symbol/index.js");
+var isBigInt = __webpack_require__(/*! is-bigint */ "./node_modules/is-bigint/index.js");
+
+// eslint-disable-next-line consistent-return
+module.exports = function whichBoxedPrimitive(value) {
+	// eslint-disable-next-line eqeqeq
+	if (value == null || (typeof value !== 'object' && typeof value !== 'function')) {
+		return null;
+	}
+	if (isString(value)) {
+		return 'String';
+	}
+	if (isNumber(value)) {
+		return 'Number';
+	}
+	if (isBoolean(value)) {
+		return 'Boolean';
+	}
+	if (isSymbol(value)) {
+		return 'Symbol';
+	}
+	if (isBigInt(value)) {
+		return 'BigInt';
+	}
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/which-collection/index.js":
+/*!************************************************!*\
+  !*** ./node_modules/which-collection/index.js ***!
+  \************************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 8:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var isMap = __webpack_require__(/*! is-map */ "./node_modules/is-map/index.js");
+var isSet = __webpack_require__(/*! is-set */ "./node_modules/is-set/index.js");
+var isWeakMap = __webpack_require__(/*! is-weakmap */ "./node_modules/is-weakmap/index.js");
+var isWeakSet = __webpack_require__(/*! is-weakset */ "./node_modules/is-weakset/index.js");
+
+module.exports = function whichCollection(value) {
+	if (value && typeof value === 'object') {
+		if (isMap(value)) {
+			return 'Map';
+		}
+		if (isSet(value)) {
+			return 'Set';
+		}
+		if (isWeakMap(value)) {
+			return 'WeakMap';
+		}
+		if (isWeakSet(value)) {
+			return 'WeakSet';
+		}
+	}
+	return false;
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/which/which.js":
+/*!*************************************!*\
+  !*** ./node_modules/which/which.js ***!
+  \*************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+module.exports = which
+which.sync = whichSync
+
+var isWindows = process.platform === 'win32' ||
+    process.env.OSTYPE === 'cygwin' ||
+    process.env.OSTYPE === 'msys'
+
+var path = __webpack_require__(/*! path */ "path")
+var COLON = isWindows ? ';' : ':'
+var isexe = __webpack_require__(/*! isexe */ "./node_modules/isexe/index.js")
+
+function getNotFoundError (cmd) {
+  var er = new Error('not found: ' + cmd)
+  er.code = 'ENOENT'
+
+  return er
+}
+
+function getPathInfo (cmd, opt) {
+  var colon = opt.colon || COLON
+  var pathEnv = opt.path || process.env.PATH || ''
+  var pathExt = ['']
+
+  pathEnv = pathEnv.split(colon)
+
+  var pathExtExe = ''
+  if (isWindows) {
+    pathEnv.unshift(process.cwd())
+    pathExtExe = (opt.pathExt || process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM')
+    pathExt = pathExtExe.split(colon)
+
+
+    // Always test the cmd itself first.  isexe will check to make sure
+    // it's found in the pathExt set.
+    if (cmd.indexOf('.') !== -1 && pathExt[0] !== '')
+      pathExt.unshift('')
+  }
+
+  // If it has a slash, then we don't bother searching the pathenv.
+  // just check the file itself, and that's it.
+  if (cmd.match(/\//) || isWindows && cmd.match(/\\/))
+    pathEnv = ['']
+
+  return {
+    env: pathEnv,
+    ext: pathExt,
+    extExe: pathExtExe
+  }
+}
+
+function which (cmd, opt, cb) {
+  if (typeof opt === 'function') {
+    cb = opt
+    opt = {}
+  }
+
+  var info = getPathInfo(cmd, opt)
+  var pathEnv = info.env
+  var pathExt = info.ext
+  var pathExtExe = info.extExe
+  var found = []
+
+  ;(function F (i, l) {
+    if (i === l) {
+      if (opt.all && found.length)
+        return cb(null, found)
+      else
+        return cb(getNotFoundError(cmd))
+    }
+
+    var pathPart = pathEnv[i]
+    if (pathPart.charAt(0) === '"' && pathPart.slice(-1) === '"')
+      pathPart = pathPart.slice(1, -1)
+
+    var p = path.join(pathPart, cmd)
+    if (!pathPart && (/^\.[\\\/]/).test(cmd)) {
+      p = cmd.slice(0, 2) + p
+    }
+    ;(function E (ii, ll) {
+      if (ii === ll) return F(i + 1, l)
+      var ext = pathExt[ii]
+      isexe(p + ext, { pathExt: pathExtExe }, function (er, is) {
+        if (!er && is) {
+          if (opt.all)
+            found.push(p + ext)
+          else
+            return cb(null, p + ext)
+        }
+        return E(ii + 1, ll)
+      })
+    })(0, pathExt.length)
+  })(0, pathEnv.length)
+}
+
+function whichSync (cmd, opt) {
+  opt = opt || {}
+
+  var info = getPathInfo(cmd, opt)
+  var pathEnv = info.env
+  var pathExt = info.ext
+  var pathExtExe = info.extExe
+  var found = []
+
+  for (var i = 0, l = pathEnv.length; i < l; i ++) {
+    var pathPart = pathEnv[i]
+    if (pathPart.charAt(0) === '"' && pathPart.slice(-1) === '"')
+      pathPart = pathPart.slice(1, -1)
+
+    var p = path.join(pathPart, cmd)
+    if (!pathPart && /^\.[\\\/]/.test(cmd)) {
+      p = cmd.slice(0, 2) + p
+    }
+    for (var j = 0, ll = pathExt.length; j < ll; j ++) {
+      var cur = p + pathExt[j]
+      var is
+      try {
+        is = isexe.sync(cur, { pathExt: pathExtExe })
+        if (is) {
+          if (opt.all)
+            found.push(cur)
+          else
+            return cur
+        }
+      } catch (ex) {}
+    }
+  }
+
+  if (opt.all && found.length)
+    return found
+
+  throw getNotFoundError(cmd)
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/wrappy/wrappy.js":
+/*!***************************************!*\
+  !*** ./node_modules/wrappy/wrappy.js ***!
+  \***************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module) => {
+
+// Returns a wrapper function that returns a wrapped callback
+// The wrapper function should do some stuff, and return a
+// presumably different callback function.
+// This makes sure that own properties are retained, so that
+// decorations and such are not lost along the way.
+module.exports = wrappy
+function wrappy (fn, cb) {
+  if (fn && cb) return wrappy(fn)(cb)
+
+  if (typeof fn !== 'function')
+    throw new TypeError('need wrapper function')
+
+  Object.keys(fn).forEach(function (k) {
+    wrapper[k] = fn[k]
+  })
+
+  return wrapper
+
+  function wrapper() {
+    var args = new Array(arguments.length)
+    for (var i = 0; i < args.length; i++) {
+      args[i] = arguments[i]
+    }
+    var ret = fn.apply(this, args)
+    var cb = args[args.length-1]
+    if (typeof ret === 'function' && ret !== cb) {
+      Object.keys(cb).forEach(function (k) {
+        ret[k] = cb[k]
+      })
+    }
+    return ret
+  }
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/yallist/yallist.js":
+/*!*****************************************!*\
+  !*** ./node_modules/yallist/yallist.js ***!
+  \*****************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module) => {
+
+module.exports = Yallist
+
+Yallist.Node = Node
+Yallist.create = Yallist
+
+function Yallist (list) {
+  var self = this
+  if (!(self instanceof Yallist)) {
+    self = new Yallist()
+  }
+
+  self.tail = null
+  self.head = null
+  self.length = 0
+
+  if (list && typeof list.forEach === 'function') {
+    list.forEach(function (item) {
+      self.push(item)
+    })
+  } else if (arguments.length > 0) {
+    for (var i = 0, l = arguments.length; i < l; i++) {
+      self.push(arguments[i])
+    }
+  }
+
+  return self
+}
+
+Yallist.prototype.removeNode = function (node) {
+  if (node.list !== this) {
+    throw new Error('removing node which does not belong to this list')
+  }
+
+  var next = node.next
+  var prev = node.prev
+
+  if (next) {
+    next.prev = prev
+  }
+
+  if (prev) {
+    prev.next = next
+  }
+
+  if (node === this.head) {
+    this.head = next
+  }
+  if (node === this.tail) {
+    this.tail = prev
+  }
+
+  node.list.length--
+  node.next = null
+  node.prev = null
+  node.list = null
+}
+
+Yallist.prototype.unshiftNode = function (node) {
+  if (node === this.head) {
+    return
+  }
+
+  if (node.list) {
+    node.list.removeNode(node)
+  }
+
+  var head = this.head
+  node.list = this
+  node.next = head
+  if (head) {
+    head.prev = node
+  }
+
+  this.head = node
+  if (!this.tail) {
+    this.tail = node
+  }
+  this.length++
+}
+
+Yallist.prototype.pushNode = function (node) {
+  if (node === this.tail) {
+    return
+  }
+
+  if (node.list) {
+    node.list.removeNode(node)
+  }
+
+  var tail = this.tail
+  node.list = this
+  node.prev = tail
+  if (tail) {
+    tail.next = node
+  }
+
+  this.tail = node
+  if (!this.head) {
+    this.head = node
+  }
+  this.length++
+}
+
+Yallist.prototype.push = function () {
+  for (var i = 0, l = arguments.length; i < l; i++) {
+    push(this, arguments[i])
+  }
+  return this.length
+}
+
+Yallist.prototype.unshift = function () {
+  for (var i = 0, l = arguments.length; i < l; i++) {
+    unshift(this, arguments[i])
+  }
+  return this.length
+}
+
+Yallist.prototype.pop = function () {
+  if (!this.tail) {
+    return undefined
+  }
+
+  var res = this.tail.value
+  this.tail = this.tail.prev
+  if (this.tail) {
+    this.tail.next = null
+  } else {
+    this.head = null
+  }
+  this.length--
+  return res
+}
+
+Yallist.prototype.shift = function () {
+  if (!this.head) {
+    return undefined
+  }
+
+  var res = this.head.value
+  this.head = this.head.next
+  if (this.head) {
+    this.head.prev = null
+  } else {
+    this.tail = null
+  }
+  this.length--
+  return res
+}
+
+Yallist.prototype.forEach = function (fn, thisp) {
+  thisp = thisp || this
+  for (var walker = this.head, i = 0; walker !== null; i++) {
+    fn.call(thisp, walker.value, i, this)
+    walker = walker.next
+  }
+}
+
+Yallist.prototype.forEachReverse = function (fn, thisp) {
+  thisp = thisp || this
+  for (var walker = this.tail, i = this.length - 1; walker !== null; i--) {
+    fn.call(thisp, walker.value, i, this)
+    walker = walker.prev
+  }
+}
+
+Yallist.prototype.get = function (n) {
+  for (var i = 0, walker = this.head; walker !== null && i < n; i++) {
+    // abort out of the list early if we hit a cycle
+    walker = walker.next
+  }
+  if (i === n && walker !== null) {
+    return walker.value
+  }
+}
+
+Yallist.prototype.getReverse = function (n) {
+  for (var i = 0, walker = this.tail; walker !== null && i < n; i++) {
+    // abort out of the list early if we hit a cycle
+    walker = walker.prev
+  }
+  if (i === n && walker !== null) {
+    return walker.value
+  }
+}
+
+Yallist.prototype.map = function (fn, thisp) {
+  thisp = thisp || this
+  var res = new Yallist()
+  for (var walker = this.head; walker !== null;) {
+    res.push(fn.call(thisp, walker.value, this))
+    walker = walker.next
+  }
+  return res
+}
+
+Yallist.prototype.mapReverse = function (fn, thisp) {
+  thisp = thisp || this
+  var res = new Yallist()
+  for (var walker = this.tail; walker !== null;) {
+    res.push(fn.call(thisp, walker.value, this))
+    walker = walker.prev
+  }
+  return res
+}
+
+Yallist.prototype.reduce = function (fn, initial) {
+  var acc
+  var walker = this.head
+  if (arguments.length > 1) {
+    acc = initial
+  } else if (this.head) {
+    walker = this.head.next
+    acc = this.head.value
+  } else {
+    throw new TypeError('Reduce of empty list with no initial value')
+  }
+
+  for (var i = 0; walker !== null; i++) {
+    acc = fn(acc, walker.value, i)
+    walker = walker.next
+  }
+
+  return acc
+}
+
+Yallist.prototype.reduceReverse = function (fn, initial) {
+  var acc
+  var walker = this.tail
+  if (arguments.length > 1) {
+    acc = initial
+  } else if (this.tail) {
+    walker = this.tail.prev
+    acc = this.tail.value
+  } else {
+    throw new TypeError('Reduce of empty list with no initial value')
+  }
+
+  for (var i = this.length - 1; walker !== null; i--) {
+    acc = fn(acc, walker.value, i)
+    walker = walker.prev
+  }
+
+  return acc
+}
+
+Yallist.prototype.toArray = function () {
+  var arr = new Array(this.length)
+  for (var i = 0, walker = this.head; walker !== null; i++) {
+    arr[i] = walker.value
+    walker = walker.next
+  }
+  return arr
+}
+
+Yallist.prototype.toArrayReverse = function () {
+  var arr = new Array(this.length)
+  for (var i = 0, walker = this.tail; walker !== null; i++) {
+    arr[i] = walker.value
+    walker = walker.prev
+  }
+  return arr
+}
+
+Yallist.prototype.slice = function (from, to) {
+  to = to || this.length
+  if (to < 0) {
+    to += this.length
+  }
+  from = from || 0
+  if (from < 0) {
+    from += this.length
+  }
+  var ret = new Yallist()
+  if (to < from || to < 0) {
+    return ret
+  }
+  if (from < 0) {
+    from = 0
+  }
+  if (to > this.length) {
+    to = this.length
+  }
+  for (var i = 0, walker = this.head; walker !== null && i < from; i++) {
+    walker = walker.next
+  }
+  for (; walker !== null && i < to; i++, walker = walker.next) {
+    ret.push(walker.value)
+  }
+  return ret
+}
+
+Yallist.prototype.sliceReverse = function (from, to) {
+  to = to || this.length
+  if (to < 0) {
+    to += this.length
+  }
+  from = from || 0
+  if (from < 0) {
+    from += this.length
+  }
+  var ret = new Yallist()
+  if (to < from || to < 0) {
+    return ret
+  }
+  if (from < 0) {
+    from = 0
+  }
+  if (to > this.length) {
+    to = this.length
+  }
+  for (var i = this.length, walker = this.tail; walker !== null && i > to; i--) {
+    walker = walker.prev
+  }
+  for (; walker !== null && i > from; i--, walker = walker.prev) {
+    ret.push(walker.value)
+  }
+  return ret
+}
+
+Yallist.prototype.reverse = function () {
+  var head = this.head
+  var tail = this.tail
+  for (var walker = head; walker !== null; walker = walker.prev) {
+    var p = walker.prev
+    walker.prev = walker.next
+    walker.next = p
+  }
+  this.head = tail
+  this.tail = head
+  return this
+}
+
+function push (self, item) {
+  self.tail = new Node(item, self.tail, null, self)
+  if (!self.head) {
+    self.head = self.tail
+  }
+  self.length++
+}
+
+function unshift (self, item) {
+  self.head = new Node(item, null, self.head, self)
+  if (!self.tail) {
+    self.tail = self.head
+  }
+  self.length++
+}
+
+function Node (value, prev, next, list) {
+  if (!(this instanceof Node)) {
+    return new Node(value, prev, next, list)
+  }
+
+  this.list = list
+  this.value = value
+
+  if (prev) {
+    prev.next = this
+    this.prev = prev
+  } else {
+    this.prev = null
+  }
+
+  if (next) {
+    next.prev = this
+    this.next = next
+  } else {
+    this.next = null
+  }
+}
+
+
+/***/ }),
+
 /***/ "assert":
 /*!*************************!*\
   !*** external "assert" ***!
   \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("assert");
+"use strict";
+module.exports = require("assert");;
 
 /***/ }),
 
@@ -35872,9 +37229,12 @@ module.exports = require("assert");
 /*!**********************!*\
   !*** external "ava" ***!
   \**********************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
+"use strict";
 module.exports = __WEBPACK_EXTERNAL_MODULE_ava__;
 
 /***/ }),
@@ -35883,10 +37243,13 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_ava__;
 /*!********************************!*\
   !*** external "child_process" ***!
   \********************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("child_process");
+"use strict";
+module.exports = require("child_process");;
 
 /***/ }),
 
@@ -35894,10 +37257,13 @@ module.exports = require("child_process");
 /*!****************************!*\
   !*** external "constants" ***!
   \****************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("constants");
+"use strict";
+module.exports = require("constants");;
 
 /***/ }),
 
@@ -35905,10 +37271,13 @@ module.exports = require("constants");
 /*!*************************!*\
   !*** external "crypto" ***!
   \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("crypto");
+"use strict";
+module.exports = require("crypto");;
 
 /***/ }),
 
@@ -35916,10 +37285,13 @@ module.exports = require("crypto");
 /*!*************************!*\
   !*** external "events" ***!
   \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("events");
+"use strict";
+module.exports = require("events");;
 
 /***/ }),
 
@@ -35927,10 +37299,13 @@ module.exports = require("events");
 /*!*********************!*\
   !*** external "fs" ***!
   \*********************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("fs");
+"use strict";
+module.exports = require("fs");;
 
 /***/ }),
 
@@ -35938,10 +37313,13 @@ module.exports = require("fs");
 /*!*********************!*\
   !*** external "os" ***!
   \*********************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("os");
+"use strict";
+module.exports = require("os");;
 
 /***/ }),
 
@@ -35949,10 +37327,13 @@ module.exports = require("os");
 /*!***********************!*\
   !*** external "path" ***!
   \***********************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("path");
+"use strict";
+module.exports = require("path");;
 
 /***/ }),
 
@@ -35960,10 +37341,14 @@ module.exports = require("path");
 /*!*****************************!*\
   !*** external "spawn-sync" ***!
   \*****************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-if(typeof __WEBPACK_EXTERNAL_MODULE_spawn_sync__ === 'undefined') {var e = new Error("Cannot find module 'spawn-sync'"); e.code = 'MODULE_NOT_FOUND'; throw e;}
+"use strict";
+if(typeof __WEBPACK_EXTERNAL_MODULE_spawn_sync__ === 'undefined') { var e = new Error("Cannot find module 'spawn-sync'"); e.code = 'MODULE_NOT_FOUND'; throw e; }
+
 module.exports = __WEBPACK_EXTERNAL_MODULE_spawn_sync__;
 
 /***/ }),
@@ -35972,10 +37357,13 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_spawn_sync__;
 /*!*************************!*\
   !*** external "stream" ***!
   \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("stream");
+"use strict";
+module.exports = require("stream");;
 
 /***/ }),
 
@@ -35983,12 +37371,99 @@ module.exports = require("stream");
 /*!***********************!*\
   !*** external "util" ***!
   \***********************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("util");
+"use strict";
+module.exports = require("util");;
 
 /***/ })
 
-/******/ });
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		if(__webpack_module_cache__[moduleId]) {
+/******/ 			return __webpack_module_cache__[moduleId].exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			id: moduleId,
+/******/ 			loaded: false,
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Flag the module as loaded
+/******/ 		module.loaded = true;
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/amd define */
+/******/ 	(() => {
+/******/ 		__webpack_require__.amdD = function () {
+/******/ 			throw new Error('define cannot be used indirect');
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/amd options */
+/******/ 	(() => {
+/******/ 		__webpack_require__.amdO = {};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop)
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/node module decorator */
+/******/ 	(() => {
+/******/ 		__webpack_require__.nmd = (module) => {
+/******/ 			module.paths = [];
+/******/ 			if (!module.children) module.children = [];
+/******/ 			return module;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+/******/ 	// module exports must be returned from runtime so entry inlining is disabled
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	return __webpack_require__("./test.ts");
+/******/ })()
+;
 });

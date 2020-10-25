@@ -8,2253 +8,24 @@
 	else
 		root["mplLoader"] = factory(root["spawn-sync"]);
 })(global, function(__WEBPACK_EXTERNAL_MODULE_spawn_sync__) {
-return /******/ (function(modules) { // webpackBootstrap
-/******/ 	// The module cache
-/******/ 	var installedModules = {};
-/******/
-/******/ 	// The require function
-/******/ 	function __webpack_require__(moduleId) {
-/******/
-/******/ 		// Check if module is in cache
-/******/ 		if(installedModules[moduleId]) {
-/******/ 			return installedModules[moduleId].exports;
-/******/ 		}
-/******/ 		// Create a new module (and put it into the cache)
-/******/ 		var module = installedModules[moduleId] = {
-/******/ 			i: moduleId,
-/******/ 			l: false,
-/******/ 			exports: {}
-/******/ 		};
-/******/
-/******/ 		// Execute the module function
-/******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
-/******/
-/******/ 		// Flag the module as loaded
-/******/ 		module.l = true;
-/******/
-/******/ 		// Return the exports of the module
-/******/ 		return module.exports;
-/******/ 	}
-/******/
-/******/
-/******/ 	// expose the modules object (__webpack_modules__)
-/******/ 	__webpack_require__.m = modules;
-/******/
-/******/ 	// expose the module cache
-/******/ 	__webpack_require__.c = installedModules;
-/******/
-/******/ 	// define getter function for harmony exports
-/******/ 	__webpack_require__.d = function(exports, name, getter) {
-/******/ 		if(!__webpack_require__.o(exports, name)) {
-/******/ 			Object.defineProperty(exports, name, { enumerable: true, get: getter });
-/******/ 		}
-/******/ 	};
-/******/
-/******/ 	// define __esModule on exports
-/******/ 	__webpack_require__.r = function(exports) {
-/******/ 		if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
-/******/ 			Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-/******/ 		}
-/******/ 		Object.defineProperty(exports, '__esModule', { value: true });
-/******/ 	};
-/******/
-/******/ 	// create a fake namespace object
-/******/ 	// mode & 1: value is a module id, require it
-/******/ 	// mode & 2: merge all properties of value into the ns
-/******/ 	// mode & 4: return value when already ns object
-/******/ 	// mode & 8|1: behave like require
-/******/ 	__webpack_require__.t = function(value, mode) {
-/******/ 		if(mode & 1) value = __webpack_require__(value);
-/******/ 		if(mode & 8) return value;
-/******/ 		if((mode & 4) && typeof value === 'object' && value && value.__esModule) return value;
-/******/ 		var ns = Object.create(null);
-/******/ 		__webpack_require__.r(ns);
-/******/ 		Object.defineProperty(ns, 'default', { enumerable: true, value: value });
-/******/ 		if(mode & 2 && typeof value != 'string') for(var key in value) __webpack_require__.d(ns, key, function(key) { return value[key]; }.bind(null, key));
-/******/ 		return ns;
-/******/ 	};
-/******/
-/******/ 	// getDefaultExport function for compatibility with non-harmony modules
-/******/ 	__webpack_require__.n = function(module) {
-/******/ 		var getter = module && module.__esModule ?
-/******/ 			function getDefault() { return module['default']; } :
-/******/ 			function getModuleExports() { return module; };
-/******/ 		__webpack_require__.d(getter, 'a', getter);
-/******/ 		return getter;
-/******/ 	};
-/******/
-/******/ 	// Object.prototype.hasOwnProperty.call
-/******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
-/******/
-/******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "";
-/******/
-/******/
-/******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = "./mpl.ts");
-/******/ })
-/************************************************************************/
-/******/ ({
-
-/***/ "./backends/js.ts":
-/*!************************!*\
-  !*** ./backends/js.ts ***!
-  \************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const writeTempFile_1 = __webpack_require__(/*! ../util/writeTempFile */ "./util/writeTempFile.ts");
-const flatten_1 = __webpack_require__(/*! ../util/list/flatten */ "./util/list/flatten.ts");
-const execAndGetResult_1 = __webpack_require__(/*! ../util/execAndGetResult */ "./util/execAndGetResult.ts");
-const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
-const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
-const needsAwait = (decl) => {
-    if (!decl)
-        return false;
-    if ('namedType' in decl.type)
-        throw debug_1.default('TODO get a real type here');
-    if (decl.type.type.kind != 'Function')
-        return false;
-    if (decl.type.type.permissions.includes('stdout'))
-        return true;
-    return false;
-};
-const astToJS = ({ ast, exitInsteadOfReturn, builtinFunctions, }) => {
-    if (!ast)
-        debugger;
-    const recurse = newInput => astToJS({ ast: newInput, exitInsteadOfReturn, builtinFunctions });
-    switch (ast.kind) {
-        case 'returnStatement': {
-            if (exitInsteadOfReturn) {
-                return [`process.exit(${recurse(ast.expression).join(' ')})`];
-            }
-            else {
-                return [`return `, ...recurse(ast.expression)];
-            }
-        }
-        case 'number':
-            return [ast.value.toString()];
-        case 'product':
-            return [...recurse(ast.lhs), '*', ...recurse(ast.rhs)];
-        case 'subtraction':
-            return [...recurse(ast.lhs), '-', ...recurse(ast.rhs)];
-        case 'addition':
-            return [...recurse(ast.lhs), '+', ...recurse(ast.rhs)];
-        case 'reassignment':
-            return [ast.destination, '=', ...recurse(ast.expression), ';'];
-        case 'typedDeclarationAssignment':
-            return [`let ${ast.destination} = `, ...recurse(ast.expression), ';'];
-        case 'functionLiteral':
-            return [ast.deanonymizedName];
-        case 'callExpression':
-            const functionName = ast.name;
-            const functionDecl = builtinFunctions.find(({ name, type }) => name == functionName);
-            const jsArguments = ast.arguments.map(argument => recurse(argument));
-            const awaitStr = needsAwait(functionDecl) ? 'await' : '';
-            return [
-                awaitStr + ` ${ast.name}(`,
-                join_1.default(jsArguments.map(argument => join_1.default(argument, ' ')), ', '),
-                `)`,
-            ];
-        case 'identifier':
-            return [ast.value];
-        case 'ternary':
-            return [
-                ...recurse(ast.condition),
-                '?',
-                ...recurse(ast.ifTrue),
-                ':',
-                ...recurse(ast.ifFalse),
-            ];
-        case 'equality':
-            return [...recurse(ast.lhs), '==', ...recurse(ast.rhs)];
-        case 'booleanLiteral':
-            return [ast.value ? 'true' : 'false'];
-        case 'stringLiteral':
-            return [`"${ast.value}"`];
-        case 'concatenation':
-            return ['(', ...recurse(ast.lhs), ').concat(', ...recurse(ast.rhs), ')'];
-        case 'typeDeclaration':
-            return [''];
-        case 'objectLiteral':
-            const members = ast.members.map(({ name, expression }) => `${name}: ${recurse(expression)}`);
-            return ['{', join_1.default(members, ','), '}'];
-        case 'memberAccess':
-            return ['(', ...recurse(ast.lhs), ').', ast.rhs];
-        case 'listLiteral':
-            const items = ast.items.map(item => join_1.default(recurse(item), ', '));
-            return ['[', join_1.default(items, ', '), ']'];
-        case 'indexAccess':
-            return ['(', ...recurse(ast.accessed), ')[(', ...recurse(ast.index), ')]'];
-        default:
-            throw debug_1.default(`${ast.kind} unhanlded in toJS`);
-    }
-};
-const compile = ({ functions, builtinFunctions, program, globalDeclarations, }) => {
-    const JSfunctions = functions.map(({ name, parameters, statements }) => {
-        const prefix = `const ${name} = (${join_1.default(parameters.map(parameter => parameter.name), ', ')}) => {`;
-        const suffix = `}`;
-        const body = statements.map(statement => {
-            return join_1.default(astToJS({ ast: statement, exitInsteadOfReturn: false, builtinFunctions }), ' ');
-        });
-        return [prefix, ...body, suffix].join(' ');
-    });
-    if (Array.isArray(program)) {
-        // Must be a module
-        const exp = program.map(v => {
-            return `export const ${v.exportedName} = ${v.declaredName};`;
-        });
-        return {
-            target: `
-                ${join_1.default(JSfunctions, '\n')}
-                ${join_1.default(exp, '\n')}
-            `,
-            tac: undefined,
-        };
-    }
-    const JS = flatten_1.default(program.statements.map(child => astToJS({ ast: child, builtinFunctions, exitInsteadOfReturn: true })));
-    return {
-        target: `
-const readline = require('readline');
-
-const length = str => str.length;
-const print = str => process.stdout.write(str);
-
-const readInt = async () => {
-    return new Promise((resolve, reject) => {
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-        });
-        rl.on('line', line => {
-            rl.close();
-            resolve(line);
-        });
-    });
-};
-
-(async () => {
-    ${join_1.default(JSfunctions, '\n')}
-    ${join_1.default(JS, '\n')}
-})();`,
-        tac: undefined,
-    };
-};
-const finishCompilation = async (jsSource, tac) => {
-    if (tac !== undefined) {
-        debug_1.default('why tac');
-    }
-    const sourceFile = await writeTempFile_1.default(jsSource, 'program', 'js');
-    const binaryFile = sourceFile;
-    return {
-        source: jsSource,
-        sourceFile,
-        binaryFile,
-        threeAddressCodeFile: undefined,
-    };
-};
-const execute = async (executablePath, stdinPath) => {
-    try {
-        const runInstructions = `node ${executablePath} < ${stdinPath}`;
-        return Object.assign(Object.assign({}, (await execAndGetResult_1.default(runInstructions))), { executorName: 'node', runInstructions, debugInstructions: `./node_modules/.bin/node --inspect --inspect-brk ${executablePath}` });
-    }
-    catch (e) {
-        return { error: e.msg, executorName: 'node' };
-    }
-};
-const jsBackend = {
-    name: 'js',
-    compile,
-    finishCompilation,
-    executors: [{ execute, name: 'node' }],
-};
-exports.default = jsBackend;
-
-
-/***/ }),
-
-/***/ "./frontend.ts":
-/*!*********************!*\
-  !*** ./frontend.ts ***!
-  \*********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const flatten_1 = __webpack_require__(/*! ./util/list/flatten */ "./util/list/flatten.ts");
-const uniqueBy_1 = __webpack_require__(/*! ./util/list/uniqueBy */ "./util/list/uniqueBy.ts");
-const idMaker_1 = __webpack_require__(/*! ./util/idMaker */ "./util/idMaker.ts");
-const last_1 = __webpack_require__(/*! ./util/list/last */ "./util/list/last.ts");
-const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
-const lex_1 = __webpack_require__(/*! ./parser-lib/lex */ "./parser-lib/lex.ts");
-exports.lex = lex_1.lex;
-const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
-const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
-const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
-/* tslint:disable */
-const { add } = __webpack_require__(/*! ./mpl/add.mpl */ "./mpl/add.mpl");
-/* tslint:enable */
-// TODO move this to parser lit
-const hasType = (ast, type) => 'type' in ast && ast.type == type;
-const repairAssociativity = (nodeType, ast) => {
-    // Let this slide because TokenType overlaps InteriorNodeType right now
-    if (ast.type === nodeType && !ast.children) /*debug('todo')*/
-        return ast;
-    if (ast.type === nodeType) {
-        if (!ast.children[2])
-            debug_1.default('todo');
-        if (ast.children[2].type === nodeType) {
-            return {
-                type: nodeType,
-                children: [
-                    {
-                        type: nodeType,
-                        children: [
-                            repairAssociativity(nodeType, ast.children[0]),
-                            ast.children[2].children[1],
-                            repairAssociativity(nodeType, ast.children[2].children[0]),
-                        ],
-                        sourceLocation: ast.sourceLocation,
-                    },
-                    ast.children[1],
-                    repairAssociativity(nodeType, ast.children[2].children[2]),
-                ],
-                sourceLocation: ast.sourceLocation,
-            };
-        }
-        else {
-            return {
-                type: ast.type,
-                children: ast.children.map(child => repairAssociativity(nodeType, child)),
-                sourceLocation: ast.sourceLocation,
-            };
-        }
-    }
-    else if ('children' in ast) {
-        return {
-            type: ast.type,
-            children: ast.children.map(child => repairAssociativity(nodeType, child)),
-            sourceLocation: ast.sourceLocation,
-        };
-    }
-    else {
-        return ast;
-    }
-};
-const transformAst = (nodeType, f, ast, recurseOnNew) => {
-    if (parse_1.isSeparatedListNode(ast)) {
-        return {
-            items: ast.items.map(i => transformAst(nodeType, f, i, recurseOnNew)),
-            separators: ast.separators.map(i => transformAst(nodeType, f, i, recurseOnNew)),
-        };
-    }
-    else if (parse_1.isListNode(ast)) {
-        return { items: ast.items.map(i => transformAst(nodeType, f, i, recurseOnNew)) };
-    }
-    else if (ast.type === nodeType) {
-        const newNode = f(ast);
-        if ('children' in newNode) {
-            // If we aren't supposed to recurse, don't re-tranform the node we just made
-            if (recurseOnNew) {
-                return transformAst(nodeType, f, newNode, recurseOnNew);
-            }
-            else {
-                return {
-                    type: newNode.type,
-                    children: newNode.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
-                    sourceLocation: ast.sourceLocation,
-                };
-            }
-        }
-        else {
-            return newNode;
-        }
-    }
-    else if ('children' in ast) {
-        return {
-            type: ast.type,
-            children: ast.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
-            sourceLocation: ast.sourceLocation,
-        };
-    }
-    else {
-        return ast;
-    }
-};
-const extractVariable = (ctx) => {
-    switch (ctx.w.kind) {
-        case 'reassignment':
-        case 'declarationAssignment':
-            // Recursive functions can refer to the left side on the right side, so to extract
-            // the left side, we need to know about the right side. Probably, this just shouldn't return
-            // a type. TODO: allow more types of recursive functions than just single int...
-            return {
-                name: ctx.w.destination,
-                type: exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression })).type,
-                exported: false,
-            };
-        case 'typedDeclarationAssignment':
-            return {
-                name: ctx.w.destination,
-                type: exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }), types_1.resolveIfNecessary(ctx.w.type, ctx.availableTypes)).type,
-                exported: false,
-            };
-        case 'returnStatement':
-        case 'typeDeclaration':
-            return undefined;
-        default:
-            throw debug_1.default(`${ctx.w.kind} unhandled in extractVariable`);
-    }
-};
-const extractVariables = (ctx) => {
-    const variables = [];
-    ctx.w.forEach((statement) => {
-        switch (statement.kind) {
-            case 'returnStatement':
-            case 'reassignment':
-            case 'typeDeclaration':
-                break;
-            case 'declarationAssignment':
-            case 'typedDeclarationAssignment':
-                const potentialVariable = extractVariable({
-                    w: statement,
-                    availableVariables: mergeDeclarations(ctx.availableVariables, variables),
-                    availableTypes: ctx.availableTypes,
-                });
-                if (potentialVariable) {
-                    variables.push(potentialVariable);
-                }
-                break;
-            default:
-                throw debug_1.default('todo');
-        }
-    });
-    return variables;
-};
-const functionObjectFromAst = (ctx) => ({
-    name: ctx.w.deanonymizedName,
-    statements: ctx.w.body,
-    variables: [
-        ...ctx.w.parameters,
-        ...extractVariables({
-            w: ctx.w.body,
-            availableVariables: mergeDeclarations(ctx.availableVariables, ctx.w.parameters),
-            availableTypes: ctx.availableTypes,
-        }),
-    ],
-    parameters: ctx.w.parameters,
-});
-const walkAst = (ast, nodeKinds, extractItem) => {
-    const recurse = ast2 => walkAst(ast2, nodeKinds, extractItem);
-    let result = [];
-    if (nodeKinds.includes(ast.kind)) {
-        result = [extractItem(ast)];
-    }
-    switch (ast.kind) {
-        case 'returnStatement':
-        case 'typedDeclarationAssignment':
-        case 'declarationAssignment':
-        case 'reassignment':
-            return [...result, ...recurse(ast.expression)];
-        case 'product':
-        case 'addition':
-        case 'subtraction':
-        case 'equality':
-        case 'concatenation':
-            return [...result, ...recurse(ast.lhs), ...recurse(ast.rhs)];
-        case 'callExpression':
-            return [...result, ...flatten_1.default(ast.arguments.map(recurse))];
-        case 'ternary':
-            return [
-                ...result,
-                ...recurse(ast.condition)
-                    .concat(recurse(ast.ifTrue))
-                    .concat(recurse(ast.ifFalse)),
-            ];
-        case 'program':
-            return [...result, ...flatten_1.default(ast.statements.map(recurse))];
-        case 'functionLiteral':
-            return [...result, ...flatten_1.default(ast.body.map(recurse))];
-        case 'objectLiteral':
-            return [
-                ...result,
-                ...flatten_1.default(ast.members.map(member => recurse(member.expression))),
-            ];
-        case 'memberAccess':
-            return [...result, ...recurse(ast.lhs)];
-        case 'number':
-        case 'identifier':
-        case 'stringLiteral':
-        case 'booleanLiteral':
-        case 'typeDeclaration':
-            return result;
-        case 'listLiteral':
-            return [...result, ...flatten_1.default(ast.items.map(recurse))];
-        case 'indexAccess':
-            return [...result, ...recurse(ast.accessed), ...recurse(ast.index)];
-        case 'memberStyleCall':
-            return [...result, ...recurse(ast.lhs), ...flatten_1.default(ast.params.map(recurse))];
-        default:
-            throw debug_1.default(`${ast.kind} unhandled in walkAst`);
-    }
-};
-const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[1], ast, true);
-exports.removeBracketsFromAst = removeBracketsFromAst;
-const parseMpl = (tokens) => {
-    const parseResult = parse_1.parse(grammar_1.grammar, 'program', tokens);
-    if (parse_1.parseResultIsError(parseResult)) {
-        // TODO: Just get the parser to give us good errors directly instead of taking the first
-        return [parseResult.errors[0]];
-    }
-    let ast = parseResult;
-    ast = repairAssociativity('subtraction', ast);
-    ast = repairAssociativity('addition', ast);
-    ast = repairAssociativity('product', ast);
-    // Bracketed expressions -> nothing. Must happen after associativity repair or we will break
-    // associativity of brackets.
-    ast = removeBracketsFromAst(ast);
-    return ast;
-};
-exports.parseMpl = parseMpl;
-const isTypeError = (val) => Array.isArray(val);
-const combineErrors = (potentialErrors) => {
-    const result = [];
-    potentialErrors.forEach(e => {
-        if (isTypeError(e)) {
-            result.push(...e);
-        }
-    });
-    return result.length > 0 ? result : null;
-};
-// TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer() maybe?
-exports.typeOfExpression = (ctx, expectedType = undefined) => {
-    const recurse = ast2 => exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast2 }));
-    const { w, availableVariables, availableTypes } = ctx;
-    const ast = w;
-    switch (ast.kind) {
-        case 'number':
-            return { type: types_1.builtinTypes.Integer, extractedFunctions: [] };
-        case 'addition':
-        case 'product':
-        case 'subtraction': {
-            const leftType = recurse(ast.lhs);
-            const rightType = recurse(ast.rhs);
-            const combinedErrors = combineErrors([leftType, rightType]);
-            if (combinedErrors) {
-                return combinedErrors;
-            }
-            const lt = leftType;
-            const rt = rightType;
-            if (!types_1.equal(lt.type, types_1.builtinTypes.Integer)) {
-                return [
-                    {
-                        kind: 'wrongTypeForOperator',
-                        operator: ast.kind,
-                        expected: 'Integer',
-                        found: lt.type,
-                        side: 'left',
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            if (!types_1.equal(rt.type, types_1.builtinTypes.Integer)) {
-                return [
-                    {
-                        kind: 'wrongTypeForOperator',
-                        operator: ast.kind,
-                        expected: 'Integer',
-                        found: rt.type,
-                        side: 'right',
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            return {
-                type: types_1.builtinTypes.Integer,
-                extractedFunctions: [...lt.extractedFunctions, ...rt.extractedFunctions],
-            };
-        }
-        case 'equality': {
-            const leftType = recurse(ast.lhs);
-            const rightType = recurse(ast.rhs);
-            const combinedErrors = combineErrors([leftType, rightType]);
-            if (combinedErrors) {
-                return combinedErrors;
-            }
-            const lt = leftType;
-            const rt = rightType;
-            if (!types_1.equal(lt.type, rt.type)) {
-                return [
-                    {
-                        kind: 'typeMismatchForOperator',
-                        leftType: lt.type,
-                        rightType: rt.type,
-                        operator: 'equality',
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            return { type: types_1.builtinTypes.Boolean, extractedFunctions: [] };
-        }
-        case 'concatenation': {
-            const leftType = recurse(ast.lhs);
-            const rightType = recurse(ast.rhs);
-            const combinedErrors = combineErrors([leftType, rightType]);
-            if (combinedErrors) {
-                return combinedErrors;
-            }
-            const lt = leftType;
-            const rt = rightType;
-            if (lt.type.type.kind !== 'String') {
-                return [
-                    {
-                        kind: 'wrongTypeForOperator',
-                        found: lt.type,
-                        expected: 'String',
-                        operator: 'concatenation',
-                        side: 'left',
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            if (rt.type.type.kind !== 'String') {
-                return [
-                    {
-                        kind: 'wrongTypeForOperator',
-                        found: rt.type,
-                        expected: 'String',
-                        operator: 'concatenation',
-                        side: 'right',
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            return {
-                type: types_1.builtinTypes.String,
-                extractedFunctions: [...lt.extractedFunctions, ...rt.extractedFunctions],
-            };
-        }
-        case 'functionLiteral':
-            const functionObject = functionObjectFromAst(Object.assign(Object.assign({}, ctx), { w: ast }));
-            const f = inferFunction({
-                w: functionObject,
-                availableVariables: mergeDeclarations(ctx.availableVariables, functionObject.variables),
-                availableTypes: ctx.availableTypes,
-            });
-            if (isTypeError(f)) {
-                return f;
-            }
-            return {
-                type: {
-                    type: {
-                        kind: 'Function',
-                        arguments: ast.parameters
-                            .map(p => p.type)
-                            .map(t => {
-                            const resolved = types_1.resolveIfNecessary(t, ctx.availableTypes);
-                            if (!resolved) {
-                                throw debug_1.default('bag argument. This should be a better error.');
-                            }
-                            return resolved;
-                        }),
-                        permissions: [],
-                        returnType: f.returnType,
-                    },
-                },
-                extractedFunctions: [f],
-            };
-        case 'callExpression': {
-            const argTypes = ast.arguments.map(argument => recurse(argument));
-            const argTypeErrors = [];
-            argTypes.forEach(argType => {
-                if (isTypeError(argType)) {
-                    argTypeErrors.push(...argType);
-                }
-            });
-            if (argTypeErrors.length > 0) {
-                return argTypeErrors;
-            }
-            const functionName = ast.name;
-            const declaration = availableVariables.find(({ name }) => functionName == name);
-            if (!declaration) {
-                return [
-                    {
-                        kind: 'unknownIdentifier',
-                        name: functionName,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            const functionType = declaration.type;
-            if (!functionType)
-                throw debug_1.default('bad function! This should be a better error.');
-            if ('namedType' in functionType) {
-                throw debug_1.default('nameRef function! This should be supported.');
-            }
-            if (functionType.type.kind !== 'Function') {
-                return [
-                    {
-                        kind: 'calledNonFunction',
-                        identifierName: functionName,
-                        actualType: functionType,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            if (argTypes.length !== functionType.type.arguments.length) {
-                return [
-                    {
-                        kind: 'wrongNumberOfArguments',
-                        targetFunction: functionName,
-                        passedArgumentCount: argTypes.length,
-                        expectedArgumentCount: functionType.type.arguments.length,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            for (let i = 0; i < argTypes.length; i++) {
-                const resolved = types_1.resolveOrError(functionType.type.arguments[i], ctx.availableTypes, ast.sourceLocation);
-                if ('errors' in resolved) {
-                    return resolved.errors;
-                }
-                if (!types_1.equal(argTypes[i].type, resolved)) {
-                    return [
-                        {
-                            kind: 'wrongArgumentType',
-                            targetFunction: functionName,
-                            passedType: argTypes[i].type,
-                            expectedType: functionType.type.arguments[i],
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ];
-                }
-            }
-            const returnType = types_1.resolveOrError(functionType.type.returnType, ctx.availableTypes, ast.sourceLocation);
-            if ('errors' in returnType) {
-                return returnType.errors;
-            }
-            return { type: returnType, extractedFunctions: [] };
-        }
-        case 'memberStyleCall': {
-            const callArgTypes = ast.params.map(recurse);
-            const argTypeErrors = [];
-            callArgTypes.forEach(argType => {
-                if (isTypeError(argType)) {
-                    argTypeErrors.push(...argType);
-                }
-            });
-            if (argTypeErrors.length > 0) {
-                return argTypeErrors;
-            }
-            const thisArgType = recurse(ast.lhs);
-            if (isTypeError(thisArgType)) {
-                return thisArgType;
-            }
-            const functionName = ast.memberName;
-            const declaration = availableVariables.find(({ name }) => functionName == name);
-            if (!declaration) {
-                return [
-                    {
-                        kind: 'unknownIdentifier',
-                        name: functionName,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            const functionType = declaration.type;
-            if (!functionType)
-                throw debug_1.default('bad function! This should be a better error.');
-            if ('namedType' in functionType) {
-                throw debug_1.default('nameRef function! This should be supported.');
-            }
-            if (functionType.type.kind !== 'Function') {
-                return [
-                    {
-                        kind: 'calledNonFunction',
-                        identifierName: functionName,
-                        actualType: functionType,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            const allArgTypes = [thisArgType, ...callArgTypes];
-            if (allArgTypes.length !== functionType.type.arguments.length) {
-                return [
-                    {
-                        kind: 'wrongNumberOfArguments',
-                        targetFunction: functionName,
-                        passedArgumentCount: allArgTypes.length,
-                        expectedArgumentCount: functionType.type.arguments.length,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            // TODO: this is probably wrong, we need check agains the LHS type
-            for (let i = 0; i < allArgTypes.length; i++) {
-                const resolved = types_1.resolveOrError(functionType.type.arguments[i], ctx.availableTypes, ast.sourceLocation);
-                if ('errors' in resolved) {
-                    return resolved.errors;
-                }
-                if (!types_1.equal(allArgTypes[i].type, resolved)) {
-                    return [
-                        {
-                            kind: 'wrongArgumentType',
-                            targetFunction: functionName,
-                            passedType: allArgTypes[i].type,
-                            expectedType: functionType.type.arguments[i],
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ];
-                }
-            }
-            const returnType = types_1.resolveOrError(functionType.type.returnType, ctx.availableTypes, ast.sourceLocation);
-            if ('errors' in returnType) {
-                return returnType.errors;
-            }
-            return { type: returnType, extractedFunctions: [] };
-        }
-        case 'identifier': {
-            const unresolved = availableVariables.find(({ name }) => ast.value == name);
-            if (!unresolved) {
-                return [
-                    {
-                        kind: 'unknownTypeForIdentifier',
-                        identifierName: ast.value,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            const declaration = types_1.resolveIfNecessary(unresolved.type, availableTypes);
-            if (!declaration) {
-                return [
-                    {
-                        kind: 'couldNotFindType',
-                        name: unresolved.type.namedType,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            return { type: declaration, extractedFunctions: [] };
-        }
-        case 'ternary': {
-            const conditionType = recurse(ast.condition);
-            const trueBranchType = recurse(ast.ifTrue);
-            const falseBranchType = recurse(ast.ifFalse);
-            const combinedErrors = combineErrors([
-                conditionType,
-                trueBranchType,
-                falseBranchType,
-            ]);
-            if (combinedErrors ||
-                isTypeError(trueBranchType) ||
-                isTypeError(falseBranchType) ||
-                isTypeError(conditionType)) {
-                if (combinedErrors) {
-                    return combinedErrors;
-                }
-                else {
-                    return [];
-                }
-            }
-            if (!types_1.equal(conditionType.type, types_1.builtinTypes.Boolean)) {
-                return [
-                    {
-                        kind: 'wrongTypeForOperator',
-                        found: conditionType.type,
-                        expected: 'Boolean',
-                        operator: 'Ternary',
-                        side: 'left',
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            if (!types_1.equal(trueBranchType.type, falseBranchType.type)) {
-                return [
-                    {
-                        kind: 'ternaryBranchMismatch',
-                        trueBranchType: trueBranchType.type,
-                        falseBranchType: falseBranchType.type,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            return trueBranchType;
-        }
-        case 'booleanLiteral':
-            return { type: types_1.builtinTypes.Boolean, extractedFunctions: [] };
-        case 'stringLiteral':
-            return { type: types_1.builtinTypes.String, extractedFunctions: [] };
-        case 'objectLiteral':
-            const memberTypes = ast.members.map(({ expression }) => recurse(expression));
-            const typeErrors = flatten_1.default(memberTypes.filter(isTypeError));
-            if (!(typeErrors.length == 0))
-                return typeErrors;
-            return {
-                type: {
-                    type: {
-                        kind: 'Product',
-                        name: ast.typeName,
-                        members: ast.members.map(({ name, expression }) => ({
-                            name,
-                            type: recurse(expression).type,
-                        })),
-                    },
-                    original: { namedType: ast.typeName },
-                },
-                extractedFunctions: [],
-            };
-        case 'memberAccess':
-            const lhsType = recurse(ast.lhs);
-            if (isTypeError(lhsType)) {
-                return lhsType;
-            }
-            const resolvedLhs = lhsType.type;
-            if (resolvedLhs.type.kind != 'Product') {
-                return [
-                    {
-                        kind: 'invalidMemberAccess',
-                        found: lhsType.type,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            const accessedMember = resolvedLhs.type.members.find(m => m.name == ast.rhs);
-            if (!accessedMember) {
-                return [
-                    {
-                        kind: 'objectDoesNotHaveMember',
-                        lhsType: lhsType.type,
-                        member: ast.rhs,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            return { type: accessedMember.type, extractedFunctions: [] };
-        case 'listLiteral':
-            let innerType;
-            const extractedFunctions = [];
-            for (const item of ast.items) {
-                const result = recurse(item);
-                if (isTypeError(result)) {
-                    return result;
-                }
-                if (!innerType) {
-                    innerType = result.type;
-                }
-                else if (!types_1.equal(innerType, result.type)) {
-                    return [{ kind: 'nonhomogenousList', sourceLocation: ast.sourceLocation }];
-                }
-                extractedFunctions.push(...result.extractedFunctions);
-            }
-            if (!innerType) {
-                if (expectedType) {
-                    return { type: expectedType, extractedFunctions };
-                }
-                return [{ kind: 'uninferrableEmptyList', sourceLocation: ast.sourceLocation }];
-            }
-            return { type: { type: { kind: 'List', of: innerType } }, extractedFunctions };
-        case 'indexAccess':
-            const accessedType = recurse(ast.accessed);
-            if (isTypeError(accessedType)) {
-                return accessedType;
-            }
-            if (accessedType.type.type.kind != 'List') {
-                return [
-                    {
-                        kind: 'indexAccessNonList',
-                        accessed: accessedType.type,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            const indexType = recurse(ast.index);
-            if (isTypeError(indexType)) {
-                return indexType;
-            }
-            if (indexType.type.type.kind != 'Integer') {
-                return [
-                    {
-                        kind: 'nonIntegerIndex',
-                        index: indexType.type,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
-            }
-            return {
-                type: accessedType.type.type.of,
-                extractedFunctions: [
-                    ...accessedType.extractedFunctions,
-                    ...indexType.extractedFunctions,
-                ],
-            };
-        default:
-            throw debug_1.default(`${ast.kind} unhandled in typeOfExpression`);
-    }
-};
-const typeCheckStatement = (ctx) => {
-    const { w, availableTypes, availableVariables } = ctx;
-    const ast = w;
-    if (!ast.kind)
-        debug_1.default('!ast.kind');
-    switch (ast.kind) {
-        case 'returnStatement': {
-            const result = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression }));
-            if (isTypeError(result)) {
-                return { errors: result, newVariables: [] };
-            }
-            return { errors: [], newVariables: [] };
-        }
-        case 'declarationAssignment': {
-            const rightType = exports.typeOfExpression({
-                w: ast.expression,
-                availableTypes,
-                availableVariables: mergeDeclarations(availableVariables, [
-                    {
-                        name: ast.destination,
-                        type: {
-                            type: {
-                                kind: 'Function',
-                                arguments: [{ type: { kind: 'Integer' } }],
-                                permissions: [],
-                                returnType: { type: { kind: 'Integer' } },
-                            },
-                        },
-                        exported: false,
-                    },
-                ]),
-            });
-            if (isTypeError(rightType)) {
-                return { errors: rightType, newVariables: [] };
-            }
-            // Left type is inferred as right type
-            return {
-                errors: [],
-                newVariables: [{ name: ast.destination, type: rightType.type, exported: false }],
-            };
-        }
-        case 'reassignment': {
-            const rightType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression }));
-            if (isTypeError(rightType)) {
-                return { errors: rightType, newVariables: [] };
-            }
-            const unresolvedLeftType = availableVariables.find(v => v.name == ast.destination);
-            if (!unresolvedLeftType) {
-                return {
-                    errors: [
-                        {
-                            kind: 'assignUndeclaredIdentifer',
-                            destinationName: ast.destination,
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ],
-                    newVariables: [],
-                };
-            }
-            const leftType = types_1.resolveIfNecessary(unresolvedLeftType.type, availableTypes);
-            if (!leftType) {
-                return {
-                    errors: [
-                        {
-                            kind: 'couldNotFindType',
-                            name: unresolvedLeftType.name,
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ],
-                    newVariables: [],
-                };
-            }
-            if (!types_1.equal(leftType, rightType.type)) {
-                return {
-                    errors: [
-                        {
-                            kind: 'assignWrongType',
-                            lhsName: ast.destination,
-                            lhsType: leftType,
-                            rhsType: rightType.type,
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ],
-                    newVariables: [],
-                };
-            }
-            return { errors: [], newVariables: [] };
-        }
-        case 'typedDeclarationAssignment': {
-            // Check that type of var being assigned to matches type being assigned
-            const destinationType = ast.type;
-            const resolvedDestination = types_1.resolveOrError(destinationType, availableTypes, ast.sourceLocation);
-            if ('errors' in resolvedDestination) {
-                return resolvedDestination;
-            }
-            const expressionType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression, availableVariables: mergeDeclarations(availableVariables, [
-                    { name: ast.destination, type: destinationType, exported: false },
-                ]) }), resolvedDestination);
-            if (isTypeError(expressionType)) {
-                return { errors: expressionType, newVariables: [] };
-            }
-            if (!types_1.equal(expressionType.type, resolvedDestination)) {
-                return {
-                    errors: [
-                        {
-                            kind: 'assignWrongType',
-                            lhsName: ast.destination,
-                            lhsType: resolvedDestination,
-                            rhsType: expressionType.type,
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ],
-                    newVariables: [],
-                };
-            }
-            return {
-                errors: [],
-                newVariables: [
-                    { name: ast.destination, type: destinationType, exported: false },
-                ],
-            };
-        }
-        case 'typeDeclaration':
-            return {
-                errors: [],
-                newVariables: [],
-            };
-        default:
-            throw debug_1.default(`${ast.kind} unhandled in typeCheckStatement`);
-    }
-};
-exports.typeCheckStatement = typeCheckStatement;
-const mergeDeclarations = (left, right) => {
-    const result = [...right];
-    left.forEach(declaration => {
-        if (!result.some(({ name }) => name == declaration.name)) {
-            result.unshift(declaration);
-        }
-    });
-    return result;
-};
-exports.mergeDeclarations = mergeDeclarations;
-const typeCheckFunction = (ctx) => {
-    let availableVariables = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
-    const allErrors = [];
-    ctx.w.statements.forEach(statement => {
-        if (allErrors.length == 0) {
-            const { errors, newVariables } = typeCheckStatement(Object.assign(Object.assign({}, ctx), { w: statement, availableVariables }));
-            availableVariables = mergeDeclarations(availableVariables, newVariables);
-            allErrors.push(...errors);
-        }
-    });
-    return { typeErrors: allErrors, identifiers: availableVariables };
-};
-const assignmentToGlobalDeclaration = (ctx) => {
-    const result = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }));
-    if (isTypeError(result))
-        throw debug_1.default('isTypeError in assignmentToGlobalDeclaration');
-    return {
-        name: ctx.w.destination,
-        type: result.type,
-        exported: ctx.w.exported,
-        mangledName: ctx.w.expression.kind == 'functionLiteral'
-            ? ctx.w.expression.deanonymizedName
-            : ctx.w.destination,
-    };
-};
-const inferFunction = (ctx) => {
-    const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
-    const statements = [];
-    ctx.w.statements.forEach(statement => {
-        const statementContext = {
-            w: statement,
-            availableVariables: variablesFound,
-            availableTypes: ctx.availableTypes,
-        };
-        const maybeNewVariable = extractVariable(statementContext);
-        if (maybeNewVariable) {
-            variablesFound.push(maybeNewVariable);
-        }
-        statements.push(infer(statementContext));
-    });
-    const maybeReturnStatement = last_1.default(ctx.w.statements);
-    if (!maybeReturnStatement) {
-        return [{ kind: 'missingReturn', sourceLocation: { line: 0, column: 0 } }];
-    }
-    if (maybeReturnStatement.kind != 'returnStatement') {
-        return [{ kind: 'missingReturn', sourceLocation: maybeReturnStatement.sourceLocation }];
-    }
-    const returnStatement = maybeReturnStatement;
-    const returnType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { availableVariables: variablesFound, w: returnStatement.expression }));
-    if (isTypeError(returnType)) {
-        return returnType;
-    }
-    return {
-        name: ctx.w.name,
-        statements,
-        variables: ctx.w.variables,
-        parameters: ctx.w.parameters,
-        returnType: returnType.type,
-    };
-};
-// TODO: merge this with typecheck maybe?
-const infer = (ctx) => {
-    const recurse = ast2 => infer(Object.assign(Object.assign({}, ctx), { w: ast2 }));
-    const { w, availableVariables, availableTypes } = ctx;
-    const ast = w;
-    switch (ast.kind) {
-        case 'returnStatement':
-            return {
-                kind: 'returnStatement',
-                expression: recurse(ast.expression),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'equality':
-            const equalityType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.lhs }));
-            if (isTypeError(equalityType))
-                throw debug_1.default('couldNotFindType');
-            return {
-                kind: 'equality',
-                sourceLocation: ast.sourceLocation,
-                lhs: recurse(ast.lhs),
-                rhs: recurse(ast.rhs),
-                type: equalityType.type,
-            };
-        case 'product':
-            return {
-                kind: ast.kind,
-                sourceLocation: ast.sourceLocation,
-                lhs: recurse(ast.lhs),
-                rhs: recurse(ast.rhs),
-            };
-        case 'addition':
-            return {
-                kind: ast.kind,
-                sourceLocation: ast.sourceLocation,
-                lhs: recurse(ast.lhs),
-                rhs: recurse(ast.rhs),
-            };
-        case 'subtraction':
-            return {
-                kind: ast.kind,
-                sourceLocation: ast.sourceLocation,
-                lhs: recurse(ast.lhs),
-                rhs: recurse(ast.rhs),
-            };
-        case 'concatenation':
-            return {
-                kind: ast.kind,
-                sourceLocation: ast.sourceLocation,
-                lhs: recurse(ast.lhs),
-                rhs: recurse(ast.rhs),
-            };
-        case 'typedDeclarationAssignment':
-            const resolved = types_1.resolveIfNecessary(ast.type, availableTypes);
-            if (!resolved)
-                throw debug_1.default("resolution shouldn't fail here");
-            return {
-                kind: 'typedDeclarationAssignment',
-                sourceLocation: ast.sourceLocation,
-                expression: recurse(ast.expression),
-                type: resolved,
-                destination: ast.destination,
-            };
-        case 'declarationAssignment':
-            const type = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression }));
-            if (isTypeError(type))
-                throw debug_1.default("type error when there shouldn't be");
-            return {
-                kind: 'typedDeclarationAssignment',
-                sourceLocation: ast.sourceLocation,
-                expression: recurse(ast.expression),
-                type: type.type,
-                destination: ast.destination,
-            };
-        case 'reassignment':
-            return {
-                kind: 'reassignment',
-                sourceLocation: ast.sourceLocation,
-                expression: recurse(ast.expression),
-                destination: ast.destination,
-            };
-        case 'callExpression':
-            return {
-                kind: 'callExpression',
-                sourceLocation: ast.sourceLocation,
-                name: ast.name,
-                arguments: ast.arguments.map(recurse),
-            };
-        case 'memberStyleCall':
-            return {
-                kind: 'callExpression',
-                sourceLocation: ast.sourceLocation,
-                name: ast.memberName,
-                arguments: [recurse(ast.lhs), ...ast.params.map(recurse)],
-            };
-        case 'ternary':
-            return {
-                kind: 'ternary',
-                sourceLocation: ast.sourceLocation,
-                condition: recurse(ast.condition),
-                ifTrue: recurse(ast.ifTrue),
-                ifFalse: recurse(ast.ifFalse),
-            };
-        case 'functionLiteral':
-            return {
-                kind: 'functionLiteral',
-                sourceLocation: ast.sourceLocation,
-                deanonymizedName: ast.deanonymizedName,
-            };
-        case 'typeDeclaration':
-            // TODO: maybe just strip declarations before inferring.
-            return { kind: 'typeDeclaration', sourceLocation: ast.sourceLocation };
-        case 'objectLiteral':
-            const declaredType = availableTypes.find(t => t.name == ast.typeName);
-            if (!declaredType) {
-                throw debug_1.default(`type ${ast.typeName} not found`);
-            }
-            return {
-                kind: 'objectLiteral',
-                sourceLocation: ast.sourceLocation,
-                type: declaredType.type,
-                members: ast.members.map(({ name, expression }) => ({
-                    name,
-                    expression: recurse(expression),
-                })),
-            };
-        case 'memberAccess':
-            const accessedObject = recurse(ast.lhs);
-            const accessedType = exports.typeOfExpression({
-                w: ast.lhs,
-                availableVariables,
-                availableTypes,
-            });
-            if (isTypeError(accessedType)) {
-                throw debug_1.default("shouldn't be a type error here");
-            }
-            return {
-                kind: 'memberAccess',
-                sourceLocation: ast.sourceLocation,
-                lhs: accessedObject,
-                rhs: ast.rhs,
-                lhsType: accessedType.type,
-            };
-        case 'listLiteral':
-            let itemType = undefined;
-            const items = [];
-            for (const item of ast.items) {
-                const newItem = recurse(item);
-                items.push(newItem);
-                if (itemType === undefined) {
-                    const maybeItemType = exports.typeOfExpression({
-                        w: item,
-                        availableVariables,
-                        availableTypes,
-                    });
-                    if (isTypeError(maybeItemType)) {
-                        throw debug_1.default("shouldn't be type error here");
-                    }
-                    itemType = maybeItemType.type;
-                }
-            }
-            if (!itemType)
-                throw debug_1.default('no itemType');
-            return {
-                kind: 'listLiteral',
-                sourceLocation: ast.sourceLocation,
-                type: { type: { kind: 'List', of: itemType } },
-                items,
-            };
-        case 'indexAccess':
-            return {
-                kind: 'indexAccess',
-                sourceLocation: ast.sourceLocation,
-                accessed: recurse(ast.accessed),
-                index: recurse(ast.index),
-            };
-        case 'number':
-        case 'identifier':
-        case 'booleanLiteral':
-        case 'stringLiteral':
-            return ast;
-        default:
-            throw debug_1.default(`${ast.kind} unhandled in infer`);
-    }
-};
-const extractFunctionBody = node => {
-    if (node.type !== 'statement')
-        debug_1.default('expected a statement');
-    if (node.children.length === 3) {
-        return [astFromParseResult(node.children[0]), ...extractFunctionBody(node.children[2])];
-    }
-    else {
-        return [astFromParseResult(node.children[0])];
-    }
-};
-// TODO: Replace extractParameterList with SeparatedList
-const extractParameterList = (ast) => {
-    if (parse_1.isSeparatedListNode(ast)) {
-        return flatten_1.default(ast.items.map(i => {
-            if (parse_1.isSeparatedListNode(i) || !('children' in i)) {
-                throw debug_1.default('todo');
-            }
-            const child2 = i.children[2];
-            if (parse_1.isSeparatedListNode(child2) || parse_1.isListNode(child2)) {
-                throw debug_1.default('todo');
-            }
-            if (child2.type == 'typeWithoutArgs') {
-                return [
-                    {
-                        name: i.children[0].value,
-                        type: parseType(child2),
-                        exported: false,
-                    },
-                ];
-            }
-            else {
-                throw debug_1.default('wrong children length');
-            }
-        }));
-    }
-    else {
-        throw debug_1.default(`${ast.type} unhandledi extractParameterList`);
-    }
-};
-const parseTypeLiteralComponent = (ast) => {
-    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
-        throw debug_1.default('todo');
-    }
-    if (ast.type != 'typeLiteralComponent')
-        throw debug_1.default('wrong as type');
-    const unresolved = parseType(ast.children[2]);
-    const resolved = types_1.resolveIfNecessary(unresolved, []);
-    if (!resolved)
-        throw debug_1.default('need to make products work as components of other products');
-    return {
-        name: ast.children[0].value,
-        type: resolved,
-    };
-};
-const parseType = (ast) => {
-    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
-        throw debug_1.default('todo');
-    }
-    switch (ast.type) {
-        case 'typeWithArgs': {
-            const name = ast.children[0].value;
-            if (name != 'Function')
-                throw debug_1.default('Only functions support args right now');
-            const list = ast.children[2];
-            if (!parse_1.isSeparatedListNode(list))
-                throw debug_1.default('todo');
-            const typeList = list.items.map(parseType);
-            return {
-                type: {
-                    kind: name,
-                    arguments: typeList.slice(0, typeList.length - 1),
-                    returnType: typeList[typeList.length - 1],
-                },
-            };
-        }
-        case 'typeWithoutArgs': {
-            const node = ast.children[0];
-            if (parse_1.isSeparatedListNode(node) || parse_1.isListNode(node)) {
-                throw debug_1.default('todo');
-            }
-            if (node.type != 'typeIdentifier')
-                throw debug_1.default('Failed to parse type');
-            const name = node.value;
-            if (typeof name != 'string')
-                throw debug_1.default('Failed to parse type');
-            switch (name) {
-                case 'String':
-                case 'Integer':
-                case 'Boolean':
-                    return { type: { kind: name } };
-                default:
-                    return { namedType: name };
-            }
-        }
-        case 'typeLiteral': {
-            const node = ast.children[1];
-            if (!parse_1.isListNode(node)) {
-                throw debug_1.default('todo');
-            }
-            return {
-                type: {
-                    kind: 'Product',
-                    name: ast.type,
-                    members: node.items.map(parseTypeLiteralComponent),
-                },
-            };
-        }
-        case 'listType': {
-            const node = ast.children[0];
-            if (parse_1.isSeparatedListNode(node) || parse_1.isListNode(node) || node.type != 'typeIdentifier') {
-                throw debug_1.default('expected a type');
-            }
-            const listOf = { type: { kind: node.value } };
-            return { type: { kind: 'List', of: listOf } };
-        }
-        default:
-            throw debug_1.default(`${ast.type} unhandled in parseType`);
-    }
-};
-const parseObjectMember = (ast) => {
-    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
-        throw debug_1.default('todo');
-    }
-    if (ast.type != 'objectLiteralComponent') {
-        {
-            throw debug_1.default('wsa');
-            return 'WrongShapeAst';
-        }
-    }
-    const expression = astFromParseResult(ast.children[2]);
-    if (expression == 'WrongShapeAst') {
-        {
-            throw debug_1.default('wsa');
-            return 'WrongShapeAst';
-        }
-    }
-    const result = {
-        name: ast.children[0].value,
-        expression: expression,
-    };
-    return result;
-};
-let functionId = add(-1, 1);
-const astFromParseResult = (ast) => {
-    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
-        throw debug_1.default('todo');
-    }
-    switch (ast.type) {
-        case 'returnStatement':
-            return {
-                kind: 'returnStatement',
-                expression: astFromParseResult(ast.children[1]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'number':
-            if (ast.value === undefined)
-                throw debug_1.default('ast.value === undefined');
-            return {
-                kind: 'number',
-                value: ast.value,
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'identifier':
-            if (!ast.value)
-                throw debug_1.default('!ast.value');
-            return {
-                kind: 'identifier',
-                value: ast.value,
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'product':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'product',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'ternary':
-            return {
-                kind: 'ternary',
-                condition: astFromParseResult(ast.children[0]),
-                ifTrue: astFromParseResult(ast.children[2]),
-                ifFalse: astFromParseResult(ast.children[4]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'equality':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'equality',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'paramList':
-            throw debug_1.default('paramList in astFromParseResult'); // Should have been caught in "callExpression"
-        case 'callExpression':
-            const child2 = ast.children[2];
-            if (!parse_1.isSeparatedListNode(child2)) {
-                throw debug_1.default('todo');
-            }
-            return {
-                kind: 'callExpression',
-                name: ast.children[0].value,
-                arguments: child2.items.map(astFromParseResult),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'subtraction':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'subtraction',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'addition':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'addition',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'reassignment':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'reassignment',
-                destination: ast.children[0].value,
-                expression: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'declaration': {
-            let childIndex = 0;
-            let exported = false;
-            if (ast.children[childIndex].type == 'export') {
-                exported = true;
-                childIndex++;
-            }
-            const destination = ast.children[childIndex].value;
-            childIndex++;
-            const destinationNode = ast.children[childIndex];
-            if (parse_1.isSeparatedListNode(destinationNode) || parse_1.isListNode(destinationNode)) {
-                throw debug_1.default('todo');
-            }
-            if (destinationNode.type != 'colon')
-                debug_1.default('expected a colon');
-            childIndex++;
-            let type = undefined;
-            const maybeTypeNode = ast.children[childIndex];
-            if (parse_1.isSeparatedListNode(maybeTypeNode) || parse_1.isListNode(maybeTypeNode)) {
-                throw debug_1.default('todo');
-            }
-            if (['typeWithArgs', 'typeWithoutArgs', 'typeLiteral', 'listType'].includes(maybeTypeNode.type)) {
-                type = parseType(maybeTypeNode);
-                childIndex++;
-            }
-            if (ast.children[childIndex].type != 'assignment')
-                debug_1.default('expected assignment');
-            childIndex++;
-            const expression = astFromParseResult(ast.children[childIndex]);
-            if (type) {
-                return {
-                    kind: 'typedDeclarationAssignment',
-                    destination,
-                    expression: expression,
-                    type,
-                    exported,
-                    sourceLocation: ast.sourceLocation,
-                };
-            }
-            else {
-                return {
-                    kind: 'declarationAssignment',
-                    destination,
-                    expression: expression,
-                    exported,
-                    sourceLocation: ast.sourceLocation,
-                };
-            }
-        }
-        case 'typeDeclaration':
-            const theType = parseType(ast.children[3]);
-            const name = ast.children[0].value;
-            if ('namedType' in theType) {
-                throw debug_1.default("Shouldn't get here, delcaring types have to actually declare a type");
-            }
-            if (theType.type.kind == 'Product') {
-                theType.type.name = name;
-            }
-            return {
-                kind: 'typeDeclaration',
-                name,
-                type: theType,
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'stringLiteral':
-            return {
-                kind: 'stringLiteral',
-                value: ast.value,
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'objectLiteral':
-            const typeNameNode = ast.children[0];
-            if (parse_1.isSeparatedListNode(typeNameNode) || parse_1.isListNode(typeNameNode)) {
-                throw debug_1.default('todo');
-            }
-            if (typeNameNode.type != 'typeIdentifier')
-                return 'WrongShapeAst';
-            const typeName = typeNameNode.value;
-            if (typeof typeName != 'string')
-                return 'WrongShapeAst';
-            const membersNode = ast.children[2];
-            if (!parse_1.isListNode(membersNode)) {
-                throw debug_1.default('todo');
-            }
-            const members = membersNode.items.map(parseObjectMember);
-            if (members.some(m => m == 'WrongShapeAst'))
-                return 'WrongShapeAst';
-            return {
-                kind: 'objectLiteral',
-                typeName,
-                members: members,
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'memberStyleCall': {
-            const anyAst = ast;
-            const lhsNode = anyAst.children[0];
-            const lhs = astFromParseResult(lhsNode);
-            if (lhs == 'WrongShapeAst') {
-                return 'WrongShapeAst';
-            }
-            const memberName = anyAst.children[2].value;
-            const params = anyAst.children[4].items.map(astFromParseResult);
-            if (params == 'WrongShapeAst') {
-                return 'WrongShapeAst';
-            }
-            const r = {
-                kind: 'memberStyleCall',
-                lhs: lhs,
-                memberName,
-                params: params,
-                sourceLocation: ast.sourceLocation,
-            };
-            return r;
-        }
-        case 'memberAccess': {
-            const anyAst = ast;
-            const lhsNode = anyAst.children[0];
-            const lhs = astFromParseResult(lhsNode);
-            return {
-                kind: 'memberAccess',
-                lhs,
-                rhs: anyAst.children[2].value,
-                sourceLocation: ast.sourceLocation,
-            };
-        }
-        case 'concatenation':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'concatenation',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'equality':
-            if (!('children' in ast))
-                throw debug_1.default('children not in ast in astFromParseResult');
-            return {
-                kind: 'equality',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'function': {
-            functionId++;
-            let childIndex = 0;
-            let hasBrackets = false;
-            if (hasType(ast.children[0], 'leftBracket')) {
-                childIndex++;
-                hasBrackets = true;
-            }
-            const parameters = extractParameterList(ast.children[childIndex]);
-            childIndex++;
-            if (hasBrackets) {
-                if (!hasType(ast.children[childIndex], 'rightBracket')) {
-                    debug_1.default('mismatched brackets');
-                }
-                childIndex++;
-            }
-            if (!hasType(ast.children[childIndex], 'fatArrow'))
-                debug_1.default('wrong');
-            childIndex++;
-            return {
-                kind: 'functionLiteral',
-                deanonymizedName: `anonymous_${functionId}`,
-                body: [
-                    {
-                        kind: 'returnStatement',
-                        expression: astFromParseResult(ast.children[childIndex]),
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ],
-                parameters,
-                sourceLocation: ast.sourceLocation,
-            };
-        }
-        case 'functionWithBlock': {
-            functionId++;
-            let childIndex = 0;
-            let hasBrackets = false;
-            if (hasType(ast.children[childIndex], 'leftBracket')) {
-                hasBrackets = true;
-                childIndex++;
-            }
-            const parameters2 = extractParameterList(ast.children[childIndex]);
-            childIndex++;
-            if (hasBrackets) {
-                if (!hasType(ast.children[childIndex], 'rightBracket')) {
-                    debug_1.default('brackets mismatched');
-                }
-                childIndex++;
-            }
-            if (!hasType(ast.children[childIndex], 'fatArrow'))
-                debug_1.default('wrong');
-            childIndex++;
-            if (!hasType(ast.children[childIndex], 'leftCurlyBrace'))
-                debug_1.default('wrong');
-            childIndex++;
-            const body = extractFunctionBody(ast.children[childIndex]);
-            childIndex++;
-            if (!hasType(ast.children[childIndex], 'rightCurlyBrace'))
-                debug_1.default('wrong');
-            childIndex++;
-            if (childIndex !== ast.children.length)
-                debug_1.default('wrong');
-            return {
-                kind: 'functionLiteral',
-                deanonymizedName: `anonymous_${functionId}`,
-                body,
-                parameters: parameters2,
-                sourceLocation: ast.sourceLocation,
-            };
-        }
-        case 'booleanLiteral':
-            return {
-                kind: 'booleanLiteral',
-                value: ast.value == 'true',
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'program':
-            return {
-                kind: 'program',
-                statements: extractFunctionBody(ast.children[0]),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'listLiteral':
-            const items = ast.children[1];
-            if (!parse_1.isSeparatedListNode(items))
-                throw debug_1.default('todo');
-            return {
-                kind: 'listLiteral',
-                items: items.items.map(astFromParseResult),
-                sourceLocation: ast.sourceLocation,
-            };
-        case 'indexAccess':
-            return {
-                kind: 'indexAccess',
-                index: astFromParseResult(ast.children[2]),
-                accessed: astFromParseResult(ast.children[0]),
-                sourceLocation: ast.sourceLocation,
-            };
-        default:
-            throw debug_1.default(`${ast.type} unhandled in astFromParseResult`);
-    }
-};
-exports.astFromParseResult = astFromParseResult;
-const compile = (source) => {
-    functionId = 0;
-    const tokens = lex_1.lex(grammar_1.tokenSpecs, source);
-    if ('kind' in tokens) {
-        return tokens;
-    }
-    const parseResult = parseMpl(tokens);
-    if (Array.isArray(parseResult)) {
-        return { parseErrors: parseResult };
-    }
-    const ast = astFromParseResult(parseResult);
-    if (ast == 'WrongShapeAst') {
-        return { internalError: 'Wrong shape AST' };
-    }
-    if (ast.kind !== 'program') {
-        return { internalError: 'AST was not a program' };
-    }
-    const exportedDeclarations = ast.statements.filter(s => (s.kind == 'typedDeclarationAssignment' || s.kind == 'declarationAssignment') &&
-        s.exported);
-    const topLevelStatements = ast.statements.filter(s => s.kind != 'typedDeclarationAssignment' && s.kind != 'declarationAssignment');
-    if (exportedDeclarations.length > 0 && topLevelStatements.length > 0) {
-        return {
-            typeErrors: [
-                {
-                    kind: 'topLevelStatementsInModule',
-                    sourceLocation: topLevelStatements[0].sourceLocation,
-                },
-            ],
-        };
-    }
-    const availableTypes = walkAst(ast, ['typeDeclaration'], n => n);
-    let availableVariables = types_1.builtinFunctions;
-    const program = {
-        name: 'main_program',
-        statements: ast.statements,
-        variables: extractVariables({ w: ast.statements, availableVariables, availableTypes }),
-        parameters: [],
-    };
-    const functions = walkAst(ast, ['functionLiteral'], astNode => functionObjectFromAst({ w: astNode, availableVariables, availableTypes }));
-    const stringLiteralIdMaker = idMaker_1.default();
-    const nonUniqueStringLiterals = walkAst(ast, ['stringLiteral'], (astNode) => ({ id: stringLiteralIdMaker(), value: astNode.value }));
-    const stringLiterals = uniqueBy_1.default(s => s.value, nonUniqueStringLiterals);
-    const programTypeCheck = typeCheckFunction({
-        w: program,
-        availableVariables,
-        availableTypes,
-    });
-    availableVariables = mergeDeclarations(availableVariables, programTypeCheck.identifiers);
-    const typeErrors = functions.map(f => typeCheckFunction({ w: f, availableVariables, availableTypes }).typeErrors);
-    typeErrors.push(programTypeCheck.typeErrors);
-    let flatTypeErrors = flatten_1.default(typeErrors);
-    if (flatTypeErrors.length > 0) {
-        return { typeErrors: flatTypeErrors };
-    }
-    const typedFunctions = [];
-    functions.forEach(f => {
-        const functionOrTypeError = inferFunction({ w: f, availableVariables, availableTypes });
-        if (isTypeError(functionOrTypeError)) {
-            typeErrors.push(functionOrTypeError);
-        }
-        else {
-            typedFunctions.push(Object.assign(Object.assign({}, f), { returnType: functionOrTypeError.returnType, statements: f.statements.map(s => infer({
-                    w: s,
-                    availableVariables: mergeDeclarations(availableVariables, f.variables),
-                    availableTypes,
-                })) }));
-        }
-    });
-    flatTypeErrors = flatten_1.default(typeErrors);
-    if (flatTypeErrors.length > 0) {
-        return { typeErrors: flatTypeErrors };
-    }
-    const globalDeclarations = program.statements
-        .filter(s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment')
-        .map(assignment => assignmentToGlobalDeclaration({
-        w: assignment,
-        availableVariables,
-        availableTypes,
-    }));
-    let inferredProgram = undefined;
-    if (exportedDeclarations.length == 0) {
-        const maybeInferredProgram = inferFunction({
-            w: program,
-            availableVariables,
-            availableTypes,
-        });
-        if (isTypeError(maybeInferredProgram)) {
-            return { typeErrors: maybeInferredProgram };
-        }
-        inferredProgram = maybeInferredProgram;
-        if (!types_1.equal(inferredProgram.returnType, types_1.builtinTypes.Integer)) {
-            const returnStatement = last_1.default(inferredProgram.statements);
-            return {
-                typeErrors: [
-                    {
-                        kind: 'wrongTypeReturn',
-                        expressionType: inferredProgram.returnType,
-                        sourceLocation: returnStatement
-                            ? returnStatement.sourceLocation
-                            : { line: 1, column: 1 },
-                    },
-                ],
-            };
-        }
-    }
-    else {
-        inferredProgram = globalDeclarations.map(d => ({
-            exportedName: d.name,
-            declaredName: d.mangledName || '',
-        }));
-    }
-    return {
-        types: availableTypes,
-        functions: typedFunctions,
-        builtinFunctions: types_1.builtinFunctions,
-        program: inferredProgram,
-        globalDeclarations,
-        stringLiterals,
-    };
-};
-exports.compile = compile;
-
-
-/***/ }),
-
-/***/ "./grammar.ts":
-/*!********************!*\
-  !*** ./grammar.ts ***!
-  \********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
-exports.tokenSpecs = [
-    {
-        token: '"[^"]*"',
-        type: 'stringLiteral',
-        action: x => {
-            const trimmed = x.trim();
-            const quotesRemoved = trimmed.substring(1, trimmed.length - 1);
-            return quotesRemoved;
-        },
-        toString: x => x,
-    },
-    { token: ',', type: 'comma', toString: () => ', ' },
-    // TODO: Make a "keyword" utility function for the lexer. Also figure out why \b doesn't work here.
-    { token: 'return[^A-z]', type: 'return', toString: () => 'return' },
-    { token: 'export[^A-z]', type: 'export', toString: () => 'export' },
-    { token: 'true|false', type: 'booleanLiteral', action: x => x.trim(), toString: x => x },
-    { token: '[a-z]\\w*', type: 'identifier', action: x => x, toString: x => x },
-    { token: '[A-Z][A-Za-z]*', type: 'typeIdentifier', action: x => x, toString: x => x },
-    { token: ';', type: 'statementSeparator', toString: _ => ';' },
-    { token: '=>', type: 'fatArrow', toString: _ => '=>' },
-    { token: '==', type: 'equality', toString: _ => '==' },
-    { token: '=', type: 'assignment', toString: _ => '=' },
-    { token: '\\d+', type: 'number', action: parseInt, toString: x => x.toString() },
-    { token: '\\+\\+', type: 'concatenation', toString: _ => '++' },
-    { token: '\\+', type: 'sum', toString: _ => '+' },
-    { token: '\\*', type: 'product', toString: _ => '*' },
-    { token: '\\-', type: 'subtraction', toString: _ => '-' },
-    { token: '\\(', type: 'leftBracket', toString: _ => '(' },
-    { token: '\\)', type: 'rightBracket', toString: _ => ')' },
-    { token: '{', type: 'leftCurlyBrace', toString: _ => '{' },
-    { token: '}', type: 'rightCurlyBrace', toString: _ => '}' },
-    { token: '\\[', type: 'leftSquareBracket', toString: _ => '[' },
-    { token: '\\]', type: 'rightSquareBracket', toString: _ => ']' },
-    { token: '\\:', type: 'colon', toString: _ => ':' },
-    { token: '\\?', type: 'ternaryOperator', toString: _ => '?' },
-    { token: '<', type: 'lessThan', toString: _ => '<' },
-    { token: '>', type: 'greaterThan', toString: _ => '>' },
-    { token: '\\.', type: 'memberAccess', toString: _ => '.' },
-];
-const mplTerminal = token => parse_1.Terminal(token);
-const mplOptional = parser => parse_1.Optional(parser);
-const export_ = mplTerminal('export');
-const plus = mplTerminal('sum');
-const minus = mplTerminal('subtraction');
-const times = mplTerminal('product');
-const leftBracket = mplTerminal('leftBracket');
-const rightBracket = mplTerminal('rightBracket');
-const int = mplTerminal('number');
-const identifier = mplTerminal('identifier');
-const colon = mplTerminal('colon');
-const ternaryOperator = mplTerminal('ternaryOperator');
-const typeIdentifier = mplTerminal('typeIdentifier');
-const assignment = mplTerminal('assignment');
-const _return = mplTerminal('return');
-const statementSeparator = mplTerminal('statementSeparator');
-const fatArrow = mplTerminal('fatArrow');
-const leftCurlyBrace = mplTerminal('leftCurlyBrace');
-const rightCurlyBrace = mplTerminal('rightCurlyBrace');
-const leftSquareBracket = mplTerminal('leftSquareBracket');
-const rightSquareBracket = mplTerminal('rightSquareBracket');
-const comma = mplTerminal('comma');
-const concatenation = mplTerminal('concatenation');
-const equality = mplTerminal('equality');
-const boolean = mplTerminal('booleanLiteral');
-const stringLiteral = mplTerminal('stringLiteral');
-const lessThan = mplTerminal('lessThan');
-const greaterThan = mplTerminal('greaterThan');
-const memberAccess = mplTerminal('memberAccess');
-exports.grammar = {
-    program: parse_1.Sequence('program', ['functionBody']),
-    function: parse_1.OneOf([
-        parse_1.Sequence('function', [
-            mplOptional(leftBracket),
-            'argList',
-            mplOptional(rightBracket),
-            fatArrow,
-            'expression',
-        ]),
-        parse_1.Sequence('functionWithBlock', [
-            mplOptional(leftBracket),
-            'argList',
-            mplOptional(rightBracket),
-            fatArrow,
-            leftCurlyBrace,
-            'functionBody',
-            rightCurlyBrace,
-        ]),
-    ]),
-    argList: parse_1.SeparatedList(comma, 'arg'),
-    arg: parse_1.Sequence('arg', [identifier, colon, 'type']),
-    functionBody: parse_1.Sequence('statement', [
-        'statement',
-        statementSeparator,
-        mplOptional('functionBody'),
-    ]),
-    statement: parse_1.OneOf([
-        parse_1.Sequence('declaration', [
-            mplOptional(export_),
-            identifier,
-            colon,
-            mplOptional('type'),
-            assignment,
-            'expression',
-        ]),
-        parse_1.Sequence('typeDeclaration', [typeIdentifier, colon, assignment, 'type']),
-        parse_1.Sequence('reassignment', [identifier, assignment, 'expression']),
-        parse_1.Sequence('returnStatement', [_return, 'expression']),
-    ]),
-    typeList: parse_1.SeparatedList(comma, 'type'),
-    type: parse_1.OneOf([
-        parse_1.Sequence('listType', [typeIdentifier, leftSquareBracket, rightSquareBracket]),
-        parse_1.Sequence('typeWithArgs', [typeIdentifier, lessThan, 'typeList', greaterThan]),
-        parse_1.Sequence('typeWithoutArgs', [typeIdentifier]),
-        'typeLiteral',
-    ]),
-    typeLiteral: parse_1.Sequence('typeLiteral', [
-        leftCurlyBrace,
-        parse_1.Many('typeLiteralComponent'),
-        rightCurlyBrace,
-    ]),
-    typeLiteralComponent: parse_1.Sequence('typeLiteralComponent', [
-        identifier,
-        colon,
-        'type',
-        statementSeparator,
-    ]),
-    objectLiteral: parse_1.Sequence('objectLiteral', [
-        typeIdentifier,
-        leftCurlyBrace,
-        parse_1.Many('objectLiteralComponent'),
-        rightCurlyBrace,
-    ]),
-    objectLiteralComponent: parse_1.Sequence('objectLiteralComponent', [
-        identifier,
-        colon,
-        'expression',
-        comma,
-    ]),
-    expression: 'ternary',
-    ternary: parse_1.OneOf([
-        parse_1.Sequence('ternary', ['addition', ternaryOperator, 'addition', colon, 'addition']),
-        'addition',
-    ]),
-    addition: parse_1.OneOf([parse_1.Sequence('addition', ['subtraction', plus, 'addition']), 'subtraction']),
-    subtraction: parse_1.OneOf([parse_1.Sequence('subtraction', ['product', minus, 'subtraction']), 'product']),
-    product: parse_1.OneOf([parse_1.Sequence('product', ['equality', times, 'product']), 'equality']),
-    equality: parse_1.OneOf([
-        parse_1.Sequence('equality', ['concatenation', equality, 'equality']),
-        'concatenation',
-    ]),
-    concatenation: parse_1.OneOf([
-        parse_1.Sequence('concatenation', ['memberAccess', concatenation, 'concatenation']),
-        'memberStyleCall',
-    ]),
-    memberStyleCall: parse_1.OneOf([
-        parse_1.Sequence('memberStyleCall', [
-            'simpleExpression',
-            memberAccess,
-            identifier,
-            leftBracket,
-            'paramList',
-            rightBracket,
-        ]),
-        'memberAccess',
-    ]),
-    memberAccess: parse_1.OneOf([
-        parse_1.Sequence('memberAccess', ['simpleExpression', memberAccess, identifier]),
-        'indexAccess',
-    ]),
-    indexAccess: parse_1.OneOf([
-        parse_1.Sequence('indexAccess', [
-            'simpleExpression',
-            leftSquareBracket,
-            'simpleExpression',
-            rightSquareBracket,
-        ]),
-        'listLiteral',
-    ]),
-    listLiteral: parse_1.OneOf([
-        parse_1.Sequence('listLiteral', [leftSquareBracket, 'listItems', rightSquareBracket]),
-        'simpleExpression',
-    ]),
-    listItems: parse_1.SeparatedList(comma, 'expression'),
-    simpleExpression: parse_1.OneOf([
-        parse_1.Sequence('bracketedExpression', [leftBracket, 'expression', rightBracket]),
-        parse_1.Sequence('callExpression', [
-            identifier,
-            leftBracket,
-            mplOptional('paramList'),
-            rightBracket,
-        ]),
-        int,
-        boolean,
-        stringLiteral,
-        'function',
-        'objectLiteral',
-        identifier,
-    ]),
-    paramList: parse_1.SeparatedList(comma, 'expression'),
-};
-
-
-/***/ }),
-
-/***/ "./mpl.ts":
-/*!****************!*\
-  !*** ./mpl.ts ***!
-  \****************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const frontend_1 = __webpack_require__(/*! ./frontend */ "./frontend.ts");
-const fs_extra_1 = __webpack_require__(/*! fs-extra */ "./node_modules/fs-extra/lib/index.js");
-const js_1 = __webpack_require__(/*! ./backends/js */ "./backends/js.ts");
-if (process.argv.length != 4) {
-    console.log('Usage: mpl <input> <output>');
-    process.exit(-1);
-}
-const inputPath = process.argv[2];
-const outputPath = process.argv[3];
-(async () => {
-    const input = await fs_extra_1.readFile(inputPath, 'utf8');
-    const frontendOutput = frontend_1.compile(input);
-    // TODO: better way to report these specific errors. Probably muck with the type of ExecutionResult.
-    if ('parseErrors' in frontendOutput ||
-        'typeErrors' in frontendOutput ||
-        'kind' in frontendOutput ||
-        'internalError' in frontendOutput) {
-        console.log(frontendOutput);
-        process.exit(-1);
-    }
-    const backendOutput = await js_1.default.compile(frontendOutput);
-    if ('error' in backendOutput) {
-        console.log(backendOutput.error);
-        process.exit(-1);
-    }
-    await fs_extra_1.writeFile(outputPath, backendOutput.target);
-})();
-
-
-/***/ }),
+return /******/ (() => { // webpackBootstrap
+/******/ 	var __webpack_modules__ = ({
 
 /***/ "./mpl/add.mpl":
 /*!*********************!*\
   !*** ./mpl/add.mpl ***!
   \*********************/
-/*! exports provided: add */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
+/*! namespace exports */
+/*! export add [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_require__.r, __webpack_exports__, __webpack_require__.d, __webpack_require__.* */
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "add", function() { return add; });
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "add": () => /* binding */ add
+/* harmony export */ });
 
                 const anonymous_1 = (a, b) => { return  a + b }
                 const add = anonymous_1;
@@ -2266,8 +37,10 @@ __webpack_require__.r(__webpack_exports__);
 /*!*********************************************!*\
   !*** ./node_modules/at-least-node/index.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module) => {
 
 module.exports = r => {
   const n = process.versions.node.split('.').map(x => parseInt(x, 10))
@@ -2282,8 +55,10 @@ module.exports = r => {
 /*!**********************************************!*\
   !*** ./node_modules/balanced-match/index.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module) => {
 
 module.exports = balanced;
 function balanced(a, b, str) {
@@ -2351,8 +126,10 @@ function range(a, b, str) {
 /*!***********************************************!*\
   !*** ./node_modules/brace-expansion/index.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var concatMap = __webpack_require__(/*! concat-map */ "./node_modules/concat-map/index.js");
 var balanced = __webpack_require__(/*! balanced-match */ "./node_modules/balanced-match/index.js");
@@ -2563,8 +340,14 @@ function expand(str, isTop) {
 /*!*****************************************************!*\
   !*** ./node_modules/child-process-promise/index.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! dynamic exports */
+/*! export exec [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! export execFile [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! export fork [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! export spawn [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_require__, module */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -2582,8 +365,10 @@ if (__webpack_require__(/*! node-version */ "./node_modules/node-version/index.j
 /*!*************************************************************************!*\
   !*** ./node_modules/child-process-promise/lib-es5/ChildProcessError.js ***!
   \*************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 29:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -2622,8 +407,10 @@ module.exports = ChildProcessError;
 /*!***************************************************************************!*\
   !*** ./node_modules/child-process-promise/lib-es5/ChildProcessPromise.js ***!
   \***************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 87:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -2720,8 +507,14 @@ module.exports = ChildProcessPromise;
 /*!*************************************************************!*\
   !*** ./node_modules/child-process-promise/lib-es5/index.js ***!
   \*************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export exec [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export execFile [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export fork [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export spawn [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
@@ -2897,8 +690,10 @@ exports.fork = fork;
 /*!*********************************************************************!*\
   !*** ./node_modules/child-process-promise/lib/ChildProcessError.js ***!
   \*********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -2926,8 +721,10 @@ module.exports = ChildProcessError;
 /*!***********************************************************************!*\
   !*** ./node_modules/child-process-promise/lib/ChildProcessPromise.js ***!
   \***********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 62:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -3000,8 +797,14 @@ module.exports = ChildProcessPromise;
 /*!*********************************************************!*\
   !*** ./node_modules/child-process-promise/lib/index.js ***!
   \*********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export exec [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export execFile [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export fork [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export spawn [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
@@ -3176,8 +979,10 @@ exports.fork = fork;
 /*!******************************************!*\
   !*** ./node_modules/concat-map/index.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module) => {
 
 module.exports = function (xs, fn) {
     var res = [];
@@ -3200,8 +1005,10 @@ var isArray = Array.isArray || function (xs) {
 /*!*******************************************!*\
   !*** ./node_modules/cross-spawn/index.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 54:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -3271,8 +1078,14 @@ module.exports._enoent = enoent;
 /*!************************************************!*\
   !*** ./node_modules/cross-spawn/lib/enoent.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export hookChildProcess [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export notFoundError [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export verifyENOENT [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export verifyENOENTSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: module, __webpack_require__ */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -3356,8 +1169,10 @@ module.exports.notFoundError = notFoundError;
 /*!********************************************************!*\
   !*** ./node_modules/cross-spawn/lib/hasBrokenSpawn.js ***!
   \********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -3379,8 +1194,10 @@ module.exports = (function () {
 /*!***********************************************!*\
   !*** ./node_modules/cross-spawn/lib/parse.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 140:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -3531,8 +1348,10 @@ module.exports = parse;
 /*!********************************************************!*\
   !*** ./node_modules/cross-spawn/lib/resolveCommand.js ***!
   \********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 31:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -3574,8 +1393,10 @@ module.exports = resolveCommand;
 /*!******************************************!*\
   !*** ./node_modules/deep-equal/index.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 356:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var objectKeys = __webpack_require__(/*! object-keys */ "./node_modules/object-keys/index.js");
 var isArguments = __webpack_require__(/*! is-arguments */ "./node_modules/is-arguments/index.js");
@@ -3588,7 +1409,7 @@ var whichBoxedPrimitive = __webpack_require__(/*! which-boxed-primitive */ "./no
 var GetIntrinsic = __webpack_require__(/*! es-abstract/GetIntrinsic */ "./node_modules/es-abstract/GetIntrinsic.js");
 var callBound = __webpack_require__(/*! es-abstract/helpers/callBound */ "./node_modules/es-abstract/helpers/callBound.js");
 var whichCollection = __webpack_require__(/*! which-collection */ "./node_modules/which-collection/index.js");
-var getIterator = __webpack_require__(/*! es-get-iterator */ "./node_modules/es-get-iterator/index.js");
+var getIterator = __webpack_require__(/*! es-get-iterator */ "./node_modules/es-get-iterator/node.js");
 var getSideChannel = __webpack_require__(/*! side-channel */ "./node_modules/side-channel/index.js");
 
 var $getTime = callBound('Date.prototype.getTime');
@@ -3943,8 +1764,10 @@ module.exports = function deepEqual(a, b, opts) {
 /*!***************************************************************!*\
   !*** ./node_modules/deep-equal/node_modules/isarray/index.js ***!
   \***************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module) => {
 
 var toString = {}.toString;
 
@@ -3959,8 +1782,10 @@ module.exports = Array.isArray || function (arr) {
 /*!*************************************************!*\
   !*** ./node_modules/define-properties/index.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 58:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -4029,8 +1854,10 @@ module.exports = defineProperties;
 /*!**************************************************!*\
   !*** ./node_modules/es-abstract/GetIntrinsic.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 193:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -4259,8 +2086,10 @@ module.exports = function GetIntrinsic(name, allowMissing) {
 /*!******************************************************!*\
   !*** ./node_modules/es-abstract/helpers/callBind.js ***!
   \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 11:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -4288,8 +2117,10 @@ module.exports.apply = function applyBind() {
 /*!*******************************************************!*\
   !*** ./node_modules/es-abstract/helpers/callBound.js ***!
   \*******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 9:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -4311,227 +2142,27 @@ module.exports = function callBoundIntrinsic(name, allowMissing) {
 
 /***/ }),
 
-/***/ "./node_modules/es-get-iterator/index.js":
-/*!***********************************************!*\
-  !*** ./node_modules/es-get-iterator/index.js ***!
-  \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ "./node_modules/es-get-iterator/node.js":
+/*!**********************************************!*\
+  !*** ./node_modules/es-get-iterator/node.js ***!
+  \**********************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
 
-/* eslint global-require: 0 */
-// the code is structured this way so that bundlers can
-// alias out `has-symbols` to `() => true` or `() => false` if your target
-// environments' Symbol capabilities are known, and then use
-// dead code elimination on the rest of this module.
-//
-// Similarly, `isarray` can be aliased to `Array.isArray` if
-// available in all target environments.
+// this should only run in node >= 13.2, so it
+// does not need any of the intense fallbacks that old node/browsers do
 
-var isArguments = __webpack_require__(/*! is-arguments */ "./node_modules/is-arguments/index.js");
-
-if (__webpack_require__(/*! has-symbols */ "./node_modules/has-symbols/index.js")() || __webpack_require__(/*! has-symbols/shams */ "./node_modules/has-symbols/shams.js")()) {
-	var $iterator = Symbol.iterator;
-	// Symbol is available natively or shammed
-	// natively:
-	//  - Chrome >= 38
-	//  - Edge 12-14?, Edge >= 15 for sure
-	//  - FF >= 36
-	//  - Safari >= 9
-	//  - node >= 0.12
-	module.exports = function getIterator(iterable) {
-		// alternatively, `iterable[$iterator]?.()`
-		if (iterable != null && typeof iterable[$iterator] !== 'undefined') {
-			return iterable[$iterator]();
-		}
-		if (isArguments(iterable)) {
-			// arguments objects lack Symbol.iterator
-			// - node 0.12
-			return Array.prototype[$iterator].call(iterable);
-		}
-	};
-} else {
-	// Symbol is not available, native or shammed
-	var isArray = __webpack_require__(/*! isarray */ "./node_modules/es-get-iterator/node_modules/isarray/index.js");
-	var isString = __webpack_require__(/*! is-string */ "./node_modules/is-string/index.js");
-	var GetIntrinsic = __webpack_require__(/*! es-abstract/GetIntrinsic */ "./node_modules/es-abstract/GetIntrinsic.js");
-	var $Map = GetIntrinsic('%Map%', true);
-	var $Set = GetIntrinsic('%Set%', true);
-	var callBound = __webpack_require__(/*! es-abstract/helpers/callBound */ "./node_modules/es-abstract/helpers/callBound.js");
-	var $arrayPush = callBound('Array.prototype.push');
-	var $charCodeAt = callBound('String.prototype.charCodeAt');
-	var $stringSlice = callBound('String.prototype.slice');
-
-	var advanceStringIndex = function advanceStringIndex(S, index) {
-		var length = S.length;
-		if ((index + 1) >= length) {
-			return index + 1;
-		}
-
-		var first = $charCodeAt(S, index);
-		if (first < 0xD800 || first > 0xDBFF) {
-			return index + 1;
-		}
-
-		var second = $charCodeAt(S, index + 1);
-		if (second < 0xDC00 || second > 0xDFFF) {
-			return index + 1;
-		}
-
-		return index + 2;
-	};
-
-	var getArrayIterator = function getArrayIterator(arraylike) {
-		var i = 0;
-		return {
-			next: function next() {
-				var done = i >= arraylike.length;
-				var value;
-				if (!done) {
-					value = arraylike[i];
-					i += 1;
-				}
-				return {
-					done: done,
-					value: value
-				};
-			}
-		};
-	};
-
-	var getNonCollectionIterator = function getNonCollectionIterator(iterable) {
-		if (isArray(iterable) || isArguments(iterable)) {
-			return getArrayIterator(iterable);
-		}
-		if (isString(iterable)) {
-			var i = 0;
-			return {
-				next: function next() {
-					var nextIndex = advanceStringIndex(iterable, i);
-					var value = $stringSlice(iterable, i, nextIndex);
-					i = nextIndex;
-					return {
-						done: nextIndex > iterable.length,
-						value: value
-					};
-				}
-			};
-		}
-	};
-
-	if (!$Map && !$Set) {
-		// the only language iterables are Array, String, arguments
-		// - Safari <= 6.0
-		// - Chrome < 38
-		// - node < 0.12
-		// - FF < 13
-		// - IE < 11
-		// - Edge < 11
-
-		module.exports = getNonCollectionIterator;
-	} else {
-		// either Map or Set are available, but Symbol is not
-		// - es6-shim on an ES5 browser
-		// - Safari 6.2 (maybe 6.1?)
-		// - FF v[13, 36)
-		// - IE 11
-		// - Edge 11
-		// - Safari v[6, 9)
-
-		var isMap = __webpack_require__(/*! is-map */ "./node_modules/is-map/index.js");
-		var isSet = __webpack_require__(/*! is-set */ "./node_modules/is-set/index.js");
-
-		// Firefox >= 27, IE 11, Safari 6.2 - 9, Edge 11, es6-shim in older envs, all have forEach
-		var $mapForEach = callBound('Map.prototype.forEach', true);
-		var $setForEach = callBound('Set.prototype.forEach', true);
-		if (typeof process === 'undefined' || !process.versions || !process.versions.node) { // "if is not node"
-
-			// Firefox 17 - 26 has `.iterator()`, whose iterator `.next()` either
-			// returns a value, or throws a StopIteration object. These browsers
-			// do not have any other mechanism for iteration.
-			var $mapIterator = callBound('Map.prototype.iterator', true);
-			var $setIterator = callBound('Set.prototype.iterator', true);
-			var getStopIterationIterator = function (iterator) {
-				var done = false;
-				return {
-					next: function next() {
-						try {
-							return {
-								done: done,
-								value: done ? undefined : iterator.next()
-							};
-						} catch (e) {
-							done = true;
-							return {
-								done: true,
-								value: undefined
-							};
-						}
-					}
-				};
-			};
-		}
-		// Firefox 27-35, and some older es6-shim versions, use a string "@@iterator" property
-		// this returns a proper iterator object, so we should use it instead of forEach.
-		// newer es6-shim versions use a string "_es6-shim iterator_" property.
-		var $mapAtAtIterator = callBound('Map.prototype.@@iterator', true) || callBound('Map.prototype._es6-shim iterator_', true);
-		var $setAtAtIterator = callBound('Set.prototype.@@iterator', true) || callBound('Set.prototype._es6-shim iterator_', true);
-
-		var getCollectionIterator = function getCollectionIterator(iterable) {
-			if (isMap(iterable)) {
-				if ($mapIterator) {
-					return getStopIterationIterator($mapIterator(iterable));
-				}
-				if ($mapAtAtIterator) {
-					return $mapAtAtIterator(iterable);
-				}
-				if ($mapForEach) {
-					var entries = [];
-					$mapForEach(iterable, function (v, k) {
-						$arrayPush(entries, [k, v]);
-					});
-					return getArrayIterator(entries);
-				}
-			}
-			if (isSet(iterable)) {
-				if ($setIterator) {
-					return getStopIterationIterator($setIterator(iterable));
-				}
-				if ($setAtAtIterator) {
-					return $setAtAtIterator(iterable);
-				}
-				if ($setForEach) {
-					var values = [];
-					$setForEach(iterable, function (v) {
-						$arrayPush(values, v);
-					});
-					return getArrayIterator(values);
-				}
-			}
-		};
-
-		module.exports = function getIterator(iterable) {
-			return getCollectionIterator(iterable) || getNonCollectionIterator(iterable);
-		};
+var $iterator = Symbol.iterator;
+module.exports = function getIterator(iterable) {
+	// alternatively, `iterable[$iterator]?.()`
+	if (iterable != null && typeof iterable[$iterator] !== 'undefined') {
+		return iterable[$iterator]();
 	}
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/es-get-iterator/node_modules/isarray/index.js":
-/*!********************************************************************!*\
-  !*** ./node_modules/es-get-iterator/node_modules/isarray/index.js ***!
-  \********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-var toString = {}.toString;
-
-module.exports = Array.isArray || function (arr) {
-  return toString.call(arr) == '[object Array]';
 };
 
 
@@ -4541,8 +2172,10 @@ module.exports = Array.isArray || function (arr) {
 /*!**********************************************************!*\
   !*** ./node_modules/fs-extra/lib/copy-sync/copy-sync.js ***!
   \**********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 166:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -4719,8 +2352,10 @@ module.exports = copySync
 /*!******************************************************!*\
   !*** ./node_modules/fs-extra/lib/copy-sync/index.js ***!
   \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -4736,8 +2371,10 @@ module.exports = {
 /*!************************************************!*\
   !*** ./node_modules/fs-extra/lib/copy/copy.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 232:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -4980,8 +2617,10 @@ module.exports = copy
 /*!*************************************************!*\
   !*** ./node_modules/fs-extra/lib/copy/index.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -4998,8 +2637,10 @@ module.exports = {
 /*!**************************************************!*\
   !*** ./node_modules/fs-extra/lib/empty/index.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 43:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5058,8 +2699,10 @@ module.exports = {
 /*!**************************************************!*\
   !*** ./node_modules/fs-extra/lib/ensure/file.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 66:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5139,8 +2782,10 @@ module.exports = {
 /*!***************************************************!*\
   !*** ./node_modules/fs-extra/lib/ensure/index.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5174,8 +2819,10 @@ module.exports = {
 /*!**************************************************!*\
   !*** ./node_modules/fs-extra/lib/ensure/link.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 58:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5247,8 +2894,10 @@ module.exports = {
 /*!***********************************************************!*\
   !*** ./node_modules/fs-extra/lib/ensure/symlink-paths.js ***!
   \***********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 96:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5358,8 +3007,10 @@ module.exports = {
 /*!**********************************************************!*\
   !*** ./node_modules/fs-extra/lib/ensure/symlink-type.js ***!
   \**********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 28:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5401,8 +3052,10 @@ module.exports = {
 /*!*****************************************************!*\
   !*** ./node_modules/fs-extra/lib/ensure/symlink.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 60:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5476,8 +3129,11 @@ module.exports = {
 /*!***********************************************!*\
   !*** ./node_modules/fs-extra/lib/fs/index.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, __webpack_exports__ */
+/*! CommonJS bailout: exports is used directly at 55:2-9 */
+/*! CommonJS bailout: exports is used directly at 60:2-9 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5616,8 +3272,10 @@ if (typeof fs.realpath.native === 'function') {
 /*!********************************************!*\
   !*** ./node_modules/fs-extra/lib/index.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5643,9 +3301,9 @@ module.exports = {
 // ExperimentalWarning before fs.promises is actually accessed.
 const fs = __webpack_require__(/*! fs */ "fs")
 if (Object.getOwnPropertyDescriptor(fs, 'promises')) {
-  Object.defineProperty(module.exports, 'promises', {
+  Object.defineProperty(module.exports, "promises", ({
     get () { return fs.promises }
-  })
+  }))
 }
 
 
@@ -5655,8 +3313,10 @@ if (Object.getOwnPropertyDescriptor(fs, 'promises')) {
 /*!*************************************************!*\
   !*** ./node_modules/fs-extra/lib/json/index.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5683,8 +3343,10 @@ module.exports = jsonFile
 /*!****************************************************!*\
   !*** ./node_modules/fs-extra/lib/json/jsonfile.js ***!
   \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5706,8 +3368,10 @@ module.exports = {
 /*!************************************************************!*\
   !*** ./node_modules/fs-extra/lib/json/output-json-sync.js ***!
   \************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 12:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5730,8 +3394,10 @@ module.exports = outputJsonSync
 /*!*******************************************************!*\
   !*** ./node_modules/fs-extra/lib/json/output-json.js ***!
   \*******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 12:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5754,8 +3420,10 @@ module.exports = outputJson
 /*!***************************************************!*\
   !*** ./node_modules/fs-extra/lib/mkdirs/index.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5780,8 +3448,12 @@ module.exports = {
 /*!******************************************************!*\
   !*** ./node_modules/fs-extra/lib/mkdirs/make-dir.js ***!
   \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export makeDir [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export makeDirSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: module, __webpack_require__ */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 // Adapted from https://github.com/sindresorhus/make-dir
@@ -5934,8 +3606,10 @@ module.exports.makeDirSync = (input, options) => {
 /*!******************************************************!*\
   !*** ./node_modules/fs-extra/lib/move-sync/index.js ***!
   \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -5951,8 +3625,10 @@ module.exports = {
 /*!**********************************************************!*\
   !*** ./node_modules/fs-extra/lib/move-sync/move-sync.js ***!
   \**********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 47:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6010,8 +3686,10 @@ module.exports = moveSync
 /*!*************************************************!*\
   !*** ./node_modules/fs-extra/lib/move/index.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6028,8 +3706,10 @@ module.exports = {
 /*!************************************************!*\
   !*** ./node_modules/fs-extra/lib/move/move.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 65:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6105,8 +3785,10 @@ module.exports = move
 /*!***************************************************!*\
   !*** ./node_modules/fs-extra/lib/output/index.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 37:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6157,8 +3839,10 @@ module.exports = {
 /*!********************************************************!*\
   !*** ./node_modules/fs-extra/lib/path-exists/index.js ***!
   \********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 9:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6181,8 +3865,10 @@ module.exports = {
 /*!***************************************************!*\
   !*** ./node_modules/fs-extra/lib/remove/index.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6202,8 +3888,10 @@ module.exports = {
 /*!****************************************************!*\
   !*** ./node_modules/fs-extra/lib/remove/rimraf.js ***!
   \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 313:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6528,8 +4216,10 @@ rimraf.sync = rimrafSync
 /*!************************************************!*\
   !*** ./node_modules/fs-extra/lib/util/stat.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 133:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6679,8 +4369,10 @@ module.exports = {
 /*!**************************************************!*\
   !*** ./node_modules/fs-extra/lib/util/utimes.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -6717,8 +4409,10 @@ module.exports = {
 /*!*****************************************************************!*\
   !*** ./node_modules/fs-extra/node_modules/graceful-fs/clone.js ***!
   \*****************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -6748,8 +4442,11 @@ function clone (obj) {
 /*!***********************************************************************!*\
   !*** ./node_modules/fs-extra/node_modules/graceful-fs/graceful-fs.js ***!
   \***********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 88:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 90:4-18 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var fs = __webpack_require__(/*! fs */ "fs")
 var polyfills = __webpack_require__(/*! ./polyfills.js */ "./node_modules/fs-extra/node_modules/graceful-fs/polyfills.js")
@@ -7105,8 +4802,10 @@ function retry () {
 /*!**************************************************************************!*\
   !*** ./node_modules/fs-extra/node_modules/graceful-fs/legacy-streams.js ***!
   \**************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Stream = __webpack_require__(/*! stream */ "stream").Stream
 
@@ -7234,8 +4933,10 @@ function legacy (fs) {
 /*!*********************************************************************!*\
   !*** ./node_modules/fs-extra/node_modules/graceful-fs/polyfills.js ***!
   \*********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var constants = __webpack_require__(/*! constants */ "constants")
 
@@ -7587,8 +5288,10 @@ function patch (fs) {
 /*!*******************************************!*\
   !*** ./node_modules/fs.realpath/index.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = realpath
 realpath.realpath = realpath
@@ -7664,8 +5367,12 @@ function unmonkeypatch () {
 /*!*****************************************!*\
   !*** ./node_modules/fs.realpath/old.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export realpath [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export realpathSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -7978,8 +5685,10 @@ exports.realpath = function realpath(p, cache, cb) {
 /*!******************************************************!*\
   !*** ./node_modules/function-bind/implementation.js ***!
   \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 10:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -8042,8 +5751,10 @@ module.exports = function bind(that) {
 /*!*********************************************!*\
   !*** ./node_modules/function-bind/index.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -8059,8 +5770,10 @@ module.exports = Function.prototype.bind || implementation;
 /*!****************************************!*\
   !*** ./node_modules/graceful-fs/fs.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -8092,8 +5805,11 @@ function clone (obj) {
 /*!*************************************************!*\
   !*** ./node_modules/graceful-fs/graceful-fs.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 27:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 29:2-16 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var fs = __webpack_require__(/*! fs */ "fs")
 var polyfills = __webpack_require__(/*! ./polyfills.js */ "./node_modules/graceful-fs/polyfills.js")
@@ -8365,8 +6081,10 @@ function retry () {
 /*!****************************************************!*\
   !*** ./node_modules/graceful-fs/legacy-streams.js ***!
   \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Stream = __webpack_require__(/*! stream */ "stream").Stream
 
@@ -8494,8 +6212,10 @@ function legacy (fs) {
 /*!***********************************************!*\
   !*** ./node_modules/graceful-fs/polyfills.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 24:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var fs = __webpack_require__(/*! ./fs.js */ "./node_modules/graceful-fs/fs.js")
 var constants = __webpack_require__(/*! constants */ "constants")
@@ -8835,8 +6555,10 @@ function chownErOk (er) {
 /*!****************************************!*\
   !*** ./node_modules/graphlib/index.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 33:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 /**
  * Copyright (c) 2014, Chris Pettitt
@@ -8884,8 +6606,10 @@ module.exports = {
 /*!*****************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/components.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 
@@ -8922,8 +6646,10 @@ function components(g) {
 /*!**********************************************!*\
   !*** ./node_modules/graphlib/lib/alg/dfs.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 
@@ -8975,8 +6701,10 @@ function doDfs(g, v, postorder, visited, navigation, acc) {
 /*!*******************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/dijkstra-all.js ***!
   \*******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var dijkstra = __webpack_require__(/*! ./dijkstra */ "./node_modules/graphlib/lib/alg/dijkstra.js");
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
@@ -8996,8 +6724,10 @@ function dijkstraAll(g, weightFunc, edgeFunc) {
 /*!***************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/dijkstra.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 var PriorityQueue = __webpack_require__(/*! ../data/priority-queue */ "./node_modules/graphlib/lib/data/priority-queue.js");
@@ -9061,8 +6791,10 @@ function runDijkstra(g, source, weightFn, edgeFn) {
 /*!******************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/find-cycles.js ***!
   \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 var tarjan = __webpack_require__(/*! ./tarjan */ "./node_modules/graphlib/lib/alg/tarjan.js");
@@ -9082,8 +6814,10 @@ function findCycles(g) {
 /*!*********************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/floyd-warshall.js ***!
   \*********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 
@@ -9143,8 +6877,10 @@ function runFloydWarshall(g, weightFn, edgeFn) {
 /*!************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/index.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = {
   components: __webpack_require__(/*! ./components */ "./node_modules/graphlib/lib/alg/components.js"),
@@ -9167,8 +6903,10 @@ module.exports = {
 /*!*****************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/is-acyclic.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var topsort = __webpack_require__(/*! ./topsort */ "./node_modules/graphlib/lib/alg/topsort.js");
 
@@ -9193,8 +6931,10 @@ function isAcyclic(g) {
 /*!****************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/postorder.js ***!
   \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var dfs = __webpack_require__(/*! ./dfs */ "./node_modules/graphlib/lib/alg/dfs.js");
 
@@ -9211,8 +6951,10 @@ function postorder(g, vs) {
 /*!***************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/preorder.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var dfs = __webpack_require__(/*! ./dfs */ "./node_modules/graphlib/lib/alg/dfs.js");
 
@@ -9229,8 +6971,10 @@ function preorder(g, vs) {
 /*!***********************************************!*\
   !*** ./node_modules/graphlib/lib/alg/prim.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 var Graph = __webpack_require__(/*! ../graph */ "./node_modules/graphlib/lib/graph.js");
@@ -9292,8 +7036,10 @@ function prim(g, weightFunc) {
 /*!*************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/tarjan.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 
@@ -9350,8 +7096,10 @@ function tarjan(g) {
 /*!**************************************************!*\
   !*** ./node_modules/graphlib/lib/alg/topsort.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 
@@ -9395,8 +7143,10 @@ CycleException.prototype = new Error(); // must be an instance of Error to pass 
 /*!**********************************************************!*\
   !*** ./node_modules/graphlib/lib/data/priority-queue.js ***!
   \**********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ../lodash */ "./node_modules/graphlib/lib/lodash.js");
 
@@ -9558,8 +7308,10 @@ PriorityQueue.prototype._swap = function(i, j) {
 /*!********************************************!*\
   !*** ./node_modules/graphlib/lib/graph.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -10102,8 +7854,10 @@ function edgeObjToId(isDirected, edgeObj) {
 /*!********************************************!*\
   !*** ./node_modules/graphlib/lib/index.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 2:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 // Includes only the "core" of graphlib
 module.exports = {
@@ -10118,8 +7872,10 @@ module.exports = {
 /*!*******************************************!*\
   !*** ./node_modules/graphlib/lib/json.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var _ = __webpack_require__(/*! ./lodash */ "./node_modules/graphlib/lib/lodash.js");
 var Graph = __webpack_require__(/*! ./graph */ "./node_modules/graphlib/lib/graph.js");
@@ -10195,8 +7951,10 @@ function read(json) {
 /*!*********************************************!*\
   !*** ./node_modules/graphlib/lib/lodash.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 34:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 /* global window */
 
@@ -10240,8 +7998,10 @@ module.exports = lodash;
 /*!**********************************************!*\
   !*** ./node_modules/graphlib/lib/version.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module) => {
 
 module.exports = '2.1.8';
 
@@ -10252,8 +8012,10 @@ module.exports = '2.1.8';
 /*!*******************************************!*\
   !*** ./node_modules/has-symbols/index.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -10277,8 +8039,10 @@ module.exports = function hasNativeSymbols() {
 /*!*******************************************!*\
   !*** ./node_modules/has-symbols/shams.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -10331,8 +8095,10 @@ module.exports = function hasSymbols() {
 /*!***************************************!*\
   !*** ./node_modules/has/src/index.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -10348,8 +8114,10 @@ module.exports = bind.call(Function.call, Object.prototype.hasOwnProperty);
 /*!*******************************************!*\
   !*** ./node_modules/inflight/inflight.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var wrappy = __webpack_require__(/*! wrappy */ "./node_modules/wrappy/wrappy.js")
 var reqs = Object.create(null)
@@ -10413,8 +8181,10 @@ function slice (args) {
 /*!*******************************************!*\
   !*** ./node_modules/inherits/inherits.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 4:2-16 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 try {
   var util = __webpack_require__(/*! util */ "util");
@@ -10431,8 +8201,11 @@ try {
 /*!***************************************************!*\
   !*** ./node_modules/inherits/inherits_browser.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 3:2-16 */
+/*! CommonJS bailout: module.exports is used directly at 16:2-16 */
+/***/ ((module) => {
 
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
@@ -10465,8 +8238,10 @@ if (typeof Object.create === 'function') {
 /*!********************************************!*\
   !*** ./node_modules/is-arguments/index.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 31:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -10508,8 +8283,11 @@ module.exports = supportsStandardArguments ? isStandardArguments : isLegacyArgum
 /*!*****************************************!*\
   !*** ./node_modules/is-bigint/index.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 14:1-15 */
+/*! CommonJS bailout: module.exports is used directly at 33:1-15 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -10545,7 +8323,7 @@ if (typeof BigInt === 'function') {
 	};
 } else {
 	module.exports = function isBigInt(value) {
-		return  false && false;
+		return  false && 0;
 	};
 }
 
@@ -10556,8 +8334,10 @@ if (typeof BigInt === 'function') {
 /*!*************************************************!*\
   !*** ./node_modules/is-boolean-object/index.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -10593,8 +8373,10 @@ module.exports = function isBoolean(value) {
 /*!**********************************************!*\
   !*** ./node_modules/is-date-object/index.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -10627,8 +8409,10 @@ module.exports = function isDateObject(value) {
 /*!**************************************!*\
   !*** ./node_modules/is-map/index.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -10681,8 +8465,10 @@ module.exports = exported || function isMap(x) {
 /*!************************************************!*\
   !*** ./node_modules/is-number-object/index.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -10717,8 +8503,10 @@ module.exports = function isNumberObject(value) {
 /*!****************************************!*\
   !*** ./node_modules/is-regex/index.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 24:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -10768,8 +8556,10 @@ module.exports = function isRegex(value) {
 /*!**************************************!*\
   !*** ./node_modules/is-set/index.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -10822,8 +8612,10 @@ module.exports = exported || function isSet(x) {
 /*!*****************************************!*\
   !*** ./node_modules/is-string/index.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -10858,8 +8650,11 @@ module.exports = function isString(value) {
 /*!*****************************************!*\
   !*** ./node_modules/is-symbol/index.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:1-15 */
+/*! CommonJS bailout: module.exports is used directly at 31:1-15 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -10894,7 +8689,7 @@ if (hasSymbols) {
 
 	module.exports = function isSymbol(value) {
 		// this environment does not support Symbols.
-		return  false && false;
+		return  false && 0;
 	};
 }
 
@@ -10905,8 +8700,10 @@ if (hasSymbols) {
 /*!******************************************!*\
   !*** ./node_modules/is-weakmap/index.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -10959,8 +8756,11 @@ module.exports = exported || function isWeakMap(x) {
 /*!******************************************!*\
   !*** ./node_modules/is-weakset/index.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 20:1-15 */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -11013,8 +8813,10 @@ module.exports = exported || function isWeakSet(x) {
 /*!*************************************!*\
   !*** ./node_modules/isexe/index.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 9:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var fs = __webpack_require__(/*! fs */ "fs")
 var core
@@ -11081,8 +8883,10 @@ function sync (path, options) {
 /*!************************************!*\
   !*** ./node_modules/isexe/mode.js ***!
   \************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = isexe
 isexe.sync = sync
@@ -11133,8 +8937,10 @@ function checkMode (stat, options) {
 /*!***************************************!*\
   !*** ./node_modules/isexe/windows.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = isexe
 isexe.sync = sync
@@ -11186,8 +8992,10 @@ function sync (path, options) {
 /*!****************************************!*\
   !*** ./node_modules/jsonfile/index.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 88:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 let _fs
 try {
@@ -11285,8 +9093,10 @@ module.exports = jsonfile
 /*!****************************************!*\
   !*** ./node_modules/jsonfile/utils.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 15:0-14 */
+/***/ ((module) => {
 
 function stringify (obj, options = {}) {
   const EOL = options.EOL || '\n'
@@ -11311,8 +9121,10 @@ module.exports = { stringify, stripBom }
 /*!******************************************!*\
   !*** ./node_modules/lodash/_DataView.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getNative = __webpack_require__(/*! ./_getNative */ "./node_modules/lodash/_getNative.js"),
     root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
@@ -11329,8 +9141,10 @@ module.exports = DataView;
 /*!**************************************!*\
   !*** ./node_modules/lodash/_Hash.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 32:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var hashClear = __webpack_require__(/*! ./_hashClear */ "./node_modules/lodash/_hashClear.js"),
     hashDelete = __webpack_require__(/*! ./_hashDelete */ "./node_modules/lodash/_hashDelete.js"),
@@ -11372,8 +9186,10 @@ module.exports = Hash;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_ListCache.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 32:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var listCacheClear = __webpack_require__(/*! ./_listCacheClear */ "./node_modules/lodash/_listCacheClear.js"),
     listCacheDelete = __webpack_require__(/*! ./_listCacheDelete */ "./node_modules/lodash/_listCacheDelete.js"),
@@ -11415,8 +9231,10 @@ module.exports = ListCache;
 /*!*************************************!*\
   !*** ./node_modules/lodash/_Map.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getNative = __webpack_require__(/*! ./_getNative */ "./node_modules/lodash/_getNative.js"),
     root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
@@ -11433,8 +9251,10 @@ module.exports = Map;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_MapCache.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 32:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var mapCacheClear = __webpack_require__(/*! ./_mapCacheClear */ "./node_modules/lodash/_mapCacheClear.js"),
     mapCacheDelete = __webpack_require__(/*! ./_mapCacheDelete */ "./node_modules/lodash/_mapCacheDelete.js"),
@@ -11476,8 +9296,10 @@ module.exports = MapCache;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_Promise.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getNative = __webpack_require__(/*! ./_getNative */ "./node_modules/lodash/_getNative.js"),
     root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
@@ -11494,8 +9316,10 @@ module.exports = Promise;
 /*!*************************************!*\
   !*** ./node_modules/lodash/_Set.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getNative = __webpack_require__(/*! ./_getNative */ "./node_modules/lodash/_getNative.js"),
     root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
@@ -11512,8 +9336,10 @@ module.exports = Set;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_SetCache.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 27:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var MapCache = __webpack_require__(/*! ./_MapCache */ "./node_modules/lodash/_MapCache.js"),
     setCacheAdd = __webpack_require__(/*! ./_setCacheAdd */ "./node_modules/lodash/_setCacheAdd.js"),
@@ -11550,8 +9376,10 @@ module.exports = SetCache;
 /*!***************************************!*\
   !*** ./node_modules/lodash/_Stack.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 27:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var ListCache = __webpack_require__(/*! ./_ListCache */ "./node_modules/lodash/_ListCache.js"),
     stackClear = __webpack_require__(/*! ./_stackClear */ "./node_modules/lodash/_stackClear.js"),
@@ -11588,8 +9416,10 @@ module.exports = Stack;
 /*!****************************************!*\
   !*** ./node_modules/lodash/_Symbol.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
 
@@ -11605,8 +9435,10 @@ module.exports = Symbol;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_Uint8Array.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
 
@@ -11622,8 +9454,10 @@ module.exports = Uint8Array;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_WeakMap.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getNative = __webpack_require__(/*! ./_getNative */ "./node_modules/lodash/_getNative.js"),
     root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
@@ -11640,8 +9474,10 @@ module.exports = WeakMap;
 /*!***************************************!*\
   !*** ./node_modules/lodash/_apply.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module) => {
 
 /**
  * A faster alternative to `Function#apply`, this function invokes `func`
@@ -11672,8 +9508,10 @@ module.exports = apply;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_arrayEach.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module) => {
 
 /**
  * A specialized version of `_.forEach` for arrays without support for
@@ -11705,8 +9543,10 @@ module.exports = arrayEach;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_arrayFilter.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 25:0-14 */
+/***/ ((module) => {
 
 /**
  * A specialized version of `_.filter` for arrays without support for
@@ -11741,8 +9581,10 @@ module.exports = arrayFilter;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_arrayIncludes.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIndexOf = __webpack_require__(/*! ./_baseIndexOf */ "./node_modules/lodash/_baseIndexOf.js");
 
@@ -11769,8 +9611,10 @@ module.exports = arrayIncludes;
 /*!***************************************************!*\
   !*** ./node_modules/lodash/_arrayIncludesWith.js ***!
   \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module) => {
 
 /**
  * This function is like `arrayIncludes` except that it accepts a comparator.
@@ -11802,8 +9646,10 @@ module.exports = arrayIncludesWith;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_arrayLikeKeys.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 49:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseTimes = __webpack_require__(/*! ./_baseTimes */ "./node_modules/lodash/_baseTimes.js"),
     isArguments = __webpack_require__(/*! ./isArguments */ "./node_modules/lodash/isArguments.js"),
@@ -11862,8 +9708,10 @@ module.exports = arrayLikeKeys;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_arrayMap.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module) => {
 
 /**
  * A specialized version of `_.map` for arrays without support for iteratee
@@ -11894,8 +9742,10 @@ module.exports = arrayMap;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_arrayPush.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module) => {
 
 /**
  * Appends the elements of `values` to `array`.
@@ -11925,8 +9775,10 @@ module.exports = arrayPush;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_arrayReduce.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 /**
  * A specialized version of `_.reduce` for arrays without support for
@@ -11962,8 +9814,10 @@ module.exports = arrayReduce;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_arraySome.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module) => {
 
 /**
  * A specialized version of `_.some` for arrays without support for iteratee
@@ -11996,8 +9850,10 @@ module.exports = arraySome;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_asciiSize.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 12:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseProperty = __webpack_require__(/*! ./_baseProperty */ "./node_modules/lodash/_baseProperty.js");
 
@@ -12019,8 +9875,10 @@ module.exports = asciiSize;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_assignValue.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 28:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseAssignValue = __webpack_require__(/*! ./_baseAssignValue */ "./node_modules/lodash/_baseAssignValue.js"),
     eq = __webpack_require__(/*! ./eq */ "./node_modules/lodash/eq.js");
@@ -12058,8 +9916,10 @@ module.exports = assignValue;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_assocIndexOf.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var eq = __webpack_require__(/*! ./eq */ "./node_modules/lodash/eq.js");
 
@@ -12090,8 +9950,10 @@ module.exports = assocIndexOf;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseAssign.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var copyObject = __webpack_require__(/*! ./_copyObject */ "./node_modules/lodash/_copyObject.js"),
     keys = __webpack_require__(/*! ./keys */ "./node_modules/lodash/keys.js");
@@ -12118,8 +9980,10 @@ module.exports = baseAssign;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_baseAssignIn.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var copyObject = __webpack_require__(/*! ./_copyObject */ "./node_modules/lodash/_copyObject.js"),
     keysIn = __webpack_require__(/*! ./keysIn */ "./node_modules/lodash/keysIn.js");
@@ -12146,8 +10010,10 @@ module.exports = baseAssignIn;
 /*!*************************************************!*\
   !*** ./node_modules/lodash/_baseAssignValue.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 25:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var defineProperty = __webpack_require__(/*! ./_defineProperty */ "./node_modules/lodash/_defineProperty.js");
 
@@ -12182,8 +10048,10 @@ module.exports = baseAssignValue;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_baseClone.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 165:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Stack = __webpack_require__(/*! ./_Stack */ "./node_modules/lodash/_Stack.js"),
     arrayEach = __webpack_require__(/*! ./_arrayEach */ "./node_modules/lodash/_arrayEach.js"),
@@ -12358,8 +10226,10 @@ module.exports = baseClone;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseCreate.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 30:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isObject = __webpack_require__(/*! ./isObject */ "./node_modules/lodash/isObject.js");
 
@@ -12399,8 +10269,10 @@ module.exports = baseCreate;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_baseEach.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseForOwn = __webpack_require__(/*! ./_baseForOwn */ "./node_modules/lodash/_baseForOwn.js"),
     createBaseEach = __webpack_require__(/*! ./_createBaseEach */ "./node_modules/lodash/_createBaseEach.js");
@@ -12424,8 +10296,10 @@ module.exports = baseEach;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseFilter.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseEach = __webpack_require__(/*! ./_baseEach */ "./node_modules/lodash/_baseEach.js");
 
@@ -12456,8 +10330,10 @@ module.exports = baseFilter;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_baseFindIndex.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 24:0-14 */
+/***/ ((module) => {
 
 /**
  * The base implementation of `_.findIndex` and `_.findLastIndex` without
@@ -12491,8 +10367,10 @@ module.exports = baseFindIndex;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_baseFlatten.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 38:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayPush = __webpack_require__(/*! ./_arrayPush */ "./node_modules/lodash/_arrayPush.js"),
     isFlattenable = __webpack_require__(/*! ./_isFlattenable */ "./node_modules/lodash/_isFlattenable.js");
@@ -12540,8 +10418,10 @@ module.exports = baseFlatten;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_baseFor.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var createBaseFor = __webpack_require__(/*! ./_createBaseFor */ "./node_modules/lodash/_createBaseFor.js");
 
@@ -12567,8 +10447,10 @@ module.exports = baseFor;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseForOwn.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseFor = __webpack_require__(/*! ./_baseFor */ "./node_modules/lodash/_baseFor.js"),
     keys = __webpack_require__(/*! ./keys */ "./node_modules/lodash/keys.js");
@@ -12594,8 +10476,10 @@ module.exports = baseForOwn;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_baseGet.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 24:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var castPath = __webpack_require__(/*! ./_castPath */ "./node_modules/lodash/_castPath.js"),
     toKey = __webpack_require__(/*! ./_toKey */ "./node_modules/lodash/_toKey.js");
@@ -12629,8 +10513,10 @@ module.exports = baseGet;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_baseGetAllKeys.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayPush = __webpack_require__(/*! ./_arrayPush */ "./node_modules/lodash/_arrayPush.js"),
     isArray = __webpack_require__(/*! ./isArray */ "./node_modules/lodash/isArray.js");
@@ -12660,8 +10546,10 @@ module.exports = baseGetAllKeys;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseGetTag.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 28:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Symbol = __webpack_require__(/*! ./_Symbol */ "./node_modules/lodash/_Symbol.js"),
     getRawTag = __webpack_require__(/*! ./_getRawTag */ "./node_modules/lodash/_getRawTag.js"),
@@ -12699,8 +10587,10 @@ module.exports = baseGetTag;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_baseHas.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 19:0-14 */
+/***/ ((module) => {
 
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
@@ -12729,8 +10619,10 @@ module.exports = baseHas;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_baseHasIn.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 13:0-14 */
+/***/ ((module) => {
 
 /**
  * The base implementation of `_.hasIn` without support for deep paths.
@@ -12753,8 +10645,10 @@ module.exports = baseHasIn;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_baseIndexOf.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseFindIndex = __webpack_require__(/*! ./_baseFindIndex */ "./node_modules/lodash/_baseFindIndex.js"),
     baseIsNaN = __webpack_require__(/*! ./_baseIsNaN */ "./node_modules/lodash/_baseIsNaN.js"),
@@ -12784,8 +10678,10 @@ module.exports = baseIndexOf;
 /*!*************************************************!*\
   !*** ./node_modules/lodash/_baseIsArguments.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGetTag = __webpack_require__(/*! ./_baseGetTag */ "./node_modules/lodash/_baseGetTag.js"),
     isObjectLike = __webpack_require__(/*! ./isObjectLike */ "./node_modules/lodash/isObjectLike.js");
@@ -12813,8 +10709,10 @@ module.exports = baseIsArguments;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_baseIsEqual.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 28:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsEqualDeep = __webpack_require__(/*! ./_baseIsEqualDeep */ "./node_modules/lodash/_baseIsEqualDeep.js"),
     isObjectLike = __webpack_require__(/*! ./isObjectLike */ "./node_modules/lodash/isObjectLike.js");
@@ -12852,8 +10750,10 @@ module.exports = baseIsEqual;
 /*!*************************************************!*\
   !*** ./node_modules/lodash/_baseIsEqualDeep.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 83:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Stack = __webpack_require__(/*! ./_Stack */ "./node_modules/lodash/_Stack.js"),
     equalArrays = __webpack_require__(/*! ./_equalArrays */ "./node_modules/lodash/_equalArrays.js"),
@@ -12946,8 +10846,10 @@ module.exports = baseIsEqualDeep;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_baseIsMap.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getTag = __webpack_require__(/*! ./_getTag */ "./node_modules/lodash/_getTag.js"),
     isObjectLike = __webpack_require__(/*! ./isObjectLike */ "./node_modules/lodash/isObjectLike.js");
@@ -12975,8 +10877,10 @@ module.exports = baseIsMap;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_baseIsMatch.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 62:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Stack = __webpack_require__(/*! ./_Stack */ "./node_modules/lodash/_Stack.js"),
     baseIsEqual = __webpack_require__(/*! ./_baseIsEqual */ "./node_modules/lodash/_baseIsEqual.js");
@@ -13048,8 +10952,10 @@ module.exports = baseIsMatch;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_baseIsNaN.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 12:0-14 */
+/***/ ((module) => {
 
 /**
  * The base implementation of `_.isNaN` without support for number objects.
@@ -13071,8 +10977,10 @@ module.exports = baseIsNaN;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_baseIsNative.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 47:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isFunction = __webpack_require__(/*! ./isFunction */ "./node_modules/lodash/isFunction.js"),
     isMasked = __webpack_require__(/*! ./_isMasked */ "./node_modules/lodash/_isMasked.js"),
@@ -13129,8 +11037,10 @@ module.exports = baseIsNative;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_baseIsSet.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getTag = __webpack_require__(/*! ./_getTag */ "./node_modules/lodash/_getTag.js"),
     isObjectLike = __webpack_require__(/*! ./isObjectLike */ "./node_modules/lodash/isObjectLike.js");
@@ -13158,8 +11068,10 @@ module.exports = baseIsSet;
 /*!**************************************************!*\
   !*** ./node_modules/lodash/_baseIsTypedArray.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 60:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGetTag = __webpack_require__(/*! ./_baseGetTag */ "./node_modules/lodash/_baseGetTag.js"),
     isLength = __webpack_require__(/*! ./isLength */ "./node_modules/lodash/isLength.js"),
@@ -13229,8 +11141,10 @@ module.exports = baseIsTypedArray;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_baseIteratee.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 31:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseMatches = __webpack_require__(/*! ./_baseMatches */ "./node_modules/lodash/_baseMatches.js"),
     baseMatchesProperty = __webpack_require__(/*! ./_baseMatchesProperty */ "./node_modules/lodash/_baseMatchesProperty.js"),
@@ -13271,8 +11185,10 @@ module.exports = baseIteratee;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_baseKeys.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 30:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isPrototype = __webpack_require__(/*! ./_isPrototype */ "./node_modules/lodash/_isPrototype.js"),
     nativeKeys = __webpack_require__(/*! ./_nativeKeys */ "./node_modules/lodash/_nativeKeys.js");
@@ -13312,8 +11228,10 @@ module.exports = baseKeys;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseKeysIn.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 33:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isObject = __webpack_require__(/*! ./isObject */ "./node_modules/lodash/isObject.js"),
     isPrototype = __webpack_require__(/*! ./_isPrototype */ "./node_modules/lodash/_isPrototype.js"),
@@ -13356,8 +11274,10 @@ module.exports = baseKeysIn;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_baseMap.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseEach = __webpack_require__(/*! ./_baseEach */ "./node_modules/lodash/_baseEach.js"),
     isArrayLike = __webpack_require__(/*! ./isArrayLike */ "./node_modules/lodash/isArrayLike.js");
@@ -13389,8 +11309,10 @@ module.exports = baseMap;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_baseMatches.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsMatch = __webpack_require__(/*! ./_baseIsMatch */ "./node_modules/lodash/_baseIsMatch.js"),
     getMatchData = __webpack_require__(/*! ./_getMatchData */ "./node_modules/lodash/_getMatchData.js"),
@@ -13422,8 +11344,10 @@ module.exports = baseMatches;
 /*!*****************************************************!*\
   !*** ./node_modules/lodash/_baseMatchesProperty.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 33:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsEqual = __webpack_require__(/*! ./_baseIsEqual */ "./node_modules/lodash/_baseIsEqual.js"),
     get = __webpack_require__(/*! ./get */ "./node_modules/lodash/get.js"),
@@ -13466,8 +11390,10 @@ module.exports = baseMatchesProperty;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_baseProperty.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module) => {
 
 /**
  * The base implementation of `_.property` without support for deep paths.
@@ -13491,8 +11417,10 @@ module.exports = baseProperty;
 /*!**************************************************!*\
   !*** ./node_modules/lodash/_basePropertyDeep.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGet = __webpack_require__(/*! ./_baseGet */ "./node_modules/lodash/_baseGet.js");
 
@@ -13518,8 +11446,10 @@ module.exports = basePropertyDeep;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseReduce.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module) => {
 
 /**
  * The base implementation of `_.reduce` and `_.reduceRight`, without support
@@ -13552,8 +11482,10 @@ module.exports = baseReduce;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_baseRest.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var identity = __webpack_require__(/*! ./identity */ "./node_modules/lodash/identity.js"),
     overRest = __webpack_require__(/*! ./_overRest */ "./node_modules/lodash/_overRest.js"),
@@ -13580,8 +11512,10 @@ module.exports = baseRest;
 /*!*************************************************!*\
   !*** ./node_modules/lodash/_baseSetToString.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var constant = __webpack_require__(/*! ./constant */ "./node_modules/lodash/constant.js"),
     defineProperty = __webpack_require__(/*! ./_defineProperty */ "./node_modules/lodash/_defineProperty.js"),
@@ -13613,8 +11547,10 @@ module.exports = baseSetToString;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_baseTimes.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module) => {
 
 /**
  * The base implementation of `_.times` without support for iteratee shorthands
@@ -13644,8 +11580,10 @@ module.exports = baseTimes;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_baseToString.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 37:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Symbol = __webpack_require__(/*! ./_Symbol */ "./node_modules/lodash/_Symbol.js"),
     arrayMap = __webpack_require__(/*! ./_arrayMap */ "./node_modules/lodash/_arrayMap.js"),
@@ -13692,8 +11630,10 @@ module.exports = baseToString;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_baseUnary.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module) => {
 
 /**
  * The base implementation of `_.unary` without support for storing metadata.
@@ -13717,8 +11657,10 @@ module.exports = baseUnary;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_baseUniq.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 72:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var SetCache = __webpack_require__(/*! ./_SetCache */ "./node_modules/lodash/_SetCache.js"),
     arrayIncludes = __webpack_require__(/*! ./_arrayIncludes */ "./node_modules/lodash/_arrayIncludes.js"),
@@ -13800,8 +11742,10 @@ module.exports = baseUniq;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_baseValues.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 19:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayMap = __webpack_require__(/*! ./_arrayMap */ "./node_modules/lodash/_arrayMap.js");
 
@@ -13830,8 +11774,10 @@ module.exports = baseValues;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_cacheHas.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 13:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if a `cache` value for `key` exists.
@@ -13854,8 +11800,10 @@ module.exports = cacheHas;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_castFunction.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var identity = __webpack_require__(/*! ./identity */ "./node_modules/lodash/identity.js");
 
@@ -13879,8 +11827,10 @@ module.exports = castFunction;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_castPath.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isArray = __webpack_require__(/*! ./isArray */ "./node_modules/lodash/isArray.js"),
     isKey = __webpack_require__(/*! ./_isKey */ "./node_modules/lodash/_isKey.js"),
@@ -13911,8 +11861,10 @@ module.exports = castPath;
 /*!**************************************************!*\
   !*** ./node_modules/lodash/_cloneArrayBuffer.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Uint8Array = __webpack_require__(/*! ./_Uint8Array */ "./node_modules/lodash/_Uint8Array.js");
 
@@ -13938,16 +11890,21 @@ module.exports = cloneArrayBuffer;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_cloneBuffer.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_exports__, module.loaded, module.id, module, __webpack_require__.nmd, __webpack_require__, __webpack_require__.* */
+/*! CommonJS bailout: exports is used directly at 4:48-55 */
+/*! CommonJS bailout: exports is used directly at 4:80-87 */
+/*! CommonJS bailout: module.exports is used directly at 35:0-14 */
+/***/ ((module, exports, __webpack_require__) => {
 
-/* WEBPACK VAR INJECTION */(function(module) {var root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
+/* module decorator */ module = __webpack_require__.nmd(module);
+var root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
 
 /** Detect free variable `exports`. */
 var freeExports =  true && exports && !exports.nodeType && exports;
 
 /** Detect free variable `module`. */
-var freeModule = freeExports && typeof module == 'object' && module && !module.nodeType && module;
+var freeModule = freeExports && "object" == 'object' && module && !module.nodeType && module;
 
 /** Detect the popular CommonJS extension `module.exports`. */
 var moduleExports = freeModule && freeModule.exports === freeExports;
@@ -13977,7 +11934,6 @@ function cloneBuffer(buffer, isDeep) {
 
 module.exports = cloneBuffer;
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../webpack/buildin/module.js */ "./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 
@@ -13985,8 +11941,10 @@ module.exports = cloneBuffer;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_cloneDataView.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var cloneArrayBuffer = __webpack_require__(/*! ./_cloneArrayBuffer */ "./node_modules/lodash/_cloneArrayBuffer.js");
 
@@ -14012,8 +11970,10 @@ module.exports = cloneDataView;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_cloneRegExp.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module) => {
 
 /** Used to match `RegExp` flags from their coerced string values. */
 var reFlags = /\w*$/;
@@ -14040,8 +12000,10 @@ module.exports = cloneRegExp;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_cloneSymbol.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Symbol = __webpack_require__(/*! ./_Symbol */ "./node_modules/lodash/_Symbol.js");
 
@@ -14069,8 +12031,10 @@ module.exports = cloneSymbol;
 /*!*************************************************!*\
   !*** ./node_modules/lodash/_cloneTypedArray.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var cloneArrayBuffer = __webpack_require__(/*! ./_cloneArrayBuffer */ "./node_modules/lodash/_cloneArrayBuffer.js");
 
@@ -14096,8 +12060,10 @@ module.exports = cloneTypedArray;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_copyArray.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module) => {
 
 /**
  * Copies the values of `source` to `array`.
@@ -14127,8 +12093,10 @@ module.exports = copyArray;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_copyObject.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 40:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var assignValue = __webpack_require__(/*! ./_assignValue */ "./node_modules/lodash/_assignValue.js"),
     baseAssignValue = __webpack_require__(/*! ./_baseAssignValue */ "./node_modules/lodash/_baseAssignValue.js");
@@ -14178,8 +12146,10 @@ module.exports = copyObject;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_copySymbols.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var copyObject = __webpack_require__(/*! ./_copyObject */ "./node_modules/lodash/_copyObject.js"),
     getSymbols = __webpack_require__(/*! ./_getSymbols */ "./node_modules/lodash/_getSymbols.js");
@@ -14205,8 +12175,10 @@ module.exports = copySymbols;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_copySymbolsIn.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var copyObject = __webpack_require__(/*! ./_copyObject */ "./node_modules/lodash/_copyObject.js"),
     getSymbolsIn = __webpack_require__(/*! ./_getSymbolsIn */ "./node_modules/lodash/_getSymbolsIn.js");
@@ -14232,8 +12204,10 @@ module.exports = copySymbolsIn;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_coreJsData.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js");
 
@@ -14249,8 +12223,10 @@ module.exports = coreJsData;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_createBaseEach.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 32:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isArrayLike = __webpack_require__(/*! ./isArrayLike */ "./node_modules/lodash/isArrayLike.js");
 
@@ -14292,8 +12268,10 @@ module.exports = createBaseEach;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_createBaseFor.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 25:0-14 */
+/***/ ((module) => {
 
 /**
  * Creates a base function for methods like `_.forIn` and `_.forOwn`.
@@ -14328,8 +12306,10 @@ module.exports = createBaseFor;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_createSet.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 19:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Set = __webpack_require__(/*! ./_Set */ "./node_modules/lodash/_Set.js"),
     noop = __webpack_require__(/*! ./noop */ "./node_modules/lodash/noop.js"),
@@ -14358,8 +12338,10 @@ module.exports = createSet;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_defineProperty.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 11:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getNative = __webpack_require__(/*! ./_getNative */ "./node_modules/lodash/_getNative.js");
 
@@ -14380,8 +12362,10 @@ module.exports = defineProperty;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_equalArrays.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 83:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var SetCache = __webpack_require__(/*! ./_SetCache */ "./node_modules/lodash/_SetCache.js"),
     arraySome = __webpack_require__(/*! ./_arraySome */ "./node_modules/lodash/_arraySome.js"),
@@ -14474,8 +12458,10 @@ module.exports = equalArrays;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_equalByTag.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 112:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Symbol = __webpack_require__(/*! ./_Symbol */ "./node_modules/lodash/_Symbol.js"),
     Uint8Array = __webpack_require__(/*! ./_Uint8Array */ "./node_modules/lodash/_Uint8Array.js"),
@@ -14597,8 +12583,10 @@ module.exports = equalByTag;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_equalObjects.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 89:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getAllKeys = __webpack_require__(/*! ./_getAllKeys */ "./node_modules/lodash/_getAllKeys.js");
 
@@ -14697,8 +12685,10 @@ module.exports = equalObjects;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_freeGlobal.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 4:0-14 */
+/***/ ((module) => {
 
 /** Detect free variable `global` from Node.js. */
 var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
@@ -14712,8 +12702,10 @@ module.exports = freeGlobal;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_getAllKeys.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGetAllKeys = __webpack_require__(/*! ./_baseGetAllKeys */ "./node_modules/lodash/_baseGetAllKeys.js"),
     getSymbols = __webpack_require__(/*! ./_getSymbols */ "./node_modules/lodash/_getSymbols.js"),
@@ -14739,8 +12731,10 @@ module.exports = getAllKeys;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_getAllKeysIn.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGetAllKeys = __webpack_require__(/*! ./_baseGetAllKeys */ "./node_modules/lodash/_baseGetAllKeys.js"),
     getSymbolsIn = __webpack_require__(/*! ./_getSymbolsIn */ "./node_modules/lodash/_getSymbolsIn.js"),
@@ -14767,8 +12761,10 @@ module.exports = getAllKeysIn;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_getMapData.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isKeyable = __webpack_require__(/*! ./_isKeyable */ "./node_modules/lodash/_isKeyable.js");
 
@@ -14796,8 +12792,10 @@ module.exports = getMapData;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_getMatchData.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 24:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isStrictComparable = __webpack_require__(/*! ./_isStrictComparable */ "./node_modules/lodash/_isStrictComparable.js"),
     keys = __webpack_require__(/*! ./keys */ "./node_modules/lodash/keys.js");
@@ -14831,8 +12829,10 @@ module.exports = getMatchData;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_getNative.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsNative = __webpack_require__(/*! ./_baseIsNative */ "./node_modules/lodash/_baseIsNative.js"),
     getValue = __webpack_require__(/*! ./_getValue */ "./node_modules/lodash/_getValue.js");
@@ -14859,8 +12859,10 @@ module.exports = getNative;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_getPrototype.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var overArg = __webpack_require__(/*! ./_overArg */ "./node_modules/lodash/_overArg.js");
 
@@ -14876,8 +12878,10 @@ module.exports = getPrototype;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_getRawTag.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 46:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Symbol = __webpack_require__(/*! ./_Symbol */ "./node_modules/lodash/_Symbol.js");
 
@@ -14933,8 +12937,10 @@ module.exports = getRawTag;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_getSymbols.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 30:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayFilter = __webpack_require__(/*! ./_arrayFilter */ "./node_modules/lodash/_arrayFilter.js"),
     stubArray = __webpack_require__(/*! ./stubArray */ "./node_modules/lodash/stubArray.js");
@@ -14974,8 +12980,10 @@ module.exports = getSymbols;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_getSymbolsIn.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 25:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayPush = __webpack_require__(/*! ./_arrayPush */ "./node_modules/lodash/_arrayPush.js"),
     getPrototype = __webpack_require__(/*! ./_getPrototype */ "./node_modules/lodash/_getPrototype.js"),
@@ -15010,8 +13018,10 @@ module.exports = getSymbolsIn;
 /*!****************************************!*\
   !*** ./node_modules/lodash/_getTag.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 58:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var DataView = __webpack_require__(/*! ./_DataView */ "./node_modules/lodash/_DataView.js"),
     Map = __webpack_require__(/*! ./_Map */ "./node_modules/lodash/_Map.js"),
@@ -15079,8 +13089,10 @@ module.exports = getTag;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_getValue.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 13:0-14 */
+/***/ ((module) => {
 
 /**
  * Gets the value at `key` of `object`.
@@ -15103,8 +13115,10 @@ module.exports = getValue;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_hasPath.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 39:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var castPath = __webpack_require__(/*! ./_castPath */ "./node_modules/lodash/_castPath.js"),
     isArguments = __webpack_require__(/*! ./isArguments */ "./node_modules/lodash/isArguments.js"),
@@ -15153,8 +13167,10 @@ module.exports = hasPath;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_hasUnicode.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 /** Used to compose unicode character classes. */
 var rsAstralRange = '\\ud800-\\udfff',
@@ -15190,8 +13206,10 @@ module.exports = hasUnicode;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_hashClear.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 15:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var nativeCreate = __webpack_require__(/*! ./_nativeCreate */ "./node_modules/lodash/_nativeCreate.js");
 
@@ -15216,8 +13234,10 @@ module.exports = hashClear;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_hashDelete.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module) => {
 
 /**
  * Removes `key` and its value from the hash.
@@ -15244,8 +13264,10 @@ module.exports = hashDelete;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_hashGet.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 30:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var nativeCreate = __webpack_require__(/*! ./_nativeCreate */ "./node_modules/lodash/_nativeCreate.js");
 
@@ -15285,8 +13307,10 @@ module.exports = hashGet;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_hashHas.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var nativeCreate = __webpack_require__(/*! ./_nativeCreate */ "./node_modules/lodash/_nativeCreate.js");
 
@@ -15319,8 +13343,10 @@ module.exports = hashHas;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_hashSet.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var nativeCreate = __webpack_require__(/*! ./_nativeCreate */ "./node_modules/lodash/_nativeCreate.js");
 
@@ -15353,8 +13379,10 @@ module.exports = hashSet;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_initCloneArray.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
@@ -15390,8 +13418,10 @@ module.exports = initCloneArray;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_initCloneByTag.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 77:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var cloneArrayBuffer = __webpack_require__(/*! ./_cloneArrayBuffer */ "./node_modules/lodash/_cloneArrayBuffer.js"),
     cloneDataView = __webpack_require__(/*! ./_cloneDataView */ "./node_modules/lodash/_cloneDataView.js"),
@@ -15478,8 +13508,10 @@ module.exports = initCloneByTag;
 /*!*************************************************!*\
   !*** ./node_modules/lodash/_initCloneObject.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseCreate = __webpack_require__(/*! ./_baseCreate */ "./node_modules/lodash/_baseCreate.js"),
     getPrototype = __webpack_require__(/*! ./_getPrototype */ "./node_modules/lodash/_getPrototype.js"),
@@ -15507,8 +13539,10 @@ module.exports = initCloneObject;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_isFlattenable.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Symbol = __webpack_require__(/*! ./_Symbol */ "./node_modules/lodash/_Symbol.js"),
     isArguments = __webpack_require__(/*! ./isArguments */ "./node_modules/lodash/isArguments.js"),
@@ -15538,8 +13572,10 @@ module.exports = isFlattenable;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_isIndex.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 25:0-14 */
+/***/ ((module) => {
 
 /** Used as references for various `Number` constants. */
 var MAX_SAFE_INTEGER = 9007199254740991;
@@ -15574,8 +13610,10 @@ module.exports = isIndex;
 /*!***************************************!*\
   !*** ./node_modules/lodash/_isKey.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 29:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isArray = __webpack_require__(/*! ./isArray */ "./node_modules/lodash/isArray.js"),
     isSymbol = __webpack_require__(/*! ./isSymbol */ "./node_modules/lodash/isSymbol.js");
@@ -15614,8 +13652,10 @@ module.exports = isKey;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/_isKeyable.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 15:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if `value` is suitable for use as unique object key.
@@ -15640,8 +13680,10 @@ module.exports = isKeyable;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_isMasked.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var coreJsData = __webpack_require__(/*! ./_coreJsData */ "./node_modules/lodash/_coreJsData.js");
 
@@ -15671,8 +13713,10 @@ module.exports = isMasked;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_isPrototype.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module) => {
 
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
@@ -15700,8 +13744,10 @@ module.exports = isPrototype;
 /*!****************************************************!*\
   !*** ./node_modules/lodash/_isStrictComparable.js ***!
   \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 15:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isObject = __webpack_require__(/*! ./isObject */ "./node_modules/lodash/isObject.js");
 
@@ -15726,8 +13772,10 @@ module.exports = isStrictComparable;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_listCacheClear.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 13:0-14 */
+/***/ ((module) => {
 
 /**
  * Removes all key-value entries from the list cache.
@@ -15750,8 +13798,10 @@ module.exports = listCacheClear;
 /*!*************************************************!*\
   !*** ./node_modules/lodash/_listCacheDelete.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 35:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var assocIndexOf = __webpack_require__(/*! ./_assocIndexOf */ "./node_modules/lodash/_assocIndexOf.js");
 
@@ -15796,8 +13846,10 @@ module.exports = listCacheDelete;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_listCacheGet.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 19:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var assocIndexOf = __webpack_require__(/*! ./_assocIndexOf */ "./node_modules/lodash/_assocIndexOf.js");
 
@@ -15826,8 +13878,10 @@ module.exports = listCacheGet;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_listCacheHas.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var assocIndexOf = __webpack_require__(/*! ./_assocIndexOf */ "./node_modules/lodash/_assocIndexOf.js");
 
@@ -15853,8 +13907,10 @@ module.exports = listCacheHas;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_listCacheSet.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var assocIndexOf = __webpack_require__(/*! ./_assocIndexOf */ "./node_modules/lodash/_assocIndexOf.js");
 
@@ -15890,8 +13946,10 @@ module.exports = listCacheSet;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_mapCacheClear.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Hash = __webpack_require__(/*! ./_Hash */ "./node_modules/lodash/_Hash.js"),
     ListCache = __webpack_require__(/*! ./_ListCache */ "./node_modules/lodash/_ListCache.js"),
@@ -15922,8 +13980,10 @@ module.exports = mapCacheClear;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_mapCacheDelete.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getMapData = __webpack_require__(/*! ./_getMapData */ "./node_modules/lodash/_getMapData.js");
 
@@ -15951,8 +14011,10 @@ module.exports = mapCacheDelete;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_mapCacheGet.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getMapData = __webpack_require__(/*! ./_getMapData */ "./node_modules/lodash/_getMapData.js");
 
@@ -15978,8 +14040,10 @@ module.exports = mapCacheGet;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_mapCacheHas.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 16:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getMapData = __webpack_require__(/*! ./_getMapData */ "./node_modules/lodash/_getMapData.js");
 
@@ -16005,8 +14069,10 @@ module.exports = mapCacheHas;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_mapCacheSet.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getMapData = __webpack_require__(/*! ./_getMapData */ "./node_modules/lodash/_getMapData.js");
 
@@ -16038,8 +14104,10 @@ module.exports = mapCacheSet;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_mapToArray.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module) => {
 
 /**
  * Converts `map` to its key-value pairs.
@@ -16067,8 +14135,10 @@ module.exports = mapToArray;
 /*!*********************************************************!*\
   !*** ./node_modules/lodash/_matchesStrictComparable.js ***!
   \*********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module) => {
 
 /**
  * A specialized version of `matchesProperty` for source values suitable
@@ -16098,8 +14168,10 @@ module.exports = matchesStrictComparable;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_memoizeCapped.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var memoize = __webpack_require__(/*! ./memoize */ "./node_modules/lodash/memoize.js");
 
@@ -16135,8 +14207,10 @@ module.exports = memoizeCapped;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_nativeCreate.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getNative = __webpack_require__(/*! ./_getNative */ "./node_modules/lodash/_getNative.js");
 
@@ -16152,8 +14226,10 @@ module.exports = nativeCreate;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_nativeKeys.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var overArg = __webpack_require__(/*! ./_overArg */ "./node_modules/lodash/_overArg.js");
 
@@ -16169,8 +14245,10 @@ module.exports = nativeKeys;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_nativeKeysIn.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 20:0-14 */
+/***/ ((module) => {
 
 /**
  * This function is like
@@ -16200,16 +14278,21 @@ module.exports = nativeKeysIn;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_nodeUtil.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_exports__, module.loaded, module.id, module, __webpack_require__.nmd, __webpack_require__, __webpack_require__.* */
+/*! CommonJS bailout: exports is used directly at 4:48-55 */
+/*! CommonJS bailout: exports is used directly at 4:80-87 */
+/*! CommonJS bailout: module.exports is used directly at 30:0-14 */
+/***/ ((module, exports, __webpack_require__) => {
 
-/* WEBPACK VAR INJECTION */(function(module) {var freeGlobal = __webpack_require__(/*! ./_freeGlobal */ "./node_modules/lodash/_freeGlobal.js");
+/* module decorator */ module = __webpack_require__.nmd(module);
+var freeGlobal = __webpack_require__(/*! ./_freeGlobal */ "./node_modules/lodash/_freeGlobal.js");
 
 /** Detect free variable `exports`. */
 var freeExports =  true && exports && !exports.nodeType && exports;
 
 /** Detect free variable `module`. */
-var freeModule = freeExports && typeof module == 'object' && module && !module.nodeType && module;
+var freeModule = freeExports && "object" == 'object' && module && !module.nodeType && module;
 
 /** Detect the popular CommonJS extension `module.exports`. */
 var moduleExports = freeModule && freeModule.exports === freeExports;
@@ -16234,7 +14317,6 @@ var nodeUtil = (function() {
 
 module.exports = nodeUtil;
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../webpack/buildin/module.js */ "./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 
@@ -16242,8 +14324,10 @@ module.exports = nodeUtil;
 /*!************************************************!*\
   !*** ./node_modules/lodash/_objectToString.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module) => {
 
 /** Used for built-in method references. */
 var objectProto = Object.prototype;
@@ -16275,8 +14359,10 @@ module.exports = objectToString;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/_overArg.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 15:0-14 */
+/***/ ((module) => {
 
 /**
  * Creates a unary function that invokes `func` with its argument transformed.
@@ -16301,8 +14387,10 @@ module.exports = overArg;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_overRest.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 36:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var apply = __webpack_require__(/*! ./_apply */ "./node_modules/lodash/_apply.js");
 
@@ -16348,8 +14436,10 @@ module.exports = overRest;
 /*!**************************************!*\
   !*** ./node_modules/lodash/_root.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 9:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var freeGlobal = __webpack_require__(/*! ./_freeGlobal */ "./node_modules/lodash/_freeGlobal.js");
 
@@ -16368,8 +14458,10 @@ module.exports = root;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_setCacheAdd.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 19:0-14 */
+/***/ ((module) => {
 
 /** Used to stand-in for `undefined` hash values. */
 var HASH_UNDEFINED = '__lodash_hash_undefined__';
@@ -16398,8 +14490,10 @@ module.exports = setCacheAdd;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_setCacheHas.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if `value` is in the array cache.
@@ -16423,8 +14517,10 @@ module.exports = setCacheHas;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_setToArray.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module) => {
 
 /**
  * Converts `set` to an array of its values.
@@ -16452,8 +14548,10 @@ module.exports = setToArray;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_setToString.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseSetToString = __webpack_require__(/*! ./_baseSetToString */ "./node_modules/lodash/_baseSetToString.js"),
     shortOut = __webpack_require__(/*! ./_shortOut */ "./node_modules/lodash/_shortOut.js");
@@ -16477,8 +14575,10 @@ module.exports = setToString;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_shortOut.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 37:0-14 */
+/***/ ((module) => {
 
 /** Used to detect hot functions by number of calls within a span of milliseconds. */
 var HOT_COUNT = 800,
@@ -16525,8 +14625,10 @@ module.exports = shortOut;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_stackClear.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 15:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var ListCache = __webpack_require__(/*! ./_ListCache */ "./node_modules/lodash/_ListCache.js");
 
@@ -16551,8 +14653,10 @@ module.exports = stackClear;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_stackDelete.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module) => {
 
 /**
  * Removes `key` and its value from the stack.
@@ -16580,8 +14684,10 @@ module.exports = stackDelete;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_stackGet.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module) => {
 
 /**
  * Gets the stack value for `key`.
@@ -16605,8 +14711,10 @@ module.exports = stackGet;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_stackHas.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 14:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if a stack value for `key` exists.
@@ -16630,8 +14738,10 @@ module.exports = stackHas;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_stackSet.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 34:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var ListCache = __webpack_require__(/*! ./_ListCache */ "./node_modules/lodash/_ListCache.js"),
     Map = __webpack_require__(/*! ./_Map */ "./node_modules/lodash/_Map.js"),
@@ -16675,8 +14785,10 @@ module.exports = stackSet;
 /*!***********************************************!*\
   !*** ./node_modules/lodash/_strictIndexOf.js ***!
   \***********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module) => {
 
 /**
  * A specialized version of `_.indexOf` which performs strict equality
@@ -16709,8 +14821,10 @@ module.exports = strictIndexOf;
 /*!********************************************!*\
   !*** ./node_modules/lodash/_stringSize.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var asciiSize = __webpack_require__(/*! ./_asciiSize */ "./node_modules/lodash/_asciiSize.js"),
     hasUnicode = __webpack_require__(/*! ./_hasUnicode */ "./node_modules/lodash/_hasUnicode.js"),
@@ -16738,8 +14852,10 @@ module.exports = stringSize;
 /*!**********************************************!*\
   !*** ./node_modules/lodash/_stringToPath.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 27:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var memoizeCapped = __webpack_require__(/*! ./_memoizeCapped */ "./node_modules/lodash/_memoizeCapped.js");
 
@@ -16776,8 +14892,10 @@ module.exports = stringToPath;
 /*!***************************************!*\
   !*** ./node_modules/lodash/_toKey.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isSymbol = __webpack_require__(/*! ./isSymbol */ "./node_modules/lodash/isSymbol.js");
 
@@ -16808,8 +14926,10 @@ module.exports = toKey;
 /*!******************************************!*\
   !*** ./node_modules/lodash/_toSource.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 /** Used for built-in method references. */
 var funcProto = Function.prototype;
@@ -16845,8 +14965,10 @@ module.exports = toSource;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/_unicodeSize.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 44:0-14 */
+/***/ ((module) => {
 
 /** Used to compose unicode character classes. */
 var rsAstralRange = '\\ud800-\\udfff',
@@ -16900,8 +15022,10 @@ module.exports = unicodeSize;
 /*!**************************************!*\
   !*** ./node_modules/lodash/clone.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 36:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseClone = __webpack_require__(/*! ./_baseClone */ "./node_modules/lodash/_baseClone.js");
 
@@ -16947,8 +15071,10 @@ module.exports = clone;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/constant.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 /**
  * Creates a function that returns `value`.
@@ -16984,8 +15110,10 @@ module.exports = constant;
 /*!*************************************!*\
   !*** ./node_modules/lodash/each.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] -> ./node_modules/lodash/forEach.js */
+/*! runtime requirements: module, __webpack_require__ */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = __webpack_require__(/*! ./forEach */ "./node_modules/lodash/forEach.js");
 
@@ -16996,8 +15124,10 @@ module.exports = __webpack_require__(/*! ./forEach */ "./node_modules/lodash/for
 /*!***********************************!*\
   !*** ./node_modules/lodash/eq.js ***!
   \***********************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 37:0-14 */
+/***/ ((module) => {
 
 /**
  * Performs a
@@ -17044,8 +15174,10 @@ module.exports = eq;
 /*!***************************************!*\
   !*** ./node_modules/lodash/filter.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 48:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayFilter = __webpack_require__(/*! ./_arrayFilter */ "./node_modules/lodash/_arrayFilter.js"),
     baseFilter = __webpack_require__(/*! ./_baseFilter */ "./node_modules/lodash/_baseFilter.js"),
@@ -17103,8 +15235,10 @@ module.exports = filter;
 /*!****************************************!*\
   !*** ./node_modules/lodash/forEach.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 41:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayEach = __webpack_require__(/*! ./_arrayEach */ "./node_modules/lodash/_arrayEach.js"),
     baseEach = __webpack_require__(/*! ./_baseEach */ "./node_modules/lodash/_baseEach.js"),
@@ -17155,8 +15289,10 @@ module.exports = forEach;
 /*!************************************!*\
   !*** ./node_modules/lodash/get.js ***!
   \************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 33:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGet = __webpack_require__(/*! ./_baseGet */ "./node_modules/lodash/_baseGet.js");
 
@@ -17199,8 +15335,10 @@ module.exports = get;
 /*!************************************!*\
   !*** ./node_modules/lodash/has.js ***!
   \************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 35:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseHas = __webpack_require__(/*! ./_baseHas */ "./node_modules/lodash/_baseHas.js"),
     hasPath = __webpack_require__(/*! ./_hasPath */ "./node_modules/lodash/_hasPath.js");
@@ -17245,8 +15383,10 @@ module.exports = has;
 /*!**************************************!*\
   !*** ./node_modules/lodash/hasIn.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 34:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseHasIn = __webpack_require__(/*! ./_baseHasIn */ "./node_modules/lodash/_baseHasIn.js"),
     hasPath = __webpack_require__(/*! ./_hasPath */ "./node_modules/lodash/_hasPath.js");
@@ -17290,8 +15430,10 @@ module.exports = hasIn;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/identity.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module) => {
 
 /**
  * This method returns the first argument it receives.
@@ -17322,8 +15464,10 @@ module.exports = identity;
 /*!********************************************!*\
   !*** ./node_modules/lodash/isArguments.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 36:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsArguments = __webpack_require__(/*! ./_baseIsArguments */ "./node_modules/lodash/_baseIsArguments.js"),
     isObjectLike = __webpack_require__(/*! ./isObjectLike */ "./node_modules/lodash/isObjectLike.js");
@@ -17369,8 +15513,10 @@ module.exports = isArguments;
 /*!****************************************!*\
   !*** ./node_modules/lodash/isArray.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if `value` is classified as an `Array` object.
@@ -17406,8 +15552,10 @@ module.exports = isArray;
 /*!********************************************!*\
   !*** ./node_modules/lodash/isArrayLike.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 33:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isFunction = __webpack_require__(/*! ./isFunction */ "./node_modules/lodash/isFunction.js"),
     isLength = __webpack_require__(/*! ./isLength */ "./node_modules/lodash/isLength.js");
@@ -17450,8 +15598,10 @@ module.exports = isArrayLike;
 /*!**************************************************!*\
   !*** ./node_modules/lodash/isArrayLikeObject.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 33:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var isArrayLike = __webpack_require__(/*! ./isArrayLike */ "./node_modules/lodash/isArrayLike.js"),
     isObjectLike = __webpack_require__(/*! ./isObjectLike */ "./node_modules/lodash/isObjectLike.js");
@@ -17494,17 +15644,22 @@ module.exports = isArrayLikeObject;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/isBuffer.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_exports__, module.loaded, module.id, module, __webpack_require__.nmd, __webpack_require__, __webpack_require__.* */
+/*! CommonJS bailout: exports is used directly at 5:48-55 */
+/*! CommonJS bailout: exports is used directly at 5:80-87 */
+/*! CommonJS bailout: module.exports is used directly at 38:0-14 */
+/***/ ((module, exports, __webpack_require__) => {
 
-/* WEBPACK VAR INJECTION */(function(module) {var root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js"),
+/* module decorator */ module = __webpack_require__.nmd(module);
+var root = __webpack_require__(/*! ./_root */ "./node_modules/lodash/_root.js"),
     stubFalse = __webpack_require__(/*! ./stubFalse */ "./node_modules/lodash/stubFalse.js");
 
 /** Detect free variable `exports`. */
 var freeExports =  true && exports && !exports.nodeType && exports;
 
 /** Detect free variable `module`. */
-var freeModule = freeExports && typeof module == 'object' && module && !module.nodeType && module;
+var freeModule = freeExports && "object" == 'object' && module && !module.nodeType && module;
 
 /** Detect the popular CommonJS extension `module.exports`. */
 var moduleExports = freeModule && freeModule.exports === freeExports;
@@ -17536,7 +15691,6 @@ var isBuffer = nativeIsBuffer || stubFalse;
 
 module.exports = isBuffer;
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../webpack/buildin/module.js */ "./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 
@@ -17544,8 +15698,10 @@ module.exports = isBuffer;
 /*!****************************************!*\
   !*** ./node_modules/lodash/isEmpty.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 77:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseKeys = __webpack_require__(/*! ./_baseKeys */ "./node_modules/lodash/_baseKeys.js"),
     getTag = __webpack_require__(/*! ./_getTag */ "./node_modules/lodash/_getTag.js"),
@@ -17632,8 +15788,10 @@ module.exports = isEmpty;
 /*!*******************************************!*\
   !*** ./node_modules/lodash/isFunction.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 37:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGetTag = __webpack_require__(/*! ./_baseGetTag */ "./node_modules/lodash/_baseGetTag.js"),
     isObject = __webpack_require__(/*! ./isObject */ "./node_modules/lodash/isObject.js");
@@ -17680,8 +15838,10 @@ module.exports = isFunction;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/isLength.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 35:0-14 */
+/***/ ((module) => {
 
 /** Used as references for various `Number` constants. */
 var MAX_SAFE_INTEGER = 9007199254740991;
@@ -17726,8 +15886,10 @@ module.exports = isLength;
 /*!**************************************!*\
   !*** ./node_modules/lodash/isMap.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 27:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsMap = __webpack_require__(/*! ./_baseIsMap */ "./node_modules/lodash/_baseIsMap.js"),
     baseUnary = __webpack_require__(/*! ./_baseUnary */ "./node_modules/lodash/_baseUnary.js"),
@@ -17764,8 +15926,10 @@ module.exports = isMap;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/isObject.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 31:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if `value` is the
@@ -17806,8 +15970,10 @@ module.exports = isObject;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/isObjectLike.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 29:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if `value` is object-like. A value is object-like if it's not `null`
@@ -17846,8 +16012,10 @@ module.exports = isObjectLike;
 /*!**************************************!*\
   !*** ./node_modules/lodash/isSet.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 27:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsSet = __webpack_require__(/*! ./_baseIsSet */ "./node_modules/lodash/_baseIsSet.js"),
     baseUnary = __webpack_require__(/*! ./_baseUnary */ "./node_modules/lodash/_baseUnary.js"),
@@ -17884,8 +16052,10 @@ module.exports = isSet;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/isString.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 30:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGetTag = __webpack_require__(/*! ./_baseGetTag */ "./node_modules/lodash/_baseGetTag.js"),
     isArray = __webpack_require__(/*! ./isArray */ "./node_modules/lodash/isArray.js"),
@@ -17925,8 +16095,10 @@ module.exports = isString;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/isSymbol.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 29:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseGetTag = __webpack_require__(/*! ./_baseGetTag */ "./node_modules/lodash/_baseGetTag.js"),
     isObjectLike = __webpack_require__(/*! ./isObjectLike */ "./node_modules/lodash/isObjectLike.js");
@@ -17965,8 +16137,10 @@ module.exports = isSymbol;
 /*!*********************************************!*\
   !*** ./node_modules/lodash/isTypedArray.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 27:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseIsTypedArray = __webpack_require__(/*! ./_baseIsTypedArray */ "./node_modules/lodash/_baseIsTypedArray.js"),
     baseUnary = __webpack_require__(/*! ./_baseUnary */ "./node_modules/lodash/_baseUnary.js"),
@@ -18003,8 +16177,10 @@ module.exports = isTypedArray;
 /*!********************************************!*\
   !*** ./node_modules/lodash/isUndefined.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 22:0-14 */
+/***/ ((module) => {
 
 /**
  * Checks if `value` is `undefined`.
@@ -18036,8 +16212,10 @@ module.exports = isUndefined;
 /*!*************************************!*\
   !*** ./node_modules/lodash/keys.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 37:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayLikeKeys = __webpack_require__(/*! ./_arrayLikeKeys */ "./node_modules/lodash/_arrayLikeKeys.js"),
     baseKeys = __webpack_require__(/*! ./_baseKeys */ "./node_modules/lodash/_baseKeys.js"),
@@ -18084,8 +16262,10 @@ module.exports = keys;
 /*!***************************************!*\
   !*** ./node_modules/lodash/keysIn.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 32:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayLikeKeys = __webpack_require__(/*! ./_arrayLikeKeys */ "./node_modules/lodash/_arrayLikeKeys.js"),
     baseKeysIn = __webpack_require__(/*! ./_baseKeysIn */ "./node_modules/lodash/_baseKeysIn.js"),
@@ -18127,8 +16307,10 @@ module.exports = keysIn;
 /*!************************************!*\
   !*** ./node_modules/lodash/map.js ***!
   \************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 53:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayMap = __webpack_require__(/*! ./_arrayMap */ "./node_modules/lodash/_arrayMap.js"),
     baseIteratee = __webpack_require__(/*! ./_baseIteratee */ "./node_modules/lodash/_baseIteratee.js"),
@@ -18191,8 +16373,10 @@ module.exports = map;
 /*!****************************************!*\
   !*** ./node_modules/lodash/memoize.js ***!
   \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 73:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var MapCache = __webpack_require__(/*! ./_MapCache */ "./node_modules/lodash/_MapCache.js");
 
@@ -18275,8 +16459,10 @@ module.exports = memoize;
 /*!*************************************!*\
   !*** ./node_modules/lodash/noop.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 17:0-14 */
+/***/ ((module) => {
 
 /**
  * This method returns `undefined`.
@@ -18303,8 +16489,10 @@ module.exports = noop;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/property.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 32:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseProperty = __webpack_require__(/*! ./_baseProperty */ "./node_modules/lodash/_baseProperty.js"),
     basePropertyDeep = __webpack_require__(/*! ./_basePropertyDeep */ "./node_modules/lodash/_basePropertyDeep.js"),
@@ -18346,8 +16534,10 @@ module.exports = property;
 /*!***************************************!*\
   !*** ./node_modules/lodash/reduce.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 51:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayReduce = __webpack_require__(/*! ./_arrayReduce */ "./node_modules/lodash/_arrayReduce.js"),
     baseEach = __webpack_require__(/*! ./_baseEach */ "./node_modules/lodash/_baseEach.js"),
@@ -18408,8 +16598,10 @@ module.exports = reduce;
 /*!*************************************!*\
   !*** ./node_modules/lodash/size.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 46:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseKeys = __webpack_require__(/*! ./_baseKeys */ "./node_modules/lodash/_baseKeys.js"),
     getTag = __webpack_require__(/*! ./_getTag */ "./node_modules/lodash/_getTag.js"),
@@ -18465,8 +16657,10 @@ module.exports = size;
 /*!******************************************!*\
   !*** ./node_modules/lodash/stubArray.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 23:0-14 */
+/***/ ((module) => {
 
 /**
  * This method returns a new empty array.
@@ -18499,8 +16693,10 @@ module.exports = stubArray;
 /*!******************************************!*\
   !*** ./node_modules/lodash/stubFalse.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module) => {
 
 /**
  * This method returns `false`.
@@ -18528,8 +16724,10 @@ module.exports = stubFalse;
 /*!*****************************************!*\
   !*** ./node_modules/lodash/toString.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 28:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseToString = __webpack_require__(/*! ./_baseToString */ "./node_modules/lodash/_baseToString.js");
 
@@ -18567,8 +16765,10 @@ module.exports = toString;
 /*!******************************************!*\
   !*** ./node_modules/lodash/transform.js ***!
   \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 65:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayEach = __webpack_require__(/*! ./_arrayEach */ "./node_modules/lodash/_arrayEach.js"),
     baseCreate = __webpack_require__(/*! ./_baseCreate */ "./node_modules/lodash/_baseCreate.js"),
@@ -18643,8 +16843,10 @@ module.exports = transform;
 /*!**************************************!*\
   !*** ./node_modules/lodash/union.js ***!
   \**************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 26:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseFlatten = __webpack_require__(/*! ./_baseFlatten */ "./node_modules/lodash/_baseFlatten.js"),
     baseRest = __webpack_require__(/*! ./_baseRest */ "./node_modules/lodash/_baseRest.js"),
@@ -18680,8 +16882,10 @@ module.exports = union;
 /*!***************************************!*\
   !*** ./node_modules/lodash/values.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 34:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var baseValues = __webpack_require__(/*! ./_baseValues */ "./node_modules/lodash/_baseValues.js"),
     keys = __webpack_require__(/*! ./keys */ "./node_modules/lodash/keys.js");
@@ -18725,8 +16929,10 @@ module.exports = values;
 /*!*************************************************!*\
   !*** ./node_modules/lru-cache/lib/lru-cache.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = LRUCache
 
@@ -19205,8 +17411,10 @@ function Entry (key, value, length, now, maxAge) {
 /*!********************************************!*\
   !*** ./node_modules/node-version/index.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 7:0-14 */
+/***/ ((module) => {
 
 /*!
  * node-version
@@ -19236,8 +17444,10 @@ module.exports = (function() {
 /*!**********************************************!*\
   !*** ./node_modules/object-inspect/index.js ***!
   \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 21:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var hasMap = typeof Map === 'function' && Map.prototype;
 var mapSizeDescriptor = Object.getOwnPropertyDescriptor && hasMap ? Object.getOwnPropertyDescriptor(Map.prototype, 'size') : null;
@@ -19554,8 +17764,10 @@ function arrObjKeys(obj, inspect) {
 /*!*****************************************************!*\
   !*** ./node_modules/object-inspect/util.inspect.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module, __webpack_require__ */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = __webpack_require__(/*! util */ "util").inspect;
 
@@ -19566,8 +17778,10 @@ module.exports = __webpack_require__(/*! util */ "util").inspect;
 /*!*****************************************!*\
   !*** ./node_modules/object-is/index.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 9:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -19599,8 +17813,10 @@ module.exports = function is(a, b) {
 /*!****************************************************!*\
   !*** ./node_modules/object-keys/implementation.js ***!
   \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 122:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -19733,8 +17949,10 @@ module.exports = keysShim;
 /*!*******************************************!*\
   !*** ./node_modules/object-keys/index.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 32:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -19777,8 +17995,10 @@ module.exports = keysShim;
 /*!*************************************************!*\
   !*** ./node_modules/object-keys/isArguments.js ***!
   \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 5:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -19806,8 +18026,10 @@ module.exports = function isArguments(value) {
 /*!***********************************!*\
   !*** ./node_modules/once/once.js ***!
   \***********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 2:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var wrappy = __webpack_require__(/*! wrappy */ "./node_modules/wrappy/wrappy.js")
 module.exports = wrappy(once)
@@ -19859,8 +18081,10 @@ function onceStrict (fn) {
 /*!************************************************!*\
   !*** ./node_modules/path-is-absolute/index.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -19891,8 +18115,12 @@ module.exports.win32 = win32;
 /*!**************************************************!*\
   !*** ./node_modules/promise-polyfill/promise.js ***!
   \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, top-level-this-exports */
+/*! CommonJS bailout: this is used directly at 233:3-7 */
+/*! CommonJS bailout: module.exports is used directly at 227:39-53 */
+/*! CommonJS bailout: module.exports is used directly at 228:4-18 */
+/***/ (function(module) {
 
 (function (root) {
 
@@ -20135,8 +18363,10 @@ module.exports.win32 = win32;
 /*!***************************************!*\
   !*** ./node_modules/pseudomap/map.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 6:2-16 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 if (process.env.npm_package_name === 'pseudomap' &&
     process.env.npm_lifecycle_script === 'test')
@@ -20155,8 +18385,10 @@ if (typeof Map === 'function' && !process.env.TEST_PSEUDOMAP) {
 /*!*********************************************!*\
   !*** ./node_modules/pseudomap/pseudomap.js ***!
   \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 3:0-14 */
+/***/ ((module) => {
 
 var hasOwnProperty = Object.prototype.hasOwnProperty
 
@@ -20279,8 +18511,10 @@ function set (data, k, v) {
 /*!***************************************************************!*\
   !*** ./node_modules/regexp.prototype.flags/implementation.js ***!
   \***************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module) => {
 
 "use strict";
 
@@ -20321,8 +18555,10 @@ module.exports = function flags() {
 /*!******************************************************!*\
   !*** ./node_modules/regexp.prototype.flags/index.js ***!
   \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 18:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -20351,8 +18587,10 @@ module.exports = flagsBound;
 /*!*********************************************************!*\
   !*** ./node_modules/regexp.prototype.flags/polyfill.js ***!
   \*********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 9:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -20383,8 +18621,10 @@ module.exports = function getPolyfill() {
 /*!*****************************************************!*\
   !*** ./node_modules/regexp.prototype.flags/shim.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: __webpack_require__, module */
+/*! CommonJS bailout: module.exports is used directly at 11:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -20421,8 +18661,10 @@ module.exports = function shimFlags() {
 /*!********************************************!*\
   !*** ./node_modules/side-channel/index.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 46:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -20540,8 +18782,22 @@ module.exports = function getSideChannel() {
 /*!*******************************************!*\
   !*** ./node_modules/tmp-promise/index.js ***!
   \*******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export dir [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export dirSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export file [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export fileSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export setGracefulCleanup [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tmpName [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tmpNameSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tmpdir [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export withDir [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export withFile [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports.file(...) prevents optimization as module.exports is passed as call context at 14:38-57 */
+/*! CommonJS bailout: module.exports.dir(...) prevents optimization as module.exports is passed as call context at 33:34-52 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 const {promisify} = __webpack_require__(/*! util */ "util");
 const tmp = __webpack_require__(/*! tmp */ "./node_modules/tmp-promise/node_modules/tmp/lib/tmp.js");
@@ -20599,8 +18855,19 @@ module.exports.setGracefulCleanup = tmp.setGracefulCleanup;
 /*!**************************************************************!*\
   !*** ./node_modules/tmp-promise/node_modules/glob/common.js ***!
   \**************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export alphasort [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export alphasorti [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export childrenIgnored [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export finish [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export isIgnored [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export makeAbs [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export mark [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export ownProp [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export setopts [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 exports.alphasort = alphasort
 exports.alphasorti = alphasorti
@@ -20850,8 +19117,10 @@ function childrenIgnored (self, path) {
 /*!************************************************************!*\
   !*** ./node_modules/tmp-promise/node_modules/glob/glob.js ***!
   \************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 41:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 // Approach:
 //
@@ -21651,8 +19920,10 @@ Glob.prototype._stat2 = function (f, abs, er, stat, cb) {
 /*!************************************************************!*\
   !*** ./node_modules/tmp-promise/node_modules/glob/sync.js ***!
   \************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = globSync
 globSync.GlobSync = GlobSync
@@ -22148,8 +20419,10 @@ GlobSync.prototype._makeAbs = function (f) {
 /*!**********************************************************************!*\
   !*** ./node_modules/tmp-promise/node_modules/minimatch/minimatch.js ***!
   \**********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = minimatch
 minimatch.Minimatch = Minimatch
@@ -23082,8 +21355,18 @@ function regExpEscape (s) {
 /*!**************************************************************!*\
   !*** ./node_modules/tmp-promise/node_modules/tmp/lib/tmp.js ***!
   \**************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export dir [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export dirSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export file [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export fileSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export setGracefulCleanup [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tmpName [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tmpNameSync [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tmpdir [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: module, __webpack_require__ */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 /*!
  * Tmp
@@ -23829,13 +22112,13 @@ _safely_install_sigint_listener();
 
 // evaluate os.tmpdir() lazily, mainly for simplifying testing but it also will
 // allow users to reconfigure the temporary directory
-Object.defineProperty(module.exports, 'tmpdir', {
+Object.defineProperty(module.exports, "tmpdir", ({
   enumerable: true,
   configurable: false,
   get: function () {
     return _getTmpDir();
   }
-});
+}));
 
 module.exports.dir = dir;
 module.exports.dirSync = dirSync;
@@ -23855,8 +22138,10 @@ module.exports.setGracefulCleanup = setGracefulCleanup;
 /*!*********************************************************************************!*\
   !*** ./node_modules/tmp-promise/node_modules/tmp/node_modules/rimraf/rimraf.js ***!
   \*********************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = rimraf
 rimraf.sync = rimrafSync
@@ -24234,12 +22519,3390 @@ function rmkidsSync (p, options) {
 
 /***/ }),
 
+/***/ "./backends/js.ts":
+/*!************************!*\
+  !*** ./backends/js.ts ***!
+  \************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const writeTempFile_1 = __webpack_require__(/*! ../util/writeTempFile */ "./util/writeTempFile.ts");
+const flatten_1 = __webpack_require__(/*! ../util/list/flatten */ "./util/list/flatten.ts");
+const execAndGetResult_1 = __webpack_require__(/*! ../util/execAndGetResult */ "./util/execAndGetResult.ts");
+const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
+const join_1 = __webpack_require__(/*! ../util/join */ "./util/join.ts");
+const needsAwait = (decl) => {
+    if (!decl)
+        return false;
+    if ('namedType' in decl.type)
+        throw debug_1.default('TODO get a real type here');
+    if (decl.type.type.kind != 'Function')
+        return false;
+    if (decl.type.type.permissions.includes('stdout'))
+        return true;
+    return false;
+};
+const astToJS = ({ ast, exitInsteadOfReturn, builtinFunctions, }) => {
+    if (!ast)
+        debugger;
+    const recurse = newInput => astToJS({ ast: newInput, exitInsteadOfReturn, builtinFunctions });
+    switch (ast.kind) {
+        case 'returnStatement': {
+            if (exitInsteadOfReturn) {
+                return [`process.exit(${recurse(ast.expression).join(' ')})`];
+            }
+            else {
+                return [`return `, ...recurse(ast.expression)];
+            }
+        }
+        case 'number':
+            return [ast.value.toString()];
+        case 'product':
+            return [...recurse(ast.lhs), '*', ...recurse(ast.rhs)];
+        case 'subtraction':
+            return [...recurse(ast.lhs), '-', ...recurse(ast.rhs)];
+        case 'addition':
+            return [...recurse(ast.lhs), '+', ...recurse(ast.rhs)];
+        case 'reassignment':
+            return [ast.destination, '=', ...recurse(ast.expression), ';'];
+        case 'typedDeclarationAssignment':
+            return [`let ${ast.destination} = `, ...recurse(ast.expression), ';'];
+        case 'functionLiteral':
+            return [ast.deanonymizedName];
+        case 'callExpression':
+            const functionName = ast.name;
+            const functionDecl = builtinFunctions.find(({ name, type }) => name == functionName);
+            const jsArguments = ast.arguments.map(argument => recurse(argument));
+            const awaitStr = needsAwait(functionDecl) ? 'await' : '';
+            return [
+                awaitStr + ` ${ast.name}(`,
+                join_1.default(jsArguments.map(argument => join_1.default(argument, ' ')), ', '),
+                `)`,
+            ];
+        case 'identifier':
+            return [ast.value];
+        case 'ternary':
+            return [
+                ...recurse(ast.condition),
+                '?',
+                ...recurse(ast.ifTrue),
+                ':',
+                ...recurse(ast.ifFalse),
+            ];
+        case 'equality':
+            return [...recurse(ast.lhs), '==', ...recurse(ast.rhs)];
+        case 'booleanLiteral':
+            return [ast.value ? 'true' : 'false'];
+        case 'stringLiteral':
+            return [`"${ast.value}"`];
+        case 'concatenation':
+            return ['(', ...recurse(ast.lhs), ').concat(', ...recurse(ast.rhs), ')'];
+        case 'typeDeclaration':
+            return [''];
+        case 'objectLiteral':
+            const members = ast.members.map(({ name, expression }) => `${name}: ${recurse(expression)}`);
+            return ['{', join_1.default(members, ','), '}'];
+        case 'memberAccess':
+            return ['(', ...recurse(ast.lhs), ').', ast.rhs];
+        case 'listLiteral':
+            const items = ast.items.map(item => join_1.default(recurse(item), ', '));
+            return ['[', join_1.default(items, ', '), ']'];
+        case 'indexAccess':
+            return ['(', ...recurse(ast.accessed), ')[(', ...recurse(ast.index), ')]'];
+        case 'forLoop':
+            const body = flatten_1.default(ast.body.map(recurse));
+            const listItems = recurse(ast.list);
+            return [
+                `const items = `,
+                ...listItems,
+                `;`,
+                `for (let i = 0; i < items.length; i++) {`,
+                `const ${ast.var} = items[i];`,
+                ...body,
+                `}`,
+            ];
+        default:
+            throw debug_1.default(`${ast.kind} unhanlded in toJS`);
+    }
+};
+const compile = ({ functions, builtinFunctions, program, globalDeclarations, }) => {
+    const JSfunctions = functions.map(({ name, parameters, statements }) => {
+        const prefix = `const ${name} = (${join_1.default(parameters.map(parameter => parameter.name), ', ')}) => {`;
+        const suffix = `}`;
+        const body = statements.map(statement => {
+            return join_1.default(astToJS({ ast: statement, exitInsteadOfReturn: false, builtinFunctions }), ' ');
+        });
+        return [prefix, ...body, suffix].join(' ');
+    });
+    if (Array.isArray(program)) {
+        // Must be a module
+        const exp = program.map(v => {
+            return `export const ${v.exportedName} = ${v.declaredName};`;
+        });
+        return {
+            target: `
+                ${join_1.default(JSfunctions, '\n')}
+                ${join_1.default(exp, '\n')}
+            `,
+            tac: undefined,
+        };
+    }
+    const JS = flatten_1.default(program.statements.map(child => astToJS({ ast: child, builtinFunctions, exitInsteadOfReturn: true })));
+    return {
+        target: `
+const readline = require('readline');
+
+const length = str => str.length;
+const print = str => process.stdout.write(str);
+
+const readInt = async () => {
+    return new Promise((resolve, reject) => {
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+        });
+        rl.on('line', line => {
+            rl.close();
+            resolve(line);
+        });
+    });
+};
+
+(async () => {
+    ${join_1.default(JSfunctions, '\n')}
+    ${join_1.default(JS, '\n')}
+})();`,
+        tac: undefined,
+    };
+};
+const finishCompilation = async (jsSource, tac) => {
+    if (tac !== undefined) {
+        debug_1.default('why tac');
+    }
+    const sourceFile = await writeTempFile_1.default(jsSource, 'program', 'js');
+    const binaryFile = sourceFile;
+    return {
+        source: jsSource,
+        sourceFile,
+        binaryFile,
+        threeAddressCodeFile: undefined,
+    };
+};
+const execute = async (executablePath, stdinPath) => {
+    try {
+        const runInstructions = `node ${executablePath} < ${stdinPath}`;
+        return Object.assign(Object.assign({}, (await execAndGetResult_1.default(runInstructions))), { executorName: 'node', runInstructions, debugInstructions: `./node_modules/.bin/node --inspect --inspect-brk ${executablePath}` });
+    }
+    catch (e) {
+        return { error: e.msg, executorName: 'node' };
+    }
+};
+const jsBackend = {
+    name: 'js',
+    compile,
+    finishCompilation,
+    executors: [{ execute, name: 'node' }],
+};
+exports.default = jsBackend;
+
+
+/***/ }),
+
+/***/ "./frontend.ts":
+/*!*********************!*\
+  !*** ./frontend.ts ***!
+  \*********************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export astFromParseResult [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export compile [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export lex [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export mergeDeclarations [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export parseMpl [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export removeBracketsFromAst [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export typeCheckStatement [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export typeOfExpression [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 115:22-46 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 121:22-46 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 269:28-52 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 738:27-51 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 745:30-54 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 773:30-54 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 826:35-59 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 859:35-59 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 913:19-43 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 950:23-47 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 983:33-57 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 1033:25-49 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 1097:33-57 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 1119:42-66 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.mergeDeclarations = exports.astFromParseResult = exports.typeCheckStatement = exports.removeBracketsFromAst = exports.compile = exports.lex = exports.parseMpl = exports.typeOfExpression = void 0;
+const flatten_1 = __webpack_require__(/*! ./util/list/flatten */ "./util/list/flatten.ts");
+const uniqueBy_1 = __webpack_require__(/*! ./util/list/uniqueBy */ "./util/list/uniqueBy.ts");
+const idMaker_1 = __webpack_require__(/*! ./util/idMaker */ "./util/idMaker.ts");
+const last_1 = __webpack_require__(/*! ./util/list/last */ "./util/list/last.ts");
+const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
+const never_1 = __webpack_require__(/*! ./util/never */ "./util/never.ts");
+const lex_1 = __webpack_require__(/*! ./parser-lib/lex */ "./parser-lib/lex.ts");
+Object.defineProperty(exports, "lex", ({ enumerable: true, get: function () { return lex_1.lex; } }));
+const grammar_1 = __webpack_require__(/*! ./grammar */ "./grammar.ts");
+const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
+const types_1 = __webpack_require__(/*! ./types */ "./types.ts");
+/* tslint:disable */
+const { add } = __webpack_require__(/*! ./mpl/add.mpl */ "./mpl/add.mpl");
+/* tslint:enable */
+// TODO move this to parser lit
+const hasType = (ast, type) => 'type' in ast && ast.type == type;
+const repairAssociativity = (nodeType, ast) => {
+    // Let this slide because TokenType overlaps InteriorNodeType right now
+    if (ast.type === nodeType && !ast.children) /*debug('todo')*/
+        return ast;
+    if (ast.type === nodeType) {
+        if (!ast.children[2])
+            debug_1.default('todo');
+        if (ast.children[2].type === nodeType) {
+            return {
+                type: nodeType,
+                children: [
+                    {
+                        type: nodeType,
+                        children: [
+                            repairAssociativity(nodeType, ast.children[0]),
+                            ast.children[2].children[1],
+                            repairAssociativity(nodeType, ast.children[2].children[0]),
+                        ],
+                        sourceLocation: ast.sourceLocation,
+                    },
+                    ast.children[1],
+                    repairAssociativity(nodeType, ast.children[2].children[2]),
+                ],
+                sourceLocation: ast.sourceLocation,
+            };
+        }
+        else {
+            return {
+                type: ast.type,
+                children: ast.children.map(child => repairAssociativity(nodeType, child)),
+                sourceLocation: ast.sourceLocation,
+            };
+        }
+    }
+    else if ('children' in ast) {
+        return {
+            type: ast.type,
+            children: ast.children.map(child => repairAssociativity(nodeType, child)),
+            sourceLocation: ast.sourceLocation,
+        };
+    }
+    else {
+        return ast;
+    }
+};
+const transformAst = (nodeType, f, ast, recurseOnNew) => {
+    if (parse_1.isSeparatedListNode(ast)) {
+        return {
+            items: ast.items.map(i => transformAst(nodeType, f, i, recurseOnNew)),
+            separators: ast.separators.map(i => transformAst(nodeType, f, i, recurseOnNew)),
+        };
+    }
+    else if (parse_1.isListNode(ast)) {
+        return { items: ast.items.map(i => transformAst(nodeType, f, i, recurseOnNew)) };
+    }
+    else if (ast.type === nodeType) {
+        const newNode = f(ast);
+        if ('children' in newNode) {
+            // If we aren't supposed to recurse, don't re-tranform the node we just made
+            if (recurseOnNew) {
+                return transformAst(nodeType, f, newNode, recurseOnNew);
+            }
+            else {
+                return {
+                    type: newNode.type,
+                    children: newNode.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
+                    sourceLocation: ast.sourceLocation,
+                };
+            }
+        }
+        else {
+            return newNode;
+        }
+    }
+    else if ('children' in ast) {
+        return {
+            type: ast.type,
+            children: ast.children.map(child => transformAst(nodeType, f, child, recurseOnNew)),
+            sourceLocation: ast.sourceLocation,
+        };
+    }
+    else {
+        return ast;
+    }
+};
+const extractVariable = (ctx) => {
+    const kind = ctx.w.kind;
+    switch (ctx.w.kind) {
+        case 'reassignment':
+        case 'declarationAssignment':
+            // Recursive functions can refer to the left side on the right side, so to extract
+            // the left side, we need to know about the right side. Probably, this just shouldn't return
+            // a type. TODO: allow more types of recursive functions than just single int...
+            return {
+                name: ctx.w.destination,
+                type: exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression })).type,
+                exported: false,
+            };
+        case 'typedDeclarationAssignment':
+            return {
+                name: ctx.w.destination,
+                type: exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }), types_1.resolveIfNecessary(ctx.w.type, ctx.availableTypes)).type,
+                exported: false,
+            };
+        case 'returnStatement':
+        case 'typeDeclaration':
+            return undefined;
+        case 'forLoop':
+            throw debug_1.default("forLoop has muliple variables, doesn't work here");
+        default:
+            never_1.default(kind, 'extractVariable');
+    }
+};
+const extractVariables = (ctx) => {
+    const variables = [];
+    ctx.w.forEach((statement) => {
+        switch (statement.kind) {
+            case 'returnStatement':
+            case 'reassignment':
+            case 'typeDeclaration':
+                break;
+            case 'declarationAssignment':
+            case 'typedDeclarationAssignment':
+                const potentialVariable = extractVariable({
+                    w: statement,
+                    availableVariables: mergeDeclarations(ctx.availableVariables, variables),
+                    availableTypes: ctx.availableTypes,
+                });
+                if (potentialVariable) {
+                    variables.push(potentialVariable);
+                }
+                break;
+            case 'forLoop':
+                statement.body.forEach(s => {
+                    const vars = extractVariables({
+                        w: [s],
+                        availableVariables: mergeDeclarations(ctx.availableVariables, variables),
+                        availableTypes: ctx.availableTypes,
+                    });
+                    if (vars) {
+                        variables.push(...vars);
+                    }
+                });
+                break;
+            default:
+                never_1.default(statement, 'extractVariables');
+        }
+    });
+    return variables;
+};
+const functionObjectFromAst = (ctx) => ({
+    name: ctx.w.deanonymizedName,
+    statements: ctx.w.body,
+    variables: [
+        ...ctx.w.parameters,
+        ...extractVariables({
+            w: ctx.w.body,
+            availableVariables: mergeDeclarations(ctx.availableVariables, ctx.w.parameters),
+            availableTypes: ctx.availableTypes,
+        }),
+    ],
+    parameters: ctx.w.parameters,
+});
+const walkAst = (ast, nodeKinds, extractItem) => {
+    const recurse = ast2 => walkAst(ast2, nodeKinds, extractItem);
+    let result = [];
+    if (nodeKinds.includes(ast.kind)) {
+        result = [extractItem(ast)];
+    }
+    switch (ast.kind) {
+        case 'returnStatement':
+        case 'typedDeclarationAssignment':
+        case 'declarationAssignment':
+        case 'reassignment':
+            return [...result, ...recurse(ast.expression)];
+        case 'product':
+        case 'addition':
+        case 'subtraction':
+        case 'equality':
+        case 'concatenation':
+            return [...result, ...recurse(ast.lhs), ...recurse(ast.rhs)];
+        case 'callExpression':
+            return [...result, ...flatten_1.default(ast.arguments.map(recurse))];
+        case 'ternary':
+            return [
+                ...result,
+                ...recurse(ast.condition)
+                    .concat(recurse(ast.ifTrue))
+                    .concat(recurse(ast.ifFalse)),
+            ];
+        case 'program':
+            return [...result, ...flatten_1.default(ast.statements.map(recurse))];
+        case 'functionLiteral':
+            return [...result, ...flatten_1.default(ast.body.map(recurse))];
+        case 'objectLiteral':
+            return [
+                ...result,
+                ...flatten_1.default(ast.members.map(member => recurse(member.expression))),
+            ];
+        case 'memberAccess':
+            return [...result, ...recurse(ast.lhs)];
+        case 'number':
+        case 'identifier':
+        case 'stringLiteral':
+        case 'booleanLiteral':
+        case 'typeDeclaration':
+            return result;
+        case 'listLiteral':
+            return [...result, ...flatten_1.default(ast.items.map(recurse))];
+        case 'indexAccess':
+            return [...result, ...recurse(ast.accessed), ...recurse(ast.index)];
+        case 'memberStyleCall':
+            return [...result, ...recurse(ast.lhs), ...flatten_1.default(ast.params.map(recurse))];
+        case 'forLoop':
+            return [...result, ...recurse(ast.list), ...flatten_1.default(ast.body.map(recurse))];
+        default:
+            throw debug_1.default(`${ast.kind} unhandled in walkAst`);
+    }
+};
+const removeBracketsFromAst = ast => transformAst('bracketedExpression', node => node.children[0], ast, true);
+exports.removeBracketsFromAst = removeBracketsFromAst;
+const parseMpl = (tokens) => {
+    const parseResult = parse_1.parse(grammar_1.grammar, 'program', tokens);
+    if (parse_1.parseResultIsError(parseResult)) {
+        // TODO: Just get the parser to give us good errors directly instead of taking the first
+        return [parseResult.errors[0]];
+    }
+    let ast = parseResult;
+    ast = repairAssociativity('subtraction', ast);
+    ast = repairAssociativity('addition', ast);
+    ast = repairAssociativity('product', ast);
+    // Bracketed expressions -> nothing. Must happen after associativity repair or we will break
+    // associativity of brackets.
+    ast = removeBracketsFromAst(ast);
+    return ast;
+};
+exports.parseMpl = parseMpl;
+const isTypeError = (val) => Array.isArray(val);
+const combineErrors = (potentialErrors) => {
+    const result = [];
+    potentialErrors.forEach(e => {
+        if (isTypeError(e)) {
+            result.push(...e);
+        }
+    });
+    return result.length > 0 ? result : null;
+};
+// TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer() maybe?
+exports.typeOfExpression = (ctx, expectedType = undefined) => {
+    const recurse = ast2 => exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast2 }));
+    const { w, availableVariables, availableTypes } = ctx;
+    const ast = w;
+    switch (ast.kind) {
+        case 'number':
+            return { type: types_1.builtinTypes.Integer, extractedFunctions: [] };
+        case 'addition':
+        case 'product':
+        case 'subtraction': {
+            const leftType = recurse(ast.lhs);
+            const rightType = recurse(ast.rhs);
+            const combinedErrors = combineErrors([leftType, rightType]);
+            if (combinedErrors) {
+                return combinedErrors;
+            }
+            const lt = leftType;
+            const rt = rightType;
+            if (!types_1.equal(lt.type, types_1.builtinTypes.Integer)) {
+                return [
+                    {
+                        kind: 'wrongTypeForOperator',
+                        operator: ast.kind,
+                        expected: 'Integer',
+                        found: lt.type,
+                        side: 'left',
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            if (!types_1.equal(rt.type, types_1.builtinTypes.Integer)) {
+                return [
+                    {
+                        kind: 'wrongTypeForOperator',
+                        operator: ast.kind,
+                        expected: 'Integer',
+                        found: rt.type,
+                        side: 'right',
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return {
+                type: types_1.builtinTypes.Integer,
+                extractedFunctions: [...lt.extractedFunctions, ...rt.extractedFunctions],
+            };
+        }
+        case 'equality': {
+            const leftType = recurse(ast.lhs);
+            const rightType = recurse(ast.rhs);
+            const combinedErrors = combineErrors([leftType, rightType]);
+            if (combinedErrors) {
+                return combinedErrors;
+            }
+            const lt = leftType;
+            const rt = rightType;
+            if (!types_1.equal(lt.type, rt.type)) {
+                return [
+                    {
+                        kind: 'typeMismatchForOperator',
+                        leftType: lt.type,
+                        rightType: rt.type,
+                        operator: 'equality',
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return { type: types_1.builtinTypes.Boolean, extractedFunctions: [] };
+        }
+        case 'concatenation': {
+            const leftType = recurse(ast.lhs);
+            const rightType = recurse(ast.rhs);
+            const combinedErrors = combineErrors([leftType, rightType]);
+            if (combinedErrors) {
+                return combinedErrors;
+            }
+            const lt = leftType;
+            const rt = rightType;
+            if (lt.type.type.kind !== 'String') {
+                return [
+                    {
+                        kind: 'wrongTypeForOperator',
+                        found: lt.type,
+                        expected: 'String',
+                        operator: 'concatenation',
+                        side: 'left',
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            if (rt.type.type.kind !== 'String') {
+                return [
+                    {
+                        kind: 'wrongTypeForOperator',
+                        found: rt.type,
+                        expected: 'String',
+                        operator: 'concatenation',
+                        side: 'right',
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return {
+                type: types_1.builtinTypes.String,
+                extractedFunctions: [...lt.extractedFunctions, ...rt.extractedFunctions],
+            };
+        }
+        case 'functionLiteral':
+            const functionObject = functionObjectFromAst(Object.assign(Object.assign({}, ctx), { w: ast }));
+            const f = inferFunction({
+                w: functionObject,
+                availableVariables: mergeDeclarations(ctx.availableVariables, functionObject.variables),
+                availableTypes: ctx.availableTypes,
+            });
+            if (isTypeError(f)) {
+                return f;
+            }
+            return {
+                type: {
+                    type: {
+                        kind: 'Function',
+                        arguments: ast.parameters
+                            .map(p => p.type)
+                            .map(t => {
+                            const resolved = types_1.resolveIfNecessary(t, ctx.availableTypes);
+                            if (!resolved) {
+                                throw debug_1.default('bag argument. This should be a better error.');
+                            }
+                            return resolved;
+                        }),
+                        permissions: [],
+                        returnType: f.returnType,
+                    },
+                },
+                extractedFunctions: [f],
+            };
+        case 'callExpression': {
+            const argTypes = ast.arguments.map(argument => recurse(argument));
+            const argTypeErrors = [];
+            argTypes.forEach(argType => {
+                if (isTypeError(argType)) {
+                    argTypeErrors.push(...argType);
+                }
+            });
+            if (argTypeErrors.length > 0) {
+                return argTypeErrors;
+            }
+            const functionName = ast.name;
+            const declaration = availableVariables.find(({ name }) => functionName == name);
+            if (!declaration) {
+                return [
+                    {
+                        kind: 'unknownIdentifier',
+                        name: functionName,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            const functionType = declaration.type;
+            if (!functionType)
+                throw debug_1.default('bad function! This should be a better error.');
+            if ('namedType' in functionType) {
+                throw debug_1.default('nameRef function! This should be supported.');
+            }
+            if (functionType.type.kind !== 'Function') {
+                return [
+                    {
+                        kind: 'calledNonFunction',
+                        identifierName: functionName,
+                        actualType: functionType,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            if (argTypes.length !== functionType.type.arguments.length) {
+                return [
+                    {
+                        kind: 'wrongNumberOfArguments',
+                        targetFunction: functionName,
+                        passedArgumentCount: argTypes.length,
+                        expectedArgumentCount: functionType.type.arguments.length,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            for (let i = 0; i < argTypes.length; i++) {
+                const resolved = types_1.resolveOrError(functionType.type.arguments[i], ctx.availableTypes, ast.sourceLocation);
+                if ('errors' in resolved) {
+                    return resolved.errors;
+                }
+                if (!types_1.equal(argTypes[i].type, resolved)) {
+                    return [
+                        {
+                            kind: 'wrongArgumentType',
+                            targetFunction: functionName,
+                            passedType: argTypes[i].type,
+                            expectedType: functionType.type.arguments[i],
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ];
+                }
+            }
+            const returnType = types_1.resolveOrError(functionType.type.returnType, ctx.availableTypes, ast.sourceLocation);
+            if ('errors' in returnType) {
+                return returnType.errors;
+            }
+            return { type: returnType, extractedFunctions: [] };
+        }
+        case 'memberStyleCall': {
+            const callArgTypes = ast.params.map(recurse);
+            const argTypeErrors = [];
+            callArgTypes.forEach(argType => {
+                if (isTypeError(argType)) {
+                    argTypeErrors.push(...argType);
+                }
+            });
+            if (argTypeErrors.length > 0) {
+                return argTypeErrors;
+            }
+            const thisArgType = recurse(ast.lhs);
+            if (isTypeError(thisArgType)) {
+                return thisArgType;
+            }
+            const functionName = ast.memberName;
+            const declaration = availableVariables.find(({ name }) => functionName == name);
+            if (!declaration) {
+                return [
+                    {
+                        kind: 'unknownIdentifier',
+                        name: functionName,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            const functionType = declaration.type;
+            if (!functionType)
+                throw debug_1.default('bad function! This should be a better error.');
+            if ('namedType' in functionType) {
+                throw debug_1.default('nameRef function! This should be supported.');
+            }
+            if (functionType.type.kind !== 'Function') {
+                return [
+                    {
+                        kind: 'calledNonFunction',
+                        identifierName: functionName,
+                        actualType: functionType,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            const allArgTypes = [thisArgType, ...callArgTypes];
+            if (allArgTypes.length !== functionType.type.arguments.length) {
+                return [
+                    {
+                        kind: 'wrongNumberOfArguments',
+                        targetFunction: functionName,
+                        passedArgumentCount: allArgTypes.length,
+                        expectedArgumentCount: functionType.type.arguments.length,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            // TODO: this is probably wrong, we need check agains the LHS type
+            for (let i = 0; i < allArgTypes.length; i++) {
+                const resolved = types_1.resolveOrError(functionType.type.arguments[i], ctx.availableTypes, ast.sourceLocation);
+                if ('errors' in resolved) {
+                    return resolved.errors;
+                }
+                if (!types_1.equal(allArgTypes[i].type, resolved)) {
+                    return [
+                        {
+                            kind: 'wrongArgumentType',
+                            targetFunction: functionName,
+                            passedType: allArgTypes[i].type,
+                            expectedType: functionType.type.arguments[i],
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ];
+                }
+            }
+            const returnType = types_1.resolveOrError(functionType.type.returnType, ctx.availableTypes, ast.sourceLocation);
+            if ('errors' in returnType) {
+                return returnType.errors;
+            }
+            return { type: returnType, extractedFunctions: [] };
+        }
+        case 'identifier': {
+            const unresolved = availableVariables.find(({ name }) => ast.value == name);
+            if (!unresolved) {
+                return [
+                    {
+                        kind: 'unknownTypeForIdentifier',
+                        identifierName: ast.value,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            const declaration = types_1.resolveIfNecessary(unresolved.type, availableTypes);
+            if (!declaration) {
+                return [
+                    {
+                        kind: 'couldNotFindType',
+                        name: unresolved.type.namedType,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return { type: declaration, extractedFunctions: [] };
+        }
+        case 'ternary': {
+            const conditionType = recurse(ast.condition);
+            const trueBranchType = recurse(ast.ifTrue);
+            const falseBranchType = recurse(ast.ifFalse);
+            const combinedErrors = combineErrors([
+                conditionType,
+                trueBranchType,
+                falseBranchType,
+            ]);
+            if (combinedErrors ||
+                isTypeError(trueBranchType) ||
+                isTypeError(falseBranchType) ||
+                isTypeError(conditionType)) {
+                if (combinedErrors) {
+                    return combinedErrors;
+                }
+                else {
+                    return [];
+                }
+            }
+            if (!types_1.equal(conditionType.type, types_1.builtinTypes.Boolean)) {
+                return [
+                    {
+                        kind: 'wrongTypeForOperator',
+                        found: conditionType.type,
+                        expected: 'Boolean',
+                        operator: 'Ternary',
+                        side: 'left',
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            if (!types_1.equal(trueBranchType.type, falseBranchType.type)) {
+                return [
+                    {
+                        kind: 'ternaryBranchMismatch',
+                        trueBranchType: trueBranchType.type,
+                        falseBranchType: falseBranchType.type,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return trueBranchType;
+        }
+        case 'booleanLiteral':
+            return { type: types_1.builtinTypes.Boolean, extractedFunctions: [] };
+        case 'stringLiteral':
+            return { type: types_1.builtinTypes.String, extractedFunctions: [] };
+        case 'objectLiteral':
+            const memberTypes = ast.members.map(({ expression }) => recurse(expression));
+            const typeErrors = flatten_1.default(memberTypes.filter(isTypeError));
+            if (!(typeErrors.length == 0))
+                return typeErrors;
+            return {
+                type: {
+                    type: {
+                        kind: 'Product',
+                        members: ast.members.map(({ name, expression }) => ({
+                            name,
+                            type: recurse(expression).type,
+                        })),
+                    },
+                    original: { namedType: ast.typeName },
+                },
+                extractedFunctions: [],
+            };
+        case 'memberAccess':
+            const lhsType = recurse(ast.lhs);
+            if (isTypeError(lhsType)) {
+                return lhsType;
+            }
+            const resolvedLhs = lhsType.type;
+            if (resolvedLhs.type.kind != 'Product') {
+                return [
+                    {
+                        kind: 'invalidMemberAccess',
+                        found: lhsType.type,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            const accessedMember = resolvedLhs.type.members.find(m => m.name == ast.rhs);
+            if (!accessedMember) {
+                return [
+                    {
+                        kind: 'objectDoesNotHaveMember',
+                        lhsType: lhsType.type,
+                        member: ast.rhs,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return { type: accessedMember.type, extractedFunctions: [] };
+        case 'listLiteral':
+            let innerType;
+            const extractedFunctions = [];
+            for (const item of ast.items) {
+                const result = recurse(item);
+                if (isTypeError(result)) {
+                    return result;
+                }
+                if (!innerType) {
+                    innerType = result.type;
+                }
+                else if (!types_1.equal(innerType, result.type)) {
+                    return [{ kind: 'nonhomogenousList', sourceLocation: ast.sourceLocation }];
+                }
+                extractedFunctions.push(...result.extractedFunctions);
+            }
+            if (!innerType) {
+                if (expectedType) {
+                    return { type: expectedType, extractedFunctions };
+                }
+                return [{ kind: 'uninferrableEmptyList', sourceLocation: ast.sourceLocation }];
+            }
+            return { type: { type: { kind: 'List', of: innerType } }, extractedFunctions };
+        case 'indexAccess':
+            const accessedType = recurse(ast.accessed);
+            if (isTypeError(accessedType)) {
+                return accessedType;
+            }
+            if (accessedType.type.type.kind != 'List') {
+                return [
+                    {
+                        kind: 'indexAccessNonList',
+                        accessed: accessedType.type,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            const indexType = recurse(ast.index);
+            if (isTypeError(indexType)) {
+                return indexType;
+            }
+            if (indexType.type.type.kind != 'Integer') {
+                return [
+                    {
+                        kind: 'nonIntegerIndex',
+                        index: indexType.type,
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ];
+            }
+            return {
+                type: accessedType.type.type.of,
+                extractedFunctions: [
+                    ...accessedType.extractedFunctions,
+                    ...indexType.extractedFunctions,
+                ],
+            };
+        default:
+            throw debug_1.default(`${ast.kind} unhandled in typeOfExpression`);
+    }
+};
+const typeCheckStatement = (ctx) => {
+    const { w, availableTypes, availableVariables } = ctx;
+    const ast = w;
+    if (!ast.kind)
+        debug_1.default('!ast.kind');
+    switch (ast.kind) {
+        case 'returnStatement': {
+            const result = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression }));
+            if (isTypeError(result)) {
+                return { errors: result, newVariables: [] };
+            }
+            return { errors: [], newVariables: [] };
+        }
+        case 'declarationAssignment': {
+            const rightType = exports.typeOfExpression({
+                w: ast.expression,
+                availableTypes,
+                availableVariables: mergeDeclarations(availableVariables, [
+                    {
+                        name: ast.destination,
+                        type: {
+                            type: {
+                                kind: 'Function',
+                                arguments: [{ type: { kind: 'Integer' } }],
+                                permissions: [],
+                                returnType: { type: { kind: 'Integer' } },
+                            },
+                        },
+                        exported: false,
+                    },
+                ]),
+            });
+            if (isTypeError(rightType)) {
+                return { errors: rightType, newVariables: [] };
+            }
+            // Left type is inferred as right type
+            return {
+                errors: [],
+                newVariables: [{ name: ast.destination, type: rightType.type, exported: false }],
+            };
+        }
+        case 'reassignment': {
+            const rightType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression }));
+            if (isTypeError(rightType)) {
+                return { errors: rightType, newVariables: [] };
+            }
+            const unresolvedLeftType = availableVariables.find(v => v.name == ast.destination);
+            if (!unresolvedLeftType) {
+                return {
+                    errors: [
+                        {
+                            kind: 'assignUndeclaredIdentifer',
+                            destinationName: ast.destination,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+            const leftType = types_1.resolveIfNecessary(unresolvedLeftType.type, availableTypes);
+            if (!leftType) {
+                return {
+                    errors: [
+                        {
+                            kind: 'couldNotFindType',
+                            name: unresolvedLeftType.name,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+            if (!types_1.equal(leftType, rightType.type)) {
+                return {
+                    errors: [
+                        {
+                            kind: 'assignWrongType',
+                            lhsName: ast.destination,
+                            lhsType: leftType,
+                            rhsType: rightType.type,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+            return { errors: [], newVariables: [] };
+        }
+        case 'typedDeclarationAssignment': {
+            // Check that type of var being assigned to matches type being assigned
+            const destinationType = ast.type;
+            const resolvedDestination = types_1.resolveOrError(destinationType, availableTypes, ast.sourceLocation);
+            if ('errors' in resolvedDestination) {
+                return resolvedDestination;
+            }
+            const expressionType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression, availableVariables: mergeDeclarations(availableVariables, [
+                    { name: ast.destination, type: destinationType, exported: false },
+                ]) }), resolvedDestination);
+            if (isTypeError(expressionType)) {
+                return { errors: expressionType, newVariables: [] };
+            }
+            if (!types_1.equal(expressionType.type, resolvedDestination)) {
+                return {
+                    errors: [
+                        {
+                            kind: 'assignWrongType',
+                            lhsName: ast.destination,
+                            lhsType: resolvedDestination,
+                            rhsType: expressionType.type,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+            return {
+                errors: [],
+                newVariables: [
+                    { name: ast.destination, type: destinationType, exported: false },
+                ],
+            };
+        }
+        case 'typeDeclaration':
+            return {
+                errors: [],
+                newVariables: [],
+            };
+        case 'forLoop': {
+            const expressionType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.list }));
+            if (isTypeError(expressionType)) {
+                return { errors: expressionType, newVariables: [] };
+            }
+            if (expressionType.type.type.kind != 'List') {
+                return {
+                    errors: [
+                        {
+                            kind: 'nonListInFor',
+                            found: expressionType.type,
+                            sourceLocation: ast.sourceLocation,
+                        },
+                    ],
+                    newVariables: [],
+                };
+            }
+            const newVariables = [];
+            for (const statement of ast.body) {
+                const statementType = typeCheckStatement(Object.assign(Object.assign({}, ctx), { w: statement }));
+                if (isTypeError(statementType)) {
+                    return { errors: statementType, newVariables: [] };
+                }
+                newVariables.push(...statementType.newVariables);
+            }
+            return { errors: [], newVariables };
+        }
+        default:
+            throw never_1.default(ast, 'typeCheckStatement');
+    }
+};
+exports.typeCheckStatement = typeCheckStatement;
+const mergeDeclarations = (left, right) => {
+    const result = [...right];
+    left.forEach(declaration => {
+        if (!result.some(({ name }) => name == declaration.name)) {
+            result.unshift(declaration);
+        }
+    });
+    return result;
+};
+exports.mergeDeclarations = mergeDeclarations;
+const typeCheckFunction = (ctx) => {
+    let availableVariables = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
+    const allErrors = [];
+    ctx.w.statements.forEach(statement => {
+        if (allErrors.length == 0) {
+            const { errors, newVariables } = typeCheckStatement(Object.assign(Object.assign({}, ctx), { w: statement, availableVariables }));
+            availableVariables = mergeDeclarations(availableVariables, newVariables);
+            allErrors.push(...errors);
+        }
+    });
+    return { typeErrors: allErrors, identifiers: availableVariables };
+};
+const assignmentToGlobalDeclaration = (ctx) => {
+    const result = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }));
+    if (isTypeError(result))
+        throw debug_1.default('isTypeError in assignmentToGlobalDeclaration');
+    return {
+        name: ctx.w.destination,
+        type: result.type,
+        exported: ctx.w.exported,
+        mangledName: ctx.w.expression.kind == 'functionLiteral'
+            ? ctx.w.expression.deanonymizedName
+            : ctx.w.destination,
+    };
+};
+const inferFunction = (ctx) => {
+    const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
+    const statements = [];
+    ctx.w.statements.forEach(statement => {
+        const statementsContext = {
+            w: [statement],
+            availableVariables: variablesFound,
+            availableTypes: ctx.availableTypes,
+        };
+        const statementContext = {
+            w: statement,
+            availableVariables: variablesFound,
+            availableTypes: ctx.availableTypes,
+        };
+        variablesFound.push(...extractVariables(statementsContext));
+        statements.push(infer(statementContext));
+    });
+    const maybeReturnStatement = last_1.default(ctx.w.statements);
+    if (!maybeReturnStatement) {
+        return [{ kind: 'missingReturn', sourceLocation: { line: 0, column: 0 } }];
+    }
+    if (maybeReturnStatement.kind != 'returnStatement') {
+        return [{ kind: 'missingReturn', sourceLocation: maybeReturnStatement.sourceLocation }];
+    }
+    const returnStatement = maybeReturnStatement;
+    const returnType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { availableVariables: variablesFound, w: returnStatement.expression }));
+    if (isTypeError(returnType)) {
+        return returnType;
+    }
+    return {
+        name: ctx.w.name,
+        statements,
+        variables: ctx.w.variables,
+        parameters: ctx.w.parameters,
+        returnType: returnType.type,
+    };
+};
+// TODO: merge this with typecheck maybe?
+const infer = (ctx) => {
+    const recurse = ast2 => infer(Object.assign(Object.assign({}, ctx), { w: ast2 }));
+    const { w, availableVariables, availableTypes } = ctx;
+    const ast = w;
+    switch (ast.kind) {
+        case 'returnStatement':
+            return {
+                kind: 'returnStatement',
+                expression: recurse(ast.expression),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'forLoop':
+            return {
+                kind: 'forLoop',
+                sourceLocation: ast.sourceLocation,
+                var: ast.var,
+                list: recurse(ast.list),
+                body: ast.body.map(recurse),
+            };
+        case 'equality':
+            const equalityType = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.lhs }));
+            if (isTypeError(equalityType))
+                throw debug_1.default('couldNotFindType');
+            return {
+                kind: 'equality',
+                sourceLocation: ast.sourceLocation,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+                type: equalityType.type,
+            };
+        case 'product':
+            return {
+                kind: ast.kind,
+                sourceLocation: ast.sourceLocation,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+            };
+        case 'addition':
+            return {
+                kind: ast.kind,
+                sourceLocation: ast.sourceLocation,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+            };
+        case 'subtraction':
+            return {
+                kind: ast.kind,
+                sourceLocation: ast.sourceLocation,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+            };
+        case 'concatenation':
+            return {
+                kind: ast.kind,
+                sourceLocation: ast.sourceLocation,
+                lhs: recurse(ast.lhs),
+                rhs: recurse(ast.rhs),
+            };
+        case 'typedDeclarationAssignment':
+            const resolved = types_1.resolveIfNecessary(ast.type, availableTypes);
+            if (!resolved)
+                throw debug_1.default("resolution shouldn't fail here");
+            return {
+                kind: 'typedDeclarationAssignment',
+                sourceLocation: ast.sourceLocation,
+                expression: recurse(ast.expression),
+                type: resolved,
+                destination: ast.destination,
+            };
+        case 'declarationAssignment':
+            const type = exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ast.expression }));
+            if (isTypeError(type))
+                throw debug_1.default("type error when there shouldn't be");
+            return {
+                kind: 'typedDeclarationAssignment',
+                sourceLocation: ast.sourceLocation,
+                expression: recurse(ast.expression),
+                type: type.type,
+                destination: ast.destination,
+            };
+        case 'reassignment':
+            return {
+                kind: 'reassignment',
+                sourceLocation: ast.sourceLocation,
+                expression: recurse(ast.expression),
+                destination: ast.destination,
+            };
+        case 'callExpression':
+            return {
+                kind: 'callExpression',
+                sourceLocation: ast.sourceLocation,
+                name: ast.name,
+                arguments: ast.arguments.map(recurse),
+            };
+        case 'memberStyleCall':
+            return {
+                kind: 'callExpression',
+                sourceLocation: ast.sourceLocation,
+                name: ast.memberName,
+                arguments: [recurse(ast.lhs), ...ast.params.map(recurse)],
+            };
+        case 'ternary':
+            return {
+                kind: 'ternary',
+                sourceLocation: ast.sourceLocation,
+                condition: recurse(ast.condition),
+                ifTrue: recurse(ast.ifTrue),
+                ifFalse: recurse(ast.ifFalse),
+            };
+        case 'functionLiteral':
+            return {
+                kind: 'functionLiteral',
+                sourceLocation: ast.sourceLocation,
+                deanonymizedName: ast.deanonymizedName,
+            };
+        case 'typeDeclaration':
+            // TODO: maybe just strip declarations before inferring.
+            return { kind: 'typeDeclaration', sourceLocation: ast.sourceLocation };
+        case 'objectLiteral':
+            const declaredType = availableTypes.find(t => t.name == ast.typeName);
+            if (!declaredType) {
+                throw debug_1.default(`type ${ast.typeName} not found`);
+            }
+            return {
+                kind: 'objectLiteral',
+                sourceLocation: ast.sourceLocation,
+                type: declaredType.type,
+                members: ast.members.map(({ name, expression }) => ({
+                    name,
+                    expression: recurse(expression),
+                })),
+            };
+        case 'memberAccess':
+            const accessedObject = recurse(ast.lhs);
+            const accessedType = exports.typeOfExpression({
+                w: ast.lhs,
+                availableVariables,
+                availableTypes,
+            });
+            if (isTypeError(accessedType)) {
+                throw debug_1.default("shouldn't be a type error here");
+            }
+            return {
+                kind: 'memberAccess',
+                sourceLocation: ast.sourceLocation,
+                lhs: accessedObject,
+                rhs: ast.rhs,
+                lhsType: accessedType.type,
+            };
+        case 'listLiteral':
+            let itemType = undefined;
+            const items = [];
+            for (const item of ast.items) {
+                const newItem = recurse(item);
+                items.push(newItem);
+                if (itemType === undefined) {
+                    const maybeItemType = exports.typeOfExpression({
+                        w: item,
+                        availableVariables,
+                        availableTypes,
+                    });
+                    if (isTypeError(maybeItemType)) {
+                        throw debug_1.default("shouldn't be type error here");
+                    }
+                    itemType = maybeItemType.type;
+                }
+            }
+            if (!itemType)
+                throw debug_1.default('no itemType');
+            return {
+                kind: 'listLiteral',
+                sourceLocation: ast.sourceLocation,
+                type: { type: { kind: 'List', of: itemType } },
+                items,
+            };
+        case 'indexAccess':
+            return {
+                kind: 'indexAccess',
+                sourceLocation: ast.sourceLocation,
+                accessed: recurse(ast.accessed),
+                index: recurse(ast.index),
+            };
+        case 'number':
+        case 'identifier':
+        case 'booleanLiteral':
+        case 'stringLiteral':
+            return ast;
+        default:
+            throw debug_1.default(`${ast.kind} unhandled in infer`);
+    }
+};
+const extractFunctionBody = (node) => {
+    if (node.type !== 'statement')
+        debug_1.default('expected a statement');
+    if (node.children.length === 3) {
+        return [astFromParseResult(node.children[0]), ...extractFunctionBody(node.children[2])];
+    }
+    else {
+        return [astFromParseResult(node.children[0])];
+    }
+};
+// TODO: Replace extractParameterList with SeparatedList
+const extractParameterList = (ast) => {
+    if (parse_1.isSeparatedListNode(ast)) {
+        return flatten_1.default(ast.items.map(i => {
+            if (parse_1.isSeparatedListNode(i) || !('children' in i)) {
+                throw debug_1.default('todo');
+            }
+            const child2 = i.children[2];
+            if (parse_1.isSeparatedListNode(child2) || parse_1.isListNode(child2)) {
+                throw debug_1.default('todo');
+            }
+            return [
+                {
+                    name: i.children[0].value,
+                    type: parseType(child2),
+                    exported: false,
+                },
+            ];
+        }));
+    }
+    else {
+        throw debug_1.default(`${ast.type} unhandledi extractParameterList`);
+    }
+};
+const parseTypeLiteralComponent = (ast) => {
+    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
+        throw debug_1.default('todo');
+    }
+    if (ast.type != 'typeLiteralComponent')
+        throw debug_1.default('wrong as type');
+    const unresolved = parseType(ast.children[2]);
+    const resolved = types_1.resolveIfNecessary(unresolved, []);
+    if (!resolved)
+        throw debug_1.default('need to make products work as components of other products');
+    return {
+        name: ast.children[0].value,
+        type: resolved,
+    };
+};
+const parseType = (ast) => {
+    if (parse_1.isSeparatedListNode(ast)) {
+        throw debug_1.default('todo');
+    }
+    if (parse_1.isListNode(ast)) {
+        return {
+            type: {
+                kind: 'Product',
+                members: ast.items.map(parseTypeLiteralComponent),
+            },
+        };
+    }
+    switch (ast.type) {
+        case 'typeWithArgs': {
+            const name = ast.children[0].value;
+            if (name != 'Function')
+                throw debug_1.default('Only functions support args right now');
+            const list = ast.children[1];
+            if (!parse_1.isSeparatedListNode(list))
+                throw debug_1.default('todo');
+            const typeList = list.items.map(parseType);
+            return {
+                type: {
+                    kind: name,
+                    arguments: typeList.slice(0, typeList.length - 1),
+                    returnType: typeList[typeList.length - 1],
+                },
+            };
+        }
+        case 'typeWithoutArgs': {
+            const node = ast.children[0];
+            if (parse_1.isSeparatedListNode(node) || parse_1.isListNode(node)) {
+                throw debug_1.default('todo');
+            }
+            if (node.type != 'typeIdentifier')
+                throw debug_1.default('Failed to parse type');
+            const name = node.value;
+            if (typeof name != 'string')
+                throw debug_1.default('Failed to parse type');
+            switch (name) {
+                case 'String':
+                case 'Integer':
+                case 'Boolean':
+                    return { type: { kind: name } };
+                default:
+                    return { namedType: name };
+            }
+        }
+        case 'listType': {
+            const node = ast.children[0];
+            if (parse_1.isSeparatedListNode(node) || parse_1.isListNode(node) || node.type != 'typeIdentifier') {
+                throw debug_1.default('expected a type');
+            }
+            const listOf = { type: { kind: node.value } };
+            return { type: { kind: 'List', of: listOf } };
+        }
+        default:
+            throw debug_1.default(`${ast.type} unhandled in parseType`);
+    }
+};
+const parseObjectMember = (ast) => {
+    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
+        throw debug_1.default('todo');
+    }
+    if (ast.type != 'objectLiteralComponent') {
+        {
+            throw debug_1.default('wsa');
+            return 'WrongShapeAst';
+        }
+    }
+    const expression = astFromParseResult(ast.children[2]);
+    if (expression == 'WrongShapeAst') {
+        {
+            throw debug_1.default('wsa');
+            return 'WrongShapeAst';
+        }
+    }
+    const result = {
+        name: ast.children[0].value,
+        expression: expression,
+    };
+    return result;
+};
+let functionId = add(-1, 1);
+const astFromParseResult = (ast) => {
+    if (parse_1.isSeparatedListNode(ast) || parse_1.isListNode(ast)) {
+        throw debug_1.default('todo');
+    }
+    switch (ast.type) {
+        case 'returnStatement':
+            return {
+                kind: 'returnStatement',
+                expression: astFromParseResult(ast.children[1]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'number':
+            if (ast.value === undefined)
+                throw debug_1.default('ast.value === undefined');
+            return {
+                kind: 'number',
+                value: ast.value,
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'identifier':
+            if (!ast.value)
+                throw debug_1.default('!ast.value');
+            return {
+                kind: 'identifier',
+                value: ast.value,
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'product':
+            if (!('children' in ast))
+                throw debug_1.default('children not in ast in astFromParseResult');
+            return {
+                kind: 'product',
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'ternary':
+            return {
+                kind: 'ternary',
+                condition: astFromParseResult(ast.children[0]),
+                ifTrue: astFromParseResult(ast.children[2]),
+                ifFalse: astFromParseResult(ast.children[4]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'equality':
+            if (!('children' in ast))
+                throw debug_1.default('children not in ast in astFromParseResult');
+            return {
+                kind: 'equality',
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'paramList':
+            throw debug_1.default('paramList in astFromParseResult'); // Should have been caught in "callExpression"
+        case 'callExpression':
+            const child2 = ast.children[2];
+            if (!parse_1.isSeparatedListNode(child2)) {
+                throw debug_1.default('todo');
+            }
+            return {
+                kind: 'callExpression',
+                name: ast.children[0].value,
+                arguments: child2.items.map(astFromParseResult),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'subtraction':
+            if (!('children' in ast))
+                throw debug_1.default('children not in ast in astFromParseResult');
+            return {
+                kind: 'subtraction',
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'addition':
+            if (!('children' in ast))
+                throw debug_1.default('children not in ast in astFromParseResult');
+            return {
+                kind: 'addition',
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'reassignment':
+            if (!('children' in ast))
+                throw debug_1.default('children not in ast in astFromParseResult');
+            return {
+                kind: 'reassignment',
+                destination: ast.children[0].value,
+                expression: astFromParseResult(ast.children[2]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'declaration': {
+            let childIndex = 0;
+            let exported = false;
+            if (ast.children[childIndex].type == 'export') {
+                exported = true;
+                childIndex++;
+            }
+            const destination = ast.children[childIndex].value;
+            childIndex++;
+            const destinationNode = ast.children[childIndex];
+            if (parse_1.isSeparatedListNode(destinationNode) || parse_1.isListNode(destinationNode)) {
+                throw debug_1.default('todo');
+            }
+            if (destinationNode.type != 'colon')
+                debug_1.default('expected a colon');
+            childIndex++;
+            let type = undefined;
+            const maybeTypeNode = ast.children[childIndex];
+            if (parse_1.isSeparatedListNode(maybeTypeNode) || parse_1.isListNode(maybeTypeNode)) {
+                throw debug_1.default('todo');
+            }
+            if (['typeWithArgs', 'typeWithoutArgs', 'typeLiteral', 'listType'].includes(maybeTypeNode.type)) {
+                type = parseType(maybeTypeNode);
+                childIndex++;
+            }
+            if (ast.children[childIndex].type != 'assignment')
+                debug_1.default('expected assignment');
+            childIndex++;
+            const expression = astFromParseResult(ast.children[childIndex]);
+            if (type) {
+                return {
+                    kind: 'typedDeclarationAssignment',
+                    destination,
+                    expression: expression,
+                    type,
+                    exported,
+                    sourceLocation: ast.sourceLocation,
+                };
+            }
+            else {
+                return {
+                    kind: 'declarationAssignment',
+                    destination,
+                    expression: expression,
+                    exported,
+                    sourceLocation: ast.sourceLocation,
+                };
+            }
+        }
+        case 'typeDeclaration':
+            const theType = parseType(ast.children[3]);
+            const name = ast.children[0].value;
+            if ('namedType' in theType) {
+                throw debug_1.default("Shouldn't get here, delcaring types have to actually declare a type");
+            }
+            return {
+                kind: 'typeDeclaration',
+                name,
+                type: theType,
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'stringLiteral':
+            return {
+                kind: 'stringLiteral',
+                value: ast.value,
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'objectLiteral':
+            const typeNameNode = ast.children[0];
+            if (parse_1.isSeparatedListNode(typeNameNode) || parse_1.isListNode(typeNameNode)) {
+                throw debug_1.default('todo');
+            }
+            if (typeNameNode.type != 'typeIdentifier')
+                return 'WrongShapeAst';
+            const typeName = typeNameNode.value;
+            if (typeof typeName != 'string')
+                return 'WrongShapeAst';
+            const membersNode = ast.children[1];
+            if (!parse_1.isListNode(membersNode)) {
+                throw debug_1.default('todo');
+            }
+            const members = membersNode.items.map(parseObjectMember);
+            if (members.some(m => m == 'WrongShapeAst'))
+                return 'WrongShapeAst';
+            return {
+                kind: 'objectLiteral',
+                typeName,
+                members: members,
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'memberStyleCall': {
+            const anyAst = ast;
+            const lhsNode = anyAst.children[0];
+            const lhs = astFromParseResult(lhsNode);
+            if (lhs == 'WrongShapeAst') {
+                return 'WrongShapeAst';
+            }
+            const memberName = anyAst.children[2].value;
+            const params = anyAst.children[3].items.map(astFromParseResult);
+            if (params == 'WrongShapeAst') {
+                return 'WrongShapeAst';
+            }
+            const r = {
+                kind: 'memberStyleCall',
+                lhs: lhs,
+                memberName,
+                params: params,
+                sourceLocation: ast.sourceLocation,
+            };
+            return r;
+        }
+        case 'memberAccess': {
+            const anyAst = ast;
+            const lhsNode = anyAst.children[0];
+            const lhs = astFromParseResult(lhsNode);
+            return {
+                kind: 'memberAccess',
+                lhs,
+                rhs: anyAst.children[2].value,
+                sourceLocation: ast.sourceLocation,
+            };
+        }
+        case 'concatenation':
+            if (!('children' in ast))
+                throw debug_1.default('children not in ast in astFromParseResult');
+            return {
+                kind: 'concatenation',
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'equality':
+            if (!('children' in ast))
+                throw debug_1.default('children not in ast in astFromParseResult');
+            return {
+                kind: 'equality',
+                lhs: astFromParseResult(ast.children[0]),
+                rhs: astFromParseResult(ast.children[2]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'function': {
+            functionId++;
+            let childIndex = 0;
+            let hasBrackets = false;
+            if (hasType(ast.children[0], 'leftBracket')) {
+                childIndex++;
+                hasBrackets = true;
+            }
+            const parameters = extractParameterList(ast.children[childIndex]);
+            childIndex++;
+            if (hasBrackets) {
+                if (!hasType(ast.children[childIndex], 'rightBracket')) {
+                    debug_1.default('mismatched brackets');
+                }
+                childIndex++;
+            }
+            if (!hasType(ast.children[childIndex], 'fatArrow'))
+                debug_1.default('wrong');
+            childIndex++;
+            return {
+                kind: 'functionLiteral',
+                deanonymizedName: `anonymous_${functionId}`,
+                body: [
+                    {
+                        kind: 'returnStatement',
+                        expression: astFromParseResult(ast.children[childIndex]),
+                        sourceLocation: ast.sourceLocation,
+                    },
+                ],
+                parameters,
+                sourceLocation: ast.sourceLocation,
+            };
+        }
+        case 'functionWithBlock': {
+            functionId++;
+            let childIndex = 0;
+            let hasBrackets = false;
+            if (hasType(ast.children[childIndex], 'leftBracket')) {
+                hasBrackets = true;
+                childIndex++;
+            }
+            const parameters2 = extractParameterList(ast.children[childIndex]);
+            childIndex++;
+            if (hasBrackets) {
+                if (!hasType(ast.children[childIndex], 'rightBracket')) {
+                    debug_1.default('brackets mismatched');
+                }
+                childIndex++;
+            }
+            if (!hasType(ast.children[childIndex], 'fatArrow'))
+                debug_1.default('wrong');
+            childIndex++;
+            const body = extractFunctionBody(ast.children[childIndex]);
+            childIndex++;
+            if (childIndex !== ast.children.length)
+                debug_1.default('wrong');
+            return {
+                kind: 'functionLiteral',
+                deanonymizedName: `anonymous_${functionId}`,
+                body,
+                parameters: parameters2,
+                sourceLocation: ast.sourceLocation,
+            };
+        }
+        case 'forLoop': {
+            const a = ast;
+            const body = extractFunctionBody(a.children[2]);
+            const lst = astFromParseResult(a.children[1].children[2]);
+            if (lst == 'WrongShapeAst')
+                return lst;
+            const result = {
+                kind: 'forLoop',
+                var: a.children[1].children[0].value,
+                list: lst,
+                body,
+                sourceLocation: a.sourceLocation,
+            };
+            return result;
+        }
+        case 'booleanLiteral':
+            return {
+                kind: 'booleanLiteral',
+                value: ast.value == 'true',
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'program':
+            return {
+                kind: 'program',
+                statements: extractFunctionBody(ast.children[0]),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'listLiteral':
+            const items = ast.children[0];
+            if (!parse_1.isSeparatedListNode(items))
+                throw debug_1.default('todo');
+            return {
+                kind: 'listLiteral',
+                items: items.items.map(astFromParseResult),
+                sourceLocation: ast.sourceLocation,
+            };
+        case 'indexAccess':
+            return {
+                kind: 'indexAccess',
+                index: astFromParseResult(ast.children[1]),
+                accessed: astFromParseResult(ast.children[0]),
+                sourceLocation: ast.sourceLocation,
+            };
+        default:
+            throw debug_1.default(`${ast.type} unhandled in astFromParseResult`);
+    }
+};
+exports.astFromParseResult = astFromParseResult;
+const compile = (source) => {
+    functionId = 0;
+    const tokens = lex_1.lex(grammar_1.tokenSpecs, source);
+    if ('kind' in tokens) {
+        return tokens;
+    }
+    const parseResult = parseMpl(tokens);
+    if (Array.isArray(parseResult)) {
+        return { parseErrors: parseResult };
+    }
+    const ast = astFromParseResult(parseResult);
+    if (ast == 'WrongShapeAst') {
+        return { internalError: 'Wrong shape AST' };
+    }
+    if (ast.kind !== 'program') {
+        return { internalError: 'AST was not a program' };
+    }
+    const exportedDeclarations = ast.statements.filter(s => (s.kind == 'typedDeclarationAssignment' || s.kind == 'declarationAssignment') &&
+        s.exported);
+    const topLevelStatements = ast.statements.filter(s => s.kind != 'typedDeclarationAssignment' && s.kind != 'declarationAssignment');
+    if (exportedDeclarations.length > 0 && topLevelStatements.length > 0) {
+        return {
+            typeErrors: [
+                {
+                    kind: 'topLevelStatementsInModule',
+                    sourceLocation: topLevelStatements[0].sourceLocation,
+                },
+            ],
+        };
+    }
+    const availableTypes = walkAst(ast, ['typeDeclaration'], n => n);
+    let availableVariables = types_1.builtinFunctions;
+    const program = {
+        name: 'main_program',
+        statements: ast.statements,
+        variables: extractVariables({ w: ast.statements, availableVariables, availableTypes }),
+        parameters: [],
+    };
+    const functions = walkAst(ast, ['functionLiteral'], astNode => functionObjectFromAst({ w: astNode, availableVariables, availableTypes }));
+    const stringLiteralIdMaker = idMaker_1.default();
+    const nonUniqueStringLiterals = walkAst(ast, ['stringLiteral'], (astNode) => ({ id: stringLiteralIdMaker(), value: astNode.value }));
+    const stringLiterals = uniqueBy_1.default(s => s.value, nonUniqueStringLiterals);
+    const programTypeCheck = typeCheckFunction({
+        w: program,
+        availableVariables,
+        availableTypes,
+    });
+    availableVariables = mergeDeclarations(availableVariables, programTypeCheck.identifiers);
+    const typeErrors = functions.map(f => typeCheckFunction({ w: f, availableVariables, availableTypes }).typeErrors);
+    typeErrors.push(programTypeCheck.typeErrors);
+    let flatTypeErrors = flatten_1.default(typeErrors);
+    if (flatTypeErrors.length > 0) {
+        return { typeErrors: flatTypeErrors };
+    }
+    const typedFunctions = [];
+    functions.forEach(f => {
+        const functionOrTypeError = inferFunction({ w: f, availableVariables, availableTypes });
+        if (isTypeError(functionOrTypeError)) {
+            typeErrors.push(functionOrTypeError);
+        }
+        else {
+            typedFunctions.push(Object.assign(Object.assign({}, f), { returnType: functionOrTypeError.returnType, statements: f.statements.map(s => infer({
+                    w: s,
+                    availableVariables: mergeDeclarations(availableVariables, f.variables),
+                    availableTypes,
+                })) }));
+        }
+    });
+    flatTypeErrors = flatten_1.default(typeErrors);
+    if (flatTypeErrors.length > 0) {
+        return { typeErrors: flatTypeErrors };
+    }
+    const globalDeclarations = program.statements
+        .filter(s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment')
+        .map(assignment => assignmentToGlobalDeclaration({
+        w: assignment,
+        availableVariables,
+        availableTypes,
+    }));
+    let inferredProgram = undefined;
+    if (exportedDeclarations.length == 0) {
+        const maybeInferredProgram = inferFunction({
+            w: program,
+            availableVariables,
+            availableTypes,
+        });
+        if (isTypeError(maybeInferredProgram)) {
+            return { typeErrors: maybeInferredProgram };
+        }
+        inferredProgram = maybeInferredProgram;
+        if (!types_1.equal(inferredProgram.returnType, types_1.builtinTypes.Integer)) {
+            const returnStatement = last_1.default(inferredProgram.statements);
+            return {
+                typeErrors: [
+                    {
+                        kind: 'wrongTypeReturn',
+                        expressionType: inferredProgram.returnType,
+                        sourceLocation: returnStatement
+                            ? returnStatement.sourceLocation
+                            : { line: 1, column: 1 },
+                    },
+                ],
+            };
+        }
+    }
+    else {
+        inferredProgram = globalDeclarations.map(d => ({
+            exportedName: d.name,
+            declaredName: d.mangledName || '',
+        }));
+    }
+    return {
+        types: availableTypes,
+        functions: typedFunctions,
+        builtinFunctions: types_1.builtinFunctions,
+        program: inferredProgram,
+        globalDeclarations,
+        stringLiterals,
+    };
+};
+exports.compile = compile;
+
+
+/***/ }),
+
+/***/ "./grammar.ts":
+/*!********************!*\
+  !*** ./grammar.ts ***!
+  \********************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export grammar [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export tokenSpecs [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.grammar = exports.tokenSpecs = void 0;
+const parse_1 = __webpack_require__(/*! ./parser-lib/parse */ "./parser-lib/parse.ts");
+exports.tokenSpecs = [
+    {
+        token: '"[^"]*"',
+        type: 'stringLiteral',
+        action: x => {
+            const trimmed = x.trim();
+            const quotesRemoved = trimmed.substring(1, trimmed.length - 1);
+            return quotesRemoved;
+        },
+        toString: x => x,
+    },
+    { token: ',', type: 'comma', toString: () => ', ' },
+    // TODO: Make a "keyword" utility function for the lexer. Also figure out why \b doesn't work here.
+    { token: 'return[^A-z]', type: 'return', toString: () => 'return' },
+    { token: 'export[^A-z]', type: 'export', toString: () => 'export' },
+    { token: 'for[^A-z]', type: 'for', toString: () => 'for' },
+    { token: 'true|false', type: 'booleanLiteral', action: x => x.trim(), toString: x => x },
+    { token: '[a-z]\\w*', type: 'identifier', action: x => x, toString: x => x },
+    { token: '[A-Z][A-Za-z]*', type: 'typeIdentifier', action: x => x, toString: x => x },
+    { token: ';', type: 'statementSeparator', toString: _ => ';' },
+    { token: '=>', type: 'fatArrow', toString: _ => '=>' },
+    { token: '==', type: 'equality', toString: _ => '==' },
+    { token: '=', type: 'assignment', toString: _ => '=' },
+    { token: '\\d+', type: 'number', action: parseInt, toString: x => x.toString() },
+    { token: '\\+\\+', type: 'concatenation', toString: _ => '++' },
+    { token: '\\+', type: 'sum', toString: _ => '+' },
+    { token: '\\*', type: 'product', toString: _ => '*' },
+    { token: '\\-', type: 'subtraction', toString: _ => '-' },
+    { token: '\\(', type: 'leftBracket', toString: _ => '(' },
+    { token: '\\)', type: 'rightBracket', toString: _ => ')' },
+    { token: '{', type: 'leftCurlyBrace', toString: _ => '{' },
+    { token: '}', type: 'rightCurlyBrace', toString: _ => '}' },
+    { token: '\\[', type: 'leftSquareBracket', toString: _ => '[' },
+    { token: '\\]', type: 'rightSquareBracket', toString: _ => ']' },
+    { token: '\\:', type: 'colon', toString: _ => ':' },
+    { token: '\\?', type: 'ternaryOperator', toString: _ => '?' },
+    { token: '<', type: 'lessThan', toString: _ => '<' },
+    { token: '>', type: 'greaterThan', toString: _ => '>' },
+    { token: '\\.', type: 'memberAccess', toString: _ => '.' },
+];
+const mplTerminal = token => parse_1.Terminal(token);
+const mplOptional = parser => parse_1.Optional(parser);
+const export_ = mplTerminal('export');
+const for_ = mplTerminal('for');
+const plus = mplTerminal('sum');
+const minus = mplTerminal('subtraction');
+const times = mplTerminal('product');
+const leftBracket = mplTerminal('leftBracket');
+const rightBracket = mplTerminal('rightBracket');
+const int = mplTerminal('number');
+const identifier = mplTerminal('identifier');
+const colon = mplTerminal('colon');
+const ternaryOperator = mplTerminal('ternaryOperator');
+const typeIdentifier = mplTerminal('typeIdentifier');
+const assignment = mplTerminal('assignment');
+const _return = mplTerminal('return');
+const statementSeparator = mplTerminal('statementSeparator');
+const fatArrow = mplTerminal('fatArrow');
+const leftCurlyBrace = mplTerminal('leftCurlyBrace');
+const rightCurlyBrace = mplTerminal('rightCurlyBrace');
+const leftSquareBracket = mplTerminal('leftSquareBracket');
+const rightSquareBracket = mplTerminal('rightSquareBracket');
+const comma = mplTerminal('comma');
+const concatenation = mplTerminal('concatenation');
+const equality = mplTerminal('equality');
+const boolean = mplTerminal('booleanLiteral');
+const stringLiteral = mplTerminal('stringLiteral');
+const lessThan = mplTerminal('lessThan');
+const greaterThan = mplTerminal('greaterThan');
+const memberAccess = mplTerminal('memberAccess');
+const rounds = { left: leftBracket, right: rightBracket };
+const curlies = { left: leftCurlyBrace, right: rightCurlyBrace };
+const squares = { left: leftSquareBracket, right: rightSquareBracket };
+const angles = { left: lessThan, right: greaterThan };
+exports.grammar = {
+    program: parse_1.Sequence('program', ['functionBody']),
+    function: parse_1.OneOf([
+        parse_1.Sequence('function', [
+            mplOptional(leftBracket),
+            'argList',
+            mplOptional(rightBracket),
+            fatArrow,
+            'expression',
+        ]),
+        parse_1.Sequence('functionWithBlock', [
+            mplOptional(leftBracket),
+            'argList',
+            mplOptional(rightBracket),
+            fatArrow,
+            parse_1.NestedIn(curlies, 'functionBody'),
+        ]),
+    ]),
+    argList: parse_1.SeparatedList(comma, 'arg'),
+    arg: parse_1.Sequence('arg', [identifier, colon, 'type']),
+    functionBody: parse_1.Sequence('statement', [
+        'statement',
+        statementSeparator,
+        mplOptional('functionBody'),
+    ]),
+    statement: parse_1.OneOf([
+        parse_1.Sequence('declaration', [
+            mplOptional(export_),
+            identifier,
+            colon,
+            mplOptional('type'),
+            assignment,
+            'expression',
+        ]),
+        parse_1.Sequence('typeDeclaration', [typeIdentifier, colon, assignment, 'type']),
+        parse_1.Sequence('reassignment', [identifier, assignment, 'expression']),
+        parse_1.Sequence('returnStatement', [_return, 'expression']),
+        parse_1.Sequence('forLoop', [
+            for_,
+            parse_1.NestedIn(rounds, parse_1.Sequence('forCondition', [identifier, colon, 'expression'])),
+            parse_1.NestedIn(curlies, 'functionBody'),
+        ]),
+    ]),
+    typeList: parse_1.SeparatedList(comma, 'type'),
+    type: parse_1.OneOf([
+        parse_1.Sequence('listType', [typeIdentifier, leftSquareBracket, rightSquareBracket]),
+        parse_1.Sequence('typeWithArgs', [typeIdentifier, parse_1.NestedIn(angles, 'typeList')]),
+        parse_1.Sequence('typeWithoutArgs', [typeIdentifier]),
+        'typeLiteral',
+    ]),
+    typeLiteral: parse_1.NestedIn(curlies, parse_1.Many('typeLiteralComponent')),
+    typeLiteralComponent: parse_1.Sequence('typeLiteralComponent', [
+        identifier,
+        colon,
+        'type',
+        statementSeparator,
+    ]),
+    objectLiteral: parse_1.Sequence('objectLiteral', [
+        typeIdentifier,
+        parse_1.NestedIn(curlies, parse_1.Many('objectLiteralComponent')),
+    ]),
+    objectLiteralComponent: parse_1.Sequence('objectLiteralComponent', [
+        identifier,
+        colon,
+        'expression',
+        comma,
+    ]),
+    expression: 'ternary',
+    ternary: parse_1.OneOf([
+        parse_1.Sequence('ternary', ['addition', ternaryOperator, 'addition', colon, 'addition']),
+        'addition',
+    ]),
+    addition: parse_1.OneOf([parse_1.Sequence('addition', ['subtraction', plus, 'addition']), 'subtraction']),
+    subtraction: parse_1.OneOf([parse_1.Sequence('subtraction', ['product', minus, 'subtraction']), 'product']),
+    product: parse_1.OneOf([parse_1.Sequence('product', ['equality', times, 'product']), 'equality']),
+    equality: parse_1.OneOf([
+        parse_1.Sequence('equality', ['concatenation', equality, 'equality']),
+        'concatenation',
+    ]),
+    concatenation: parse_1.OneOf([
+        parse_1.Sequence('concatenation', ['memberAccess', concatenation, 'concatenation']),
+        'memberStyleCall',
+    ]),
+    memberStyleCall: parse_1.OneOf([
+        parse_1.Sequence('memberStyleCall', [
+            'simpleExpression',
+            memberAccess,
+            identifier,
+            parse_1.NestedIn(rounds, 'paramList'),
+        ]),
+        'memberAccess',
+    ]),
+    memberAccess: parse_1.OneOf([
+        parse_1.Sequence('memberAccess', ['simpleExpression', memberAccess, identifier]),
+        'indexAccess',
+    ]),
+    indexAccess: parse_1.OneOf([
+        parse_1.Sequence('indexAccess', ['simpleExpression', parse_1.NestedIn(squares, 'simpleExpression')]),
+        'listLiteral',
+    ]),
+    listLiteral: parse_1.OneOf([
+        parse_1.Sequence('listLiteral', [parse_1.NestedIn(squares, 'listItems')]),
+        'simpleExpression',
+    ]),
+    listItems: parse_1.SeparatedList(comma, 'expression'),
+    simpleExpression: parse_1.OneOf([
+        parse_1.Sequence('bracketedExpression', [parse_1.NestedIn(rounds, 'expression')]),
+        parse_1.Sequence('callExpression', [
+            identifier,
+            // TODO: Make NestedIn(..., Optional(...)) work
+            leftBracket,
+            mplOptional('paramList'),
+            rightBracket,
+        ]),
+        int,
+        boolean,
+        stringLiteral,
+        'function',
+        'objectLiteral',
+        identifier,
+    ]),
+    paramList: parse_1.SeparatedList(comma, 'expression'),
+};
+
+
+/***/ }),
+
+/***/ "./mpl.ts":
+/*!****************!*\
+  !*** ./mpl.ts ***!
+  \****************/
+/*! flagged exports */
+/*! export __esModule [provided] [maybe used in mpl (runtime-defined)] [usage prevents renaming] */
+/*! other exports [not provided] [maybe used in mpl (runtime-defined)] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const frontend_1 = __webpack_require__(/*! ./frontend */ "./frontend.ts");
+const fs_extra_1 = __webpack_require__(/*! fs-extra */ "./node_modules/fs-extra/lib/index.js");
+const js_1 = __webpack_require__(/*! ./backends/js */ "./backends/js.ts");
+if (process.argv.length != 4) {
+    console.log('Usage: mpl <input> <output>');
+    process.exit(-1);
+}
+const inputPath = process.argv[2];
+const outputPath = process.argv[3];
+(async () => {
+    const input = await fs_extra_1.readFile(inputPath, 'utf8');
+    const frontendOutput = frontend_1.compile(input);
+    // TODO: better way to report these specific errors. Probably muck with the type of ExecutionResult.
+    if ('parseErrors' in frontendOutput ||
+        'typeErrors' in frontendOutput ||
+        'kind' in frontendOutput ||
+        'internalError' in frontendOutput) {
+        console.log(frontendOutput);
+        process.exit(-1);
+    }
+    const backendOutput = await js_1.default.compile(frontendOutput);
+    if ('error' in backendOutput) {
+        console.log(backendOutput.error);
+        process.exit(-1);
+    }
+    await fs_extra_1.writeFile(outputPath, backendOutput.target);
+})();
+
+
+/***/ }),
+
+/***/ "./parser-lib/lex.ts":
+/*!***************************!*\
+  !*** ./parser-lib/lex.ts ***!
+  \***************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export lex [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.lex = void 0;
+const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
+exports.lex = (tokenSpecs, input) => {
+    // Source location tracking
+    let currentSourceLine = 1;
+    let currentSourceColumn = 1;
+    const updateSourceLocation = (matchString) => {
+        for (const char of matchString) {
+            if (char == '\n') {
+                currentSourceLine++;
+                currentSourceColumn = 1;
+            }
+            else {
+                currentSourceColumn++;
+            }
+        }
+    };
+    // slurp initial whitespace
+    const initialWhitespaceMatch = input.match(/^[ \t\n]*/);
+    if (!initialWhitespaceMatch)
+        throw debug_1.default('Initial whitespace didnt match in lex');
+    const initialWhitespace = initialWhitespaceMatch[0];
+    updateSourceLocation(initialWhitespace);
+    input = input.slice(initialWhitespace.length);
+    // consume input reading tokens
+    const tokens = [];
+    while (input.length > 0) {
+        // This results in runnng match twice. Once to find if there is a match, and once to extract it. TODO: optimize!
+        const matchingSpec = tokenSpecs.find(spec => !!input.match(RegExp(`^(${spec.token})[ \\t\\n]*`)));
+        if (!matchingSpec) {
+            return { kind: 'lexError', error: `Invalid token: ${input}` };
+        }
+        else {
+            // TOOO don't allow a single "word" to be parsed as 2 token.
+            const match = input.match(RegExp(`^(${matchingSpec.token})[ \\t\\n]*`));
+            if (!match)
+                throw debug_1.default('Should have failed earlier.');
+            input = input.slice(match[0].length);
+            const action = matchingSpec.action || (() => null);
+            const value = action(match[1]);
+            tokens.push({
+                type: matchingSpec.type,
+                value,
+                string: matchingSpec.toString(value),
+                sourceLocation: { line: currentSourceLine, column: currentSourceColumn },
+            });
+            updateSourceLocation(match[0]);
+        }
+    }
+    return tokens;
+};
+
+
+/***/ }),
+
+/***/ "./parser-lib/parse.ts":
+/*!*****************************!*\
+  !*** ./parser-lib/parse.ts ***!
+  \*****************************/
+/*! flagged exports */
+/*! export Many [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export NestedIn [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export OneOf [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export Optional [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export SeparatedList [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export Sequence [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export Terminal [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export isListNode [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export isSeparatedListNode [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export parse [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export parseResultIsError [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export parseString [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export stripSourceLocation [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export toDotFile [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 41:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 116:12-38 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 159:21-47 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 177:21-47 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 196:16-42 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 238:16-42 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 261:20-46 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 283:24-50 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 295:24-50 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 310:24-50 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 326:25-51 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 356:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 360:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 364:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 375:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 379:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 383:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 390:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 394:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 437:8-34 */
+/*! CommonJS bailout: exports.isSeparatedListNode(...) prevents optimization as exports is passed as call context at 496:12-39 */
+/*! CommonJS bailout: exports.isListNode(...) prevents optimization as exports is passed as call context at 502:17-35 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 535:8-34 */
+/*! CommonJS bailout: exports.parse(...) prevents optimization as exports is passed as call context at 560:19-32 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 561:8-34 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseString = exports.parse = exports.toDotFile = exports.Terminal = exports.Many = exports.NestedIn = exports.SeparatedList = exports.Optional = exports.OneOf = exports.Sequence = exports.stripSourceLocation = exports.parseResultIsError = exports.isListNode = exports.isSeparatedListNode = void 0;
+const last_1 = __webpack_require__(/*! ../util/list/last */ "./util/list/last.ts");
+const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
+const graphlib_1 = __webpack_require__(/*! graphlib */ "./node_modules/graphlib/index.js");
+const lex_1 = __webpack_require__(/*! ./lex */ "./parser-lib/lex.ts");
+exports.isSeparatedListNode = (n) => 'items' in n && 'separators' in n;
+exports.isListNode = (n) => {
+    if (!n)
+        throw debug_1.default('bad node');
+    return 'items' in n && !('separators' in n);
+};
+exports.parseResultIsError = (result) => result != 'missingOptional' && 'kind' in result && result.kind == 'parseError';
+const parseResultWithIndexIsLeaf = (r) => 'value' in r;
+// TODO also use a real sum type
+const parseResultWithIndexIsSeparatedList = (r) => 'items' in r && 'separators' in r;
+const parseResultWithIndexIsList = (r) => 'items' in r && !('separators' in r);
+const stripNodeIndexes = (r) => {
+    if (parseResultWithIndexIsLeaf(r)) {
+        return { value: r.value, type: r.type, sourceLocation: r.sourceLocation };
+    }
+    if (parseResultWithIndexIsSeparatedList(r)) {
+        return {
+            items: r.items.map(stripNodeIndexes),
+            separators: r.separators.map(stripNodeIndexes),
+        };
+    }
+    if (parseResultWithIndexIsList(r)) {
+        return { items: r.items.map(stripNodeIndexes) };
+    }
+    if (!r.children)
+        debug_1.default('expected children');
+    return {
+        type: r.type,
+        children: r.children.map(stripNodeIndexes),
+        sourceLocation: r.sourceLocation,
+    };
+};
+const stripResultIndexes = (r) => {
+    if (exports.parseResultIsError(r)) {
+        return r;
+    }
+    return stripNodeIndexes(r);
+};
+exports.stripSourceLocation = ast => {
+    if ('children' in ast) {
+        return { type: ast.type, children: ast.children.map(exports.stripSourceLocation) };
+    }
+    else {
+        return { type: ast.type, value: ast.value };
+    }
+};
+exports.Sequence = (name, parsers) => ({ kind: 'sequence', name, parsers });
+exports.OneOf = (parsers) => ({ kind: 'oneOf', parsers });
+exports.Optional = (parser) => ({
+    kind: 'optional',
+    parser,
+});
+exports.SeparatedList = (separator, item) => ({ kind: 'separatedList', separator, item });
+exports.NestedIn = (nesting, parser) => ({ kind: 'nested', in: nesting, parser });
+exports.Many = (item) => ({
+    kind: 'many',
+    item,
+});
+const getSourceLocation = (tokens, index) => {
+    if (tokens.length == 0) {
+        return { line: 0, column: 0 };
+    }
+    else if (index >= tokens.length) {
+        const lastToken = last_1.default(tokens);
+        return {
+            line: lastToken.sourceLocation.line,
+            column: lastToken.sourceLocation.column + lastToken.string.length,
+        };
+    }
+    else if (index < 0) {
+        return { line: 0, column: 0 };
+    }
+    else {
+        return tokens[index].sourceLocation;
+    }
+};
+const isTerminalParser = (p) => typeof p == 'object' && 'kind' in p && p.kind === 'terminal';
+const parseSequence = (grammar, parser, tokens, index) => {
+    const originalIndex = index;
+    const results = [];
+    for (const p of parser.parsers) {
+        let result;
+        if (isTerminalParser(p)) {
+            result = parseTerminal(p, tokens, index);
+        }
+        else if (typeof p === 'string') {
+            result = parseRule(grammar, p, tokens, index);
+        }
+        else if (p.kind == 'optional') {
+            // TODO: Possibly they wanted the optional but had syntax error. If this is the case, we should get an error and do something useful with it (display it)
+            // TODO: Handle case of parsing "x" with "x?x" where successfully parsing optional may cause remaining parse to fail and we need to try again without the optional.
+            const maybeResult = parseOptional(grammar, p, tokens, index);
+            if (!maybeResult) {
+                continue; // Skip to the next non-optional
+            }
+            else {
+                result = maybeResult;
+            }
+        }
+        else if (p.kind == 'many') {
+            result = parseMany(grammar, p, tokens, index);
+        }
+        else if (p.kind == 'nested') {
+            result = parseNested(grammar, p, tokens, index);
+        }
+        else {
+            throw debug_1.default(`Invalid parser type: ${JSON.stringify(p)}`);
+        }
+        if (exports.parseResultIsError(result)) {
+            result.errors.forEach(e => {
+                e.whileParsing.unshift(parser.name);
+            });
+            return result;
+        }
+        results.push(result);
+        index = result.newIndex;
+    }
+    return {
+        success: true,
+        newIndex: index,
+        type: parser.name,
+        children: results,
+        sourceLocation: getSourceLocation(tokens, originalIndex),
+    };
+};
+const parseAlternative = (grammar, alternatives, tokens, index) => {
+    const progressCache = alternatives.parsers.map(_ => ({ kind: 'progress', parseResults: [], subParserIndex: 0 }));
+    // TODO: fix this linter error
+    // tslint:disable-next-line
+    for (let alternativeIndex = 0; alternativeIndex < alternatives.parsers.length; alternativeIndex++) {
+        let alternativeNeedsSubtracting = false;
+        let currentParser = alternatives.parsers[alternativeIndex];
+        let currentResult;
+        let currentIndex;
+        const currentProgress = progressCache[alternativeIndex];
+        // Check if we have cached an error for this parser. If we have, continue to the next parser.
+        if (currentProgress.kind == 'failed') {
+            continue;
+        }
+        if (!currentParser)
+            throw debug_1.default('no currentParser');
+        if (typeof currentParser === 'string') {
+            // Reference to another rule.
+            if (currentProgress.subParserIndex == 1) {
+                // We already finished this one earlier. It must be a prefix of an earlier rule.
+                return currentProgress.parseResults[0];
+            }
+            else {
+                // We haven't tried this parser yet. Try it now.
+                currentResult = parseAnything(grammar, currentParser, tokens, index);
+                currentIndex = 0;
+                if (!exports.parseResultIsError(currentResult)) {
+                    return currentResult;
+                }
+                else {
+                    progressCache[alternativeIndex] = { kind: 'failed', error: currentResult };
+                }
+            }
+        }
+        else if (isTerminalParser(currentParser)) {
+            // Terminal.
+            if (currentProgress.subParserIndex == 1) {
+                // We already finished this one earlier. It must be a prefix of an earlier rule.
+                return currentProgress.parseResults[0];
+            }
+            else {
+                // We haven't tried this parser yet. Try it now.
+                currentResult = parseTerminal(currentParser, tokens, index);
+                currentIndex = 0;
+                if (!exports.parseResultIsError(currentResult)) {
+                    return currentResult;
+                }
+                else {
+                    progressCache[alternativeIndex] = { kind: 'failed', error: currentResult };
+                }
+            }
+        }
+        else if (currentParser.kind == 'nested') {
+            throw debug_1.default('should figure out a way to do nested inside alternative - probably need a more generic framework');
+        }
+        else if (currentParser.kind == 'sequence') {
+            // Sequence. This is the complex one.
+            // Next get the parser for the next item in the sequence based on how much progress we have made due
+            // to being a prefix of previous rules.
+            const sequenceParser = currentParser;
+            currentParser = currentParser.parsers[currentProgress.subParserIndex];
+            const currentProgressLastItem = last_1.default(currentProgress.parseResults);
+            if (currentProgressLastItem !== null &&
+                exports.parseResultIsError(currentProgressLastItem)) {
+                throw debug_1.default('todo');
+            }
+            const tokenIndex = currentProgressLastItem !== null ? currentProgressLastItem.newIndex : index;
+            // Check if this parser has been completed due to being a successful prefix of a previous alternative
+            if (currentProgressLastItem !== null &&
+                currentProgress.subParserIndex === sequenceParser.parsers.length) {
+                return {
+                    newIndex: currentProgressLastItem.newIndex,
+                    success: true,
+                    children: currentProgress.parseResults,
+                    type: sequenceParser.name,
+                    sourceLocation: getSourceLocation(tokens, index),
+                };
+            }
+            // We still need to do work on this parser
+            if (isTerminalParser(currentParser)) {
+                currentResult = parseTerminal(currentParser, tokens, tokenIndex);
+                currentIndex = currentProgress.subParserIndex;
+            }
+            else if (typeof currentParser == 'string') {
+                currentResult = parseRule(grammar, currentParser, tokens, tokenIndex);
+                currentIndex = currentProgress.subParserIndex;
+            }
+            else if (currentParser.kind == 'optional') {
+                const optionalResult = parseOptional(grammar, currentParser, tokens, tokenIndex);
+                if (optionalResult === undefined) {
+                    currentResult = 'missingOptional';
+                }
+                else {
+                    currentResult = optionalResult;
+                }
+                currentIndex = currentProgress.subParserIndex;
+            }
+            else if (currentParser.kind == 'nested') {
+                currentResult = parseNested(grammar, currentParser, tokens, tokenIndex);
+                currentIndex = currentProgress.subParserIndex;
+            }
+            else {
+                throw debug_1.default(`unhandled kind of parser: ${currentParser.kind}`);
+            }
+            // Push the results into the cache for the current parser
+            if (exports.parseResultIsError(currentResult)) {
+                progressCache[alternativeIndex] = { kind: 'failed', error: currentResult };
+            }
+            else {
+                if (progressCache[alternativeIndex].kind != 'failed') {
+                    if (currentResult !== 'missingOptional') {
+                        progressCache[alternativeIndex].parseResults.push(currentResult);
+                    }
+                    progressCache[alternativeIndex].subParserIndex++;
+                }
+                // When we return to the top of this loop, we want to continue parsing the current sequence.
+                // In order to make this happen, flag that we need to subtract one from alternativesIndex.
+                // TODO: Be less janky. Probably turning the for into a while that says "while we have alternatives
+                // that haven't reached an error yet".
+                alternativeNeedsSubtracting = true;
+            }
+            // Check if we are done
+            const refreshedCurrentProgress = progressCache[alternativeIndex];
+            if (refreshedCurrentProgress.kind != 'failed' &&
+                refreshedCurrentProgress.subParserIndex == sequenceParser.parsers.length) {
+                const cachedSuccess = last_1.default(refreshedCurrentProgress.parseResults);
+                if (cachedSuccess === null)
+                    throw debug_1.default('cachedSuccess == null');
+                if (exports.parseResultIsError(cachedSuccess)) {
+                    throw debug_1.default('todo');
+                }
+                return {
+                    newIndex: cachedSuccess.newIndex,
+                    success: true,
+                    children: refreshedCurrentProgress.parseResults,
+                    type: sequenceParser.name,
+                    sourceLocation: getSourceLocation(tokens, index),
+                };
+            }
+        }
+        else {
+            throw debug_1.default('a parser type was not handled');
+        }
+        // Now we have a parse result and the index it was found at. Push it into the progress cache
+        // for each alternative that has parsed up to that index and expects the next item to be of that type.
+        for (let progressCacheIndex = alternativeIndex; progressCacheIndex < alternatives.parsers.length; progressCacheIndex++) {
+            const parser = alternatives.parsers[progressCacheIndex];
+            const progressRef = progressCache[progressCacheIndex];
+            if (progressRef.kind != 'failed' && progressRef.subParserIndex == currentIndex) {
+                if (typeof parser === 'string' && currentParser == parser) {
+                    if (exports.parseResultIsError(currentResult)) {
+                        progressCache[progressCacheIndex] = {
+                            kind: 'failed',
+                            error: currentResult,
+                        };
+                    }
+                    else if (currentResult != 'missingOptional') {
+                        progressRef.parseResults.push(currentResult);
+                        progressRef.subParserIndex++;
+                    }
+                }
+                else if (typeof parser === 'function' && currentParser == parser) {
+                    if (exports.parseResultIsError(currentResult)) {
+                        progressCache[progressCacheIndex] = {
+                            kind: 'failed',
+                            error: currentResult,
+                        };
+                    }
+                    else if (currentResult != 'missingOptional') {
+                        progressRef.parseResults.push(currentResult);
+                        progressRef.subParserIndex++;
+                    }
+                }
+                else if (typeof parser != 'string' &&
+                    typeof parser != 'function' &&
+                    parser.kind == 'sequence' &&
+                    currentParser === parser.parsers[currentIndex]) {
+                    if (exports.parseResultIsError(currentResult)) {
+                        progressCache[progressCacheIndex] = {
+                            kind: 'failed',
+                            error: currentResult,
+                        };
+                    }
+                    else if (currentResult != 'missingOptional') {
+                        progressRef.parseResults.push(currentResult);
+                        progressRef.subParserIndex++;
+                    }
+                }
+                else if (typeof parser != 'string' &&
+                    typeof parser != 'function' &&
+                    parser.kind == 'optional' &&
+                    currentParser == parser.parser) {
+                    if (currentResult != 'missingOptional' &&
+                        !exports.parseResultIsError(currentResult)) {
+                        progressCache[progressCacheIndex].parseResults.push(currentResult);
+                    }
+                    progressCache[progressCacheIndex].subParserIndex++;
+                }
+            }
+        }
+        if (alternativeNeedsSubtracting) {
+            alternativeIndex--;
+        }
+    }
+    const errors = { kind: 'parseError', errors: [] };
+    progressCache.forEach(progress => {
+        if (progress.kind == 'failed') {
+            errors.errors.push(...progress.error.errors);
+        }
+        else {
+            throw debug_1.default('everything should have failed by now');
+        }
+    });
+    errors.errors.sort((l, r) => {
+        if (l.sourceLocation.line != r.sourceLocation.line) {
+            return r.sourceLocation.line - l.sourceLocation.line;
+        }
+        return r.sourceLocation.column - l.sourceLocation.column;
+    });
+    return errors;
+};
+const parseSeparatedList = (grammar, sep, tokens, index) => {
+    const item = parseAnything(grammar, sep.item, tokens, index);
+    if (exports.parseResultIsError(item)) {
+        return { items: [], separators: [], newIndex: index };
+    }
+    const separator = parseAnything(grammar, sep.separator, tokens, item.newIndex);
+    if (exports.parseResultIsError(separator)) {
+        return { items: [item], separators: [], newIndex: item.newIndex };
+    }
+    const next = parseSeparatedList(grammar, sep, tokens, separator.newIndex);
+    if (exports.parseResultIsError(next)) {
+        return next;
+    }
+    return {
+        items: [item, ...next.items],
+        separators: [separator, ...next.separators],
+        newIndex: next.newIndex,
+    };
+};
+const parseNested = (grammar, nested, tokens, index) => {
+    const leftNest = parseAnything(grammar, nested.in.left, tokens, index);
+    if (exports.parseResultIsError(leftNest)) {
+        return leftNest;
+    }
+    const result = parseAnything(grammar, nested.parser, tokens, leftNest.newIndex);
+    if (exports.parseResultIsError(result)) {
+        return result;
+    }
+    const rightNest = parseAnything(grammar, nested.in.right, tokens, result.newIndex);
+    if (exports.parseResultIsError(rightNest)) {
+        return rightNest;
+    }
+    return Object.assign(Object.assign({}, result), { newIndex: rightNest.newIndex });
+};
+const parseMany = (grammar, many, tokens, index) => {
+    const item = parseAnything(grammar, many.item, tokens, index);
+    if (exports.parseResultIsError(item)) {
+        return { items: [], newIndex: index };
+    }
+    const next = parseMany(grammar, many, tokens, item.newIndex);
+    if (exports.parseResultIsError(next)) {
+        return { items: [item], newIndex: item.newIndex };
+    }
+    return { items: [item, ...next.items], newIndex: next.newIndex };
+};
+const parseAnything = (grammar, parser, tokens, index) => {
+    try {
+        if (typeof parser === 'string') {
+            return parseRule(grammar, parser, tokens, index);
+        }
+        else if (isTerminalParser(parser)) {
+            return parseTerminal(parser, tokens, index);
+        }
+        else if (parser.kind == 'sequence') {
+            return parseSequence(grammar, parser, tokens, index);
+        }
+        else if (parser.kind == 'oneOf') {
+            return parseAlternative(grammar, parser, tokens, index);
+        }
+        else if (parser.kind == 'separatedList') {
+            return parseSeparatedList(grammar, parser, tokens, index);
+        }
+        else if (parser.kind == 'many') {
+            return parseMany(grammar, parser, tokens, index);
+        }
+        else if (parser.kind == 'nested') {
+            return parseNested(grammar, parser, tokens, index);
+        }
+        else {
+            throw debug_1.default('bad type in parse');
+        }
+    }
+    catch (e) {
+        if (e instanceof RangeError) {
+            debugger;
+            parseAnything(grammar, parser, tokens, index);
+            debug_1.default('range error');
+        }
+        throw e;
+    }
+};
+const parseOptional = (grammar, optional, tokens, index) => {
+    const result = parseAnything(grammar, optional.parser, tokens, index);
+    if (exports.parseResultIsError(result)) {
+        return undefined;
+    }
+    return result;
+};
+const parseTerminal = (terminal, tokens, index) => {
+    if (index >= tokens.length) {
+        return {
+            kind: 'parseError',
+            errors: [
+                {
+                    found: 'endOfFile',
+                    foundTokenText: 'endOfFile',
+                    expected: terminal.token,
+                    whileParsing: [],
+                    sourceLocation: index > tokens.length
+                        ? getSourceLocation(tokens, index)
+                        : getSourceLocation(tokens, tokens.length - 1),
+                },
+            ],
+        };
+    }
+    if (tokens[index].type == terminal.token) {
+        return {
+            success: true,
+            newIndex: index + 1,
+            value: tokens[index].value,
+            type: tokens[index].type,
+            sourceLocation: getSourceLocation(tokens, index),
+        };
+    }
+    return {
+        kind: 'parseError',
+        errors: [
+            {
+                expected: terminal.token,
+                found: tokens[index].type,
+                foundTokenText: tokens[index].string,
+                whileParsing: [],
+                // Use index of prevoius Ltoken so that the parse error shows up right
+                // after the place where the user should have done something (e.g. they
+                // place where they forgot the semicolon
+                sourceLocation: getSourceLocation(tokens, index - 1),
+            },
+        ],
+    };
+};
+exports.Terminal = (Ltoken) => ({
+    kind: 'terminal',
+    token: Ltoken,
+});
+exports.toDotFile = (ast) => {
+    const digraph = new graphlib_1.Graph();
+    let id = 0;
+    const traverse = (node) => {
+        const myId = id;
+        id++;
+        let children = [];
+        let nodeString = '';
+        if (exports.isSeparatedListNode(node)) {
+            // TODO: make this prettier as a node within the tree than just "seplist"
+            nodeString = 'seplist';
+            // TODO: interleave the items and separators for better display
+            children = [...node.items, ...node.separators];
+        }
+        else if (exports.isListNode(node)) {
+            // TODO: make this prettier as a node within the tree than just "list"
+            nodeString = 'list';
+            children = node.items;
+        }
+        else if ('children' in node) {
+            nodeString = node.type;
+            children = node.children;
+        }
+        else {
+            nodeString = `${node.type}\n${node.value ? node.value : ''}`;
+        }
+        // Create a new graphviz node for this ast node
+        digraph.setNode(myId, { label: nodeString });
+        // Recursively create nodes for this node's children
+        const childIds = children.map(traverse);
+        // Add an edge from this node to each child
+        children.forEach((child, index) => {
+            digraph.setEdge(myId, childIds[index]);
+        });
+        return myId;
+    };
+    traverse(ast);
+    return digraph;
+};
+const parseRule = (grammar, rule, tokens, index) => {
+    const childrenParser = grammar[rule];
+    if (!childrenParser)
+        throw debug_1.default(`invalid rule name: ${rule}`);
+    return parseAnything(grammar, childrenParser, tokens, index);
+};
+exports.parse = (grammar, firstRule, tokens) => {
+    const result = parseRule(grammar, firstRule, tokens, 0);
+    if (exports.parseResultIsError(result))
+        return result;
+    if (result.newIndex != tokens.length) {
+        const firstExtraToken = tokens[result.newIndex];
+        if (!firstExtraToken)
+            debug_1.default('there are extra tokens but also not');
+        return {
+            kind: 'parseError',
+            errors: [
+                {
+                    found: firstExtraToken.type,
+                    foundTokenText: firstExtraToken.string,
+                    expected: 'endOfFile',
+                    whileParsing: [firstRule],
+                    sourceLocation: firstExtraToken.sourceLocation,
+                },
+            ],
+        };
+    }
+    return stripResultIndexes(result);
+};
+exports.parseString = (tokens, grammar, rule, input) => {
+    const lexed = lex_1.lex(tokens, input);
+    if ('kind' in lexed)
+        return { errors: lexed };
+    const parsed = exports.parse(grammar, rule, lexed);
+    if (exports.parseResultIsError(parsed)) {
+        return { errors: parsed.errors };
+    }
+    return parsed;
+};
+
+
+/***/ }),
+
+/***/ "./types.ts":
+/*!******************!*\
+  !*** ./types.ts ***!
+  \******************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export builtinFunctions [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export builtinTypes [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export equal [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export resolve [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export resolveIfNecessary [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export resolveOrError [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export toString [provided] [no usage info] [provision prevents renaming (no use info)] */
+/*! export typeSize [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/*! CommonJS bailout: exports.toString(...) prevents optimization as exports is passed as call context at 19:67-83 */
+/*! CommonJS bailout: exports.toString(...) prevents optimization as exports is passed as call context at 22:22-38 */
+/*! CommonJS bailout: exports.resolve(...) prevents optimization as exports is passed as call context at 38:89-104 */
+/*! CommonJS bailout: exports.resolveIfNecessary(...) prevents optimization as exports is passed as call context at 40:21-47 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 72:17-30 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 80:137-150 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 82:137-150 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 86:15-28 */
+/*! CommonJS bailout: exports.typeSize(...) prevents optimization as exports is passed as call context at 140:60-76 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.typeSize = exports.builtinFunctions = exports.builtinTypes = exports.equal = exports.resolveOrError = exports.resolveIfNecessary = exports.resolve = exports.toString = void 0;
+const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
+const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
+const sum_1 = __webpack_require__(/*! ./util/list/sum */ "./util/list/sum.ts");
+const deepEqual = __webpack_require__(/*! deep-equal */ "./node_modules/deep-equal/index.js");
+exports.toString = (type) => {
+    // TODO: Include the original in here somehow?
+    switch (type.type.kind) {
+        case 'String':
+        case 'Integer':
+        case 'Boolean':
+            return type.type.kind;
+        case 'Function':
+            return type.type.kind + '<' + join_1.default(type.type.arguments.map(exports.toString), ', ') + '>';
+        case 'Product':
+            return ('{' +
+                type.type.members.map(member => `${member.name}: ${exports.toString(member.type)}`) +
+                '}');
+        case 'List':
+            return `${exports.toString(type.type.of)}[]`;
+        default:
+            throw debug_1.default(`Unhandled kind in type toString: ${type.kind}`);
+    }
+};
+exports.resolve = (t, availableTypes) => {
+    if (!availableTypes)
+        debug_1.default('no declarations');
+    const type = availableTypes.find(d => d.name == t.namedType);
+    if (!type)
+        return undefined;
+    return {
+        type: type.type.type,
+        original: t,
+    };
+};
+exports.resolveIfNecessary = (unresolved, availableTypes) => 'namedType' in unresolved ? exports.resolve(unresolved, availableTypes) : unresolved;
+exports.resolveOrError = (unresolved, availableTypes, sourceLocation) => {
+    const resolved = exports.resolveIfNecessary(unresolved, availableTypes);
+    if (!resolved) {
+        return {
+            errors: [
+                {
+                    kind: 'unknownType',
+                    name: unresolved.namedType,
+                    sourceLocation,
+                },
+            ],
+            newVariables: [],
+        };
+    }
+    return resolved;
+};
+exports.equal = (a, b) => {
+    // Should we allow assigning one product to another if they have different names but identical members? That would be "structural typing" which I'm not sure I want.
+    if (!deepEqual(a.original, b.original))
+        return false;
+    if (a.type.kind == 'Function' && b.type.kind == 'Function') {
+        if (a.type.arguments.length != b.type.arguments.length) {
+            return false;
+        }
+        for (let i = 0; i < a.type.arguments.length; i++) {
+            const tA = a.type.arguments[i];
+            if ('namedType' in tA) {
+                throw debug_1.default('need to handle refs here');
+            }
+            const tB = b.type.arguments[i];
+            if ('namedType' in tB) {
+                throw debug_1.default('need to handle refs here');
+            }
+            if (!exports.equal(tA, tB)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    if (a.type.kind == 'Product' && b.type.kind == 'Product') {
+        const bProduct = b.type;
+        const allInLeftPresentInRight = a.type.members.every(memberA => bProduct.members.some(memberB => memberA.name == memberB.name && exports.equal(memberA.type, memberB.type)));
+        const aProduct = a.type;
+        const allInRightPresentInLeft = b.type.members.every(memberB => aProduct.members.some(memberA => memberA.name == memberB.name && exports.equal(memberA.type, memberB.type)));
+        return allInLeftPresentInRight && allInRightPresentInLeft;
+    }
+    if (a.type.kind == 'List' && b.type.kind == 'List') {
+        return exports.equal(a.type.of, b.type.of);
+    }
+    return a.type.kind == b.type.kind;
+};
+exports.builtinTypes = {
+    String: { type: { kind: 'String' } },
+    Integer: { type: { kind: 'Integer' } },
+    Boolean: { type: { kind: 'Boolean' } },
+};
+// TODO: Require these to be imported in user code
+exports.builtinFunctions = [
+    {
+        name: 'length',
+        type: {
+            type: {
+                kind: 'Function',
+                arguments: [exports.builtinTypes.String],
+                permissions: [],
+                returnType: exports.builtinTypes.Integer,
+            },
+        },
+        exported: false,
+    },
+    {
+        name: 'print',
+        type: {
+            type: {
+                kind: 'Function',
+                arguments: [exports.builtinTypes.String],
+                permissions: [],
+                returnType: exports.builtinTypes.Integer,
+            },
+        },
+        exported: false,
+    },
+    {
+        name: 'readInt',
+        type: {
+            type: {
+                kind: 'Function',
+                arguments: [],
+                permissions: ['stdout'],
+                returnType: exports.builtinTypes.Integer,
+            },
+        },
+        exported: false,
+    },
+];
+exports.typeSize = (targetInfo, type, typeDeclarations) => {
+    switch (type.type.kind) {
+        case 'List':
+            // Pointer + size
+            return targetInfo.bytesInWord * 2;
+        case 'Product':
+            return sum_1.default(type.type.members.map(m => exports.typeSize(targetInfo, m.type, typeDeclarations)));
+        case 'Boolean':
+        case 'Function':
+        case 'String':
+        case 'Integer':
+            return targetInfo.bytesInWord;
+        default:
+            throw debug_1.default(`${type.kind} unhandled in typeSize`);
+    }
+};
+
+
+/***/ }),
+
+/***/ "./util/debug.ts":
+/*!***********************!*\
+  !*** ./util/debug.ts ***!
+  \***********************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.default = (why) => {
+    debugger;
+    throw why;
+};
+
+
+/***/ }),
+
+/***/ "./util/execAndGetResult.ts":
+/*!**********************************!*\
+  !*** ./util/execAndGetResult.ts ***!
+  \**********************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const child_process_promise_1 = __webpack_require__(/*! child-process-promise */ "./node_modules/child-process-promise/index.js");
+exports.default = async (command) => {
+    try {
+        const result = await child_process_promise_1.exec(command);
+        return { exitCode: 0, stdout: result.stdout, stderr: result.stderr };
+    }
+    catch (e) {
+        if (typeof e.code === 'number') {
+            return { exitCode: e.code, stdout: e.stdout, stderr: e.stderr };
+        }
+        else {
+            return { error: `Couldn't get exit code: ${e}` };
+        }
+    }
+};
+
+
+/***/ }),
+
+/***/ "./util/idMaker.ts":
+/*!*************************!*\
+  !*** ./util/idMaker.ts ***!
+  \*************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.default = () => {
+    let id = 0;
+    return () => {
+        id++;
+        return id;
+    };
+};
+
+
+/***/ }),
+
+/***/ "./util/join.ts":
+/*!**********************!*\
+  !*** ./util/join.ts ***!
+  \**********************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.default = (strings, joiner) => strings.join(joiner);
+
+
+/***/ }),
+
+/***/ "./util/list/flatten.ts":
+/*!******************************!*\
+  !*** ./util/list/flatten.ts ***!
+  \******************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.default = (array) => array.reduce((a, b) => a.concat(b), []);
+
+
+/***/ }),
+
+/***/ "./util/list/last.ts":
+/*!***************************!*\
+  !*** ./util/list/last.ts ***!
+  \***************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.default = (array) => {
+    if (array.length == 0) {
+        return null;
+    }
+    else {
+        return array[array.length - 1];
+    }
+};
+
+
+/***/ }),
+
+/***/ "./util/list/sum.ts":
+/*!**************************!*\
+  !*** ./util/list/sum.ts ***!
+  \**************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.default = (array) => array.reduce((a, b) => a + b, 0);
+
+
+/***/ }),
+
+/***/ "./util/list/uniqueBy.ts":
+/*!*******************************!*\
+  !*** ./util/list/uniqueBy.ts ***!
+  \*******************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const uniqueCmp_1 = __webpack_require__(/*! ./uniqueCmp */ "./util/list/uniqueCmp.ts");
+exports.default = (p, array) => uniqueCmp_1.default((x, y) => p(x) === p(y), array);
+
+
+/***/ }),
+
+/***/ "./util/list/uniqueCmp.ts":
+/*!********************************!*\
+  !*** ./util/list/uniqueCmp.ts ***!
+  \********************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.default = (p, array) => {
+    const result = [];
+    for (const item of array) {
+        if (result.every(existing => !p(item, existing))) {
+            result.push(item);
+        }
+    }
+    return result;
+};
+
+
+/***/ }),
+
+/***/ "./util/never.ts":
+/*!***********************!*\
+  !*** ./util/never.ts ***!
+  \***********************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const debug_1 = __webpack_require__(/*! ./debug */ "./util/debug.ts");
+exports.default = (n, f) => {
+    throw debug_1.default(`${JSON.stringify(n)} unhandled in ${f}`);
+};
+
+
+/***/ }),
+
+/***/ "./util/writeTempFile.ts":
+/*!*******************************!*\
+  !*** ./util/writeTempFile.ts ***!
+  \*******************************/
+/*! flagged exports */
+/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__, __webpack_require__ */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const tmp_promise_1 = __webpack_require__(/*! tmp-promise */ "./node_modules/tmp-promise/index.js");
+const fs_extra_1 = __webpack_require__(/*! fs-extra */ "./node_modules/fs-extra/lib/index.js");
+// Write the provided contents to a temporary file with the provided extension. Return the created file object.
+exports.default = async (contents, name, extension) => {
+    const file = await tmp_promise_1.file({ template: `${name}-XXXXXX.${extension}`, dir: '/tmp' });
+    await fs_extra_1.writeFile(file.fd, contents);
+    return file;
+};
+
+
+/***/ }),
+
 /***/ "./node_modules/universalify/index.js":
 /*!********************************************!*\
   !*** ./node_modules/universalify/index.js ***!
   \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! default exports */
+/*! export fromCallback [provided] [no usage info] [missing usage info prevents renaming] */
+/*! export fromPromise [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_exports__ */
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
@@ -24269,45 +25932,14 @@ exports.fromPromise = function (fn) {
 
 /***/ }),
 
-/***/ "./node_modules/webpack/buildin/module.js":
-/*!***********************************!*\
-  !*** (webpack)/buildin/module.js ***!
-  \***********************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = function(module) {
-	if (!module.webpackPolyfill) {
-		module.deprecate = function() {};
-		module.paths = [];
-		// module.parent = undefined by default
-		if (!module.children) module.children = [];
-		Object.defineProperty(module, "loaded", {
-			enumerable: true,
-			get: function() {
-				return module.l;
-			}
-		});
-		Object.defineProperty(module, "id", {
-			enumerable: true,
-			get: function() {
-				return module.i;
-			}
-		});
-		module.webpackPolyfill = 1;
-	}
-	return module;
-};
-
-
-/***/ }),
-
 /***/ "./node_modules/which-boxed-primitive/index.js":
 /*!*****************************************************!*\
   !*** ./node_modules/which-boxed-primitive/index.js ***!
   \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 10:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -24348,8 +25980,10 @@ module.exports = function whichBoxedPrimitive(value) {
 /*!************************************************!*\
   !*** ./node_modules/which-collection/index.js ***!
   \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 8:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
@@ -24384,8 +26018,10 @@ module.exports = function whichCollection(value) {
 /*!*************************************!*\
   !*** ./node_modules/which/which.js ***!
   \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 module.exports = which
 which.sync = whichSync
@@ -24527,8 +26163,10 @@ function whichSync (cmd, opt) {
 /*!***************************************!*\
   !*** ./node_modules/wrappy/wrappy.js ***!
   \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 6:0-14 */
+/***/ ((module) => {
 
 // Returns a wrapper function that returns a wrapped callback
 // The wrapper function should do some stuff, and return a
@@ -24571,8 +26209,10 @@ function wrappy (fn, cb) {
 /*!*****************************************!*\
   !*** ./node_modules/yallist/yallist.js ***!
   \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/*! CommonJS bailout: module.exports is used directly at 1:0-14 */
+/***/ ((module) => {
 
 module.exports = Yallist
 
@@ -24948,974 +26588,17 @@ function Node (value, prev, next, list) {
 
 /***/ }),
 
-/***/ "./parser-lib/lex.ts":
-/*!***************************!*\
-  !*** ./parser-lib/lex.ts ***!
-  \***************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
-exports.lex = (tokenSpecs, input) => {
-    // Source location tracking
-    let currentSourceLine = 1;
-    let currentSourceColumn = 1;
-    const updateSourceLocation = (matchString) => {
-        for (const char of matchString) {
-            if (char == '\n') {
-                currentSourceLine++;
-                currentSourceColumn = 1;
-            }
-            else {
-                currentSourceColumn++;
-            }
-        }
-    };
-    // slurp initial whitespace
-    const initialWhitespaceMatch = input.match(/^[ \t\n]*/);
-    if (!initialWhitespaceMatch)
-        throw debug_1.default('Initial whitespace didnt match in lex');
-    const initialWhitespace = initialWhitespaceMatch[0];
-    updateSourceLocation(initialWhitespace);
-    input = input.slice(initialWhitespace.length);
-    // consume input reading tokens
-    const tokens = [];
-    while (input.length > 0) {
-        // This results in runnng match twice. Once to find if there is a match, and once to extract it. TODO: optimize!
-        const matchingSpec = tokenSpecs.find(spec => !!input.match(RegExp(`^(${spec.token})[ \\t\\n]*`)));
-        if (!matchingSpec) {
-            return { kind: 'lexError', error: `Invalid token: ${input}` };
-        }
-        else {
-            // TOOO don't allow a single "word" to be parsed as 2 token.
-            const match = input.match(RegExp(`^(${matchingSpec.token})[ \\t\\n]*`));
-            if (!match)
-                throw debug_1.default('Should have failed earlier.');
-            input = input.slice(match[0].length);
-            const action = matchingSpec.action || (() => null);
-            const value = action(match[1]);
-            tokens.push({
-                type: matchingSpec.type,
-                value,
-                string: matchingSpec.toString(value),
-                sourceLocation: { line: currentSourceLine, column: currentSourceColumn },
-            });
-            updateSourceLocation(match[0]);
-        }
-    }
-    return tokens;
-};
-
-
-/***/ }),
-
-/***/ "./parser-lib/parse.ts":
-/*!*****************************!*\
-  !*** ./parser-lib/parse.ts ***!
-  \*****************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const last_1 = __webpack_require__(/*! ../util/list/last */ "./util/list/last.ts");
-const debug_1 = __webpack_require__(/*! ../util/debug */ "./util/debug.ts");
-const graphlib_1 = __webpack_require__(/*! graphlib */ "./node_modules/graphlib/index.js");
-const lex_1 = __webpack_require__(/*! ./lex */ "./parser-lib/lex.ts");
-exports.isSeparatedListNode = (n) => 'items' in n && 'separators' in n;
-exports.isListNode = (n) => 'items' in n && !('separators' in n);
-exports.parseResultIsError = (result) => result != 'missingOptional' && 'kind' in result && result.kind == 'parseError';
-const parseResultWithIndexIsLeaf = (r) => 'value' in r;
-// TODO also use a real sum type
-const parseResultWithIndexIsSeparatedList = (r) => 'items' in r && 'separators' in r;
-const parseResultWithIndexIsList = (r) => 'items' in r && !('separators' in r);
-const stripNodeIndexes = (r) => {
-    if (parseResultWithIndexIsLeaf(r)) {
-        return { value: r.value, type: r.type, sourceLocation: r.sourceLocation };
-    }
-    if (parseResultWithIndexIsSeparatedList(r)) {
-        return {
-            items: r.items.map(stripNodeIndexes),
-            separators: r.separators.map(stripNodeIndexes),
-        };
-    }
-    if (parseResultWithIndexIsList(r)) {
-        return { items: r.items.map(stripNodeIndexes) };
-    }
-    if (!r.children)
-        debug_1.default('expected children');
-    return {
-        type: r.type,
-        children: r.children.map(stripNodeIndexes),
-        sourceLocation: r.sourceLocation,
-    };
-};
-const stripResultIndexes = (r) => {
-    if (exports.parseResultIsError(r)) {
-        return r;
-    }
-    return stripNodeIndexes(r);
-};
-exports.stripSourceLocation = ast => {
-    if ('children' in ast) {
-        return { type: ast.type, children: ast.children.map(exports.stripSourceLocation) };
-    }
-    else {
-        return { type: ast.type, value: ast.value };
-    }
-};
-exports.Sequence = (name, parsers) => ({ kind: 'sequence', name, parsers });
-exports.OneOf = (parsers) => ({ kind: 'oneOf', parsers });
-exports.Optional = (parser) => ({
-    kind: 'optional',
-    parser,
-});
-exports.SeparatedList = (separator, item) => ({ kind: 'separatedList', separator, item });
-exports.Many = (item) => ({
-    kind: 'many',
-    item,
-});
-const getSourceLocation = (tokens, index) => {
-    if (tokens.length == 0) {
-        return { line: 0, column: 0 };
-    }
-    else if (index >= tokens.length) {
-        const lastToken = last_1.default(tokens);
-        return {
-            line: lastToken.sourceLocation.line,
-            column: lastToken.sourceLocation.column + lastToken.string.length,
-        };
-    }
-    else if (index < 0) {
-        return { line: 0, column: 0 };
-    }
-    else {
-        return tokens[index].sourceLocation;
-    }
-};
-const isTerminalParser = (p) => typeof p == 'object' && 'kind' in p && p.kind === 'terminal';
-const parseSequence = (grammar, parser, tokens, index) => {
-    const originalIndex = index;
-    const results = [];
-    for (const p of parser.parsers) {
-        let result;
-        if (isTerminalParser(p)) {
-            result = parseTerminal(p, tokens, index);
-        }
-        else if (typeof p === 'string') {
-            result = parseRule(grammar, p, tokens, index);
-        }
-        else if (p.kind == 'optional') {
-            // TODO: Possibly they wanted the optional but had syntax error. If this is the case, we should get an error and do something useful with it (display it)
-            // TODO: Handle case of parsing "x" with "x?x" where successfully parsing optional may cause remaining parse to fail and we need to try again without the optional.
-            const maybeResult = parseOptional(grammar, p, tokens, index);
-            if (!maybeResult) {
-                continue; // Skip to the next non-optional
-            }
-            else {
-                result = maybeResult;
-            }
-        }
-        else if (p.kind == 'many') {
-            result = parseMany(grammar, p, tokens, index);
-        }
-        else {
-            throw debug_1.default(`Invalid parser type: ${JSON.stringify(p)}`);
-        }
-        if (exports.parseResultIsError(result)) {
-            result.errors.forEach(e => {
-                e.whileParsing.unshift(parser.name);
-            });
-            return result;
-        }
-        results.push(result);
-        index = result.newIndex;
-    }
-    return {
-        success: true,
-        newIndex: index,
-        type: parser.name,
-        children: results,
-        sourceLocation: getSourceLocation(tokens, originalIndex),
-    };
-};
-const parseAlternative = (grammar, alternatives, tokens, index) => {
-    const progressCache = alternatives.parsers.map(_ => ({ kind: 'progress', parseResults: [], subParserIndex: 0 }));
-    // TODO: fix this linter error
-    // tslint:disable-next-line
-    for (let alternativeIndex = 0; alternativeIndex < alternatives.parsers.length; alternativeIndex++) {
-        let alternativeNeedsSubtracting = false;
-        let currentParser = alternatives.parsers[alternativeIndex];
-        let currentResult;
-        let currentIndex;
-        const currentProgress = progressCache[alternativeIndex];
-        // Check if we have cached an error for this parser. If we have, continue to the next parser.
-        if (currentProgress.kind == 'failed') {
-            continue;
-        }
-        if (!currentParser)
-            throw debug_1.default('no currentParser');
-        if (typeof currentParser === 'string') {
-            // Reference to another rule.
-            if (currentProgress.subParserIndex == 1) {
-                // We already finished this one earlier. It must be a prefix of an earlier rule.
-                return currentProgress.parseResults[0];
-            }
-            else {
-                // We haven't tried this parser yet. Try it now.
-                currentResult = parseAnything(grammar, currentParser, tokens, index);
-                currentIndex = 0;
-                if (!exports.parseResultIsError(currentResult)) {
-                    return currentResult;
-                }
-                else {
-                    progressCache[alternativeIndex] = { kind: 'failed', error: currentResult };
-                }
-            }
-        }
-        else if (isTerminalParser(currentParser)) {
-            // Terminal.
-            if (currentProgress.subParserIndex == 1) {
-                // We already finished this one earlier. It must be a prefix of an earlier rule.
-                return currentProgress.parseResults[0];
-            }
-            else {
-                // We haven't tried this parser yet. Try it now.
-                currentResult = parseTerminal(currentParser, tokens, index);
-                currentIndex = 0;
-                if (!exports.parseResultIsError(currentResult)) {
-                    return currentResult;
-                }
-                else {
-                    progressCache[alternativeIndex] = { kind: 'failed', error: currentResult };
-                }
-            }
-        }
-        else if (currentParser.kind == 'sequence') {
-            // Sequence. This is the complex one.
-            // Next get the parser for the next item in the sequence based on how much progress we have made due
-            // to being a prefix of previous rules.
-            const sequenceParser = currentParser;
-            currentParser = currentParser.parsers[currentProgress.subParserIndex];
-            const currentProgressLastItem = last_1.default(currentProgress.parseResults);
-            if (currentProgressLastItem !== null &&
-                exports.parseResultIsError(currentProgressLastItem)) {
-                throw debug_1.default('todo');
-            }
-            const tokenIndex = currentProgressLastItem !== null ? currentProgressLastItem.newIndex : index;
-            // Check if this parser has been completed due to being a successful prefix of a previous alternative
-            if (currentProgressLastItem !== null &&
-                currentProgress.subParserIndex === sequenceParser.parsers.length) {
-                return {
-                    newIndex: currentProgressLastItem.newIndex,
-                    success: true,
-                    children: currentProgress.parseResults,
-                    type: sequenceParser.name,
-                    sourceLocation: getSourceLocation(tokens, index),
-                };
-            }
-            // We still need to do work on this parser
-            if (isTerminalParser(currentParser)) {
-                currentResult = parseTerminal(currentParser, tokens, tokenIndex);
-                currentIndex = currentProgress.subParserIndex;
-            }
-            else if (typeof currentParser == 'string') {
-                currentResult = parseRule(grammar, currentParser, tokens, tokenIndex);
-                currentIndex = currentProgress.subParserIndex;
-            }
-            else if (currentParser.kind == 'optional') {
-                const optionalResult = parseOptional(grammar, currentParser, tokens, tokenIndex);
-                if (optionalResult === undefined) {
-                    currentResult = 'missingOptional';
-                }
-                else {
-                    currentResult = optionalResult;
-                }
-                currentIndex = currentProgress.subParserIndex;
-            }
-            else {
-                throw debug_1.default(`unhandled kind of parser: ${currentParser.kind}`);
-            }
-            // Push the results into the cache for the current parser
-            if (exports.parseResultIsError(currentResult)) {
-                progressCache[alternativeIndex] = { kind: 'failed', error: currentResult };
-            }
-            else {
-                if (progressCache[alternativeIndex].kind != 'failed') {
-                    if (currentResult !== 'missingOptional') {
-                        progressCache[alternativeIndex].parseResults.push(currentResult);
-                    }
-                    progressCache[alternativeIndex].subParserIndex++;
-                }
-                // When we return to the top of this loop, we want to continue parsing the current sequence.
-                // In order to make this happen, flag that we need to subtract one from alternativesIndex.
-                // TODO: Be less janky. Probably turning the for into a while that says "while we have alternatives
-                // that haven't reached an error yet".
-                alternativeNeedsSubtracting = true;
-            }
-            // Check if we are done
-            const refreshedCurrentProgress = progressCache[alternativeIndex];
-            if (refreshedCurrentProgress.kind != 'failed' &&
-                refreshedCurrentProgress.subParserIndex == sequenceParser.parsers.length) {
-                const cachedSuccess = last_1.default(refreshedCurrentProgress.parseResults);
-                if (cachedSuccess === null)
-                    throw debug_1.default('cachedSuccess == null');
-                if (exports.parseResultIsError(cachedSuccess)) {
-                    throw debug_1.default('todo');
-                }
-                return {
-                    newIndex: cachedSuccess.newIndex,
-                    success: true,
-                    children: refreshedCurrentProgress.parseResults,
-                    type: sequenceParser.name,
-                    sourceLocation: getSourceLocation(tokens, index),
-                };
-            }
-        }
-        else {
-            throw debug_1.default('a parser type was not handled');
-        }
-        // Now we have a parse result and the index it was found at. Push it into the progress cache
-        // for each alternative that has parsed up to that index and expects the next item to be of that type.
-        for (let progressCacheIndex = alternativeIndex; progressCacheIndex < alternatives.parsers.length; progressCacheIndex++) {
-            const parser = alternatives.parsers[progressCacheIndex];
-            const progressRef = progressCache[progressCacheIndex];
-            if (progressRef.kind != 'failed' && progressRef.subParserIndex == currentIndex) {
-                if (typeof parser === 'string' && currentParser == parser) {
-                    if (exports.parseResultIsError(currentResult)) {
-                        progressCache[progressCacheIndex] = {
-                            kind: 'failed',
-                            error: currentResult,
-                        };
-                    }
-                    else if (currentResult != 'missingOptional') {
-                        progressRef.parseResults.push(currentResult);
-                        progressRef.subParserIndex++;
-                    }
-                }
-                else if (typeof parser === 'function' && currentParser == parser) {
-                    if (exports.parseResultIsError(currentResult)) {
-                        progressCache[progressCacheIndex] = {
-                            kind: 'failed',
-                            error: currentResult,
-                        };
-                    }
-                    else if (currentResult != 'missingOptional') {
-                        progressRef.parseResults.push(currentResult);
-                        progressRef.subParserIndex++;
-                    }
-                }
-                else if (typeof parser != 'string' &&
-                    typeof parser != 'function' &&
-                    parser.kind == 'sequence' &&
-                    currentParser === parser.parsers[currentIndex]) {
-                    if (exports.parseResultIsError(currentResult)) {
-                        progressCache[progressCacheIndex] = {
-                            kind: 'failed',
-                            error: currentResult,
-                        };
-                    }
-                    else if (currentResult != 'missingOptional') {
-                        progressRef.parseResults.push(currentResult);
-                        progressRef.subParserIndex++;
-                    }
-                }
-                else if (typeof parser != 'string' &&
-                    typeof parser != 'function' &&
-                    parser.kind == 'optional' &&
-                    currentParser == parser.parser) {
-                    if (currentResult != 'missingOptional' &&
-                        !exports.parseResultIsError(currentResult)) {
-                        progressCache[progressCacheIndex].parseResults.push(currentResult);
-                    }
-                    progressCache[progressCacheIndex].subParserIndex++;
-                }
-            }
-        }
-        if (alternativeNeedsSubtracting) {
-            alternativeIndex--;
-        }
-    }
-    const errors = { kind: 'parseError', errors: [] };
-    progressCache.forEach(progress => {
-        if (progress.kind == 'failed') {
-            errors.errors.push(...progress.error.errors);
-        }
-        else {
-            throw debug_1.default('everything should have failed by now');
-        }
-    });
-    errors.errors.sort((l, r) => {
-        if (l.sourceLocation.line != r.sourceLocation.line) {
-            return r.sourceLocation.line - l.sourceLocation.line;
-        }
-        return r.sourceLocation.column - l.sourceLocation.column;
-    });
-    return errors;
-};
-const parseSeparatedList = (grammar, sep, tokens, index) => {
-    const item = parseAnything(grammar, sep.item, tokens, index);
-    if (exports.parseResultIsError(item)) {
-        return { items: [], separators: [], newIndex: index };
-    }
-    const separator = parseAnything(grammar, sep.separator, tokens, item.newIndex);
-    if (exports.parseResultIsError(separator)) {
-        return { items: [item], separators: [], newIndex: item.newIndex };
-    }
-    const next = parseSeparatedList(grammar, sep, tokens, separator.newIndex);
-    if (exports.parseResultIsError(next)) {
-        return next;
-    }
-    return {
-        items: [item, ...next.items],
-        separators: [separator, ...next.separators],
-        newIndex: next.newIndex,
-    };
-};
-const parseMany = (grammar, many, tokens, index) => {
-    const item = parseAnything(grammar, many.item, tokens, index);
-    if (exports.parseResultIsError(item)) {
-        return { items: [], newIndex: index };
-    }
-    const next = parseMany(grammar, many, tokens, item.newIndex);
-    if (exports.parseResultIsError(next)) {
-        return { items: [item], newIndex: item.newIndex };
-    }
-    return { items: [item, ...next.items], newIndex: next.newIndex };
-};
-const parseAnything = (grammar, parser, tokens, index) => {
-    try {
-        if (typeof parser === 'string') {
-            return parseRule(grammar, parser, tokens, index);
-        }
-        else if (isTerminalParser(parser)) {
-            return parseTerminal(parser, tokens, index);
-        }
-        else if (parser.kind == 'sequence') {
-            return parseSequence(grammar, parser, tokens, index);
-        }
-        else if (parser.kind == 'oneOf') {
-            return parseAlternative(grammar, parser, tokens, index);
-        }
-        else if (parser.kind == 'separatedList') {
-            return parseSeparatedList(grammar, parser, tokens, index);
-        }
-        else if (parser.kind == 'many') {
-            return parseMany(grammar, parser, tokens, index);
-        }
-        else {
-            throw debug_1.default('bad type in parse');
-        }
-    }
-    catch (e) {
-        if (e instanceof RangeError) {
-            debug_1.default('range error');
-        }
-        throw e;
-    }
-};
-const parseOptional = (grammar, optional, tokens, index) => {
-    const result = parseAnything(grammar, optional.parser, tokens, index);
-    if (exports.parseResultIsError(result)) {
-        return undefined;
-    }
-    return result;
-};
-const parseTerminal = (terminal, tokens, index) => {
-    if (index >= tokens.length) {
-        return {
-            kind: 'parseError',
-            errors: [
-                {
-                    found: 'endOfFile',
-                    foundTokenText: 'endOfFile',
-                    expected: terminal.token,
-                    whileParsing: [],
-                    sourceLocation: index > tokens.length
-                        ? getSourceLocation(tokens, index)
-                        : getSourceLocation(tokens, tokens.length - 1),
-                },
-            ],
-        };
-    }
-    if (tokens[index].type == terminal.token) {
-        return {
-            success: true,
-            newIndex: index + 1,
-            value: tokens[index].value,
-            type: tokens[index].type,
-            sourceLocation: getSourceLocation(tokens, index),
-        };
-    }
-    return {
-        kind: 'parseError',
-        errors: [
-            {
-                expected: terminal.token,
-                found: tokens[index].type,
-                foundTokenText: tokens[index].string,
-                whileParsing: [],
-                // Use index of prevoius Ltoken so that the parse error shows up right
-                // after the place where the user should have done something (e.g. they
-                // place where they forgot the semicolon
-                sourceLocation: getSourceLocation(tokens, index - 1),
-            },
-        ],
-    };
-};
-exports.Terminal = (Ltoken) => ({
-    kind: 'terminal',
-    token: Ltoken,
-});
-exports.toDotFile = (ast) => {
-    const digraph = new graphlib_1.Graph();
-    let id = 0;
-    const traverse = (node) => {
-        const myId = id;
-        id++;
-        let children = [];
-        let nodeString = '';
-        if (exports.isSeparatedListNode(node)) {
-            // TODO: make this prettier as a node within the tree than just "seplist"
-            nodeString = 'seplist';
-            // TODO: interleave the items and separators for better display
-            children = [...node.items, ...node.separators];
-        }
-        else if (exports.isListNode(node)) {
-            // TODO: make this prettier as a node within the tree than just "list"
-            nodeString = 'list';
-            children = node.items;
-        }
-        else if ('children' in node) {
-            nodeString = node.type;
-            children = node.children;
-        }
-        else {
-            nodeString = `${node.type}\n${node.value ? node.value : ''}`;
-        }
-        // Create a new graphviz node for this ast node
-        digraph.setNode(myId, { label: nodeString });
-        // Recursively create nodes for this node's children
-        const childIds = children.map(traverse);
-        // Add an edge from this node to each child
-        children.forEach((child, index) => {
-            digraph.setEdge(myId, childIds[index]);
-        });
-        return myId;
-    };
-    traverse(ast);
-    return digraph;
-};
-const parseRule = (grammar, rule, tokens, index) => {
-    const childrenParser = grammar[rule];
-    if (!childrenParser)
-        throw debug_1.default(`invalid rule name: ${rule}`);
-    return parseAnything(grammar, childrenParser, tokens, index);
-};
-exports.parse = (grammar, firstRule, tokens) => {
-    const result = parseRule(grammar, firstRule, tokens, 0);
-    if (exports.parseResultIsError(result))
-        return result;
-    if (result.newIndex != tokens.length) {
-        const firstExtraToken = tokens[result.newIndex];
-        if (!firstExtraToken)
-            debug_1.default('there are extra tokens but also not');
-        return {
-            kind: 'parseError',
-            errors: [
-                {
-                    found: firstExtraToken.type,
-                    foundTokenText: firstExtraToken.string,
-                    expected: 'endOfFile',
-                    whileParsing: [firstRule],
-                    sourceLocation: firstExtraToken.sourceLocation,
-                },
-            ],
-        };
-    }
-    return stripResultIndexes(result);
-};
-exports.parseString = (tokens, grammar, rule, input) => {
-    const lexed = lex_1.lex(tokens, input);
-    if ('kind' in lexed)
-        return { errors: lexed };
-    const parsed = exports.parse(grammar, rule, lexed);
-    if (exports.parseResultIsError(parsed)) {
-        return { errors: parsed.errors };
-    }
-    return parsed;
-};
-
-
-/***/ }),
-
-/***/ "./types.ts":
-/*!******************!*\
-  !*** ./types.ts ***!
-  \******************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
-const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
-const sum_1 = __webpack_require__(/*! ./util/list/sum */ "./util/list/sum.ts");
-const deepEqual = __webpack_require__(/*! deep-equal */ "./node_modules/deep-equal/index.js");
-exports.toString = (type) => {
-    // TODO: Include the original in here somehow?
-    switch (type.type.kind) {
-        case 'String':
-        case 'Integer':
-        case 'Boolean':
-            return type.type.kind;
-        case 'Function':
-            return type.type.kind + '<' + join_1.default(type.type.arguments.map(exports.toString), ', ') + '>';
-        case 'Product':
-            return ('{' +
-                type.type.members.map(member => `${member.name}: ${exports.toString(member.type)}`) +
-                '}');
-        case 'List':
-            return `${exports.toString(type.type.of)}[]`;
-        default:
-            throw debug_1.default(`Unhandled kind in type toString: ${type.kind}`);
-    }
-};
-exports.resolve = (t, availableTypes) => {
-    if (!availableTypes)
-        debug_1.default('no declarations');
-    const type = availableTypes.find(d => d.name == t.namedType);
-    if (!type)
-        return undefined;
-    return {
-        type: type.type.type,
-        original: t,
-    };
-};
-exports.resolveIfNecessary = (unresolved, availableTypes) => 'namedType' in unresolved ? exports.resolve(unresolved, availableTypes) : unresolved;
-exports.resolveOrError = (unresolved, availableTypes, sourceLocation) => {
-    const resolved = exports.resolveIfNecessary(unresolved, availableTypes);
-    if (!resolved) {
-        return {
-            errors: [
-                {
-                    kind: 'unknownType',
-                    name: unresolved.namedType,
-                    sourceLocation,
-                },
-            ],
-            newVariables: [],
-        };
-    }
-    return resolved;
-};
-exports.equal = (a, b) => {
-    // Should we allow assigning one product to another if they have different names but identical members? That would be "structural typing" which I'm not sure I want.
-    if (!deepEqual(a.original, b.original))
-        return false;
-    if (a.type.kind == 'Function' && b.type.kind == 'Function') {
-        if (a.type.arguments.length != b.type.arguments.length) {
-            return false;
-        }
-        for (let i = 0; i < a.type.arguments.length; i++) {
-            const tA = a.type.arguments[i];
-            if ('namedType' in tA) {
-                throw debug_1.default('need to handle refs here');
-            }
-            const tB = b.type.arguments[i];
-            if ('namedType' in tB) {
-                throw debug_1.default('need to handle refs here');
-            }
-            if (!exports.equal(tA, tB)) {
-                return false;
-            }
-        }
-        return true;
-    }
-    if (a.type.kind == 'Product' && b.type.kind == 'Product') {
-        if (a.type.name != b.type.name)
-            return false;
-        const bProduct = b.type;
-        const allInLeftPresentInRight = a.type.members.every(memberA => bProduct.members.some(memberB => memberA.name == memberB.name && exports.equal(memberA.type, memberB.type)));
-        const aProduct = a.type;
-        const allInRightPresentInLeft = b.type.members.every(memberB => aProduct.members.some(memberA => memberA.name == memberB.name && exports.equal(memberA.type, memberB.type)));
-        return allInLeftPresentInRight && allInRightPresentInLeft;
-    }
-    return a.type.kind == b.type.kind;
-};
-exports.builtinTypes = {
-    String: { type: { kind: 'String' } },
-    Integer: { type: { kind: 'Integer' } },
-    Boolean: { type: { kind: 'Boolean' } },
-};
-// TODO: Require these to be imported in user code
-exports.builtinFunctions = [
-    {
-        name: 'length',
-        type: {
-            type: {
-                kind: 'Function',
-                arguments: [exports.builtinTypes.String],
-                permissions: [],
-                returnType: exports.builtinTypes.Integer,
-            },
-        },
-        exported: false,
-    },
-    {
-        name: 'print',
-        type: {
-            type: {
-                kind: 'Function',
-                arguments: [exports.builtinTypes.String],
-                permissions: [],
-                returnType: exports.builtinTypes.Integer,
-            },
-        },
-        exported: false,
-    },
-    {
-        name: 'readInt',
-        type: {
-            type: {
-                kind: 'Function',
-                arguments: [],
-                permissions: ['stdout'],
-                returnType: exports.builtinTypes.Integer,
-            },
-        },
-        exported: false,
-    },
-];
-exports.typeSize = (targetInfo, type, typeDeclarations) => {
-    switch (type.type.kind) {
-        case 'List':
-            // Pointer + size
-            return targetInfo.bytesInWord * 2;
-        case 'Product':
-            return sum_1.default(type.type.members.map(m => exports.typeSize(targetInfo, m.type, typeDeclarations)));
-        case 'Boolean':
-        case 'Function':
-        case 'String':
-        case 'Integer':
-            return targetInfo.bytesInWord;
-        default:
-            throw debug_1.default(`${type.kind} unhandled in typeSize`);
-    }
-};
-
-
-/***/ }),
-
-/***/ "./util/debug.ts":
-/*!***********************!*\
-  !*** ./util/debug.ts ***!
-  \***********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = (why) => {
-    debugger;
-    throw why;
-};
-
-
-/***/ }),
-
-/***/ "./util/execAndGetResult.ts":
-/*!**********************************!*\
-  !*** ./util/execAndGetResult.ts ***!
-  \**********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const child_process_promise_1 = __webpack_require__(/*! child-process-promise */ "./node_modules/child-process-promise/index.js");
-exports.default = async (command) => {
-    try {
-        const result = await child_process_promise_1.exec(command);
-        return { exitCode: 0, stdout: result.stdout, stderr: result.stderr };
-    }
-    catch (e) {
-        if (typeof e.code === 'number') {
-            return { exitCode: e.code, stdout: e.stdout, stderr: e.stderr };
-        }
-        else {
-            return { error: `Couldn't get exit code: ${e}` };
-        }
-    }
-};
-
-
-/***/ }),
-
-/***/ "./util/idMaker.ts":
-/*!*************************!*\
-  !*** ./util/idMaker.ts ***!
-  \*************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = () => {
-    let id = 0;
-    return () => {
-        id++;
-        return id;
-    };
-};
-
-
-/***/ }),
-
-/***/ "./util/join.ts":
-/*!**********************!*\
-  !*** ./util/join.ts ***!
-  \**********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = (strings, joiner) => strings.join(joiner);
-
-
-/***/ }),
-
-/***/ "./util/list/flatten.ts":
-/*!******************************!*\
-  !*** ./util/list/flatten.ts ***!
-  \******************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = (array) => array.reduce((a, b) => a.concat(b), []);
-
-
-/***/ }),
-
-/***/ "./util/list/last.ts":
-/*!***************************!*\
-  !*** ./util/list/last.ts ***!
-  \***************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = (array) => {
-    if (array.length == 0) {
-        return null;
-    }
-    else {
-        return array[array.length - 1];
-    }
-};
-
-
-/***/ }),
-
-/***/ "./util/list/sum.ts":
-/*!**************************!*\
-  !*** ./util/list/sum.ts ***!
-  \**************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = (array) => array.reduce((a, b) => a + b, 0);
-
-
-/***/ }),
-
-/***/ "./util/list/uniqueBy.ts":
-/*!*******************************!*\
-  !*** ./util/list/uniqueBy.ts ***!
-  \*******************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const uniqueCmp_1 = __webpack_require__(/*! ./uniqueCmp */ "./util/list/uniqueCmp.ts");
-exports.default = (p, array) => uniqueCmp_1.default((x, y) => p(x) === p(y), array);
-
-
-/***/ }),
-
-/***/ "./util/list/uniqueCmp.ts":
-/*!********************************!*\
-  !*** ./util/list/uniqueCmp.ts ***!
-  \********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = (p, array) => {
-    const result = [];
-    for (const item of array) {
-        if (result.every(existing => !p(item, existing))) {
-            result.push(item);
-        }
-    }
-    return result;
-};
-
-
-/***/ }),
-
-/***/ "./util/writeTempFile.ts":
-/*!*******************************!*\
-  !*** ./util/writeTempFile.ts ***!
-  \*******************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const tmp_promise_1 = __webpack_require__(/*! tmp-promise */ "./node_modules/tmp-promise/index.js");
-const fs_extra_1 = __webpack_require__(/*! fs-extra */ "./node_modules/fs-extra/lib/index.js");
-// Write the provided contents to a temporary file with the provided extension. Return the created file object.
-exports.default = async (contents, name, extension) => {
-    const file = await tmp_promise_1.file({ template: `${name}-XXXXXX.${extension}`, dir: '/tmp' });
-    await fs_extra_1.writeFile(file.fd, contents);
-    return file;
-};
-
-
-/***/ }),
-
 /***/ "assert":
 /*!*************************!*\
   !*** external "assert" ***!
   \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("assert");
+"use strict";
+module.exports = require("assert");;
 
 /***/ }),
 
@@ -25923,10 +26606,13 @@ module.exports = require("assert");
 /*!********************************!*\
   !*** external "child_process" ***!
   \********************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("child_process");
+"use strict";
+module.exports = require("child_process");;
 
 /***/ }),
 
@@ -25934,10 +26620,13 @@ module.exports = require("child_process");
 /*!****************************!*\
   !*** external "constants" ***!
   \****************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("constants");
+"use strict";
+module.exports = require("constants");;
 
 /***/ }),
 
@@ -25945,10 +26634,13 @@ module.exports = require("constants");
 /*!*************************!*\
   !*** external "crypto" ***!
   \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("crypto");
+"use strict";
+module.exports = require("crypto");;
 
 /***/ }),
 
@@ -25956,10 +26648,13 @@ module.exports = require("crypto");
 /*!*************************!*\
   !*** external "events" ***!
   \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("events");
+"use strict";
+module.exports = require("events");;
 
 /***/ }),
 
@@ -25967,10 +26662,13 @@ module.exports = require("events");
 /*!*********************!*\
   !*** external "fs" ***!
   \*********************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("fs");
+"use strict";
+module.exports = require("fs");;
 
 /***/ }),
 
@@ -25978,10 +26676,13 @@ module.exports = require("fs");
 /*!*********************!*\
   !*** external "os" ***!
   \*********************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("os");
+"use strict";
+module.exports = require("os");;
 
 /***/ }),
 
@@ -25989,10 +26690,13 @@ module.exports = require("os");
 /*!***********************!*\
   !*** external "path" ***!
   \***********************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("path");
+"use strict";
+module.exports = require("path");;
 
 /***/ }),
 
@@ -26000,10 +26704,14 @@ module.exports = require("path");
 /*!*****************************!*\
   !*** external "spawn-sync" ***!
   \*****************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-if(typeof __WEBPACK_EXTERNAL_MODULE_spawn_sync__ === 'undefined') {var e = new Error("Cannot find module 'spawn-sync'"); e.code = 'MODULE_NOT_FOUND'; throw e;}
+"use strict";
+if(typeof __WEBPACK_EXTERNAL_MODULE_spawn_sync__ === 'undefined') { var e = new Error("Cannot find module 'spawn-sync'"); e.code = 'MODULE_NOT_FOUND'; throw e; }
+
 module.exports = __WEBPACK_EXTERNAL_MODULE_spawn_sync__;
 
 /***/ }),
@@ -26012,10 +26720,13 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_spawn_sync__;
 /*!*************************!*\
   !*** external "stream" ***!
   \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("stream");
+"use strict";
+module.exports = require("stream");;
 
 /***/ }),
 
@@ -26023,12 +26734,87 @@ module.exports = require("stream");
 /*!***********************!*\
   !*** external "util" ***!
   \***********************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/*! dynamic exports */
+/*! exports [maybe provided (runtime-defined)] [no usage info] */
+/*! runtime requirements: module */
+/***/ ((module) => {
 
-module.exports = require("util");
+"use strict";
+module.exports = require("util");;
 
 /***/ })
 
-/******/ });
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		if(__webpack_module_cache__[moduleId]) {
+/******/ 			return __webpack_module_cache__[moduleId].exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			id: moduleId,
+/******/ 			loaded: false,
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Flag the module as loaded
+/******/ 		module.loaded = true;
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop)
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/node module decorator */
+/******/ 	(() => {
+/******/ 		__webpack_require__.nmd = (module) => {
+/******/ 			module.paths = [];
+/******/ 			if (!module.children) module.children = [];
+/******/ 			return module;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+/******/ 	// module exports must be returned from runtime so entry inlining is disabled
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	return __webpack_require__("./mpl.ts");
+/******/ })()
+;
 });
