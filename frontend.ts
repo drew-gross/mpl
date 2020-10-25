@@ -1272,17 +1272,13 @@ const extractParameterList = (ast: MplAst): VariableDeclaration[] => {
                 if (isSeparatedListNode(child2) || isListNode(child2)) {
                     throw debug('todo');
                 }
-                if (child2.type == 'typeWithoutArgs') {
-                    return [
-                        {
-                            name: (i.children[0] as any).value as string,
-                            type: parseType(child2),
-                            exported: false,
-                        },
-                    ];
-                } else {
-                    throw debug('wrong children length');
-                }
+                return [
+                    {
+                        name: (i.children[0] as any).value as string,
+                        type: parseType(child2),
+                        exported: false,
+                    },
+                ];
             })
         );
     } else {

@@ -1,5 +1,5 @@
 import { file as tmpFile } from 'tmp-promise';
-import { testPrograms } from './test-cases';
+import { testPrograms, testModules } from './test-cases';
 import { passed } from './test-case';
 import produceProgramInfo from './produceProgramInfo';
 import writeSvg from './util/graph/writeSvg';
@@ -13,6 +13,7 @@ import * as commander from 'commander';
 import annotateSource from './annotateSource';
 import * as deepEqual from 'deep-equal';
 import renderParseError from './parser-lib/renderParseError';
+import { mplLoader } from './mpl-loader';
 
 (async () => {
     // Commander is dumb
@@ -36,7 +37,27 @@ import renderParseError from './parser-lib/renderParseError';
     const testCase = testPrograms.find(c => c.name == commander.args[0]);
 
     if (!testCase) {
-        console.log(`Could not find a test case named "${commander.args[0]}"`);
+        const testModule = testModules.find(c => c.name == commander.args[0]);
+        if (!testModule) {
+            console.log(`Could not find a test case named "${commander.args[0]}"`);
+            return;
+        }
+        // TODO: Refactor to produceModuleInfo?
+        const errors: any[] = [];
+        const jsSource = mplLoader(testModule.source, {
+            emitError: e => {
+                debugger;
+                errors.push(e);
+            },
+        });
+        if (errors.length != 0) {
+            console.log(`Errors in module:`);
+            errors.forEach(e => {
+                console.log(e.stack);
+            });
+            return;
+        }
+        console.log(jsSource);
         return;
     }
 

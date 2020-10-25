@@ -372,6 +372,17 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 33,
     },
     {
+        name: 'Function Accepts List',
+        source: `
+            acceptsList := (xs: Integer[]) => {
+                return 3;
+            };
+            xs := [1];
+            return acceptsList(xs);
+        `,
+        exitCode: 3,
+    },
+    {
         name: 'List Out Of Bounds Access',
         source: `
             myList := [11, 22];
