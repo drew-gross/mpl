@@ -396,14 +396,23 @@ const makeCfunctionBody = ({
             '\n'
         );
     });
-    const endOfFunctionFrees = variables
+    const endOfFunctionFrees: string[] = variables
         .filter(s => !globalVariableNames.includes(s.name))
         .filter(s => !parameters.map(d => d.name).includes(s.name))
         .filter(s => {
             if ('namedType' in s.type) throw debug('TODO get a real type here');
-            return typesAreEqual(s.type, builtinTypes.String);
+            return typesAreEqual(s.type, builtinTypes.String) || s.type.type.kind == 'List';
         })
-        .map(s => callFree(s.name, 'Freeing Stack String at end of function'));
+        .map(s2 => {
+            const s: any = s2;
+            if (typesAreEqual(s.type, builtinTypes.String)) {
+                return callFree(s.name, 'Freeing Stack String at end of function');
+            } else if (s.type.type.kind == 'List') {
+                return callFree(`${s.name}.data`, 'Freeing Stack String at end of function');
+            } else {
+                throw debug('...');
+            }
+        });
     const returnCode = astToC({
         ast: returnStatement.expression,
         stringLiterals,
@@ -417,14 +426,14 @@ const makeCfunctionBody = ({
             '{',
             ...body,
             ...returnCode.prepare,
-            `${mplTypeToCDeclaration(returnType, 'result')} = ${registerTransferLangaugeToC(
+            `${mplTypeToCDeclaration(returnType, 'rrresult')} = ${registerTransferLangaugeToC(
                 returnCode.execute,
                 ' '
             )};`,
             ...returnCode.cleanup,
             ...endOfFunctionFrees,
             ...beforeExit,
-            `return result;`,
+            `return rrresult;`,
             '}',
         ],
         '\n'

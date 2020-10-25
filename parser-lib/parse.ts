@@ -617,6 +617,8 @@ const parseAnything = <Node extends string, Token>(
         }
     } catch (e) {
         if (e instanceof RangeError) {
+            debugger;
+            parseAnything(grammar, parser, tokens, index);
             debug('range error');
         }
         throw e;

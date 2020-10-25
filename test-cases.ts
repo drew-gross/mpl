@@ -59,11 +59,12 @@ export const testModules: TestModule[] = [
                 result := 0;
                 for (x : xs) {
                     result = result + x;
-                }
+                };
                 return result;
-            }
+            };
         `,
         resultJs: '',
+        infiniteLooping: true,
     },
 ];
 
@@ -656,11 +657,11 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 11,
     },
     {
-        name: 'Variable Named Result',
+        name: 'Reserved Name',
         source: `
             foo := () => {
-                result := 10;
-                return result;
+                rrresult := 10;
+                return rrresult;
             };
             return foo();
         `,
@@ -826,5 +827,20 @@ return isFive(5) ? 1 : 0;`,
                 sourceLocation: { line: 3, column: 13 },
             },
         ] as any,
+    },
+    {
+        name: 'For in Function',
+        source: `
+            sum := () => {
+                xs := [3, 4, 5];
+                result := 0;
+                for (x : xs) {
+                    result = result + x;
+                };
+                return result;
+            };
+            return sum();
+        `,
+        exitCode: 12,
     },
 ];
