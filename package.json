@@ -22,9 +22,9 @@
         "test-case-debug": "npm run compile-tests && node  --stack_size=1000000 --inspect --inspect-brk ./built/debug-test-case.js",
         "test-case-profile": "tsc && node_modules/.bin/0x ./built/debug-test-case.js",
         "compile": "webpack --mode development --env",
-        "compile-tests": "webpack --mode development --env.tests",
-        "compile-commit": "webpack --mode development --env.commit",
-        "compile-experimental": "webpack --mode development --env.experimental",
+        "compile-tests": "webpack --mode development --env tests",
+        "compile-commit": "webpack --mode development --env commit",
+        "compile-experimental": "webpack --mode development --env experimental",
         "compile-watch": "tsc --watch --preserveWatchOutput",
         "cloc": "cloc --exclude-dir=node_modules,built,bin --not-match-f='npm-shrinkwrap.json|package.json|tsconfig.json|test.ts|test-cases.ts|test-case.ts' .",
         "cloc-all": "cloc --exclude-dir=node_modules,built,bin . --not-match-f='npm-shrinkwrap.json'",
@@ -60,8 +60,8 @@
         "tmp-promise": "2.0.2",
         "tslint": "6.1.0",
         "tslint-config-prettier": "1.18.0",
-        "webpack": "4.42.0",
-        "webpack-cli": "3.3.11"
+        "webpack": "5.2.0",
+        "webpack-cli": "4.1.0"
     },
     "prettier": {
         "printWidth": 97,
