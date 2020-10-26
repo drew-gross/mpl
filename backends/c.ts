@@ -365,11 +365,17 @@ type MakeCFunctionBodyInputs = {
 
 const freeVariable = (v: Variable) => {
     if (typesAreEqual(v.type as Type, builtinTypes.String)) {
-        return callFree(v.name, 'Freeing Stack String at end of function');
+        return callFree(v.name, 'Freeing string');
     } else if ((v.type as Type).type.kind == 'List') {
-        return callFree(`${v.name}.data`, 'Freeing Stack String at end of function');
+        return callFree(`${v.name}.data`, 'Freeing list');
+    } else if (
+        ['Function', 'Integer', 'Product' /* TODO free elements */].includes(
+            (v.type as Type).type.kind
+        )
+    ) {
+        return '';
     } else {
-        throw debug('dont know how to free');
+        throw debug(`dont know how to free ${(v.type as Type).type.kind}`);
     }
 };
 
@@ -409,10 +415,6 @@ const makeCfunctionBody = ({
     const endOfFunctionFrees: string[] = variables
         .filter(s => !globalVariableNames.includes(s.name))
         .filter(s => !parameters.map(d => d.name).includes(s.name))
-        .filter(s => {
-            if ('namedType' in s.type) throw debug('TODO get a real type here');
-            return typesAreEqual(s.type, builtinTypes.String) || s.type.type.kind == 'List';
-        })
         .map(freeVariable);
     const returnCode = astToC({
         ast: returnStatement.expression,
@@ -492,12 +494,7 @@ const compile = ({
         stringLiterals,
         buildSignature: (_1, _2) => 'int main(int argc, char **argv)',
         returnType: { type: { kind: 'Integer' } }, // Main can only ever return integer
-        beforeExit: [
-            ...globalDeclarations
-                .filter(d => ['String', 'List'].includes((d.type as Type).type.kind))
-                .map(freeVariable),
-            'verify_no_leaks();',
-        ],
+        beforeExit: [...globalDeclarations.map(freeVariable), 'verify_no_leaks();'],
     });
     const Cdeclarations = globalDeclarations
         .map(declaration => mplTypeToCDeclaration(declaration.type as Type, declaration.name))
