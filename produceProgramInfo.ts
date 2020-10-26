@@ -54,7 +54,6 @@ export default async (
         return tokens;
     }
 
-    debugger;
     const ast = parseMpl(tokens);
     if (Array.isArray(ast)) {
         return { parseErrors: ast };

@@ -391,7 +391,6 @@ return isFive(5) ? 1 : 0;`,
             return acceptsList([1]);
         `,
         exitCode: 3,
-        failing: true,
     },
     {
         name: 'List Out Of Bounds Access',
@@ -525,7 +524,6 @@ return isFive(5) ? 1 : 0;`,
             return returnsList()[3];
         `,
         exitCode: 4,
-        failing: true,
     },
     {
         name: 'String Length',

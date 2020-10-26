@@ -187,15 +187,29 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                         );
                     }
                 case 'List':
-                    // TODO: Pretty sure I need to copy the list
-                    if (predeclaredVariables.includes(declaration.name)) {
-                        return compileAssignment(declaration.name, rhs);
-                    } else {
-                        return compileAssignment(
-                            mplTypeToCDeclaration(declaration.type, lhs),
-                            rhs
-                        );
-                    }
+                    const lhsDecl = predeclaredVariables.includes(declaration.name)
+                        ? declaration.name
+                        : mplTypeToCDeclaration(declaration.type, lhs);
+                    const tmp = makeTemporary('tmp');
+                    const tmpDecl = mplTypeToCDeclaration(declaration.type, tmp);
+                    // Actually assigning here seems unnecessary, since we only keep the size
+                    const assignmentCode = compileAssignment(lhsDecl, rhs);
+                    const assignTmpCode = compileAssignment(tmpDecl, {
+                        prepare: [],
+                        execute: [lhs],
+                        cleanup: [],
+                    });
+                    return compileExpression(
+                        [assignmentCode, assignTmpCode],
+                        ([assign, assignTmp]) => [
+                            ...assign,
+                            ...assignTmp,
+                            `${declaration.name}.data = my_malloc(${declaration.name}.size);`,
+                            // TODO: need something more complex than memcpy to support complex fields
+                            `memcpy(${declaration.name}.data, ${tmp}.data, ${declaration.name}.size);`,
+                        ]
+                    );
+
                 default:
                     throw debug(
                         `${declaration.type.type.kind} unhandled in typedDeclarationAssignment`
@@ -326,7 +340,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                     ...assignItems.cleanup,
                 ],
                 execute: [],
-                cleanup: [],
+                cleanup: [callFree(`${listLiteral}.data`, 'Free list literal')],
             };
             return compileExpression([buildLiteral, assignItems], _ => [listLiteral]);
         }
@@ -506,6 +520,7 @@ const compile = ({
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include <unistd.h>
 
 struct list {
