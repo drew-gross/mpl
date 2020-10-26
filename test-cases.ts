@@ -54,6 +54,7 @@ export const testModules: TestModule[] = [
     },
     {
         name: 'Sum',
+        only: true,
         source: `
             export sum := (xs: Integer[]) => {
                 result := 0;
@@ -63,10 +64,17 @@ export const testModules: TestModule[] = [
                 return result;
             };
         `,
-        resultJs: `
-                const anonymous_1 = (xs) => { let result =  0 ; const items =  xs ; for (let i = 0; i < items.length; i++) { const x = items[i]; result = result + x ; } return  result }
-                export const sum = anonymous_1;
-            `,
+        resultJs: `const anonymous_1 = (xs) => {
+  let result = 0;
+  const items = xs;
+  for (let i = 0; i < items.length; i++) {
+    const x = items[i];
+    result = result + x;
+  }
+  return result;
+};
+export const sum = anonymous_1;
+`,
     },
 ];
 
