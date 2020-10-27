@@ -27,9 +27,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "add": () => /* binding */ add
 /* harmony export */ });
 
-                const anonymous_1 = (a, b) => { return  a + b }
-                const add = anonymous_1;
-            
+const anonymous_1 = (a, b) => {
+  return a + b;
+};
+const add = anonymous_1;
+
 
 /***/ }),
 
@@ -49,9 +51,17 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "sum": () => /* binding */ sum
 /* harmony export */ });
 
-                const anonymous_1 = (xs) => { let result =  0 ; const items =  xs ; for (let i = 0; i < items.length; i++) { const x = items[i]; result = result + x ; } return  result }
-                const sum = anonymous_1;
-            
+const anonymous_1 = (xs) => {
+  let result = 0;
+  const items = xs;
+  for (let i = 0; i < items.length; i++) {
+    const x = items[i];
+    result = result + x;
+  }
+  return result;
+};
+const sum = anonymous_1;
+
 
 /***/ }),
 
@@ -24725,10 +24735,9 @@ exports.grammar = {
         'listLiteral',
     ]),
     listLiteral: parse_1.OneOf([
-        parse_1.Sequence('listLiteral', [parse_1.NestedIn(squares, 'listItems')]),
+        parse_1.Sequence('listLiteral', [parse_1.NestedIn(squares, parse_1.SeparatedList(comma, 'expression'))]),
         'simpleExpression',
     ]),
-    listItems: parse_1.SeparatedList(comma, 'expression'),
     simpleExpression: parse_1.OneOf([
         parse_1.Sequence('bracketedExpression', [parse_1.NestedIn(rounds, 'expression')]),
         parse_1.Sequence('callExpression', [
@@ -25499,15 +25508,15 @@ exports.parseString = (tokens, grammar, rule, input) => {
 /*! export typeSize [provided] [no usage info] [missing usage info prevents renaming] */
 /*! other exports [not provided] [no usage info] */
 /*! runtime requirements: __webpack_exports__, __webpack_require__ */
-/*! CommonJS bailout: exports.toString(...) prevents optimization as exports is passed as call context at 20:67-83 */
-/*! CommonJS bailout: exports.toString(...) prevents optimization as exports is passed as call context at 23:22-38 */
-/*! CommonJS bailout: exports.resolve(...) prevents optimization as exports is passed as call context at 39:89-104 */
-/*! CommonJS bailout: exports.resolveIfNecessary(...) prevents optimization as exports is passed as call context at 41:21-47 */
-/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 73:17-30 */
-/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 81:137-150 */
-/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 83:137-150 */
-/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 87:15-28 */
-/*! CommonJS bailout: exports.typeSize(...) prevents optimization as exports is passed as call context at 141:50-66 */
+/*! CommonJS bailout: exports.toString(...) prevents optimization as exports is passed as call context at 19:67-83 */
+/*! CommonJS bailout: exports.toString(...) prevents optimization as exports is passed as call context at 22:22-38 */
+/*! CommonJS bailout: exports.resolve(...) prevents optimization as exports is passed as call context at 38:89-104 */
+/*! CommonJS bailout: exports.resolveIfNecessary(...) prevents optimization as exports is passed as call context at 40:21-47 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 72:17-30 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 80:137-150 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 82:137-150 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 86:15-28 */
+/*! CommonJS bailout: exports.typeSize(...) prevents optimization as exports is passed as call context at 140:50-66 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
@@ -25516,7 +25525,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.typeSize = exports.builtinFunctions = exports.builtinTypes = exports.equal = exports.resolveOrError = exports.resolveIfNecessary = exports.resolve = exports.toString = void 0;
 const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
 const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
-// import sum from './util/list/sum';
 const { sum } = __webpack_require__(/*! ./mpl/sum.mpl */ "./mpl/sum.mpl");
 const deepEqual = __webpack_require__(/*! deep-equal */ "./node_modules/deep-equal/index.js");
 exports.toString = (type) => {

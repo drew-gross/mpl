@@ -83,7 +83,7 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
     { token: '\\.', type: 'memberAccess', toString: _ => '.' },
 ];
 
-export type MplAstNode =
+export type MplAstNode = 
     | 'program'
     | 'function'
     | 'functionWithBlock'
@@ -114,7 +114,6 @@ export type MplAstNode =
     | 'memberAccess'
     | 'memberStyleCall'
     | 'listLiteral'
-    | 'listItems'
     | 'indexAccess'
     | 'paramList';
 
@@ -259,10 +258,9 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         'listLiteral',
     ]),
     listLiteral: OneOf([
-        Sequence('listLiteral', [NestedIn(squares, 'listItems')]),
+        Sequence('listLiteral', [NestedIn(squares, SeparatedList(comma, 'expression'))]),
         'simpleExpression',
     ]),
-    listItems: SeparatedList(comma, 'expression'),
     simpleExpression: OneOf([
         Sequence('bracketedExpression', [NestedIn(rounds, 'expression')]),
         Sequence('callExpression', [

@@ -440,6 +440,22 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 21,
     },
     {
+        name: 'List of Pairs',
+        source: `
+            IntPair := {
+                first: Integer;
+                second: Integer;
+            };
+            ipList: IntPair[] = [
+                IntPair { first: 1, second: 2, },
+                IntPair { first: 3, second: 4, }
+            ];
+            return ipList[0].second;
+        `,
+        exitCode: 4,
+        failing: true,
+    },
+    {
         name: 'Int Pair in Function',
         source: `
             IntPair := {
