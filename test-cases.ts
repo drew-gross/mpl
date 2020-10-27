@@ -34,17 +34,21 @@ export const testModules: TestModule[] = [
         name: 'Exported Function',
         source: 'export constThree := a: Integer => 3;',
         resultJs: `
-                const anonymous_1 = (a) => { return  3 }
-                export const constThree = anonymous_1;
-            `,
+const anonymous_1 = (a) => {
+  return 3;
+};
+export const constThree = anonymous_1;
+`,
     },
     {
         name: 'Add Functions',
         source: 'export add := (a: Integer, b: Integer) => a + b;',
         resultJs: `
-                const anonymous_1 = (a, b) => { return  a + b }
-                export const add = anonymous_1;
-            `,
+const anonymous_1 = (a, b) => {
+  return a + b;
+};
+export const add = anonymous_1;
+`,
     },
     {
         name: 'Exported Integer',
@@ -54,7 +58,6 @@ export const testModules: TestModule[] = [
     },
     {
         name: 'Sum',
-        only: true,
         source: `
             export sum := (xs: Integer[]) => {
                 result := 0;
@@ -64,7 +67,8 @@ export const testModules: TestModule[] = [
                 return result;
             };
         `,
-        resultJs: `const anonymous_1 = (xs) => {
+        resultJs: `
+const anonymous_1 = (xs) => {
   let result = 0;
   const items = xs;
   for (let i = 0; i < items.length; i++) {

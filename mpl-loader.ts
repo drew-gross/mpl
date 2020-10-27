@@ -18,6 +18,5 @@ export function mplLoader(source: string, context: any) {
         context.emitError(new Error(JSON.stringify(js.error)));
         return;
     }
-    debugger;
-    return format(js.target);
+    return '\n' + format(js.target, { parser: 'babel' });
 }
