@@ -1,7 +1,7 @@
 import debug from './util/debug';
 import join from './util/join';
-import sum from './util/list/sum';
-// const { sum } = require('./mpl/sum.mpl');
+// import sum from './util/list/sum';
+const { sum } = require('./mpl/sum.mpl');
 import { Variable } from './api';
 import { RegisterAgnosticTargetInfo } from './TargetInfo';
 import { TypeError } from './TypeError';

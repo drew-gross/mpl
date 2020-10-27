@@ -27,9 +27,41 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "add": () => /* binding */ add
 /* harmony export */ });
 
-                const anonymous_1 = (a, b) => { return  a + b }
-                const add = anonymous_1;
-            
+const anonymous_1 = (a, b) => {
+  return a + b;
+};
+const add = anonymous_1;
+
+
+/***/ }),
+
+/***/ "./mpl/sum.mpl":
+/*!*********************!*\
+  !*** ./mpl/sum.mpl ***!
+  \*********************/
+/*! namespace exports */
+/*! export sum [provided] [no usage info] [missing usage info prevents renaming] */
+/*! other exports [not provided] [no usage info] */
+/*! runtime requirements: __webpack_require__.r, __webpack_exports__, __webpack_require__.d, __webpack_require__.* */
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "sum": () => /* binding */ sum
+/* harmony export */ });
+
+const anonymous_1 = (xs) => {
+  let result = 0;
+  const items = xs;
+  for (let i = 0; i < items.length; i++) {
+    const x = items[i];
+    result = result + x;
+  }
+  return result;
+};
+const sum = anonymous_1;
+
 
 /***/ }),
 
@@ -10050,7 +10082,7 @@ module.exports = baseAssignValue;
   \*******************************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 165:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 166:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Stack = __webpack_require__(/*! ./_Stack */ "./node_modules/lodash/_Stack.js"),
@@ -10073,7 +10105,8 @@ var Stack = __webpack_require__(/*! ./_Stack */ "./node_modules/lodash/_Stack.js
     isMap = __webpack_require__(/*! ./isMap */ "./node_modules/lodash/isMap.js"),
     isObject = __webpack_require__(/*! ./isObject */ "./node_modules/lodash/isObject.js"),
     isSet = __webpack_require__(/*! ./isSet */ "./node_modules/lodash/isSet.js"),
-    keys = __webpack_require__(/*! ./keys */ "./node_modules/lodash/keys.js");
+    keys = __webpack_require__(/*! ./keys */ "./node_modules/lodash/keys.js"),
+    keysIn = __webpack_require__(/*! ./keysIn */ "./node_modules/lodash/keysIn.js");
 
 /** Used to compose bitmasks for cloning. */
 var CLONE_DEEP_FLAG = 1,
@@ -12364,7 +12397,7 @@ module.exports = defineProperty;
   \*********************************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 83:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 84:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var SetCache = __webpack_require__(/*! ./_SetCache */ "./node_modules/lodash/_SetCache.js"),
@@ -12396,10 +12429,11 @@ function equalArrays(array, other, bitmask, customizer, equalFunc, stack) {
   if (arrLength != othLength && !(isPartial && othLength > arrLength)) {
     return false;
   }
-  // Assume cyclic values are equal.
-  var stacked = stack.get(array);
-  if (stacked && stack.get(other)) {
-    return stacked == other;
+  // Check that cyclic values are equal.
+  var arrStacked = stack.get(array);
+  var othStacked = stack.get(other);
+  if (arrStacked && othStacked) {
+    return arrStacked == other && othStacked == array;
   }
   var index = -1,
       result = true,
@@ -12585,7 +12619,7 @@ module.exports = equalByTag;
   \**********************************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 89:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 90:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var getAllKeys = __webpack_require__(/*! ./_getAllKeys */ "./node_modules/lodash/_getAllKeys.js");
@@ -12629,10 +12663,11 @@ function equalObjects(object, other, bitmask, customizer, equalFunc, stack) {
       return false;
     }
   }
-  // Assume cyclic values are equal.
-  var stacked = stack.get(object);
-  if (stacked && stack.get(other)) {
-    return stacked == other;
+  // Check that cyclic values are equal.
+  var objStacked = stack.get(object);
+  var othStacked = stack.get(other);
+  if (objStacked && othStacked) {
+    return objStacked == other && othStacked == object;
   }
   var result = true;
   stack.set(object, other);
@@ -15176,7 +15211,7 @@ module.exports = eq;
   \***************************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 48:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 52:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var arrayFilter = __webpack_require__(/*! ./_arrayFilter */ "./node_modules/lodash/_arrayFilter.js"),
@@ -15220,6 +15255,10 @@ var arrayFilter = __webpack_require__(/*! ./_arrayFilter */ "./node_modules/loda
  * // The `_.property` iteratee shorthand.
  * _.filter(users, 'active');
  * // => objects for ['barney']
+ *
+ * // Combining several predicates using `_.overEvery` or `_.overSome`.
+ * _.filter(users, _.overSome([{ 'age': 36 }, ['age', 40]]));
+ * // => objects for ['fred', 'barney']
  */
 function filter(collection, predicate) {
   var func = isArray(collection) ? arrayFilter : baseFilter;
@@ -25470,15 +25509,15 @@ exports.parseString = (tokens, grammar, rule, input) => {
 /*! export typeSize [provided] [no usage info] [missing usage info prevents renaming] */
 /*! other exports [not provided] [no usage info] */
 /*! runtime requirements: __webpack_exports__, __webpack_require__ */
-/*! CommonJS bailout: exports.toString(...) prevents optimization as exports is passed as call context at 19:67-83 */
-/*! CommonJS bailout: exports.toString(...) prevents optimization as exports is passed as call context at 22:22-38 */
-/*! CommonJS bailout: exports.resolve(...) prevents optimization as exports is passed as call context at 38:89-104 */
-/*! CommonJS bailout: exports.resolveIfNecessary(...) prevents optimization as exports is passed as call context at 40:21-47 */
-/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 72:17-30 */
-/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 80:137-150 */
-/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 82:137-150 */
-/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 86:15-28 */
-/*! CommonJS bailout: exports.typeSize(...) prevents optimization as exports is passed as call context at 140:60-76 */
+/*! CommonJS bailout: exports.toString(...) prevents optimization as exports is passed as call context at 20:67-83 */
+/*! CommonJS bailout: exports.toString(...) prevents optimization as exports is passed as call context at 23:22-38 */
+/*! CommonJS bailout: exports.resolve(...) prevents optimization as exports is passed as call context at 39:89-104 */
+/*! CommonJS bailout: exports.resolveIfNecessary(...) prevents optimization as exports is passed as call context at 41:21-47 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 73:17-30 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 81:137-150 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 83:137-150 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 87:15-28 */
+/*! CommonJS bailout: exports.typeSize(...) prevents optimization as exports is passed as call context at 141:50-66 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
@@ -25487,7 +25526,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.typeSize = exports.builtinFunctions = exports.builtinTypes = exports.equal = exports.resolveOrError = exports.resolveIfNecessary = exports.resolve = exports.toString = void 0;
 const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
 const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
-const sum_1 = __webpack_require__(/*! ./util/list/sum */ "./util/list/sum.ts");
+// import sum from './util/list/sum';
+const { sum } = __webpack_require__(/*! ./mpl/sum.mpl */ "./mpl/sum.mpl");
 const deepEqual = __webpack_require__(/*! deep-equal */ "./node_modules/deep-equal/index.js");
 exports.toString = (type) => {
     // TODO: Include the original in here somehow?
@@ -25621,7 +25661,7 @@ exports.typeSize = (targetInfo, type, typeDeclarations) => {
             // Pointer + size
             return targetInfo.bytesInWord * 2;
         case 'Product':
-            return sum_1.default(type.type.members.map(m => exports.typeSize(targetInfo, m.type, typeDeclarations)));
+            return sum(type.type.members.map(m => exports.typeSize(targetInfo, m.type, typeDeclarations)));
         case 'Boolean':
         case 'Function':
         case 'String':
@@ -25775,25 +25815,6 @@ exports.default = (array) => {
         return array[array.length - 1];
     }
 };
-
-
-/***/ }),
-
-/***/ "./util/list/sum.ts":
-/*!**************************!*\
-  !*** ./util/list/sum.ts ***!
-  \**************************/
-/*! flagged exports */
-/*! export __esModule [provided] [no usage info] [missing usage info prevents renaming] */
-/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
-/*! other exports [not provided] [no usage info] */
-/*! runtime requirements: __webpack_exports__ */
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.default = (array) => array.reduce((a, b) => a + b, 0);
 
 
 /***/ }),
