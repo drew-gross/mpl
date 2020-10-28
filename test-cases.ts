@@ -450,7 +450,8 @@ return isFive(5) ? 1 : 0;`,
                 IntPair { first: 1, second: 2, },
                 IntPair { first: 3, second: 4, }
             ];
-            return ipList[0].second;
+            elem: IntPair = ipList[1];
+            return elem.second;
         `,
         exitCode: 4,
         failing: true,

@@ -48,7 +48,7 @@ export const toString = (type: Type): string => {
         case 'List':
             return `${toString(type.type.of)}[]`;
         default:
-            throw debug(`Unhandled kind in type toString: ${(type as any).kind}`);
+            throw debug(`Unhandled kindpi in type toString: ${(type.type as any).kind}`);
     }
 };
 

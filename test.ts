@@ -5,7 +5,7 @@ import { TestModule, TestProgram, Test, mplTest, tacTest, moduleTest } from './t
 import { parseInstructions } from './threeAddressCode/parser';
 import { parseProgram as parseTacProgram } from './threeAddressCode/Program';
 import annotateSource from './annotateSource';
-import { equal as typesAreEqual, builtinTypes, Type } from './types';
+import { equal as typesAreEqual, builtinTypes, Type, toString as typeToString } from './types';
 import {
     Function,
     toString as functionToString,
