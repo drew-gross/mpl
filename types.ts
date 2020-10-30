@@ -55,28 +55,16 @@ export const toString = (type: Type): string => {
 export type TypeDeclaration = { name: string; type: Type };
 
 export const resolve = (
-    t: TypeReference,
-    availableTypes: TypeDeclaration[]
-): Type | undefined => {
-    if (!availableTypes) debug('no declarations');
-    const type = availableTypes.find(d => d.name == t.namedType);
-    if (!type) return undefined;
-    return {
-        type: type.type.type, // lol
-        original: t,
-    };
-};
-
-export const resolveIfNecessary = (unresolved: Type | TypeReference, availableTypes) =>
-    'namedType' in unresolved ? resolve(unresolved, availableTypes) : unresolved;
-
-export const resolveOrError = (
     unresolved: Type | TypeReference,
     availableTypes,
     sourceLocation
 ): Type | { errors: TypeError[]; newVariables: Variable[] } => {
-    const resolved = resolveIfNecessary(unresolved, availableTypes);
-    if (!resolved) {
+    if (!('namedType' in unresolved)) {
+        return unresolved;
+    }
+    if (!availableTypes) debug('no declarations');
+    const type = availableTypes.find(d => d.name == unresolved.namedType);
+    if (!type) {
         return {
             errors: [
                 {
@@ -88,7 +76,10 @@ export const resolveOrError = (
             newVariables: [],
         };
     }
-    return resolved;
+    return {
+        type: type.type.type, // lol
+        original: unresolved,
+    };
 };
 
 export const equal = (a: Type, b: Type): boolean => {

@@ -12,8 +12,7 @@ import {
     Type,
     ProductComponent,
     equal as typesAreEqual,
-    resolveIfNecessary,
-    resolveOrError,
+    resolve,
     builtinTypes,
     builtinFunctions,
     TypeDeclaration,
@@ -128,12 +127,12 @@ const extractVariable = (ctx: WithContext<Ast.UninferredStatement>): Variable | 
                 exported: false,
             };
         case 'typedDeclarationAssignment':
+            const resolved = resolve(ctx.w.type, ctx.availableTypes, ctx.w.sourceLocation);
+            if ('errors' in resolved) throw debug('expected no error');
             return {
                 name: ctx.w.destination,
-                type: (typeOfExpression(
-                    { ...ctx, w: ctx.w.expression },
-                    resolveIfNecessary(ctx.w.type, ctx.availableTypes)
-                ) as TOEResult).type,
+                type: (typeOfExpression({ ...ctx, w: ctx.w.expression }, resolved) as TOEResult)
+                    .type,
                 exported: false,
             };
         case 'returnStatement':
@@ -431,8 +430,12 @@ export const typeOfExpression = (
                         arguments: ast.parameters
                             .map(p => p.type)
                             .map(t => {
-                                const resolved = resolveIfNecessary(t, ctx.availableTypes);
-                                if (!resolved) {
+                                const resolved = resolve(
+                                    t,
+                                    ctx.availableTypes,
+                                    ctx.w.sourceLocation
+                                );
+                                if ('errors' in resolved) {
                                     throw debug('bag argument. This should be a better error.');
                                 }
                                 return resolved;
@@ -494,7 +497,7 @@ export const typeOfExpression = (
                 ];
             }
             for (let i = 0; i < argTypes.length; i++) {
-                const resolved = resolveOrError(
+                const resolved = resolve(
                     functionType.type.arguments[i],
                     ctx.availableTypes,
                     ast.sourceLocation
@@ -514,7 +517,7 @@ export const typeOfExpression = (
                     ];
                 }
             }
-            const returnType = resolveOrError(
+            const returnType = resolve(
                 functionType.type.returnType,
                 ctx.availableTypes,
                 ast.sourceLocation
@@ -583,7 +586,7 @@ export const typeOfExpression = (
             }
             // TODO: this is probably wrong, we need check agains the LHS type
             for (let i = 0; i < allArgTypes.length; i++) {
-                const resolved = resolveOrError(
+                const resolved = resolve(
                     functionType.type.arguments[i],
                     ctx.availableTypes,
                     ast.sourceLocation
@@ -603,7 +606,7 @@ export const typeOfExpression = (
                     ];
                 }
             }
-            const returnType = resolveOrError(
+            const returnType = resolve(
                 functionType.type.returnType,
                 ctx.availableTypes,
                 ast.sourceLocation
@@ -624,15 +627,9 @@ export const typeOfExpression = (
                     },
                 ];
             }
-            const declaration = resolveIfNecessary(unresolved.type, availableTypes);
-            if (!declaration) {
-                return [
-                    {
-                        kind: 'couldNotFindType',
-                        name: (unresolved.type as any).namedType,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
+            const declaration = resolve(unresolved.type, availableTypes, ast.sourceLocation);
+            if ('errors' in declaration) {
+                return declaration.errors;
             }
             return { type: declaration, extractedFunctions: [] };
         }
@@ -850,18 +847,13 @@ const typeCheckStatement = (
                     newVariables: [],
                 };
             }
-            const leftType = resolveIfNecessary(unresolvedLeftType.type, availableTypes);
-            if (!leftType) {
-                return {
-                    errors: [
-                        {
-                            kind: 'couldNotFindType',
-                            name: unresolvedLeftType.name,
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ],
-                    newVariables: [],
-                };
+            const leftType = resolve(
+                unresolvedLeftType.type,
+                availableTypes,
+                ast.sourceLocation
+            );
+            if ('errors' in leftType) {
+                return leftType;
             }
 
             if (!typesAreEqual(leftType, rightType.type)) {
@@ -883,7 +875,7 @@ const typeCheckStatement = (
         case 'typedDeclarationAssignment': {
             // Check that type of var being assigned to matches type being assigned
             const destinationType = ast.type;
-            const resolvedDestination = resolveOrError(
+            const resolvedDestination = resolve(
                 destinationType,
                 availableTypes,
                 ast.sourceLocation
@@ -1113,8 +1105,8 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
                 rhs: recurse(ast.rhs),
             };
         case 'typedDeclarationAssignment':
-            const resolved = resolveIfNecessary(ast.type, availableTypes);
-            if (!resolved) throw debug("resolution shouldn't fail here");
+            const resolved = resolve(ast.type, availableTypes, ast.sourceLocation);
+            if ('errors' in resolved) throw debug("resolution shouldn't fail here");
             return {
                 kind: 'typedDeclarationAssignment',
                 sourceLocation: ast.sourceLocation,
@@ -1284,8 +1276,10 @@ const parseTypeLiteralComponent = (ast: MplAst): ProductComponent => {
     }
     if (ast.type != 'typeLiteralComponent') throw debug('wrong as type');
     const unresolved = parseType(ast.children[2]);
-    const resolved = resolveIfNecessary(unresolved, []);
-    if (!resolved) throw debug('need to make products work as components of other products');
+    const resolved = resolve(unresolved, [], ast.sourceLocation);
+    if ('errors' in resolved) {
+        throw debug('need to make products work as components of other products');
+    }
     return {
         name: (ast.children[0] as any).value,
         type: resolved,
