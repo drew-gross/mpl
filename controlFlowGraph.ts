@@ -718,7 +718,9 @@ export const assignRegisters = <TargetRegister>(
     if (needToSpill) {
         debugger;
         const spilled = spill(taf, needToSpill);
-        return assignRegisters(spilled, colors);
+        const spilledAssignment = assignRegisters(spilled, colors);
+        spilledAssignment.assignment.spilled.push(needToSpill);
+        return spilledAssignment;
     }
 
     return { assignment: result, newFunction: taf };

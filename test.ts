@@ -2066,70 +2066,39 @@ test('Assign Registers for Old For', t => {
 test.only('Register assignment for Many Globals Multiply', t => {
     const f = parseFunctionOrDie(`
         (function) main():
-            ; call readInt
-            r:function_pointer_ = &readInt; Load runtime function
-            r:assignment_rhs_ = r:function_pointer_(); Call runtime readInt
-            *var_1_ = r:assignment_rhs_; Put Integer into globa
-            ; call readInt
-            r:function_pointer_1 = &readInt; Load runtime function
-            r:assignment_rhs_1 = r:function_pointer_1(); Call runtime readInt
-            *var_2_ = r:assignment_rhs_1; Put Integer into globa
-            ; call readInt
-            r:function_pointer_2 = &readInt; Load runtime function
-            r:assignment_rhs_2 = r:function_pointer_2(); Call runtime readInt
-            *var_3_ = r:assignment_rhs_2; Put Integer into globa
-            ; call readInt
-            r:function_pointer_3 = &readInt; Load runtime function
-            r:assignment_rhs_3 = r:function_pointer_3(); Call runtime readInt
-            *var_4_ = r:assignment_rhs_3; Put Integer into globa
-            ; call readInt
-            r:function_pointer_4 = &readInt; Load runtime function
-            r:assignment_rhs_4 = r:function_pointer_4(); Call runtime readInt
-            *var_5_ = r:assignment_rhs_4; Put Integer into globa
-            ; call readInt
-            r:function_pointer_5 = &readInt; Load runtime function
-            r:assignment_rhs_5 = r:function_pointer_5(); Call runtime readInt
-            *var_6_ = r:assignment_rhs_5; Put Integer into globa
-            ; call readInt
-            r:function_pointer_6 = &readInt; Load runtime function
-            r:assignment_rhs_6 = r:function_pointer_6(); Call runtime readInt
-            *var_7_ = r:assignment_rhs_6; Put Integer into globa
-            ; call readInt
-            r:function_pointer_7 = &readInt; Load runtime function
-            r:assignment_rhs_7 = r:function_pointer_7(); Call runtime readInt
-            *var_8_ = r:assignment_rhs_7; Put Integer into globa
-            ; call readInt
-            r:function_pointer_8 = &readInt; Load runtime function
-            r:assignment_rhs_8 = r:function_pointer_8(); Call runtime readInt
-            *var_9_ = r:assignment_rhs_8; Put Integer into globa
-            ; call readInt
-            r:function_pointer_9 = &readInt; Load runtime function
-            r:assignment_rhs_9 = r:function_pointer_9(); Call runtime readInt
-            *var_10_ = r:assignment_rhs_9; Put Integer into globa
-            ; call readInt
-            r:function_pointer_10 = &readInt; Load runtime function
-            r:assignment_rhs_10 = r:function_pointer_10(); Call runtime readInt
-            *var_11_ = r:assignment_rhs_10; Put Integer into globa
-            ; call readInt
-            r:function_pointer_11 = &readInt; Load runtime function
-            r:assignment_rhs_11 = r:function_pointer_11(); Call runtime readInt
-            *var_12_ = r:assignment_rhs_11; Put Integer into globa
-            ; call readInt
-            r:function_pointer_12 = &readInt; Load runtime function
-            r:assignment_rhs_12 = r:function_pointer_12(); Call runtime readInt
-            *var_13_ = r:assignment_rhs_12; Put Integer into globa
-            ; call readInt
-            r:function_pointer_13 = &readInt; Load runtime function
-            r:assignment_rhs_13 = r:function_pointer_13(); Call runtime readInt
-            *var_14_ = r:assignment_rhs_13; Put Integer into globa
-            ; call readInt
-            r:function_pointer_14 = &readInt; Load runtime function
-            r:assignment_rhs_14 = r:function_pointer_14(); Call runtime readInt
-            *var_15_ = r:assignment_rhs_14; Put Integer into globa
-            ; call readInt
-            r:function_pointer_15 = &readInt; Load runtime function
-            r:assignment_rhs_15 = r:function_pointer_15(); Call runtime readInt
-            *var_16_ = r:assignment_rhs_15; Put Integer into globa
+            r:ri = &readInt; Load runtime function
+            r:assignment_rhs_ = r:ri();
+            *var_1_ = r:assignment_rhs_; Put Integer into global
+            r:assignment_rhs_1 = r:ri();
+            *var_2_ = r:assignment_rhs_1; Put Integer into global
+            r:assignment_rhs_2 = r:ri();
+            *var_3_ = r:assignment_rhs_2; Put Integer into global
+            r:assignment_rhs_3 = r:ri();
+            *var_4_ = r:assignment_rhs_3; Put Integer into global
+            r:assignment_rhs_4 = r:ri();
+            *var_5_ = r:assignment_rhs_4; Put Integer into global
+            r:assignment_rhs_5 = r:ri();
+            *var_6_ = r:assignment_rhs_5; Put Integer into global
+            r:assignment_rhs_6 = r:ri();
+            *var_7_ = r:assignment_rhs_6; Put Integer into global
+            r:assignment_rhs_7 = r:ri();
+            *var_8_ = r:assignment_rhs_7; Put Integer into global
+            r:assignment_rhs_8 = r:ri();
+            *var_9_ = r:assignment_rhs_8; Put Integer into global
+            r:assignment_rhs_9 = r:ri();
+            *var_10_ = r:assignment_rhs_9; Put Integer into global
+            r:assignment_rhs_10 = r:ri();
+            *var_11_ = r:assignment_rhs_10; Put Integer into global
+            r:assignment_rhs_11 = r:ri();
+            *var_12_ = r:assignment_rhs_11; Put Integer into global
+            r:assignment_rhs_12 = r:ri();
+            *var_13_ = r:assignment_rhs_12; Put Integer into global
+            r:assignment_rhs_13 = r:ri();
+            *var_14_ = r:assignment_rhs_13; Put Integer into global
+            r:assignment_rhs_14 = r:ri();
+            *var_15_ = r:assignment_rhs_14; Put Integer into global
+            r:assignment_rhs_15 = r:ri();
+            *var_16_ = r:assignment_rhs_15; Put Integer into global
             r:product_lhs_1 = var_1_; Load var_1 from global into register
             r:product_rhs_1 = var_2_; Load var_2 from global into register
             r:product_lhs_ = r:product_lhs_1 * r:product_rhs_1; Evaluate product
