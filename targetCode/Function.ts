@@ -1,6 +1,9 @@
 import uniqueCmp from '../util/list/uniqueCmp';
 import { Statement as ThreeAddressStatement, reads } from '../threeAddressCode/Statement';
-import { Function as ThreeAddressFunction } from '../threeAddressCode/Function';
+import {
+    Function as ThreeAddressFunction,
+    toString as functionToString,
+} from '../threeAddressCode/Function';
 import { Register, isEqual } from '../threeAddressCode/Register';
 import { assignRegisters } from '../controlFlowGraph';
 import debug from '../util/debug';
@@ -9,7 +12,7 @@ import flatten from '../util/list/flatten';
 import {
     Statement as TargetStatement,
     toTarget as statementToTarget,
-    argumentLocation,
+    argumentStackLocation,
 } from './Statement';
 import { StackUsage, calleeReserveCount, savedExtraOffset, savedUsedOffset } from './StackUsage';
 import { TargetInfo } from '../TargetInfo';
@@ -27,7 +30,7 @@ export type Function<TargetRegister> = {
     stackUsage: StackUsage<TargetRegister>;
 };
 
-// TODO: this code is very similar to "spill" in controlFlowGraph.js, try to DRY this up
+// TODO: this code is very similar to "moveRegisterToStack" in controlFlowGraph.js, try to DRY this up
 const translateStackArgumentsToStackReads = (
     taf: ThreeAddressFunction,
     targetInfo
@@ -36,16 +39,17 @@ const translateStackArgumentsToStackReads = (
     const instructions = flatten(
         taf.instructions.map(tas => {
             const result: ThreeAddressStatement[] = [];
+            // If this register is an argument is on the stack, generate a new register to load into temporarily
             switch (tas.kind) {
                 case 'move':
-                    // TODO: just load direclty into the destination
-                    const fromLocation = argumentLocation(targetInfo, taf.arguments, tas.from);
-                    if (fromLocation.kind == 'stack') {
+                    // TODO: just load directly into the destination
+                    const location = argumentStackLocation(targetInfo, taf.arguments, tas.from);
+                    if (location) {
                         const fromLoaded = new Register(`${tas.from.name}_loaded`);
                         result.push({
                             kind: 'loadStack',
-                            register: tas.from,
-                            to: fromLoaded,
+                            register: fromLoaded,
+                            location,
                             why: `Load arg ${tas.from.name} from stack`,
                         });
                         result.push({ ...tas, from: fromLoaded });
@@ -54,26 +58,33 @@ const translateStackArgumentsToStackReads = (
                     }
                     break;
                 case 'add':
+                    const lhsLocation = argumentStackLocation(
+                        targetInfo,
+                        taf.arguments,
+                        tas.lhs
+                    );
                     let lhsLoaded = tas.lhs;
-                    const lhsLocation = argumentLocation(targetInfo, taf.arguments, tas.lhs);
-                    if (lhsLocation.kind == 'stack') {
-                        // TODO: Can probably do this without an extra temp register
+                    if (lhsLocation) {
                         lhsLoaded = new Register(`${tas.lhs.name}_loaded`);
                         result.push({
                             kind: 'loadStack',
-                            register: tas.lhs,
-                            to: lhsLoaded,
+                            register: lhsLoaded,
+                            location: lhsLocation,
                             why: `Load arg from stack`,
                         });
                     }
                     let rhsLoaded = tas.rhs;
-                    const rhsLocation = argumentLocation(targetInfo, taf.arguments, tas.rhs);
-                    if (rhsLocation.kind == 'stack') {
+                    const rhsLocation = argumentStackLocation(
+                        targetInfo,
+                        taf.arguments,
+                        tas.rhs
+                    );
+                    if (rhsLocation) {
                         rhsLoaded = new Register(`${tas.rhs.name}_loaded`);
                         result.push({
                             kind: 'loadStack',
-                            register: tas.rhs,
-                            to: rhsLoaded,
+                            register: rhsLoaded,
+                            location: rhsLocation,
                             why: `Load arg from stack`,
                         });
                     }
@@ -82,8 +93,8 @@ const translateStackArgumentsToStackReads = (
                 default:
                     const registersRead = reads(tas, taf.arguments);
                     const registerReadsStackArgument = (r: Register) => {
-                        const location = argumentLocation(targetInfo, taf.arguments, r);
-                        return location.kind == 'stack';
+                        const location = argumentStackLocation(targetInfo, taf.arguments, r);
+                        return location !== undefined;
                     };
                     if (registersRead.some(registerReadsStackArgument)) {
                         throw debug(
@@ -113,7 +124,8 @@ const stackArguments = <TargetRegister>(
     threeAddressFunction: ThreeAddressFunction
 ): Register[] =>
     threeAddressFunction.arguments.filter(
-        arg => argumentLocation(targetInfo, threeAddressFunction.arguments, arg).kind == 'stack'
+        arg =>
+            argumentStackLocation(targetInfo, threeAddressFunction.arguments, arg) !== undefined
     );
 
 export const toTarget = <TargetRegister>({
@@ -122,12 +134,12 @@ export const toTarget = <TargetRegister>({
     finalCleanup,
     isMain,
 }: ToTargetInput<TargetRegister>): Function<TargetRegister> => {
-    // When we call this we don't know the total stack frame size because we haven't assigned registers yet. statmentToTarget takes into account the total stack frame size and adjusts stack indexes accordingly.
     const functonWithArgsFromStack = translateStackArgumentsToStackReads(
         threeAddressFunction,
         targetInfo
     );
 
+    debugger;
     const { assignment, newFunction: functionWithAssignment } = assignRegisters(
         functonWithArgsFromStack,
         targetInfo.registers.generalPurpose
@@ -153,10 +165,10 @@ export const toTarget = <TargetRegister>({
             stackOffsetPerInstruction.push(0);
         }
     });
-
+    functionToString;
     const exitLabel = `${threeAddressFunction.name}_cleanup`;
     const statements: TargetStatement<TargetRegister>[] = flatten(
-        functonWithArgsFromStack.instructions.map((instruction, index) =>
+        functionWithAssignment.instructions.map((instruction, index) =>
             statementToTarget({
                 tas: instruction,
                 targetInfo,

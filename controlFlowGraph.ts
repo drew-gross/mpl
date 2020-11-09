@@ -11,7 +11,8 @@ import {
     isEqual as registerIsEqual,
     compare as registerCompare,
 } from './threeAddressCode/Register';
-import { Function } from './threeAddressCode/Function';
+import { Function, toString as functionToString } from './threeAddressCode/Function';
+functionToString;
 import {
     Statement,
     toString as tasToString,
@@ -307,6 +308,7 @@ export const tafLiveness = (taf: Function): Set<Register>[] => {
         entryLiveness: b[0],
         index: i,
     }));
+    // TODO use drain()
     while (remainingToPropagate.length > 0) {
         const { entryLiveness, index } = remainingToPropagate.shift() as any;
         const preceedingNodeIndices = cfg.connections
@@ -416,12 +418,7 @@ export const moveRegisterToStack = (
         name: taf.name,
     };
 
-    // When we storeStack a register, we replace every read of that register with an loadStack to a new register that
-    // exists only as long as that read, and replace every write the write followed by a storeStack, so that the
-    // lifetime of the spilled register is very short. Each read or write needs to create a new register to storeStack
-    // from or to (we call that register a fragment) and this function creates a new fragment for each read/write.
-    const makeFragment = (): Register => new Register(registerName(`${register.name}_spill`));
-
+    // When we spill a register, we insert a stack load before every read and a stack write after every store.
     taf.instructions.forEach(instruction => {
         // TODO: Come up with some way to do this generically without unpacking the instruction. A refactor that required the implementation of spilling for callByName/callByRegister was hard to debug due to this not being generic.
         switch (instruction.kind) {
@@ -431,89 +428,65 @@ export const moveRegisterToStack = (
             }
             case 'loadImmediate': {
                 // TODO: seems weird to storeStack a constant? Could just reload instead. Oh well, will fix later.
+                newFunction.instructions.push(instruction);
                 if (registerIsEqual(instruction.destination, register)) {
-                    const fragment = makeFragment();
-                    newFunction.instructions.push({ ...instruction, destination: fragment });
                     newFunction.instructions.push({
                         kind: 'storeStack',
-                        register: fragment,
+                        register: register,
                         location,
                         why: 'storeStack',
                     });
-                } else {
-                    newFunction.instructions.push(instruction);
                 }
                 break;
             }
             case 'add':
             case 'multiply': {
-                let newLhs = instruction.lhs;
-                let newRhs = instruction.rhs;
                 if (registerIsEqual(instruction.lhs, register)) {
-                    newLhs = makeFragment();
                     newFunction.instructions.push({
                         kind: 'loadStack',
                         register: instruction.lhs,
-                        to: newLhs,
+                        location,
                         why: 'loadStack',
                     });
                 }
                 if (registerIsEqual(instruction.rhs, register)) {
-                    newRhs = makeFragment();
                     newFunction.instructions.push({
                         kind: 'loadStack',
                         register: instruction.rhs,
-                        to: newRhs,
+                        location,
                         why: 'loadStack',
                     });
                 }
-                let newDestination = instruction.destination;
+                newFunction.instructions.push(instruction);
                 if (registerIsEqual(instruction.destination, register)) {
-                    newDestination = makeFragment();
-                    newFunction.instructions.push({
-                        ...instruction,
-                        lhs: newLhs,
-                        rhs: newRhs,
-                        destination: newDestination,
-                    });
                     newFunction.instructions.push({
                         kind: 'storeStack',
-                        register: newDestination,
+                        register: instruction.destination,
                         location,
                         why: 'storeStack',
                     });
-                } else {
-                    newFunction.instructions.push({ ...instruction, lhs: newLhs, rhs: newRhs });
                 }
                 break;
             }
             case 'move': {
                 // TODO: seems weird to storeStack a move. Maybe should _replace_ the move or sommething?
-                let newSource = instruction.from;
                 if (registerIsEqual(instruction.from, register)) {
-                    newSource = makeFragment();
                     newFunction.instructions.push({
                         kind: 'loadStack',
                         register: instruction.from,
-                        to: newSource,
+                        location,
                         why: 'loadStack',
                     });
                 }
+                newFunction.instructions.push(instruction);
                 if (registerIsEqual(instruction.to, register)) {
-                    const newDestination = makeFragment();
-                    newFunction.instructions.push({
-                        ...instruction,
-                        to: newDestination,
-                        from: newSource,
-                    });
                     newFunction.instructions.push({
                         kind: 'storeStack',
-                        register: newDestination,
+                        register: instruction.to,
                         location,
                         why: 'storeStack',
                     });
                 } else {
-                    newFunction.instructions.push({ ...instruction, from: newSource });
                 }
                 break;
             }
@@ -527,58 +500,44 @@ export const moveRegisterToStack = (
             case 'syscall':
             case 'callByName': {
                 // TODO: Implement proper spilling for callByName and callByRegister (and probs syscalls)
-                const newArguments: (Register | number | string)[] = [];
                 instruction.arguments.forEach(arg => {
                     if (
                         typeof arg != 'string' &&
                         typeof arg != 'number' &&
                         registerIsEqual(arg, register)
                     ) {
-                        const newSource = makeFragment();
-                        newArguments.push(newSource);
                         newFunction.instructions.push({
                             kind: 'loadStack',
                             register: arg,
-                            to: newSource,
+                            location,
                             why: 'loadStack arg',
                         });
-                    } else {
-                        newArguments.push(arg);
                     }
                 });
-                newFunction.instructions.push({
-                    ...instruction,
-                    arguments: newArguments,
-                } as any);
+                newFunction.instructions.push(instruction);
                 break;
             }
             case 'loadSymbolAddress':
+                newFunction.instructions.push(instruction);
                 if (registerIsEqual(instruction.to, register)) {
-                    const newDestination = makeFragment();
-                    newFunction.instructions.push({ ...instruction, to: newDestination });
                     newFunction.instructions.push({
                         kind: 'storeStack',
-                        register: newDestination,
+                        register: instruction.to,
                         location,
                         why: 'spill',
                     });
-                } else {
-                    newFunction.instructions.push(instruction);
                 }
                 break;
             case 'return':
                 if (registerIsEqual(instruction.register, register)) {
-                    const newReturnVal = makeFragment();
                     newFunction.instructions.push({
                         kind: 'loadStack',
                         register: instruction.register,
-                        to: newReturnVal,
+                        location,
                         why: 'loadStack ret val',
                     });
-                    newFunction.instructions.push({ ...instruction, register: newReturnVal });
-                } else {
-                    newFunction.instructions.push(instruction);
                 }
+                newFunction.instructions.push(instruction);
                 break;
             default:
                 if (

@@ -1,30 +1,36 @@
 import debug from '../util/debug';
-import { Statement as ThreeAddressStatement } from '../threeAddressCode/statement';
+import {
+    Statement as ThreeAddressStatement,
+    StackLocation,
+} from '../threeAddressCode/statement';
 import { Register, isEqual } from '../threeAddressCode/Register';
 import { RegisterAssignment, saveFunctionCallResult } from '../backend-utils';
 import { TargetInfo, TargetRegisters } from '../TargetInfo';
 import { StackUsage, offset } from './StackUsage';
 
+// TODO: remove this probably
 export type DataLocation<TargetRegister> =
     | { kind: 'register'; register: TargetRegister }
     | { kind: 'stack'; offset: number /* TODO: offset maybe in the wrong place? */ }
     // Returned when input to argumentLocation isn't an argument. TODO: we should know before calling argumentLocation whether it's an argument or not.
     | { kind: 'not_argument' };
 
-export const argumentLocation = <TargetRegister>(
+export const argumentStackLocation = <TargetRegister>(
     targetInfo: TargetInfo<TargetRegister>,
     functionArgs: Register[],
     register: Register
-): DataLocation<TargetRegister> => {
+): StackLocation | undefined => {
     const argIndex = functionArgs.findIndex(arg => isEqual(arg, register));
     if (argIndex < 0) {
-        return { kind: 'not_argument' };
+        // not an arg
+        return undefined;
     } else if (argIndex < targetInfo.registers.functionArgument.length) {
-        return { kind: 'register', register: targetInfo.registers.functionArgument[argIndex] };
+        // not passed in stack
+        return undefined;
     } else {
         return {
-            kind: 'stack',
-            offset: argIndex - targetInfo.registers.functionArgument.length,
+            kind: 'argument',
+            argNumber: argIndex - targetInfo.registers.functionArgument.length,
         };
     }
 };
@@ -386,7 +392,8 @@ export const toTarget = <TargetRegister>({
             return [
                 {
                     kind: 'stackLoad',
-                    register: getRegister(tas.to),
+                    // TODO: Need to refactor StackUsage
+                    register: getRegister(tas.register),
                     offset: offset(stackUsage, tas.register),
                     why: tas.why,
                 },

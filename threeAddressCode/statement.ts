@@ -26,7 +26,7 @@ export type Statement = { why: string } & (
     | { kind: 'alloca'; bytes: number; register: Register }
     // Stack is used for many reasons. Each stack slot has a name at this stage, a stack slot number will be assigned later.
     | { kind: 'storeStack'; register: Register; location: StackLocation }
-    | { kind: 'loadStack'; register: Register; to: Register }
+    | { kind: 'loadStack'; register: Register; location: StackLocation }
     // Branches
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: Register; rhs: Register; label: string }
@@ -301,10 +301,9 @@ export const writes = (tas: Statement): Register[] => {
             return [];
         case 'alloca':
             return [tas.register];
-        case 'loadStack':
-            // storeStack/loadStack doesn't really fit into the reads/write paradigm correctly, because it _implements_ reads/writes. Semantics: After we storeStack something, it's not live anymore, so it's a "write" since writes kill a register. After we loadStack something, we can kinda do whatever (whether it's live depends on whether future readers exist)TODO: handle it better somehow
-            return [tas.register, tas.to];
+        // storeStack/loadStack doesn't really fit into the reads/write paradigm correctly, because it _implements_ reads/writes. Semantics: After we storeStack something, it's not live anymore, so it's a "write" since writes kill a register. After we loadStack something, we can kinda do whatever (whether it's live depends on whether future readers exist)TODO: handle it better somehow
         case 'storeStack':
+        case 'loadStack':
             return [tas.register];
     }
     throw debug(`kind ${(tas as any).kind} missing in writes`);
