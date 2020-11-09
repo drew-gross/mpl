@@ -591,6 +591,28 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 28,
     },
     {
+        name: 'Nine Argument Function With Multiply',
+        source: `
+            foo := (a: Integer, b: Integer, c: Integer, d: Integer, e: Integer, f: Integer, g: Integer, h: Integer, i: Integer) => {
+                return a * b * c * d * e * f * g * h * i;
+            };
+            return foo(1, 1, 1, 2, 3, 2, 1, 2, 3);
+        `,
+        exitCode: 72,
+        failing: true,
+    },
+    {
+        name: 'Seven Argument Function With Subtract',
+        source: `
+            foo := (a: Integer, b: Integer, c: Integer, d: Integer, e: Integer, f: Integer, g: Integer) => {
+                return a - b - c - d - e - f - g;
+            };
+            return foo(10, 1, 1, 1, 1, 1, 1);
+        `,
+        exitCode: 4,
+        failing: true,
+    },
+    {
         name: 'Id Function',
         source: `
             id := a: Integer => a; return id(5);
