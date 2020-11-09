@@ -18,6 +18,7 @@ import {
     reads,
     writes,
     hasSideEffects,
+    StackLocation,
 } from './threeAddressCode/Statement';
 
 export type BasicBlock = {
@@ -401,8 +402,12 @@ export const registerInterferenceGraph = (
     return result;
 };
 
-export const storeStack = (taf: Function, registerToSpill: Register): Function => {
-    if (typeof registerToSpill == 'string') throw debug("Can't storeStack special registers");
+export const moveRegisterToStack = (
+    taf: Function,
+    register: Register,
+    location: StackLocation
+): Function => {
+    if (typeof register == 'string') throw debug("Can't storeStack special registers");
     const registerName = idAppender();
     const newFunction: Function = {
         instructions: [],
@@ -415,8 +420,7 @@ export const storeStack = (taf: Function, registerToSpill: Register): Function =
     // exists only as long as that read, and replace every write the write followed by a storeStack, so that the
     // lifetime of the spilled register is very short. Each read or write needs to create a new register to storeStack
     // from or to (we call that register a fragment) and this function creates a new fragment for each read/write.
-    const makeFragment = (): Register =>
-        new Register(registerName(`${registerToSpill.name}_spill`));
+    const makeFragment = (): Register => new Register(registerName(`${register.name}_spill`));
 
     taf.instructions.forEach(instruction => {
         // TODO: Come up with some way to do this generically without unpacking the instruction. A refactor that required the implementation of spilling for callByName/callByRegister was hard to debug due to this not being generic.
@@ -427,12 +431,13 @@ export const storeStack = (taf: Function, registerToSpill: Register): Function =
             }
             case 'loadImmediate': {
                 // TODO: seems weird to storeStack a constant? Could just reload instead. Oh well, will fix later.
-                if (registerIsEqual(instruction.destination, registerToSpill)) {
+                if (registerIsEqual(instruction.destination, register)) {
                     const fragment = makeFragment();
                     newFunction.instructions.push({ ...instruction, destination: fragment });
                     newFunction.instructions.push({
                         kind: 'storeStack',
                         register: fragment,
+                        location,
                         why: 'storeStack',
                     });
                 } else {
@@ -444,7 +449,7 @@ export const storeStack = (taf: Function, registerToSpill: Register): Function =
             case 'multiply': {
                 let newLhs = instruction.lhs;
                 let newRhs = instruction.rhs;
-                if (registerIsEqual(instruction.lhs, registerToSpill)) {
+                if (registerIsEqual(instruction.lhs, register)) {
                     newLhs = makeFragment();
                     newFunction.instructions.push({
                         kind: 'loadStack',
@@ -453,7 +458,7 @@ export const storeStack = (taf: Function, registerToSpill: Register): Function =
                         why: 'loadStack',
                     });
                 }
-                if (registerIsEqual(instruction.rhs, registerToSpill)) {
+                if (registerIsEqual(instruction.rhs, register)) {
                     newRhs = makeFragment();
                     newFunction.instructions.push({
                         kind: 'loadStack',
@@ -463,7 +468,7 @@ export const storeStack = (taf: Function, registerToSpill: Register): Function =
                     });
                 }
                 let newDestination = instruction.destination;
-                if (registerIsEqual(instruction.destination, registerToSpill)) {
+                if (registerIsEqual(instruction.destination, register)) {
                     newDestination = makeFragment();
                     newFunction.instructions.push({
                         ...instruction,
@@ -474,6 +479,7 @@ export const storeStack = (taf: Function, registerToSpill: Register): Function =
                     newFunction.instructions.push({
                         kind: 'storeStack',
                         register: newDestination,
+                        location,
                         why: 'storeStack',
                     });
                 } else {
@@ -484,7 +490,7 @@ export const storeStack = (taf: Function, registerToSpill: Register): Function =
             case 'move': {
                 // TODO: seems weird to storeStack a move. Maybe should _replace_ the move or sommething?
                 let newSource = instruction.from;
-                if (registerIsEqual(instruction.from, registerToSpill)) {
+                if (registerIsEqual(instruction.from, register)) {
                     newSource = makeFragment();
                     newFunction.instructions.push({
                         kind: 'loadStack',
@@ -493,7 +499,7 @@ export const storeStack = (taf: Function, registerToSpill: Register): Function =
                         why: 'loadStack',
                     });
                 }
-                if (registerIsEqual(instruction.to, registerToSpill)) {
+                if (registerIsEqual(instruction.to, register)) {
                     const newDestination = makeFragment();
                     newFunction.instructions.push({
                         ...instruction,
@@ -503,6 +509,7 @@ export const storeStack = (taf: Function, registerToSpill: Register): Function =
                     newFunction.instructions.push({
                         kind: 'storeStack',
                         register: newDestination,
+                        location,
                         why: 'storeStack',
                     });
                 } else {
@@ -512,7 +519,7 @@ export const storeStack = (taf: Function, registerToSpill: Register): Function =
             }
             case 'loadStack':
             case 'storeStack':
-                if (registerIsEqual(instruction.register, registerToSpill)) {
+                if (registerIsEqual(instruction.register, register)) {
                     throw debug('repsill');
                 }
                 newFunction.instructions.push(instruction);
@@ -525,7 +532,7 @@ export const storeStack = (taf: Function, registerToSpill: Register): Function =
                     if (
                         typeof arg != 'string' &&
                         typeof arg != 'number' &&
-                        registerIsEqual(arg, registerToSpill)
+                        registerIsEqual(arg, register)
                     ) {
                         const newSource = makeFragment();
                         newArguments.push(newSource);
@@ -546,20 +553,21 @@ export const storeStack = (taf: Function, registerToSpill: Register): Function =
                 break;
             }
             case 'loadSymbolAddress':
-                if (registerIsEqual(instruction.to, registerToSpill)) {
+                if (registerIsEqual(instruction.to, register)) {
                     const newDestination = makeFragment();
                     newFunction.instructions.push({ ...instruction, to: newDestination });
                     newFunction.instructions.push({
                         kind: 'storeStack',
                         register: newDestination,
-                        why: 'storeStack',
+                        location,
+                        why: 'spill',
                     });
                 } else {
                     newFunction.instructions.push(instruction);
                 }
                 break;
             case 'return':
-                if (registerIsEqual(instruction.register, registerToSpill)) {
+                if (registerIsEqual(instruction.register, register)) {
                     const newReturnVal = makeFragment();
                     newFunction.instructions.push({
                         kind: 'loadStack',
@@ -574,8 +582,8 @@ export const storeStack = (taf: Function, registerToSpill: Register): Function =
                 break;
             default:
                 if (
-                    reads(instruction, taf.arguments).includes(registerToSpill) ||
-                    writes(instruction).includes(registerToSpill)
+                    reads(instruction, taf.arguments).includes(register) ||
+                    writes(instruction).includes(register)
                 ) {
                     throw debug(`${instruction.kind} unhandled in storeStack`);
                 } else {
@@ -622,7 +630,8 @@ export const removeDeadStores = (
 
 export const assignRegisters = <TargetRegister>(
     taf: Function,
-    colors: TargetRegister[]
+    colors: TargetRegister[],
+    alreadySpilled: number = 0
 ): { assignment: RegisterAssignment<TargetRegister>; newFunction: Function } => {
     let liveness = tafLiveness(taf);
     let newFunction = removeDeadStores(taf, liveness);
@@ -717,8 +726,11 @@ export const assignRegisters = <TargetRegister>(
 
     if (needToSpill) {
         debugger;
-        const spilled = storeStack(taf, needToSpill);
-        const spilledAssignment = assignRegisters(spilled, colors);
+        const spilled = moveRegisterToStack(taf, needToSpill, {
+            kind: 'spill',
+            slotNumber: alreadySpilled,
+        });
+        const spilledAssignment = assignRegisters(spilled, colors, alreadySpilled + 1);
         spilledAssignment.assignment.spilled.push(needToSpill);
         return spilledAssignment;
     }

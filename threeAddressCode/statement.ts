@@ -5,6 +5,10 @@ import debug from '../util/debug';
 
 type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
 
+export type StackLocation =
+    | { kind: 'argument'; argNumber: number }
+    | { kind: 'spill'; slotNumber: number };
+
 export type Statement = { why: string } & (
     | { kind: 'empty' }
     // Arithmetic
@@ -21,7 +25,7 @@ export type Statement = { why: string } & (
     // Stack management
     | { kind: 'alloca'; bytes: number; register: Register }
     // Stack is used for many reasons. Each stack slot has a name at this stage, a stack slot number will be assigned later.
-    | { kind: 'storeStack'; register: Register }
+    | { kind: 'storeStack'; register: Register; location: StackLocation }
     | { kind: 'loadStack'; register: Register; to: Register }
     // Branches
     | { kind: 'goto'; label: string }
