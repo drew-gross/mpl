@@ -20,9 +20,9 @@ export type Statement = { why: string } & (
     | { kind: 'functionLabel'; name: string }
     // Stack management
     | { kind: 'alloca'; bytes: number; register: Register }
-    // Spilling
-    | { kind: 'spill'; register: Register }
-    | { kind: 'unspill'; register: Register; to: Register }
+    // Stack is used for many reasons. Each stack slot has a name at this stage, a stack slot number will be assigned later.
+    | { kind: 'storeStack'; register: Register }
+    | { kind: 'loadStack'; register: Register; to: Register }
     // Branches
     | { kind: 'goto'; label: string }
     | { kind: 'gotoIfEqual'; lhs: Register; rhs: Register; label: string }
@@ -149,10 +149,10 @@ const toStringWithoutComment = (tas: Statement): string => {
             return `return ${s(tas.register)};`;
         case 'alloca':
             return `${s(tas.register)} = alloca(${tas.bytes})`;
-        case 'spill':
-            return `spill:${s(tas.register)}`;
-        case 'unspill':
-            return `unspill:${s(tas.register)}`;
+        case 'storeStack':
+            return `storeStack:${s(tas.register)}`;
+        case 'loadStack':
+            return `loadStack:${s(tas.register)}`;
     }
 };
 
@@ -239,10 +239,10 @@ export const reads = (tas: Statement, args: Register[]): Register[] => {
             return [tas.register];
         case 'alloca':
             return [];
-        // Spill/Unspill doesn't really fit into the reads/write paradigm correctly, because it _implements_ reads/writes. Semantics: After we spill something, it's not live anymore, so it's a "write" since writes kill a register. After we unspill something, we can kinda do whatever (whether it's live depends on whether future readers exist)TODO: handle it better somehow
-        case 'unspill':
+        // storeStack/loadStack doesn't really fit into the reads/write paradigm correctly, because it _implements_ reads/writes. Semantics: After we storeStack something, it's not live anymore, so it's a "write" since writes kill a register. After we loadStack something, we can kinda do whatever (whether it's live depends on whether future readers exist)TODO: handle it better somehow
+        case 'loadStack':
             return [];
-        case 'spill':
+        case 'storeStack':
             return [];
     }
     throw debug(`kind ${(tas as any).kind} missing in reads`);
@@ -297,10 +297,10 @@ export const writes = (tas: Statement): Register[] => {
             return [];
         case 'alloca':
             return [tas.register];
-        case 'unspill':
-            // Spill/Unspill doesn't really fit into the reads/write paradigm correctly, because it _implements_ reads/writes. Semantics: After we spill something, it's not live anymore, so it's a "write" since writes kill a register. After we unspill something, we can kinda do whatever (whether it's live depends on whether future readers exist)TODO: handle it better somehow
+        case 'loadStack':
+            // storeStack/loadStack doesn't really fit into the reads/write paradigm correctly, because it _implements_ reads/writes. Semantics: After we storeStack something, it's not live anymore, so it's a "write" since writes kill a register. After we loadStack something, we can kinda do whatever (whether it's live depends on whether future readers exist)TODO: handle it better somehow
             return [tas.register, tas.to];
-        case 'spill':
+        case 'storeStack':
             return [tas.register];
     }
     throw debug(`kind ${(tas as any).kind} missing in writes`);
@@ -318,7 +318,7 @@ export const hasSideEffects = (tas: Statement): boolean => {
         case 'storeMemoryByte':
         // These write to the stack
         case 'alloca':
-        case 'spill':
+        case 'storeStack':
         // Labels act as a side effect in that it can't be removed for having no side effects
         case 'label':
         case 'functionLabel':
@@ -348,7 +348,7 @@ export const hasSideEffects = (tas: Statement): boolean => {
         case 'loadGlobal':
         case 'loadMemory':
         case 'loadMemoryByte':
-        case 'unspill':
+        case 'loadStack':
             return false;
     }
     throw debug(`kind ${(tas as any).kind} missing in hasSideEffects`);

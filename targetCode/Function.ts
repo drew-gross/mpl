@@ -32,7 +32,7 @@ const translateStackArgumentsToStackReads = (
     taf: ThreeAddressFunction,
     targetInfo
 ): ThreeAddressFunction => {
-    // TODO: don't load the argument if it happens to already be loaded due to a previous unspill
+    // TODO: don't load the argument if it happens to already be loaded due to a previous loadStack
     const instructions = flatten(
         taf.instructions.map(tas => {
             const result: ThreeAddressStatement[] = [];
@@ -43,7 +43,7 @@ const translateStackArgumentsToStackReads = (
                     if (fromLocation.kind == 'stack') {
                         const fromLoaded = new Register(`${tas.from.name}_loaded`);
                         result.push({
-                            kind: 'unspill',
+                            kind: 'loadStack',
                             register: tas.from,
                             to: fromLoaded,
                             why: `Load arg ${tas.from.name} from stack`,
@@ -60,7 +60,7 @@ const translateStackArgumentsToStackReads = (
                         // TODO: Can probably do this without an extra temp register
                         lhsLoaded = new Register(`${tas.lhs.name}_loaded`);
                         result.push({
-                            kind: 'unspill',
+                            kind: 'loadStack',
                             register: tas.lhs,
                             to: lhsLoaded,
                             why: `Load arg from stack`,
@@ -71,7 +71,7 @@ const translateStackArgumentsToStackReads = (
                     if (rhsLocation.kind == 'stack') {
                         rhsLoaded = new Register(`${tas.rhs.name}_loaded`);
                         result.push({
-                            kind: 'unspill',
+                            kind: 'loadStack',
                             register: tas.rhs,
                             to: rhsLoaded,
                             why: `Load arg from stack`,
@@ -104,7 +104,7 @@ const spilledRegisters = (threeAddressFunction: ThreeAddressFunction): Register[
     uniqueCmp(
         isEqual,
         threeAddressFunction.instructions
-            .filter(i => ['spill', 'unspill'].includes(i.kind))
+            .filter(i => ['spill', 'loadStack'].includes(i.kind))
             .map((i: any) => i.register)
     );
 

@@ -2063,7 +2063,7 @@ test('Assign Registers for Old For', t => {
     t.pass();
 });
 
-test.only('Register assignment for Many Globals Multiply', t => {
+test.failing('Register assignment for Many Globals Multiply', t => {
     const f = parseFunctionOrDie(`
         (function) main():
             r:ri = &readInt; Load runtime function

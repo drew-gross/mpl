@@ -372,7 +372,7 @@ export const toTarget = <TargetRegister>({
                     why: tas.why,
                 },
             ];
-        case 'spill': {
+        case 'storeStack': {
             return [
                 {
                     kind: 'stackStore',
@@ -382,7 +382,7 @@ export const toTarget = <TargetRegister>({
                 },
             ];
         }
-        case 'unspill':
+        case 'loadStack':
             return [
                 {
                     kind: 'stackLoad',

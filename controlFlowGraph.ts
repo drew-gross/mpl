@@ -58,8 +58,8 @@ const blockBehaviour = (tas: Statement): 'endBlock' | 'beginBlock' | 'midBlock' 
         case 'callByName':
         case 'callByRegister':
         case 'alloca':
-        case 'spill':
-        case 'unspill':
+        case 'storeStack':
+        case 'loadStack':
             return 'midBlock';
         case 'label':
         case 'functionLabel':
@@ -401,8 +401,8 @@ export const registerInterferenceGraph = (
     return result;
 };
 
-export const spill = (taf: Function, registerToSpill: Register): Function => {
-    if (typeof registerToSpill == 'string') throw debug("Can't spill special registers");
+export const storeStack = (taf: Function, registerToSpill: Register): Function => {
+    if (typeof registerToSpill == 'string') throw debug("Can't storeStack special registers");
     const registerName = idAppender();
     const newFunction: Function = {
         instructions: [],
@@ -411,9 +411,9 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
         name: taf.name,
     };
 
-    // When we spill a register, we replace every read of that register with an unspill to a new register that
-    // exists only as long as that read, and replace every write the write followed by a spill, so that the
-    // lifetime of the spilled register is very short. Each read or write needs to create a new register to spill
+    // When we storeStack a register, we replace every read of that register with an loadStack to a new register that
+    // exists only as long as that read, and replace every write the write followed by a storeStack, so that the
+    // lifetime of the spilled register is very short. Each read or write needs to create a new register to storeStack
     // from or to (we call that register a fragment) and this function creates a new fragment for each read/write.
     const makeFragment = (): Register =>
         new Register(registerName(`${registerToSpill.name}_spill`));
@@ -426,14 +426,14 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                 break;
             }
             case 'loadImmediate': {
-                // TODO: seems weird to spill a constant? Could just reload instead. Oh well, will fix later.
+                // TODO: seems weird to storeStack a constant? Could just reload instead. Oh well, will fix later.
                 if (registerIsEqual(instruction.destination, registerToSpill)) {
                     const fragment = makeFragment();
                     newFunction.instructions.push({ ...instruction, destination: fragment });
                     newFunction.instructions.push({
-                        kind: 'spill',
+                        kind: 'storeStack',
                         register: fragment,
-                        why: 'spill',
+                        why: 'storeStack',
                     });
                 } else {
                     newFunction.instructions.push(instruction);
@@ -447,19 +447,19 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                 if (registerIsEqual(instruction.lhs, registerToSpill)) {
                     newLhs = makeFragment();
                     newFunction.instructions.push({
-                        kind: 'unspill',
+                        kind: 'loadStack',
                         register: instruction.lhs,
                         to: newLhs,
-                        why: 'unspill',
+                        why: 'loadStack',
                     });
                 }
                 if (registerIsEqual(instruction.rhs, registerToSpill)) {
                     newRhs = makeFragment();
                     newFunction.instructions.push({
-                        kind: 'unspill',
+                        kind: 'loadStack',
                         register: instruction.rhs,
                         to: newRhs,
-                        why: 'unspill',
+                        why: 'loadStack',
                     });
                 }
                 let newDestination = instruction.destination;
@@ -472,9 +472,9 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                         destination: newDestination,
                     });
                     newFunction.instructions.push({
-                        kind: 'spill',
+                        kind: 'storeStack',
                         register: newDestination,
-                        why: 'spill',
+                        why: 'storeStack',
                     });
                 } else {
                     newFunction.instructions.push({ ...instruction, lhs: newLhs, rhs: newRhs });
@@ -482,15 +482,15 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                 break;
             }
             case 'move': {
-                // TODO: seems weird to spill a move. Maybe should _replace_ the move or sommething?
+                // TODO: seems weird to storeStack a move. Maybe should _replace_ the move or sommething?
                 let newSource = instruction.from;
                 if (registerIsEqual(instruction.from, registerToSpill)) {
                     newSource = makeFragment();
                     newFunction.instructions.push({
-                        kind: 'unspill',
+                        kind: 'loadStack',
                         register: instruction.from,
                         to: newSource,
-                        why: 'unspill',
+                        why: 'loadStack',
                     });
                 }
                 if (registerIsEqual(instruction.to, registerToSpill)) {
@@ -501,17 +501,17 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                         from: newSource,
                     });
                     newFunction.instructions.push({
-                        kind: 'spill',
+                        kind: 'storeStack',
                         register: newDestination,
-                        why: 'spill',
+                        why: 'storeStack',
                     });
                 } else {
                     newFunction.instructions.push({ ...instruction, from: newSource });
                 }
                 break;
             }
-            case 'unspill':
-            case 'spill':
+            case 'loadStack':
+            case 'storeStack':
                 if (registerIsEqual(instruction.register, registerToSpill)) {
                     throw debug('repsill');
                 }
@@ -530,10 +530,10 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                         const newSource = makeFragment();
                         newArguments.push(newSource);
                         newFunction.instructions.push({
-                            kind: 'unspill',
+                            kind: 'loadStack',
                             register: arg,
                             to: newSource,
-                            why: 'unspill arg',
+                            why: 'loadStack arg',
                         });
                     } else {
                         newArguments.push(arg);
@@ -550,9 +550,9 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                     const newDestination = makeFragment();
                     newFunction.instructions.push({ ...instruction, to: newDestination });
                     newFunction.instructions.push({
-                        kind: 'spill',
+                        kind: 'storeStack',
                         register: newDestination,
-                        why: 'spill',
+                        why: 'storeStack',
                     });
                 } else {
                     newFunction.instructions.push(instruction);
@@ -562,10 +562,10 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                 if (registerIsEqual(instruction.register, registerToSpill)) {
                     const newReturnVal = makeFragment();
                     newFunction.instructions.push({
-                        kind: 'unspill',
+                        kind: 'loadStack',
                         register: instruction.register,
                         to: newReturnVal,
-                        why: 'unspill ret val',
+                        why: 'loadStack ret val',
                     });
                     newFunction.instructions.push({ ...instruction, register: newReturnVal });
                 } else {
@@ -577,7 +577,7 @@ export const spill = (taf: Function, registerToSpill: Register): Function => {
                     reads(instruction, taf.arguments).includes(registerToSpill) ||
                     writes(instruction).includes(registerToSpill)
                 ) {
-                    throw debug(`${instruction.kind} unhandled in spill`);
+                    throw debug(`${instruction.kind} unhandled in storeStack`);
                 } else {
                     newFunction.instructions.push(instruction);
                 }
@@ -665,7 +665,7 @@ export const assignRegisters = <TargetRegister>(
             return true;
         });
 
-        // ... or we choose a node to spill if we can't find one we can color ...
+        // ... or we choose a node to storeStack if we can't find one we can color ...
         if (!colorableRegister) {
             colorableRegister = registersToAssign.extractOne(_ => true);
         }
@@ -717,7 +717,7 @@ export const assignRegisters = <TargetRegister>(
 
     if (needToSpill) {
         debugger;
-        const spilled = spill(taf, needToSpill);
+        const spilled = storeStack(taf, needToSpill);
         const spilledAssignment = assignRegisters(spilled, colors);
         spilledAssignment.assignment.spilled.push(needToSpill);
         return spilledAssignment;
