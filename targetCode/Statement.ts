@@ -8,13 +8,6 @@ import { RegisterAssignment, saveFunctionCallResult } from '../backend-utils';
 import { TargetInfo, TargetRegisters } from '../TargetInfo';
 import { StackUsage, offset } from './StackUsage';
 
-// TODO: remove this probably
-export type DataLocation<TargetRegister> =
-    | { kind: 'register'; register: TargetRegister }
-    | { kind: 'stack'; offset: number /* TODO: offset maybe in the wrong place? */ }
-    // Returned when input to argumentLocation isn't an argument. TODO: we should know before calling argumentLocation whether it's an argument or not.
-    | { kind: 'not_argument' };
-
 export const argumentStackLocation = <TargetRegister>(
     targetInfo: TargetInfo<TargetRegister>,
     functionArgs: Register[],
@@ -82,19 +75,19 @@ const arrangeArgumentsForFunctionCall = <TargetRegister>(
     });
 };
 
-const dataLocation = <TargetRegister>(
+const getRegisterFromAssignment = <TargetRegister>(
     registerAssignment: RegisterAssignment<TargetRegister>,
     functionArguments: Register[],
     registers: TargetRegisters<TargetRegister>,
     register: Register
-): DataLocation<TargetRegister> => {
+): TargetRegister => {
     const argIndex = functionArguments.findIndex(arg => isEqual(arg, register));
     if (argIndex > -1) {
         // This is an argument
         if (argIndex < registers.functionArgument.length) {
-            return { kind: 'register', register: registers.functionArgument[argIndex] };
+            return registers.functionArgument[argIndex];
         } else {
-            return { kind: 'stack', offset: argIndex - registers.functionArgument.length };
+            throw debug('stack arg should have been translated to stackLoad');
         }
     } else {
         // This is a temporary or local
@@ -106,22 +99,9 @@ const dataLocation = <TargetRegister>(
                 }. Map: ${JSON.stringify(registerAssignment.registerMap)}`
             );
         }
-        return { kind: 'register', register: registerAssignment.registerMap[register.name] };
+        return registerAssignment.registerMap[register.name];
     }
     debug('should not get here');
-};
-
-const getRegisterFromAssignment = <TargetRegister>(
-    registerAssignment: RegisterAssignment<TargetRegister>,
-    functionArguments: Register[], // TODO Maybe put the info about whether the register is an argument directly into the register?
-    registers: TargetRegisters<TargetRegister>,
-    r: Register
-): TargetRegister => {
-    const location = dataLocation(registerAssignment, functionArguments, registers, r);
-    if (location.kind !== 'register') {
-        throw debug('expected a register');
-    }
-    return location.register;
 };
 
 export type Statement<TargetRegister> = { why: string } & (
