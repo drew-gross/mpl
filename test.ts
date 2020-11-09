@@ -2138,7 +2138,6 @@ test.failing('Register assignment for Many Globals Multiply', t => {
     `);
     const rds = ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'];
     const assigned = assignRegisters(f, rds);
-    debugger;
     t.assert('product_lhs_1' in assigned.assignment);
 });
 

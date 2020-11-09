@@ -602,6 +602,7 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 72,
         failing: true,
+        infiniteLooping: true,
     },
     {
         name: 'Seven Argument Function With Subtract',

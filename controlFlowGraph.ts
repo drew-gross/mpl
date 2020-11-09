@@ -398,149 +398,38 @@ export const registerInterferenceGraph = (
     return result;
 };
 
+// Put a stack read before every read of a variable, and a stack write after every write to it.
 export const moveRegisterToStack = (
     taf: Function,
     register: Register,
     location: StackLocation
 ): Function => {
     if (typeof register == 'string') throw debug("Can't storeStack special registers");
-    const newFunction: Function = {
-        instructions: [],
-        arguments: taf.arguments,
-        liveAtExit: taf.liveAtExit,
-        name: taf.name,
-    };
+    const newFunction: Function = { ...taf };
+    newFunction.instructions = [];
 
-    // When we spill a register, we insert a stack load before every read and a stack write after every store.
     taf.instructions.forEach(instruction => {
-        // TODO: Come up with some way to do this generically without unpacking the instruction. A refactor that required the implementation of spilling for callByName/callByRegister was hard to debug due to this not being generic.
-        switch (instruction.kind) {
-            case 'empty': {
-                newFunction.instructions.push(instruction);
-                break;
-            }
-            case 'loadImmediate': {
-                // TODO: seems weird to storeStack a constant? Could just reload instead. Oh well, will fix later.
-                newFunction.instructions.push(instruction);
-                if (registerIsEqual(instruction.destination, register)) {
-                    newFunction.instructions.push({
-                        kind: 'storeStack',
-                        register,
-                        location,
-                        why: 'storeStack',
-                    });
-                }
-                break;
-            }
-            case 'add':
-            case 'multiply': {
-                if (registerIsEqual(instruction.lhs, register)) {
-                    newFunction.instructions.push({
-                        kind: 'loadStack',
-                        register: instruction.lhs,
-                        location,
-                        why: 'loadStack',
-                    });
-                }
-                if (registerIsEqual(instruction.rhs, register)) {
-                    newFunction.instructions.push({
-                        kind: 'loadStack',
-                        register: instruction.rhs,
-                        location,
-                        why: 'loadStack',
-                    });
-                }
-                newFunction.instructions.push(instruction);
-                if (registerIsEqual(instruction.destination, register)) {
-                    newFunction.instructions.push({
-                        kind: 'storeStack',
-                        register: instruction.destination,
-                        location,
-                        why: 'storeStack',
-                    });
-                }
-                break;
-            }
-            case 'move': {
-                // TODO: seems weird to storeStack a move. Maybe should _replace_ the move or sommething?
-                if (registerIsEqual(instruction.from, register)) {
-                    newFunction.instructions.push({
-                        kind: 'loadStack',
-                        register: instruction.from,
-                        location,
-                        why: 'loadStack',
-                    });
-                }
-                newFunction.instructions.push(instruction);
-                if (registerIsEqual(instruction.to, register)) {
-                    newFunction.instructions.push({
-                        kind: 'storeStack',
-                        register: instruction.to,
-                        location,
-                        why: 'storeStack',
-                    });
-                }
-                break;
-            }
-            case 'loadStack':
-            case 'storeStack':
-                if (registerIsEqual(instruction.register, register)) {
-                    throw debug('repsill');
-                }
-                newFunction.instructions.push(instruction);
-                break;
-            case 'syscall':
-            case 'callByName': {
-                // TODO: Implement proper spilling for callByName and callByRegister (and probs syscalls)
-                instruction.arguments.forEach(arg => {
-                    if (
-                        typeof arg != 'string' &&
-                        typeof arg != 'number' &&
-                        registerIsEqual(arg, register)
-                    ) {
-                        newFunction.instructions.push({
-                            kind: 'loadStack',
-                            register: arg,
-                            location,
-                            why: 'loadStack arg',
-                        });
-                    }
+        reads(instruction, taf.arguments).forEach(readRegister => {
+            if (registerIsEqual(readRegister, register)) {
+                newFunction.instructions.push({
+                    kind: 'loadStack',
+                    register: readRegister,
+                    location,
+                    why: 'loadStack',
                 });
-                newFunction.instructions.push(instruction);
-                break;
             }
-            case 'loadSymbolAddress':
-                newFunction.instructions.push(instruction);
-                if (registerIsEqual(instruction.to, register)) {
-                    newFunction.instructions.push({
-                        kind: 'storeStack',
-                        register: instruction.to,
-                        location,
-                        why: 'spill',
-                    });
-                }
-                break;
-            case 'return':
-                if (registerIsEqual(instruction.register, register)) {
-                    newFunction.instructions.push({
-                        kind: 'loadStack',
-                        register: instruction.register,
-                        location,
-                        why: 'loadStack ret val',
-                    });
-                }
-                newFunction.instructions.push(instruction);
-                break;
-            default:
-                if (
-                    reads(instruction, taf.arguments).includes(register) ||
-                    writes(instruction).includes(register)
-                ) {
-                    throw debug(`${instruction.kind} unhandled in storeStack`);
-                } else {
-                    newFunction.instructions.push(instruction);
-                }
-        }
+        });
+        newFunction.instructions.push(instruction);
+        writes(instruction).forEach(writtenRegister => {
+            if (registerIsEqual(writtenRegister, register)) {
+                newFunction.instructions.push({
+                    kind: 'storeStack',
+                    register: writtenRegister,
+                    location,
+                    why: 'storeStack',
+                });
+            }
+        });
     });
 
     return newFunction;
@@ -676,7 +565,6 @@ export const assignRegisters = <TargetRegister>(
     });
 
     if (needToSpill) {
-        debugger;
         const spilled = moveRegisterToStack(taf, needToSpill, {
             kind: 'spill',
             slotNumber: alreadySpilled,
