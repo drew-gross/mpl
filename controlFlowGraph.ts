@@ -4,7 +4,6 @@ import last from './util/list/last';
 import { set, Set, join as setJoin, fromList as setFromList } from './util/set';
 import { orderedSet, OrderedSet } from './util/ordered-set';
 import join from './util/join';
-import idAppender from './util/idAppender';
 import { RegisterAssignment } from './backend-utils';
 import {
     Register,
@@ -12,7 +11,7 @@ import {
     compare as registerCompare,
 } from './threeAddressCode/Register';
 import { Function, toString as functionToString } from './threeAddressCode/Function';
-functionToString;
+functionToString; // tslint:disable-line
 import {
     Statement,
     toString as tasToString,
@@ -410,7 +409,6 @@ export const moveRegisterToStack = (
     location: StackLocation
 ): Function => {
     if (typeof register == 'string') throw debug("Can't storeStack special registers");
-    const registerName = idAppender();
     const newFunction: Function = {
         instructions: [],
         arguments: taf.arguments,
@@ -432,7 +430,7 @@ export const moveRegisterToStack = (
                 if (registerIsEqual(instruction.destination, register)) {
                     newFunction.instructions.push({
                         kind: 'storeStack',
-                        register: register,
+                        register,
                         location,
                         why: 'storeStack',
                     });
@@ -486,7 +484,6 @@ export const moveRegisterToStack = (
                         location,
                         why: 'storeStack',
                     });
-                } else {
                 }
                 break;
             }

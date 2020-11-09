@@ -1,10 +1,9 @@
-import uniqueCmp from '../util/list/uniqueCmp';
 import { Statement as ThreeAddressStatement, reads } from '../threeAddressCode/Statement';
 import {
     Function as ThreeAddressFunction,
     toString as functionToString,
 } from '../threeAddressCode/Function';
-import { Register, isEqual } from '../threeAddressCode/Register';
+import { Register } from '../threeAddressCode/Register';
 import { assignRegisters } from '../controlFlowGraph';
 import debug from '../util/debug';
 import { orderedSet, operatorCompare } from '../util/ordered-set';
@@ -92,10 +91,8 @@ const translateStackArgumentsToStackReads = (
                     break;
                 default:
                     const registersRead = reads(tas, taf.arguments);
-                    const registerReadsStackArgument = (r: Register) => {
-                        const location = argumentStackLocation(targetInfo, taf.arguments, r);
-                        return location !== undefined;
-                    };
+                    const registerReadsStackArgument = (r: Register) =>
+                        argumentStackLocation(targetInfo, taf.arguments, r) !== undefined;
                     if (registersRead.some(registerReadsStackArgument)) {
                         throw debug(
                             `not sure how to convert args to stack loads for ${
@@ -111,12 +108,13 @@ const translateStackArgumentsToStackReads = (
     return { ...taf, instructions };
 };
 
-const spilledRegisters = (threeAddressFunction: ThreeAddressFunction): Register[] =>
-    uniqueCmp(
-        isEqual,
-        threeAddressFunction.instructions
-            .filter(i => ['spill', 'loadStack'].includes(i.kind))
-            .map((i: any) => i.register)
+const spillSlotCount = (threeAddressFunction: ThreeAddressFunction): number =>
+    Math.max(
+        0,
+        ...threeAddressFunction.instructions
+            .filter(i => ['storeStack', 'loadStack'].includes(i.kind))
+            .filter((i: any) => 'slotNumber' in i.location)
+            .map((i: any) => i.location.slotNumber)
     );
 
 const stackArguments = <TargetRegister>(
@@ -151,7 +149,7 @@ export const toTarget = <TargetRegister>({
 
     const stackUsage: StackUsage<TargetRegister> = {
         arguments: stackArguments(targetInfo, threeAddressFunction),
-        spills: spilledRegisters(functionWithAssignment),
+        spillSlotCount: spillSlotCount(functionWithAssignment),
         savedExtraRegisters: isMain ? [] : targetInfo.extraSavedRegisters,
         savedUsedRegisters: usedSavedRegistersSet.toList(),
         callerSavedRegisters: targetInfo.callerSavedRegisters,
@@ -165,7 +163,7 @@ export const toTarget = <TargetRegister>({
             stackOffsetPerInstruction.push(0);
         }
     });
-    functionToString;
+    functionToString; // tslint:disable-line
     const exitLabel = `${threeAddressFunction.name}_cleanup`;
     const statements: TargetStatement<TargetRegister>[] = flatten(
         functionWithAssignment.instructions.map((instruction, index) =>

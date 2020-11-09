@@ -383,7 +383,7 @@ export const toTarget = <TargetRegister>({
                 {
                     kind: 'stackStore',
                     register: getRegister(tas.register),
-                    offset: offset(stackUsage, tas.register),
+                    offset: offset(stackUsage, tas.location),
                     why: tas.why,
                 },
             ];
@@ -394,7 +394,7 @@ export const toTarget = <TargetRegister>({
                     kind: 'stackLoad',
                     // TODO: Need to refactor StackUsage
                     register: getRegister(tas.register),
-                    offset: offset(stackUsage, tas.register),
+                    offset: offset(stackUsage, tas.location),
                     why: tas.why,
                 },
             ];

@@ -1639,7 +1639,7 @@ return a + t1 + t2 + t3 + ip.first - ip.second;
     exitCode: 17,
 });
 
-test.failing('Spill with Local Variables and Local Struct in Function', mplTest, {
+test('Spill with Local Variables and Local Struct in Function', mplTest, {
     source: `
 IntPair := {
     first: Integer;
@@ -1676,7 +1676,7 @@ return foo(1);
 });
 
 // TODO: rewrite this in a way that it is guaranteed to cause spilling
-test.failing('2-level call tree with spilling', mplTest, {
+test('2-level call tree with spilling', mplTest, {
     source: `
 
 bar := a: Integer => {

@@ -83,7 +83,7 @@ export const tokenSpecs: TokenSpec<MplToken>[] = [
     { token: '\\.', type: 'memberAccess', toString: _ => '.' },
 ];
 
-export type MplAstNode = 
+export type MplAstNode =
     | 'program'
     | 'function'
     | 'functionWithBlock'

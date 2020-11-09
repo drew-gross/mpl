@@ -1,6 +1,6 @@
 import debug from './util/debug';
 import join from './util/join';
-const { sum } = require('./mpl/sum.mpl');
+const { sum } = require('./mpl/sum.mpl'); // tslint:disable-line
 import { Variable } from './api';
 import { RegisterAgnosticTargetInfo } from './TargetInfo';
 import { TypeError } from './TypeError';
