@@ -174,7 +174,6 @@ export const toTarget = <TargetRegister>({
                 registerAssignment: assignment,
                 exitLabel,
                 stackOffset: stackOffsetPerInstruction[index],
-                stackFrameSize: calleeReserveCount(stackUsage),
                 stackUsage,
             })
         )

@@ -58,8 +58,7 @@ const assignGlobal = (
     makeLabel: (name: string) => string,
     rhsRegister: Register,
     targetInfo: RegisterAgnosticTargetInfo,
-    lhsInfo: GlobalInfo,
-    availableTypes: TypeDeclaration[]
+    lhsInfo: GlobalInfo
 ) => {
     const lhsType = lhsInfo.originalDeclaration.type;
     switch ((lhsType as Type).type.kind) {
@@ -423,8 +422,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                             makeLabel,
                             rhsRegister,
                             targetInfo,
-                            globalNameMap[lhs],
-                            types
+                            globalNameMap[lhs]
                         ),
                     ],
                     ([rhs, assign]) => [...rhs, ...assign]
@@ -767,7 +765,7 @@ export const constructFunction = (
 ): Function => {
     const variablesInScope: { [key: string]: Register } = {};
     const args: Register[] = [];
-    f.parameters.forEach((parameter, index) => {
+    f.parameters.forEach(parameter => {
         const param = makeTemporary(parameter.name);
         args.push(param);
         variablesInScope[parameter.name] = param;

@@ -313,6 +313,7 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
         size: () => {
             let size = 0;
             if (head) {
+                // @ts-ignore
                 forEachNode((node, rank) => {
                     size++;
                 }, head);
@@ -417,6 +418,7 @@ export const orderedSet = <T>(cmp: SetComparator<T>): OrderedSet<T> => {
                 }, head);
 
                 // Add rank enforcement
+                // @ts-ignore
                 rankToIdsMap.forEach((ids, rank) => {
                     let rankText = '{rank=same;';
                     ids.forEach(nodeId => {

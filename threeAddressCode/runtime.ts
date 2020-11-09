@@ -98,6 +98,7 @@ export const mallocWithMmap: RuntimeFunctionGenerator = bytesInWord =>
         destination,
     }));
 
+// @ts-ignore
 export const length: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) length(r:str):
@@ -113,6 +114,7 @@ export const length: RuntimeFunctionGenerator = bytesInWord =>
             return r:len;
     `);
 
+// @ts-ignore
 export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) string_copy(r:source, r:destination):; Copy string pointer to by first argument to second argument
@@ -126,6 +128,7 @@ export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
         string_copy_return:; Done
     `);
 
+// @ts-ignore
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) print(r:str):
@@ -133,6 +136,7 @@ export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
         return r:result;
     `);
 
+// @ts-ignore
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) print(r:str):
@@ -141,6 +145,7 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
         return r:result;
    `);
 
+// @ts-ignore
 export const readIntDirect: RuntimeFunctionGenerator = bytesInWord =>
     // TODO: Allow syscalls that don't have any arguments, cause this shouldn't have arguments
     parseFunctionOrDie(`
@@ -149,6 +154,7 @@ export const readIntDirect: RuntimeFunctionGenerator = bytesInWord =>
               return r:result;
     `);
 
+// @ts-ignore
 export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
     const stdinFd = 0;
     const bufferSize = 10;
@@ -170,6 +176,7 @@ export const readIntThroughSyscall: RuntimeFunctionGenerator = bytesInWord => {
 };
 
 // TODO: figure out a way to verify that this is working
+// @ts-ignore
 export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) verify_no_leaks():
@@ -193,6 +200,7 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = bytesInWord =>
     verify_no_leaks_return:; All done
     `);
 
+// @ts-ignore
 export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) string_concatenate(r:lhs, r:rhs, r:dest):
@@ -213,6 +221,7 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = bytesI
         concatenate_return:; Exit. TODO: repair input pointers?
     `);
 
+// @ts-ignore
 export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`
     (function) stringEquality(r:lhs, r:rhs):
@@ -249,6 +258,7 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = bytesInWord =>
     `);
 
 // TODO: return error if string doesn't contain an int
+// @ts-ignore
 export const intFromString: RuntimeFunctionGenerator = bytesInWord => {
     return parseFunctionOrDie(`
     (function) intFromString(r:in):

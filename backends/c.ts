@@ -249,7 +249,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                     };
                     const expression = compileExpression(
                         [rhs, assign],
-                        // Can ignore rhs because it is executed during assign.
+                        // @ts-ignore Can ignore rhs because it is executed during assign.
                         ([executeRhs, executeAssign]) => executeAssign
                     );
                     return compileAssignment(declaration.name, expression);

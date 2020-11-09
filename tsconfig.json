@@ -7,7 +7,9 @@
         "module": "commonjs",
         "noEmitOnError": true,
         "noFallthroughCasesInSwitch": true,
-        "strictNullChecks": true
+        "strictNullChecks": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true
     },
     "include": ["./**/*"],
     "exclude": ["./bin/**/*", "./built/**/*"]

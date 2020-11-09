@@ -251,7 +251,9 @@ export const tacTest = async (
     {
         source,
         exitCode,
+        // @ts-ignore
         printSubsteps = [],
+        // @ts-ignore
         debugSubsteps = [],
         failing = [],
         stdin = '',

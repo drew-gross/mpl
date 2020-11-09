@@ -158,7 +158,6 @@ export type ToTargetInput<TargetRegister> = {
     functionArguments: Register[];
     targetInfo: TargetInfo<TargetRegister>;
     stackOffset: number;
-    stackFrameSize: number;
     stackUsage: StackUsage<TargetRegister>;
     registerAssignment: RegisterAssignment<TargetRegister>;
     exitLabel: string;
@@ -169,7 +168,6 @@ export const toTarget = <TargetRegister>({
     functionArguments,
     targetInfo,
     stackOffset,
-    stackFrameSize,
     stackUsage,
     registerAssignment,
     exitLabel,

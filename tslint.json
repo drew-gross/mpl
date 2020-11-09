@@ -14,8 +14,7 @@
         "variable-name": false,
         "ban-types": false,
         "interface-name": false,
-        "no-console": false,
-        "no-unused-variable": true
+        "no-console": false
     },
     "rulesDirectory": []
 }

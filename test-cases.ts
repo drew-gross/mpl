@@ -14,6 +14,7 @@ const manyGlobalsMultiply = () => {
         ' * '
     );
     const stdin = join(
+        // @ts-ignore
         numbers.map(i => `1\n`),
         ''
     );

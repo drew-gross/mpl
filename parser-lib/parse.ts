@@ -724,6 +724,7 @@ export const toDotFile = <Node extends string, Token>(ast: Ast<Node, Token>) => 
         const childIds = children.map(traverse);
 
         // Add an edge from this node to each child
+        // @ts-ignore
         children.forEach((child, index) => {
             digraph.setEdge(myId, childIds[index]);
         });

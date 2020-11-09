@@ -51,7 +51,7 @@ const astToJS = ({
             return [ast.deanonymizedName];
         case 'callExpression':
             const functionName = ast.name;
-            const functionDecl = builtinFunctions.find(({ name, type }) => name == functionName);
+            const functionDecl = builtinFunctions.find(({ name }) => name == functionName);
             const jsArguments: string[][] = ast.arguments.map(argument => recurse(argument));
             const awaitStr = needsAwait(functionDecl) ? 'await' : '';
             return [
@@ -115,7 +115,6 @@ const compile = ({
     functions,
     builtinFunctions,
     program,
-    globalDeclarations,
 }: FrontendOutput): { target: string; tac: Program | undefined } | { error: string } => {
     const JSfunctions = functions.map(({ name, parameters, statements }) => {
         const prefix = `const ${name} = (${join(

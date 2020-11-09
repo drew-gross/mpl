@@ -137,17 +137,12 @@ const blockExits = (rtl: Statement[]): Exits => {
     }
 };
 
-export const toDotFile = ({
-    blocks,
-    connections,
-    labelToIndexMap,
-    exits,
-}: ControlFlowGraph): string => {
+export const toDotFile = ({ blocks, connections, exits }: ControlFlowGraph): string => {
     let dotText = 'digraph {\n';
     dotText += `Entry [style="invis"]\n`;
     dotText += `Entry -> node_0\n`;
 
-    blocks.forEach(({ name, instructions }, index) => {
+    blocks.forEach(({ instructions }, index) => {
         const label = join(instructions.map(tasToString), '\\n')
             .replace(/"/g, '\\"')
             .replace(/:/g, '\\:');
