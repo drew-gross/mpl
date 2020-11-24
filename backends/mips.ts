@@ -59,7 +59,12 @@ const threeAddressCodeToMipsWithoutComment = (tas: Statement<MipsRegister>): str
         case 'syscall':
             return ['syscall'];
         case 'move':
-            return [`move ${tas.to}, ${tas.from}`];
+            // TODO: an actual framework for optimizations, with e.g. tracking. Also unify with backends
+            if (tas.to != tas.from) {
+                return [`move ${tas.to}, ${tas.from}`];
+            } else {
+                return [];
+            }
         case 'loadImmediate':
             return [`li ${tas.destination}, ${tas.value}`];
         case 'multiply':

@@ -148,8 +148,8 @@ export default async (
                 } else {
                     const executionResults = (
                         await Promise.all(
-                            executors.map(async ({ execute, name }) => {
-                                if ((skipExecutors || []).includes(name)) {
+                            executors.map(async ({ execute, name: executorName }) => {
+                                if ((skipExecutors || []).includes(executorName)) {
                                     return;
                                 }
                                 return await execute(

@@ -18,6 +18,7 @@ module.exports = env => {
             'mpl-loader-raw': './mpl-loader.ts',
             test: './test.ts',
             'debug-test-case': './debug-test-case.ts',
+            benchmark: './benchmark.ts',
         },
         target: 'node',
         devtool: false,

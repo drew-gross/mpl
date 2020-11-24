@@ -22617,7 +22617,7 @@ const astToJS = ({ ast, exitInsteadOfReturn, builtinFunctions, }) => {
             return [ast.deanonymizedName];
         case 'callExpression':
             const functionName = ast.name;
-            const functionDecl = builtinFunctions.find(({ name, type }) => name == functionName);
+            const functionDecl = builtinFunctions.find(({ name }) => name == functionName);
             const jsArguments = ast.arguments.map(argument => recurse(argument));
             const awaitStr = needsAwait(functionDecl) ? 'await' : '';
             return [
@@ -22671,7 +22671,7 @@ const astToJS = ({ ast, exitInsteadOfReturn, builtinFunctions, }) => {
             throw debug_1.default(`${ast.kind} unhanlded in toJS`);
     }
 };
-const compile = ({ functions, builtinFunctions, program, globalDeclarations, }) => {
+const compile = ({ functions, builtinFunctions, program, }) => {
     const JSfunctions = functions.map(({ name, parameters, statements }) => {
         const prefix = `const ${name} = (${join_1.default(parameters.map(parameter => parameter.name), ', ')}) => {`;
         const suffix = `}`;
@@ -22771,19 +22771,19 @@ exports.default = jsBackend;
 /*! other exports [not provided] [no usage info] */
 /*! runtime requirements: __webpack_exports__, __webpack_require__ */
 /*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 115:22-46 */
-/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 121:22-46 */
-/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 269:28-52 */
-/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 738:27-51 */
-/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 745:30-54 */
-/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 773:30-54 */
-/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 826:35-59 */
-/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 859:35-59 */
-/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 913:19-43 */
-/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 950:23-47 */
-/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 983:33-57 */
-/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 1033:25-49 */
-/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 1097:33-57 */
-/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 1119:42-66 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 124:22-46 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 273:28-52 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 736:27-51 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 743:30-54 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 771:30-54 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 815:35-59 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 848:35-59 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 902:19-43 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 939:23-47 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 972:33-57 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 1022:25-49 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 1086:33-57 */
+/*! CommonJS bailout: exports.typeOfExpression(...) prevents optimization as exports is passed as call context at 1108:42-66 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
@@ -22905,9 +22905,13 @@ const extractVariable = (ctx) => {
                 exported: false,
             };
         case 'typedDeclarationAssignment':
+            const resolved = types_1.resolve(ctx.w.type, ctx.availableTypes, ctx.w.sourceLocation);
+            if ('errors' in resolved)
+                throw debug_1.default('expected no error');
             return {
                 name: ctx.w.destination,
-                type: exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }), types_1.resolveIfNecessary(ctx.w.type, ctx.availableTypes)).type,
+                type: exports.typeOfExpression(Object.assign(Object.assign({}, ctx), { w: ctx.w.expression }), resolved)
+                    .type,
                 exported: false,
             };
         case 'returnStatement':
@@ -23178,8 +23182,8 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                         arguments: ast.parameters
                             .map(p => p.type)
                             .map(t => {
-                            const resolved = types_1.resolveIfNecessary(t, ctx.availableTypes);
-                            if (!resolved) {
+                            const resolved = types_1.resolve(t, ctx.availableTypes, ctx.w.sourceLocation);
+                            if ('errors' in resolved) {
                                 throw debug_1.default('bag argument. This should be a better error.');
                             }
                             return resolved;
@@ -23240,7 +23244,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                 ];
             }
             for (let i = 0; i < argTypes.length; i++) {
-                const resolved = types_1.resolveOrError(functionType.type.arguments[i], ctx.availableTypes, ast.sourceLocation);
+                const resolved = types_1.resolve(functionType.type.arguments[i], ctx.availableTypes, ast.sourceLocation);
                 if ('errors' in resolved) {
                     return resolved.errors;
                 }
@@ -23256,7 +23260,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                     ];
                 }
             }
-            const returnType = types_1.resolveOrError(functionType.type.returnType, ctx.availableTypes, ast.sourceLocation);
+            const returnType = types_1.resolve(functionType.type.returnType, ctx.availableTypes, ast.sourceLocation);
             if ('errors' in returnType) {
                 return returnType.errors;
             }
@@ -23318,7 +23322,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
             }
             // TODO: this is probably wrong, we need check agains the LHS type
             for (let i = 0; i < allArgTypes.length; i++) {
-                const resolved = types_1.resolveOrError(functionType.type.arguments[i], ctx.availableTypes, ast.sourceLocation);
+                const resolved = types_1.resolve(functionType.type.arguments[i], ctx.availableTypes, ast.sourceLocation);
                 if ('errors' in resolved) {
                     return resolved.errors;
                 }
@@ -23334,7 +23338,7 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                     ];
                 }
             }
-            const returnType = types_1.resolveOrError(functionType.type.returnType, ctx.availableTypes, ast.sourceLocation);
+            const returnType = types_1.resolve(functionType.type.returnType, ctx.availableTypes, ast.sourceLocation);
             if ('errors' in returnType) {
                 return returnType.errors;
             }
@@ -23351,15 +23355,9 @@ exports.typeOfExpression = (ctx, expectedType = undefined) => {
                     },
                 ];
             }
-            const declaration = types_1.resolveIfNecessary(unresolved.type, availableTypes);
-            if (!declaration) {
-                return [
-                    {
-                        kind: 'couldNotFindType',
-                        name: unresolved.type.namedType,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
+            const declaration = types_1.resolve(unresolved.type, availableTypes, ast.sourceLocation);
+            if ('errors' in declaration) {
+                return declaration.errors;
             }
             return { type: declaration, extractedFunctions: [] };
         }
@@ -23576,18 +23574,9 @@ const typeCheckStatement = (ctx) => {
                     newVariables: [],
                 };
             }
-            const leftType = types_1.resolveIfNecessary(unresolvedLeftType.type, availableTypes);
-            if (!leftType) {
-                return {
-                    errors: [
-                        {
-                            kind: 'couldNotFindType',
-                            name: unresolvedLeftType.name,
-                            sourceLocation: ast.sourceLocation,
-                        },
-                    ],
-                    newVariables: [],
-                };
+            const leftType = types_1.resolve(unresolvedLeftType.type, availableTypes, ast.sourceLocation);
+            if ('errors' in leftType) {
+                return leftType;
             }
             if (!types_1.equal(leftType, rightType.type)) {
                 return {
@@ -23608,7 +23597,7 @@ const typeCheckStatement = (ctx) => {
         case 'typedDeclarationAssignment': {
             // Check that type of var being assigned to matches type being assigned
             const destinationType = ast.type;
-            const resolvedDestination = types_1.resolveOrError(destinationType, availableTypes, ast.sourceLocation);
+            const resolvedDestination = types_1.resolve(destinationType, availableTypes, ast.sourceLocation);
             if ('errors' in resolvedDestination) {
                 return resolvedDestination;
             }
@@ -23808,8 +23797,8 @@ const infer = (ctx) => {
                 rhs: recurse(ast.rhs),
             };
         case 'typedDeclarationAssignment':
-            const resolved = types_1.resolveIfNecessary(ast.type, availableTypes);
-            if (!resolved)
+            const resolved = types_1.resolve(ast.type, availableTypes, ast.sourceLocation);
+            if ('errors' in resolved)
                 throw debug_1.default("resolution shouldn't fail here");
             return {
                 kind: 'typedDeclarationAssignment',
@@ -23981,9 +23970,10 @@ const parseTypeLiteralComponent = (ast) => {
     if (ast.type != 'typeLiteralComponent')
         throw debug_1.default('wrong as type');
     const unresolved = parseType(ast.children[2]);
-    const resolved = types_1.resolveIfNecessary(unresolved, []);
-    if (!resolved)
+    const resolved = types_1.resolve(unresolved, [], ast.sourceLocation);
+    if ('errors' in resolved) {
         throw debug_1.default('need to make products work as components of other products');
+    }
     return {
         name: ast.children[0].value,
         type: resolved,
@@ -24917,9 +24907,9 @@ exports.lex = (tokenSpecs, input) => {
 /*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 437:8-34 */
 /*! CommonJS bailout: exports.isSeparatedListNode(...) prevents optimization as exports is passed as call context at 496:12-39 */
 /*! CommonJS bailout: exports.isListNode(...) prevents optimization as exports is passed as call context at 502:17-35 */
-/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 535:8-34 */
-/*! CommonJS bailout: exports.parse(...) prevents optimization as exports is passed as call context at 560:19-32 */
-/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 561:8-34 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 536:8-34 */
+/*! CommonJS bailout: exports.parse(...) prevents optimization as exports is passed as call context at 561:19-32 */
+/*! CommonJS bailout: exports.parseResultIsError(...) prevents optimization as exports is passed as call context at 562:8-34 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
@@ -25441,6 +25431,7 @@ exports.toDotFile = (ast) => {
         // Recursively create nodes for this node's children
         const childIds = children.map(traverse);
         // Add an edge from this node to each child
+        // @ts-ignore
         children.forEach((child, index) => {
             digraph.setEdge(myId, childIds[index]);
         });
@@ -25502,30 +25493,26 @@ exports.parseString = (tokens, grammar, rule, input) => {
 /*! export builtinTypes [provided] [no usage info] [missing usage info prevents renaming] */
 /*! export equal [provided] [no usage info] [missing usage info prevents renaming] */
 /*! export resolve [provided] [no usage info] [missing usage info prevents renaming] */
-/*! export resolveIfNecessary [provided] [no usage info] [missing usage info prevents renaming] */
-/*! export resolveOrError [provided] [no usage info] [missing usage info prevents renaming] */
 /*! export toString [provided] [no usage info] [provision prevents renaming (no use info)] */
 /*! export typeSize [provided] [no usage info] [missing usage info prevents renaming] */
 /*! other exports [not provided] [no usage info] */
 /*! runtime requirements: __webpack_exports__, __webpack_require__ */
 /*! CommonJS bailout: exports.toString(...) prevents optimization as exports is passed as call context at 19:67-83 */
 /*! CommonJS bailout: exports.toString(...) prevents optimization as exports is passed as call context at 22:22-38 */
-/*! CommonJS bailout: exports.resolve(...) prevents optimization as exports is passed as call context at 38:89-104 */
-/*! CommonJS bailout: exports.resolveIfNecessary(...) prevents optimization as exports is passed as call context at 40:21-47 */
-/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 72:17-30 */
-/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 80:137-150 */
-/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 82:137-150 */
-/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 86:15-28 */
-/*! CommonJS bailout: exports.typeSize(...) prevents optimization as exports is passed as call context at 140:50-66 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 68:17-30 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 76:137-150 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 78:137-150 */
+/*! CommonJS bailout: exports.equal(...) prevents optimization as exports is passed as call context at 82:15-28 */
+/*! CommonJS bailout: exports.typeSize(...) prevents optimization as exports is passed as call context at 136:50-66 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.typeSize = exports.builtinFunctions = exports.builtinTypes = exports.equal = exports.resolveOrError = exports.resolveIfNecessary = exports.resolve = exports.toString = void 0;
+exports.typeSize = exports.builtinFunctions = exports.builtinTypes = exports.equal = exports.resolve = exports.toString = void 0;
 const debug_1 = __webpack_require__(/*! ./util/debug */ "./util/debug.ts");
 const join_1 = __webpack_require__(/*! ./util/join */ "./util/join.ts");
-const { sum } = __webpack_require__(/*! ./mpl/sum.mpl */ "./mpl/sum.mpl");
+const { sum } = __webpack_require__(/*! ./mpl/sum.mpl */ "./mpl/sum.mpl"); // tslint:disable-line
 const deepEqual = __webpack_require__(/*! deep-equal */ "./node_modules/deep-equal/index.js");
 exports.toString = (type) => {
     // TODO: Include the original in here somehow?
@@ -25543,24 +25530,17 @@ exports.toString = (type) => {
         case 'List':
             return `${exports.toString(type.type.of)}[]`;
         default:
-            throw debug_1.default(`Unhandled kind in type toString: ${type.kind}`);
+            throw debug_1.default(`Unhandled kindpi in type toString: ${type.type.kind}`);
     }
 };
-exports.resolve = (t, availableTypes) => {
+exports.resolve = (unresolved, availableTypes, sourceLocation) => {
+    if (!('namedType' in unresolved)) {
+        return unresolved;
+    }
     if (!availableTypes)
         debug_1.default('no declarations');
-    const type = availableTypes.find(d => d.name == t.namedType);
-    if (!type)
-        return undefined;
-    return {
-        type: type.type.type,
-        original: t,
-    };
-};
-exports.resolveIfNecessary = (unresolved, availableTypes) => 'namedType' in unresolved ? exports.resolve(unresolved, availableTypes) : unresolved;
-exports.resolveOrError = (unresolved, availableTypes, sourceLocation) => {
-    const resolved = exports.resolveIfNecessary(unresolved, availableTypes);
-    if (!resolved) {
+    const type = availableTypes.find(d => d.name == unresolved.namedType);
+    if (!type) {
         return {
             errors: [
                 {
@@ -25572,7 +25552,10 @@ exports.resolveOrError = (unresolved, availableTypes, sourceLocation) => {
             newVariables: [],
         };
     }
-    return resolved;
+    return {
+        type: type.type.type,
+        original: unresolved,
+    };
 };
 exports.equal = (a, b) => {
     // Should we allow assigning one product to another if they have different names but identical members? That would be "structural typing" which I'm not sure I want.

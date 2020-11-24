@@ -54,7 +54,12 @@ const threeAddressCodeToX64WithoutComment = (tas: Statement<X64Register>): strin
         case 'loadImmediate':
             return [`mov ${tas.destination}, ${tas.value}`];
         case 'move':
-            return [`mov ${tas.to}, ${tas.from}`];
+            // TODO: an actual framework for optimizations, with e.g. tracking. Also unify with backends
+            if (tas.to != tas.from) {
+                return [`mov ${tas.to}, ${tas.from}`];
+            } else {
+                return [];
+            }
         case 'subtract':
             if (tas.lhs == tas.destination) {
                 return [`sub ${tas.destination}, ${tas.rhs}`];
