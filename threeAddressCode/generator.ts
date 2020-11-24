@@ -188,8 +188,8 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 ([_, e1]) => e1
             );
         case 'subtraction': {
-            const lhs = makeTemporary('addition_lhs');
-            const rhs = makeTemporary('addition_rhs');
+            const lhs = makeTemporary('subtraction_lhs');
+            const rhs = makeTemporary('subtraction_rhs');
             const computeLhs = recurse({ ast: ast.lhs, destination: lhs });
             const computeRhs = recurse({ ast: ast.rhs, destination: rhs });
             return compileExpression<Statement>(
