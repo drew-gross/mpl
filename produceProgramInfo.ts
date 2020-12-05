@@ -18,6 +18,7 @@ import { astToString } from './ast';
 import { Program, toString as programToString } from './threeAddressCode/Program';
 import { makeTargetProgram } from './threeAddressCode/generator';
 import { backends } from './backend-utils';
+import { interpret, InterpreterResults } from './interpreter';
 
 type BackendResult = {
     name: string;
@@ -32,6 +33,7 @@ type ProgramInfo = {
     threeAddressRoundTrip: Program | LexError | ParseError[];
     frontendOutput: FrontendOutput;
     backendResults: BackendResult[];
+    interpreterResults: InterpreterResults;
     structure: string;
 };
 
@@ -103,12 +105,14 @@ export default async (
             bytesInWord: 4,
             syscallNumbers: {},
             functionImpls: {
-                mallocImpl: mallocWithSbrk(7),
-                printImpl: printWithPrintRuntimeFunction(11),
-                readIntImpl: readIntDirect(5),
+                mallocImpl: mallocWithSbrk(4),
+                printImpl: printWithPrintRuntimeFunction(4),
+                readIntImpl: readIntDirect(4),
             },
         },
     });
+
+    const interpreterResults = interpret(threeAddressCode);
 
     // Do a roundtrip on three address code to string and back to check the parser for that
     const stringForm = programToString(threeAddressCode);
@@ -173,5 +177,6 @@ export default async (
         threeAddressCode: stringForm,
         threeAddressRoundTrip: roundTripParsed as any,
         backendResults,
+        interpreterResults,
     };
 };

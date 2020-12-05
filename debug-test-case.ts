@@ -202,7 +202,13 @@ import { mplLoader } from './mpl-loader';
             });
         }
     });
-
+    console.log('Interpreter:');
+    let log =
+        testCase.exitCode == programInfo.interpreterResults.exitCode
+            ? s => console.log(s)
+            : s => console.log(chalk.red(s));
+    log(`    Expected Exit Code: ${testCase.exitCode}`);
+    log(`    Actual Exit Code: ${programInfo.interpreterResults.exitCode}`);
     await prompt({
         type: 'confirm',
         message:
