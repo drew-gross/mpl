@@ -34,23 +34,23 @@ const arrangeArgumentsForFunctionCall = <TargetRegister>(
     targetInfo: TargetInfo<TargetRegister>
 ): Statement<TargetRegister>[] => {
     // TODO: Add some type check to ensure we have the right number of arguments
-    return args.map((arg, index) => {
+    return args.map((arg, argIndex) => {
         // TODO: Reuse the code in argumentLocation here
-        if (index < targetInfo.registers.functionArgument.length) {
+        if (argIndex < targetInfo.registers.functionArgument.length) {
             // Registers that fix in arguments go in arguments
             if (typeof arg == 'number') {
                 return {
                     kind: 'loadImmediate',
                     value: arg,
-                    destination: targetInfo.registers.functionArgument[index],
-                    why: `Pass arg ${index} in register`,
+                    destination: targetInfo.registers.functionArgument[argIndex],
+                    why: `Pass arg ${argIndex} in register`,
                 };
             } else {
                 return {
                     kind: 'move',
                     from: getRegister(arg as Register),
-                    to: targetInfo.registers.functionArgument[index],
-                    why: `Pass arg ${index} in register`,
+                    to: targetInfo.registers.functionArgument[argIndex],
+                    why: `Pass arg ${argIndex} in register`,
                 };
             }
         } else {
@@ -61,14 +61,14 @@ const arrangeArgumentsForFunctionCall = <TargetRegister>(
                 );
             } else {
                 const stackSlot =
-                    index -
+                    argIndex -
                     targetInfo.registers.functionArgument.length +
                     targetInfo.callerSavedRegisters.length;
                 return {
                     kind: 'stackStore',
                     register: getRegister(arg as Register),
                     offset: -stackSlot,
-                    why: `Pass arg ${index} on stack (slot ${stackSlot})`,
+                    why: `Pass arg ${argIndex} on stack (slot ${stackSlot})`,
                 };
             }
         }
