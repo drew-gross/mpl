@@ -13,16 +13,25 @@ export const interpret = ({
     }
     let registerValues = {};
     let globalValues = {};
-    var result: undefined | number = undefined;
-    main.instructions.forEach(i => {
+    var ip = 0;
+    let gotoLabel = (labelName: string) => {
+        ip = main.instructions.findIndex(
+            target => target.kind == 'label' && target.name == labelName
+        );
+        if (ip === -1) {
+            throw debug('no label');
+        }
+    };
+    while (true) {
+        let i = main.instructions[ip];
         switch (i.kind) {
             case 'empty':
                 break;
             case 'loadImmediate':
                 registerValues[i.destination.name] = i.value;
                 break;
-            case 'return':
-                result = registerValues[i.register.name];
+            case 'move':
+                registerValues[i.to.name] = registerValues[i.from.name];
                 break;
             case 'loadSymbolAddress':
                 registerValues[i.to.name] = i.symbolName;
@@ -47,22 +56,34 @@ export const interpret = ({
                     registerValues[i.destination.name] = callResult;
                 }
                 break;
+            case 'goto':
+                gotoLabel(i.label);
+                break;
+            case 'gotoIfZero':
+                if (registerValues[i.register.name] === 0) {
+                    gotoLabel(i.label);
+                }
+                break;
+            case 'gotoIfEqual':
+                if (registerValues[i.lhs.name] == registerValues[i.rhs.name]) {
+                    gotoLabel(i.label);
+                }
+                break;
             case 'multiply':
                 registerValues[i.destination.name] =
                     registerValues[i.lhs.name] * registerValues[i.rhs.name];
                 break;
+            case 'return':
+                return {
+                    exitCode: registerValues[i.register.name],
+                    stdout: '',
+                    executorName: 'interpreter',
+                    runInstructions: 'none yet',
+                    debugInstructions: 'none yet',
+                };
             default:
                 debug(`${i.kind} unhandled in interpret`);
         }
-    });
-    if (result === undefined) {
-        throw debug('no result');
+        ip++;
     }
-    return {
-        exitCode: result,
-        stdout: '',
-        executorName: 'interpreter',
-        runInstructions: 'none yet',
-        debugInstructions: 'none yet',
-    };
 };
