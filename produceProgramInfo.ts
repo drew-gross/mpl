@@ -18,7 +18,7 @@ import { astToString } from './ast';
 import { Program, toString as programToString } from './threeAddressCode/Program';
 import { makeTargetProgram } from './threeAddressCode/generator';
 import { backends } from './backend-utils';
-import { interpret, InterpreterResults } from './interpreter';
+import { interpret } from './interpreter';
 
 type BackendResult = {
     name: string;
@@ -33,7 +33,7 @@ type ProgramInfo = {
     threeAddressRoundTrip: Program | LexError | ParseError[];
     frontendOutput: FrontendOutput;
     backendResults: BackendResult[];
-    interpreterResults: InterpreterResults;
+    interpreterResults: ExecutionResult; // TODO: merge with backendResults maybe?
     structure: string;
 };
 

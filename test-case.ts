@@ -203,6 +203,14 @@ generated source:
         programInfo.threeAddressRoundTrip.globals,
         programInfo.threeAddressRoundTrip.globals
     );
+    if (
+        !passed(
+            { exitCode, stdout, name: 'interpreter', source },
+            programInfo.interpreterResults
+        )
+    ) {
+        error('interpreter');
+    }
 
     for (const { name: backendName, executionResults } of programInfo.backendResults) {
         if (exitCode === undefined) {

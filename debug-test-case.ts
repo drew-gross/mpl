@@ -204,11 +204,16 @@ import { mplLoader } from './mpl-loader';
     });
     console.log('Interpreter:');
     let log =
+        'error' in programInfo.interpreterResults ||
         testCase.exitCode == programInfo.interpreterResults.exitCode
             ? s => console.log(s)
             : s => console.log(chalk.red(s));
-    log(`    Expected Exit Code: ${testCase.exitCode}`);
-    log(`    Actual Exit Code: ${programInfo.interpreterResults.exitCode}`);
+    if ('error' in programInfo.interpreterResults) {
+        log(`    Error: ${programInfo.interpreterResults.error}`);
+    } else {
+        log(`    Expected Exit Code: ${testCase.exitCode}`);
+        log(`    Actual Exit Code: ${programInfo.interpreterResults.exitCode}`);
+    }
     await prompt({
         type: 'confirm',
         message:
