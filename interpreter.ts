@@ -27,6 +27,8 @@ export const interpret = ({
         switch (i.kind) {
             case 'empty':
                 break;
+            case 'label':
+                break;
             case 'loadImmediate':
                 registerValues[i.destination.name] = i.value;
                 break;
@@ -52,8 +54,11 @@ export const interpret = ({
                     stringLiterals,
                     main: f,
                 });
+                if ('error' in callResult) {
+                    throw debug(`error: ${callResult.error}`);
+                }
                 if (i.destination) {
-                    registerValues[i.destination.name] = callResult;
+                    registerValues[i.destination.name] = callResult.exitCode;
                 }
                 break;
             case 'goto':
@@ -72,6 +77,10 @@ export const interpret = ({
             case 'multiply':
                 registerValues[i.destination.name] =
                     registerValues[i.lhs.name] * registerValues[i.rhs.name];
+                break;
+            case 'add':
+                registerValues[i.destination.name] =
+                    registerValues[i.lhs.name] + registerValues[i.rhs.name];
                 break;
             case 'return':
                 return {
