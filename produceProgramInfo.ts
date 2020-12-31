@@ -2,7 +2,7 @@ import debug from './util/debug';
 import { Type } from './types';
 import { parseProgram as parseTacProgram } from './threeAddressCode/Program';
 import {
-    mallocWithSbrk,
+    mallocWithMmap,
     printWithPrintRuntimeFunction,
     readIntDirect,
 } from './threeAddressCode/runtime';
@@ -105,14 +105,14 @@ export default async (
             bytesInWord: 4,
             syscallNumbers: {},
             functionImpls: {
-                mallocImpl: mallocWithSbrk(4),
+                mallocImpl: mallocWithMmap(4),
                 printImpl: printWithPrintRuntimeFunction(4),
                 readIntImpl: readIntDirect(4),
             },
         },
     });
 
-    const interpreterResults = interpret(threeAddressCode);
+    const interpreterResults = interpret(threeAddressCode, []);
 
     // Do a roundtrip on three address code to string and back to check the parser for that
     const stringForm = programToString(threeAddressCode);

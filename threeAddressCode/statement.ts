@@ -14,7 +14,7 @@ export type Statement = { why: string } & (
     // Arithmetic
     | { kind: 'move'; from: Register; to: Register }
     | { kind: 'loadImmediate'; value: number; destination: Register }
-    | { kind: 'addImmediate'; register: Register; amount: number }
+    | { kind: 'addImmediate'; register: Register; amount: number } // TODO: Fuse with add
     | { kind: 'subtract'; lhs: Register; rhs: Register; destination: Register }
     | { kind: 'add'; lhs: Register; rhs: Register; destination: Register }
     | { kind: 'multiply'; lhs: Register; rhs: Register; destination: Register }
