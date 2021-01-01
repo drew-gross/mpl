@@ -112,7 +112,7 @@ export default async (
         },
     });
 
-    const interpreterResults = interpret(threeAddressCode, []);
+    const interpreterResults = interpret(threeAddressCode, [], { globalValues: {} });
 
     // Do a roundtrip on three address code to string and back to check the parser for that
     const stringForm = programToString(threeAddressCode);

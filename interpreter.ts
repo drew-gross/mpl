@@ -8,15 +8,19 @@ export type Argument = {
     value: number;
 };
 
+export type State = {
+    globalValues: object;
+};
+
 export const interpret = (
     { globals, functions, main, stringLiterals }: Program,
-    args: Argument[]
+    args: Argument[],
+    state: State // modified
 ): ExecutionResult => {
     if (!main) {
         throw debug('interpret rquires a main');
     }
     let registerValues = {};
-    let globalValues = {};
     var ip = 0;
     let gotoLabel = (labelName: string) => {
         ip = main.instructions.findIndex(
@@ -45,14 +49,20 @@ export const interpret = (
         }
         throw debug('unable to getVal');
     };
+    let getGlobal = (from: string) => {
+        if (!(from in state.globalValues)) {
+            throw debug('Missing global');
+        }
+        return state.globalValues[from];
+    };
     let getMemory = (symbolName: string, offset: number) => {
-        if (!(symbolName in globalValues)) {
-            globalValues[symbolName] = [];
+        if (!(symbolName in state.globalValues)) {
+            state.globalValues[symbolName] = [];
         }
-        while (globalValues[symbolName].length <= offset) {
-            globalValues[symbolName].push(0);
+        while (state.globalValues[symbolName].length <= offset) {
+            state.globalValues[symbolName].push(0);
         }
-        return globalValues[symbolName][offset];
+        return state.globalValues[symbolName][offset];
     };
     while (true) {
         let i = main.instructions[ip];
@@ -75,10 +85,10 @@ export const interpret = (
                 registerValues[i.to.name] = getMemory(pointer, i.offset);
                 break;
             case 'storeGlobal':
-                globalValues[i.to] = getVal(i.from);
+                state.globalValues[i.to] = getVal(i.from);
                 break;
             case 'loadGlobal':
-                registerValues[i.to.name] = globalValues[i.from];
+                registerValues[i.to.name] = getGlobal(i.from);
                 break;
             case 'callByRegister': {
                 let actualName = getVal(i.function);
@@ -94,7 +104,8 @@ export const interpret = (
                     func.arguments.map((arg, index) => ({
                         name: arg.name,
                         value: getVal(args[index]),
-                    }))
+                    })),
+                    state
                 );
                 if ('error' in callResult) {
                     throw debug(`error: ${callResult.error}`);
@@ -117,7 +128,8 @@ export const interpret = (
                     func.arguments.map((arg, index) => ({
                         name: arg.name,
                         value: getVal(args[index]),
-                    }))
+                    })),
+                    state
                 );
                 if ('error' in callResult) {
                     throw debug(`error: ${callResult.error}`);
@@ -153,6 +165,9 @@ export const interpret = (
                 break;
             case 'addImmediate':
                 registerValues[i.register.name] += i.amount;
+                break;
+            case 'subtract':
+                registerValues[i.destination.name] = getVal(i.lhs) - getVal(i.rhs);
                 break;
             case 'syscall':
                 switch (i.name) {
