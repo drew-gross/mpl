@@ -2,6 +2,7 @@ import debug from './util/debug';
 import { Program } from './threeAddressCode/Program';
 import { ExecutionResult } from './api';
 import { Register } from './threeAddressCode/Register';
+import { stringLiteralName } from './backend-utils';
 
 export type Argument = {
     name: string;
@@ -10,6 +11,32 @@ export type Argument = {
 
 export type State = {
     globalValues: object;
+    memory: { [key: string]: number[] };
+};
+type Pointer = {
+    block: string;
+    offset: number;
+};
+
+export const createInitialState = ({ stringLiterals, globals }: Program): State => {
+    let state = {
+        globalValues: {},
+        memory: {},
+    };
+    for (let name in globals) {
+        state.globalValues[name] = {};
+    }
+    stringLiterals.forEach(stringLiteral => {
+        let index = stringLiteralName(stringLiteral);
+        state.memory[index] = [];
+        for (var i = 0; i < stringLiteral.value.length; i++) {
+            state.memory[index].push(stringLiteral.value.charCodeAt(i));
+        }
+        state.memory[index].push(0);
+    });
+    // TODO: make first_block less special-casey
+    state.memory['first_block'] = [0];
+    return state;
 };
 
 export const interpret = (
@@ -20,7 +47,10 @@ export const interpret = (
     if (!main) {
         throw debug('interpret rquires a main');
     }
-    let registerValues = {};
+    let registerValues: { [key: string]: number | Pointer } = {};
+    args.forEach(arg => {
+        registerValues[arg.name] = arg.value;
+    });
     var ip = 0;
     let gotoLabel = (labelName: string) => {
         ip = main.instructions.findIndex(
@@ -43,11 +73,14 @@ export const interpret = (
         if (regVal !== undefined) {
             return regVal;
         }
-        let argVal = args.find(arg => arg.name == from.name);
-        if (argVal !== undefined) {
-            return argVal.value;
-        }
         throw debug('unable to getVal');
+    };
+    let addToRegister = (name: string, amount: number) => {
+        if (typeof registerValues[name] === 'number') {
+            (registerValues as any)[name] += amount;
+        } else {
+            (registerValues as any)[name].offset += amount;
+        }
     };
     let getGlobal = (from: string) => {
         if (!(from in state.globalValues)) {
@@ -55,14 +88,10 @@ export const interpret = (
         }
         return state.globalValues[from];
     };
-    let getMemory = (symbolName: string, offset: number) => {
-        if (!(symbolName in state.globalValues)) {
-            state.globalValues[symbolName] = [];
-        }
-        while (state.globalValues[symbolName].length <= offset) {
-            state.globalValues[symbolName].push(0);
-        }
-        return state.globalValues[symbolName][offset];
+    let getMemory = (block: string, offset: number) => {
+        let val = state.memory[block][offset];
+        if (val === undefined) throw debug('bad mem access');
+        return val;
     };
     while (true) {
         let i = main.instructions[ip];
@@ -78,12 +107,20 @@ export const interpret = (
                 registerValues[i.to.name] = getVal(i.from);
                 break;
             case 'loadSymbolAddress':
-                registerValues[i.to.name] = i.symbolName;
+                registerValues[i.to.name] = { block: i.symbolName, offset: 0 };
                 break;
             case 'loadMemory':
                 let pointer = getVal(i.from);
-                registerValues[i.to.name] = getMemory(pointer, i.offset);
+                registerValues[i.to.name] = getMemory(pointer.block, pointer.offset + i.offset);
                 break;
+            case 'loadMemoryByte': {
+                let pointer = getVal(i.address);
+                if (typeof pointer === 'number') {
+                    throw debug('expected a pointer');
+                }
+                registerValues[i.to.name] = getMemory(pointer.block, pointer.offset);
+                break;
+            }
             case 'storeGlobal':
                 state.globalValues[i.to] = getVal(i.from);
                 break;
@@ -160,11 +197,14 @@ export const interpret = (
             case 'multiply':
                 registerValues[i.destination.name] = getVal(i.lhs) * getVal(i.rhs);
                 break;
+            case 'increment':
+                addToRegister(i.register.name, 1);
+                break;
             case 'add':
                 registerValues[i.destination.name] = getVal(i.lhs) + getVal(i.rhs);
                 break;
             case 'addImmediate':
-                registerValues[i.register.name] += i.amount;
+                addToRegister(i.register.name, i.amount);
                 break;
             case 'subtract':
                 registerValues[i.destination.name] = getVal(i.lhs) - getVal(i.rhs);

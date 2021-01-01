@@ -18,7 +18,7 @@ import { astToString } from './ast';
 import { Program, toString as programToString } from './threeAddressCode/Program';
 import { makeTargetProgram } from './threeAddressCode/generator';
 import { backends } from './backend-utils';
-import { interpret } from './interpreter';
+import { interpret, createInitialState } from './interpreter';
 
 type BackendResult = {
     name: string;
@@ -112,7 +112,11 @@ export default async (
         },
     });
 
-    const interpreterResults = interpret(threeAddressCode, [], { globalValues: {} });
+    const interpreterResults = interpret(
+        threeAddressCode,
+        [],
+        createInitialState(threeAddressCode)
+    );
 
     // Do a roundtrip on three address code to string and back to check the parser for that
     const stringForm = programToString(threeAddressCode);

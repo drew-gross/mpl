@@ -20,6 +20,7 @@ import {
     CompiledExpression,
     compileExpression,
     CompiledAssignment,
+    stringLiteralName,
 } from '../backend-utils';
 import { errors } from '../runtime-strings';
 import { mergeDeclarations } from '../frontend';
@@ -358,8 +359,6 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
     return debug('todo');
 };
 
-const stringLiteralName = ({ id, value }: StringLiteralData) =>
-    `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
 const stringLiteralDeclaration = (literal: StringLiteralData) =>
     `char *${stringLiteralName(literal)} = "${literal.value}";`;
 
