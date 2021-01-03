@@ -61,7 +61,8 @@ export const interpret = (
         }
     };
     let findFunction = (funcName: string) => {
-        let f = functions.find(f => f.name == funcName);
+        // TODO: Get the types right for pointers to functions
+        let f = functions.find(f => f.name == funcName || f.name == (funcName as any).block);
         if (!f) throw debug('failed to find function');
         return f;
     };
@@ -128,8 +129,7 @@ export const interpret = (
                 registerValues[i.to.name] = getGlobal(i.from);
                 break;
             case 'callByRegister': {
-                let actualName = getVal(i.function);
-                let func = findFunction(actualName);
+                let func = findFunction(getVal(i.function));
                 let args = i.arguments;
                 let callResult = interpret(
                     {

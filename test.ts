@@ -1675,61 +1675,6 @@ return foo(1);
     exitCode: 11,
 });
 
-// TODO: rewrite this in a way that it is guaranteed to cause spilling
-test('2-level call tree with spilling', mplTest, {
-    source: `
-
-bar := a: Integer => {
-    t1 := a + 1;
-    t2 := a + 2;
-    t3 := a + 3;
-    t4 := a + 4;
-    t5 := a + 5;
-    t6 := a + 6;
-    t7 := a + 7;
-    t8 := a + 8;
-    t9 := a + 9;
-    t10 := a + 10;
-    t11 := a + 11;
-    t12 := a + 12;
-    t13 := a + 13;
-    t14 := a + 14;
-    t15 := a + 15;
-    t16 := a + 16;
-    t17 := a + 17;
-    t18 := a + 18;
-    t19 := a + 19;
-    return t19 - t18;
-};
-
-foo := a: Integer => {
-    t1 := a + 1;
-    t2 := a + 2;
-    t3 := a + 3;
-    t4 := a + 4;
-    t5 := a + 5;
-    t6 := a + 6;
-    t7 := a + 7;
-    t8 := a + 8;
-    t9 := a + 9;
-    t10 := a + 10;
-    t11 := a + 11;
-    t12 := a + 12;
-    t13 := a + 13;
-    t14 := a + 14;
-    t15 := a + 15;
-    t16 := a + 16;
-    t17 := a + 17;
-    t18 := a + 18;
-    t19 := a + 19;
-    return bar(t19 - t18);
-};
-
-return foo(1);
-`,
-    exitCode: 1,
-});
-
 test('Parse grammar from multiple entry points', t => {
     type TestToken = 'a' | 'b';
     type TestNode = 'a' | 'b';
