@@ -94,6 +94,7 @@ export const interpret = (
         if (val === undefined) throw debug('bad mem access');
         return val;
     };
+    var allocaCount = 0;
     while (true) {
         let i = main.instructions[ip];
         switch (i.kind) {
@@ -209,11 +210,20 @@ export const interpret = (
             case 'subtract':
                 registerValues[i.destination.name] = getVal(i.lhs) - getVal(i.rhs);
                 break;
+            case 'alloca':
+                let blockName = `alloca_count_${allocaCount}`;
+                allocaCount++;
+                state.memory[blockName] = new Array(i.bytes);
+                state.memory[blockName].fill(0);
+                registerValues[i.register.name] = { block: blockName, offset: 0 };
+                break;
             case 'syscall':
                 switch (i.name) {
                     case 'print':
                         let stringName = getVal(i.arguments[0]);
-                        console.log(stringLiterals[stringName]);
+                        let string = stringLiterals[stringName];
+                        if (typeof string !== 'string') throw debug('missing string');
+                        console.log(string);
                         break;
                     case 'exit':
 
