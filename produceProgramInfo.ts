@@ -18,7 +18,7 @@ import { astToString } from './ast';
 import { Program, toString as programToString } from './threeAddressCode/Program';
 import { makeTargetProgram } from './threeAddressCode/generator';
 import { backends } from './backend-utils';
-import { interpret, createInitialState } from './interpreter';
+import { interpretProgram, createInitialState } from './interpreter';
 
 type BackendResult = {
     name: string;
@@ -112,7 +112,7 @@ export default async (
         },
     });
 
-    const interpreterResults = interpret(
+    const interpreterResults = interpretProgram(
         threeAddressCode,
         [],
         createInitialState(threeAddressCode)

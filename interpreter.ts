@@ -6,12 +6,11 @@ import { stringLiteralName } from './backend-utils';
 
 export type Argument = {
     name: string;
-    value: number;
+    value: number | Pointer;
 };
 
 export type State = {
-    globalValues: object;
-    memory: { [key: string]: number[] };
+    memory: { [key: string]: (number | Pointer)[] };
 };
 type Pointer = {
     block: string;
@@ -19,12 +18,11 @@ type Pointer = {
 };
 
 export const createInitialState = ({ stringLiterals, globals }: Program): State => {
-    let state = {
-        globalValues: {},
-        memory: {},
-    };
+    let state = { memory: {} };
     for (let name in globals) {
-        state.globalValues[name] = {};
+        var global = globals[name];
+        state.memory[global.mangledName] = new Array(global.bytes);
+        state.memory[global.mangledName].fill(0);
     }
     stringLiterals.forEach(stringLiteral => {
         let index = stringLiteralName(stringLiteral);
@@ -39,11 +37,11 @@ export const createInitialState = ({ stringLiterals, globals }: Program): State 
     return state;
 };
 
-export const interpret = (
+export const interpretFunction = (
     { globals, functions, main, stringLiterals }: Program,
     args: Argument[],
     state: State // modified
-): ExecutionResult => {
+): number | Pointer | undefined => {
     if (!main) {
         throw debug('interpret rquires a main');
     }
@@ -66,7 +64,7 @@ export const interpret = (
         if (!f) throw debug('failed to find function');
         return f;
     };
-    let getVal = (from: number | Register): any => {
+    let getRegister = (from: number | Register): number | Pointer => {
         if (typeof from === 'number') {
             return from;
         }
@@ -74,7 +72,22 @@ export const interpret = (
         if (regVal !== undefined) {
             return regVal;
         }
-        throw debug('unable to getVal');
+        throw debug('unable to getRegister');
+    };
+    let getPointer = (from: Register): Pointer => {
+        let val = getRegister(from);
+        if (typeof val === 'number') throw debug('expected a pointer');
+        return val;
+    };
+    let getValue = (from: number | Register): number => {
+        let val = getRegister(from);
+        if (typeof val !== 'number') throw debug('expected a value');
+        return val;
+    };
+    let getName = (from: number | Register): string => {
+        let val = getRegister(from);
+        if (typeof val === 'number') throw debug('expected a name');
+        return val.block;
     };
     let addToRegister = (name: string, amount: number) => {
         if (typeof registerValues[name] === 'number') {
@@ -84,10 +97,11 @@ export const interpret = (
         }
     };
     let getGlobal = (from: string) => {
-        if (!(from in state.globalValues)) {
-            throw debug('Missing global');
+        if (from in globals) {
+            // TODO: Tidy up which things are pointers and which are values
+            from = globals[from].mangledName;
         }
-        return state.globalValues[from];
+        return state.memory[from][0];
     };
     let getMemory = (block: string, offset: number) => {
         let val = state.memory[block][offset];
@@ -95,7 +109,12 @@ export const interpret = (
         return val;
     };
     var allocaCount = 0;
+    var mmapCount = 0;
     while (true) {
+        // One past the last instruction
+        if (ip == main.instructions.length) {
+            return undefined;
+        }
         let i = main.instructions[ip];
         switch (i.kind) {
             case 'empty':
@@ -106,17 +125,17 @@ export const interpret = (
                 registerValues[i.destination.name] = i.value;
                 break;
             case 'move':
-                registerValues[i.to.name] = getVal(i.from);
+                registerValues[i.to.name] = getRegister(i.from);
                 break;
             case 'loadSymbolAddress':
                 registerValues[i.to.name] = { block: i.symbolName, offset: 0 };
                 break;
             case 'loadMemory':
-                let pointer = getVal(i.from);
+                let pointer = getPointer(i.from);
                 registerValues[i.to.name] = getMemory(pointer.block, pointer.offset + i.offset);
                 break;
             case 'loadMemoryByte': {
-                let pointer = getVal(i.address);
+                let pointer = getRegister(i.address);
                 if (typeof pointer === 'number') {
                     throw debug('expected a pointer');
                 }
@@ -124,15 +143,26 @@ export const interpret = (
                 break;
             }
             case 'storeGlobal':
-                state.globalValues[i.to] = getVal(i.from);
+                state.memory[i.to][0] = getRegister(i.from);
                 break;
+            case 'storeMemory': {
+                let pointer = getPointer(i.address);
+                let value = getValue(i.from);
+                state.memory[pointer.block][pointer.offset] = value;
+                break;
+            }
+            case 'storeZeroToMemory': {
+                let pointer = getPointer(i.address);
+                state.memory[pointer.block][pointer.offset + i.offset] = 0;
+                break;
+            }
             case 'loadGlobal':
                 registerValues[i.to.name] = getGlobal(i.from);
                 break;
             case 'callByRegister': {
-                let func = findFunction(getVal(i.function));
+                let func = findFunction(getName(i.function));
                 let args = i.arguments;
-                let callResult = interpret(
+                let callResult = interpretFunction(
                     {
                         functions,
                         globals,
@@ -141,22 +171,22 @@ export const interpret = (
                     },
                     func.arguments.map((arg, index) => ({
                         name: arg.name,
-                        value: getVal(args[index]),
+                        value: getRegister(args[index]),
                     })),
                     state
                 );
-                if ('error' in callResult) {
-                    throw debug(`error: ${callResult.error}`);
-                }
                 if (i.destination) {
-                    registerValues[i.destination.name] = callResult.exitCode;
+                    if (callResult === undefined) {
+                        throw debug('expected a result');
+                    }
+                    registerValues[i.destination.name] = callResult;
                 }
                 break;
             }
             case 'callByName': {
                 let func = findFunction(i.function);
                 let args = i.arguments;
-                let callResult = interpret(
+                let callResult = interpretFunction(
                     {
                         functions,
                         globals,
@@ -165,15 +195,15 @@ export const interpret = (
                     },
                     func.arguments.map((arg, index) => ({
                         name: arg.name,
-                        value: getVal(args[index]),
+                        value: getRegister(args[index]),
                     })),
                     state
                 );
-                if ('error' in callResult) {
-                    throw debug(`error: ${callResult.error}`);
-                }
                 if (i.destination) {
-                    registerValues[i.destination.name] = callResult.exitCode;
+                    if (callResult === undefined) {
+                        throw debug('expected a result');
+                    }
+                    registerValues[i.destination.name] = callResult;
                 }
                 break;
             }
@@ -186,29 +216,40 @@ export const interpret = (
                 }
                 break;
             case 'gotoIfEqual':
-                if (registerValues[i.lhs.name] == getVal(i.rhs)) {
+                if (registerValues[i.lhs.name] == getRegister(i.rhs)) {
+                    gotoLabel(i.label);
+                }
+                break;
+            case 'gotoIfNotEqual':
+                if (registerValues[i.lhs.name] != getRegister(i.rhs)) {
                     gotoLabel(i.label);
                 }
                 break;
             case 'gotoIfGreater':
-                if (getVal(i.lhs) > getVal(i.rhs)) {
+                if (getRegister(i.lhs) > getRegister(i.rhs)) {
                     gotoLabel(i.label);
                 }
                 break;
             case 'multiply':
-                registerValues[i.destination.name] = getVal(i.lhs) * getVal(i.rhs);
+                registerValues[i.destination.name] = getValue(i.lhs) * getValue(i.rhs);
                 break;
             case 'increment':
                 addToRegister(i.register.name, 1);
                 break;
             case 'add':
-                registerValues[i.destination.name] = getVal(i.lhs) + getVal(i.rhs);
+                registerValues[i.destination.name] = getValue(i.lhs) + getValue(i.rhs);
                 break;
             case 'addImmediate':
                 addToRegister(i.register.name, i.amount);
                 break;
             case 'subtract':
-                registerValues[i.destination.name] = getVal(i.lhs) - getVal(i.rhs);
+                let lhs = getRegister(i.lhs);
+                let rhs = getValue(i.rhs);
+                if (typeof lhs === 'number') {
+                    registerValues[i.destination.name] = lhs - rhs;
+                } else {
+                    registerValues[i.destination.name] = { ...lhs, offset: lhs.offset - rhs };
+                }
                 break;
             case 'alloca':
                 let blockName = `alloca_count_${allocaCount}`;
@@ -220,10 +261,20 @@ export const interpret = (
             case 'syscall':
                 switch (i.name) {
                     case 'print':
-                        let stringName = getVal(i.arguments[0]);
+                        let stringName = getName(i.arguments[0]);
                         let string = stringLiterals[stringName];
                         if (typeof string !== 'string') throw debug('missing string');
                         console.log(string);
+                        break;
+                    case 'mmap':
+                        let blockName = `mmap_count_${mmapCount}`;
+                        mmapCount++;
+                        let amount = getValue(i.arguments[1]);
+                        state.memory[blockName] = new Array(amount);
+                        state.memory[blockName].fill(0);
+                        if (i.destination) {
+                            registerValues[i.destination.name] = { block: blockName, offset: 0 };
+                        }
                         break;
                     case 'exit':
 
@@ -232,16 +283,26 @@ export const interpret = (
                 }
                 break;
             case 'return':
-                return {
-                    exitCode: getVal(i.register),
-                    stdout: '',
-                    executorName: 'interpreter',
-                    runInstructions: 'none yet',
-                    debugInstructions: 'none yet',
-                };
+                return getRegister(i.register);
             default:
                 debug(`${i.kind} unhandled in interpret`);
         }
         ip++;
     }
+};
+
+export const interpretProgram = (
+    program: Program,
+    args: Argument[],
+    state: State /* modified */
+): ExecutionResult => {
+    let mainResult = interpretFunction(program, args, state);
+    if (typeof mainResult !== 'number') throw debug('main should return a number');
+    return {
+        exitCode: mainResult,
+        stdout: '',
+        executorName: 'interpreter',
+        runInstructions: 'none yet',
+        debugInstructions: 'none yet',
+    };
 };
