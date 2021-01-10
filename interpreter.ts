@@ -151,6 +151,12 @@ export const interpretFunction = (
                 state.memory[pointer.block][pointer.offset] = value;
                 break;
             }
+            case 'storeMemoryByte': {
+                let pointer = getPointer(i.address);
+                let value = getValue(i.contents);
+                state.memory[pointer.block][pointer.offset] = value;
+                break;
+            }
             case 'storeZeroToMemory': {
                 let pointer = getPointer(i.address);
                 state.memory[pointer.block][pointer.offset + i.offset] = 0;
