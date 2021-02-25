@@ -874,6 +874,7 @@ return isFive(5) ? 1 : 0;`,
             return sum;
         `,
         exitCode: 6,
+        failingInterpreter: true,
     },
     {
         name: 'Large For',

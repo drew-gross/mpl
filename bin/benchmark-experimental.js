@@ -41922,7 +41922,7 @@ const astToC = (input) => {
             const stringLiteralData = stringLiterals.find(({ value }) => value == ast.value);
             if (!stringLiteralData)
                 throw debug_1.default('todo');
-            return backend_utils_1.compileExpression([], ([]) => [stringLiteralName(stringLiteralData)]);
+            return backend_utils_1.compileExpression([], ([]) => [backend_utils_1.stringLiteralName(stringLiteralData)]);
         case 'typeDeclaration':
             return backend_utils_1.compileExpression([], ([]) => []);
         case 'indexAccess': {
@@ -41973,8 +41973,7 @@ const astToC = (input) => {
     }
     return debug_1.default('todo');
 };
-const stringLiteralName = ({ id, value }) => `string_literal_${id}_${value.replace(/[^a-zA-Z]/g, '')}`;
-const stringLiteralDeclaration = (literal) => `char *${stringLiteralName(literal)} = "${literal.value}";`;
+const stringLiteralDeclaration = (literal) => `char *${backend_utils_1.stringLiteralName(literal)} = "${literal.value}";`;
 const freeVariable = (v) => {
     if (types_1.equal(v.type, types_1.builtinTypes.String)) {
         return callFree(v.name, 'Freeing string');
@@ -46657,24 +46656,24 @@ exports.argumentStackLocation = (targetInfo, functionArgs, register) => {
 };
 const arrangeArgumentsForFunctionCall = (args, getRegister, targetInfo) => {
     // TODO: Add some type check to ensure we have the right number of arguments
-    return args.map((arg, index) => {
+    return args.map((arg, argIndex) => {
         // TODO: Reuse the code in argumentLocation here
-        if (index < targetInfo.registers.functionArgument.length) {
+        if (argIndex < targetInfo.registers.functionArgument.length) {
             // Registers that fix in arguments go in arguments
             if (typeof arg == 'number') {
                 return {
                     kind: 'loadImmediate',
                     value: arg,
-                    destination: targetInfo.registers.functionArgument[index],
-                    why: `Pass arg ${index} in register`,
+                    destination: targetInfo.registers.functionArgument[argIndex],
+                    why: `Pass arg ${argIndex} in register`,
                 };
             }
             else {
                 return {
                     kind: 'move',
                     from: getRegister(arg),
-                    to: targetInfo.registers.functionArgument[index],
-                    why: `Pass arg ${index} in register`,
+                    to: targetInfo.registers.functionArgument[argIndex],
+                    why: `Pass arg ${argIndex} in register`,
                 };
             }
         }
@@ -46684,14 +46683,14 @@ const arrangeArgumentsForFunctionCall = (args, getRegister, targetInfo) => {
                 throw debug_1.default("arrangeArgumentsForFunctionCall doesn't support literals on stack yet");
             }
             else {
-                const stackSlot = index -
+                const stackSlot = argIndex -
                     targetInfo.registers.functionArgument.length +
                     targetInfo.callerSavedRegisters.length;
                 return {
                     kind: 'stackStore',
                     register: getRegister(arg),
                     offset: -stackSlot,
-                    why: `Pass arg ${index} on stack (slot ${stackSlot})`,
+                    why: `Pass arg ${argIndex} on stack (slot ${stackSlot})`,
                 };
             }
         }
@@ -47787,6 +47786,7 @@ return isFive(5) ? 1 : 0;`,
             return sum;
         `,
         exitCode: 6,
+        failingInterpreter: true,
     },
     {
         name: 'Large For',
@@ -47831,6 +47831,60 @@ return isFive(5) ? 1 : 0;`,
             return sum();
         `,
         exitCode: 12,
+    },
+    {
+        // TODO: rewrite this in a way that it is guaranteed to cause spilling
+        name: 'Stack depth 2 with spilling',
+        source: `
+            bar := a: Integer => {
+                t1 := a + 1;
+                t2 := a + 2;
+                t3 := a + 3;
+                t4 := a + 4;
+                t5 := a + 5;
+                t6 := a + 6;
+                t7 := a + 7;
+                t8 := a + 8;
+                t9 := a + 9;
+                t10 := a + 10;
+                t11 := a + 11;
+                t12 := a + 12;
+                t13 := a + 13;
+                t14 := a + 14;
+                t15 := a + 15;
+                t16 := a + 16;
+                t17 := a + 17;
+                t18 := a + 18;
+                t19 := a + 19;
+                return t19 - t18;
+            };
+
+            foo := a: Integer => {
+                t1 := a + 1;
+                t2 := a + 2;
+                t3 := a + 3;
+                t4 := a + 4;
+                t5 := a + 5;
+                t6 := a + 6;
+                t7 := a + 7;
+                t8 := a + 8;
+                t9 := a + 9;
+                t10 := a + 10;
+                t11 := a + 11;
+                t12 := a + 12;
+                t13 := a + 13;
+                t14 := a + 14;
+                t15 := a + 15;
+                t16 := a + 16;
+                t17 := a + 17;
+                t18 := a + 18;
+                t19 := a + 19;
+                return bar(t19 - t18);
+            };
+
+            return foo(1);
+        `,
+        exitCode: 1,
     },
 ];
 

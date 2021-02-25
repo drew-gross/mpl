@@ -37,6 +37,13 @@ export const createInitialState = ({ stringLiterals, globals }: Program): State 
     return state;
 };
 
+var isPointer = (val: number | Pointer): val is Pointer => {
+    if (typeof val !== 'number') {
+        return true;
+    }
+    return false;
+};
+
 export const interpretFunction = (
     { globals, functions, main, stringLiterals }: Program,
     args: Argument[],
@@ -50,6 +57,7 @@ export const interpretFunction = (
         registerValues[arg.name] = arg.value;
     });
     var ip = 0;
+    var cycles = 0;
     let gotoLabel = (labelName: string) => {
         ip = main.instructions.findIndex(
             target => target.kind == 'label' && target.name == labelName
@@ -105,7 +113,8 @@ export const interpretFunction = (
     };
     let getMemory = (block: string, offset: number) => {
         let val = state.memory[block][offset];
-        if (val === undefined) throw debug('bad mem access');
+        // TODO: Make this an error instead, once I have a debugger set up
+        if (val === undefined) return 0;
         return val;
     };
     var allocaCount = 0;
@@ -242,13 +251,24 @@ export const interpretFunction = (
             case 'increment':
                 addToRegister(i.register.name, 1);
                 break;
-            case 'add':
-                registerValues[i.destination.name] = getValue(i.lhs) + getValue(i.rhs);
+            case 'add': {
+                let lhs = getRegister(i.lhs);
+                let rhs = getRegister(i.rhs);
+                if (isPointer(lhs) && isPointer(rhs)) {
+                    throw debug("Can't add 2 pointers");
+                } else if (isPointer(lhs) && !isPointer(rhs)) {
+                    registerValues[i.destination.name] = { ...lhs, offset: lhs.offset + rhs };
+                } else if (isPointer(rhs) && !isPointer(lhs)) {
+                    registerValues[i.destination.name] = { ...rhs, offset: rhs.offset + lhs };
+                } else if (!isPointer(rhs) && !isPointer(lhs)) {
+                    registerValues[i.destination.name] = lhs + rhs;
+                }
                 break;
+            }
             case 'addImmediate':
                 addToRegister(i.register.name, i.amount);
                 break;
-            case 'subtract':
+            case 'subtract': {
                 let lhs = getRegister(i.lhs);
                 let rhs = getValue(i.rhs);
                 if (typeof lhs === 'number') {
@@ -257,6 +277,7 @@ export const interpretFunction = (
                     registerValues[i.destination.name] = { ...lhs, offset: lhs.offset - rhs };
                 }
                 break;
+            }
             case 'alloca':
                 let blockName = `alloca_count_${allocaCount}`;
                 allocaCount++;
@@ -294,6 +315,10 @@ export const interpretFunction = (
                 debug(`${i.kind} unhandled in interpret`);
         }
         ip++;
+        cycles++;
+        if (cycles > 10000) {
+            debug('Too many cycles');
+        }
     }
 };
 

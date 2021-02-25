@@ -24,6 +24,7 @@ export type TestProgram = {
     failing?: boolean | string | string[]; // Expect this to fail
     only?: boolean; // Run only this test
     infiniteLooping?: boolean; // Don't even attempt to compile this, it will infinite loop
+    failingInterpreter?: boolean; // Fails to interpret in a way that fucks with the debugger
 
     // Expected results of test
     exitCode?: number;
@@ -99,6 +100,7 @@ export const mplTest = async (
         stdout,
         ast,
         failing,
+        failingInterpreter = false,
         name = undefined,
         stdin = '',
     }: Partial<TestProgram>
@@ -203,13 +205,17 @@ generated source:
         programInfo.threeAddressRoundTrip.globals,
         programInfo.threeAddressRoundTrip.globals
     );
-    if (
-        !passed(
-            { exitCode, stdout, name: 'interpreter', source },
-            programInfo.interpreterResults
-        )
-    ) {
-        error('interpreter');
+    if (!failingInterpreter) {
+        if (
+            !passed(
+                { exitCode, stdout, name: 'interpreter', source },
+                programInfo.interpreterResults
+            )
+        ) {
+            error('interpreter');
+        }
+    } else {
+        error('interpreter disabled');
     }
 
     for (const { name: backendName, executionResults } of programInfo.backendResults) {

@@ -15,6 +15,7 @@ module.exports = env => {
     return {
         entry: {
             mpl: './mpl.ts',
+            'mpl-interpreter': './mpl-interpreter.ts',
             'mpl-loader-raw': './mpl-loader.ts',
             test: './test.ts',
             'debug-test-case': './debug-test-case.ts',
