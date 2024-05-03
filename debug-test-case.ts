@@ -8,7 +8,7 @@ import { prompt } from 'inquirer';
 import * as dot from 'graphlib-dot';
 import { toDotFile } from './parser-lib/parse';
 import { toString as typeErrorToString } from './TypeError';
-import chalk from 'chalk';
+import * as chalk from 'chalk';
 import * as commander from 'commander';
 import annotateSource from './annotateSource';
 import * as deepEqual from 'deep-equal';
