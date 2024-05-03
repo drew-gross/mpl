@@ -15,6 +15,7 @@
                 "child-process-promise": "2.2.1",
                 "deep-equal": "2.0.1",
                 "fs-extra": "9.0.0",
+                "graphlib": "2.1.8",
                 "graphlib-dot": "0.6.4",
                 "inquirer": "7.1.0",
                 "loader-utils": "2.0.4",

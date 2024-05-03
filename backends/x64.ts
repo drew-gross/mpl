@@ -211,11 +211,11 @@ first_block: dq 0
 ${join(tac.stringLiterals.map(stringLiteralDeclaration), '\n')}
 section .bss
 ${Object.values(tac.globals)
-    .map(({ mangledName, bytes }) => `${mangledName}: resq ${bytes / bytesInWord}`)
-    .join('\n')}
+                .map(({ mangledName, bytes }) => `${mangledName}: resq ${bytes / bytesInWord}`)
+                .join('\n')}
 ${Object.keys(errors)
-    .map(key => `${errors[key].name}: db "${errors[key].value}", 0`)
-    .join('\n')}
+                .map(key => `${errors[key].name}: db "${errors[key].value}", 0`)
+                .join('\n')}
 `,
         tac,
     };
@@ -250,7 +250,7 @@ const finishCompilation = async (
         await exec(`nasm -fmacho64 -o ${linkerInputPath.path} ${sourceFile.path}`);
         // TODO: Cross compiling or something? IDK. Dependency on system linker sucks.
         await exec(
-            `ld ${linkerInputPath.path} -o ${binaryFile.path} -macosx_version_min 10.6 -lSystem`
+            `ld ${linkerInputPath.path} -o ${binaryFile.path} -macos_version_min 10.6 -lSystem`
         );
         return {
             source: x64source,

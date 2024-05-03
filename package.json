@@ -41,7 +41,6 @@
         "0x": "4.9.1",
         "commander": "5.0.0",
         "deepcopy": "2.0.0",
-        "graphlib": "2.1.8",
         "lodash": "4.17.20",
         "node": "13.11.0",
         "parallelshell": "3.0.2",
@@ -50,6 +49,7 @@
         "": ""
     },
     "dependencies": {
+        "graphlib": "2.1.8",
         "@types/node": "13.9.3",
         "loader-utils": "2.0.4",
         "chalk": "3.0.0",
