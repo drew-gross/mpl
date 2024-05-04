@@ -14,7 +14,8 @@ import join from './util/join';
 import mipsBackend from './backends/mips';
 import jsBackend from './backends/js';
 import cBackend from './backends/c';
-import x64Backend from './backends/x64';
+// TODO: Figure out how to run x64 code on this mac
+//import x64Backend from './backends/x64';
 
 export const preceedingWhitespace = <TargetRegister>(
     tas: TargetStatement<TargetRegister>
@@ -112,9 +113,9 @@ export const executableToString = (
     return `
 ${functionToString(commentChar, main)}
 ${join(
-    functions.map(f => functionToString(commentChar, f)),
-    '\n'
-)}`;
+        functions.map(f => functionToString(commentChar, f)),
+        '\n'
+    )}`;
 };
 
 export const makeExecutable = <TargetRegister>(
@@ -146,17 +147,17 @@ export const makeExecutable = <TargetRegister>(
             },
             ...(includeCleanup
                 ? [
-                      {
-                          kind: 'callByName' as 'callByName',
-                          function: 'free_globals',
-                          why: 'free_globals',
-                      },
-                      {
-                          kind: 'callByName' as 'callByName',
-                          function: 'verify_no_leaks',
-                          why: 'verify_no_leaks',
-                      },
-                  ]
+                    {
+                        kind: 'callByName' as 'callByName',
+                        function: 'free_globals',
+                        why: 'free_globals',
+                    },
+                    {
+                        kind: 'callByName' as 'callByName',
+                        function: 'verify_no_leaks',
+                        why: 'verify_no_leaks',
+                    },
+                ]
                 : []),
             {
                 kind: 'pop' as 'pop',
@@ -225,4 +226,4 @@ export const freeGlobalsInstructions = (
     return instructions;
 };
 
-export const backends: Backend[] = [mipsBackend, jsBackend, cBackend, x64Backend];
+export const backends: Backend[] = [mipsBackend, jsBackend, cBackend/*, x64Backend*/];
