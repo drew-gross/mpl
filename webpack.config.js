@@ -20,6 +20,7 @@ module.exports = env => {
             test: './test.ts',
             'debug-test-case': './debug-test-case.ts',
             benchmark: './benchmark.ts',
+            'test-case-table': './test-case-table.ts',
         },
         target: 'node',
         devtool: false,
