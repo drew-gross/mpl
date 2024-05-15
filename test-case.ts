@@ -108,6 +108,12 @@ export const mplTest = async (
     if (typeof failing === 'string') {
         failing = [failing];
     }
+    if (typeof failing !== 'object') {
+        failing = [];
+    }
+    if (!failing.includes('x64')) {
+        failing = [...failing, 'x64']
+    }
 
     const error = (stage: string) => {
         t.fail(

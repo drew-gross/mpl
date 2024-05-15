@@ -14,8 +14,7 @@ import join from './util/join';
 import mipsBackend from './backends/mips';
 import jsBackend from './backends/js';
 import cBackend from './backends/c';
-// TODO: Figure out how to run x64 code on this mac
-//import x64Backend from './backends/x64';
+import x64Backend from './backends/x64';
 
 export const preceedingWhitespace = <TargetRegister>(
     tas: TargetStatement<TargetRegister>
@@ -226,4 +225,4 @@ export const freeGlobalsInstructions = (
     return instructions;
 };
 
-export const backends: Backend[] = [mipsBackend, jsBackend, cBackend/*, x64Backend*/];
+export const backends: Backend[] = [mipsBackend, jsBackend, cBackend, x64Backend];
