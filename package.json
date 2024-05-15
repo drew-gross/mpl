@@ -44,7 +44,7 @@
         "deepcopy": "2.0.0",
         "lodash": "4.17.20",
         "node": "13.11.0",
-        "parallelshell": "3.0.2",
+        "parallelshell": "3.0.2"
     },
     "dependencies": {
         "@types/cli-table": "0.3.4",

@@ -178,20 +178,20 @@ import { mplLoader } from './mpl-loader';
                     // TODO: put debug instructions too
                     console.log(chalk.red(`            Execution Failed: ${r.error}`));
                 } else {
-                    let log =
+                    let lg =
                         testCase.exitCode == r.exitCode
                             ? s => console.log(s)
                             : s => console.log(chalk.red(s));
-                    log(`            Expected Exit Code: ${testCase.exitCode}`);
-                    log(`            Actual Exit Code: ${r.exitCode}`);
+                    lg(`            Expected Exit Code: ${testCase.exitCode}`);
+                    lg(`            Actual Exit Code: ${r.exitCode}`);
 
                     if (testCase.stdout) {
-                        log =
+                        lg =
                             testCase.stdout == r.stdout
                                 ? s => console.log(s)
                                 : s => console.log(chalk.red(s));
-                        log(`            Expected stdout: ${testCase.stdout}`);
-                        log(`            Actual stdout: ${r.stdout}`);
+                        lg(`            Expected stdout: ${testCase.stdout}`);
+                        lg(`            Actual stdout: ${r.stdout}`);
                     }
                     console.log(`            Run: ${r.runInstructions}`);
                     console.log(`            Debug: ${r.debugInstructions}`);
@@ -201,7 +201,7 @@ import { mplLoader } from './mpl-loader';
         }
     });
     console.log('Interpreter:');
-    let log =
+    const log =
         'error' in programInfo.interpreterResults ||
             testCase.exitCode == programInfo.interpreterResults.exitCode
             ? s => console.log(s)

@@ -18,16 +18,16 @@ type Pointer = {
 };
 
 export const createInitialState = ({ stringLiterals, globals }: Program): State => {
-    let state = { memory: {} };
-    for (let name in globals) {
-        var global = globals[name];
+    const state = { memory: {} };
+    for (const name in globals) {
+        const global = globals[name];
         state.memory[global.mangledName] = new Array(global.bytes);
         state.memory[global.mangledName].fill(0);
     }
     stringLiterals.forEach(stringLiteral => {
-        let index = stringLiteralName(stringLiteral);
+        const index = stringLiteralName(stringLiteral);
         state.memory[index] = [];
-        for (var i = 0; i < stringLiteral.value.length; i++) {
+        for (let i = 0; i < stringLiteral.value.length; i++) {
             state.memory[index].push(stringLiteral.value.charCodeAt(i));
         }
         state.memory[index].push(0);
