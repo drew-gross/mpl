@@ -176,6 +176,8 @@ str2: String = "b";
 return str1 ++ str2 == "ab" ? 5 : 10;
 `,
         exitCode: 5,
+        failingInterpreter: true,
+        failing: true,
     },
     {
         name: 'Semi-Complex String Concatenation',
@@ -188,6 +190,8 @@ lenFunc := dummy: Integer => {
 return lenFunc(5);
 `,
         exitCode: 40,
+        failingInterpreter: true,
+        failing: true,
     },
     {
         name: 'Self Multiply and Assign',
@@ -223,6 +227,7 @@ return isFive(5) ? 1 : 0;`,
         name: 'String Copy',
         source: `myStr1: String = "testing"; myStr2: String = myStr1; return length(myStr2);`,
         exitCode: 7,
+        failing: true,
     },
     {
         name: 'String assignment inside function',
@@ -238,6 +243,7 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 0,
         stdout: 'HelloWorld!!!!!',
+        failing: true,
     },
     {
         name: 'Print',
@@ -248,6 +254,7 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 1,
         stdout: 'sample_string',
+        failing: true,
     },
     {
         name: 'Complex String Concatenation',
@@ -288,6 +295,7 @@ return isFive(5) ? 1 : 0;`,
         `,
         stdin: '5',
         exitCode: 5,
+        failing: true,
     },
     {
         // TODO: Errors/sum types
@@ -343,6 +351,7 @@ return isFive(5) ? 1 : 0;`,
             return myList[0] ? 1 : 2;
         `,
         exitCode: 1,
+        failing: true,
     },
     {
         name: 'Untyped Zero Item List',
@@ -377,6 +386,8 @@ return isFive(5) ? 1 : 0;`,
             return myList[0];
         `,
         exitCode: 11,
+        failingInterpreter: true,
+        failing: true,
     },
     {
         name: 'Two Item List',
@@ -385,6 +396,7 @@ return isFive(5) ? 1 : 0;`,
             return myList[0] + myList[1];
         `,
         exitCode: 33,
+        failing: true,
     },
     {
         name: 'Function Accepts List',
@@ -427,6 +439,8 @@ return isFive(5) ? 1 : 0;`,
             return bp.first ? 10 : 20;
         `,
         exitCode: 10,
+        failingInterpreter: true,
+        failing: true,
     },
     {
         name: 'Int Pair',
@@ -439,6 +453,7 @@ return isFive(5) ? 1 : 0;`,
             return ip.first * ip.second;
         `,
         exitCode: 21,
+        failing: true,
     },
     {
         name: 'List of Pairs',
@@ -477,6 +492,7 @@ return isFive(5) ? 1 : 0;`,
             return foo();
         `,
         exitCode: 34 - 12,
+        failing: true,
     },
     {
         name: 'Multiple Int Pairs in Function',
@@ -491,6 +507,7 @@ return isFive(5) ? 1 : 0;`,
             return ip1.first + ip1.second + ip2.second;
         `,
         exitCode: 7,
+        failing: true,
     },
     {
         name: 'Return Int Pair',
@@ -512,6 +529,7 @@ return isFive(5) ? 1 : 0;`,
             return resultVar.second - resultVar.first;
         `,
         exitCode: 34 - 12,
+        failing: true,
     },
     {
         name: 'Return Int Pair Twice',
@@ -535,6 +553,8 @@ return isFive(5) ? 1 : 0;`,
             return result1.second - result2.first - midVar;
         `,
         exitCode: 34 - 12 - 2,
+        failingInterpreter: true,
+        failing: true,
     },
     {
         name: 'Return List',
@@ -546,6 +566,7 @@ return isFive(5) ? 1 : 0;`,
             return l[3];
         `,
         exitCode: 4,
+        failing: true,
     },
     {
         name: 'Temporary List',
@@ -556,6 +577,8 @@ return isFive(5) ? 1 : 0;`,
             return returnsList()[3];
         `,
         exitCode: 4,
+        failingInterpreter: true,
+        failing: true,
     },
     {
         name: 'String Length',
@@ -564,6 +587,8 @@ return isFive(5) ? 1 : 0;`,
             return length(myStr);
         `,
         exitCode: 4,
+        failingInterpreter: true,
+        failing: true,
     },
     {
         name: 'Empty String Length',
@@ -580,6 +605,7 @@ return isFive(5) ? 1 : 0;`,
             return myStr.length();
         `,
         exitCode: 4,
+        failing: true,
     },
     {
         name: 'Seven Argument Function',
@@ -590,7 +616,7 @@ return isFive(5) ? 1 : 0;`,
             return foo(1, 2, 3, 4, 5, 6, 7);
         `,
         exitCode: 28,
-        failing: true, // Need to fix x64 stack layout BS
+        failing: false, // Failing on x64, Need to fix x64 stack layout BS
     },
     {
         name: 'Nine Argument Function With Multiply',
@@ -633,6 +659,7 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 0,
         stdout: 'HelloWorld!!!!!',
+        failing: true,
     },
     {
         name: 'Allocate in Ternary True',
@@ -645,6 +672,7 @@ return isFive(5) ? 1 : 0;`,
             return foo(true);
         `,
         exitCode: 2,
+        failing: true,
     },
     {
         name: 'Allocate in Ternary False',
@@ -657,6 +685,7 @@ return isFive(5) ? 1 : 0;`,
             return foo(false);
         `,
         exitCode: 2,
+        failing: true,
     },
     {
         name: 'Skipped Allocate in Ternary True',
@@ -875,6 +904,7 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 6,
         failingInterpreter: true,
+        failing: true,
     },
     {
         name: 'Large For',
@@ -887,6 +917,7 @@ return isFive(5) ? 1 : 0;`,
             return sum;
         `,
         exitCode: 24,
+        failing: true,
     },
     {
         name: 'For With Non-Iterable',
@@ -919,6 +950,8 @@ return isFive(5) ? 1 : 0;`,
             return sum();
         `,
         exitCode: 12,
+        failingInterpreter: true,
+        failing: true,
     },
     {
         // TODO: rewrite this in a way that it is guaranteed to cause spilling

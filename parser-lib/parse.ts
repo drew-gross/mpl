@@ -274,10 +274,10 @@ const parseSequence = <Node extends string, Token>(
 type ParserProgress<Node, Token> =
     | { kind: 'failed'; error: ParseError<Token> }
     | {
-          kind: 'progress';
-          parseResults: AstWithIndex<Node, Token>[];
-          subParserIndex: number;
-      };
+        kind: 'progress';
+        parseResults: AstWithIndex<Node, Token>[];
+        subParserIndex: number;
+    };
 
 const parseAlternative = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -287,10 +287,10 @@ const parseAlternative = <Node extends string, Token>(
 ): ParseResultWithIndex<Node, Token> => {
     const progressCache: ParserProgress<Node, Token>[] = alternatives.parsers.map(
         _ =>
-            ({ kind: 'progress', parseResults: [], subParserIndex: 0 } as ParserProgress<
-                Node,
-                Token
-            >)
+        ({ kind: 'progress', parseResults: [], subParserIndex: 0 } as ParserProgress<
+            Node,
+            Token
+        >)
     );
 
     // TODO: fix this linter error
