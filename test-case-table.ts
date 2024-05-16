@@ -35,7 +35,6 @@ export const passed = (testCase: TestProgram, result: ExecutionResult) => {
 
     t.push([
         'Test Name',
-        'Fail?',
         'Inf?',
         'Info?',
         'Exc?',
@@ -50,7 +49,6 @@ export const passed = (testCase: TestProgram, result: ExecutionResult) => {
         ...(await Promise.all(
             testPrograms.map(async p => {
                 const testName = `npm run test-case "${p.name}"`;
-                let failingOk = 'n/a';
                 let infiniteLoopOk = 'n/a';
                 let producedInfoOk = 'n/a';
                 let exceptionOk = 'n/a';
@@ -60,11 +58,6 @@ export const passed = (testCase: TestProgram, result: ExecutionResult) => {
                 let interpreterOk = 'n/a';
                 const backendResults: string[] = [];
                 await (async () => {
-                    if (p.failing) {
-                        failingOk = 'err';
-                    } else {
-                        failingOk = 'ok';
-                    }
                     if (p.infiniteLooping) {
                         infiniteLoopOk = 'err';
                         return;
@@ -220,9 +213,15 @@ export const passed = (testCase: TestProgram, result: ExecutionResult) => {
                             );
 
                             // Allow failures if specific backends are expected to be failing, otherwise require success
-                            if (Array.isArray(p.failing) && p.failing.includes(backendName))
+                            if (
+                                Array.isArray(p.failingBackends) &&
+                                p.failingBackends.includes(backendName)
+                            )
                                 return;
-                            if (typeof p.failing === 'string' && p.failing == backendName)
+                            if (
+                                typeof p.failingBackends === 'string' &&
+                                p.failingBackends == backendName
+                            )
                                 return;
 
                             if (!testPassed) {
@@ -239,7 +238,6 @@ export const passed = (testCase: TestProgram, result: ExecutionResult) => {
                 })();
                 return [
                     testName,
-                    color(failingOk),
                     color(infiniteLoopOk),
                     color(producedInfoOk),
                     color(exceptionOk),
@@ -254,7 +252,7 @@ export const passed = (testCase: TestProgram, result: ExecutionResult) => {
     );
 
     console.log(t.toString());
-    const expectedProblems = 185;
+    const expectedProblems = 133;
     if (problems != expectedProblems) {
         console.log(chalk.red(`${problems} Problems`));
     } else {

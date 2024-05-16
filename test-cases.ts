@@ -4,11 +4,9 @@ import range from './util/list/range';
 import { builtinTypes } from './types';
 
 export type TestProgram = {
-    // To extend "Test"
     name: string;
     source: string;
-    failing?: boolean | string | string[]; // Expect this to fail
-    only?: boolean; // Run only this test
+    failingBackends?: string | string[]; // Expect this to fail
     infiniteLooping?: boolean; // Don't even attempt to compile this, it will infinite loop
     failingInterpreter?: boolean; // Fails to interpret in a way that fucks with the debugger
 
@@ -46,7 +44,6 @@ const manyGlobalsMultiply = () => {
         `,
         exitCode: 1,
         stdin,
-        failing: true,
     };
 };
 
@@ -197,7 +194,6 @@ return str1 ++ str2 == "ab" ? 5 : 10;
 `,
         exitCode: 5,
         failingInterpreter: true,
-        failing: true,
     },
     {
         name: 'Semi-Complex String Concatenation',
@@ -211,7 +207,6 @@ return lenFunc(5);
 `,
         exitCode: 40,
         failingInterpreter: true,
-        failing: true,
     },
     {
         name: 'Self Multiply and Assign',
@@ -247,7 +242,6 @@ return isFive(5) ? 1 : 0;`,
         name: 'String Copy',
         source: `myStr1: String = "testing"; myStr2: String = myStr1; return length(myStr2);`,
         exitCode: 7,
-        failing: true,
     },
     {
         name: 'String assignment inside function',
@@ -263,7 +257,6 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 0,
         stdout: 'HelloWorld!!!!!',
-        failing: true,
     },
     {
         name: 'Print',
@@ -274,7 +267,6 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 1,
         stdout: 'sample_string',
-        failing: true,
     },
     {
         name: 'Complex String Concatenation',
@@ -291,7 +283,6 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 6,
         infiniteLooping: true,
-        failing: true,
     },
     {
         name: 'No Args',
@@ -302,10 +293,10 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 11,
     },
     {
+        // TODO: should be a syntax error (no return)
         name: 'No Return',
         source: 'const11 := () => 11;',
         exitCode: 1,
-        failing: true, // TODO: should be a syntax error (no return)
     },
     {
         name: 'Read Integer',
@@ -315,7 +306,6 @@ return isFive(5) ? 1 : 0;`,
         `,
         stdin: '5',
         exitCode: 5,
-        failing: true,
     },
     {
         // TODO: Errors/sum types
@@ -326,7 +316,6 @@ return isFive(5) ? 1 : 0;`,
         `,
         stdin: '',
         exitCode: 5, // TODO select an exit code
-        failing: true,
     },
     {
         name: 'Should leak',
@@ -336,7 +325,6 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: -1,
         stdout: 'Leaks found',
-        failing: true,
     },
     {
         name: 'Missing Semicolon',
@@ -356,13 +344,13 @@ return isFive(5) ? 1 : 0;`,
     },
     manyGlobalsMultiply(),
     {
+        // TODO: Length currently only for strings :(
         name: 'Zero Item List',
         source: `
             myList: Boolean[] = [];
             return length(myList);
         `,
         exitCode: 0,
-        failing: true, // TODO: Length currently only for strings :(
     },
     {
         name: 'Explicitly Typed List',
@@ -371,16 +359,15 @@ return isFive(5) ? 1 : 0;`,
             return myList[0] ? 1 : 2;
         `,
         exitCode: 1,
-        failing: true,
     },
     {
+        // expect a type error
         name: 'Untyped Zero Item List',
         source: `
             myList := [];
             return length(myList);
         `,
         exitCode: 0,
-        failing: true, // expect a type error
     },
     {
         name: 'Wrong Type List',
@@ -407,7 +394,6 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 11,
         failingInterpreter: true,
-        failing: true,
     },
     {
         name: 'Two Item List',
@@ -416,7 +402,6 @@ return isFive(5) ? 1 : 0;`,
             return myList[0] + myList[1];
         `,
         exitCode: 33,
-        failing: true,
     },
     {
         name: 'Function Accepts List',
@@ -446,7 +431,6 @@ return isFive(5) ? 1 : 0;`,
             return myList[2];
         `,
         exitCode: 0,
-        failing: true,
     },
     {
         name: 'Bool Pair',
@@ -460,7 +444,6 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 10,
         failingInterpreter: true,
-        failing: true,
     },
     {
         name: 'Int Pair',
@@ -473,7 +456,6 @@ return isFive(5) ? 1 : 0;`,
             return ip.first * ip.second;
         `,
         exitCode: 21,
-        failing: true,
     },
     {
         name: 'List of Pairs',
@@ -490,7 +472,6 @@ return isFive(5) ? 1 : 0;`,
             return elem.second;
         `,
         exitCode: 4,
-        failing: true,
     },
     {
         name: 'Int Pair in Function',
@@ -512,7 +493,6 @@ return isFive(5) ? 1 : 0;`,
             return foo();
         `,
         exitCode: 34 - 12,
-        failing: true,
     },
     {
         name: 'Multiple Int Pairs in Function',
@@ -527,7 +507,6 @@ return isFive(5) ? 1 : 0;`,
             return ip1.first + ip1.second + ip2.second;
         `,
         exitCode: 7,
-        failing: true,
     },
     {
         name: 'Return Int Pair',
@@ -549,7 +528,6 @@ return isFive(5) ? 1 : 0;`,
             return resultVar.second - resultVar.first;
         `,
         exitCode: 34 - 12,
-        failing: true,
     },
     {
         name: 'Return Int Pair Twice',
@@ -574,7 +552,6 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 34 - 12 - 2,
         failingInterpreter: true,
-        failing: true,
     },
     {
         name: 'Return List',
@@ -586,7 +563,6 @@ return isFive(5) ? 1 : 0;`,
             return l[3];
         `,
         exitCode: 4,
-        failing: true,
     },
     {
         name: 'Temporary List',
@@ -598,7 +574,6 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 4,
         failingInterpreter: true,
-        failing: true,
     },
     {
         name: 'String Length',
@@ -608,7 +583,6 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 4,
         failingInterpreter: true,
-        failing: true,
     },
     {
         name: 'Empty String Length',
@@ -625,9 +599,9 @@ return isFive(5) ? 1 : 0;`,
             return myStr.length();
         `,
         exitCode: 4,
-        failing: true,
     },
     {
+        // Failing on x64, Need to fix x64 stack layout BS (after fixing all of x64?)
         name: 'Seven Argument Function',
         source: `
             foo := (a: Integer, b: Integer, c: Integer, d: Integer, e: Integer, f: Integer, g: Integer) => {
@@ -636,7 +610,6 @@ return isFive(5) ? 1 : 0;`,
             return foo(1, 2, 3, 4, 5, 6, 7);
         `,
         exitCode: 28,
-        failing: false, // Failing on x64, Need to fix x64 stack layout BS
     },
     {
         name: 'Nine Argument Function With Multiply',
@@ -647,7 +620,6 @@ return isFive(5) ? 1 : 0;`,
             return foo(1, 1, 1, 2, 3, 2, 1, 2, 3);
         `,
         exitCode: 72,
-        failing: true,
         infiniteLooping: true,
     },
     {
@@ -659,7 +631,6 @@ return isFive(5) ? 1 : 0;`,
             return foo(10, 1, 1, 1, 1, 1, 1);
         `,
         exitCode: 4,
-        failing: true,
     },
     {
         name: 'Id Function',
@@ -679,7 +650,6 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 0,
         stdout: 'HelloWorld!!!!!',
-        failing: true,
     },
     {
         name: 'Allocate in Ternary True',
@@ -692,7 +662,6 @@ return isFive(5) ? 1 : 0;`,
             return foo(true);
         `,
         exitCode: 2,
-        failing: true,
     },
     {
         name: 'Allocate in Ternary False',
@@ -705,7 +674,6 @@ return isFive(5) ? 1 : 0;`,
             return foo(false);
         `,
         exitCode: 2,
-        failing: true,
     },
     {
         name: 'Skipped Allocate in Ternary True',
@@ -740,6 +708,7 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 1,
     },
     {
+        // TODO: should error about assigning to argument
         name: 'Write to Argument',
         source: `
             foo := a: Boolean => {
@@ -748,8 +717,7 @@ return isFive(5) ? 1 : 0;`,
             };
             return foo(true);
         `,
-        exitCode: 0,
-        failing: true, // TODO: should error about assigning to argument
+        exitCode: 1,
     },
     {
         name: 'Return String',
@@ -791,7 +759,6 @@ return isFive(5) ? 1 : 0;`,
             return foo();
         `,
         exitCode: 10,
-        failing: true,
     },
     {
         name: 'Variable Named Like Keyword',
@@ -924,7 +891,6 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 6,
         failingInterpreter: true,
-        failing: true,
     },
     {
         name: 'Large For',
@@ -937,7 +903,6 @@ return isFive(5) ? 1 : 0;`,
             return sum;
         `,
         exitCode: 24,
-        failing: true,
     },
     {
         name: 'For With Non-Iterable',
@@ -971,7 +936,6 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 12,
         failingInterpreter: true,
-        failing: true,
     },
     {
         // TODO: rewrite this in a way that it is guaranteed to cause spilling
@@ -1174,11 +1138,9 @@ return isFive(11);`,
 recursiveAdd := x: Integer, y: Integer => x == 0 ? y : recursiveAdd(x - 1, y + 1);
 return recursiveAdd(4,11);`,
         exitCode: 15,
-        failing: true,
     },
     {
         name: 'uninferable recursive',
-        failing: true,
         source: `
 recursive := x: Integer => recursive(x);
 return recursive(1);`,
@@ -1251,7 +1213,6 @@ return myFunc(4, "four");`,
     },
     {
         name: 'string equality: inequal same length',
-        failing: true,
         source: `str1 := "a";
 str2 := "b";
 return str1 == str2 ? 1 : 2;
@@ -1260,7 +1221,6 @@ return str1 == str2 ? 1 : 2;
     },
     {
         name: 'string equality: inequal different length',
-        failing: true,
         source: `str1 := "aa";
 str2 := "a";
 return str1 == str2 ? 7 : 2;
@@ -1285,7 +1245,6 @@ return myFunc();`,
         name: 'many temporaries, spill to ram',
         source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
         exitCode: 1,
-        failing: true,
     },
 
     {
@@ -1337,7 +1296,6 @@ return quadrupleWithLocal(5);`,
         name: 'string length with type inferred',
         source: `myStr := "test2"; return length(myStr);`,
         exitCode: 5,
-        failing: true,
     },
     {
         name: 'wrong type global',
@@ -1356,7 +1314,6 @@ return quadrupleWithLocal(5);`,
         name: 'concatenate and get length then subtract',
         source: `return length("abc" ++ "defg") - 2;`,
         exitCode: 5,
-        failing: true,
     },
     {
         name: 'parsing fails for extra invalid tokens',
@@ -1447,7 +1404,6 @@ dummy := print("sample string with space");
 return 1;`,
         exitCode: 1,
         stdout: 'sample string with space',
-        failing: true,
     },
 
     {
@@ -1457,7 +1413,6 @@ print("sample string");
 return 1;`,
         exitCode: 1,
         stdout: 'sample string',
-        failing: true,
     },
 
     {
@@ -1468,7 +1423,7 @@ return 1 + dummy - dummy;`,
         exitCode: 1,
         stdout: '1',
         // Fails mips because of the silly way we extract exit codes.
-        failing: ['mips'],
+        failingBackends: ['mips'],
     },
     {
         name: 'assign result of call to builtin to local in function',
@@ -1482,7 +1437,6 @@ return lengthOfFoo(1);`,
     },
     {
         name: 'string args',
-        failing: true,
         source: `
 excitmentifier := (boring: String) => {
     dummy := print(boring ++ "!");
@@ -1534,7 +1488,6 @@ return a;`,
     },
     {
         name: 'reassign to a using expression including a',
-        failing: true,
         source: `
 hello := "HelloWorld";
 hello = hello ++ "!";
@@ -1597,7 +1550,6 @@ return t19 - t16;
     // TODO: rewrite this in a way that it is guaranteed to cause spilling
     {
         name: 'Spill With Local Variables and Local Struct',
-        failing: true,
         source: `
 IntPair := {
     first: Integer;
@@ -1632,7 +1584,6 @@ return a + t1 + t2 + t3 + ip.first - ip.second;
 
     {
         name: 'Spill with Local Variables and Local Struct in Function',
-        failing: true,
         source: `
 IntPair := {
     first: Integer;

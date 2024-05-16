@@ -39,8 +39,8 @@ const fmtNum = num =>
 if (!before) {
     (async () => {
         const results = await Promise.all(
-            testPrograms.map(async ({ name, source, failing }: TestProgram) => {
-                if (failing) {
+            testPrograms.map(async ({ name, source, failingBackends }: TestProgram) => {
+                if (failingBackends !== undefined && failingBackends.length != 0) {
                     return;
                 }
                 const frontendOutput = compile(source);
