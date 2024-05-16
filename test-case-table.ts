@@ -4,6 +4,7 @@ import produceProgramInfo from './produceProgramInfo';
 import * as chalk from 'chalk';
 import * as assert from 'assert';
 
+/* tslint:disable-next-line */
 const Table = require('cli-table');
 
 (async () => {
