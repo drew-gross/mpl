@@ -5,7 +5,7 @@ import * as chalk from 'chalk';
 import * as assert from 'assert';
 
 /* tslint:disable-next-line */
-const Table = require('cli-table');
+const Table = require('cli-table3');
 
 (async () => {
     const t = new Table();

@@ -47,12 +47,11 @@
         "parallelshell": "3.0.2"
     },
     "dependencies": {
-        "@types/cli-table": "0.3.4",
         "@types/node": "13.9.3",
         "ava": "6.1.2",
         "chalk": "3.0.0",
         "child-process-promise": "2.2.1",
-        "cli-table": "0.3.11",
+        "cli-table3": "0.6.5",
         "deep-equal": "2.0.1",
         "fs-extra": "9.0.0",
         "graphlib": "2.1.8",
