@@ -569,67 +569,6 @@ testModules.forEach((testModule: TestModule) => {
     getRunner(testModule)(testModule.name, moduleTest, testModule);
 });
 
-test('assign function with no args to typed var', mplTest, {
-    source: `
-myFunc: Function<Integer> = () => 111;
-return myFunc();`,
-    exitCode: 111,
-});
-
-test('return local integer', mplTest, {
-    source: 'myVar: Integer = 3 * 3; return myVar;',
-    exitCode: 9,
-});
-
-test.failing('many temporaries, spill to ram', mplTest, {
-    source:
-        'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
-    exitCode: 1,
-});
-
-test('multi statement function with locals', mplTest, {
-    source: `
-quadrupleWithLocal := a: Integer => { b: Integer = 2 * a; return 2 * b; };
-return quadrupleWithLocal(5);`,
-    exitCode: 20,
-});
-
-test('multi statement function with type error', mplTest, {
-    source: `
-boolTimesInt := a: Integer => { b: Boolean = false; return a * b; };
-return boolTimesInt(1);`,
-    typeErrors: [
-        {
-            kind: 'wrongTypeForOperator',
-            operator: 'product',
-            side: 'right',
-            found: builtinTypes.Boolean,
-            expected: 'Integer',
-            sourceLocation: { line: 2, column: 60 },
-        },
-        // TODO: Refactor until I don't get the same error twice
-        {
-            kind: 'wrongTypeForOperator',
-            operator: 'product',
-            side: 'right',
-            found: builtinTypes.Boolean,
-            expected: 'Integer',
-            sourceLocation: { line: 2, column: 60 },
-        },
-    ],
-});
-
-test('multi statement function on multiple lines', mplTest, {
-    source: `
-quadrupleWithLocal := a: Integer => {
-    b: Integer = 2 * a;
-    return 2 * b;
-};
-
-return quadrupleWithLocal(5);`,
-    exitCode: 20,
-});
-
 test.failing('string length with type inferred', mplTest, {
     source: `myStr := "test2"; return length(myStr);`,
     exitCode: 5,

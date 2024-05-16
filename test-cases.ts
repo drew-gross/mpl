@@ -1233,19 +1233,85 @@ return myFunc(4, "four");`,
         name: 'string equality: inequal same length',
         failing: true,
         source: `str1 := "a";
-    str2 := "b";
-    return str1 == str2 ? 1 : 2;
-    `,
+str2 := "b";
+return str1 == str2 ? 1 : 2;
+`,
         exitCode: 2,
     },
-
     {
         name: 'string equality: inequal different length',
         failing: true,
         source: `str1 := "aa";
-    str2 := "a";
-    return str1 == str2 ? 7 : 2;
-    `,
+str2 := "a";
+return str1 == str2 ? 7 : 2;
+`,
         exitCode: 2,
+    },
+    {
+        name: 'assign function with no args to typed var',
+        source: `
+myFunc: Function<Integer> = () => 111;
+return myFunc();`,
+        exitCode: 111,
+    },
+
+    {
+        name: 'return local integer',
+        source: 'myVar: Integer = 3 * 3; return myVar;',
+        exitCode: 9,
+    },
+
+    {
+        name: 'many temporaries, spill to ram',
+        source:
+            'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
+        exitCode: 1,
+        failing: true,
+    },
+
+    {
+        name: 'multi statement function with locals',
+        source: `
+quadrupleWithLocal := a: Integer => { b: Integer = 2 * a; return 2 * b; };
+return quadrupleWithLocal(5);`,
+        exitCode: 20,
+    },
+
+    {
+        name: 'multi statement function with type error',
+        source: `
+boolTimesInt := a: Integer => { b: Boolean = false; return a * b; };
+return boolTimesInt(1);`,
+        typeErrors: [
+            {
+                kind: 'wrongTypeForOperator',
+                operator: 'product',
+                side: 'right',
+                found: builtinTypes.Boolean,
+                expected: 'Integer',
+                sourceLocation: { line: 2, column: 60 },
+            },
+            // TODO: Refactor until I don't get the same error twice
+            {
+                kind: 'wrongTypeForOperator',
+                operator: 'product',
+                side: 'right',
+                found: builtinTypes.Boolean,
+                expected: 'Integer',
+                sourceLocation: { line: 2, column: 60 },
+            },
+        ],
+    },
+
+    {
+        name: 'multi statement function on multiple lines',
+        source: `
+quadrupleWithLocal := a: Integer => {
+    b: Integer = 2 * a;
+    return 2 * b;
+};
+
+return quadrupleWithLocal(5);`,
+        exitCode: 20,
     },
 ];
