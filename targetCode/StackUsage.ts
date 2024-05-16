@@ -18,8 +18,8 @@ export const stackUsageToString = <TargetRegister>(
     const descriptions: string[] = [
         ...usage.callerSavedRegisters,
         ...usage.arguments.map(toString),
-        ...((usage.savedExtraRegisters as unknown) as string[]),
-        ...((usage.savedUsedRegisters as unknown) as string[]),
+        ...(usage.savedExtraRegisters as unknown as string[]),
+        ...(usage.savedUsedRegisters as unknown as string[]),
         `(${usage.spillSlotCount} spill slots)`,
     ] as string[];
     return `[${join(descriptions, ', ')}]`;

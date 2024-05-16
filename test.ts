@@ -575,7 +575,9 @@ test('structure is equal for inferred string type', t => {
     // TODO:  remove this awful hack. Need to either strip source location from structure,
     // or not have it there in the first place.
     (inferredStructure as any).program.statements[0].expression.sourceLocation.column = 17;
-    (inferredStructure as any).program.statements[1].expression.arguments[0].sourceLocation.column = 39;
+    (
+        inferredStructure as any
+    ).program.statements[1].expression.arguments[0].sourceLocation.column = 39;
     (inferredStructure as any).program.statements[1].expression.sourceLocation.column = 32;
     (inferredStructure as any).program.statements[1].sourceLocation.column = 25;
     t.deepEqual(inferredStructure, suppliedStructure);

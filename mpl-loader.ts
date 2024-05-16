@@ -2,7 +2,7 @@ import { compile } from './frontend';
 import jsBackend from './backends/js';
 import { format } from 'prettier';
 
-export function mplLoader(source: string, context: any) {
+export async function mplLoader(source: string, context: any) {
     const frontendOutput = compile(source);
     if (
         'parseErrors' in frontendOutput ||
@@ -18,5 +18,5 @@ export function mplLoader(source: string, context: any) {
         context.emitError(new Error(JSON.stringify(js.error)));
         return;
     }
-    return '\n' + format(js.target, { parser: 'babel' });
+    return '\n' + (await format(js.target, { parser: 'babel' }));
 }

@@ -59,7 +59,7 @@
         "inquirer": "7.1.0",
         "loader-utils": "2.0.4",
         "omit-deep": "0.3.0",
-        "prettier": "2.0.5",
+        "prettier": "3.2.5",
         "rimraf": "3.0.2",
         "tmp-promise": "2.0.2",
         "tslint": "6.1.3",

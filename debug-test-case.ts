@@ -44,7 +44,7 @@ import { mplLoader } from './mpl-loader';
         }
         // TODO: Refactor to produceModuleInfo?
         const errors: any[] = [];
-        const jsSource = mplLoader(testModule.source, {
+        const jsSource = await mplLoader(testModule.source, {
             emitError: e => {
                 debugger;
                 errors.push(e);

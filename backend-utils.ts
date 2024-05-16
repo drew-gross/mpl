@@ -141,8 +141,7 @@ export const makeExecutable = <TargetRegister>(
             {
                 kind: 'push',
                 register: targetRegisterInfo.registers.functionResult,
-                why:
-                    "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
+                why: "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
             },
             ...(includeCleanup
                 ? [
@@ -219,8 +218,7 @@ export const freeGlobalsInstructions = (
     instructions.push({
         kind: 'return' as 'return',
         register: new Register('dummyReturn'),
-        why:
-            'Need to not have an empty function, otherwise verifyingOverlappingJoin fails. TODO: fix that.',
+        why: 'Need to not have an empty function, otherwise verifyingOverlappingJoin fails. TODO: fix that.',
     });
     return instructions;
 };

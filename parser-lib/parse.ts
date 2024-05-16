@@ -287,10 +287,10 @@ const parseAlternative = <Node extends string, Token>(
 ): ParseResultWithIndex<Node, Token> => {
     const progressCache: ParserProgress<Node, Token>[] = alternatives.parsers.map(
         _ =>
-            ({ kind: 'progress', parseResults: [], subParserIndex: 0 } as ParserProgress<
+            ({ kind: 'progress', parseResults: [], subParserIndex: 0 }) as ParserProgress<
                 Node,
                 Token
-            >)
+            >
     );
 
     // TODO: fix this linter error

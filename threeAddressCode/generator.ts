@@ -110,8 +110,8 @@ const assignGlobal = (
                     ${s(sourceAddress)} = ${s(rhsRegister)}; Local copy of source data pointer
                     ${s(itemSize)} = ${bytesInWord}; For multiplying
                     ${s(remainingCount)} = ${s(remainingCount)} * ${s(
-                    itemSize
-                )}; Count = count * size
+                        itemSize
+                    )}; Count = count * size
                     ${s(remainingCount)} += ${bytesInWord}; Add place to store length of list
                     ${s(targetAddress)} = my_malloc(${s(remainingCount)}); Malloc
                     *${lhsInfo.newName} = ${s(targetAddress)}; Store to global
@@ -243,7 +243,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             );
         }
         case 'forLoop': {
-            const varName: string = (ast.var as unknown) as string;
+            const varName: string = ast.var as unknown as string;
             const item = { name: varName };
             const body = ast.body.map(statement =>
                 recurse({
@@ -528,8 +528,8 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 execute: [],
                 cleanup: ins(`
                     goto ${doneFree} if ${s(
-                    allocated
-                )} == 0; If we never allocated, we should never free
+                        allocated
+                    )} == 0; If we never allocated, we should never free
                     my_free(${s(
                         destination
                     )}); Free destination of concat (TODO: are we sure we aren't using it?)
@@ -550,12 +550,12 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         r:rhsLength = length(${s(rhs)}); Compute rhs length
                         ${s(combinedLength)} = ${s(combinedLength)} + r:rhsLength; Accumulate it
                         ${s(destination)} = my_malloc(${s(
-                    combinedLength
-                )}); Allocate space for new string
+                            combinedLength
+                        )}); Allocate space for new string
                         ${s(allocated)} = 1; Remind ourselves to decallocate
                         string_concatenate(${s(lhs)}, ${s(rhs)}, ${s(
-                    destination
-                )}); Concatenate and put in new space
+                            destination
+                        )}); Concatenate and put in new space
                     `),
             ]);
         }
@@ -733,14 +733,14 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         goto ${outOfRange} if ${s(itemIndex)} > ${s(listLength)}; check OOB
                         ${s(itemSize)} = ${bytesInWord}; TODO:) should be type size
                         ${s(itemAddress)} = ${s(itemIndex)} * ${s(
-                        itemSize
-                    )}; account for item size
+                            itemSize
+                        )}; account for item size
                         ${s(itemAddress)} = ${s(itemAddress)} + ${s(
-                        accessed
-                    )}; offset from list base
+                            accessed
+                        )}; offset from list base
                         ${s(destination)} = *(${s(
-                        itemAddress
-                    )} + ${bytesInWord}); add word to adjust for length
+                            itemAddress
+                        )} + ${bytesInWord}); add word to adjust for length
                     ${outOfRange}:; TODO: exit on out of range
                     `),
                 ]

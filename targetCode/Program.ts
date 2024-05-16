@@ -45,8 +45,7 @@ export const toTarget = <TargetRegister>({
                 {
                     kind: 'push',
                     register: targetInfo.registers.functionResult,
-                    why:
-                        "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
+                    why: "Need to save exit code so it isn't clobbber by free_globals/verify_no_leaks",
                 },
                 ...(includeCleanup
                     ? [

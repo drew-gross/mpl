@@ -81,9 +81,9 @@ const required = (errorMessage: string): any => {
     throw errorMessage;
 };
 
-export const moduleTest = (t, m: TestModule) => {
+export const moduleTest = async (t, m: TestModule) => {
     const errors: Error[] = [];
-    const resultJs = mplLoader(m.source, { emitError: e => errors.push(e) });
+    const resultJs = await mplLoader(m.source, { emitError: e => errors.push(e) });
     errors.forEach(e => {
         t.fail(e.stack);
     });
