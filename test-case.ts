@@ -112,7 +112,7 @@ export const mplTest = async (
         failing = [];
     }
     if (!failing.includes('x64')) {
-        failing = [...failing, 'x64']
+        failing = [...failing, 'x64'];
     }
 
     const error = (stage: string) => {

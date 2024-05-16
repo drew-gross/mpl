@@ -102,8 +102,9 @@ import { mplLoader } from './mpl-loader';
 
     console.log(`Mpl: ${(await writeTempFile(testCase.source, 'mpl', 'mpl')).path}`);
     console.log(
-        `Tokens: ${(await writeTempFile(JSON.stringify(programInfo.tokens, null, 2), 'tokens', 'json'))
-            .path
+        `Tokens: ${
+            (await writeTempFile(JSON.stringify(programInfo.tokens, null, 2), 'tokens', 'json'))
+                .path
         }`
     );
     const astFile = await writeTempFile(JSON.stringify(programInfo.ast, null, 2), 'ast', 'json');
@@ -125,7 +126,8 @@ import { mplLoader } from './mpl-loader';
     );
 
     console.log(
-        `Three Address Code: ${(await writeTempFile(programInfo.threeAddressCode, 'three-address-code', 'txt')).path
+        `Three Address Code: ${
+            (await writeTempFile(programInfo.threeAddressCode, 'three-address-code', 'txt')).path
         }`
     );
     const roundTripParsedPath = (
@@ -203,7 +205,7 @@ import { mplLoader } from './mpl-loader';
     console.log('Interpreter:');
     const log =
         'error' in programInfo.interpreterResults ||
-            testCase.exitCode == programInfo.interpreterResults.exitCode
+        testCase.exitCode == programInfo.interpreterResults.exitCode
             ? s => console.log(s)
             : s => console.log(chalk.red(s));
     if ('error' in programInfo.interpreterResults) {

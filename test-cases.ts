@@ -1085,19 +1085,23 @@ return isFive(5) ? 1 : 0;`,
         name: 'double function',
         source: 'doubleIt := a: Integer => 2 * a; return doubleIt(100);',
         exitCode: 200,
-    }, {
+    },
+    {
         name: 'subtraction',
         source: 'return 7 - 5;',
         exitCode: 2,
-    }, {
+    },
+    {
         name: 'order of operations',
         source: 'return 2 * 5 - 1;',
         exitCode: 9,
-    }, {
+    },
+    {
         name: 'associativity of subtraction',
         source: 'return 5 - 2 - 1;',
         exitCode: 2,
-    }, {
+    },
+    {
         name: 'ternary true',
         source: 'return 1 == 1 ? 5 : 6;',
         exitCode: 5,
@@ -1105,7 +1109,13 @@ return isFive(5) ? 1 : 0;`,
     {
         name: 'parse error',
         source: '=>',
-        parseErrors: [{ expected: 'identifier', found: 'fatArrow', sourceLocation: { column: 0, line: 0 } }],
+        parseErrors: [
+            {
+                expected: 'identifier',
+                found: 'fatArrow',
+                sourceLocation: { column: 0, line: 0 },
+            },
+        ],
     },
     {
         name: 'ternary in function false',

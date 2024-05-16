@@ -112,9 +112,9 @@ export const executableToString = (
     return `
 ${functionToString(commentChar, main)}
 ${join(
-        functions.map(f => functionToString(commentChar, f)),
-        '\n'
-    )}`;
+    functions.map(f => functionToString(commentChar, f)),
+    '\n'
+)}`;
 };
 
 export const makeExecutable = <TargetRegister>(
@@ -146,17 +146,17 @@ export const makeExecutable = <TargetRegister>(
             },
             ...(includeCleanup
                 ? [
-                    {
-                        kind: 'callByName' as 'callByName',
-                        function: 'free_globals',
-                        why: 'free_globals',
-                    },
-                    {
-                        kind: 'callByName' as 'callByName',
-                        function: 'verify_no_leaks',
-                        why: 'verify_no_leaks',
-                    },
-                ]
+                      {
+                          kind: 'callByName' as 'callByName',
+                          function: 'free_globals',
+                          why: 'free_globals',
+                      },
+                      {
+                          kind: 'callByName' as 'callByName',
+                          function: 'verify_no_leaks',
+                          why: 'verify_no_leaks',
+                      },
+                  ]
                 : []),
             {
                 kind: 'pop' as 'pop',
