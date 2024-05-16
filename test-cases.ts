@@ -1138,4 +1138,85 @@ isFive := notFive: Integer => notFive == 5 ? 2 : 7;
 return isFive(11);`,
         exitCode: 7,
     },
+    {
+        name: '2 arg recursve',
+        source: `
+recursiveAdd := x: Integer, y: Integer => x == 0 ? y : recursiveAdd(x - 1, y + 1);
+return recursiveAdd(4,11);`,
+        exitCode: 15,
+        failing: true,
+    },
+    {
+        name: 'uninferable recursive',
+        failing: true,
+        source: `
+recursive := x: Integer => recursive(x);
+return recursive(1);`,
+        exitCode: 15,
+    },
+    {
+        name: 'return bool fail',
+        source: 'return 1 == 2;',
+        typeErrors: [
+            {
+                kind: 'wrongTypeReturn',
+                expressionType: builtinTypes.Boolean,
+                sourceLocation: { line: 1, column: 1 },
+            },
+        ],
+    },
+
+    {
+        name: 'boolean literal false',
+        source: `return false ? 1 : 2;`,
+        exitCode: 2,
+    },
+
+    {
+        name: 'boolean literal true',
+        source: `return true ? 1 : 2;`,
+        exitCode: 1,
+    },
+    {
+        name: 'wrong type for arg',
+        source: `
+boolFunc := a: Boolean => 1;
+return boolFunc(7);`,
+        typeErrors: [
+            {
+                kind: 'wrongArgumentType',
+                targetFunction: 'boolFunc',
+                passedType: builtinTypes.Integer,
+                expectedType: builtinTypes.Boolean,
+                sourceLocation: { line: 3, column: 8 },
+            },
+        ],
+    },
+    {
+        name: 'assign wrong type',
+        source: 'myInt: Integer = false; return myInt;',
+        typeErrors: [
+            {
+                kind: 'assignWrongType',
+                lhsName: 'myInt',
+                lhsType: builtinTypes.Integer,
+                rhsType: builtinTypes.Boolean,
+                sourceLocation: { line: 1, column: 1 },
+            },
+        ],
+    },
+
+    {
+        name: 'assign function to typed var',
+        source: 'myFunc: Function<Integer, Integer> = a: Integer => a; return myFunc(37);',
+        exitCode: 37,
+    },
+
+    {
+        name: 'assign function with multiple args to typed var',
+        source: `
+myFunc: Function<Integer, String, Integer> = (a: Integer, b: String) => a + length(b);
+return myFunc(4, "four");`,
+        exitCode: 8,
+    },
 ];

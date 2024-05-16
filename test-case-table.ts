@@ -17,15 +17,21 @@ const Table = require('cli-table');
         return chalk.red(st)
     }
 
-    t.push(['Test Name', 'Inf?', "Info?", "Exc?", "Parse?"]);
+    t.push(['Test Name', 'Fail?', 'Inf?', "Info?", "Exc?", "Parse?"]);
 
     t.push(... await Promise.all(testPrograms.map(async p => {
         const testName = p.name
+        let failingOk = "n/a";
         let infiniteLoopOk = "n/a";
         let producedInfoOk = "n/a";
         let exceptionOk = "n/a";
         let parseOk = "n/a";
         await (async () => {
+            if (p.failing) {
+                failingOk = "err";
+            } else {
+                failingOk = "ok";
+            }
             if (p.infiniteLooping) {
                 infiniteLoopOk = "err";
                 return;
@@ -67,7 +73,7 @@ const Table = require('cli-table');
             }
             exceptionOk = "ok";
         })();
-        return [testName, color(infiniteLoopOk), color(producedInfoOk), color(exceptionOk), color(parseOk)];
+        return [testName, color(failingOk), color(infiniteLoopOk), color(producedInfoOk), color(exceptionOk), color(parseOk)];
     })));
 
     console.log(t.toString());
