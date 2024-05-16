@@ -5,7 +5,7 @@ import { TestModule, TestProgram, Test, mplTest, tacTest, moduleTest } from './t
 import { parseInstructions } from './threeAddressCode/parser';
 import { parseProgram as parseTacProgram } from './threeAddressCode/Program';
 import annotateSource from './annotateSource';
-import { equal as typesAreEqual, builtinTypes, Type } from './types';
+import { equal as typesAreEqual, Type } from './types';
 import {
     Function,
     toString as functionToString,
@@ -583,101 +583,6 @@ test('structure is equal for inferred string type', t => {
     t.deepEqual(inferredStructure, suppliedStructure);
 });
 
-test('assign result of call to builtin to local in function', mplTest, {
-    source: `
-lengthOfFoo := (dummy: Integer) => {
-    dumme := length("foo");
-    return dumme;
-};
-return lengthOfFoo(1);`,
-    exitCode: 3,
-});
-
-test.failing('string args', mplTest, {
-    source: `
-excitmentifier := (boring: String) => {
-    dummy := print(boring ++ "!");
-    return 11 + dummy - dummy;
-};
-return excitmentifier("Hello World");`,
-    stdout: 'Hello World!',
-    exitCode: 11,
-});
-
-test('reassign integer', mplTest, {
-    source: `
-a := 1;
-bb := a + 5;
-a = 2;
-c := a + bb;
-return c;`,
-    exitCode: 8,
-});
-
-test('reassign to undeclared identifier', mplTest, {
-    source: `
-a := 1;
-b = 2;
-return a + b;`,
-    typeErrors: [
-        {
-            kind: 'assignUndeclaredIdentifer',
-            destinationName: 'b',
-            sourceLocation: { line: 3, column: 1 },
-        },
-    ],
-});
-
-test('reassigning wrong type', mplTest, {
-    source: `
-a := 1;
-a = true;
-return a;`,
-    typeErrors: [
-        {
-            kind: 'assignWrongType',
-            lhsName: 'a',
-            lhsType: builtinTypes.Integer,
-            rhsType: builtinTypes.Boolean,
-            sourceLocation: { line: 3, column: 1 },
-        },
-    ],
-});
-
-test.failing('reassign to a using expression including a', mplTest, {
-    source: `
-hello := "HelloWorld";
-hello = hello ++ "!";
-return length(hello);`,
-    exitCode: 11,
-});
-
-test('reassigning wrong type inside function', mplTest, {
-    source: `
-foo := () => {
-    a := 1;
-    a = true;
-    return a;
-};
-return foo();`,
-    typeErrors: [
-        {
-            kind: 'assignWrongType',
-            lhsName: 'a',
-            lhsType: builtinTypes.Integer,
-            rhsType: builtinTypes.Boolean,
-            sourceLocation: { line: 4, column: 5 },
-        },
-    ],
-});
-
-test('variable named b', mplTest, {
-    source: `
-b := 2;
-return b;`,
-    exitCode: 2,
-});
-
 test('controlFlowGraph basic test', t => {
     const rtl: Statement[] = [
         {
@@ -1162,103 +1067,6 @@ test.failing('Add Numbers in ThreeAddressCode', tacTest, {
     return r:sum; ret
 `,
     exitCode: 3,
-});
-
-test('Spill With Local Variables', mplTest, {
-    source: `
-a := 0;
-t1 := a + 1;
-t2 := a + 2;
-t3 := a + 3;
-t4 := a + 4;
-t5 := a + 5;
-t6 := a + 6;
-t7 := a + 7;
-t8 := a + 8;
-t9 := a + 9;
-t10 := a + 10;
-t11 := a + 11;
-t12 := a + 12;
-t13 := a + 13;
-t14 := a + 14;
-t15 := a + 15;
-t16 := a + 16;
-t17 := a + 17;
-t18 := a + 18;
-t19 := a + 19;
-return t19 - t16;
-`,
-    exitCode: 3,
-});
-
-// TODO: rewrite this in a way that it is guaranteed to cause spilling
-test.failing('Spill With Local Variables and Local Struct', mplTest, {
-    source: `
-IntPair := {
-    first: Integer;
-    second: Integer;
-};
-
-a := 0;
-t1 := a + 1;
-t2 := a + 2;
-t3 := a + 3;
-t4 := a + 4;
-t5 := a + 5;
-t6 := a + 6;
-t7 := a + 7;
-t8 := a + 8;
-t9 := a + 9;
-t10 := a + 10;
-t11 := a + 11;
-t12 := a + 12;
-t13 := a + 13;
-t14 := a + 14;
-t15 := a + 15;
-t16 := a + 16;
-t17 := a + 17;
-t18 := a + 18;
-t19 := a + 19;
-ip: IntPair = IntPair { first: t19, second: t8, };
-return a + t1 + t2 + t3 + ip.first - ip.second;
-`,
-    exitCode: 17,
-});
-
-test.failing('Spill with Local Variables and Local Struct in Function', mplTest, {
-    source: `
-IntPair := {
-    first: Integer;
-    second: Integer;
-};
-
-foo := a: Integer => {
-    t1 := a + 1;
-    t2 := a + 2;
-    t3 := a + 3;
-    t4 := a + 4;
-    t5 := a + 5;
-    t6 := a + 6;
-    t7 := a + 7;
-    t8 := a + 8;
-    t9 := a + 9;
-    t10 := a + 10;
-    t11 := a + 11;
-    t12 := a + 12;
-    t13 := a + 13;
-    t14 := a + 14;
-    t15 := a + 15;
-    t16 := a + 16;
-    t17 := a + 17;
-    t18 := a + 18;
-    t19 := a + 19;
-    ip: IntPair = IntPair { first: t7, second: t18, };
-    return ip.second - ip.first;
-};
-
-return foo(1);
-`,
-    exitCode: 11,
 });
 
 test('Parse grammar from multiple entry points', t => {

@@ -1450,4 +1450,201 @@ return 1 + dummy - dummy;`,
         // Fails mips because of the silly way we extract exit codes.
         failing: ['mips'],
     },
+    {
+        name: 'assign result of call to builtin to local in function',
+        source: `
+lengthOfFoo := (dummy: Integer) => {
+    dumme := length("foo");
+    return dumme;
+};
+return lengthOfFoo(1);`,
+        exitCode: 3,
+    },
+    {
+        name: 'string args',
+        failing: true,
+        source: `
+excitmentifier := (boring: String) => {
+    dummy := print(boring ++ "!");
+    return 11 + dummy - dummy;
+};
+return excitmentifier("Hello World");`,
+        stdout: 'Hello World!',
+        exitCode: 11,
+    },
+    {
+        name: 'reassign integer',
+        source: `
+a := 1;
+bb := a + 5;
+a = 2;
+c := a + bb;
+return c;`,
+        exitCode: 8,
+    },
+    {
+        name: 'reassign to undeclared identifier',
+        source: `
+a := 1;
+b = 2;
+return a + b;`,
+        typeErrors: [
+            {
+                kind: 'assignUndeclaredIdentifer',
+                destinationName: 'b',
+                sourceLocation: { line: 3, column: 1 },
+            },
+        ],
+    },
+    {
+        name: 'reassigning wrong type',
+        source: `
+a := 1;
+a = true;
+return a;`,
+        typeErrors: [
+            {
+                kind: 'assignWrongType',
+                lhsName: 'a',
+                lhsType: builtinTypes.Integer,
+                rhsType: builtinTypes.Boolean,
+                sourceLocation: { line: 3, column: 1 },
+            },
+        ],
+    },
+    {
+        name: 'reassign to a using expression including a',
+        failing: true,
+        source: `
+hello := "HelloWorld";
+hello = hello ++ "!";
+return length(hello);`,
+        exitCode: 11,
+    },
+    {
+        name: 'reassigning wrong type inside function',
+        source: `
+foo := () => {
+    a := 1;
+    a = true;
+    return a;
+};
+return foo();`,
+        typeErrors: [
+            {
+                kind: 'assignWrongType',
+                lhsName: 'a',
+                lhsType: builtinTypes.Integer,
+                rhsType: builtinTypes.Boolean,
+                sourceLocation: { line: 4, column: 5 },
+            },
+        ],
+    },
+    {
+        name: 'variable named b',
+        source: `
+b := 2;
+return b;`,
+        exitCode: 2,
+    },
+    {
+        name: 'Spill With Local Variables',
+        source: `
+a := 0;
+t1 := a + 1;
+t2 := a + 2;
+t3 := a + 3;
+t4 := a + 4;
+t5 := a + 5;
+t6 := a + 6;
+t7 := a + 7;
+t8 := a + 8;
+t9 := a + 9;
+t10 := a + 10;
+t11 := a + 11;
+t12 := a + 12;
+t13 := a + 13;
+t14 := a + 14;
+t15 := a + 15;
+t16 := a + 16;
+t17 := a + 17;
+t18 := a + 18;
+t19 := a + 19;
+return t19 - t16;
+`,
+        exitCode: 3,
+    },
+    // TODO: rewrite this in a way that it is guaranteed to cause spilling
+    {
+        name: 'Spill With Local Variables and Local Struct',
+        failing: true,
+        source: `
+IntPair := {
+    first: Integer;
+    second: Integer;
+};
+
+a := 0;
+t1 := a + 1;
+t2 := a + 2;
+t3 := a + 3;
+t4 := a + 4;
+t5 := a + 5;
+t6 := a + 6;
+t7 := a + 7;
+t8 := a + 8;
+t9 := a + 9;
+t10 := a + 10;
+t11 := a + 11;
+t12 := a + 12;
+t13 := a + 13;
+t14 := a + 14;
+t15 := a + 15;
+t16 := a + 16;
+t17 := a + 17;
+t18 := a + 18;
+t19 := a + 19;
+ip: IntPair = IntPair { first: t19, second: t8, };
+return a + t1 + t2 + t3 + ip.first - ip.second;
+`,
+        exitCode: 17,
+    },
+
+    {
+        name: 'Spill with Local Variables and Local Struct in Function',
+        failing: true,
+        source: `
+IntPair := {
+    first: Integer;
+    second: Integer;
+};
+
+foo := a: Integer => {
+    t1 := a + 1;
+    t2 := a + 2;
+    t3 := a + 3;
+    t4 := a + 4;
+    t5 := a + 5;
+    t6 := a + 6;
+    t7 := a + 7;
+    t8 := a + 8;
+    t9 := a + 9;
+    t10 := a + 10;
+    t11 := a + 11;
+    t12 := a + 12;
+    t13 := a + 13;
+    t14 := a + 14;
+    t15 := a + 15;
+    t16 := a + 16;
+    t17 := a + 17;
+    t18 := a + 18;
+    t19 := a + 19;
+    ip: IntPair = IntPair { first: t7, second: t18, };
+    return ip.second - ip.first;
+};
+
+return foo(1);
+`,
+        exitCode: 11,
+    },
 ];
