@@ -1,7 +1,27 @@
-import { TestProgram, TestModule } from './test-case';
+import { TestModule } from './test-case';
 import join from './util/join';
 import range from './util/list/range';
 import { builtinTypes } from './types';
+
+export type TestProgram = {
+    // To extend "Test"
+    name: string;
+    source: string;
+    failing?: boolean | string | string[]; // Expect this to fail
+    only?: boolean; // Run only this test
+    infiniteLooping?: boolean; // Don't even attempt to compile this, it will infinite loop
+    failingInterpreter?: boolean; // Fails to interpret in a way that fucks with the debugger
+
+    // Expected results of test
+    exitCode?: number;
+    stdout?: string;
+    parseErrors?: any[];
+    typeErrors?: any[];
+    ast?: any;
+
+    // Runtime inputs to test
+    stdin?: string;
+};
 
 const manyGlobalsMultiply = () => {
     const numbers = range(1, 20);

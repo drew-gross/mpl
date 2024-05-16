@@ -1,7 +1,7 @@
 import { stat } from 'fs-extra';
 import { writeFile, readFile } from 'fs-extra';
 import { testPrograms } from './test-cases';
-import { TestProgram } from './test-case';
+import { TestProgram } from './test-cases';
 import { compile } from './frontend';
 import { Backend } from './api';
 import * as commander from 'commander';

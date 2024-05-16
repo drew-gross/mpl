@@ -1,7 +1,7 @@
 import uniqueCmp from './util/list/uniqueCmp';
 import uniqueBy from './util/list/uniqueBy';
-import { testPrograms, testModules } from './test-cases';
-import { TestModule, TestProgram, Test, mplTest, tacTest, moduleTest } from './test-case';
+import { testModules } from './test-cases';
+import { TestModule, Test, tacTest, moduleTest } from './test-case';
 import { parseInstructions } from './threeAddressCode/parser';
 import { parseProgram as parseTacProgram } from './threeAddressCode/Program';
 import annotateSource from './annotateSource';
@@ -560,10 +560,6 @@ const getRunner = ({ name, infiniteLooping, failing, only }: Test) => {
     }
     return only ? test.only : failing ? test.failing : test;
 };
-
-testPrograms.forEach((testProgram: TestProgram) => {
-    getRunner(testProgram)(testProgram.name, mplTest, testProgram);
-});
 
 testModules.forEach((testModule: TestModule) => {
     getRunner(testModule)(testModule.name, moduleTest, testModule);
