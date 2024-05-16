@@ -1007,4 +1007,41 @@ return isFive(5) ? 1 : 0;`,
         `,
         exitCode: 1,
     },
+    {
+        name: 'double product',
+        source: 'return 5 * 3 * 4;',
+        exitCode: 60,
+        ast: {
+            type: 'program',
+            children: [
+                {
+                    type: 'statement',
+                    children: [
+                        {
+                            type: 'returnStatement',
+                            children: [
+                                { type: 'return', value: null },
+                                {
+                                    type: 'product',
+                                    children: [
+                                        {
+                                            type: 'product',
+                                            children: [
+                                                { type: 'number', value: 5 },
+                                                { type: 'product', value: null },
+                                                { type: 'number', value: 3 },
+                                            ],
+                                        },
+                                        { type: 'product', value: null },
+                                        { type: 'number', value: 4 },
+                                    ],
+                                },
+                            ],
+                        },
+                        { type: 'statementSeparator', value: null },
+                    ],
+                },
+            ],
+        },
+    }
 ];

@@ -569,43 +569,6 @@ testModules.forEach((testModule: TestModule) => {
     getRunner(testModule)(testModule.name, moduleTest, testModule);
 });
 
-test('double product', mplTest, {
-    source: 'return 5 * 3 * 4;',
-    exitCode: 60,
-    ast: {
-        type: 'program',
-        children: [
-            {
-                type: 'statement',
-                children: [
-                    {
-                        type: 'returnStatement',
-                        children: [
-                            { type: 'return', value: null },
-                            {
-                                type: 'product',
-                                children: [
-                                    {
-                                        type: 'product',
-                                        children: [
-                                            { type: 'number', value: 5 },
-                                            { type: 'product', value: null },
-                                            { type: 'number', value: 3 },
-                                        ],
-                                    },
-                                    { type: 'product', value: null },
-                                    { type: 'number', value: 4 },
-                                ],
-                            },
-                        ],
-                    },
-                    { type: 'statementSeparator', value: null },
-                ],
-            },
-        ],
-    },
-});
-
 test('brackets product', mplTest, {
     source: 'return (3 * 4) * 5;',
     exitCode: 60,
