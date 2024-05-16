@@ -1043,5 +1043,99 @@ return isFive(5) ? 1 : 0;`,
                 },
             ],
         },
-    }
+    },
+    {
+        name: 'brackets product',
+        source: 'return (3 * 4) * 5;',
+        exitCode: 60,
+        ast: {
+            type: 'program',
+            children: [
+                {
+                    type: 'statement',
+                    children: [
+                        {
+                            type: 'returnStatement',
+                            children: [
+                                { type: 'return', value: null },
+                                {
+                                    type: 'product',
+                                    children: [
+                                        {
+                                            type: 'product',
+                                            children: [
+                                                { type: 'number', value: 3 },
+                                                { type: 'product', value: null },
+                                                { type: 'number', value: 4 },
+                                            ],
+                                        },
+                                        { type: 'product', value: null },
+                                        { type: 'number', value: 5 },
+                                    ],
+                                },
+                            ],
+                        },
+                        { type: 'statementSeparator', value: null },
+                    ],
+                },
+            ],
+        },
+    },
+    {
+        name: 'double function',
+        source: 'doubleIt := a: Integer => 2 * a; return doubleIt(100);',
+        exitCode: 200,
+    }, {
+        name: 'subtraction',
+        source: 'return 7 - 5;',
+        exitCode: 2,
+    }, {
+        name: 'order of operations',
+        source: 'return 2 * 5 - 1;',
+        exitCode: 9,
+    }, {
+        name: 'associativity of subtraction',
+        source: 'return 5 - 2 - 1;',
+        exitCode: 2,
+    }, {
+        name: 'ternary true',
+        source: 'return 1 == 1 ? 5 : 6;',
+        exitCode: 5,
+    },
+    {
+        name: 'parse error',
+        source: '=>',
+        parseErrors: [{ expected: 'identifier', found: 'fatArrow', sourceLocation: { column: 0, line: 0 } }],
+    },
+    {
+        name: 'ternary in function false',
+        source: `
+ternary := a: Boolean => a ? 9 : 5;
+return ternary(false);`,
+        exitCode: 5,
+    },
+
+    {
+        name: 'ternary in function then subtract',
+        source: `
+ternaryFunc := a:Boolean => a ? 9 : 3;
+return ternaryFunc(true) - ternaryFunc(false);`,
+        exitCode: 6,
+    },
+
+    {
+        name: 'equality comparison true',
+        source: `
+isFive := five: Integer => five == 5 ? 2 : 7;
+return isFive(5);`,
+        exitCode: 2,
+    },
+
+    {
+        name: 'equality comparison false',
+        source: `
+isFive := notFive: Integer => notFive == 5 ? 2 : 7;
+return isFive(11);`,
+        exitCode: 7,
+    },
 ];
