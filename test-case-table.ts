@@ -3,9 +3,7 @@ import { testPrograms } from './test-cases';
 import produceProgramInfo from './produceProgramInfo';
 import * as chalk from 'chalk';
 import * as assert from 'assert';
-
-/* tslint:disable-next-line */
-const Table = require('cli-table3');
+import * as Table from 'cli-table3';
 
 (async () => {
     const t = new Table();
