@@ -1,6 +1,6 @@
 import { file as tmpFile } from 'tmp-promise';
 import { testPrograms, testModules } from './test-cases';
-import { passed } from './test-case-table';
+import { passed } from './test-cases';
 import produceProgramInfo from './produceProgramInfo';
 import writeSvg from './util/graph/writeSvg';
 import writeTempFile from './util/writeTempFile';

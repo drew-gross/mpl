@@ -1,5 +1,5 @@
 import * as omitDeep from 'omit-deep';
-import { testPrograms, TestProgram } from './test-cases';
+import { testPrograms, passed } from './test-cases';
 import produceProgramInfo from './produceProgramInfo';
 import * as chalk from 'chalk';
 import * as assert from 'assert';
@@ -7,20 +7,7 @@ import * as Table from 'cli-table3';
 import { stripSourceLocation } from './parser-lib/parse';
 import join from './util/join';
 import { toString as typeErrorToString } from './TypeError';
-import { ExecutionResult } from './api';
 import { backends } from './backend-utils';
-
-export const passed = (testCase: TestProgram, result: ExecutionResult) => {
-    if ('error' in result) return false;
-    if (testCase.exitCode != result.exitCode) return false;
-    if (
-        'stdout' in testCase &&
-        testCase.stdout !== undefined &&
-        testCase.stdout != result.stdout
-    )
-        return false;
-    return true;
-};
 
 (async () => {
     const t = new Table();

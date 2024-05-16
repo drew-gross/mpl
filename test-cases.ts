@@ -2,6 +2,7 @@ import { TestModule } from './test-case';
 import join from './util/join';
 import range from './util/list/range';
 import { builtinTypes } from './types';
+import { ExecutionResult } from './api';
 
 export type TestProgram = {
     name: string;
@@ -19,6 +20,18 @@ export type TestProgram = {
 
     // Runtime inputs to test
     stdin?: string;
+};
+
+export const passed = (testCase: TestProgram, result: ExecutionResult) => {
+    if ('error' in result) return false;
+    if (testCase.exitCode != result.exitCode) return false;
+    if (
+        'stdout' in testCase &&
+        testCase.stdout !== undefined &&
+        testCase.stdout != result.stdout
+    )
+        return false;
+    return true;
 };
 
 const manyGlobalsMultiply = () => {
