@@ -90,7 +90,7 @@ import * as Table from 'cli-table3';
     );
 
     console.log(t.toString());
-    const expectedProblems = 60;
+    const expectedProblems = 68;
     if (problems != expectedProblems) {
         console.log(chalk.red(`${problems} Problems`));
     } else {

@@ -1314,4 +1314,141 @@ quadrupleWithLocal := a: Integer => {
 return quadrupleWithLocal(5);`,
         exitCode: 20,
     },
+    {
+        name: 'string length with type inferred',
+        source: `myStr := "test2"; return length(myStr);`,
+        exitCode: 5,
+        failing: true,
+    },
+    {
+        name: 'wrong type global',
+        source: `str: String = 5; return length(str);`,
+        typeErrors: [
+            {
+                kind: 'assignWrongType',
+                lhsName: 'str',
+                lhsType: builtinTypes.String,
+                rhsType: builtinTypes.Integer,
+                sourceLocation: { line: 1, column: 1 },
+            },
+        ],
+    },
+    {
+        name: 'concatenate and get length then subtract',
+        source: `return length("abc" ++ "defg") - 2;`,
+        exitCode: 5,
+        failing: true,
+    },
+    {
+        name: 'parsing fails for extra invalid tokens',
+        source: `return 5; (`,
+        parseErrors: [
+            {
+                found: 'leftBracket',
+                expected: 'endOfFile',
+                sourceLocation: { line: 1, column: 11 },
+            },
+        ],
+    },
+    {
+        name: 'addition',
+        source: `return length("foo") + 5;`,
+        exitCode: 8,
+    },
+    {
+        name: 'two args',
+        source: `
+myAdd := a: Integer, b: Integer => a + b;
+return myAdd(7, 4);`,
+        exitCode: 11,
+    },
+    {
+        name: 'two args with expression argument',
+        source: `
+myAdd := a: Integer, b: Integer => a + b;
+return myAdd(7 + 7, 4);`,
+        exitCode: 18,
+    },
+    {
+        name: 'three args',
+        source: `
+myAdd := a: Integer, b: Integer, c: Integer => a + b + c;
+return myAdd(7, 4, 5);`,
+        exitCode: 16,
+    },
+    {
+        name: 'one bracketed arg',
+        source: `
+times11 := (a: Integer) => a * 11;
+return times11(1);`,
+        exitCode: 11,
+    },
+    {
+        name: 'two bracketed args',
+        source: `
+timess := (a: Integer, b: Integer) => a * b;
+return timess(11, 1);`,
+        exitCode: 11,
+    },
+    {
+        name: 'call with wrong number of args',
+        source: `
+threeArgs := a: Integer, b: Integer, c: Integer => a + b + c;
+return threeArgs(7, 4);`,
+        typeErrors: [
+            {
+                kind: 'wrongNumberOfArguments',
+                targetFunction: 'threeArgs',
+                passedArgumentCount: 2,
+                expectedArgumentCount: 3,
+                sourceLocation: { line: 3, column: 8 },
+            },
+        ],
+    },
+    {
+        name: 'call with wrong arg type',
+        source: `
+threeArgs := a: Integer, b: Integer, c: Integer => a + b + c;
+return threeArgs(7, 4, "notAnInteger");`,
+        typeErrors: [
+            {
+                kind: 'wrongArgumentType',
+                targetFunction: 'threeArgs',
+                expectedType: builtinTypes.Integer,
+                passedType: builtinTypes.String,
+                sourceLocation: { line: 3, column: 8 },
+            },
+        ],
+    },
+
+    {
+        name: 'print string with space',
+        source: `
+dummy := print("sample string with space");
+return 1;`,
+        exitCode: 1,
+        stdout: 'sample string with space',
+        failing: true,
+    },
+
+    {
+        name: 'require/force no return value for print',
+        source: `
+print("sample string");
+return 1;`,
+        exitCode: 1,
+        stdout: 'sample string',
+        failing: true,
+    },
+
+    {
+        name: 'print string containing number',
+        source: `
+dummy := print("1");
+return 1 + dummy - dummy;`,
+        exitCode: 1,
+        stdout: '1',
+        // Fails mips because of the silly way we extract exit codes.
+        failing: ['mips'],
+    },
 ];
