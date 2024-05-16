@@ -90,7 +90,11 @@ import * as Table from 'cli-table3';
     );
 
     console.log(t.toString());
-    console.log(`${problems} Problems`);
-    const expectedProblems = 56;
+    const expectedProblems = 58;
+    if (problems != expectedProblems) {
+        console.log(chalk.red(`${problems} Problems`));
+    } else {
+        console.log(chalk.green(`${problems} Problems`));
+    }
     process.exit(problems == expectedProblems ? 0 : 1);
 })();

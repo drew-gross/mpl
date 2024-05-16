@@ -647,23 +647,6 @@ test('structure is equal for inferred string type', t => {
     t.deepEqual(inferredStructure, suppliedStructure);
 });
 
-test.failing('string equality: inequal same length', mplTest, {
-    source: `str1 := "a";
-str2 := "b";
-return str1 == str2 ? 1 : 2;
-`,
-    exitCode: 2,
-    failing: true,
-});
-
-test.failing('string equality: inequal different length', mplTest, {
-    source: `str1 := "aa";
-str2 := "a";
-return str1 == str2 ? 7 : 2;
-`,
-    exitCode: 2,
-});
-
 test('wrong type global', mplTest, {
     source: `str: String = 5; return length(str);`,
     typeErrors: [

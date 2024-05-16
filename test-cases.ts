@@ -1229,4 +1229,23 @@ myFunc: Function<Integer, String, Integer> = (a: Integer, b: String) => a + leng
 return myFunc(4, "four");`,
         exitCode: 8,
     },
+    {
+        name: 'string equality: inequal same length',
+        failing: true,
+        source: `str1 := "a";
+    str2 := "b";
+    return str1 == str2 ? 1 : 2;
+    `,
+        exitCode: 2,
+    },
+
+    {
+        name: 'string equality: inequal different length',
+        failing: true,
+        source: `str1 := "aa";
+    str2 := "a";
+    return str1 == str2 ? 7 : 2;
+    `,
+        exitCode: 2,
+    },
 ];
