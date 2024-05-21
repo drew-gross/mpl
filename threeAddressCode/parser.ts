@@ -2,7 +2,7 @@ import debug from '../util/debug';
 import last from '../util/list/last';
 import { TokenSpec, LexError } from '../parser-lib/lex';
 import { Register } from './Register';
-import { Statement } from './statement';
+import { Statement } from './Statement';
 import {
     Grammar,
     Sequence,

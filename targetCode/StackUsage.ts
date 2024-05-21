@@ -1,7 +1,7 @@
 import debug from '../util/debug';
 import join from '../util/join';
 import { Register, toString } from '../threeAddressCode/Register';
-import { StackLocation } from '../threeAddressCode/statement';
+import { StackLocation } from '../threeAddressCode/Statement';
 
 // Order here matches argument on stack
 export type StackUsage<TargetRegister> = {

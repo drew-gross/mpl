@@ -24,7 +24,7 @@ import {
 } from '../backend-utils';
 import { Register, toString as s } from './Register';
 import { FrontendOutput, Function as ApiFunction, Variable, StringLiteralData } from '../api';
-import { Statement } from './statement';
+import { Statement } from './Statement';
 import { parseInstructionsOrDie as ins } from './parser';
 
 // TODO: merge this with Variable?

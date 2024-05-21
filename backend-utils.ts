@@ -180,6 +180,7 @@ export const makeExecutable = <TargetRegister>(
         functions: targetFunctions.map(({ name, instructions, stackUsage }) => ({
             name,
             stackUsage,
+            // @ts-ignore
             instructions: flatten(instructions.map(translator)),
         })) as any,
     };

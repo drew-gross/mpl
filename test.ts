@@ -12,7 +12,7 @@ import {
     parseFunctionOrDie,
 } from './threeAddressCode/Function';
 import { Register } from './threeAddressCode/Register';
-import { Statement } from './threeAddressCode/statement';
+import { Statement } from './threeAddressCode/Statement';
 import * as threeAddressCodeRuntime from './threeAddressCode/runtime';
 import test from 'ava';
 import flatten from './util/list/flatten';

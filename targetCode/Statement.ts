@@ -2,7 +2,7 @@ import debug from '../util/debug';
 import {
     Statement as ThreeAddressStatement,
     StackLocation,
-} from '../threeAddressCode/statement';
+} from '../threeAddressCode/Statement';
 import { Register, isEqual } from '../threeAddressCode/Register';
 import { RegisterAssignment, saveFunctionCallResult } from '../backend-utils';
 import { TargetInfo, TargetRegisters } from '../TargetInfo';
