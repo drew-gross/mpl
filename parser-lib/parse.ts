@@ -80,8 +80,10 @@ export const parseResultIsError = <Node, Leaf, Token>(
         | ParseResultWithIndex<Node, Token>
         | AstWithIndex<Node, Leaf>[]
         | 'missingOptional'
-): result is ParseError<Token> =>
-    result != 'missingOptional' && 'kind' in result && result.kind == 'parseError';
+): result is ParseError<Token> => {
+    if (result === undefined) throw debug("bad parse result");
+    return result != 'missingOptional' && 'kind' in result && result.kind == 'parseError';
+}
 
 const parseResultWithIndexIsLeaf = <Node, Token>(
     r: ParseResultWithIndex<Node, Token>
@@ -274,10 +276,10 @@ const parseSequence = <Node extends string, Token>(
 type ParserProgress<Node, Token> =
     | { kind: 'failed'; error: ParseError<Token> }
     | {
-          kind: 'progress';
-          parseResults: AstWithIndex<Node, Token>[];
-          subParserIndex: number;
-      };
+        kind: 'progress';
+        parseResults: AstWithIndex<Node, Token>[];
+        subParserIndex: number;
+    };
 
 const parseAlternative = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -745,12 +747,38 @@ const parseRule = <Node extends string, Token>(
     return parseAnything(grammar, childrenParser, tokens, index);
 };
 
+const getTokenMap = <Node extends string, Token>(grammar: Grammar<Node, Token>, parser: Parser<Node, Token>) => {
+    if (typeof parser == 'string') return getTokenMap(grammar, grammar[parser]);
+    switch (parser.kind) {
+        case 'terminal':
+            const dict: any = {};
+            dict[parser.token] = parser;
+            return dict;
+        case 'many':
+            return getTokenMap(grammar, parser.item);
+        default: throw debug(`unhandled: ${parser.kind}`);
+    }
+};
+
+export const parseRule2 = <Node extends string, Token>(
+    grammar: Grammar<Node, Token>,
+    rule: Node,
+    tokens: LToken<Token>[],
+): ParseResultWithIndex<Node, Token> => {
+    const ruleParser: Parser<Node, Token> = grammar[rule];
+    if (!ruleParser) throw debug(`invalid rule name: ${rule}`);
+    const index = 0;
+    const tokenToNext = getTokenMap(grammar, ruleParser);
+    return tokenToNext[tokens[index].type];
+};
+
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     firstRule: Node,
     tokens: LToken<Token>[]
 ): ParseResult<Node, Token> => {
     const result = parseRule(grammar, firstRule, tokens, 0);
+    // const result = parseRule2(grammar, firstRule, tokens);
     if (parseResultIsError(result)) return result;
     if (result.newIndex != tokens.length) {
         const firstExtraToken = tokens[result.newIndex];
