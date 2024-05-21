@@ -13,8 +13,7 @@
     "scripts": {
         "benchmark": "rimraf built && tsc && node ./built/benchmark.js",
         "benchmark-debug": "rimraf built && tsc && node --inspect --inspect-brk ./built/benchmark.js",
-        "lint": "tslint --project ./tsconfig.json",
-        "lint-fix": "tslint --fix --project ./tsconfig.json",
+        "lint": "eslint --ignore-pattern bin/ --ignore-pattern built/ --global __dirname --global require --global module",
         "test": "rimraf built && npm run compile-tests && ava --timeout=3m --verbose && npm run test-table && npm run lint && npm run format",
         "test-table": "rimraf built && npm run compile-tests && node ./built/test-case-table.js",
         "test-debug": "npm run compile-tests && ava debug built/test.js",
@@ -53,6 +52,7 @@
         "child-process-promise": "2.2.1",
         "cli-table3": "0.6.5",
         "deep-equal": "2.0.1",
+        "eslint": "9.3.0",
         "fs-extra": "9.0.0",
         "graphlib": "2.1.8",
         "graphlib-dot": "0.6.4",
