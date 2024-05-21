@@ -4,6 +4,7 @@ import debug from '../util/debug';
 import { Graph } from 'graphlib';
 import SourceLocation from './sourceLocation';
 import { TokenSpec, lex, LexError } from './lex';
+import flatten from '../util/list/flatten';
 
 type ListNode<Node, Leaf> = { items: Ast<Node, Leaf>[] };
 export type SeparatedListNode<Node, Leaf> = {
@@ -746,13 +747,6 @@ const parseRule = <Node extends string, Token>(
     if (!childrenParser) throw debug(`invalid rule name: ${rule}`);
     return parseAnything(grammar, childrenParser, tokens, index);
 };
-
-// TODO: Use builtin flat
-const flatten = array =>
-    array.reduce(
-        (flattened, elem) => flattened.concat(Array.isArray(elem) ? flatten(elem) : elem),
-        []
-    );
 
 const getTokenMap = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
