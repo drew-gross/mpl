@@ -12,7 +12,6 @@ import {
 } from './runtime';
 import idAppender from '../util/idAppender';
 import * as Ast from '../ast';
-import flatten from '../util/list/flatten';
 import drain from '../util/list/drain';
 import { builtinFunctions, Type, TypeDeclaration, typeSize } from '../types';
 import debug from '../util/debug';
@@ -94,7 +93,7 @@ const assignGlobal = (
             });
             return compileExpression<Statement>([], ([]) => [
                 ...ins(`${s(lhsAddress)} = &${lhsInfo.newName}; Get address of global`),
-                ...flatten(copyMembers),
+                ...copyMembers.flat(),
             ]);
         case 'List':
             const remainingCount = makeTemporary('remainingCount');
@@ -273,7 +272,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         ${s(itemAddress)} = ${s(list)} + ${s(itemAddress)};
                         ${s(item)} = *(${s(itemAddress)} + ${targetInfo.bytesInWord});
                     `),
-                    ...flatten(statements),
+                    ...statements.flat(),
                     { kind: 'increment', register: i, why: 'i++' },
                     {
                         kind: 'gotoIfNotEqual',
@@ -349,7 +348,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             }
 
             return compileExpression<Statement>(argumentComputers, argComputers => [
-                ...flatten(argComputers),
+                ...argComputers.flat(),
                 { kind: 'empty', why: `call ${functionName}` },
                 ...callInstructions,
             ]);
@@ -647,7 +646,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                     register: destination,
                     why: 'Make space for object literal',
                 },
-                ...flatten(members),
+                ...members.flat(),
             ]);
         }
         case 'listLiteral': {
@@ -695,7 +694,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
             };
             return compileExpression<Statement>(
                 [prepAndCleanup, ...createItems],
-                ([allocate, ...create]) => [...allocate, ...flatten(create)]
+                ([allocate, ...create]) => [...allocate, ...create.flat()]
             );
         }
         case 'memberAccess': {
@@ -779,8 +778,8 @@ export const constructFunction = (
         }
     });
 
-    const functionCode = flatten(
-        f.statements.map(statement => {
+    const functionCode = f.statements
+        .map(statement => {
             const compiledProgram = astToThreeAddressCode({
                 ast: statement,
                 variablesInScope,
@@ -799,7 +798,7 @@ export const constructFunction = (
                 ...compiledProgram.cleanup,
             ];
         })
-    );
+        .flat();
     return { name: f.name, instructions: functionCode, liveAtExit, arguments: args };
 };
 
@@ -849,8 +848,8 @@ export const makeTargetProgram = ({
     if (Array.isArray(program)) {
         throw debug("Three Address Code doesn't support modules.");
     }
-    const mainProgramInstructions: Statement[] = flatten(
-        program.statements.map(statement => {
+    const mainProgramInstructions: Statement[] = program.statements
+        .map(statement => {
             const compiledProgram = astToThreeAddressCode({
                 ast: statement,
                 destination: exitCodeRegister,
@@ -869,7 +868,7 @@ export const makeTargetProgram = ({
                 ...compiledProgram.cleanup,
             ];
         })
-    );
+        .flat();
 
     const mainFunction: Function = {
         name: 'main',

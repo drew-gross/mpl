@@ -15,7 +15,6 @@ import { Register } from './threeAddressCode/Register';
 import { Statement } from './threeAddressCode/Statement';
 import * as threeAddressCodeRuntime from './threeAddressCode/runtime';
 import test from 'ava';
-import flatten from './util/list/flatten';
 import join from './util/join';
 import range from './util/list/range';
 import { lex, Token } from './parser-lib/lex';
@@ -46,10 +45,6 @@ import {
 import { orderedSet, operatorCompare } from './util/ordered-set';
 import { set } from './util/set';
 import { shuffle } from 'shuffle-seed';
-
-test('double flatten', t => {
-    t.deepEqual(flatten(flatten([[[1, 2]], [[3], [4]], [[5]]])), [1, 2, 3, 4, 5]);
-});
 
 test('lexer', t => {
     t.deepEqual(lex(tokenSpecs, '123'), [

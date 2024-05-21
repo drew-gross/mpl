@@ -1,4 +1,3 @@
-import flatten from '../util/list/flatten';
 import { Program } from '../threeAddressCode/Program';
 import * as Ast from '../ast';
 import { file as tmpFile } from 'tmp-promise';
@@ -350,7 +349,7 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
             return compileExpression(body, b => [
                 `for (uint64_t i = 0; i < ${(ast as any).list.value}.size; i++) {`,
                 `uint8_t ${ast.var} = ((uint8_t*)${(ast as any).list.value}.data)[i];`,
-                ...flatten(b),
+                ...b.flat(),
                 `}`,
             ]);
         default:

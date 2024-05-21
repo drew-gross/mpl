@@ -9,7 +9,8 @@
         "noFallthroughCasesInSwitch": true,
         "strictNullChecks": true,
         "noUnusedLocals": true,
-        "noUnusedParameters": true
+        "noUnusedParameters": true,
+        "lib": ["es2019"]
     },
     "include": ["./**/*"],
     "exclude": ["./bin/**/*", "./built/**/*"]

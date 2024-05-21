@@ -1,6 +1,5 @@
 import { Program } from '../threeAddressCode/Program';
 import writeTempFile from '../util/writeTempFile';
-import flatten from '../util/list/flatten';
 import execAndGetResult from '../util/execAndGetResult';
 import { FrontendOutput, ExecutionResult, CompilationResult, Backend, Variable } from '../api';
 import * as Ast from '../ast';
@@ -95,7 +94,7 @@ const astToJS = ({
         case 'indexAccess':
             return ['(', ...recurse(ast.accessed), ')[(', ...recurse(ast.index), ')]'];
         case 'forLoop':
-            const body: string[] = flatten(ast.body.map(recurse));
+            const body: string[] = ast.body.map(recurse).flat();
             const listItems: string[] = recurse(ast.list);
             return [
                 `const items = `,
@@ -146,11 +145,9 @@ const compile = ({
             tac: undefined,
         };
     }
-    const JS: string[] = flatten(
-        program.statements.map(child =>
-            astToJS({ ast: child, builtinFunctions, exitInsteadOfReturn: true })
-        )
-    );
+    const JS: string[] = program.statements
+        .map(child => astToJS({ ast: child, builtinFunctions, exitInsteadOfReturn: true }))
+        .flat();
     return {
         target: `
 const readline = require('readline');

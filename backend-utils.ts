@@ -1,7 +1,6 @@
 import debug from './util/debug';
 import { Type } from './types';
 import { StringLiteralData, Backend, Variable } from './api';
-import flatten from './util/list/flatten';
 import { Statement } from './threeAddressCode/Statement';
 import { Statement as TargetStatement } from './targetCode/Statement';
 import { Program } from './threeAddressCode/Program';
@@ -52,9 +51,12 @@ export const compileExpression = <T>(
     subExpressions: CompiledExpression<T>[],
     expressionCompiler: ExpressionCompiler<T>
 ): CompiledExpression<T> => ({
-    prepare: flatten(subExpressions.map(input => input.prepare)),
+    prepare: subExpressions.map(input => input.prepare).flat(),
     execute: expressionCompiler(subExpressions.map(input => input.execute)),
-    cleanup: flatten(subExpressions.reverse().map(input => input.cleanup)),
+    cleanup: subExpressions
+        .reverse()
+        .map(input => input.cleanup)
+        .flat(),
 });
 
 export const stringLiteralName = ({ id, value }: StringLiteralData) =>
@@ -174,14 +176,15 @@ export const makeExecutable = <TargetRegister>(
     });
     return {
         main: {
-            instructions: flatten(targetMain.instructions.map(translator)),
+            // @ts-ignore
+            instructions: targetMain.instructions.map(translator).flat(),
             stackUsage: targetMain.stackUsage as any,
         },
         functions: targetFunctions.map(({ name, instructions, stackUsage }) => ({
             name,
             stackUsage,
             // @ts-ignore
-            instructions: flatten(instructions.map(translator)),
+            instructions: instructions.map(translator).flat(),
         })) as any,
     };
 };
@@ -192,30 +195,28 @@ export const freeGlobalsInstructions = (
     makeTemporary,
     globalNameMap
 ): Statement[] => {
-    const instructions: Statement[] = flatten(
-        globals
-            .filter(declaration =>
-                ['String', 'List'].includes((declaration.type as Type).type.kind)
-            )
-            .map(declaration => {
-                const globalStringAddress = makeTemporary('gobalStringAddress');
-                return [
-                    {
-                        kind: 'loadGlobal',
-                        from: globalNameMap[declaration.name].newName,
-                        to: globalStringAddress,
-                        why: 'Load global string so we can free it',
-                    },
-                    {
-                        kind: 'callByName',
-                        function: 'my_free',
-                        arguments: [globalStringAddress],
-                        destination: null,
-                        why: 'Free global string at end of program',
-                    },
-                ];
-            })
-    );
+    // @ts-ignore
+    const instructions: Statement[] = globals
+        .filter(declaration => ['String', 'List'].includes((declaration.type as Type).type.kind))
+        .map(declaration => {
+            const globalStringAddress = makeTemporary('gobalStringAddress');
+            return [
+                {
+                    kind: 'loadGlobal',
+                    from: globalNameMap[declaration.name].newName,
+                    to: globalStringAddress,
+                    why: 'Load global string so we can free it',
+                },
+                {
+                    kind: 'callByName',
+                    function: 'my_free',
+                    arguments: [globalStringAddress],
+                    destination: null,
+                    why: 'Free global string at end of program',
+                },
+            ];
+        })
+        .flat();
     instructions.push({
         kind: 'return' as 'return',
         register: new Register('dummyReturn'),

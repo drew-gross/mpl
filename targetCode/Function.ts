@@ -7,7 +7,6 @@ import { Register } from '../threeAddressCode/Register';
 import { assignRegisters } from '../controlFlowGraph';
 import debug from '../util/debug';
 import { orderedSet, operatorCompare } from '../util/ordered-set';
-import flatten from '../util/list/flatten';
 import {
     Statement as TargetStatement,
     toTarget as statementToTarget,
@@ -35,8 +34,8 @@ const translateStackArgumentsToStackReads = (
     targetInfo
 ): ThreeAddressFunction => {
     // TODO: don't load the argument if it happens to already be loaded due to a previous loadStack
-    const instructions = flatten(
-        taf.instructions.map(tas => {
+    const instructions = taf.instructions
+        .map(tas => {
             const result: ThreeAddressStatement[] = [];
             // If this register is an argument is on the stack, generate a new register to load into temporarily
             switch (tas.kind) {
@@ -104,7 +103,7 @@ const translateStackArgumentsToStackReads = (
             }
             return result;
         })
-    );
+        .flat();
     return { ...taf, instructions };
 };
 
@@ -164,8 +163,8 @@ export const toTarget = <TargetRegister>({
     });
     functionToString; // tslint:disable-line
     const exitLabel = `${threeAddressFunction.name}_cleanup`;
-    const statements: TargetStatement<TargetRegister>[] = flatten(
-        functionWithAssignment.instructions.map((instruction, index) =>
+    const statements: TargetStatement<TargetRegister>[] = functionWithAssignment.instructions
+        .map((instruction, index) =>
             statementToTarget({
                 tas: instruction,
                 targetInfo,
@@ -176,7 +175,7 @@ export const toTarget = <TargetRegister>({
                 stackUsage,
             })
         )
-    );
+        .flat();
 
     return {
         name: threeAddressFunction.name,

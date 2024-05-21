@@ -1,4 +1,3 @@
-import flatten from './util/list/flatten';
 import uniqueBy from './util/list/uniqueBy';
 import idMaker from './util/idMaker';
 import last from './util/list/last';
@@ -222,7 +221,7 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
         case 'concatenation':
             return [...result, ...recurse(ast.lhs), ...recurse(ast.rhs)];
         case 'callExpression':
-            return [...result, ...flatten(ast.arguments.map(recurse))];
+            return [...result, ...ast.arguments.map(recurse).flat()];
         case 'ternary':
             return [
                 ...result,
@@ -231,14 +230,11 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
                     .concat(recurse(ast.ifFalse)),
             ];
         case 'program':
-            return [...result, ...flatten(ast.statements.map(recurse))];
+            return [...result, ...ast.statements.map(recurse).flat()];
         case 'functionLiteral':
-            return [...result, ...flatten(ast.body.map(recurse))];
+            return [...result, ...ast.body.map(recurse).flat()];
         case 'objectLiteral':
-            return [
-                ...result,
-                ...flatten(ast.members.map(member => recurse(member.expression))),
-            ];
+            return [...result, ...ast.members.map(member => recurse(member.expression)).flat()];
         case 'memberAccess':
             return [...result, ...recurse(ast.lhs)];
         case 'number':
@@ -248,13 +244,13 @@ const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
         case 'typeDeclaration':
             return result;
         case 'listLiteral':
-            return [...result, ...flatten(ast.items.map(recurse))];
+            return [...result, ...ast.items.map(recurse).flat()];
         case 'indexAccess':
             return [...result, ...recurse(ast.accessed), ...recurse(ast.index)];
         case 'memberStyleCall':
-            return [...result, ...recurse(ast.lhs), ...flatten(ast.params.map(recurse))];
+            return [...result, ...recurse(ast.lhs), ...ast.params.map(recurse).flat()];
         case 'forLoop':
-            return [...result, ...recurse(ast.list), ...flatten(ast.body.map(recurse))];
+            return [...result, ...recurse(ast.list), ...ast.body.map(recurse).flat()];
         default:
             throw debug(`${(ast as any).kind} unhandled in walkAst`);
     }
@@ -684,7 +680,7 @@ export const typeOfExpression = (
             return { type: builtinTypes.String, extractedFunctions: [] };
         case 'objectLiteral':
             const memberTypes = ast.members.map(({ expression }) => recurse(expression));
-            const typeErrors: TypeError[] = flatten(memberTypes.filter(isTypeError));
+            const typeErrors: TypeError[] = memberTypes.filter(isTypeError).flat();
             if (!(typeErrors.length == 0)) return typeErrors;
             return {
                 type: {
@@ -1247,8 +1243,8 @@ const extractFunctionBody = (node): any[] => {
 // TODO: Replace extractParameterList with SeparatedList
 const extractParameterList = (ast: MplAst): Variable[] => {
     if (isSeparatedListNode(ast)) {
-        return flatten(
-            ast.items.map(i => {
+        return ast.items
+            .map(i => {
                 if (isSeparatedListNode(i) || !('children' in i)) {
                     throw debug('todo');
                 }
@@ -1264,7 +1260,7 @@ const extractParameterList = (ast: MplAst): Variable[] => {
                     },
                 ];
             })
-        );
+            .flat();
     } else {
         throw debug(`${(ast as any).type} unhandledi extractParameterList`);
     }
@@ -1796,7 +1792,7 @@ const compile = (
     );
     typeErrors.push(programTypeCheck.typeErrors);
 
-    let flatTypeErrors: TypeError[] = flatten(typeErrors);
+    let flatTypeErrors: TypeError[] = typeErrors.flat();
     if (flatTypeErrors.length > 0) {
         return { typeErrors: flatTypeErrors };
     }
@@ -1821,7 +1817,7 @@ const compile = (
         }
     });
 
-    flatTypeErrors = flatten(typeErrors);
+    flatTypeErrors = typeErrors.flat();
     if (flatTypeErrors.length > 0) {
         return { typeErrors: flatTypeErrors };
     }
