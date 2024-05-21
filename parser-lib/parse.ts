@@ -81,9 +81,9 @@ export const parseResultIsError = <Node, Leaf, Token>(
         | AstWithIndex<Node, Leaf>[]
         | 'missingOptional'
 ): result is ParseError<Token> => {
-    if (result === undefined) throw debug("bad parse result");
+    if (result === undefined) throw debug('bad parse result');
     return result != 'missingOptional' && 'kind' in result && result.kind == 'parseError';
-}
+};
 
 const parseResultWithIndexIsLeaf = <Node, Token>(
     r: ParseResultWithIndex<Node, Token>
@@ -276,10 +276,10 @@ const parseSequence = <Node extends string, Token>(
 type ParserProgress<Node, Token> =
     | { kind: 'failed'; error: ParseError<Token> }
     | {
-        kind: 'progress';
-        parseResults: AstWithIndex<Node, Token>[];
-        subParserIndex: number;
-    };
+          kind: 'progress';
+          parseResults: AstWithIndex<Node, Token>[];
+          subParserIndex: number;
+      };
 
 const parseAlternative = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -747,23 +747,40 @@ const parseRule = <Node extends string, Token>(
     return parseAnything(grammar, childrenParser, tokens, index);
 };
 
-const getTokenMap = <Node extends string, Token>(grammar: Grammar<Node, Token>, parser: Parser<Node, Token>) => {
+// TODO: Use builtin flat
+const flatten = array =>
+    array.reduce(
+        (flattened, elem) => flattened.concat(Array.isArray(elem) ? flatten(elem) : elem),
+        []
+    );
+
+const getTokenMap = <Node extends string, Token>(
+    grammar: Grammar<Node, Token>,
+    parser: Parser<Node, Token>
+) => {
+    if (parser === undefined) throw debug('bad parser');
     if (typeof parser == 'string') return getTokenMap(grammar, grammar[parser]);
     switch (parser.kind) {
         case 'terminal':
-            const dict: any = {};
-            dict[parser.token] = parser;
-            return dict;
+            return [parser.token];
         case 'many':
             return getTokenMap(grammar, parser.item);
-        default: throw debug(`unhandled: ${parser.kind}`);
+        case 'oneOf':
+            return flatten(parser.parsers.map(p => getTokenMap(grammar, p)));
+        case 'sequence':
+            return getTokenMap(grammar, parser.parsers[0]);
+        case 'optional':
+            // TODO: allow nothing
+            return getTokenMap(grammar, parser.parser);
+        default:
+            throw debug(`unhandled: ${parser.kind}`);
     }
 };
 
 export const parseRule2 = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     rule: Node,
-    tokens: LToken<Token>[],
+    tokens: LToken<Token>[]
 ): ParseResultWithIndex<Node, Token> => {
     const ruleParser: Parser<Node, Token> = grammar[rule];
     if (!ruleParser) throw debug(`invalid rule name: ${rule}`);
