@@ -45,6 +45,7 @@ import {
 import { orderedSet, operatorCompare } from './util/ordered-set';
 import { set } from './util/set';
 import { shuffle } from 'shuffle-seed';
+import { mergeNoConflict } from './util/merge';
 
 test('lexer', t => {
     t.deepEqual(lex(tokenSpecs, '123'), [
@@ -1922,4 +1923,13 @@ node_0 -> null_7 [style="invis"]
     );
 
     // await writeSvg(dotText, './set.svg');
+});
+
+test('Merge Maps', t => {
+    const into = new Map();
+    into.set('a', 'a');
+    const from = new Map();
+    from.set('b', 'b');
+    mergeNoConflict(into, from);
+    t.deepEqual(into.get('b'), 'b');
 });

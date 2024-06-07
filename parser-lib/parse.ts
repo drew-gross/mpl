@@ -1,6 +1,7 @@
 import { Token as LToken } from './lex';
 import last from '../util/list/last';
 import debug from '../util/debug';
+import { mergeNoConflict } from '../util/merge';
 import { Graph } from 'graphlib';
 import SourceLocation from './sourceLocation';
 import { TokenSpec, lex, LexError } from './lex';
@@ -750,24 +751,45 @@ const parseRule = <Node extends string, Token>(
 const getTokenMap = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     parser: Parser<Node, Token>
-) => {
+): Map<string, ParserProgress<Node, Token>> => {
     if (parser === undefined) throw debug('bad parser');
     if (typeof parser == 'string') return getTokenMap(grammar, grammar[parser]);
+    const result: Map<string, ParserProgress<Node, Token>> = new Map();
     switch (parser.kind) {
         case 'terminal':
-            return [parser.token];
+            result.set(parser.token as string, {
+                kind: 'progress',
+                parseResults: [
+                    {
+                        success: true,
+                        newIndex: 0, // TODO: make new type without this?
+                        type: parser.token,
+                        value: null, // TODO: make a function for this?
+                        sourceLocation: { line: 0, column: 0 },
+                    },
+                ],
+                subParserIndex: 0,
+            });
+            break;
         case 'many':
-            return getTokenMap(grammar, parser.item);
+            mergeNoConflict(result, getTokenMap(grammar, parser.item));
+            break;
         case 'oneOf':
-            return parser.parsers.map(p => getTokenMap(grammar, p)).flat();
+            for (const p of parser.parsers) {
+                mergeNoConflict(result, getTokenMap(grammar, p));
+            }
+            break;
         case 'sequence':
-            return getTokenMap(grammar, parser.parsers[0]);
+            mergeNoConflict(result, getTokenMap(grammar, parser.parsers[0]));
+            break;
         case 'optional':
             // TODO: allow nothing
-            return getTokenMap(grammar, parser.parser);
+            mergeNoConflict(result, getTokenMap(grammar, parser.parser));
+            break;
         default:
             throw debug(`unhandled: ${parser.kind}`);
     }
+    return result;
 };
 
 export const parseRule2 = <Node extends string, Token>(
@@ -777,18 +799,30 @@ export const parseRule2 = <Node extends string, Token>(
 ): ParseResultWithIndex<Node, Token> => {
     const ruleParser: Parser<Node, Token> = grammar[rule];
     if (!ruleParser) throw debug(`invalid rule name: ${rule}`);
-    const index = 0;
+    let index = 0;
     const tokenToNext = getTokenMap(grammar, ruleParser);
-    return tokenToNext[tokens[index].type];
+    for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[index].type;
+        const progress = tokenToNext[token as string];
+        if (progress.kind == 'error') {
+            return progress;
+        }
+    }
+    const result = tokenToNext.get(tokens[index].type as string);
+    if (!result) debug('bad result');
+    return result as any;
 };
+
+export const useWipParser = false;
 
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     firstRule: Node,
     tokens: LToken<Token>[]
 ): ParseResult<Node, Token> => {
-    const result = parseRule(grammar, firstRule, tokens, 0);
-    // const result = parseRule2(grammar, firstRule, tokens);
+    const result = useWipParser
+        ? parseRule2(grammar, firstRule, tokens)
+        : parseRule(grammar, firstRule, tokens, 0);
     if (parseResultIsError(result)) return result;
     if (result.newIndex != tokens.length) {
         const firstExtraToken = tokens[result.newIndex];

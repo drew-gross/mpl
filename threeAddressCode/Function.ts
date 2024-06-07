@@ -9,7 +9,13 @@ import {
     parseArgList,
     instructionFromParseResult,
 } from './parser';
-import { parseString, Ast, isListNode, isSeparatedListNode } from '../parser-lib/parse';
+import {
+    parseString,
+    Ast,
+    isListNode,
+    isSeparatedListNode,
+    useWipParser,
+} from '../parser-lib/parse';
 import { LexError } from '../parser-lib/lex';
 import join from '../util/join';
 import debug from '../util/debug';
@@ -120,6 +126,14 @@ export const parseFunction = (input: string): Function | LexError | ParseError[]
 };
 
 export const parseFunctionOrDie = (tacString: string): Function => {
+    if (useWipParser) {
+        return {
+            instructions: [],
+            arguments: [],
+            liveAtExit: [],
+            name: 'temp disabled',
+        };
+    }
     const parsed = parseFunction(tacString);
     if ('kind' in parsed) {
         debugger;
