@@ -754,7 +754,8 @@ type PartialAst<Node, Token> =
     | 'Leaf'
     | PartialToken<Token>
     | PartialMany<Node, Token>
-    | PartialSequence<Node, Token>;
+    | PartialSequence<Node, Token>
+    | PartialNested<Node, Token>;
 type PartialMany<Node, Token> = {
     items: PartialAst<Node, Token>[];
 };
@@ -763,6 +764,11 @@ type PartialSequence<Node, Token> = {
 };
 type PartialToken<Token> = {
     token: Token;
+};
+type PartialNested<Node, Token> = {
+    left: PartialAst<Node, Token>;
+    enclosed: PartialAst<Node, Token>;
+    right: PartialAst<Node, Token>;
 };
 type EmptySlot<Node> = {
     rule: Node;
@@ -809,45 +815,91 @@ const getProgressMap = <Node extends string, Token>(
         case 'optional':
             mergeNoConflict(result, getProgressMap(grammar, parser.parser));
             break;
-        default:
+        case 'nested':
+            const subProgress = getProgressMap(grammar, parser.in.left);
+            for (const key of subProgress.keys()) {
+                subProgress.set(key, {
+                    left: subProgress.get(key) as any,
+                    enclosed: { rule: parser.kind as any },
+                    right: { rule: parser.in.right as any },
+                });
+            }
+            break;
+        default: {
             throw debug(`unhandled: ${parser.kind}`);
+        }
     }
     return result;
 };
 
 const replaceLeafWithToken = <Node, Token>(
-    progress: PartialAst<Node, Token>,
+    ast: PartialAst<Node, Token>,
     token: Token
 ): boolean => {
-    if (progress === 'Leaf') {
+    if (ast === 'Leaf') {
         throw debug(`parent should handle`);
-    } else if ('rule' in progress) {
+    } else if ('rule' in ast) {
         return false;
-    } else if ('sequenceItems' in progress) {
-        for (let i = 0; i < progress.sequenceItems.length; i++) {
-            if (progress.sequenceItems[i] == 'Leaf') {
-                progress.sequenceItems[i] = { token: token };
+    } else if ('sequenceItems' in ast) {
+        for (let i = 0; i < ast.sequenceItems.length; i++) {
+            if (ast.sequenceItems[i] == 'Leaf') {
+                ast.sequenceItems[i] = { token: token };
                 return true;
             }
-            if (replaceLeafWithToken(progress.sequenceItems[i], token)) {
+            if (replaceLeafWithToken(ast.sequenceItems[i], token)) {
                 return true;
             }
         }
         return false;
-    } else if ('token' in progress) {
+    } else if ('token' in ast) {
         return false;
     }
-    throw debug(`unhandled: ${progress}`);
+    throw debug(`unhandled: ${ast}`);
 };
 
-const getRuleForNextEmptySlot = <Node, Token>(ast: PartialAst<Node, Token>) => {
-    throw debug(`unimplemented: ${ast}`);
+const getRuleForNextEmptySlot = <Node, Token>(
+    ast: PartialAst<Node, Token>
+): Parser<Node, Token> | undefined => {
+    if (ast === 'Leaf') {
+        return undefined;
+    } else if ('rule' in ast) {
+        return ast.rule as any;
+    } else if ('sequenceItems' in ast) {
+        for (let i = 0; i < ast.sequenceItems.length; i++) {
+            const nextSequenceItemRule = getRuleForNextEmptySlot(ast.sequenceItems[i]);
+            if (nextSequenceItemRule) {
+                return nextSequenceItemRule;
+            }
+        }
+        return undefined;
+    } else if ('token' in ast) {
+        return undefined;
+    }
+    throw debug(`unhandled: ${ast}`);
 };
 const replaceNextEmptySlotWithProgress = <Node, Token>(
     ast: PartialAst<Node, Token>,
     progress: PartialAst<Node, Token>
-) => {
-    throw debug(`unimplemented: ${ast} ${progress}`);
+): boolean => {
+    if (ast === 'Leaf') {
+        throw debug(`parent should handle`);
+    } else if ('rule' in ast) {
+        return false;
+    } else if ('sequenceItems' in ast) {
+        for (let i = 0; i < ast.sequenceItems.length; i++) {
+            if ('rule' in (ast.sequenceItems[i] as any)) {
+                ast.sequenceItems[i] = progress;
+                return true;
+            }
+            if (replaceNextEmptySlotWithProgress(ast.sequenceItems[i], progress)) {
+                return true;
+            }
+        }
+        return false;
+    } else if ('token' in ast) {
+        return false;
+    }
+    throw debug(`unhandled: ${ast}`);
 };
 const partialAstToCompleteAst = <Node, Token>(
     ast: PartialAst<Node, Token>
@@ -862,16 +914,34 @@ export const parseRule2 = <Node extends string, Token>(
 ): ParseResultWithIndex<Node, Token> => {
     const ruleParser: Parser<Node, Token> = grammar[rule];
     if (!ruleParser) throw debug(`invalid rule name: ${rule}`);
-    let index = 0;
     let ast: PartialAst<Node, Token> = { rule: ruleParser } as any;
     for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i].type;
         let rule = getRuleForNextEmptySlot(ast);
+        if (!rule) {
+            return {
+                kind: 'parseError',
+                errors: [
+                    {
+                        expected: 'endOfFile',
+                        found: token,
+                        foundTokenText: `${token}`,
+                        sourceLocation: tokens[i].sourceLocation,
+                        whileParsing: [],
+                    },
+                ],
+            };
+        }
         const tokenToProgress = getProgressMap(grammar, rule);
-        const token = tokens[index].type;
         const progress = tokenToProgress.get(token as string);
         if (progress === undefined) throw debug('bad result');
         replaceLeafWithToken(progress, token);
-        replaceNextEmptySlotWithProgress(ast, progress);
+        if ('rule' in (ast as any)) {
+            ast = progress;
+        } else {
+            const ok = replaceNextEmptySlotWithProgress(ast, progress);
+            if (!ok) throw debug('not ok');
+        }
     }
     return partialAstToCompleteAst(ast);
 };
