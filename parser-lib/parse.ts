@@ -5,6 +5,7 @@ import { mergeNoConflict } from '../util/merge';
 import { Graph } from 'graphlib';
 import SourceLocation from './sourceLocation';
 import { TokenSpec, lex, LexError } from './lex';
+import { deepCopy } from "deep-copy-ts";
 
 type ListNode<Node, Leaf> = { items: Ast<Node, Leaf>[] };
 export type SeparatedListNode<Node, Leaf> = {
@@ -33,7 +34,7 @@ interface LeafWithIndex<Token> {
     success: true;
     newIndex: number;
     type: Token | 'endOfFile';
-    value: string | number | null | undefined;
+    value: LeafValue;
     sourceLocation: SourceLocation;
 }
 
@@ -277,10 +278,10 @@ const parseSequence = <Node extends string, Token>(
 type ParserProgress<Node, Token> =
     | { kind: 'failed'; error: ParseError<Token> }
     | {
-          kind: 'progress';
-          parseResults: AstWithIndex<Node, Token>[];
-          subParserIndex: number;
-      };
+        kind: 'progress';
+        parseResults: AstWithIndex<Node, Token>[];
+        subParserIndex: number;
+    };
 
 const parseAlternative = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -748,49 +749,98 @@ const parseRule = <Node extends string, Token>(
     return parseAnything(grammar, childrenParser, tokens, index);
 };
 
-const getTokenMap = <Node extends string, Token>(
+// TODO: The idea here is that we'll have a list of options for what the next token could be, and if the actual next token isn't any of them, we can give a good error. But maybe that can still be done if the token is always stored? That would be easier and probably faster.
+type PartialAst<Token> = 'EmptySlot' | 'Leaf' | PartialToken<Token> | PartialMany<Token>
+    |
+    PartialSequence<Token>;
+type PartialMany<Token> = {
+    items: PartialAst<Token>[];
+};
+type PartialSequence<Token> = {
+    sequenceItems: PartialAst<Token>[];
+}
+type PartialToken<Token> = {
+    token: Token;
+}
+
+// Replace the "next" empty slot with the provided more-complete partial ast
+const applyProgressToPartialAst = <Token>(currentProgress: PartialAst<Token>, newProgress: PartialAst<Token>): 'AlreadyDone' | PartialAst<Token> => {
+    if (currentProgress === 'EmptySlot') {
+        return deepCopy(newProgress);
+    } else if (currentProgress === "Leaf") {
+        return 'AlreadyDone';
+    } else if ('sequenceItems' in currentProgress) {
+        for (const item of currentProgress.sequenceItems) {
+            const applied = applyProgressToPartialAst(item, newProgress);
+            if (applied !== 'AlreadyDone') { return applied; }
+        }
+        return 'AlreadyDone';
+    }
+    throw debug(`unhandled: ${currentProgress}`);
+}
+
+const getProgressMap = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
-    parser: Parser<Node, Token>
-): Map<string, ParserProgress<Node, Token>> => {
+    parser: Parser<Node, Token>,
+    progress: PartialAst<Token> = 'EmptySlot',
+): Map<string, PartialAst<Token>> => {
     if (parser === undefined) throw debug('bad parser');
-    if (typeof parser == 'string') return getTokenMap(grammar, grammar[parser]);
-    const result: Map<string, ParserProgress<Node, Token>> = new Map();
+    const result: Map<string, PartialAst<Token>> = new Map();
+    if (typeof parser == 'string') {
+        mergeNoConflict(result, getProgressMap(grammar, grammar[parser], progress));
+        return result;
+    }
     switch (parser.kind) {
         case 'terminal':
-            result.set(parser.token as string, {
-                kind: 'progress',
-                parseResults: [
-                    {
-                        success: true,
-                        newIndex: 0, // TODO: make new type without this?
-                        type: parser.token,
-                        value: null, // TODO: make a function for this?
-                        sourceLocation: { line: 0, column: 0 },
-                    },
-                ],
-                subParserIndex: 0,
-            });
+            debugger;
+            result.set(parser.token as string, 'Leaf');
             break;
-        case 'many':
-            mergeNoConflict(result, getTokenMap(grammar, parser.item));
+        case 'many': {
+            const applied = applyProgressToPartialAst(progress, { items: ['EmptySlot'] });
+            if (applied == 'AlreadyDone') throw debug('todo: error?');
+            mergeNoConflict(result, getProgressMap(grammar, parser.item, applied));
             break;
+        }
         case 'oneOf':
             for (const p of parser.parsers) {
-                mergeNoConflict(result, getTokenMap(grammar, p));
+                mergeNoConflict(result, getProgressMap(grammar, p, progress));
             }
             break;
-        case 'sequence':
-            mergeNoConflict(result, getTokenMap(grammar, parser.parsers[0]));
+        case 'sequence': {
+            const applied = applyProgressToPartialAst(progress, { sequenceItems: parser.parsers.map(_ => 'EmptySlot') });
+            if (applied == 'AlreadyDone') {
+                throw debug('todo: error?');
+            }
+            mergeNoConflict(result, getProgressMap(grammar, parser.parsers[0], applied));
             break;
+        }
         case 'optional':
-            // TODO: allow nothing
-            mergeNoConflict(result, getTokenMap(grammar, parser.parser));
+            mergeNoConflict(result, getProgressMap(grammar, parser.parser, progress));
             break;
         default:
             throw debug(`unhandled: ${parser.kind}`);
     }
     return result;
 };
+
+const replaceLeafWithToken = <Token>(progress: PartialAst<Token>, token: Token): boolean => {
+    if (progress === 'EmptySlot') {
+        return false;
+    } else if (progress === "Leaf") {
+        throw debug(`parent should handle`);
+    } else if ('sequenceItems' in progress) {
+        for (let i = 0; i < progress.sequenceItems.length; i++) {
+            if (progress.sequenceItems[i] == 'Leaf') {
+                progress.sequenceItems[i] = { token: token };
+                return true;
+            }
+            if (replaceLeafWithToken(progress.sequenceItems[i], token)) {
+                return true;
+            }
+        }
+    }
+    throw debug(`unhandled: ${progress}`);
+}
 
 export const parseRule2 = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -800,20 +850,19 @@ export const parseRule2 = <Node extends string, Token>(
     const ruleParser: Parser<Node, Token> = grammar[rule];
     if (!ruleParser) throw debug(`invalid rule name: ${rule}`);
     let index = 0;
-    const tokenToNext = getTokenMap(grammar, ruleParser);
+    const tokenToProgress = getProgressMap(grammar, ruleParser);
     for (let i = 0; i < tokens.length; i++) {
         const token = tokens[index].type;
-        const progress = tokenToNext[token as string];
-        if (progress.kind == 'error') {
-            return progress;
-        }
+        const progress = tokenToProgress.get(token as string);
+        if (progress === undefined) throw debug('bad result');
+        replaceLeafWithToken(progress, token);
     }
-    const result = tokenToNext.get(tokens[index].type as string);
+    const result = tokenToProgress.get(tokens[index].type as string);
     if (!result) debug('bad result');
     return result as any;
 };
 
-export const useWipParser = false;
+export const useWipParser = true;
 
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
