@@ -763,59 +763,42 @@ type PartialToken<Token> = {
     token: Token;
 }
 
-// Replace the "next" empty slot with the provided more-complete partial ast
-const applyProgressToPartialAst = <Token>(currentProgress: PartialAst<Token>, newProgress: PartialAst<Token>): 'AlreadyDone' | PartialAst<Token> => {
-    if (currentProgress === 'EmptySlot') {
-        return deepCopy(newProgress);
-    } else if (currentProgress === "Leaf") {
-        return 'AlreadyDone';
-    } else if ('sequenceItems' in currentProgress) {
-        for (const item of currentProgress.sequenceItems) {
-            const applied = applyProgressToPartialAst(item, newProgress);
-            if (applied !== 'AlreadyDone') { return applied; }
-        }
-        return 'AlreadyDone';
-    }
-    throw debug(`unhandled: ${currentProgress}`);
-}
-
-const getProgressMap = <Node extends string, Token>(
+const getProgressMao = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     parser: Parser<Node, Token>,
-    progress: PartialAst<Token> = 'EmptySlot',
 ): Map<string, PartialAst<Token>> => {
     if (parser === undefined) throw debug('bad parser');
+    if (typeof parser == 'string') return getProgressMao(grammar, grammar[parser]);
     const result: Map<string, PartialAst<Token>> = new Map();
-    if (typeof parser == 'string') {
-        mergeNoConflict(result, getProgressMap(grammar, grammar[parser], progress));
-        return result;
-    }
     switch (parser.kind) {
         case 'terminal':
-            debugger;
             result.set(parser.token as string, 'Leaf');
             break;
         case 'many': {
-            const applied = applyProgressToPartialAst(progress, { items: ['EmptySlot'] });
-            if (applied == 'AlreadyDone') throw debug('todo: error?');
-            mergeNoConflict(result, getProgressMap(grammar, parser.item, applied));
+            const subProgress = getProgressMao(grammar, parser.item);
+            for (const key of subProgress.keys()) {
+                subProgress.set(key, { items: [subProgress.get(key) as PartialAst<Token>] });
+            }
+            mergeNoConflict(result, subProgress);
             break;
         }
         case 'oneOf':
             for (const p of parser.parsers) {
-                mergeNoConflict(result, getProgressMap(grammar, p, progress));
+                mergeNoConflict(result, getProgressMao(grammar, p));
             }
             break;
         case 'sequence': {
-            const applied = applyProgressToPartialAst(progress, { sequenceItems: parser.parsers.map(_ => 'EmptySlot') });
-            if (applied == 'AlreadyDone') {
-                throw debug('todo: error?');
+            const subProgress = getProgressMao(grammar, parser.parsers[0]);
+            for (const key of subProgress.keys()) {
+                const empties: PartialAst<Token>[] = parser.parsers.map(_ => 'EmptySlot');
+                empties[0] = subProgress.get(key) as PartialAst<Token>;
+                subProgress.set(key, { sequenceItems: empties });
             }
-            mergeNoConflict(result, getProgressMap(grammar, parser.parsers[0], applied));
+            mergeNoConflict(result, subProgress);
             break;
         }
         case 'optional':
-            mergeNoConflict(result, getProgressMap(grammar, parser.parser, progress));
+            mergeNoConflict(result, getProgressMao(grammar, parser.parser));
             break;
         default:
             throw debug(`unhandled: ${parser.kind}`);
@@ -838,6 +821,9 @@ const replaceLeafWithToken = <Token>(progress: PartialAst<Token>, token: Token):
                 return true;
             }
         }
+        return false;
+    } else if ('token' in progress) {
+        return false;
     }
     throw debug(`unhandled: ${progress}`);
 }
@@ -850,7 +836,7 @@ export const parseRule2 = <Node extends string, Token>(
     const ruleParser: Parser<Node, Token> = grammar[rule];
     if (!ruleParser) throw debug(`invalid rule name: ${rule}`);
     let index = 0;
-    const tokenToProgress = getProgressMap(grammar, ruleParser);
+    const tokenToProgress = getProgressMao(grammar, ruleParser);
     for (let i = 0; i < tokens.length; i++) {
         const token = tokens[index].type;
         const progress = tokenToProgress.get(token as string);
