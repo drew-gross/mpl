@@ -5,7 +5,6 @@ import { mergeNoConflict } from '../util/merge';
 import { Graph } from 'graphlib';
 import SourceLocation from './sourceLocation';
 import { TokenSpec, lex, LexError } from './lex';
-import { deepCopy } from "deep-copy-ts";
 
 type ListNode<Node, Leaf> = { items: Ast<Node, Leaf>[] };
 export type SeparatedListNode<Node, Leaf> = {
@@ -278,10 +277,10 @@ const parseSequence = <Node extends string, Token>(
 type ParserProgress<Node, Token> =
     | { kind: 'failed'; error: ParseError<Token> }
     | {
-        kind: 'progress';
-        parseResults: AstWithIndex<Node, Token>[];
-        subParserIndex: number;
-    };
+          kind: 'progress';
+          parseResults: AstWithIndex<Node, Token>[];
+          subParserIndex: number;
+      };
 
 const parseAlternative = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -750,55 +749,65 @@ const parseRule = <Node extends string, Token>(
 };
 
 // TODO: The idea here is that we'll have a list of options for what the next token could be, and if the actual next token isn't any of them, we can give a good error. But maybe that can still be done if the token is always stored? That would be easier and probably faster.
-type PartialAst<Token> = 'EmptySlot' | 'Leaf' | PartialToken<Token> | PartialMany<Token>
-    |
-    PartialSequence<Token>;
-type PartialMany<Token> = {
-    items: PartialAst<Token>[];
+type PartialAst<Node, Token> =
+    | EmptySlot<Node>
+    | 'Leaf'
+    | PartialToken<Token>
+    | PartialMany<Node, Token>
+    | PartialSequence<Node, Token>;
+type PartialMany<Node, Token> = {
+    items: PartialAst<Node, Token>[];
 };
-type PartialSequence<Token> = {
-    sequenceItems: PartialAst<Token>[];
-}
+type PartialSequence<Node, Token> = {
+    sequenceItems: PartialAst<Node, Token>[];
+};
 type PartialToken<Token> = {
     token: Token;
-}
+};
+type EmptySlot<Node> = {
+    rule: Node;
+};
 
-const getProgressMao = <Node extends string, Token>(
+const getProgressMap = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
-    parser: Parser<Node, Token>,
-): Map<string, PartialAst<Token>> => {
+    parser: Parser<Node, Token>
+): Map<string, PartialAst<Node, Token>> => {
     if (parser === undefined) throw debug('bad parser');
-    if (typeof parser == 'string') return getProgressMao(grammar, grammar[parser]);
-    const result: Map<string, PartialAst<Token>> = new Map();
+    if (typeof parser == 'string') return getProgressMap(grammar, grammar[parser]);
+    const result: Map<string, PartialAst<Node, Token>> = new Map();
     switch (parser.kind) {
         case 'terminal':
             result.set(parser.token as string, 'Leaf');
             break;
         case 'many': {
-            const subProgress = getProgressMao(grammar, parser.item);
+            const subProgress = getProgressMap(grammar, parser.item);
             for (const key of subProgress.keys()) {
-                subProgress.set(key, { items: [subProgress.get(key) as PartialAst<Token>] });
+                subProgress.set(key, {
+                    items: [subProgress.get(key) as PartialAst<Node, Token>],
+                });
             }
             mergeNoConflict(result, subProgress);
             break;
         }
         case 'oneOf':
             for (const p of parser.parsers) {
-                mergeNoConflict(result, getProgressMao(grammar, p));
+                mergeNoConflict(result, getProgressMap(grammar, p));
             }
             break;
         case 'sequence': {
-            const subProgress = getProgressMao(grammar, parser.parsers[0]);
+            const subProgress = getProgressMap(grammar, parser.parsers[0]);
             for (const key of subProgress.keys()) {
-                const empties: PartialAst<Token>[] = parser.parsers.map(_ => 'EmptySlot');
-                empties[0] = subProgress.get(key) as PartialAst<Token>;
+                const empties: PartialAst<Node, Token>[] = parser.parsers.map(p => ({
+                    rule: p,
+                })) as any;
+                empties[0] = subProgress.get(key) as PartialAst<Node, Token>;
                 subProgress.set(key, { sequenceItems: empties });
             }
             mergeNoConflict(result, subProgress);
             break;
         }
         case 'optional':
-            mergeNoConflict(result, getProgressMao(grammar, parser.parser));
+            mergeNoConflict(result, getProgressMap(grammar, parser.parser));
             break;
         default:
             throw debug(`unhandled: ${parser.kind}`);
@@ -806,11 +815,14 @@ const getProgressMao = <Node extends string, Token>(
     return result;
 };
 
-const replaceLeafWithToken = <Token>(progress: PartialAst<Token>, token: Token): boolean => {
-    if (progress === 'EmptySlot') {
-        return false;
-    } else if (progress === "Leaf") {
+const replaceLeafWithToken = <Node, Token>(
+    progress: PartialAst<Node, Token>,
+    token: Token
+): boolean => {
+    if (progress === 'Leaf') {
         throw debug(`parent should handle`);
+    } else if ('rule' in progress) {
+        return false;
     } else if ('sequenceItems' in progress) {
         for (let i = 0; i < progress.sequenceItems.length; i++) {
             if (progress.sequenceItems[i] == 'Leaf') {
@@ -826,7 +838,22 @@ const replaceLeafWithToken = <Token>(progress: PartialAst<Token>, token: Token):
         return false;
     }
     throw debug(`unhandled: ${progress}`);
-}
+};
+
+const getRuleForNextEmptySlot = <Node, Token>(ast: PartialAst<Node, Token>) => {
+    throw debug(`unimplemented: ${ast}`);
+};
+const replaceNextEmptySlotWithProgress = <Node, Token>(
+    ast: PartialAst<Node, Token>,
+    progress: PartialAst<Node, Token>
+) => {
+    throw debug(`unimplemented: ${ast} ${progress}`);
+};
+const partialAstToCompleteAst = <Node, Token>(
+    ast: PartialAst<Node, Token>
+): ParseResultWithIndex<Node, Token> => {
+    throw debug(`unimplemented: ${ast}`);
+};
 
 export const parseRule2 = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -836,19 +863,20 @@ export const parseRule2 = <Node extends string, Token>(
     const ruleParser: Parser<Node, Token> = grammar[rule];
     if (!ruleParser) throw debug(`invalid rule name: ${rule}`);
     let index = 0;
-    const tokenToProgress = getProgressMao(grammar, ruleParser);
+    let ast: PartialAst<Node, Token> = { rule: ruleParser } as any;
     for (let i = 0; i < tokens.length; i++) {
+        let rule = getRuleForNextEmptySlot(ast);
+        const tokenToProgress = getProgressMap(grammar, rule);
         const token = tokens[index].type;
         const progress = tokenToProgress.get(token as string);
         if (progress === undefined) throw debug('bad result');
         replaceLeafWithToken(progress, token);
+        replaceNextEmptySlotWithProgress(ast, progress);
     }
-    const result = tokenToProgress.get(tokens[index].type as string);
-    if (!result) debug('bad result');
-    return result as any;
+    return partialAstToCompleteAst(ast);
 };
 
-export const useWipParser = true;
+export const useWipParser = false;
 
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
