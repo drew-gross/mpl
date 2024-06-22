@@ -159,6 +159,7 @@ const angles = { left: lessThan, right: greaterThan };
 
 export const grammar: Grammar<MplAstNode, MplToken> = {
     program: Sequence<MplAstNode, MplToken>('program', ['functionBody']),
+    // TODO: Instead of function and functionWithBlock, use a OneOf(['expression,', NestedIn(curlies, 'functionBody')])
     function: OneOf([
         Sequence('function', [
             mplOptional(leftBracket),
