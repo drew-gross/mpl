@@ -1,10 +1,10 @@
 import { Token as LToken } from './lex';
 import last from '../util/list/last';
 import debug from '../util/debug';
-import { mergeNoConflict } from '../util/merge';
 import { Graph } from 'graphlib';
 import SourceLocation from './sourceLocation';
 import { TokenSpec, lex, LexError } from './lex';
+import defaultdict from 'defaultdict-proxy';
 
 type ListNode<Node, Leaf> = { items: Ast<Node, Leaf>[] };
 export type SeparatedListNode<Node, Leaf> = {
@@ -760,7 +760,7 @@ type PartialMany<Node, Token> = {
     items: PartialAst<Node, Token>[];
 };
 type PartialSequence<Node, Token> = {
-    sequenceItems: PartialAst<Node, Token>[];
+    sequenceItems: PartialAst<Node, Token>[][];
 };
 type PartialToken<Token> = {
     token: Token;
@@ -777,49 +777,49 @@ type EmptySlot<Node> = {
 const getProgressMap = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     parser: Parser<Node, Token>
-): Map<string, PartialAst<Node, Token>> => {
+): Map<string, PartialAst<Node, Token>[]> => {
     if (parser === undefined) throw debug('bad parser');
     if (typeof parser == 'string') return getProgressMap(grammar, grammar[parser]);
-    const result: Map<string, PartialAst<Node, Token>> = new Map();
+    const result: Map<string, PartialAst<Node, Token>[]> = defaultdict([]) as any;
     switch (parser.kind) {
         case 'terminal':
-            result.set(parser.token as string, 'Leaf');
+            result[parser.token as string].push('Leaf');
             break;
         case 'many': {
-            const subProgress = getProgressMap(grammar, parser.item);
-            for (const key of subProgress.keys()) {
-                subProgress.set(key, {
-                    items: [subProgress.get(key) as PartialAst<Node, Token>],
-                });
+            for (const [key, value] of Object.entries(getProgressMap(grammar, parser.item))) {
+                result[key].push({ items: value });
             }
-            mergeNoConflict(result, subProgress);
             break;
         }
         case 'oneOf':
             for (const p of parser.parsers) {
-                mergeNoConflict(result, getProgressMap(grammar, p));
+                for (const [key, value] of Object.entries(getProgressMap(grammar, p))) {
+                    result[key].push(...value);
+                }
             }
             break;
         case 'sequence': {
-            const subProgress = getProgressMap(grammar, parser.parsers[0]);
-            for (const key of subProgress.keys()) {
-                const empties: PartialAst<Node, Token>[] = parser.parsers.map(p => ({
+            for (const [key, value] of Object.entries(
+                getProgressMap(grammar, parser.parsers[0])
+            )) {
+                const empties: PartialAst<Node, Token>[][] = parser.parsers.map(p => ({
                     rule: p,
                 })) as any;
-                empties[0] = subProgress.get(key) as PartialAst<Node, Token>;
-                subProgress.set(key, { sequenceItems: empties });
+                empties[0] = value;
+                result[key].push({ sequenceItems: empties });
             }
-            mergeNoConflict(result, subProgress);
             break;
         }
         case 'optional':
-            mergeNoConflict(result, getProgressMap(grammar, parser.parser));
+            for (const [key, value] of Object.entries(getProgressMap(grammar, parser.parser))) {
+                result[key].push(...value);
+            }
             break;
         case 'nested':
             const subProgress = getProgressMap(grammar, parser.in.left);
             for (const key of subProgress.keys()) {
-                subProgress.set(key, {
-                    left: subProgress.get(key) as any,
+                subProgress[key].push({
+                    left: subProgress[key] as any,
                     enclosed: { rule: parser.kind as any },
                     right: { rule: parser.in.right as any },
                 });
@@ -842,12 +842,14 @@ const replaceLeafWithToken = <Node, Token>(
         return false;
     } else if ('sequenceItems' in ast) {
         for (let i = 0; i < ast.sequenceItems.length; i++) {
-            if (ast.sequenceItems[i] == 'Leaf') {
-                ast.sequenceItems[i] = { token: token };
-                return true;
-            }
-            if (replaceLeafWithToken(ast.sequenceItems[i], token)) {
-                return true;
+            for (let j = 0; i < ast.sequenceItems[i].length; j++) {
+                if (ast.sequenceItems[i][j] == 'Leaf') {
+                    ast.sequenceItems[i][j] = { token: token };
+                    return true;
+                }
+                if (replaceLeafWithToken(ast.sequenceItems[i][j], token)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -866,12 +868,14 @@ const getRuleForNextEmptySlot = <Node, Token>(
         return ast.rule as any;
     } else if ('sequenceItems' in ast) {
         for (let i = 0; i < ast.sequenceItems.length; i++) {
-            const nextSequenceItemRule = getRuleForNextEmptySlot(ast.sequenceItems[i]);
-            if (nextSequenceItemRule) {
-                return nextSequenceItemRule;
+            for (let j = 0; j < ast.sequenceItems[i].length; j++) {
+                const nextSequenceItemRule = getRuleForNextEmptySlot(ast.sequenceItems[i][j]);
+                if (nextSequenceItemRule) {
+                    return nextSequenceItemRule;
+                }
             }
+            return undefined;
         }
-        return undefined;
     } else if ('token' in ast) {
         return undefined;
     }
@@ -887,12 +891,14 @@ const replaceNextEmptySlotWithProgress = <Node, Token>(
         return false;
     } else if ('sequenceItems' in ast) {
         for (let i = 0; i < ast.sequenceItems.length; i++) {
-            if ('rule' in (ast.sequenceItems[i] as any)) {
-                ast.sequenceItems[i] = progress;
-                return true;
-            }
-            if (replaceNextEmptySlotWithProgress(ast.sequenceItems[i], progress)) {
-                return true;
+            for (let j = 0; j < ast.sequenceItems[i].length; j++) {
+                if ('rule' in (ast.sequenceItems[i] as any)) {
+                    ast.sequenceItems[i][j] = progress;
+                    return true;
+                }
+                if (replaceNextEmptySlotWithProgress(ast.sequenceItems[i][j], progress)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -933,13 +939,14 @@ export const parseRule2 = <Node extends string, Token>(
             };
         }
         const tokenToProgress = getProgressMap(grammar, rule);
-        const progress = tokenToProgress.get(token as string);
-        if (progress === undefined) throw debug('bad result');
-        replaceLeafWithToken(progress, token);
+        const progress = tokenToProgress[token as string];
+        if (progress.length == 0) throw debug('bad result');
+        // TODO: Handle the case of multiple potential parses
+        replaceLeafWithToken(progress[0], token);
         if ('rule' in (ast as any)) {
-            ast = progress;
+            ast = progress[0];
         } else {
-            const ok = replaceNextEmptySlotWithProgress(ast, progress);
+            const ok = replaceNextEmptySlotWithProgress(ast, progress[0]);
             if (!ok) throw debug('not ok');
         }
     }
