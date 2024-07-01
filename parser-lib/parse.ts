@@ -4,7 +4,6 @@ import debug from '../util/debug';
 import { Graph } from 'graphlib';
 import SourceLocation from './sourceLocation';
 import { TokenSpec, lex, LexError } from './lex';
-import defaultdict from 'defaultdict-proxy';
 
 type ListNode<Node, Leaf> = { items: Ast<Node, Leaf>[] };
 export type SeparatedListNode<Node, Leaf> = {
@@ -751,7 +750,6 @@ const parseRule = <Node extends string, Token>(
 // TODO: The idea here is that we'll have a list of options for what the next token could be, and if the actual next token isn't any of them, we can give a good error. But maybe that can still be done if the token is always stored? That would be easier and probably faster.
 type PartialAst<Node, Token> =
     | EmptySlot<Node>
-    | 'Leaf'
     | PartialToken<Token>
     | PartialMany<Node, Token>
     | PartialSequence<Node, Token>
@@ -773,98 +771,89 @@ type PartialNested<Node, Token> = {
 type EmptySlot<Node> = {
     rule: Node;
 };
+type ExpectedToken<Token> = {
+    expected: Token[];
+};
 
-const getProgressMap = <Node extends string, Token>(
+const getPotentialAsts = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
-    parser: Parser<Node, Token>
-): Map<string, PartialAst<Node, Token>[]> => {
+    parser: Parser<Node, Token>,
+    token: Token
+): PartialAst<Node, Token>[] | ExpectedToken<Token> => {
     if (parser === undefined) throw debug('bad parser');
-    if (typeof parser == 'string') return getProgressMap(grammar, grammar[parser]);
-    const result: Map<string, PartialAst<Node, Token>[]> = defaultdict([]) as any;
+    if (typeof parser == 'string') return getPotentialAsts(grammar, grammar[parser], token);
     switch (parser.kind) {
         case 'terminal':
-            result[parser.token as string].push('Leaf');
-            break;
-        case 'many': {
-            for (const [key, value] of Object.entries(getProgressMap(grammar, parser.item))) {
-                result[key].push({ items: value });
+            if (parser.token === token) {
+                return [{ token }];
+            } else {
+                return { expected: [parser.token] };
             }
-            break;
+        case 'many': {
+            const result = getPotentialAsts(grammar, parser.item, token);
+            // Failed to even parse a single of the options
+            if ('expected' in result) {
+                return result;
+            }
+            return [{ items: result }];
         }
         case 'oneOf':
+            const errors: ExpectedToken<Token> = { expected: [] };
+            const partials: PartialAst<Node, Token>[] = [];
             for (const p of parser.parsers) {
-                for (const [key, value] of Object.entries(getProgressMap(grammar, p))) {
-                    result[key].push(...value);
+                const result = getPotentialAsts(grammar, p, token);
+                if ('expected' in result) {
+                    errors.expected.push(...result.expected);
+                } else {
+                    partials.push(...result);
                 }
             }
-            break;
+            if (partials.length > 0) {
+                return partials;
+            }
+            return errors;
         case 'sequence': {
-            for (const [key, value] of Object.entries(
-                getProgressMap(grammar, parser.parsers[0])
-            )) {
-                const empties: PartialAst<Node, Token>[][] = parser.parsers.map(p => ({
-                    rule: p,
-                })) as any;
-                empties[0] = value;
-                result[key].push({ sequenceItems: empties });
+            const result = getPotentialAsts(grammar, parser.parsers[0], token);
+            if ('expected' in result) {
+                return result;
             }
-            break;
+            const empties: PartialAst<Node, Token>[][] = parser.parsers.map(p => ({
+                rule: p,
+            })) as any;
+            empties[0] = result;
+            return [{ sequenceItems: empties }];
         }
-        case 'optional':
-            for (const [key, value] of Object.entries(getProgressMap(grammar, parser.parser))) {
-                result[key].push(...value);
+        case 'optional': {
+            const result = getPotentialAsts(grammar, parser.parser, token);
+            if ('expected' in result) {
+                return [];
+            } else {
+                return result;
             }
-            break;
-        case 'nested':
-            const subProgress = getProgressMap(grammar, parser.in.left);
-            for (const key of subProgress.keys()) {
-                subProgress[key].push({
-                    left: subProgress[key] as any,
+        }
+        case 'nested': {
+            const result = getPotentialAsts(grammar, parser.in.left, token);
+            if ('expected' in result) {
+                return result;
+            }
+            return [
+                {
+                    left: result as any,
                     enclosed: { rule: parser.kind as any },
                     right: { rule: parser.in.right as any },
-                });
-            }
-            break;
+                },
+            ];
+        }
         default: {
             throw debug(`unhandled: ${parser.kind}`);
         }
     }
-    return result;
-};
-
-const replaceLeafWithToken = <Node, Token>(
-    ast: PartialAst<Node, Token>,
-    token: Token
-): boolean => {
-    if (ast === 'Leaf') {
-        throw debug(`parent should handle`);
-    } else if ('rule' in ast) {
-        return false;
-    } else if ('sequenceItems' in ast) {
-        for (let i = 0; i < ast.sequenceItems.length; i++) {
-            for (let j = 0; i < ast.sequenceItems[i].length; j++) {
-                if (ast.sequenceItems[i][j] == 'Leaf') {
-                    ast.sequenceItems[i][j] = { token: token };
-                    return true;
-                }
-                if (replaceLeafWithToken(ast.sequenceItems[i][j], token)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    } else if ('token' in ast) {
-        return false;
-    }
-    throw debug(`unhandled: ${ast}`);
 };
 
 const getRuleForNextEmptySlot = <Node, Token>(
     ast: PartialAst<Node, Token>
 ): Parser<Node, Token> | undefined => {
-    if (ast === 'Leaf') {
-        return undefined;
-    } else if ('rule' in ast) {
+    if ('rule' in ast) {
         return ast.rule as any;
     } else if ('sequenceItems' in ast) {
         for (let i = 0; i < ast.sequenceItems.length; i++) {
@@ -885,9 +874,7 @@ const replaceNextEmptySlotWithProgress = <Node, Token>(
     ast: PartialAst<Node, Token>,
     progress: PartialAst<Node, Token>
 ): boolean => {
-    if (ast === 'Leaf') {
-        throw debug(`parent should handle`);
-    } else if ('rule' in ast) {
+    if ('rule' in ast) {
         return false;
     } else if ('sequenceItems' in ast) {
         for (let i = 0; i < ast.sequenceItems.length; i++) {
@@ -920,37 +907,44 @@ export const parseRule2 = <Node extends string, Token>(
 ): ParseResultWithIndex<Node, Token> => {
     const ruleParser: Parser<Node, Token> = grammar[rule];
     if (!ruleParser) throw debug(`invalid rule name: ${rule}`);
-    let ast: PartialAst<Node, Token> = { rule: ruleParser } as any;
+    let potentialAsts: PartialAst<Node, Token>[] = [{ rule: ruleParser }] as any;
     for (let i = 0; i < tokens.length; i++) {
         const token = tokens[i].type;
-        let rule = getRuleForNextEmptySlot(ast);
-        if (!rule) {
+        const errors: ExpectedToken<Token> = { expected: [] };
+        const partials: PartialAst<Node, Token>[] = [];
+        for (const potentialAst of potentialAsts) {
+            let rule = getRuleForNextEmptySlot(potentialAst);
+            if (!rule) {
+                errors.expected.push('endOfFile' as Token);
+                continue;
+            }
+            const result = getPotentialAsts(grammar, rule, token);
+            if ('expected' in result) {
+                errors.expected.push(...result.expected);
+            } else {
+                partials.push(...result);
+            }
+        }
+        if (partials.length == 0) {
             return {
                 kind: 'parseError',
-                errors: [
-                    {
-                        expected: 'endOfFile',
+                errors: errors.expected.map(token => {
+                    return {
+                        expected: token,
                         found: token,
                         foundTokenText: `${token}`,
                         sourceLocation: tokens[i].sourceLocation,
                         whileParsing: [],
-                    },
-                ],
+                    };
+                }) as unknown as ParseFailureInfo<Token>[],
             };
         }
-        const tokenToProgress = getProgressMap(grammar, rule);
-        const progress = tokenToProgress[token as string];
-        if (progress.length == 0) throw debug('bad result');
-        // TODO: Handle the case of multiple potential parses
-        replaceLeafWithToken(progress[0], token);
-        if ('rule' in (ast as any)) {
-            ast = progress[0];
-        } else {
-            const ok = replaceNextEmptySlotWithProgress(ast, progress[0]);
-            if (!ok) throw debug('not ok');
-        }
+        potentialAsts = partials;
     }
-    return partialAstToCompleteAst(ast);
+    if (potentialAsts.length > 1) {
+        throw debug('ambiguus parse');
+    }
+    return partialAstToCompleteAst(potentialAsts[0]);
 };
 
 export const useWipParser = false;
