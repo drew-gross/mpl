@@ -276,10 +276,10 @@ const parseSequence = <Node extends string, Token>(
 type ParserProgress<Node, Token> =
     | { kind: 'failed'; error: ParseError<Token> }
     | {
-          kind: 'progress';
-          parseResults: AstWithIndex<Node, Token>[];
-          subParserIndex: number;
-      };
+        kind: 'progress';
+        parseResults: AstWithIndex<Node, Token>[];
+        subParserIndex: number;
+    };
 
 const parseAlternative = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -753,12 +753,14 @@ type PartialAst<Node, Token> =
     | PartialToken<Token>
     | PartialMany<Node, Token>
     | PartialSequence<Node, Token>
-    | PartialNested<Node, Token>;
+    | PartialNested<Node, Token>
+    | PartialOptional<Node, Token>;
 type PartialMany<Node, Token> = {
     items: PartialAst<Node, Token>[];
 };
 type PartialSequence<Node, Token> = {
     sequenceItems: PartialAst<Node, Token>[][];
+    name: string;
 };
 type PartialToken<Token> = {
     token: Token;
@@ -767,6 +769,10 @@ type PartialNested<Node, Token> = {
     left: PartialAst<Node, Token>;
     enclosed: PartialAst<Node, Token>;
     right: PartialAst<Node, Token>;
+};
+type PartialOptional<Node, Token> = {
+    present: boolean;
+    item?: PartialAst<Node, Token>;
 };
 type EmptySlot<Node> = {
     rule: Node;
@@ -813,22 +819,29 @@ const getPotentialAsts = <Node extends string, Token>(
             }
             return errors;
         case 'sequence': {
-            const result = getPotentialAsts(grammar, parser.parsers[0], token);
-            if ('expected' in result) {
-                return result;
+            for (const seqParser of parser.parsers) {
+                const result = getPotentialAsts(grammar, seqParser, token);
+                const resultIsMissingOptional = r => Array.isArray(r) && r.length === 1 && 'present' in r[0] && r[0].present == false;
+                if (resultIsMissingOptional(result)) {
+                    continue;
+                }
+                if ('expected' in result) {
+                    return result;
+                }
+                const empties: PartialAst<Node, Token>[][] = parser.parsers.map(p => ({
+                    rule: p,
+                })) as any;
+                empties[0] = result;
+                return [{ sequenceItems: empties, name: parser.name }];
             }
-            const empties: PartialAst<Node, Token>[][] = parser.parsers.map(p => ({
-                rule: p,
-            })) as any;
-            empties[0] = result;
-            return [{ sequenceItems: empties }];
+            throw debug('All optionals of sequence missing');
         }
         case 'optional': {
             const result = getPotentialAsts(grammar, parser.parser, token);
             if ('expected' in result) {
-                return [];
+                return [{ present: false }];
             } else {
-                return result;
+                return result.map(partial => ({ present: true, item: partial }));
             }
         }
         case 'nested': {
@@ -863,34 +876,18 @@ const getRuleForNextEmptySlot = <Node, Token>(
                     return nextSequenceItemRule;
                 }
             }
-            return undefined;
         }
+        return undefined;
     } else if ('token' in ast) {
         return undefined;
-    }
-    throw debug(`unhandled: ${ast}`);
-};
-const replaceNextEmptySlotWithProgress = <Node, Token>(
-    ast: PartialAst<Node, Token>,
-    progress: PartialAst<Node, Token>
-): boolean => {
-    if ('rule' in ast) {
-        return false;
-    } else if ('sequenceItems' in ast) {
-        for (let i = 0; i < ast.sequenceItems.length; i++) {
-            for (let j = 0; j < ast.sequenceItems[i].length; j++) {
-                if ('rule' in (ast.sequenceItems[i] as any)) {
-                    ast.sequenceItems[i][j] = progress;
-                    return true;
-                }
-                if (replaceNextEmptySlotWithProgress(ast.sequenceItems[i][j], progress)) {
-                    return true;
-                }
-            }
+    } else if ('present' in ast) {
+        if (!ast.present) {
+            return undefined;
+        } else if (ast.item) {
+            return getRuleForNextEmptySlot(ast.item);
+        } else {
+            throw debug('bad item');
         }
-        return false;
-    } else if ('token' in ast) {
-        return false;
     }
     throw debug(`unhandled: ${ast}`);
 };
@@ -947,7 +944,7 @@ export const parseRule2 = <Node extends string, Token>(
     return partialAstToCompleteAst(potentialAsts[0]);
 };
 
-export const useWipParser = false;
+export const useWipParser = true;
 
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
