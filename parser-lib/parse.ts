@@ -753,6 +753,7 @@ type PartialAst<Node, Token> =
     | PartialToken<Token>
     | PartialMany<Node, Token>
     | PartialSequence<Node, Token>
+    | PartialSeparatedList<Node, Token>
     | PartialNested<Node, Token>
     | PartialOptional<Node, Token>;
 type PartialMany<Node, Token> = {
@@ -761,6 +762,10 @@ type PartialMany<Node, Token> = {
 type PartialSequence<Node, Token> = {
     sequenceItems: PartialAst<Node, Token>[];
     name: string;
+};
+type PartialSeparatedList<Node, Token> = {
+    items: PartialAst<Node, Token>[];
+    separators: PartialAst<Node, Token>[];
 };
 type PartialToken<Token> = {
     token: Token;
@@ -865,8 +870,15 @@ const getPotentialAsts = <Node extends string, Token>(
                 },
             ];
         }
+        case 'separatedList': {
+            const result = getPotentialAsts(grammar, parser.item, token);
+            if ('expected' in result) {
+                return result;
+            }
+            return result.map(partial => ({ items: [partial], separators: [] }));
+        }
         default: {
-            throw debug(`unhandled: ${parser.kind}`);
+            throw debug(`unhandled parser kind`);
         }
     }
 };
