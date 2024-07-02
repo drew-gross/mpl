@@ -45,12 +45,14 @@
         "parallelshell": "3.0.2"
     },
     "dependencies": {
+        "@types/deep-diff": "1.0.5",
         "@types/node": "13.9.3",
         "ava": "6.1.2",
         "chalk": "3.0.0",
         "child-process-promise": "2.2.1",
         "cli-table3": "0.6.5",
         "deep-copy-ts": "0.5.4",
+        "deep-diff": "1.0.2",
         "deep-equal": "2.0.1",
         "defaultdict-proxy": "1.0.1",
         "eslint": "9.3.0",

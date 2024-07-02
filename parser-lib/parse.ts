@@ -5,6 +5,7 @@ import { Graph } from 'graphlib';
 import SourceLocation from './sourceLocation';
 import { TokenSpec, lex, LexError } from './lex';
 import { deepCopy } from 'deep-copy-ts';
+const diff = require('deep-diff');
 
 type ListNode<Node, Leaf> = { items: Ast<Node, Leaf>[] };
 export type SeparatedListNode<Node, Leaf> = {
@@ -762,6 +763,7 @@ type PartialMany<Node, Token> = {
 type PartialSequence<Node, Token> = {
     sequenceItems: PartialAst<Node, Token>[];
     name: string;
+    sourceLocation: SourceLocation;
 };
 type PartialSeparatedList<Node, Token> = {
     items: PartialAst<Node, Token>[];
@@ -770,6 +772,7 @@ type PartialSeparatedList<Node, Token> = {
 type PartialToken<Token> = {
     tokenType: Token;
     value: LeafValue;
+    ltoken: LToken<Token>;
 };
 type PartialNested<Node, Token> = {
     left: PartialAst<Node, Token>;
@@ -797,7 +800,7 @@ const getPotentialAsts = <Node extends string, Token>(
     switch (parser.kind) {
         case 'terminal':
             if (parser.token === token.type) {
-                return [{ tokenType: token.type, value: token.value }];
+                return [{ tokenType: token.type, value: token.value, ltoken: token }];
             } else {
                 return { expected: [parser.token] };
             }
@@ -846,6 +849,7 @@ const getPotentialAsts = <Node extends string, Token>(
                 return result.map(partial => ({
                     sequenceItems: [partial, ...empties],
                     name: parser.name,
+                    sourceLocation: token.sourceLocation,
                 }));
             }
             throw debug('All optionals of sequence missing');
@@ -959,7 +963,7 @@ const partialAstToCompleteAst = <Node, Token>(
             newIndex: 0,
             type: ast.name as Node,
             children: ast.sequenceItems.map(partialAstToCompleteAst),
-            sourceLocation: { line: 0, column: 0 },
+            sourceLocation: ast.sourceLocation,
         };
     } else if ('tokenType' in ast) {
         return {
@@ -967,7 +971,7 @@ const partialAstToCompleteAst = <Node, Token>(
             newIndex: 0,
             type: ast.tokenType,
             value: ast.value,
-            sourceLocation: { line: 0, column: 0 },
+            sourceLocation: ast.ltoken.sourceLocation,
         };
     } else {
         throw debug(`unhandled conversion: ${ast}`);
@@ -1021,7 +1025,7 @@ export const parseRule2 = <Node extends string, Token>(
     if (potentialAsts.length > 1) {
         throw debug('ambiguus parse');
     }
-    return partialAstToCompleteAst(potentialAsts[0]);
+    return stripResultIndexes(partialAstToCompleteAst(potentialAsts[0]));
 };
 
 export const useWipParser = false;
@@ -1031,9 +1035,6 @@ export const parse = <Node extends string, Token>(
     firstRule: Node,
     tokens: LToken<Token>[]
 ): ParseResult<Node, Token> => {
-    if (useWipParser) {
-        return parseRule2(grammar, firstRule, tokens);
-    }
     const result = parseRule(grammar, firstRule, tokens, 0);
     if (parseResultIsError(result)) return result;
     if (result.newIndex != tokens.length) {
@@ -1052,7 +1053,16 @@ export const parse = <Node extends string, Token>(
             ],
         };
     }
-    return stripResultIndexes(result);
+    const strippedResult = stripResultIndexes(result);
+    if (useWipParser) {
+        const wipResult = parseRule2(grammar, firstRule, tokens);
+        const resultDiff = diff(wipResult, strippedResult);
+        console.log(resultDiff);
+        if (resultDiff) debugger;
+        parseRule2(grammar, firstRule, tokens);
+        return wipResult;
+    }
+    return strippedResult;
 };
 
 export const parseString = <Node extends string, Token>(
