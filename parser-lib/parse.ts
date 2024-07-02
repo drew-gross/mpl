@@ -1054,7 +1054,8 @@ export const parse = <Node extends string, Token>(
         };
     }
     const strippedResult = stripResultIndexes(result);
-    if (useWipParser) {
+    // Not ready to use wip parser for tac yet, tac grammar has global
+    if (useWipParser && !('global' in grammar)) {
         const wipResult = parseRule2(grammar, firstRule, tokens);
         const resultDiff = diff(wipResult, strippedResult);
         console.log(resultDiff);

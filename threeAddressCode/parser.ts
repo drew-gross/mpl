@@ -17,7 +17,6 @@ import {
     ParseFailureInfo,
     isListNode,
     isSeparatedListNode,
-    useWipParser,
 } from '../parser-lib/parse';
 import renderParseError from '../parser-lib/renderParseError';
 
@@ -653,7 +652,6 @@ export const parseInstructions = (input: string): Statement[] | LexError | Parse
 };
 
 export const parseInstructionsOrDie = (tacString: string): Statement[] => {
-    if (useWipParser) return [];
     const parsed = parseInstructions(tacString);
     if ('kind' in parsed) {
         debugger;
