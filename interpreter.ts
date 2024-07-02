@@ -375,7 +375,8 @@ export const interpretProgram = (
 ): ExecutionResult => {
     /* tslint:disable-next-line */
     let mainResult = interpretFunction(program, args, state);
-    if (typeof mainResult !== 'number') throw debug('main should return a number');
+    if (typeof mainResult !== 'number')
+        throw debug(`main should return a number. got: ${mainResult}`);
     return {
         exitCode: mainResult,
         stdout: '',

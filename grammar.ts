@@ -9,6 +9,7 @@ import {
     Optional,
     Many,
     NestedIn,
+    useWipParser,
 } from './parser-lib/parse';
 import { TokenSpec } from './parser-lib/lex';
 
@@ -225,7 +226,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         'expression',
         comma,
     ]),
-    expression: 'ternary',
+    expression: useWipParser ? 'listLiteral' : 'ternary',
     ternary: OneOf([
         Sequence('ternary', ['addition', ternaryOperator, 'addition', colon, 'addition']),
         'addition',

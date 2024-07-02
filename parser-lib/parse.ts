@@ -4,6 +4,7 @@ import debug from '../util/debug';
 import { Graph } from 'graphlib';
 import SourceLocation from './sourceLocation';
 import { TokenSpec, lex, LexError } from './lex';
+import { deepCopy } from 'deep-copy-ts';
 
 type ListNode<Node, Leaf> = { items: Ast<Node, Leaf>[] };
 export type SeparatedListNode<Node, Leaf> = {
@@ -747,7 +748,6 @@ const parseRule = <Node extends string, Token>(
     return parseAnything(grammar, childrenParser, tokens, index);
 };
 
-// TODO: The idea here is that we'll have a list of options for what the next token could be, and if the actual next token isn't any of them, we can give a good error. But maybe that can still be done if the token is always stored? That would be easier and probably faster.
 type PartialAst<Node, Token> =
     | EmptySlot<Node, Token>
     | PartialToken<Token>
@@ -768,7 +768,8 @@ type PartialSeparatedList<Node, Token> = {
     separators: PartialAst<Node, Token>[];
 };
 type PartialToken<Token> = {
-    token: Token;
+    tokenType: Token;
+    value: LeafValue;
 };
 type PartialNested<Node, Token> = {
     left: PartialAst<Node, Token>;
@@ -789,14 +790,14 @@ type ExpectedToken<Token> = {
 const getPotentialAsts = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     parser: Parser<Node, Token>,
-    token: Token
+    token: LToken<Token>
 ): PartialAst<Node, Token>[] | ExpectedToken<Token> => {
     if (parser === undefined) throw debug('bad parser');
     if (typeof parser == 'string') return getPotentialAsts(grammar, grammar[parser], token);
     switch (parser.kind) {
         case 'terminal':
-            if (parser.token === token) {
-                return [{ token }];
+            if (parser.token === token.type) {
+                return [{ tokenType: token.type, value: token.value }];
             } else {
                 return { expected: [parser.token] };
             }
@@ -899,7 +900,7 @@ const getRuleForNextEmptySlot = <Node, Token>(
             }
         }
         return undefined;
-    } else if ('token' in ast) {
+    } else if ('tokenType' in ast) {
         return undefined;
     } else if ('present' in ast) {
         if (!ast.present) {
@@ -912,22 +913,76 @@ const getRuleForNextEmptySlot = <Node, Token>(
     }
     throw debug(`unhandled: ${ast}`);
 };
+const replaceRuleForNextEmptySlotWithPartial = <Node, Token>(
+    ast: PartialAst<Node, Token>,
+    replacement: PartialAst<Node, Token>
+): boolean => {
+    if ('rule' in ast) {
+        delete (ast as any).rule;
+        Object.assign(ast, replacement);
+        return true;
+    } else if ('sequenceItems' in ast) {
+        for (const item of ast.sequenceItems) {
+            if (replaceRuleForNextEmptySlotWithPartial(item, replacement)) {
+                return true;
+            }
+        }
+        return false;
+    } else if ('tokenType' in ast) {
+        return false;
+    } else if ('present' in ast) {
+        if (!ast.present) {
+            return false;
+        } else if (ast.item) {
+            return replaceRuleForNextEmptySlotWithPartial(ast.item, replacement);
+        } else {
+            throw debug('bad item');
+        }
+    }
+    throw debug(`unhandled: ${ast}`);
+};
 const partialAstToCompleteAst = <Node, Token>(
     ast: PartialAst<Node, Token>
-): ParseResultWithIndex<Node, Token> => {
-    throw debug(`unimplemented: ${ast}`);
+): AstWithIndex<Node, Token> => {
+    if ('rule' in ast) {
+        throw debug('was supposed to be complete');
+    } else if ('sequenceItems' in ast) {
+        const sequenceHasTrailingMissingOptional = seq => {
+            const backItem = seq[seq.length - 1];
+            return 'rule' in backItem && backItem.rule.kind == 'optional';
+        };
+        while (sequenceHasTrailingMissingOptional(ast.sequenceItems)) {
+            ast.sequenceItems.pop();
+        }
+        return {
+            success: true,
+            newIndex: 0,
+            type: ast.name as Node,
+            children: ast.sequenceItems.map(partialAstToCompleteAst),
+            sourceLocation: { line: 0, column: 0 },
+        };
+    } else if ('tokenType' in ast) {
+        return {
+            success: true,
+            newIndex: 0,
+            type: ast.tokenType,
+            value: ast.value,
+            sourceLocation: { line: 0, column: 0 },
+        };
+    } else {
+        throw debug(`unhandled conversion: ${ast}`);
+    }
 };
 
 export const parseRule2 = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     rule: Node,
     tokens: LToken<Token>[]
-): ParseResultWithIndex<Node, Token> => {
+): ParseResult<Node, Token> => {
     const ruleParser: Parser<Node, Token> = grammar[rule];
     if (!ruleParser) throw debug(`invalid rule name: ${rule}`);
     let potentialAsts: PartialAst<Node, Token>[] = [{ rule: ruleParser }] as any;
-    for (let i = 0; i < tokens.length; i++) {
-        const token = tokens[i].type;
+    for (const token of tokens) {
         const errors: ExpectedToken<Token> = { expected: [] };
         const partials: PartialAst<Node, Token>[] = [];
         for (const potentialAst of potentialAsts) {
@@ -940,7 +995,11 @@ export const parseRule2 = <Node extends string, Token>(
             if ('expected' in result) {
                 errors.expected.push(...result.expected);
             } else {
-                partials.push(...result);
+                for (const newProgress of result) {
+                    const existingProgress = deepCopy(potentialAst);
+                    replaceRuleForNextEmptySlotWithPartial(existingProgress, newProgress);
+                    partials.push(existingProgress);
+                }
             }
         }
         if (partials.length == 0) {
@@ -951,7 +1010,7 @@ export const parseRule2 = <Node extends string, Token>(
                         expected: token,
                         found: token,
                         foundTokenText: `${token}`,
-                        sourceLocation: tokens[i].sourceLocation,
+                        sourceLocation: { line: 0, column: 0 },
                         whileParsing: [],
                     };
                 }) as unknown as ParseFailureInfo<Token>[],
@@ -972,9 +1031,10 @@ export const parse = <Node extends string, Token>(
     firstRule: Node,
     tokens: LToken<Token>[]
 ): ParseResult<Node, Token> => {
-    const result = useWipParser
-        ? parseRule2(grammar, firstRule, tokens)
-        : parseRule(grammar, firstRule, tokens, 0);
+    if (useWipParser) {
+        return parseRule2(grammar, firstRule, tokens);
+    }
+    const result = parseRule(grammar, firstRule, tokens, 0);
     if (parseResultIsError(result)) return result;
     if (result.newIndex != tokens.length) {
         const firstExtraToken = tokens[result.newIndex];
