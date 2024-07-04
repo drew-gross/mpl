@@ -867,13 +867,11 @@ const getPotentialAsts = <Node extends string, Token>(
             if ('expected' in result) {
                 return result;
             }
-            return [
-                {
-                    left: result as any,
-                    enclosed: { rule: parser.kind },
-                    right: { rule: parser.in.right },
-                },
-            ];
+            return result.map(partial => ({
+                left: partial,
+                enclosed: { rule: parser.parser },
+                right: { rule: parser.in.right },
+            }));
         }
         case 'separatedList': {
             const result = getPotentialAsts(grammar, parser.item, token);
@@ -914,6 +912,16 @@ const getRuleForNextEmptySlot = <Node, Token>(
         } else {
             throw debug('bad item');
         }
+    } else if ('left' in ast) {
+        const left = getRuleForNextEmptySlot(ast.left);
+        if (left) {
+            return left;
+        }
+        const enclosed = getRuleForNextEmptySlot(ast.enclosed);
+        if (enclosed) {
+            return enclosed;
+        }
+        return getRuleForNextEmptySlot(ast.right);
     }
     throw debug(`unhandled: ${ast}`);
 };
@@ -942,6 +950,14 @@ const replaceRuleForNextEmptySlotWithPartial = <Node, Token>(
         } else {
             throw debug('bad item');
         }
+    } else if ('left' in ast) {
+        if (replaceRuleForNextEmptySlotWithPartial(ast.left, replacement)) {
+            return true;
+        }
+        if (replaceRuleForNextEmptySlotWithPartial(ast.enclosed, replacement)) {
+            return true;
+        }
+        return replaceRuleForNextEmptySlotWithPartial(ast.right, replacement);
     }
     throw debug(`unhandled: ${ast}`);
 };
@@ -973,9 +989,11 @@ const partialAstToCompleteAst = <Node, Token>(
             value: ast.value,
             sourceLocation: ast.ltoken.sourceLocation,
         };
-    } else {
-        throw debug(`unhandled conversion: ${ast}`);
+    } else if ('left' in ast) {
+        // TODO: Return into about the separators? Maybe only if asked.
+        return partialAstToCompleteAst(ast.enclosed);
     }
+    throw debug(`unhandled conversion: ${ast}`);
 };
 
 export const parseRule2 = <Node extends string, Token>(
