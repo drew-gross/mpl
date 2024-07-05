@@ -119,13 +119,24 @@ const stripNodeIndexes = <Node, Leaf>(r: AstWithIndex<Node, Leaf>): Ast<Node, Le
     if (parseResultWithIndexIsList(r)) {
         return { items: r.items.map(stripNodeIndexes) };
     }
+    // TODO: Should fix optional handling to work more like the new parser when skipping missing items
     if ('item' in r) {
-        throw debug('new optional handling');
+        throw debug('TODO: better optional handling');
     }
     if (!r.children) debug('expected children');
+    const childrenWithFixedOptionals: any[] = [];
+    for (const c of r.children) {
+        if ('item' in c) {
+            if (c.item) {
+                childrenWithFixedOptionals.push(c.item);
+            }
+        } else {
+            childrenWithFixedOptionals.push(c);
+        }
+    }
     return {
         type: r.type,
-        children: r.children.map(stripNodeIndexes),
+        children: childrenWithFixedOptionals.map(stripNodeIndexes) as any,
         sourceLocation: r.sourceLocation,
     };
 };
@@ -1230,7 +1241,7 @@ export const parseRule2 = <Node extends string, Token>(
     return stripResultIndexes(partialAstToCompleteAst(completeAsts[0]));
 };
 
-export const useWipParser = true;
+export const useWipParser = false;
 
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
