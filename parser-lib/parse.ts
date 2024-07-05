@@ -278,10 +278,10 @@ const parseSequence = <Node extends string, Token>(
 type ParserProgress<Node, Token> =
     | { kind: 'failed'; error: ParseError<Token> }
     | {
-          kind: 'progress';
-          parseResults: AstWithIndex<Node, Token>[];
-          subParserIndex: number;
-      };
+        kind: 'progress';
+        parseResults: AstWithIndex<Node, Token>[];
+        subParserIndex: number;
+    };
 
 const parseAlternative = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -754,6 +754,7 @@ type PartialAst<Node, Token> =
     | PartialToken<Token>
     | PartialMany<Node, Token>
     | PartialSequence<Node, Token>
+    | EmptySeparatedList
     | PartialSeparatedList<Node, Token>
     | PartialNested<Node, Token>
     | PartialOptional<Node, Token>;
@@ -765,9 +766,14 @@ type PartialSequence<Node, Token> = {
     name: string;
     sourceLocation: SourceLocation;
 };
+type EmptySeparatedList = {
+    emptySeparatedList: true,
+}
+// TOOD: Maybe use separate types for separated list with and without more items?
 type PartialSeparatedList<Node, Token> = {
-    items: PartialAst<Node, Token>[];
-    separators: PartialAst<Node, Token>[];
+    item: PartialAst<Node, Token>;
+    separator?: PartialAst<Node, Token>;
+    remainingItems?: PartialSeparatedList<Node, Token>;
 };
 type PartialToken<Token> = {
     tokenType: Token;
@@ -790,17 +796,21 @@ type ExpectedToken<Token> = {
     expected: Token[];
 };
 
+type PotentialAstsResult<Node, Token> = {
+    partial: PartialAst<Node, Token>;
+    madeProgress: boolean;
+}
 const getPotentialAsts = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     parser: Parser<Node, Token>,
     token: LToken<Token>
-): PartialAst<Node, Token>[] | ExpectedToken<Token> => {
+): PotentialAstsResult<Node, Token>[] | ExpectedToken<Token> => {
     if (parser === undefined) throw debug('bad parser');
     if (typeof parser == 'string') return getPotentialAsts(grammar, grammar[parser], token);
     switch (parser.kind) {
         case 'terminal':
             if (parser.token === token.type) {
-                return [{ tokenType: token.type, value: token.value, ltoken: token }];
+                return [{ partial: { tokenType: token.type, value: token.value, ltoken: token }, madeProgress: true }];
             } else {
                 return { expected: [parser.token] };
             }
@@ -810,11 +820,11 @@ const getPotentialAsts = <Node extends string, Token>(
             if ('expected' in result) {
                 return result;
             }
-            return [{ items: result }];
+            return result.map(({ partial, madeProgress }) => [{ partial: { items: [partial] }, madeProgress: madeProgress }]).flat();
         }
         case 'oneOf':
             const errors: ExpectedToken<Token> = { expected: [] };
-            const partials: PartialAst<Node, Token>[] = [];
+            const partials: PotentialAstsResult<Node, Token>[] = [];
             for (const p of parser.parsers) {
                 const result = getPotentialAsts(grammar, p, token);
                 if ('expected' in result) {
@@ -830,6 +840,7 @@ const getPotentialAsts = <Node extends string, Token>(
         case 'sequence': {
             for (const seqParser of parser.parsers) {
                 const result = getPotentialAsts(grammar, seqParser, token);
+                // TODO: Solve this more like empty separated list
                 const resultIsMissingOptional = r =>
                     Array.isArray(r) &&
                     r.length === 1 &&
@@ -846,10 +857,12 @@ const getPotentialAsts = <Node extends string, Token>(
                 }));
                 // remove first element and replace it with successful partial parse
                 empties.shift();
-                return result.map(partial => ({
-                    sequenceItems: [partial, ...empties],
-                    name: parser.name,
-                    sourceLocation: token.sourceLocation,
+                return result.map(({ partial, madeProgress }) => ({
+                    partial: {
+                        sequenceItems: [partial, ...empties],
+                        name: parser.name,
+                        sourceLocation: token.sourceLocation,
+                    }, madeProgress: madeProgress
                 }));
             }
             throw debug('All optionals of sequence missing');
@@ -857,9 +870,9 @@ const getPotentialAsts = <Node extends string, Token>(
         case 'optional': {
             const result = getPotentialAsts(grammar, parser.parser, token);
             if ('expected' in result) {
-                return [{ present: false }];
+                return [{ partial: { present: false }, madeProgress: false }];
             } else {
-                return result.map(partial => ({ present: true, item: partial }));
+                return result.map(({ partial, madeProgress }) => ({ partial: { present: true, item: partial }, madeProgress: madeProgress }));
             }
         }
         case 'nested': {
@@ -867,18 +880,23 @@ const getPotentialAsts = <Node extends string, Token>(
             if ('expected' in result) {
                 return result;
             }
-            return result.map(partial => ({
-                left: partial,
-                enclosed: { rule: parser.parser },
-                right: { rule: parser.in.right },
-            }));
+            return result.map(({ partial, madeProgress }) => ({
+                partial: {
+                    left: partial,
+                    enclosed: { rule: parser.parser },
+                    right: { rule: parser.in.right },
+                }, madeProgress
+            }))
         }
         case 'separatedList': {
             const result = getPotentialAsts(grammar, parser.item, token);
             if ('expected' in result) {
                 return result;
             }
-            return result.map(partial => ({ items: [partial], separators: [] }));
+            // TODO: Include already parsed items and separators somehow
+            const parseWithNoMoreItems = result.map(({ partial, madeProgress }) => ({ partial: { item: partial }, madeProgress: madeProgress }));
+            const parsesWithMoreItems = result.map(({ partial, madeProgress }) => ({ partial: { item: partial, separator: { rule: parser.separator }, remainingItems: { rule: parser } }, madeProgress }));
+            return [{ partial: { 'emptySeparatedList': true }, madeProgress: false }, ...parseWithNoMoreItems, ...parsesWithMoreItems];
         }
         default: {
             throw debug(`unhandled parser kind`);
@@ -922,6 +940,25 @@ const getRuleForNextEmptySlot = <Node, Token>(
             return enclosed;
         }
         return getRuleForNextEmptySlot(ast.right);
+    } else if ('separator' in ast) {
+        // If the last item isn't finished, we need to finish it before looking for the separator
+        const item = getRuleForNextEmptySlot(ast.item);
+        if (item) { return item; }
+        // If there is no separator there is no next item
+        if (!ast.separator) { return undefined; }
+        // If the last separator isn't finished, finish the separator
+        const sep = getRuleForNextEmptySlot(ast.separator);
+        if (sep) { return sep; }
+        // If there is no option for a new item, this node is finished
+        if (!ast.remainingItems) { return undefined; }
+        // Otherwise finish the next item
+        return getRuleForNextEmptySlot(ast.remainingItems);
+    } else if ('item' in ast) {
+        return getRuleForNextEmptySlot(ast.item);
+    } else if ('emptySeparatedList' in ast) {
+        return undefined;
+    } else if ('kind' in ast) {
+        ast
     }
     throw debug(`unhandled: ${ast}`);
 };
@@ -958,6 +995,15 @@ const replaceRuleForNextEmptySlotWithPartial = <Node, Token>(
             return true;
         }
         return replaceRuleForNextEmptySlotWithPartial(ast.right, replacement);
+    } else if ('separator' in ast) {
+        if (replaceRuleForNextEmptySlotWithPartial(ast.item, replacement)) { return true; }
+        if (ast.separator && replaceRuleForNextEmptySlotWithPartial(ast.separator, replacement)) {
+            return true;
+        }
+        if (!ast.remainingItems) { return false; }
+        return replaceRuleForNextEmptySlotWithPartial(ast.remainingItems, replacement);
+    } else if ('item' in ast) {
+        return replaceRuleForNextEmptySlotWithPartial(ast.item, replacement);
     }
     throw debug(`unhandled: ${ast}`);
 };
@@ -992,8 +1038,68 @@ const partialAstToCompleteAst = <Node, Token>(
     } else if ('left' in ast) {
         // TODO: Return into about the separators? Maybe only if asked.
         return partialAstToCompleteAst(ast.enclosed);
+    } else if ('emptySeparatedList' in ast) {
+        return {
+            items: [],
+            separators: [],
+            newIndex: 0,
+        };
+    } else if ('present' in ast) {
+        // TODO: handle optional
+    } else if ('separator' in ast) {
+        const flattenPartialSeparatedList = (list: PartialSeparatedList<Node, Token>) => {
+            const item = partialAstToCompleteAst(list.item);
+            const newSeparators = list.separator ? [partialAstToCompleteAst(list.separator)] : [];
+            const { items, separators } = list.remainingItems ? flattenPartialSeparatedList(list.remainingItems) : { items: [], separators: [] };
+            return { items: [item, ...items], separators: [...newSeparators, ...separators] };
+        }
+        return {
+            ...flattenPartialSeparatedList(ast),
+            newIndex: 0,
+        }
+    } else if ('item' in ast) {
+        return {
+            items: [partialAstToCompleteAst(ast.item)],
+            separators: [],
+            newIndex: 0,
+        }
     }
     throw debug(`unhandled conversion: ${ast}`);
+};
+
+// TODO: Return errors OR partials, at this layer we don't need both.
+const applyTokenToPartialParse = <Node, Token>(grammar: Grammar<Node, Token>, partial: PartialAst<Node, Token>, token: LToken<Token>) => {
+    const errors: ExpectedToken<Token> = { expected: [] };
+    const partials: PartialAst<Node, Token>[] = [];
+    let rule = getRuleForNextEmptySlot(partial);
+    if (!rule) {
+        errors.expected.push('endOfFile' as Token);
+        return { errors, partials };
+    }
+    const result = getPotentialAsts(grammar, rule, token);
+    // Couldn't find any valid continuations: Must be an error
+    if ('expected' in result) {
+        errors.expected.push(...result.expected);
+    } else {
+        // If we found a missing optional or an empty list, we need to apply the token to the next item.
+        const reapplied: any[] = [];
+        for (const newProgress of result) {
+            if (!newProgress.madeProgress) {
+                const appliedToNext = applyTokenToPartialParse(grammar, newProgress.partial, token);
+                errors.expected.push(...appliedToNext.errors.expected);
+                reapplied.push(...appliedToNext.partials);
+            } else {
+                reapplied.push(newProgress);
+            }
+        }
+        for (const newProgress of reapplied) {
+            const existingProgress = deepCopy(partial);
+            if (replaceRuleForNextEmptySlotWithPartial(existingProgress, newProgress.partial)) {
+                partials.push(existingProgress);
+            };
+        }
+    }
+    return { errors, partials };
 };
 
 export const parseRule2 = <Node extends string, Token>(
@@ -1001,27 +1107,21 @@ export const parseRule2 = <Node extends string, Token>(
     rule: Node,
     tokens: LToken<Token>[]
 ): ParseResult<Node, Token> => {
-    const ruleParser: Parser<Node, Token> = grammar[rule];
+    let ruleParser: Parser<Node, Token> = grammar[rule];
     if (!ruleParser) throw debug(`invalid rule name: ${rule}`);
     let potentialAsts: PartialAst<Node, Token>[] = [{ rule: ruleParser }] as any;
+    // Inelegant hack to handle case of no tokens, but that is valid for the grammar
+    if (typeof ruleParser !== 'string' && ruleParser.kind == 'separatedList') {
+        potentialAsts.push({ emptySeparatedList: true });
+    }
     for (const token of tokens) {
         const errors: ExpectedToken<Token> = { expected: [] };
         const partials: PartialAst<Node, Token>[] = [];
         for (const potentialAst of potentialAsts) {
-            let rule = getRuleForNextEmptySlot(potentialAst);
-            if (!rule) {
-                errors.expected.push('endOfFile' as Token);
-                continue;
-            }
-            const result = getPotentialAsts(grammar, rule, token);
-            if ('expected' in result) {
-                errors.expected.push(...result.expected);
-            } else {
-                for (const newProgress of result) {
-                    const existingProgress = deepCopy(potentialAst);
-                    replaceRuleForNextEmptySlotWithPartial(existingProgress, newProgress);
-                    partials.push(existingProgress);
-                }
+            const { errors: newErrors, partials: newPartials } = applyTokenToPartialParse(grammar, potentialAst, token);
+            partials.push(...newPartials);
+            for (const newError in newErrors.expected) {
+                errors.expected.push(newError as Token);
             }
         }
         if (partials.length == 0) {
@@ -1040,13 +1140,27 @@ export const parseRule2 = <Node extends string, Token>(
         }
         potentialAsts = partials;
     }
-    if (potentialAsts.length > 1) {
+    const completeAsts: PartialAst<Node, Token>[] = [];
+    const incompleteAsts: PartialAst<Node, Token>[] = [];
+    for (const potentialAst of potentialAsts) {
+        const rule = getRuleForNextEmptySlot(potentialAst);
+        if (rule) {
+            incompleteAsts.push(potentialAst);
+        } else {
+            completeAsts.push(potentialAst)
+        }
+    }
+    if (completeAsts.length > 1) {
         throw debug('ambiguus parse');
     }
-    return stripResultIndexes(partialAstToCompleteAst(potentialAsts[0]));
+    if (completeAsts.length < 0) {
+        // TODO: give good error about extra tokens
+        throw debug('no parse');
+    }
+    return stripResultIndexes(partialAstToCompleteAst(completeAsts[0]));
 };
 
-export const useWipParser = false;
+export const useWipParser = true;
 
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
