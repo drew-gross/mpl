@@ -50,7 +50,8 @@ type AstWithIndex<Node, Token> =
     | NodeWithIndex<Node, Token>
     | LeafWithIndex<Token>
     | SeparatedListWithIndex<Node, Token>
-    | ManyWithIndex<Node, Token>;
+    | ManyWithIndex<Node, Token>
+    | OptionalWithIndex<Node, Token>;
 
 type SeparatedListWithIndex<Node, Token> = {
     items: AstWithIndex<Node, Token>[];
@@ -60,6 +61,11 @@ type SeparatedListWithIndex<Node, Token> = {
 
 type ManyWithIndex<Node, Token> = {
     items: AstWithIndex<Node, Token>[];
+    newIndex: number;
+};
+
+type OptionalWithIndex<Node, Token> = {
+    item: AstWithIndex<Node, Token> | undefined;
     newIndex: number;
 };
 
@@ -112,6 +118,9 @@ const stripNodeIndexes = <Node, Leaf>(r: AstWithIndex<Node, Leaf>): Ast<Node, Le
     }
     if (parseResultWithIndexIsList(r)) {
         return { items: r.items.map(stripNodeIndexes) };
+    }
+    if ('item' in r) {
+        throw debug('new optional handling');
     }
     if (!r.children) debug('expected children');
     return {
@@ -849,15 +858,6 @@ const getPotentialAsts = <Node extends string, Token>(
         case 'sequence': {
             for (const seqParser of parser.parsers) {
                 const result = getPotentialAsts(grammar, seqParser, token);
-                // TODO: Solve this more like empty separated list
-                const resultIsMissingOptional = r =>
-                    Array.isArray(r) &&
-                    r.length === 1 &&
-                    'present' in r[0] &&
-                    r[0].present == false;
-                if (resultIsMissingOptional(result)) {
-                    continue;
-                }
                 if ('expected' in result) {
                     return result;
                 }
@@ -993,8 +993,6 @@ const getRuleForNextEmptySlot = <Node, Token>(
         return getRuleForNextEmptySlot(ast.item);
     } else if ('emptySeparatedList' in ast) {
         return undefined;
-    } else if ('kind' in ast) {
-        ast;
     }
     throw debug(`unhandled: ${ast}`);
 };
@@ -1047,6 +1045,8 @@ const replaceRuleForNextEmptySlotWithPartial = <Node, Token>(
         return replaceRuleForNextEmptySlotWithPartial(ast.remainingItems, replacement);
     } else if ('item' in ast) {
         return replaceRuleForNextEmptySlotWithPartial(ast.item, replacement);
+    } else if ('emptySeparatedList' in ast) {
+        return false;
     }
     throw debug(`unhandled: ${ast}`);
 };
@@ -1088,7 +1088,11 @@ const partialAstToCompleteAst = <Node, Token>(
             newIndex: 0,
         };
     } else if ('present' in ast) {
-        // TODO: handle optional
+        if (ast.present) {
+            return { item: partialAstToCompleteAst(ast.item as any), newIndex: 0 };
+        } else {
+            return { item: undefined, newIndex: 0 };
+        }
     } else if ('separator' in ast) {
         const flattenPartialSeparatedList = (list: PartialSeparatedList<Node, Token>) => {
             const item = partialAstToCompleteAst(list.item);
@@ -1132,25 +1136,31 @@ const applyTokenToPartialParse = <Node, Token>(
     if ('expected' in result) {
         errors.expected.push(...result.expected);
     } else {
-        // If we found a missing optional or an empty list, we need to apply the token to the next item.
-        const reapplied: any[] = [];
         for (const newProgress of result) {
-            if (!newProgress.madeProgress) {
-                const appliedToNext = applyTokenToPartialParse(
-                    grammar,
-                    newProgress.partial,
-                    token
-                );
-                errors.expected.push(...appliedToNext.errors.expected);
-                reapplied.push(...appliedToNext.partials);
+            // If we used the token, hooray! Return the new partial tree
+            if (newProgress.madeProgress) {
+                const existingProgress = deepCopy(partial);
+                if (
+                    replaceRuleForNextEmptySlotWithPartial(existingProgress, newProgress.partial)
+                ) {
+                    partials.push(existingProgress);
+                }
             } else {
-                reapplied.push(newProgress);
-            }
-        }
-        for (const newProgress of reapplied) {
-            const existingProgress = deepCopy(partial);
-            if (replaceRuleForNextEmptySlotWithPartial(existingProgress, newProgress.partial)) {
-                partials.push(existingProgress);
+                // If we found a missing optional or an empty list, we need to apply the token to the next item.
+                const existingProgress = deepCopy(partial);
+                if (
+                    !replaceRuleForNextEmptySlotWithPartial(
+                        existingProgress,
+                        newProgress.partial
+                    )
+                ) {
+                    throw debug(
+                        'should have replaced I think? being here implies we should be replacing something with a missing optional/empty list'
+                    );
+                }
+                const appliedToNext = applyTokenToPartialParse(grammar, existingProgress, token);
+                errors.expected.push(...appliedToNext.errors.expected);
+                partials.push(...appliedToNext.partials);
             }
         }
     }

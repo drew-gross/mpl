@@ -329,7 +329,7 @@ test('ast for product with brackets', t => {
     );
 });
 
-test('ast for assignment then return', t => {
+test.only('ast for assignment then return', t => {
     const expected = {
         type: 'program',
         children: [
@@ -394,6 +394,7 @@ test('ast for assignment then return', t => {
             },
         ],
     };
+    debugger;
     const astWithSemicolon = stripSourceLocation(
         removeBracketsFromAst(
             parse(
