@@ -5,6 +5,7 @@ import { Graph } from 'graphlib';
 import SourceLocation from './sourceLocation';
 import { TokenSpec, lex, LexError } from './lex';
 import { deepCopy } from 'deep-copy-ts';
+import drain from '../util/list/drain';
 const diff = require('deep-diff');
 
 type ListNode<Node, Leaf> = { items: Ast<Node, Leaf>[] };
@@ -823,12 +824,15 @@ type PotentialAstsResult<Node, Token> = {
 const getPotentialAsts = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     parser: Parser<Node, Token>,
-    token: LToken<Token>
+    token: LToken<Token> | 'endOfFile'
 ): PotentialAstsResult<Node, Token>[] | ExpectedToken<Token> => {
     if (parser === undefined) throw debug('bad parser');
     if (typeof parser == 'string') return getPotentialAsts(grammar, grammar[parser], token);
     switch (parser.kind) {
         case 'terminal':
+            if (token === 'endOfFile') {
+                return { expected: [parser.token] };
+            }
             if (parser.token === token.type) {
                 return [
                     {
@@ -843,7 +847,7 @@ const getPotentialAsts = <Node extends string, Token>(
             const result = getPotentialAsts(grammar, parser.item, token);
             // Failed to even parse a single of the options
             if ('expected' in result) {
-                return result;
+                return [{ partial: { items: [] }, madeProgress: false }];
             }
             return result
                 .map(({ partial, madeProgress }) => [
@@ -881,7 +885,10 @@ const getPotentialAsts = <Node extends string, Token>(
                     partial: {
                         sequenceItems: [partial, ...empties],
                         name: parser.name,
-                        sourceLocation: token.sourceLocation,
+                        sourceLocation:
+                            token !== 'endOfFile'
+                                ? token.sourceLocation
+                                : { column: 0, line: 0 },
                     },
                     madeProgress: madeProgress,
                 }));
@@ -1008,6 +1015,9 @@ const getRuleForNextEmptySlot = <Node, Token>(
         return getRuleForNextEmptySlot(ast.item);
     } else if ('emptySeparatedList' in ast) {
         return undefined;
+    } else if ('items' in ast) {
+        // Complete many
+        return undefined;
     }
     throw debug(`unhandled: ${ast}`);
 };
@@ -1062,18 +1072,26 @@ const replaceRuleForNextEmptySlotWithPartial = <Node, Token>(
         return replaceRuleForNextEmptySlotWithPartial(ast.item, replacement);
     } else if ('emptySeparatedList' in ast) {
         return false;
+    } else if ('items' in ast) {
+        return false;
     }
     throw debug(`unhandled: ${ast}`);
 };
+
 const partialAstToCompleteAst = <Node, Token>(
     ast: PartialAst<Node, Token>
 ): AstWithIndex<Node, Token> => {
     if ('rule' in ast) {
         throw debug('was supposed to be complete');
+    } else if ('items' in ast) {
+        return {
+            items: ast.items.map(partialAstToCompleteAst),
+            newIndex: 0,
+        };
     } else if ('sequenceItems' in ast) {
         const sequenceHasTrailingMissingOptional = seq => {
             const backItem = seq[seq.length - 1];
-            return 'rule' in backItem && backItem.rule.kind == 'optional';
+            return backItem && 'rule' in backItem && backItem.rule.kind == 'optional';
         };
         while (sequenceHasTrailingMissingOptional(ast.sequenceItems)) {
             ast.sequenceItems.pop();
@@ -1226,17 +1244,26 @@ export const parseRule2 = <Node extends string, Token>(
     }
     const completeAsts: PartialAst<Node, Token>[] = [];
     const incompleteAsts: PartialAst<Node, Token>[] = [];
-    for (const potentialAst of potentialAsts) {
-        const rule = getRuleForNextEmptySlot(potentialAst);
-        // TODO: use more general logic for determining if remaining rules are satisfied by "end of file". This logic exists elsewhere.
-        if (rule && typeof rule != 'string' && rule.kind != 'optional') {
-            incompleteAsts.push(potentialAst);
-        } else {
-            completeAsts.push(potentialAst);
+    debugger;
+    drain(potentialAsts, ast => {
+        const rule = getRuleForNextEmptySlot(ast);
+        if (!rule) {
+            completeAsts.push(ast);
+            return;
         }
-    }
+        const newAsts = getPotentialAsts(grammar, rule, 'endOfFile');
+        if ('expected' in newAsts) {
+            incompleteAsts.push(ast);
+            return;
+        }
+        for (const newAst of newAsts) {
+            const extended = deepCopy(ast);
+            replaceRuleForNextEmptySlotWithPartial(extended, newAst.partial);
+            potentialAsts.push(extended);
+        }
+    });
     if (completeAsts.length > 1) {
-        throw debug('ambiguus parse');
+        throw debug('ambiguous parse');
     }
     if (completeAsts.length < 1) {
         // TODO: give good error about extra tokens

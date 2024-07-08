@@ -1183,6 +1183,7 @@ test('Parser lib - SeparatedList', t => {
 });
 
 test('Parser Lib - Many', t => {
+    debugger;
     type TestToken = 'a' | 'b';
     type TestNode = 'a' | 'b';
     const terminal = token => Terminal<TestNode, TestToken>(token);
