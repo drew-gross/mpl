@@ -889,14 +889,18 @@ const getPotentialAsts = <Node extends string, Token>(
             throw debug('All optionals of sequence missing');
         }
         case 'optional': {
+            const missingOptional = { partial: { present: false }, madeProgress: false };
             const result = getPotentialAsts(grammar, parser.parser, token);
             if ('expected' in result) {
-                return [{ partial: { present: false }, madeProgress: false }];
+                return [missingOptional];
             } else {
-                return result.map(({ partial, madeProgress }) => ({
-                    partial: { present: true, item: partial },
-                    madeProgress: madeProgress,
-                }));
+                return [
+                    missingOptional,
+                    ...result.map(({ partial, madeProgress }) => ({
+                        partial: { present: true, item: partial },
+                        madeProgress: madeProgress,
+                    })),
+                ];
             }
         }
         case 'nested': {
@@ -1271,8 +1275,10 @@ export const parse = <Node extends string, Token>(
     if (useWipParser && !('global' in grammar)) {
         const wipResult = parseRule2(grammar, firstRule, tokens);
         const resultDiff = diff(wipResult, strippedResult);
-        console.log(resultDiff);
-        if (resultDiff) debugger;
+        if (resultDiff) {
+            console.log(resultDiff);
+            debugger;
+        }
         parseRule2(grammar, firstRule, tokens);
         return wipResult;
     }

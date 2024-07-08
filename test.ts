@@ -395,7 +395,6 @@ test('ast for assignment then return', t => {
             },
         ],
     };
-    debugger;
     const astWithSemicolon = stripSourceLocation(
         removeBracketsFromAst(
             parse(
