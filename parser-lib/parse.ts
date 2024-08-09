@@ -299,10 +299,10 @@ const parseSequence = <Node extends string, Token>(
 type ParserProgress<Node, Token> =
     | { kind: 'failed'; error: ParseError<Token> }
     | {
-          kind: 'progress';
-          parseResults: AstWithIndex<Node, Token>[];
-          subParserIndex: number;
-      };
+        kind: 'progress';
+        parseResults: AstWithIndex<Node, Token>[];
+        subParserIndex: number;
+    };
 
 const parseAlternative = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -642,7 +642,6 @@ const parseAnything = <Node extends string, Token>(
         }
     } catch (e) {
         if (e instanceof RangeError) {
-            debugger;
             parseAnything(grammar, parser, tokens, index);
             debug('range error');
         }
@@ -779,9 +778,6 @@ type PartialAst<Node, Token> =
     | PartialSeparatedList<Node, Token>
     | PartialNested<Node, Token>
     | PartialOptional<Node, Token>;
-type PartialMany<Node, Token> = {
-    items: PartialAst<Node, Token>[];
-};
 type PartialSequence<Node, Token> = {
     sequenceItems: PartialAst<Node, Token>[];
     name: string;
@@ -790,7 +786,11 @@ type PartialSequence<Node, Token> = {
 type EmptySeparatedList = {
     emptySeparatedList: true;
 };
-// TOOD: Maybe use separate types for separated list with and without more items?
+// TOOD: Maybe use separate types for many/separated list with and without more items?
+type PartialMany<Node, Token> = {
+    items: PartialAst<Node, Token>[];
+    remainingItems?: PartialMany<Node, Token>;
+};
 type PartialSeparatedList<Node, Token> = {
     item: PartialAst<Node, Token>;
     separator?: PartialAst<Node, Token>;
@@ -847,13 +847,18 @@ const getPotentialAsts = <Node extends string, Token>(
             const result = getPotentialAsts(grammar, parser.item, token);
             // Failed to even parse a single of the options
             if ('expected' in result) {
-                return [{ partial: { items: [] }, madeProgress: false }];
+                return [{ partial: { items: [], }, madeProgress: false }];
             }
-            return result
-                .map(({ partial, madeProgress }) => [
-                    { partial: { items: [partial] }, madeProgress: madeProgress },
-                ])
-                .flat();
+            const parsesWithNoMoreItems = result.map(({ partial, madeProgress }) => ({
+                partial: { items: [partial], },
+                madeProgress: madeProgress,
+            }));
+            const parsesWithMoreItems = result.map(({ partial, madeProgress }) => ({
+                partial: { items: [partial], },
+                madeProgress: madeProgress,
+                remainingItems: { rule: parser }
+            }));
+            return [...parsesWithNoMoreItems, ...parsesWithMoreItems];
         }
         case 'oneOf':
             const errors: ExpectedToken<Token> = { expected: [] };
@@ -871,6 +876,7 @@ const getPotentialAsts = <Node extends string, Token>(
             }
             return errors;
         case 'sequence': {
+            // TODO: We only seem to use the first element?
             for (const seqParser of parser.parsers) {
                 const result = getPotentialAsts(grammar, seqParser, token);
                 if ('expected' in result) {
@@ -881,9 +887,9 @@ const getPotentialAsts = <Node extends string, Token>(
                 }));
                 // remove first element and replace it with successful partial parse
                 empties.shift();
-                return result.map(({ partial, madeProgress }) => ({
+                return result.map(({ partial, madeProgress, ...rest }) => ({
                     partial: {
-                        sequenceItems: [partial, ...empties],
+                        sequenceItems: [{ ...partial, ...rest }, ...empties],
                         name: parser.name,
                         sourceLocation:
                             token !== 'endOfFile'
@@ -930,7 +936,7 @@ const getPotentialAsts = <Node extends string, Token>(
                 return result;
             }
             // TODO: Include already parsed items and separators somehow
-            const parseWithNoMoreItems = result.map(({ partial, madeProgress }) => ({
+            const parsesWithNoMoreItems = result.map(({ partial, madeProgress }) => ({
                 partial: { item: partial },
                 madeProgress: madeProgress,
             }));
@@ -944,7 +950,7 @@ const getPotentialAsts = <Node extends string, Token>(
             }));
             return [
                 { partial: { emptySeparatedList: true }, madeProgress: false },
-                ...parseWithNoMoreItems,
+                ...parsesWithNoMoreItems,
                 ...parsesWithMoreItems,
             ];
         }
@@ -1016,7 +1022,12 @@ const getRuleForNextEmptySlot = <Node, Token>(
     } else if ('emptySeparatedList' in ast) {
         return undefined;
     } else if ('items' in ast) {
-        // Complete many
+        // many
+        if ('remainingItems' in ast) {
+            // many with more items
+            return getRuleForNextEmptySlot(ast.remainingItems as PartialMany<Node, Token>);
+        }
+        // complete many
         return undefined;
     }
     throw debug(`unhandled: ${ast}`);
@@ -1073,6 +1084,9 @@ const replaceRuleForNextEmptySlotWithPartial = <Node, Token>(
     } else if ('emptySeparatedList' in ast) {
         return false;
     } else if ('items' in ast) {
+        if ('remainingItems' in ast) {
+            return replaceRuleForNextEmptySlotWithPartial(ast.remainingItems as any, replacement);
+        }
         return false;
     }
     throw debug(`unhandled: ${ast}`);
@@ -1244,7 +1258,6 @@ export const parseRule2 = <Node extends string, Token>(
     }
     const completeAsts: PartialAst<Node, Token>[] = [];
     const incompleteAsts: PartialAst<Node, Token>[] = [];
-    debugger;
     drain(potentialAsts, ast => {
         const rule = getRuleForNextEmptySlot(ast);
         if (!rule) {
@@ -1272,7 +1285,7 @@ export const parseRule2 = <Node extends string, Token>(
     return stripResultIndexes(partialAstToCompleteAst(completeAsts[0]));
 };
 
-export const useWipParser = false;
+export const useWipParser = true;
 
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -1304,7 +1317,6 @@ export const parse = <Node extends string, Token>(
         const resultDiff = diff(wipResult, strippedResult);
         if (resultDiff) {
             console.log(resultDiff);
-            debugger;
         }
         parseRule2(grammar, firstRule, tokens);
         return wipResult;

@@ -1182,7 +1182,7 @@ test('Parser lib - SeparatedList', t => {
     });
 });
 
-test('Parser Lib - Many', t => {
+test.only('Parser Lib - Many', t => {
     debugger;
     type TestToken = 'a' | 'b';
     type TestNode = 'a' | 'b';
