@@ -214,44 +214,41 @@ test('ast for single number', t => {
 
 // TODO: Causes OOM - need to improve parser efficiency to not generate duplicate trees
 (useWipParser ? test.skip : test)('ast for number in double brackets', t => {
-    t.deepEqual(
-        removeBracketsFromAst(
-            parse(grammar, 'program', lex(tokenSpecs, 'return ((20));') as Token<MplToken>[])
-        ),
-        {
-            type: 'program',
-            sourceLocation: { line: 1, column: 1 },
-            children: [
-                {
-                    type: 'statement',
-                    sourceLocation: { line: 1, column: 1 },
-                    children: [
-                        {
-                            type: 'returnStatement',
-                            sourceLocation: { line: 1, column: 1 },
-                            children: [
-                                {
-                                    type: 'return',
-                                    value: null,
-                                    sourceLocation: { line: 1, column: 1 },
-                                },
-                                {
-                                    type: 'number',
-                                    value: 20,
-                                    sourceLocation: { line: 1, column: 10 },
-                                },
-                            ],
-                        },
-                        {
-                            type: 'statementSeparator',
-                            value: null,
-                            sourceLocation: { line: 1, column: 14 },
-                        },
-                    ],
-                },
-            ],
-        }
-    );
+    const tokens = lex(tokenSpecs, 'return ((20));');
+    const ast = parse(grammar, 'program', tokens as Token<MplToken>[]);
+    t.deepEqual(removeBracketsFromAst(ast), {
+        type: 'program',
+        sourceLocation: { line: 1, column: 1 },
+        children: [
+            {
+                type: 'statement',
+                sourceLocation: { line: 1, column: 1 },
+                children: [
+                    {
+                        type: 'returnStatement',
+                        sourceLocation: { line: 1, column: 1 },
+                        children: [
+                            {
+                                type: 'return',
+                                value: null,
+                                sourceLocation: { line: 1, column: 1 },
+                            },
+                            {
+                                type: 'number',
+                                value: 20,
+                                sourceLocation: { line: 1, column: 10 },
+                            },
+                        ],
+                    },
+                    {
+                        type: 'statementSeparator',
+                        value: null,
+                        sourceLocation: { line: 1, column: 14 },
+                    },
+                ],
+            },
+        ],
+    });
 });
 
 // TODO: Causes OOM - need to improve parser efficiency to not generate duplicate trees
@@ -331,7 +328,6 @@ test('ast for single number', t => {
         }
     );
 });
-
 
 // TODO: Causes OOM - need to improve parser efficiency to not generate duplicate trees
 (useWipParser ? test.skip : test)('ast for assignment then return', t => {
@@ -570,7 +566,6 @@ testModules.forEach((testModule: TestModule) => {
         getRunner(testModule)(testModule.name, moduleTest, testModule);
     }
 });
-
 
 // TODO: Causes OOM - need to improve parser efficiency to not generate duplicate trees
 (useWipParser ? test.skip : test)('structure is equal for inferred string type', t => {

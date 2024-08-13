@@ -268,8 +268,8 @@ const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
     }
     let ast = parseResult;
 
-    ast = repairAssociativity('subtraction', ast);
-    ast = repairAssociativity('addition', ast);
+    // TODO: This needs some more work given the new way binary expressions work
+    ast = repairAssociativity('binaryExpression', ast);
     ast = repairAssociativity('product', ast);
 
     // Bracketed expressions -> nothing. Must happen after associativity repair or we will break
@@ -1426,18 +1426,20 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 arguments: child2.items.map(astFromParseResult),
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
-        case 'subtraction':
+        case 'binaryExpression':
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
+            const getKind = t => {
+                switch (t) {
+                    case 'sum':
+                        return 'addition';
+                    case 'subtraction':
+                        return 'subtraction';
+                    default:
+                        throw debug('unhandled in getKind');
+                }
+            };
             return {
-                kind: 'subtraction',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredAst;
-        case 'addition':
-            if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
-            return {
-                kind: 'addition',
+                kind: getKind((ast.children[1] as any).type),
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
                 sourceLocation: ast.sourceLocation,
