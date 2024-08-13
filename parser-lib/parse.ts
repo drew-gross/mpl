@@ -302,7 +302,7 @@ type ParserProgress<Node, Token> =
           /* prettier-ignore */ kind: 'progress';
           /* prettier-ignore */ parseResults: AstWithIndex<Node, Token>[];
           /* prettier-ignore */ subParserIndex: number;
-      };
+    };
 
 const parseAlternative = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -1291,7 +1291,7 @@ export const parseRule2 = <Node extends string, Token>(
     return stripResultIndexes(partialAstToCompleteAst(completeAsts[0]));
 };
 
-export const useWipParser = false;
+export const useWipParser = true;
 
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
