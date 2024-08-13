@@ -270,7 +270,6 @@ const parseMpl = (tokens: Token<MplToken>[]): MplAst | ParseError[] => {
 
     // TODO: This needs some more work given the new way binary expressions work
     ast = repairAssociativity('binaryExpression', ast);
-    ast = repairAssociativity('product', ast);
 
     // Bracketed expressions -> nothing. Must happen after associativity repair or we will break
     // associativity of brackets.
@@ -1389,14 +1388,6 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 value: ast.value as any,
                 sourceLocation: ast.sourceLocation,
             };
-        case 'product':
-            if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
-            return {
-                kind: 'product',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredAst;
         case 'ternary':
             return {
                 kind: 'ternary',

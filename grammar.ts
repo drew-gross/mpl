@@ -96,7 +96,6 @@ export type MplAstNode =
     | 'reassignment'
     | 'ternary'
     | 'binaryExpression'
-    | 'product'
     | 'equality'
     | 'concatenation'
     | 'bracketedExpression'
@@ -235,12 +234,11 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         ]),
         'binaryExpression',
     ]),
-    binaryOperator: OneOf([plus, minus]),
+    binaryOperator: OneOf([plus, minus, times]),
     binaryExpression: OneOf([
-        Sequence('binaryExpression', ['product', 'binaryOperator', 'binaryExpression']),
-        'product',
+        Sequence('binaryExpression', ['equality', 'binaryOperator', 'binaryExpression']),
+        'equality',
     ]),
-    product: OneOf([Sequence('product', ['equality', times, 'product']), 'equality']),
     equality: OneOf([
         Sequence('equality', ['concatenation', equality, 'equality']),
         'concatenation',

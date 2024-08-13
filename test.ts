@@ -278,7 +278,7 @@ test('ast for number in brackets', t => {
                                     value: null,
                                 },
                                 {
-                                    type: 'product',
+                                    type: 'binaryExpression',
                                     sourceLocation: { line: 1, column: 8 },
                                     children: [
                                         {
@@ -292,7 +292,7 @@ test('ast for number in brackets', t => {
                                             sourceLocation: { line: 1, column: 10 },
                                         },
                                         {
-                                            type: 'product',
+                                            type: 'binaryExpression',
                                             sourceLocation: { line: 1, column: 13 },
                                             children: [
                                                 {
@@ -471,7 +471,7 @@ test('parse for', t => {
                                 value: null,
                             },
                             {
-                                type: 'product',
+                                type: 'binaryExpression',
                                 children: [
                                     {
                                         type: 'number',
