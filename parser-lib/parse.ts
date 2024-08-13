@@ -1098,8 +1098,14 @@ const partialAstToCompleteAst = <Node, Token>(
     if ('rule' in ast) {
         throw debug('was supposed to be complete');
     } else if ('items' in ast) {
+        const flattenRemainingItems = (many: PartialMany<Node, Token>) => {
+            const remaining: PartialAst<Node, Token>[] = many.remainingItems
+                ? flattenRemainingItems(many.remainingItems)
+                : [];
+            return [...many.items, ...remaining];
+        };
         return {
-            items: ast.items.map(partialAstToCompleteAst),
+            items: flattenRemainingItems(ast).map(partialAstToCompleteAst),
             newIndex: 0,
         };
     } else if ('sequenceItems' in ast) {
