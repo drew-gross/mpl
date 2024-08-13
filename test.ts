@@ -170,8 +170,7 @@ test('ast for single number', t => {
     t.deepEqual(expectedResult, parseResult);
 });
 
-// TODO: Causes OOM - need to improve parser efficiency to not generate duplicate trees
-(useWipParser ? test.skip : test)('ast for number in brackets', t => {
+test('ast for number in brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(
             parse(grammar, 'program', lex(tokenSpecs, ' return (5);') as Token<MplToken>[])
