@@ -234,13 +234,9 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         ]),
         'binaryExpression',
     ]),
-    binaryOperator: OneOf([plus, minus, times]),
+    binaryOperator: OneOf([plus, minus, times, equality]),
     binaryExpression: OneOf([
-        Sequence('binaryExpression', ['equality', 'binaryOperator', 'binaryExpression']),
-        'equality',
-    ]),
-    equality: OneOf([
-        Sequence('equality', ['concatenation', equality, 'equality']),
+        Sequence('binaryExpression', ['concatenation', 'binaryOperator', 'binaryExpression']),
         'concatenation',
     ]),
     concatenation: OneOf([

@@ -1425,6 +1425,10 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                         return 'addition';
                     case 'subtraction':
                         return 'subtraction';
+                    case 'product':
+                        return 'product';
+                    case 'equality':
+                        return 'equality';
                     default:
                         throw debug('unhandled in getKind');
                 }
@@ -1571,14 +1575,6 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
             return {
                 kind: 'concatenation',
-                lhs: astFromParseResult(ast.children[0]),
-                rhs: astFromParseResult(ast.children[2]),
-                sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredAst;
-        case 'equality':
-            if (!('children' in ast)) throw debug('children not in ast in astFromParseResult');
-            return {
-                kind: 'equality',
                 lhs: astFromParseResult(ast.children[0]),
                 rhs: astFromParseResult(ast.children[2]),
                 sourceLocation: ast.sourceLocation,
