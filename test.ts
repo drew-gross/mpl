@@ -1181,17 +1181,31 @@ test('Parser lib - SeparatedList', t => {
         ],
     });
 });
+const dummySourceLocation = { line: 0, column: 0 };
 
-test.only('Parser Lib - Many', t => {
-    debugger;
+test('Parser Lib - Many', t => {
+    type TestToken = 'a';
+    type TestNode = 'a';
+    const terminal = token => Terminal<TestNode, TestToken>(token);
+    const a = terminal('a');
+    const testGrammar = { as: Many(a) };
+
+    const aToken = { type: 'a', string: 'a', sourceLocation: dummySourceLocation };
+    const parsedAToken = { type: 'a', value: undefined, sourceLocation: dummySourceLocation };
+
+    const zeroItems = parse(testGrammar, 'as', []);
+    t.deepEqual(zeroItems, { items: [] });
+    const oneItem = parse(testGrammar, 'as', [aToken]);
+    t.deepEqual(oneItem, { items: [parsedAToken] });
+});
+
+test('Parser Lib - Sequence of Many', t => {
     type TestToken = 'a' | 'b';
     type TestNode = 'a' | 'b';
     const terminal = token => Terminal<TestNode, TestToken>(token);
     const a = terminal('a');
     const b = terminal('b');
     const testGrammar = { a, b, asAndBs: Sequence('asAndBs', [Many(a), Many(b)]) };
-
-    const dummySourceLocation = { line: 0, column: 0 };
 
     const zeroItemList: any = parse(testGrammar, 'asAndBs', []);
     t.deepEqual(zeroItemList, {

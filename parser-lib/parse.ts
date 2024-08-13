@@ -299,10 +299,10 @@ const parseSequence = <Node extends string, Token>(
 type ParserProgress<Node, Token> =
     | { kind: 'failed'; error: ParseError<Token> }
     | {
-        kind: 'progress';
-        parseResults: AstWithIndex<Node, Token>[];
-        subParserIndex: number;
-    };
+          kind: 'progress';
+          parseResults: AstWithIndex<Node, Token>[];
+          subParserIndex: number;
+      };
 
 const parseAlternative = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -845,20 +845,17 @@ const getPotentialAsts = <Node extends string, Token>(
             }
         case 'many': {
             const result = getPotentialAsts(grammar, parser.item, token);
-            // Failed to even parse a single of the options
+            // If we didn't parse an item, we have completed the many items
             if ('expected' in result) {
-                return [{ partial: { items: [], }, madeProgress: false }];
+                return [{ partial: { items: [] }, madeProgress: false }];
             }
-            const parsesWithNoMoreItems = result.map(({ partial, madeProgress }) => ({
-                partial: { items: [partial], },
-                madeProgress: madeProgress,
-            }));
+            // If we did parse an item, there also might still be more items, so indicate that we need to try parsing another item
             const parsesWithMoreItems = result.map(({ partial, madeProgress }) => ({
-                partial: { items: [partial], },
+                // TODO: rename items to item since it no longer contains multiple and it's more like a linked list
+                partial: { items: [partial], remainingItems: { rule: parser } },
                 madeProgress: madeProgress,
-                remainingItems: { rule: parser }
-            }));
-            return [...parsesWithNoMoreItems, ...parsesWithMoreItems];
+            })) as any;
+            return parsesWithMoreItems;
         }
         case 'oneOf':
             const errors: ExpectedToken<Token> = { expected: [] };
@@ -1085,7 +1082,10 @@ const replaceRuleForNextEmptySlotWithPartial = <Node, Token>(
         return false;
     } else if ('items' in ast) {
         if ('remainingItems' in ast) {
-            return replaceRuleForNextEmptySlotWithPartial(ast.remainingItems as any, replacement);
+            return replaceRuleForNextEmptySlotWithPartial(
+                ast.remainingItems as any,
+                replacement
+            );
         }
         return false;
     }
@@ -1285,7 +1285,7 @@ export const parseRule2 = <Node extends string, Token>(
     return stripResultIndexes(partialAstToCompleteAst(completeAsts[0]));
 };
 
-export const useWipParser = true;
+export const useWipParser = false;
 
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
