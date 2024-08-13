@@ -1183,7 +1183,7 @@ test('Parser lib - SeparatedList', t => {
 });
 const dummySourceLocation = { line: 0, column: 0 };
 
-test('Parser Lib - Many', t => {
+test.only('Parser Lib - Many', t => {
     type TestToken = 'a';
     type TestNode = 'a';
     const terminal = token => Terminal<TestNode, TestToken>(token);
@@ -1197,6 +1197,8 @@ test('Parser Lib - Many', t => {
     t.deepEqual(zeroItems, { items: [] });
     const oneItem = parse(testGrammar, 'as', [aToken]);
     t.deepEqual(oneItem, { items: [parsedAToken] });
+    const twoItems = parse(testGrammar, 'as', [aToken, aToken]);
+    t.deepEqual(twoItems, { items: [parsedAToken, parsedAToken] });
 });
 
 test('Parser Lib - Sequence of Many', t => {
