@@ -299,9 +299,9 @@ const parseSequence = <Node extends string, Token>(
 type ParserProgress<Node, Token> =
     | { kind: 'failed'; error: ParseError<Token> }
     | {
-          kind: 'progress';
-          parseResults: AstWithIndex<Node, Token>[];
-          subParserIndex: number;
+          /* prettier-ignore */ kind: 'progress';
+          /* prettier-ignore */ parseResults: AstWithIndex<Node, Token>[];
+          /* prettier-ignore */ subParserIndex: number;
       };
 
 const parseAlternative = <Node extends string, Token>(

@@ -1183,7 +1183,7 @@ test('Parser lib - SeparatedList', t => {
 });
 const dummySourceLocation = { line: 0, column: 0 };
 
-test.only('Parser Lib - Many', t => {
+test('Parser Lib - Many', t => {
     type TestToken = 'a';
     type TestNode = 'a';
     const terminal = token => Terminal<TestNode, TestToken>(token);
