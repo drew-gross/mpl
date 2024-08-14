@@ -258,10 +258,6 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     ]),
     indexAccess: OneOf([
         Sequence('indexAccess', ['simpleExpression', NestedIn(squares, 'simpleExpression')]),
-        'listLiteral',
-    ]),
-    listLiteral: OneOf([
-        Sequence('listLiteral', [NestedIn(squares, SeparatedList(comma, 'expression'))]),
         'simpleExpression',
     ]),
     simpleExpression: OneOf([
@@ -273,6 +269,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
             mplOptional('paramList'),
             rightBracket,
         ]),
+        Sequence('listLiteral', [NestedIn(squares, SeparatedList(comma, 'expression'))]),
         int,
         boolean,
         stringLiteral,
