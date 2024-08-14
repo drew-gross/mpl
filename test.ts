@@ -31,7 +31,6 @@ import {
     OneOf,
     SeparatedList,
     Many,
-    useWipParser,
 } from './parser-lib/parse';
 import * as Ast from './ast';
 import { removeBracketsFromAst } from './frontend';
@@ -451,8 +450,7 @@ test('parse for', t => {
     });
 });
 
-// TODO: Causes OOM - need to improve parser efficiency to not generate duplicate trees
-(useWipParser ? test.skip : test)('lowering of bracketedExpressions', t => {
+test('lowering of bracketedExpressions', t => {
     const lexResult = lex(tokenSpecs, 'return (8 * ((7)));') as Token<MplToken>[];
     t.deepEqual(stripSourceLocation(parseMpl(lexResult)), {
         type: 'program',
@@ -556,11 +554,8 @@ const getRunner = ({ name, infiniteLooping, failing, only }: Test) => {
     return only ? test.only : failing ? test.failing : test;
 };
 
-// TODO: Some of these are OOMing with new parser, that is next
 testModules.forEach((testModule: TestModule) => {
-    if (!useWipParser) {
-        getRunner(testModule)(testModule.name, moduleTest, testModule);
-    }
+    getRunner(testModule)(testModule.name, moduleTest, testModule);
 });
 
 test('structure is equal for inferred string type', t => {
