@@ -157,23 +157,6 @@ const angles = { left: lessThan, right: greaterThan };
 
 export const grammar: Grammar<MplAstNode, MplToken> = {
     program: Sequence<MplAstNode, MplToken>('program', ['functionBody']),
-    // TODO: Instead of function and functionWithBlock, use a OneOf(['expression,', NestedIn(curlies, 'functionBody')])
-    function: OneOf([
-        Sequence('function', [
-            mplOptional(leftBracket),
-            'argList', // TODO pull out "args" into separate rule
-            mplOptional(rightBracket),
-            fatArrow,
-            'expression',
-        ]),
-        Sequence('functionWithBlock', [
-            mplOptional(leftBracket),
-            'argList',
-            mplOptional(rightBracket),
-            fatArrow,
-            NestedIn(curlies, 'functionBody'),
-        ]),
-    ]),
     argList: SeparatedList(comma, 'arg'),
     arg: Sequence('arg', [identifier, colon, 'type']),
     functionBody: Sequence('statement', [
@@ -223,7 +206,25 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         'expression',
         comma,
     ]),
-    expression: 'ternary',
+    expression: 'function',
+    // TODO: Instead of function and functionWithBlock, use a OneOf(['expression,', NestedIn(curlies, 'functionBody')])
+    function: OneOf([
+        Sequence('function', [
+            mplOptional(leftBracket),
+            'argList', // TODO pull out "args" into separate rule
+            mplOptional(rightBracket),
+            fatArrow,
+            'ternary',
+        ]),
+        Sequence('functionWithBlock', [
+            mplOptional(leftBracket),
+            'argList',
+            mplOptional(rightBracket),
+            fatArrow,
+            NestedIn(curlies, 'functionBody'),
+        ]),
+        'ternary',
+    ]),
     ternary: OneOf([
         Sequence('ternary', [
             'binaryExpression',
@@ -274,7 +275,6 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         int,
         boolean,
         stringLiteral,
-        'function',
         'objectLiteral',
         identifier,
     ]),
