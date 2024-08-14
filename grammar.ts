@@ -240,28 +240,28 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         'concatenation',
     ]),
     concatenation: OneOf([
-        Sequence('concatenation', ['memberAccess', concatenation, 'concatenation']),
-        'memberStyleCall',
+        Sequence('concatenation', ['simpleExpression', concatenation, 'concatenation']),
+        'simpleExpression',
     ]),
-    memberStyleCall: OneOf([
+    simpleExpression: OneOf([
+        // "access" expressions
+        // NOTE: These aren't as powerful as they should be, e.g.
+        // myNestedArray[1][2][3]
+        // and
+        // foo()[1]
+        // Aren't supported. To get those I'll need to implement
+        // left recursion elimination.
         Sequence('memberStyleCall', [
-            'simpleExpression',
+            identifier,
             memberAccess,
             identifier,
             NestedIn(rounds, 'paramList'),
         ]),
-        'memberAccess',
-    ]),
-    memberAccess: OneOf([
-        Sequence('memberAccess', ['simpleExpression', memberAccess, identifier]),
-        'indexAccess',
-    ]),
-    indexAccess: OneOf([
-        Sequence('indexAccess', ['simpleExpression', NestedIn(squares, 'simpleExpression')]),
-        'simpleExpression',
-    ]),
-    simpleExpression: OneOf([
+        Sequence('memberAccess', [identifier, memberAccess, identifier]),
+        Sequence('indexAccess', [identifier, NestedIn(squares, 'simpleExpression')]),
+        // Brackets (this is how we "escape" back to arbitrary expressions)
         Sequence('bracketedExpression', [NestedIn(rounds, 'expression')]),
+        // Function calls
         Sequence('callExpression', [
             identifier,
             // TODO: Make NestedIn(..., Optional(...)) work
@@ -269,6 +269,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
             mplOptional('paramList'),
             rightBracket,
         ]),
+        // Literals
         Sequence('listLiteral', [NestedIn(squares, SeparatedList(comma, 'expression'))]),
         int,
         boolean,
