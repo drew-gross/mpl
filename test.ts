@@ -211,8 +211,7 @@ test('ast for number in brackets', t => {
     );
 });
 
-// TODO: Causes OOM - need to improve parser efficiency to not generate duplicate trees
-(useWipParser ? test.skip : test)('ast for number in double brackets', t => {
+test('ast for number in double brackets', t => {
     const tokens = lex(tokenSpecs, 'return ((20));');
     const ast = parse(grammar, 'program', tokens as Token<MplToken>[]);
     t.deepEqual(removeBracketsFromAst(ast), {
@@ -250,8 +249,7 @@ test('ast for number in brackets', t => {
     });
 });
 
-// TODO: Causes OOM - need to improve parser efficiency to not generate duplicate trees
-(useWipParser ? test.skip : test)('ast for product with brackets', t => {
+test('ast for product with brackets', t => {
     t.deepEqual(
         removeBracketsFromAst(
             parse(
@@ -328,8 +326,7 @@ test('ast for number in brackets', t => {
     );
 });
 
-// TODO: Causes OOM - need to improve parser efficiency to not generate duplicate trees
-(useWipParser ? test.skip : test)('ast for assignment then return', t => {
+test('ast for assignment then return', t => {
     const expected = {
         type: 'program',
         children: [
@@ -566,8 +563,7 @@ testModules.forEach((testModule: TestModule) => {
     }
 });
 
-// TODO: Causes OOM - need to improve parser efficiency to not generate duplicate trees
-(useWipParser ? test.skip : test)('structure is equal for inferred string type', t => {
+test('structure is equal for inferred string type', t => {
     const inferredStructure = compile('myStr := "test"; return length(myStr);');
     const suppliedStructure = compile('myStr: String = "test"; return length(myStr);');
     // TODO:  remove this awful hack. Need to either strip source location from structure,
