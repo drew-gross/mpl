@@ -1246,12 +1246,12 @@ export const parseRule2 = <Node extends string, Token>(
         if (partials.length == 0) {
             return {
                 kind: 'parseError',
-                errors: errors.expected.map(token => {
+                errors: errors.expected.map(expectedToken => {
                     return {
-                        expected: token,
-                        found: token,
+                        expected: expectedToken,
+                        found: token.string,
                         foundTokenText: `${token}`,
-                        sourceLocation: { line: 0, column: 0 },
+                        sourceLocation: token.sourceLocation,
                         whileParsing: [],
                     };
                 }) as unknown as ParseFailureInfo<Token>[],
@@ -1288,7 +1288,7 @@ export const parseRule2 = <Node extends string, Token>(
     return stripResultIndexes(partialAstToCompleteAst(completeAsts[0]));
 };
 
-export const useWipParser = false;
+export const useWipParser = true;
 
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -1320,6 +1320,7 @@ export const parse = <Node extends string, Token>(
         const resultDiff = diff(wipResult, strippedResult);
         if (resultDiff) {
             console.log(resultDiff);
+            debugger;
         }
         parseRule2(grammar, firstRule, tokens);
         return wipResult;
