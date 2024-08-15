@@ -1221,10 +1221,6 @@ export const parseRule2 = <Node extends string, Token>(
     let ruleParser: Parser<Node, Token> = grammar[rule];
     if (!ruleParser) throw debug(`invalid rule name: ${rule}`);
     let potentialAsts: PartialAst<Node, Token>[] = [{ rule: ruleParser }] as any;
-    // Inelegant hack to handle case of no tokens, but that is valid for the grammar
-    if (typeof ruleParser !== 'string' && ruleParser.kind == 'separatedList') {
-        potentialAsts.push({ emptySeparatedList: true });
-    }
     for (const token of tokens) {
         const errors: ExpectedToken<Token> = { expected: [] };
         const partials: PartialAst<Node, Token>[] = [];
