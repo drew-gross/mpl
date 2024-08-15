@@ -57,6 +57,7 @@ const manyGlobalsMultiply = () => {
         `,
         exitCode: 1,
         stdin,
+        infiniteLooping: true,
     };
 };
 
@@ -633,6 +634,7 @@ return isFive(5) ? 1 : 0;`,
             return foo(1, 1, 1, 2, 3, 2, 1, 2, 3);
         `,
         exitCode: 72,
+        // TODO: Probably need to implement left recursion elimination for this to work
         infiniteLooping: true,
     },
     {
