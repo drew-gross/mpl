@@ -1113,6 +1113,8 @@ test('Parse grammar from multiple entry points', t => {
     });
 });
 
+const dummySourceLocation = { line: 0, column: 0 };
+
 test('Parser lib - SeparatedList', t => {
     type TestToken = 'a' | 'b' | 'comma';
     type TestNode = 'a' | 'b' | 'comma';
@@ -1128,7 +1130,6 @@ test('Parser lib - SeparatedList', t => {
         listItem: OneOf([a, b]),
     };
 
-    const dummySourceLocation = { line: 0, column: 0 };
     const zeroItemList: any = parse(testGrammar, 'list', []);
     t.deepEqual(zeroItemList, { items: [], separators: [] });
 
@@ -1172,7 +1173,31 @@ test('Parser lib - SeparatedList', t => {
         ],
     });
 });
-const dummySourceLocation = { line: 0, column: 0 };
+
+test.only('Parser lib - SeparatedList in sequence', t => {
+    debugger;
+    type TestToken = 'a' | 'comma' | 'start' | 'finish';
+    type TestNode = 'a' | 'comma' | 'start' | 'finish';
+    const terminal = token => Terminal<TestNode, TestToken>(token);
+    const a = terminal('a');
+    const start = terminal('start');
+    const finish = terminal('finish');
+    const comma = terminal('comma');
+    const testGrammar = {
+        a,
+        start,
+        finish,
+        comma,
+        list: SeparatedList(comma, a),
+        inSequence: Sequence('seqWithList', [start, 'list', finish]),
+    };
+
+    const zeroItemList: any = parse(testGrammar, 'inSequence', [
+        { type: 'start', string: 'start', sourceLocation: dummySourceLocation },
+        { type: 'finish', string: 'finish', sourceLocation: dummySourceLocation },
+    ]);
+    t.deepEqual(zeroItemList.children[1], { items: [], separators: [] });
+});
 
 test('Parser Lib - Many', t => {
     type TestToken = 'a';

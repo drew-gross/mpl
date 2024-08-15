@@ -1244,6 +1244,18 @@ export const parseRule2 = <Node extends string, Token>(
             }
         }
         if (partials.length == 0) {
+            debugger;
+            for (const potentialAst of potentialAsts) {
+                const { errors: newErrors, partials: newPartials } = applyTokenToPartialParse(
+                    grammar,
+                    potentialAst,
+                    token
+                );
+                partials.push(...newPartials);
+                for (const newError in newErrors.expected) {
+                    errors.expected.push(newError as Token);
+                }
+            }
             return {
                 kind: 'parseError',
                 errors: errors.expected.map(expectedToken => {
@@ -1288,7 +1300,7 @@ export const parseRule2 = <Node extends string, Token>(
     return stripResultIndexes(partialAstToCompleteAst(completeAsts[0]));
 };
 
-export const useWipParser = true;
+export const useWipParser = false;
 
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
