@@ -1236,7 +1236,6 @@ export const parseRule2 = <Node extends string, Token>(
             }
         }
         if (partials.length == 0) {
-            debugger;
             for (const potentialAst of potentialAsts) {
                 const { errors: newErrors, partials: newPartials } = applyTokenToPartialParse(
                     grammar,
@@ -1256,7 +1255,7 @@ export const parseRule2 = <Node extends string, Token>(
                         found: token.string,
                         foundTokenText: `${token}`,
                         sourceLocation: token.sourceLocation,
-                        whileParsing: [],
+                        whileParsing: [rule],
                     };
                 }) as unknown as ParseFailureInfo<Token>[],
             };

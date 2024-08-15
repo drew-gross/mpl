@@ -263,13 +263,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         // Brackets (this is how we "escape" back to arbitrary expressions)
         Sequence('bracketedExpression', [NestedIn(rounds, 'expression')]),
         // Function calls
-        Sequence('callExpression', [
-            identifier,
-            // TODO: Make NestedIn(..., Optional(...)) work
-            leftBracket,
-            mplOptional('paramList'),
-            rightBracket,
-        ]),
+        Sequence('callExpression', [identifier, leftBracket, 'paramList', rightBracket]),
         // Literals
         Sequence('listLiteral', [NestedIn(squares, SeparatedList(comma, 'expression'))]),
         int,
