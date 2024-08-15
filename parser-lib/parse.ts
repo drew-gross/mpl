@@ -927,7 +927,7 @@ const getPotentialAsts = <Node extends string, Token>(
         case 'separatedList': {
             const result = getPotentialAsts(grammar, parser.item, token);
             if ('expected' in result) {
-                return result;
+                return [{ partial: { emptySeparatedList: true }, madeProgress: false }];
             }
             // TODO: Include already parsed items and separators somehow
             const parsesWithNoMoreItems = result.map(({ partial, madeProgress }) => ({
@@ -942,11 +942,7 @@ const getPotentialAsts = <Node extends string, Token>(
                 },
                 madeProgress,
             }));
-            return [
-                { partial: { emptySeparatedList: true }, madeProgress: false },
-                ...parsesWithNoMoreItems,
-                ...parsesWithMoreItems,
-            ];
+            return [...parsesWithNoMoreItems, ...parsesWithMoreItems];
         }
         default: {
             throw debug(`unhandled parser kind`);

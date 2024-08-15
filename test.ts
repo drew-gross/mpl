@@ -1174,8 +1174,7 @@ test('Parser lib - SeparatedList', t => {
     });
 });
 
-test.only('Parser lib - SeparatedList in sequence', t => {
-    debugger;
+test('Parser lib - SeparatedList in sequence', t => {
     type TestToken = 'a' | 'comma' | 'start' | 'finish';
     type TestNode = 'a' | 'comma' | 'start' | 'finish';
     const terminal = token => Terminal<TestNode, TestToken>(token);
