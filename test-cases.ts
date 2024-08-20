@@ -460,7 +460,18 @@ return isFive(5) ? 1 : 0;`,
         failingInterpreter: true,
     },
     {
-        name: 'Int Pair',
+        name: 'Define Int Pair',
+        source: `
+            IntPair := {
+                first: Integer;
+                second: Integer;
+            };
+            return 1;
+        `,
+        exitCode: 1,
+    },
+    {
+        name: 'Use Int Pair',
         source: `
             IntPair := {
                 first: Integer;

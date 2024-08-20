@@ -1019,11 +1019,19 @@ const getRuleForNextEmptySlot = <Node, Token>(
         return undefined;
     } else if ('items' in ast) {
         // many
+        // first try to finish any in-progress items
+        for (const item of ast.items) {
+            const itemRule = getRuleForNextEmptySlot(item);
+            if (itemRule) {
+                return itemRule;
+            }
+        }
+        // then try to start a new item
         if ('remainingItems' in ast) {
             // many with more items
             return getRuleForNextEmptySlot(ast.remainingItems as PartialMany<Node, Token>);
         }
-        // complete many
+        // then, return that we've completed the many
         return undefined;
     }
     throw debug(`unhandled: ${ast}`);
@@ -1080,12 +1088,21 @@ const replaceRuleForNextEmptySlotWithPartial = <Node, Token>(
     } else if ('emptySeparatedList' in ast) {
         return false;
     } else if ('items' in ast) {
+        // Replace in the next in-progress item
+        for (const item of ast.items) {
+            const replaced = replaceRuleForNextEmptySlotWithPartial(item, replacement);
+            if (replaced) {
+                return true;
+            }
+        }
+        // If no in-progress items, start the next item
         if ('remainingItems' in ast) {
             return replaceRuleForNextEmptySlotWithPartial(
                 ast.remainingItems as any,
                 replacement
             );
         }
+        // Otherwise, continue to the next rule
         return false;
     }
     throw debug(`unhandled: ${ast}`);
