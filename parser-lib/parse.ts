@@ -843,8 +843,12 @@ const getPotentialAsts = <Node extends string, Token>(
         case 'many': {
             const result = getPotentialAsts(grammar, parser.item, token);
             // If we didn't parse an item, we have completed the many items
+            const parsesWithNoItems: PotentialAstsResult<Node, Token>[] = [
+                { partial: { items: [] }, madeProgress: false },
+            ];
+
             if ('expected' in result) {
-                return [{ partial: { items: [] }, madeProgress: false }];
+                return parsesWithNoItems;
             }
             // If we did parse an item, there also might still be more items, so indicate that we need to try parsing another item
             const parsesWithMoreItems = result.map(({ partial, madeProgress }) => ({
@@ -852,7 +856,7 @@ const getPotentialAsts = <Node extends string, Token>(
                 partial: { items: [partial], remainingItems: { rule: parser } },
                 madeProgress: madeProgress,
             })) as any;
-            return parsesWithMoreItems;
+            return [...parsesWithMoreItems, ...parsesWithNoItems];
         }
         case 'oneOf':
             const errors: ExpectedToken<Token> = { expected: [] };
@@ -1306,7 +1310,11 @@ export const parseRule2 = <Node extends string, Token>(
         }
     });
     if (completeAsts.length > 1) {
-        throw debug('ambiguous parse');
+        // TODO:TAC parser contains some real ambiguities (loadImmediate vs assign when data is a number)
+        // but by con
+        if (!('global' in grammar)) {
+            throw debug('ambiguous parse');
+        }
     }
     if (completeAsts.length < 1) {
         // TODO: give good error about extra tokens
@@ -1315,7 +1323,7 @@ export const parseRule2 = <Node extends string, Token>(
     return stripResultIndexes(partialAstToCompleteAst(completeAsts[0]));
 };
 
-export const useWipParser = true;
+export const useWipParser = false;
 
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
@@ -1341,8 +1349,7 @@ export const parse = <Node extends string, Token>(
         };
     }
     const strippedResult = stripResultIndexes(result);
-    // Not ready to use wip parser for tac yet, tac grammar has global
-    if (useWipParser && !('global' in grammar)) {
+    if (useWipParser) {
         const wipResult = parseRule2(grammar, firstRule, tokens);
         const resultDiff = diff(wipResult, strippedResult);
         if (resultDiff) {

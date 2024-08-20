@@ -167,7 +167,7 @@ export const grammar: Grammar<TacAstNode, TacToken> = {
         tacOptional(spillSpec),
         identifier,
         leftBracket,
-        tacOptional('argList'),
+        'argList',
         rightBracket,
         colon,
         'instructions',
