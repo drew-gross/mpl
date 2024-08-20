@@ -210,6 +210,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     // TODO: Instead of function and functionWithBlock, use a OneOf(['expression,', NestedIn(curlies, 'functionBody')])
     function: OneOf([
         Sequence('function', [
+            // TODO: This formulation allows a) no brackets and also no args b) having the left bracked but not the right bracket
             mplOptional(leftBracket),
             'argList', // TODO pull out "args" into separate rule
             mplOptional(rightBracket),
@@ -263,7 +264,13 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         // Brackets (this is how we "escape" back to arbitrary expressions)
         Sequence('bracketedExpression', [NestedIn(rounds, 'expression')]),
         // Function calls
-        Sequence('callExpression', [identifier, leftBracket, 'paramList', rightBracket]),
+        Sequence('callExpression', [
+            identifier,
+            // TODO: Figure out why this breaks when changed to NestedIn(rounds, 'paramList')
+            leftBracket,
+            'paramList',
+            rightBracket,
+        ]),
         // Literals
         Sequence('listLiteral', [NestedIn(squares, SeparatedList(comma, 'expression'))]),
         int,

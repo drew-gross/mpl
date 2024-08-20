@@ -22,6 +22,7 @@ import { parseMpl, compile, astFromParseResult, typeOfExpression } from './front
 import { grammar, tokenSpecs, MplParseResult, MplAst, MplToken } from './grammar';
 import {
     parse,
+    parseRule2,
     parseResultIsError,
     stripSourceLocation,
     Terminal,
@@ -1300,6 +1301,47 @@ test('Parser Lib - Sequence of Many', t => {
                 whileParsing: ['asAndBs'],
             },
         ],
+    });
+});
+
+test('Parser Lib - Separated List With Items That Start With Optional', t => {
+    const terminal = token => Terminal<'Node', 'Token'>(token);
+    const opt = parser => Optional<'Node', 'Token'>(parser);
+
+    const end = terminal('end');
+    const missing = terminal('missing');
+    const comma = terminal('comma');
+
+    const testGrammar: Grammar<'Node', 'Token'> = {
+        listOfOptionalStarter: Sequence('listOfOptionalStarter', [
+            SeparatedList(comma, 'optionalStarter'),
+            end,
+        ]),
+        optionalStarter: Sequence('optionalStarter', [opt(missing), missing]),
+    };
+
+    const aThenBTokens: any = parseRule2(testGrammar, 'listOfOptionalStarter', [
+        {
+            type: 'end',
+            value: null,
+            string: ';',
+            sourceLocation: dummySourceLocation,
+        },
+    ]);
+    t.deepEqual(aThenBTokens, {
+        children: [
+            {
+                items: [],
+                separators: [],
+            },
+            {
+                sourceLocation: dummySourceLocation,
+                type: 'end',
+                value: null,
+            },
+        ],
+        type: 'listOfOptionalStarter',
+        sourceLocation: dummySourceLocation,
     });
 });
 

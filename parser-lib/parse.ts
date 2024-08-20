@@ -926,8 +926,11 @@ const getPotentialAsts = <Node extends string, Token>(
         }
         case 'separatedList': {
             const result = getPotentialAsts(grammar, parser.item, token);
+            const parsesWithNoItems: PotentialAstsResult<Node, Token>[] = [
+                { partial: { emptySeparatedList: true }, madeProgress: false },
+            ];
             if ('expected' in result) {
-                return [{ partial: { emptySeparatedList: true }, madeProgress: false }];
+                return parsesWithNoItems;
             }
             // TODO: Include already parsed items and separators somehow
             const parsesWithNoMoreItems = result.map(({ partial, madeProgress }) => ({
@@ -942,7 +945,10 @@ const getPotentialAsts = <Node extends string, Token>(
                 },
                 madeProgress,
             }));
-            return [...parsesWithNoMoreItems, ...parsesWithMoreItems];
+            // NOTE: Need to handle the case where the token indicates that we could parse an item, but
+            // the item after that indicates that we can't, and we need to successfully parse a zero item
+            // separated list, followed by a successful parse of whatever comes next
+            return [...parsesWithNoMoreItems, ...parsesWithMoreItems, ...parsesWithNoItems];
         }
         default: {
             throw debug(`unhandled parser kind`);
@@ -1236,6 +1242,7 @@ export const parseRule2 = <Node extends string, Token>(
             }
         }
         if (partials.length == 0) {
+            // NOTE: Just here for easy rerun while debugging
             for (const potentialAst of potentialAsts) {
                 const { errors: newErrors, partials: newPartials } = applyTokenToPartialParse(
                     grammar,
@@ -1291,7 +1298,7 @@ export const parseRule2 = <Node extends string, Token>(
     return stripResultIndexes(partialAstToCompleteAst(completeAsts[0]));
 };
 
-export const useWipParser = false;
+export const useWipParser = true;
 
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
