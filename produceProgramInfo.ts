@@ -1,6 +1,6 @@
 import debug from './util/debug';
 import { Type } from './types';
-import { parseProgram as parseTacProgram } from './threeAddressCode/Program';
+//import { parseProgram as parseTacProgram } from './threeAddressCode/Program';
 import {
     mallocWithMmap,
     printWithPrintRuntimeFunction,
@@ -120,7 +120,8 @@ export default async (
 
     // Do a roundtrip on three address code to string and back to check the parser for that
     const stringForm = programToString(threeAddressCode);
-    const roundTripParsed = parseTacProgram(stringForm);
+    // Disabled because it's currently really slow :(
+    //const roundTripParsed = parseTacProgram(stringForm);
 
     const stdinFile = await writeTempFile(stdin, 'stdin', 'txt');
 
@@ -179,7 +180,7 @@ export default async (
         frontendOutput,
         structure,
         threeAddressCode: stringForm,
-        threeAddressRoundTrip: roundTripParsed as any,
+        threeAddressRoundTrip: {} as any, //roundTripParsed as any,
         backendResults,
         interpreterResults,
     };

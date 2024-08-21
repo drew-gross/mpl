@@ -261,7 +261,7 @@ export const grammar: Grammar<TacAstNode, TacToken> = {
             tacOptional(assign),
             tacOptional(register), // TODO: a) combine assignment and register b) once optional parsing is refactored, put the optional on the first register
             leftBracket,
-            tacOptional('argList'),
+            'argList',
             rightBracket,
             statementSeparator,
         ]),
@@ -270,7 +270,7 @@ export const grammar: Grammar<TacAstNode, TacToken> = {
             tacOptional(assign),
             identifier,
             leftBracket,
-            tacOptional('argList'),
+            'argList',
             rightBracket,
             statementSeparator,
         ]),
