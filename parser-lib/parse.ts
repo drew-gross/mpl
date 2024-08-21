@@ -135,15 +135,6 @@ const stripNodeIndexes = <Node, Leaf>(r: AstWithIndex<Node, Leaf>): Ast<Node, Le
     };
 };
 
-const stripResultIndexes = <Node, Token>(
-    r: ParseResultWithIndex<Node, Token>
-): ParseResult<Node, Token> => {
-    if (parseResultIsError(r)) {
-        return r;
-    }
-    return stripNodeIndexes(r);
-};
-
 export const stripSourceLocation = ast => {
     if ('children' in ast) {
         return { type: ast.type, children: ast.children.map(stripSourceLocation) };
@@ -797,7 +788,7 @@ export const parse = <Node extends string, Token>(
         // TODO: give good error about extra tokens
         throw debug('no parse');
     }
-    return stripResultIndexes(partialAstToCompleteAst(completeAsts[0]));
+    return stripNodeIndexes(partialAstToCompleteAst(completeAsts[0]));
 };
 
 export const parseString = <Node extends string, Token>(
