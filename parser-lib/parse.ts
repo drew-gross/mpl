@@ -1260,27 +1260,15 @@ export const parseRule2 = <Node extends string, Token>(
             errors.push(...newErrors);
         }
         if (partials.length == 0) {
-            // NOTE: Just here for easy rerun while debugging
-            for (const potentialAst of potentialAsts) {
-                const { errors: newErrors, partials: newPartials } = applyTokenToPartialParse(
-                    grammar,
-                    potentialAst,
-                    token
-                );
-                partials.push(...newPartials);
-                errors.push(...newErrors);
-            }
             return {
                 kind: 'parseError',
-                errors: errors.map(expectedToken => {
-                    return {
-                        expected: expectedToken,
-                        found: token.string,
-                        foundTokenText: `${token}`,
-                        sourceLocation: token.sourceLocation,
-                        whileParsing: [rule],
-                    };
-                }) as unknown as ParseFailureInfo<Token>[],
+                errors: errors.map(expectedToken => ({
+                    expected: expectedToken.expected,
+                    found: token.type,
+                    foundTokenText: token.string,
+                    sourceLocation: token.sourceLocation,
+                    whileParsing: [rule],
+                })),
             };
         }
         potentialAsts = partials;
@@ -1325,22 +1313,6 @@ export const parse = <Node extends string, Token>(
 ): ParseResult<Node, Token> => {
     const result = parseRule(grammar, firstRule, tokens, 0);
     if (parseResultIsError(result)) return result;
-    if (result.newIndex != tokens.length) {
-        const firstExtraToken = tokens[result.newIndex];
-        if (!firstExtraToken) debug('there are extra tokens but also not');
-        return {
-            kind: 'parseError',
-            errors: [
-                {
-                    found: firstExtraToken.type,
-                    foundTokenText: firstExtraToken.string,
-                    expected: 'endOfFile',
-                    whileParsing: [firstRule],
-                    sourceLocation: firstExtraToken.sourceLocation,
-                },
-            ],
-        };
-    }
     return parseRule2(grammar, firstRule, tokens);
 };
 
