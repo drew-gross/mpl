@@ -810,7 +810,7 @@ type EmptySlot<Node, Token> = {
     rule: Parser<Node, Token>;
 };
 type ExpectedToken<Token> = {
-    expected: Token[];
+    expected: Token | 'endOfFile';
 };
 
 type PotentialAstsResult<Node, Token> = {
@@ -827,7 +827,7 @@ const getPotentialAsts = <Node extends string, Token>(
     switch (parser.kind) {
         case 'terminal':
             if (token === 'endOfFile') {
-                return { expected: [parser.token] };
+                return { expected: parser.token };
             }
             if (parser.token === token.type) {
                 return [
@@ -837,7 +837,7 @@ const getPotentialAsts = <Node extends string, Token>(
                     },
                 ];
             } else {
-                return { expected: [parser.token] };
+                return { expected: parser.token };
             }
         case 'many': {
             const result = getPotentialAsts(grammar, parser.item, token);
@@ -858,12 +858,12 @@ const getPotentialAsts = <Node extends string, Token>(
             return [...parsesWithMoreItems, ...parsesWithNoItems];
         }
         case 'oneOf':
-            const errors: ExpectedToken<Token> = { expected: [] };
+            let error: ExpectedToken<Token> | undefined = undefined;
             const partials: PotentialAstsResult<Node, Token>[] = [];
             for (const p of parser.parsers) {
                 const result = getPotentialAsts(grammar, p, token);
                 if ('expected' in result) {
-                    errors.expected.push(...result.expected);
+                    error = result;
                 } else {
                     partials.push(...result);
                 }
@@ -871,7 +871,8 @@ const getPotentialAsts = <Node extends string, Token>(
             if (partials.length > 0) {
                 return partials;
             }
-            return errors;
+            if (error === undefined) throw debug('wat');
+            return error;
         case 'sequence': {
             // TODO: We only seem to use the first element?
             for (const seqParser of parser.parsers) {
@@ -1195,18 +1196,17 @@ const applyTokenToPartialParse = <Node, Token>(
     grammar: Grammar<Node, Token>,
     partial: PartialAst<Node, Token>,
     token: LToken<Token>
-) => {
-    const errors: ExpectedToken<Token> = { expected: [] };
+): { errors: ExpectedToken<Token>[]; partials: PartialAst<Node, Token>[] } => {
     const partials: PartialAst<Node, Token>[] = [];
     let rule = getRuleForNextEmptySlot(partial);
     if (!rule) {
-        errors.expected.push('endOfFile' as Token);
-        return { errors, partials };
+        return { errors: [{ expected: 'endOfFile' }], partials };
     }
     const result = getPotentialAsts(grammar, rule, token);
+    let errors: ExpectedToken<Token>[] = [];
     // Couldn't find any valid continuations: Must be an error
     if ('expected' in result) {
-        errors.expected.push(...result.expected);
+        errors.push(result);
     } else {
         for (const newProgress of result) {
             // If we used the token, hooray! Return the new partial tree
@@ -1231,7 +1231,7 @@ const applyTokenToPartialParse = <Node, Token>(
                     );
                 }
                 const appliedToNext = applyTokenToPartialParse(grammar, existingProgress, token);
-                errors.expected.push(...appliedToNext.errors.expected);
+                errors.push(...appliedToNext.errors);
                 partials.push(...appliedToNext.partials);
             }
         }
@@ -1248,7 +1248,7 @@ export const parseRule2 = <Node extends string, Token>(
     if (!ruleParser) throw debug(`invalid rule name: ${rule}`);
     let potentialAsts: PartialAst<Node, Token>[] = [{ rule: ruleParser }] as any;
     for (const token of tokens) {
-        const errors: ExpectedToken<Token> = { expected: [] };
+        const errors: ExpectedToken<Token>[] = [];
         const partials: PartialAst<Node, Token>[] = [];
         for (const potentialAst of potentialAsts) {
             const { errors: newErrors, partials: newPartials } = applyTokenToPartialParse(
@@ -1257,9 +1257,7 @@ export const parseRule2 = <Node extends string, Token>(
                 token
             );
             partials.push(...newPartials);
-            for (const newError in newErrors.expected) {
-                errors.expected.push(newError as Token);
-            }
+            errors.push(...newErrors);
         }
         if (partials.length == 0) {
             // NOTE: Just here for easy rerun while debugging
@@ -1270,13 +1268,11 @@ export const parseRule2 = <Node extends string, Token>(
                     token
                 );
                 partials.push(...newPartials);
-                for (const newError in newErrors.expected) {
-                    errors.expected.push(newError as Token);
-                }
+                errors.push(...newErrors);
             }
             return {
                 kind: 'parseError',
-                errors: errors.expected.map(expectedToken => {
+                errors: errors.map(expectedToken => {
                     return {
                         expected: expectedToken,
                         found: token.string,
