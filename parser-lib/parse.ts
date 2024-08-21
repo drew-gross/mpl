@@ -36,7 +36,6 @@ interface Leaf<Token> {
 }
 
 interface NodeWithIndex<Node, Leaf> {
-    success: true;
     type: Node;
     children: AstWithIndex<Node, Leaf>[];
     sourceLocation: SourceLocation;
@@ -628,14 +627,12 @@ const partialAstToCompleteAst = <Node, Token>(
             ast.sequenceItems.pop();
         }
         return {
-            success: true,
             type: ast.name as Node,
             children: ast.sequenceItems.map(partialAstToCompleteAst),
             sourceLocation: ast.sourceLocation,
         };
     } else if ('tokenType' in ast) {
         return {
-            success: true,
             type: ast.tokenType,
             value: ast.value,
             sourceLocation: ast.ltoken.sourceLocation,
