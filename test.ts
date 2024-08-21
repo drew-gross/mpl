@@ -22,7 +22,6 @@ import { parseMpl, compile, astFromParseResult, typeOfExpression } from './front
 import { grammar, tokenSpecs, MplParseResult, MplAst, MplToken } from './grammar';
 import {
     parse,
-    parseRule2,
     parseResultIsError,
     stripSourceLocation,
     Terminal,
@@ -1320,7 +1319,7 @@ test('Parser Lib - Separated List With Items That Start With Optional', t => {
         optionalStarter: Sequence('optionalStarter', [opt(missing), missing]),
     };
 
-    const aThenBTokens: any = parseRule2(testGrammar, 'listOfOptionalStarter', [
+    const aThenBTokens: any = parse(testGrammar, 'listOfOptionalStarter', [
         {
             type: 'end',
             value: null,

@@ -1239,7 +1239,7 @@ const applyTokenToPartialParse = <Node, Token>(
     return { errors, partials };
 };
 
-export const parseRule2 = <Node extends string, Token>(
+export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     rule: Node,
     tokens: LToken<Token>[]
@@ -1304,14 +1304,6 @@ export const parseRule2 = <Node extends string, Token>(
         throw debug('no parse');
     }
     return stripResultIndexes(partialAstToCompleteAst(completeAsts[0]));
-};
-
-export const parse = <Node extends string, Token>(
-    grammar: Grammar<Node, Token>,
-    firstRule: Node,
-    tokens: LToken<Token>[]
-): ParseResult<Node, Token> => {
-    return parseRule2(grammar, firstRule, tokens);
 };
 
 export const parseString = <Node extends string, Token>(
