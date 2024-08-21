@@ -41,26 +41,6 @@ interface AstNode<Node, Token> {
     sourceLocation: SourceLocation;
 }
 
-type AstWithIndex<Node, Token> =
-    | AstNode<Node, Token>
-    | Leaf<Token>
-    | SeparatedListWithIndex<Node, Token>
-    | ManyWithIndex<Node, Token>
-    | OptionalWithIndex<Node, Token>;
-
-type SeparatedListWithIndex<Node, Token> = {
-    items: AstWithIndex<Node, Token>[];
-    separators: AstWithIndex<Node, Token>[];
-};
-
-type ManyWithIndex<Node, Token> = {
-    items: AstWithIndex<Node, Token>[];
-};
-
-type OptionalWithIndex<Node, Token> = {
-    item: AstWithIndex<Node, Token> | undefined;
-};
-
 // TODO: just put the actual Ltoken in here instead of most of it's members
 export interface ParseFailureInfo<Token> {
     found: Token | 'endOfFile';
@@ -71,34 +51,29 @@ export interface ParseFailureInfo<Token> {
 }
 
 export type ParseError<Token> = { kind: 'parseError'; errors: ParseFailureInfo<Token>[] };
-export type ParseResultWithIndex<Node, Token> = ParseError<Token> | AstWithIndex<Node, Token>;
 export type ParseResult<Node, Token> = ParseError<Token> | Ast<Node, Token>;
 
 export const parseResultIsError = <Node, Leaf, Token>(
-    result:
-        | ParseResult<Node, Token>
-        | ParseResultWithIndex<Node, Token>
-        | AstWithIndex<Node, Leaf>[]
-        | 'missingOptional'
+    result: ParseResult<Node, Token> | Ast<Node, Leaf>[] | 'missingOptional'
 ): result is ParseError<Token> => {
     if (result === undefined) throw debug('bad parse result');
     return result != 'missingOptional' && 'kind' in result && result.kind == 'parseError';
 };
 
 const parseResultWithIndexIsLeaf = <Node, Token>(
-    r: ParseResultWithIndex<Node, Token>
+    r: ParseResult<Node, Token>
 ): r is Leaf<Token> => 'value' in r;
 
 // TODO also use a real sum type
 const parseResultWithIndexIsSeparatedList = <Node, Token>(
-    r: ParseResultWithIndex<Node, Token>
-): r is SeparatedListWithIndex<Node, Token> => 'items' in r && 'separators' in r;
+    r: ParseResult<Node, Token>
+): r is SeparatedListNode<Node, Token> => 'items' in r && 'separators' in r;
 
 const parseResultWithIndexIsList = <Node, Token>(
-    r: ParseResultWithIndex<Node, Token>
-): r is ManyWithIndex<Node, Token> => 'items' in r && !('separators' in r);
+    r: ParseResult<Node, Token>
+): r is ListNode<Node, Token> => 'items' in r && !('separators' in r);
 
-const stripNodeIndexes = <Node, Leaf>(r: AstWithIndex<Node, Leaf>): Ast<Node, Leaf> => {
+const stripNodeIndexes = <Node, Leaf>(r: Ast<Node, Leaf>): Ast<Node, Leaf> => {
     if (parseResultWithIndexIsLeaf(r)) {
         return { value: r.value, type: r.type, sourceLocation: r.sourceLocation };
     }
@@ -605,7 +580,7 @@ const replaceRuleForNextEmptySlotWithPartial = <Node, Token>(
 
 const partialAstToCompleteAst = <Node, Token>(
     ast: PartialAst<Node, Token>
-): AstWithIndex<Node, Token> => {
+): Ast<Node, Token> => {
     if ('rule' in ast) {
         throw debug('was supposed to be complete');
     } else if ('items' in ast) {
@@ -616,7 +591,7 @@ const partialAstToCompleteAst = <Node, Token>(
             return [...many.items, ...remaining];
         };
         return {
-            items: flattenRemainingItems(ast).map(partialAstToCompleteAst),
+            items: flattenRemainingItems(ast).map(partialAstToCompleteAst) as any,
         };
     } else if ('sequenceItems' in ast) {
         const sequenceHasTrailingMissingOptional = seq => {
@@ -647,9 +622,9 @@ const partialAstToCompleteAst = <Node, Token>(
         };
     } else if ('present' in ast) {
         if (ast.present) {
-            return { item: partialAstToCompleteAst(ast.item as any) };
+            return { item: partialAstToCompleteAst(ast.item as any) } as any;
         } else {
-            return { item: undefined };
+            return { item: undefined } as any;
         }
     } else if ('separator' in ast) {
         const flattenPartialSeparatedList = (list: PartialSeparatedList<Node, Token>) => {
@@ -665,7 +640,7 @@ const partialAstToCompleteAst = <Node, Token>(
         return flattenPartialSeparatedList(ast);
     } else if ('item' in ast) {
         return {
-            items: [partialAstToCompleteAst(ast.item)],
+            items: [partialAstToCompleteAst(ast.item) as any],
             separators: [],
         };
     }
@@ -784,7 +759,7 @@ export const parse = <Node extends string, Token>(
         // TODO: give good error about extra tokens
         throw debug('no parse');
     }
-    return stripNodeIndexes(partialAstToCompleteAst(completeAsts[0]));
+    return stripNodeIndexes(partialAstToCompleteAst(completeAsts[0]) as any);
 };
 
 export const parseString = <Node extends string, Token>(
