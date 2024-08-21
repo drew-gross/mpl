@@ -31,7 +31,6 @@ export const isListNode = <Node, Leaf>(n: Ast<Node, Leaf>): n is ListNode<Node, 
 
 interface LeafWithIndex<Token> {
     success: true;
-    newIndex: number;
     type: Token | 'endOfFile';
     value: LeafValue;
     sourceLocation: SourceLocation;
@@ -39,7 +38,6 @@ interface LeafWithIndex<Token> {
 
 interface NodeWithIndex<Node, Leaf> {
     success: true;
-    newIndex: number;
     type: Node;
     children: AstWithIndex<Node, Leaf>[];
     sourceLocation: SourceLocation;
@@ -55,17 +53,14 @@ type AstWithIndex<Node, Token> =
 type SeparatedListWithIndex<Node, Token> = {
     items: AstWithIndex<Node, Token>[];
     separators: AstWithIndex<Node, Token>[];
-    newIndex: number;
 };
 
 type ManyWithIndex<Node, Token> = {
     items: AstWithIndex<Node, Token>[];
-    newIndex: number;
 };
 
 type OptionalWithIndex<Node, Token> = {
     item: AstWithIndex<Node, Token> | undefined;
-    newIndex: number;
 };
 
 // TODO: just put the actual Ltoken in here instead of most of it's members
@@ -633,7 +628,6 @@ const partialAstToCompleteAst = <Node, Token>(
         };
         return {
             items: flattenRemainingItems(ast).map(partialAstToCompleteAst),
-            newIndex: 0,
         };
     } else if ('sequenceItems' in ast) {
         const sequenceHasTrailingMissingOptional = seq => {
@@ -645,7 +639,6 @@ const partialAstToCompleteAst = <Node, Token>(
         }
         return {
             success: true,
-            newIndex: 0,
             type: ast.name as Node,
             children: ast.sequenceItems.map(partialAstToCompleteAst),
             sourceLocation: ast.sourceLocation,
@@ -653,7 +646,6 @@ const partialAstToCompleteAst = <Node, Token>(
     } else if ('tokenType' in ast) {
         return {
             success: true,
-            newIndex: 0,
             type: ast.tokenType,
             value: ast.value,
             sourceLocation: ast.ltoken.sourceLocation,
@@ -665,13 +657,12 @@ const partialAstToCompleteAst = <Node, Token>(
         return {
             items: [],
             separators: [],
-            newIndex: 0,
         };
     } else if ('present' in ast) {
         if (ast.present) {
-            return { item: partialAstToCompleteAst(ast.item as any), newIndex: 0 };
+            return { item: partialAstToCompleteAst(ast.item as any) };
         } else {
-            return { item: undefined, newIndex: 0 };
+            return { item: undefined };
         }
     } else if ('separator' in ast) {
         const flattenPartialSeparatedList = (list: PartialSeparatedList<Node, Token>) => {
@@ -684,15 +675,11 @@ const partialAstToCompleteAst = <Node, Token>(
                 : { items: [], separators: [] };
             return { items: [item, ...items], separators: [...newSeparators, ...separators] };
         };
-        return {
-            ...flattenPartialSeparatedList(ast),
-            newIndex: 0,
-        };
+        return flattenPartialSeparatedList(ast);
     } else if ('item' in ast) {
         return {
             items: [partialAstToCompleteAst(ast.item)],
             separators: [],
-            newIndex: 0,
         };
     }
     throw debug(`unhandled conversion: ${ast}`);
