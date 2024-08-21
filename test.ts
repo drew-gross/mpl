@@ -1395,8 +1395,7 @@ test('Parse function call', t => {
     ]);
 });
 
-// TODO: need to refactor parser lib for better parsing of optionals
-test.failing('Parse "x" with "x?x"', t => {
+test('Parse "x" with "x?x"', t => {
     type TestNode = 'xNode';
     type TestToken = 'xToken';
 

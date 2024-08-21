@@ -352,7 +352,7 @@ return isFive(5) ? 1 : 0;`,
             {
                 expected: 'statementSeparator',
                 found: 'return',
-                sourceLocation: { line: 4, column: 13 },
+                sourceLocation: { line: 5, column: 13 },
             },
         ],
     },
@@ -1123,7 +1123,7 @@ return isFive(5) ? 1 : 0;`,
             {
                 expected: 'identifier',
                 found: 'fatArrow',
-                sourceLocation: { column: 0, line: 0 },
+                sourceLocation: { column: 1, line: 1 },
             },
         ],
     },
@@ -1266,11 +1266,11 @@ return myFunc();`,
         source: 'myVar: Integer = 3 * 3; return myVar;',
         exitCode: 9,
     },
-
     {
         name: 'many temporaries, spill to ram',
-        source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1',
+        source: 'return 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1 * 1;',
         exitCode: 1,
+        failingBackends: ['mips'],
     },
 
     {

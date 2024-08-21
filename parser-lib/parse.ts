@@ -1311,8 +1311,6 @@ export const parse = <Node extends string, Token>(
     firstRule: Node,
     tokens: LToken<Token>[]
 ): ParseResult<Node, Token> => {
-    const result = parseRule(grammar, firstRule, tokens, 0);
-    if (parseResultIsError(result)) return result;
     return parseRule2(grammar, firstRule, tokens);
 };
 
