@@ -6,7 +6,6 @@ import SourceLocation from './sourceLocation';
 import { TokenSpec, lex, LexError } from './lex';
 import { deepCopy } from 'deep-copy-ts';
 import drain from '../util/list/drain';
-const diff = require('deep-diff');
 
 type ListNode<Node, Leaf> = { items: Ast<Node, Leaf>[] };
 export type SeparatedListNode<Node, Leaf> = {
@@ -1346,15 +1345,7 @@ export const parse = <Node extends string, Token>(
             ],
         };
     }
-    const strippedResult = stripResultIndexes(result);
-    const wipResult = parseRule2(grammar, firstRule, tokens);
-    const resultDiff = diff(wipResult, strippedResult);
-    if (resultDiff) {
-        console.log(resultDiff);
-        debugger;
-    }
-    parseRule2(grammar, firstRule, tokens);
-    return wipResult;
+    return parseRule2(grammar, firstRule, tokens);
 };
 
 export const parseString = <Node extends string, Token>(
