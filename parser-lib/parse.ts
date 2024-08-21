@@ -1323,8 +1323,6 @@ export const parseRule2 = <Node extends string, Token>(
     return stripResultIndexes(partialAstToCompleteAst(completeAsts[0]));
 };
 
-export const useWipParser = true;
-
 export const parse = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     firstRule: Node,
@@ -1349,17 +1347,14 @@ export const parse = <Node extends string, Token>(
         };
     }
     const strippedResult = stripResultIndexes(result);
-    if (useWipParser) {
-        const wipResult = parseRule2(grammar, firstRule, tokens);
-        const resultDiff = diff(wipResult, strippedResult);
-        if (resultDiff) {
-            console.log(resultDiff);
-            debugger;
-        }
-        parseRule2(grammar, firstRule, tokens);
-        return wipResult;
+    const wipResult = parseRule2(grammar, firstRule, tokens);
+    const resultDiff = diff(wipResult, strippedResult);
+    if (resultDiff) {
+        console.log(resultDiff);
+        debugger;
     }
-    return strippedResult;
+    parseRule2(grammar, firstRule, tokens);
+    return wipResult;
 };
 
 export const parseString = <Node extends string, Token>(
