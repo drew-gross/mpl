@@ -16,7 +16,7 @@ type LeafValue = string | number | null | undefined;
 
 export type Ast<Node, Token> =
     | { type: Node; children: Ast<Node, Token>[]; sourceLocation: SourceLocation }
-    | { type: Token | 'endOfFile'; value: LeafValue; sourceLocation: SourceLocation }
+    | Leaf<Token>
     | SeparatedListNode<Node, Token>
     | ListNode<Node, Token>;
 
@@ -29,8 +29,7 @@ export const isListNode = <Node, Leaf>(n: Ast<Node, Leaf>): n is ListNode<Node, 
     return 'items' in n && !('separators' in n);
 };
 
-interface LeafWithIndex<Token> {
-    success: true;
+interface Leaf<Token> {
     type: Token | 'endOfFile';
     value: LeafValue;
     sourceLocation: SourceLocation;
@@ -45,7 +44,7 @@ interface NodeWithIndex<Node, Leaf> {
 
 type AstWithIndex<Node, Token> =
     | NodeWithIndex<Node, Token>
-    | LeafWithIndex<Token>
+    | Leaf<Token>
     | SeparatedListWithIndex<Node, Token>
     | ManyWithIndex<Node, Token>
     | OptionalWithIndex<Node, Token>;
@@ -89,7 +88,7 @@ export const parseResultIsError = <Node, Leaf, Token>(
 
 const parseResultWithIndexIsLeaf = <Node, Token>(
     r: ParseResultWithIndex<Node, Token>
-): r is LeafWithIndex<Token> => 'value' in r;
+): r is Leaf<Token> => 'value' in r;
 
 // TODO also use a real sum type
 const parseResultWithIndexIsSeparatedList = <Node, Token>(
@@ -108,10 +107,10 @@ const stripNodeIndexes = <Node, Leaf>(r: AstWithIndex<Node, Leaf>): Ast<Node, Le
         return {
             items: r.items.map(stripNodeIndexes),
             separators: r.separators.map(stripNodeIndexes),
-        };
+        } as any;
     }
     if (parseResultWithIndexIsList(r)) {
-        return { items: r.items.map(stripNodeIndexes) };
+        return { items: r.items.map(stripNodeIndexes) } as any;
     }
     // TODO: Should fix optional handling to work more like the new parser when skipping missing items
     if ('item' in r) {
