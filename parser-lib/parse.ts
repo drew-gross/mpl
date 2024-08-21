@@ -75,22 +75,21 @@ const parseResultWithIndexIsList = <Node, Token>(
 
 const stripNodeIndexes = <Node, Leaf>(r: Ast<Node, Leaf>): Ast<Node, Leaf> => {
     if (parseResultWithIndexIsLeaf(r)) {
-        return { value: r.value, type: r.type, sourceLocation: r.sourceLocation };
+        return r;
     }
     if (parseResultWithIndexIsSeparatedList(r)) {
         return {
             items: r.items.map(stripNodeIndexes),
             separators: r.separators.map(stripNodeIndexes),
-        } as any;
+        };
     }
     if (parseResultWithIndexIsList(r)) {
-        return { items: r.items.map(stripNodeIndexes) } as any;
+        return { items: r.items.map(stripNodeIndexes) };
     }
     // TODO: Should fix optional handling to work more like the new parser when skipping missing items
     if ('item' in r) {
         throw debug('TODO: better optional handling');
     }
-    if (!r.children) debug('expected children');
     const childrenWithFixedOptionals: any[] = [];
     for (const c of r.children) {
         if ('item' in c) {
