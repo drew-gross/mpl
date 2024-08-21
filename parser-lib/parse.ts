@@ -15,7 +15,7 @@ export type SeparatedListNode<Node, Leaf> = {
 type LeafValue = string | number | null | undefined;
 
 export type Ast<Node, Token> =
-    | AstNode<Node, Token>
+    | SequenceNode<Node, Token>
     | Leaf<Token>
     | SeparatedListNode<Node, Token>
     | ListNode<Node, Token>;
@@ -35,9 +35,9 @@ interface Leaf<Token> {
     sourceLocation: SourceLocation;
 }
 
-interface AstNode<Node, Token> {
+interface SequenceNode<Node, Token> {
     type: Node;
-    children: Ast<Node, Token>[];
+    sequenceItems: Ast<Node, Token>[];
     sourceLocation: SourceLocation;
 }
 
@@ -91,7 +91,7 @@ const stripNodeIndexes = <Node, Leaf>(r: Ast<Node, Leaf>): Ast<Node, Leaf> => {
         throw debug('TODO: better optional handling');
     }
     const childrenWithFixedOptionals: any[] = [];
-    for (const c of r.children) {
+    for (const c of r.sequenceItems) {
         if ('item' in c) {
             if (c.item) {
                 childrenWithFixedOptionals.push(c.item);
@@ -102,14 +102,14 @@ const stripNodeIndexes = <Node, Leaf>(r: Ast<Node, Leaf>): Ast<Node, Leaf> => {
     }
     return {
         type: r.type,
-        children: childrenWithFixedOptionals.map(stripNodeIndexes) as any,
+        sequenceItems: childrenWithFixedOptionals.map(stripNodeIndexes) as any,
         sourceLocation: r.sourceLocation,
     };
 };
 
 export const stripSourceLocation = ast => {
-    if ('children' in ast) {
-        return { type: ast.type, children: ast.children.map(stripSourceLocation) };
+    if ('sequenceItems' in ast) {
+        return { type: ast.type, sequenceItems: ast.sequenceItems.map(stripSourceLocation) };
     } else {
         return { type: ast.type, value: ast.value };
     }
@@ -206,9 +206,9 @@ export const toDotFile = <Node extends string, Token>(ast: Ast<Node, Token>) => 
             // TODO: make this prettier as a node within the tree than just "list"
             nodeString = 'list';
             children = node.items;
-        } else if ('children' in node) {
+        } else if ('sequenceItems' in node) {
             nodeString = node.type;
-            children = node.children;
+            children = node.sequenceItems;
         } else {
             nodeString = `${node.type}\n${node.value ? node.value : ''}`;
         }
@@ -602,7 +602,7 @@ const partialAstToCompleteAst = <Node, Token>(
         }
         return {
             type: ast.name as Node,
-            children: ast.sequenceItems.map(partialAstToCompleteAst) as any,
+            sequenceItems: ast.sequenceItems.map(partialAstToCompleteAst),
             sourceLocation: ast.sourceLocation,
         };
     } else if ('tokenType' in ast) {

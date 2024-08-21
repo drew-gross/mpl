@@ -39,13 +39,13 @@ export const functionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Functio
     if (ast.type != 'function') {
         throw debug('Need a function');
     }
-    if (!('children' in ast)) {
+    if (!('sequenceItems' in ast)) {
         debug('wrong shape ast');
         throw debug('WrongShapeAst');
     }
 
     let childIndex = 0;
-    let child = ast.children[childIndex];
+    let child = ast.sequenceItems[childIndex];
     if (isSeparatedListNode(child) || isListNode(child)) {
         throw debug('todo');
     }
@@ -54,14 +54,14 @@ export const functionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Functio
         throw debug('WrongShapeAst');
     }
     childIndex++;
-    child = ast.children[childIndex];
+    child = ast.sequenceItems[childIndex];
     if (isSeparatedListNode(child) || isListNode(child)) {
         throw debug('todo');
     }
     if (child.type == 'spillSpec') {
         childIndex++;
     }
-    child = ast.children[childIndex];
+    child = ast.sequenceItems[childIndex];
     if (isSeparatedListNode(child) || isListNode(child)) {
         throw debug('todo');
     }
@@ -69,9 +69,9 @@ export const functionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Functio
         debug('wrong shape ast');
         throw debug('WrongShapeAst');
     }
-    const name = (ast.children[childIndex] as any).value;
+    const name = (ast.sequenceItems[childIndex] as any).value;
     childIndex++;
-    child = ast.children[childIndex];
+    child = ast.sequenceItems[childIndex];
     if (isSeparatedListNode(child) || isListNode(child)) {
         throw debug('todo');
     }
@@ -81,13 +81,13 @@ export const functionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Functio
     }
     childIndex++;
     let args: Register[] = [];
-    child = ast.children[childIndex];
+    child = ast.sequenceItems[childIndex];
     if (isSeparatedListNode(child)) {
         args = parseArgList(child) as Register[];
         childIndex++;
     }
 
-    child = ast.children[childIndex];
+    child = ast.sequenceItems[childIndex];
     if (isSeparatedListNode(child) || isListNode(child)) {
         throw debug('todo');
     }
@@ -96,7 +96,7 @@ export const functionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Functio
         throw debug('WrongShapeAst');
     }
     childIndex++;
-    child = ast.children[childIndex];
+    child = ast.sequenceItems[childIndex];
     if (isSeparatedListNode(child) || isListNode(child)) {
         throw debug('todo');
     }
@@ -105,7 +105,7 @@ export const functionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Functio
         throw debug('WrongShapeAst');
     }
     childIndex++;
-    child = ast.children[childIndex];
+    child = ast.sequenceItems[childIndex];
     if (!isListNode(child)) {
         throw debug('todo');
     }

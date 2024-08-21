@@ -124,25 +124,25 @@ export const testPrograms: TestProgram[] = [
         exitCode: 120,
         ast: {
             type: 'program',
-            children: [
+            seqeunceItems: [
                 {
                     type: 'statement',
-                    children: [
+                    seqeunceItems: [
                         {
                             type: 'returnStatement',
-                            children: [
+                            seqeunceItems: [
                                 { type: 'return', value: null },
                                 {
                                     type: 'product',
-                                    children: [
+                                    seqeunceItems: [
                                         {
                                             type: 'product',
-                                            children: [
+                                            seqeunceItems: [
                                                 { type: 'number', value: 2 },
                                                 { type: 'product', value: null },
                                                 {
                                                     type: 'product',
-                                                    children: [
+                                                    seqeunceItems: [
                                                         { type: 'number', value: 3 },
                                                         { type: 'product', value: null },
                                                         { type: 'number', value: 4 },
@@ -1023,20 +1023,20 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 60,
         ast: {
             type: 'program',
-            children: [
+            seqeunceItems: [
                 {
                     type: 'statement',
-                    children: [
+                    seqeunceItems: [
                         {
                             type: 'returnStatement',
-                            children: [
+                            seqeunceItems: [
                                 { type: 'return', value: null },
                                 {
                                     type: 'product',
-                                    children: [
+                                    seqeunceItems: [
                                         {
                                             type: 'product',
-                                            children: [
+                                            seqeunceItems: [
                                                 { type: 'number', value: 5 },
                                                 { type: 'product', value: null },
                                                 { type: 'number', value: 3 },
@@ -1060,20 +1060,20 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 60,
         ast: {
             type: 'program',
-            children: [
+            seqeunceItems: [
                 {
                     type: 'statement',
-                    children: [
+                    seqeunceItems: [
                         {
                             type: 'returnStatement',
-                            children: [
+                            seqeunceItems: [
                                 { type: 'return', value: null },
                                 {
                                     type: 'product',
-                                    children: [
+                                    seqeunceItems: [
                                         {
                                             type: 'product',
-                                            children: [
+                                            seqeunceItems: [
                                                 { type: 'number', value: 3 },
                                                 { type: 'product', value: null },
                                                 { type: 'number', value: 4 },

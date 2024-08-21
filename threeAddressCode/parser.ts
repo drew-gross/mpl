@@ -347,9 +347,9 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
     const a = ast as any;
     switch (ast.type) {
         case 'assign': {
-            const to = parseRegister(a.children[0].value);
-            const from = a.children[2].value;
-            const why = stripComment(a.children[3].value);
+            const to = parseRegister(a.sequenceItems[0].value);
+            const from = a.sequenceItems[2].value;
+            const why = stripComment(a.sequenceItems[3].value);
             if (isRegister(from)) {
                 return { kind: 'move', to, from: parseRegister(from), why };
             } else {
@@ -359,58 +359,58 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
         case 'label':
             return {
                 kind: 'label',
-                name: a.children[0].value,
-                why: stripComment(a.children[2].value),
+                name: a.sequenceItems[0].value,
+                why: stripComment(a.sequenceItems[2].value),
             };
         case 'load':
             return {
                 kind: 'loadMemoryByte',
-                address: parseRegister(a.children[3].value),
-                to: parseRegister(a.children[0].value),
-                why: stripComment(a.children[4].value),
+                address: parseRegister(a.sequenceItems[3].value),
+                to: parseRegister(a.sequenceItems[0].value),
+                why: stripComment(a.sequenceItems[4].value),
             };
         case 'goto':
-            if (a.children.length == 3) {
+            if (a.sequenceItems.length == 3) {
                 return {
                     kind: 'goto',
-                    label: a.children[1].value,
-                    why: stripComment(a.children[2].value),
+                    label: a.sequenceItems[1].value,
+                    why: stripComment(a.sequenceItems[2].value),
                 };
             }
             return {
                 kind: 'goto',
             } as any;
         case 'gotoIfEqual': {
-            if (a.children[5].value == 0) {
+            if (a.sequenceItems[5].value == 0) {
                 return {
                     kind: 'gotoIfZero',
-                    label: a.children[1].value,
-                    register: parseRegister(a.children[3].value),
-                    why: stripComment(a.children[6].value),
+                    label: a.sequenceItems[1].value,
+                    register: parseRegister(a.sequenceItems[3].value),
+                    why: stripComment(a.sequenceItems[6].value),
                 };
             }
-            if (a.children[5].type == 'number') {
+            if (a.sequenceItems[5].type == 'number') {
                 return {
                     kind: 'gotoIfEqual',
-                    label: a.children[1].value,
-                    lhs: parseRegister(a.children[3].value),
-                    rhs: parseRegister(a.children[5].value),
-                    why: stripComment(a.children[6].value),
+                    label: a.sequenceItems[1].value,
+                    lhs: parseRegister(a.sequenceItems[3].value),
+                    rhs: parseRegister(a.sequenceItems[5].value),
+                    why: stripComment(a.sequenceItems[6].value),
                 };
             }
             return {
                 kind: 'gotoIfEqual',
-                label: a.children[1].value,
-                lhs: parseRegister(a.children[3].value),
-                rhs: parseRegister(a.children[5].value),
-                why: stripComment(a.children[6].value),
+                label: a.sequenceItems[1].value,
+                lhs: parseRegister(a.sequenceItems[3].value),
+                rhs: parseRegister(a.sequenceItems[5].value),
+                why: stripComment(a.sequenceItems[6].value),
             } as any;
         }
         case 'increment':
             return {
                 kind: 'increment',
-                register: parseRegister(a.children[0].value),
-                why: stripComment(a.children[2].value),
+                register: parseRegister(a.sequenceItems[0].value),
+                why: stripComment(a.sequenceItems[2].value),
             };
         case 'identifier':
             return {
@@ -419,221 +419,226 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
         case 'loadImmediate':
             return {
                 kind: 'loadImmediate',
-                destination: parseRegister(a.children[0].value),
-                value: a.children[2].value,
-                why: stripComment(a.children[3].value),
+                destination: parseRegister(a.sequenceItems[0].value),
+                value: a.sequenceItems[2].value,
+                why: stripComment(a.sequenceItems[3].value),
             };
         case 'difference': {
             return {
                 kind: 'subtract',
-                destination: parseRegister(a.children[0].value),
-                lhs: parseRegister(a.children[2].value),
-                rhs: parseRegister(a.children[4].value),
-                why: stripComment(a.children[5].value),
+                destination: parseRegister(a.sequenceItems[0].value),
+                lhs: parseRegister(a.sequenceItems[2].value),
+                rhs: parseRegister(a.sequenceItems[4].value),
+                why: stripComment(a.sequenceItems[5].value),
             };
         }
         case 'gotoIfNotEqual': {
             const rhs =
-                a.children[5].type == 'number'
-                    ? a.children[5].value
-                    : parseRegister(a.children[5].value);
+                a.sequenceItems[5].type == 'number'
+                    ? a.sequenceItems[5].value
+                    : parseRegister(a.sequenceItems[5].value);
             return {
                 kind: 'gotoIfNotEqual',
-                label: a.children[1].value,
-                lhs: parseRegister(a.children[3].value),
+                label: a.sequenceItems[1].value,
+                lhs: parseRegister(a.sequenceItems[3].value),
                 rhs,
-                why: stripComment(a.children[6].value),
+                why: stripComment(a.sequenceItems[6].value),
             };
         }
         case 'gotoIfGreater': {
             return {
                 kind: 'gotoIfGreater',
-                label: a.children[1].value,
-                lhs: parseRegister(a.children[3].value),
-                rhs: parseRegister(a.children[5].value),
-                why: stripComment(a.children[6].value),
+                label: a.sequenceItems[1].value,
+                lhs: parseRegister(a.sequenceItems[3].value),
+                rhs: parseRegister(a.sequenceItems[5].value),
+                why: stripComment(a.sequenceItems[6].value),
             };
         }
         case 'store': {
-            const why = stripComment(a.children[4].value);
-            if (a.children[3].type == 'number') {
+            const why = stripComment(a.sequenceItems[4].value);
+            if (a.sequenceItems[3].type == 'number') {
                 return {
                     kind: 'storeMemoryByte',
-                    address: parseRegister(a.children[1].value),
-                    contents: a.children[3].value,
+                    address: parseRegister(a.sequenceItems[1].value),
+                    contents: a.sequenceItems[3].value,
                     why,
                 };
             }
-            if (!isRegister(a.children[1].value)) {
+            if (!isRegister(a.sequenceItems[1].value)) {
                 return {
                     kind: 'storeGlobal',
-                    from: parseRegister(a.children[3].value),
-                    to: a.children[1].value,
+                    from: parseRegister(a.sequenceItems[3].value),
+                    to: a.sequenceItems[1].value,
                     why,
                 };
             }
             return {
                 kind: 'storeMemoryByte',
-                address: parseRegister(a.children[1].value),
-                contents: parseRegister(a.children[3].value),
+                address: parseRegister(a.sequenceItems[1].value),
+                contents: parseRegister(a.sequenceItems[3].value),
                 why,
             };
         }
         case 'offsetStore': {
-            if (a.children[7].value == 0) {
+            if (a.sequenceItems[7].value == 0) {
                 return {
                     kind: 'storeZeroToMemory',
-                    address: parseRegister(a.children[2].value),
-                    offset: a.children[4].value,
-                    why: stripComment(a.children[8].value),
+                    address: parseRegister(a.sequenceItems[2].value),
+                    offset: a.sequenceItems[4].value,
+                    why: stripComment(a.sequenceItems[8].value),
                 };
             }
             return {
                 kind: 'storeMemory',
-                address: parseRegister(a.children[2].value),
-                offset: a.children[4].value,
-                from: parseRegister(a.children[7].value),
-                why: stripComment(a.children[8].value),
+                address: parseRegister(a.sequenceItems[2].value),
+                offset: a.sequenceItems[4].value,
+                from: parseRegister(a.sequenceItems[7].value),
+                why: stripComment(a.sequenceItems[8].value),
             };
         }
         case 'offsetLoad': {
             return {
                 kind: 'loadMemory',
-                to: parseRegister(a.children[0].value),
-                from: parseRegister(a.children[4].value),
-                offset: a.children[6].value,
-                why: stripComment(a.children[8].value),
+                to: parseRegister(a.sequenceItems[0].value),
+                from: parseRegister(a.sequenceItems[4].value),
+                offset: a.sequenceItems[6].value,
+                why: stripComment(a.sequenceItems[8].value),
             };
         }
         case 'addressOf': {
             return {
                 kind: 'loadSymbolAddress',
-                symbolName: a.children[3].value,
-                to: parseRegister(a.children[0].value),
-                why: stripComment(a.children[4].value),
+                symbolName: a.sequenceItems[3].value,
+                to: parseRegister(a.sequenceItems[0].value),
+                why: stripComment(a.sequenceItems[4].value),
             };
         }
         case 'callByRegister': {
-            if (a.children[1].type == 'assign') {
+            if (a.sequenceItems[1].type == 'assign') {
                 return {
                     kind: 'callByRegister',
-                    function: parseRegister(a.children[2].value),
-                    arguments: a.children.length == 7 ? parseArgList(a.children[4]) : [],
-                    destination: parseRegister(a.children[0].value),
-                    why: stripComment((last(a.children) as any).value),
+                    function: parseRegister(a.sequenceItems[2].value),
+                    arguments:
+                        a.sequenceItems.length == 7 ? parseArgList(a.sequenceItems[4]) : [],
+                    destination: parseRegister(a.sequenceItems[0].value),
+                    why: stripComment((last(a.sequenceItems) as any).value),
                 };
             } else {
-                if (a.children[1].type != 'leftBracket') throw debug('expecting left bracket');
+                if (a.sequenceItems[1].type != 'leftBracket')
+                    throw debug('expecting left bracket');
                 return {
                     kind: 'callByRegister',
-                    function: parseRegister(a.children[0].value),
-                    arguments: a.children.length == 5 ? parseArgList(a.children[2]) : [],
+                    function: parseRegister(a.sequenceItems[0].value),
+                    arguments:
+                        a.sequenceItems.length == 5 ? parseArgList(a.sequenceItems[2]) : [],
                     destination: null,
-                    why: stripComment((last(a.children) as any).value),
+                    why: stripComment((last(a.sequenceItems) as any).value),
                 };
             }
         }
         case 'callByName': {
-            if (a.children[1].type == 'assign') {
-                if (![6, 7].includes(a.children.length)) debug('wrong children lenght');
+            if (a.sequenceItems[1].type == 'assign') {
+                if (![6, 7].includes(a.sequenceItems.length)) debug('wrong children lenght');
                 return {
                     kind: 'callByName',
-                    function: a.children[2].value,
-                    arguments: a.children.length == 7 ? parseArgList(a.children[4]) : [],
-                    destination: parseRegister(a.children[0].value),
-                    why: stripComment((last(a.children) as any).value),
+                    function: a.sequenceItems[2].value,
+                    arguments:
+                        a.sequenceItems.length == 7 ? parseArgList(a.sequenceItems[4]) : [],
+                    destination: parseRegister(a.sequenceItems[0].value),
+                    why: stripComment((last(a.sequenceItems) as any).value),
                 };
             } else {
-                if (![4, 5].includes(a.children.length)) debug('wrong children lenght');
+                if (![4, 5].includes(a.sequenceItems.length)) debug('wrong children lenght');
                 return {
                     kind: 'callByName',
-                    function: a.children[0].value,
-                    arguments: a.children.length == 5 ? parseArgList(a.children[2]) : [],
+                    function: a.sequenceItems[0].value,
+                    arguments:
+                        a.sequenceItems.length == 5 ? parseArgList(a.sequenceItems[2]) : [],
                     destination: null,
-                    why: stripComment((last(a.children) as any).value),
+                    why: stripComment((last(a.sequenceItems) as any).value),
                 };
             }
         }
         case 'syscall': {
-            if (a.children[1].type == 'assign') {
+            if (a.sequenceItems[1].type == 'assign') {
                 return {
                     kind: 'syscall',
-                    name: a.children[3].value,
-                    arguments: parseSyscallArgs(a.children[4].children[0]),
-                    destination: parseRegister(a.children[0].value),
-                    why: stripComment(a.children[3].value),
+                    name: a.sequenceItems[3].value,
+                    arguments: parseSyscallArgs(a.sequenceItems[4].sequenceItems[0]),
+                    destination: parseRegister(a.sequenceItems[0].value),
+                    why: stripComment(a.sequenceItems[3].value),
                 };
             } else {
                 return {
                     kind: 'syscall',
-                    name: a.children[1].value,
-                    arguments: parseSyscallArgs(a.children[2].children[0]),
+                    name: a.sequenceItems[1].value,
+                    arguments: parseSyscallArgs(a.sequenceItems[2].sequenceItems[0]),
                     destination: null,
-                    why: stripComment(a.children[3].value),
+                    why: stripComment(a.sequenceItems[3].value),
                 };
             }
         }
         case 'plusEqual': {
             return {
                 kind: 'addImmediate',
-                register: parseRegister(a.children[0].value),
-                amount: a.children[2].value,
-                why: stripComment(a.children[3].value),
+                register: parseRegister(a.sequenceItems[0].value),
+                amount: a.sequenceItems[2].value,
+                why: stripComment(a.sequenceItems[3].value),
             } as any;
         }
         case 'statementSeparator': {
             return {
                 kind: 'empty',
-                why: stripComment(a.children[0].value),
+                why: stripComment(a.sequenceItems[0].value),
             };
         }
         case 'product': {
             return {
                 kind: 'multiply',
-                destination: parseRegister(a.children[0].value),
-                lhs: parseRegister(a.children[2].value),
-                rhs: parseRegister(a.children[4].value),
-                why: stripComment(a.children[5].value),
+                destination: parseRegister(a.sequenceItems[0].value),
+                lhs: parseRegister(a.sequenceItems[2].value),
+                rhs: parseRegister(a.sequenceItems[4].value),
+                why: stripComment(a.sequenceItems[5].value),
             };
         }
         case 'sum': {
             return {
                 kind: 'add',
-                destination: parseRegister(a.children[0].value),
-                lhs: parseRegister(a.children[2].value),
-                rhs: parseRegister(a.children[4].value),
-                why: stripComment(a.children[5].value),
+                destination: parseRegister(a.sequenceItems[0].value),
+                lhs: parseRegister(a.sequenceItems[2].value),
+                rhs: parseRegister(a.sequenceItems[4].value),
+                why: stripComment(a.sequenceItems[5].value),
             };
         }
         case 'alloca':
             return {
                 kind: 'alloca',
-                register: parseRegister(a.children[0].value),
-                bytes: a.children[4].value,
-                why: stripComment(a.children[6].value),
+                register: parseRegister(a.sequenceItems[0].value),
+                bytes: a.sequenceItems[4].value,
+                why: stripComment(a.sequenceItems[6].value),
             };
         case 'spill':
             return {
                 kind: ast.type as any,
-                register: parseRegister(a.children[1].value),
-                offset: a.children[0].value,
-                why: stripComment(a.children[2].value),
+                register: parseRegister(a.sequenceItems[1].value),
+                offset: a.sequenceItems[0].value,
+                why: stripComment(a.sequenceItems[2].value),
             };
         case 'unspill':
-            if (Number.isNaN(a.children[0].value)) debug('nan!');
+            if (Number.isNaN(a.sequenceItems[0].value)) debug('nan!');
             return {
                 kind: ast.type as any,
-                register: parseRegister(a.children[1].value),
-                offset: a.children[0].value,
-                why: stripComment(a.children[2].value),
+                register: parseRegister(a.sequenceItems[1].value),
+                offset: a.sequenceItems[0].value,
+                why: stripComment(a.sequenceItems[2].value),
             };
         case 'return':
-            if (a.children.length < 2) debug('short in lengh');
-            if (!a.children || !a.children[2]) debug('bad shape');
+            if (a.sequenceItems.length < 2) debug('short in lengh');
+            if (!a.sequenceItems || !a.sequenceItems[2]) debug('bad shape');
             return {
                 kind: 'return',
-                register: parseRegister(a.children[1].value),
-                why: stripComment(a.children[2].value),
+                register: parseRegister(a.sequenceItems[1].value),
+                why: stripComment(a.sequenceItems[2].value),
             };
         default:
             throw debug(`${ast.type} unhandled in instructionFromParseResult`);

@@ -135,15 +135,15 @@ test('ast for single number', t => {
     }
     const expectedResult = {
         type: 'program',
-        children: [
+        sequenceItems: [
             {
                 type: 'statement',
                 sourceLocation: { line: 1, column: 1 },
-                children: [
+                sequenceItems: [
                     {
                         type: 'returnStatement',
                         sourceLocation: { line: 1, column: 1 },
-                        children: [
+                        sequenceItems: [
                             {
                                 type: 'return',
                                 value: null,
@@ -177,15 +177,15 @@ test('ast for number in brackets', t => {
         {
             type: 'program',
             sourceLocation: { line: 1, column: 2 },
-            children: [
+            sequenceItems: [
                 {
                     type: 'statement',
                     sourceLocation: { line: 1, column: 2 },
-                    children: [
+                    sequenceItems: [
                         {
                             type: 'returnStatement',
                             sourceLocation: { line: 1, column: 2 },
-                            children: [
+                            sequenceItems: [
                                 {
                                     type: 'return',
                                     value: null,
@@ -216,15 +216,15 @@ test('ast for number in double brackets', t => {
     t.deepEqual(removeBracketsFromAst(ast), {
         type: 'program',
         sourceLocation: { line: 1, column: 1 },
-        children: [
+        sequenceItems: [
             {
                 type: 'statement',
                 sourceLocation: { line: 1, column: 1 },
-                children: [
+                sequenceItems: [
                     {
                         type: 'returnStatement',
                         sourceLocation: { line: 1, column: 1 },
-                        children: [
+                        sequenceItems: [
                             {
                                 type: 'return',
                                 value: null,
@@ -260,15 +260,15 @@ test('ast for product with brackets', t => {
         {
             type: 'program',
             sourceLocation: { line: 1, column: 1 },
-            children: [
+            sequenceItems: [
                 {
                     type: 'statement',
                     sourceLocation: { line: 1, column: 1 },
-                    children: [
+                    sequenceItems: [
                         {
                             type: 'returnStatement',
                             sourceLocation: { line: 1, column: 1 },
-                            children: [
+                            sequenceItems: [
                                 {
                                     type: 'return',
                                     sourceLocation: { line: 1, column: 1 },
@@ -277,7 +277,7 @@ test('ast for product with brackets', t => {
                                 {
                                     type: 'binaryExpression',
                                     sourceLocation: { line: 1, column: 8 },
-                                    children: [
+                                    sequenceItems: [
                                         {
                                             type: 'number',
                                             value: 3,
@@ -291,7 +291,7 @@ test('ast for product with brackets', t => {
                                         {
                                             type: 'binaryExpression',
                                             sourceLocation: { line: 1, column: 13 },
-                                            children: [
+                                            sequenceItems: [
                                                 {
                                                     type: 'number',
                                                     value: 4,
@@ -328,23 +328,23 @@ test('ast for product with brackets', t => {
 test('ast for assignment then return', t => {
     const expected = {
         type: 'program',
-        children: [
+        sequenceItems: [
             {
                 type: 'statement',
-                children: [
+                sequenceItems: [
                     {
                         type: 'declaration',
-                        children: [
+                        sequenceItems: [
                             { type: 'identifier', value: 'constThree' },
                             { type: 'colon', value: null },
                             { type: 'assignment', value: null },
                             {
                                 type: 'function',
-                                children: [
+                                sequenceItems: [
                                     // TODO pretty sure the commented out version is actaully correct
                                     {
                                         // type: 'arg',
-                                        // children: [
+                                        // sequenceItems: [
                                         //     {
                                         //         type: 'identifier',
                                         //         value: 'a',
@@ -355,7 +355,7 @@ test('ast for assignment then return', t => {
                                         //     },
                                         //     {
                                         //         type: 'typeWithoutArgs',
-                                        //         children: [
+                                        //         sequenceItems: [
                                         //             {
                                         //                 type: 'typeIdentifier',
                                         //                 value: 'Integer',
@@ -375,10 +375,10 @@ test('ast for assignment then return', t => {
                     { type: 'statementSeparator', value: null },
                     {
                         type: 'statement',
-                        children: [
+                        sequenceItems: [
                             {
                                 type: 'returnStatement',
-                                children: [
+                                sequenceItems: [
                                     { type: 'return', value: null },
                                     { type: 'number', value: 10 },
                                 ],
@@ -411,17 +411,17 @@ test('parse for', t => {
     const ast = parse(grammar, 'program', lex(tokenSpecs, source) as Token<MplToken>[]);
     t.deepEqual(stripSourceLocation(ast), {
         type: 'program',
-        children: [
+        sequenceItems: [
             {
                 type: 'statement' as any,
-                children: [
+                sequenceItems: [
                     {
                         type: 'forLoop' as any,
-                        children: [
+                        sequenceItems: [
                             { value: null, type: 'for' as any },
                             {
                                 type: 'forCondition' as any,
-                                children: [
+                                sequenceItems: [
                                     { value: 'a', type: 'identifier' as any },
                                     { value: null, type: 'colon' as any },
                                     { value: 'b', type: 'identifier' as any },
@@ -429,10 +429,10 @@ test('parse for', t => {
                             },
                             {
                                 type: 'statement' as any,
-                                children: [
+                                sequenceItems: [
                                     {
                                         type: 'reassignment' as any,
-                                        children: [
+                                        sequenceItems: [
                                             { value: 'a', type: 'identifier' as any },
                                             { value: null, type: 'assignment' as any },
                                             { value: 'b', type: 'identifier' as any },
@@ -454,20 +454,20 @@ test('lowering of bracketedExpressions', t => {
     const lexResult = lex(tokenSpecs, 'return (8 * ((7)));') as Token<MplToken>[];
     t.deepEqual(stripSourceLocation(parseMpl(lexResult)), {
         type: 'program',
-        children: [
+        sequenceItems: [
             {
                 type: 'statement',
-                children: [
+                sequenceItems: [
                     {
                         type: 'returnStatement',
-                        children: [
+                        sequenceItems: [
                             {
                                 type: 'return',
                                 value: null,
                             },
                             {
                                 type: 'binaryExpression',
-                                children: [
+                                sequenceItems: [
                                     {
                                         type: 'number',
                                         value: 8,
@@ -1195,7 +1195,7 @@ test('Parser lib - SeparatedList in sequence', t => {
         { type: 'start', string: 'start', sourceLocation: dummySourceLocation },
         { type: 'finish', string: 'finish', sourceLocation: dummySourceLocation },
     ]);
-    t.deepEqual(zeroItemList.children[1], { items: [], separators: [] });
+    t.deepEqual(zeroItemList.sequenceItems[1], { items: [], separators: [] });
 });
 
 test('Parser Lib - Many', t => {
@@ -1226,7 +1226,7 @@ test('Parser Lib - Sequence of Many', t => {
 
     const zeroItemList: any = parse(testGrammar, 'asAndBs', []);
     t.deepEqual(zeroItemList, {
-        children: [{ items: [] }, { items: [] }],
+        sequenceItems: [{ items: [] }, { items: [] }],
         sourceLocation: dummySourceLocation,
         type: 'asAndBs',
     });
@@ -1236,7 +1236,7 @@ test('Parser Lib - Sequence of Many', t => {
         { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
     ]);
     t.deepEqual(twoAs, {
-        children: [
+        sequenceItems: [
             {
                 items: [
                     { sourceLocation: dummySourceLocation, type: 'a', value: undefined },
@@ -1254,7 +1254,7 @@ test('Parser Lib - Sequence of Many', t => {
         { type: 'b', string: 'b', sourceLocation: dummySourceLocation },
     ]);
     t.deepEqual(twobs, {
-        children: [
+        sequenceItems: [
             { items: [] },
             {
                 items: [
@@ -1272,7 +1272,7 @@ test('Parser Lib - Sequence of Many', t => {
         { type: 'b', string: 'b', sourceLocation: dummySourceLocation },
     ]);
     t.deepEqual(aThenB, {
-        children: [
+        sequenceItems: [
             {
                 items: [{ sourceLocation: dummySourceLocation, type: 'a', value: undefined }],
             },
@@ -1328,7 +1328,7 @@ test('Parser Lib - Separated List With Items That Start With Optional', t => {
         },
     ]);
     t.deepEqual(aThenBTokens, {
-        children: [
+        sequenceItems: [
             {
                 items: [],
                 separators: [],
@@ -1410,7 +1410,7 @@ test('Parse "x" with "x?x"', t => {
     ];
     const ast = parse(testGrammar, 'x', tokens);
     t.deepEqual(stripSourceLocation(ast), {
-        children: [{ type: 'xToken', value: undefined }],
+        sequenceItems: [{ type: 'xToken', value: undefined }],
         type: 'x?x',
     });
 });

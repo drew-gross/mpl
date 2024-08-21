@@ -35,15 +35,15 @@ const tacFromParseResult = (ast: Ast<TacAstNode, TacToken>): Program | ParseErro
     if (isSeparatedListNode(ast)) throw debug('todo');
     if (isListNode(ast)) throw debug('todo');
     if (ast.type !== 'program') throw debug('todo');
-    const parsedGlobals = ast.children[0];
-    const parsedFunctions = ast.children[1];
+    const parsedGlobals = ast.sequenceItems[0];
+    const parsedFunctions = ast.sequenceItems[1];
     if (!isListNode(parsedGlobals)) throw debug('todo');
     if (!isListNode(parsedFunctions)) throw debug('todo');
     const globals = {};
     parsedGlobals.items.forEach((a: any) => {
-        globals[a.children[1].value] = {
-            mangledName: a.children[3].value,
-            bytes: a.children[4].value,
+        globals[a.sequenceItems[1].value] = {
+            mangledName: a.sequenceItems[3].value,
+            bytes: a.sequenceItems[4].value,
         };
     });
     const allFunctions = parsedFunctions.items.map(functionFromParseResult);
