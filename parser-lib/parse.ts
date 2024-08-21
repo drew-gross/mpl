@@ -1310,7 +1310,7 @@ export const parseRule2 = <Node extends string, Token>(
     });
     if (completeAsts.length > 1) {
         // TODO:TAC parser contains some real ambiguities (loadImmediate vs assign when data is a number)
-        // but by con
+        // but by coincidence, the first parse is the correct one, so for the tac parser, skip this check
         if (!('global' in grammar)) {
             throw debug('ambiguous parse');
         }
