@@ -15,7 +15,7 @@ export type SeparatedListNode<Node, Leaf> = {
 type LeafValue = string | number | null | undefined;
 
 export type Ast<Node, Token> =
-    | { type: Node; children: Ast<Node, Token>[]; sourceLocation: SourceLocation }
+    | AstNode<Node, Token>
     | Leaf<Token>
     | SeparatedListNode<Node, Token>
     | ListNode<Node, Token>;
@@ -35,14 +35,14 @@ interface Leaf<Token> {
     sourceLocation: SourceLocation;
 }
 
-interface NodeWithIndex<Node, Leaf> {
+interface AstNode<Node, Token> {
     type: Node;
-    children: AstWithIndex<Node, Leaf>[];
+    children: Ast<Node, Token>[];
     sourceLocation: SourceLocation;
 }
 
 type AstWithIndex<Node, Token> =
-    | NodeWithIndex<Node, Token>
+    | AstNode<Node, Token>
     | Leaf<Token>
     | SeparatedListWithIndex<Node, Token>
     | ManyWithIndex<Node, Token>
@@ -628,7 +628,7 @@ const partialAstToCompleteAst = <Node, Token>(
         }
         return {
             type: ast.name as Node,
-            children: ast.sequenceItems.map(partialAstToCompleteAst),
+            children: ast.sequenceItems.map(partialAstToCompleteAst) as any,
             sourceLocation: ast.sourceLocation,
         };
     } else if ('tokenType' in ast) {
