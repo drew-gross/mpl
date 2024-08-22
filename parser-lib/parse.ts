@@ -595,7 +595,12 @@ const partialAstToCompleteAst = <Node, Token>(
     } else if ('sequenceItems' in ast) {
         return {
             type: ast.name as Node,
-            sequenceItems: ast.sequenceItems.map(partialAstToCompleteAst),
+            sequenceItems: ast.sequenceItems.map(partialAstToCompleteAst).filter(
+                item =>
+                    // Remove non-present optionals as that is currently what the
+                    // frontend expects. TODO: Update the frontend to expect a { present: false }
+                    !('present' in item && !item.present)
+            ),
             sourceLocation: ast.sourceLocation,
         };
     } else if ('tokenType' in ast) {
