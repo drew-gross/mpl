@@ -1404,15 +1404,17 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 ifFalse: astFromParseResult(ifFalse),
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
-        case 'equality':
+        case 'equality': {
             if (!('sequenceItems' in ast))
                 throw debug('children not in ast in astFromParseResult');
+            const [lhs, _equal, rhs] = ast.sequenceItems;
             return {
                 kind: 'equality',
-                lhs: astFromParseResult(ast.sequenceItems[0]),
-                rhs: astFromParseResult(ast.sequenceItems[2]),
+                lhs: astFromParseResult(lhs),
+                rhs: astFromParseResult(rhs),
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
+        }
         case 'paramList':
             throw debug('paramList in astFromParseResult'); // Should have been caught in "callExpression"
         case 'callExpression':
@@ -1443,10 +1445,11 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                         throw debug('unhandled in getKind');
                 }
             };
+            const [lhs, kind, rhs] = ast.sequenceItems;
             return {
-                kind: getKind((ast.sequenceItems[1] as any).type),
-                lhs: astFromParseResult(ast.sequenceItems[0]),
-                rhs: astFromParseResult(ast.sequenceItems[2]),
+                kind: getKind((kind as any).type),
+                lhs: astFromParseResult(lhs),
+                rhs: astFromParseResult(rhs),
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'reassignment':
@@ -1552,21 +1555,22 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             };
         case 'memberStyleCall': {
             const anyAst = ast as any;
-            const lhsNode = anyAst.sequenceItems[0];
+            const [accessed, _dot, method, params] = anyAst.sequenceItems;
+            const lhsNode = accessed;
             const lhs = astFromParseResult(lhsNode);
             if (lhs == 'WrongShapeAst') {
                 return 'WrongShapeAst';
             }
-            const memberName = anyAst.sequenceItems[2].value;
-            const params = anyAst.sequenceItems[3].items.map(astFromParseResult);
-            if (params == 'WrongShapeAst') {
+            const memberName = method.value;
+            const newParams = params.items.map(astFromParseResult);
+            if (newParams == 'WrongShapeAst') {
                 return 'WrongShapeAst';
             }
             const r: Ast.UninferredMemberStyleCall = {
                 kind: 'memberStyleCall',
                 lhs: lhs as Ast.UninferredExpression,
                 memberName,
-                params: params as Ast.UninferredExpression[],
+                params: newParams as Ast.UninferredExpression[],
                 sourceLocation: ast.sourceLocation,
             };
             return r;
@@ -1691,10 +1695,11 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 sourceLocation: ast.sourceLocation,
             };
         case 'indexAccess':
+            const [accessed, index] = ast.sequenceItems;
             return {
                 kind: 'indexAccess',
-                index: astFromParseResult(ast.sequenceItems[1]) as Ast.UninferredExpression,
-                accessed: astFromParseResult(ast.sequenceItems[0]) as Ast.UninferredExpression,
+                index: astFromParseResult(index) as Ast.UninferredExpression,
+                accessed: astFromParseResult(accessed) as Ast.UninferredExpression,
                 sourceLocation: ast.sourceLocation,
             };
         default:
