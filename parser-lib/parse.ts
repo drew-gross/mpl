@@ -593,13 +593,6 @@ const partialAstToCompleteAst = <Node, Token>(
             items: flattenRemainingItems(ast).map(partialAstToCompleteAst) as any,
         };
     } else if ('sequenceItems' in ast) {
-        const sequenceHasTrailingMissingOptional = seq => {
-            const backItem = seq[seq.length - 1];
-            return backItem && 'rule' in backItem && backItem.rule.kind == 'optional';
-        };
-        while (sequenceHasTrailingMissingOptional(ast.sequenceItems)) {
-            ast.sequenceItems.pop();
-        }
         return {
             type: ast.name as Node,
             sequenceItems: ast.sequenceItems.map(partialAstToCompleteAst),
