@@ -1396,11 +1396,12 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 sourceLocation: ast.sourceLocation,
             };
         case 'ternary':
+            const [condition, _question, ifTrue, _colon, ifFalse] = ast.sequenceItems;
             return {
                 kind: 'ternary',
-                condition: astFromParseResult(ast.sequenceItems[0]),
-                ifTrue: astFromParseResult(ast.sequenceItems[2]),
-                ifFalse: astFromParseResult(ast.sequenceItems[4]),
+                condition: astFromParseResult(condition),
+                ifTrue: astFromParseResult(ifTrue),
+                ifFalse: astFromParseResult(ifFalse),
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'equality':
