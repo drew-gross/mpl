@@ -1,5 +1,4 @@
 import debug from '../util/debug';
-import last from '../util/list/last';
 import { TokenSpec, LexError } from '../parser-lib/lex';
 import { Register } from './Register';
 import { Statement } from './Statement';
@@ -547,25 +546,24 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
             }
         }
         case 'callByName': {
-            if (a.sequenceItems[1].type == 'assign') {
-                if (![6, 7].includes(a.sequenceItems.length)) debug('wrong children lenght');
+            const differentiator = a.sequenceItems[1];
+            if (differentiator.type == 'assign') {
+                const [to, _assign, fn, _lb, args, _rb, comment] = a.sequenceItems;
                 return {
                     kind: 'callByName',
-                    function: a.sequenceItems[2].value,
-                    arguments:
-                        a.sequenceItems.length == 7 ? parseArgList(a.sequenceItems[4]) : [],
-                    destination: parseRegister(a.sequenceItems[0].value),
-                    why: stripComment((last(a.sequenceItems) as any).value),
+                    function: fn.value,
+                    arguments: parseArgList(args),
+                    destination: parseRegister(to.value),
+                    why: stripComment(comment.value),
                 };
             } else {
-                if (![4, 5].includes(a.sequenceItems.length)) debug('wrong children lenght');
+                const [fn, _lb, args, _rb, comment] = a.sequenceItems;
                 return {
                     kind: 'callByName',
-                    function: a.sequenceItems[0].value,
-                    arguments:
-                        a.sequenceItems.length == 5 ? parseArgList(a.sequenceItems[2]) : [],
+                    function: fn.value,
+                    arguments: parseArgList(args),
                     destination: null,
-                    why: stripComment((last(a.sequenceItems) as any).value),
+                    why: stripComment(comment.value),
                 };
             }
         }
