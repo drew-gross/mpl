@@ -804,14 +804,7 @@ const typeCheckStatement = (
                 availableVariables: mergeDeclarations(availableVariables, [
                     {
                         name: ast.destination,
-                        type: {
-                            type: {
-                                kind: 'Function' as 'Function',
-                                arguments: [{ type: { kind: 'Integer' } }],
-                                permissions: [],
-                                returnType: { type: { kind: 'Integer' } },
-                            },
-                        },
+                        type: FunctionType([builtinTypes.Integer], [], builtinTypes.Integer),
                         exported: false,
                     },
                 ]),
