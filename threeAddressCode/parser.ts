@@ -536,13 +536,13 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
                 };
             } else {
                 if (differentiator.type != 'leftBracket') throw debug('expecting left bracket');
+                const [from, _lb, args, _rb, comment] = a.sequenceItems;
                 return {
                     kind: 'callByRegister',
-                    function: parseRegister(a.sequenceItems[0].value),
-                    arguments:
-                        a.sequenceItems.length == 5 ? parseArgList(a.sequenceItems[2]) : [],
+                    function: parseRegister(from.value),
+                    arguments: parseArgList(args),
                     destination: null,
-                    why: stripComment((last(a.sequenceItems) as any).value),
+                    why: stripComment(comment.value),
                 };
             }
         }
