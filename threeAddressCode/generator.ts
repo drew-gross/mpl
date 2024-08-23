@@ -3,7 +3,7 @@ import { Function } from './Function';
 import { Program } from './Program';
 import {
     length,
-    startswith,
+    startsWith,
     intFromString,
     stringCopy,
     verifyNoLeaks,
@@ -886,7 +886,7 @@ export const makeTargetProgram = ({
     };
     const runtimeFunctions = [
         length,
-        startswith,
+        startsWith,
         stringEqualityRuntimeFunction,
         stringConcatenateRuntimeFunction,
         stringCopy,

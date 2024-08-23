@@ -621,7 +621,7 @@ int length(char *str) {
     return len;
 }
 
-bool startswith(char *haystack, char *needle) {
+bool startsWith(char *haystack, char *needle) {
     while (true) {
         if (*needle == 0) {
             return true;

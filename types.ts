@@ -146,7 +146,7 @@ export const builtinFunctions: Variable[] = [
         exported: false,
     },
     {
-        name: 'startswith',
+        name: 'startsWith',
         type: {
             type: {
                 kind: 'Function',

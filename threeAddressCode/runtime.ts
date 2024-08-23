@@ -114,9 +114,9 @@ export const length: RuntimeFunctionGenerator = bytesInWord =>
             return r:len;
     `);
 
-export const startswith: RuntimeFunctionGenerator = _bytesInWord =>
+export const startsWith: RuntimeFunctionGenerator = _bytesInWord =>
     parseFunctionOrDie(`
-    (function) startswith(r:haystack, r:needle):
+    (function) startsWith(r:haystack, r:needle):
             r:haystackPtr = r:haystack;
             r:needlePtr = r:needle;
         compare_loop:; Count another charachter
