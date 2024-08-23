@@ -621,6 +621,22 @@ int length(char *str) {
     return len;
 }
 
+bool startswith(char *haystack, char *needle) {
+    while (true) {
+        if (*needle == 0) {
+            return true;
+        }
+        if (*haystack == 0) {
+            return false;
+        }
+        if (*haystack != *needle) {
+            return false;
+        }
+        needle++;
+        haystack++;
+    }
+}
+
 int print(char *str) {
     int result = printf("%s", str);
     if (result < 0) {

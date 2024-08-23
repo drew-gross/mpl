@@ -626,6 +626,38 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 4,
     },
     {
+        name: 'String Startswith Success',
+        source: `
+            myStr: String = "test";
+            return myStr.startswith("te") ? 10 : 9;
+        `,
+        exitCode: 10,
+    },
+    {
+        name: 'String Startswith Fail',
+        source: `
+            myStr: String = "test";
+            return myStr.startswith("nope") ? 9 : 10;
+        `,
+        exitCode: 10,
+    },
+    {
+        name: 'String Startswith Empty Needle',
+        source: `
+            myStr: String = "test";
+            return myStr.startswith("") ? 10 : 9;
+        `,
+        exitCode: 10,
+    },
+    {
+        name: 'String Startswith Empty Haystack',
+        source: `
+            myStr: String = "";
+            return myStr.startswith("test") ? 9 : 10;
+        `,
+        exitCode: 10,
+    },
+    {
         // Failing on x64, Need to fix x64 stack layout BS (after fixing all of x64?)
         name: 'Seven Argument Function',
         source: `

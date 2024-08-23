@@ -2,6 +2,7 @@ import debug from './util/debug';
 import { Program } from './threeAddressCode/Program';
 import { ExecutionResult } from './api';
 import { Register } from './threeAddressCode/Register';
+import { deepCopy } from 'deep-copy-ts';
 import { stringLiteralName } from './backend-utils';
 
 export type Argument = {
@@ -247,7 +248,7 @@ export const interpretFunction = (
                     },
                     func.arguments.map((arg, index) => ({
                         name: arg.name,
-                        value: getRegister(args[index]),
+                        value: deepCopy(getRegister(args[index])),
                     })),
                     state
                 );

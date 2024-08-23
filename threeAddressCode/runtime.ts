@@ -114,6 +114,27 @@ export const length: RuntimeFunctionGenerator = bytesInWord =>
             return r:len;
     `);
 
+export const startswith: RuntimeFunctionGenerator = _bytesInWord =>
+    parseFunctionOrDie(`
+    (function) startswith(r:haystack, r:needle):
+            r:haystackPtr = r:haystack;
+            r:needlePtr = r:needle;
+        compare_loop:; Count another charachter
+            r:needleChar = *r:needlePtr; Load next needle byte
+            goto true_return if r:needleChar == 0; If it's null, we are done
+            r:haystackChar = *r:haystackPtr; Load next haystack byte
+            goto false_return if r:haystackChar != r:needleChar; check equal
+            r:haystackPtr++; Bump pointers
+            r:needlePtr++; Bump pointers
+            goto compare_loop; Go check another char
+        true_return:; Done
+            r:one = 1; TODO: Support returning int literals
+            return r:one;
+        false_return:; Done
+            r:zero = 0; TODO: Support returning int literals
+            return r:zero;
+    `);
+
 // @ts-ignore
 export const stringCopy: RuntimeFunctionGenerator = bytesInWord =>
     parseFunctionOrDie(`

@@ -153,6 +153,7 @@ const compile = ({
 const readline = require('readline');
 
 const length = str => str.length;
+const startswith = (haystack, needle) => haystack.startsWith(needle);
 const print = str => process.stdout.write(str);
 
 const readInt = async () => {

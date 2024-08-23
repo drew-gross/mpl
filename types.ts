@@ -146,6 +146,18 @@ export const builtinFunctions: Variable[] = [
         exported: false,
     },
     {
+        name: 'startswith',
+        type: {
+            type: {
+                kind: 'Function',
+                arguments: [builtinTypes.String, builtinTypes.String],
+                permissions: [],
+                returnType: builtinTypes.Boolean,
+            },
+        },
+        exported: false,
+    },
+    {
         name: 'print',
         type: {
             type: {
