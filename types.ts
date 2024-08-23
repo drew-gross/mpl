@@ -27,6 +27,7 @@ export type List = { kind: 'List'; of: Type };
 export type Product = { kind: 'Product'; members: ProductComponent[] };
 export type Type = {
     type: String | Integer | Boolean | Function | List | Product;
+    methods?: Function[];
     original?: TypeReference;
 };
 

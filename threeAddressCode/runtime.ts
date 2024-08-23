@@ -15,8 +15,8 @@ const memoize = fn => {
         const result = fn(arg);
         cache.set(arg, result);
         return result;
-    }
-}
+    };
+};
 
 const switchableMallocImpl = (bytesInWord, makeSyscall): Function => ({
     name: 'my_malloc',
@@ -48,7 +48,8 @@ const switchableMallocImpl = (bytesInWord, makeSyscall): Function => ({
         found_large_enough_block:;
             goto sbrk_more_space if r:currentBlockPointer == 0; JK need to syscall lol
             *(r:currentBlockPointer + ${2 * bytesInWord}) = 0; block->free = false
-            r:currentBlockPointer += ${3 * bytesInWord
+            r:currentBlockPointer += ${
+                3 * bytesInWord
             }; Adjust pointer to point to actual space, not control block
             goto my_malloc_return;
         sbrk_more_space:;
@@ -75,7 +76,8 @@ const switchableMallocImpl = (bytesInWord, makeSyscall): Function => ({
             *(r:currentBlockPointer + 0) = r:numBytes; new->size = requested_size
             *(r:currentBlockPointer + ${1 * bytesInWord}) = 0; new->next = null
             *(r:currentBlockPointer + ${2 * bytesInWord}) = 0; new->free = false
-            r:currentBlockPointer += ${3 * bytesInWord
+            r:currentBlockPointer += ${
+                3 * bytesInWord
             }; Adjust pointer to point to actual space, not control block
         my_malloc_return:;
             return r:currentBlockPointer;
@@ -90,7 +92,8 @@ export const mallocWithSbrk: RuntimeFunctionGenerator = memoize(bytesInWord =>
         arguments: [amount],
         why: 'sbrk',
         destination,
-    })));
+    }))
+);
 
 export const mallocWithMmap: RuntimeFunctionGenerator = memoize(bytesInWord =>
     switchableMallocImpl(bytesInWord, (amount, destination) => ({
@@ -106,7 +109,8 @@ export const mallocWithMmap: RuntimeFunctionGenerator = memoize(bytesInWord =>
         ],
         why: 'mmap',
         destination,
-    })));
+    }))
+);
 
 export const length: RuntimeFunctionGenerator = memoize(_bytesInWord =>
     parseFunctionOrDie(`
@@ -121,7 +125,8 @@ export const length: RuntimeFunctionGenerator = memoize(_bytesInWord =>
             goto length_loop; Go count another char
         length_return:; Done
             return r:len;
-    `));
+    `)
+);
 
 export const startsWith: RuntimeFunctionGenerator = memoize(_bytesInWord =>
     parseFunctionOrDie(`
@@ -142,7 +147,8 @@ export const startsWith: RuntimeFunctionGenerator = memoize(_bytesInWord =>
         false_return:; Done
             r:zero = 0; TODO: Support returning int literals
             return r:zero;
-    `));
+    `)
+);
 
 export const stringCopy: RuntimeFunctionGenerator = memoize(_bytesInWord =>
     parseFunctionOrDie(`
@@ -155,14 +161,16 @@ export const stringCopy: RuntimeFunctionGenerator = memoize(_bytesInWord =>
             r:destination++; Increment output too
             goto string_copy_loop; and go keep copying
         string_copy_return:; Done
-    `));
+    `)
+);
 
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = memoize(_bytesInWord =>
     parseFunctionOrDie(`
     (function) print(r:str):
         r:result = syscall print r:str;
         return r:result;
-    `));
+    `)
+);
 
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = memoize(_bytesInWord =>
     parseFunctionOrDie(`
@@ -170,14 +178,16 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = memoize(_
         r:len = length(r:str); Get str length
         r:result = syscall print 1 r:str r:len; 1: fd of stdout. r:str: ptr to data to write. r:len: length to write
         return r:result;
-   `));
+   `)
+);
 
 export const readIntDirect: RuntimeFunctionGenerator = memoize(_bytesInWord =>
     parseFunctionOrDie(`
         (function) readInt():
               r:result = syscall readInt;
               return r:result;
-    `));
+    `)
+);
 
 export const readIntThroughSyscall: RuntimeFunctionGenerator = memoize(_bytesInWord => {
     const stdinFd = 0;
@@ -204,7 +214,8 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = memoize(bytesInWord =>
     parseFunctionOrDie(`
     (function) verify_no_leaks():
         r:currentBlockPointer = &first_block; Load first block address
-        r:currentBlockPointer = *(r:currentBlockPointer + ${0 * bytesInWord
+        r:currentBlockPointer = *(r:currentBlockPointer + ${
+            0 * bytesInWord
         }); Load first block pointer
     verify_no_leaks_loop:; verify_no_leaks_loop
         goto verify_no_leaks_return if r:currentBlockPointer == 0; Last block, can return now
@@ -215,11 +226,13 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = memoize(bytesInWord =>
         syscall print r:err; syscall
         syscall exit -1; syscall
     verify_no_leaks_advance_pointers:; verify_no_leaks_advance_pointers
-        r:currentBlockPointer = *(r:currentBlockPointer + ${1 * bytesInWord
+        r:currentBlockPointer = *(r:currentBlockPointer + ${
+            1 * bytesInWord
         }); block = block->next
         goto verify_no_leaks_loop; Check next block
     verify_no_leaks_return:; All done
-    `));
+    `)
+);
 
 export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = memoize(_bytesInWord =>
     parseFunctionOrDie(`
@@ -239,7 +252,8 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = memoiz
             r:dest++; Bump out pointer
             goto copy_from_right; Go copy next char
         concatenate_return:; Exit. TODO: repair input pointers?
-    `));
+    `)
+);
 
 export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = _bytesInWord =>
     parseFunctionOrDie(`
@@ -274,7 +288,8 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = memoize(bytesInWo
             r:managementBlockSize = ${3 * bytesInWord}; 3 words for management
             r:ptr = r:ptr - r:managementBlockSize; Get management block ptr
             *(r:ptr + ${2 * bytesInWord}) = r:one; block->free = true
-    `));
+    `)
+);
 
 // TODO: return error if string doesn't contain an int
 // @ts-ignore
@@ -310,4 +325,4 @@ export const allRuntimeFunctions = [
     stringEqualityRuntimeFunction,
     myFreeRuntimeFunction,
     readIntDirect,
-]
+];

@@ -505,7 +505,7 @@ const compile = ({
         globalDeclarations,
         stringLiterals,
         buildSignature: (_1, _2) => 'int main(int argc, char **argv)',
-        returnType: { type: { kind: 'Integer' } }, // Main can only ever return integer
+        returnType: builtinTypes.Integer, // Main can only ever return integer
         beforeExit: [...globalDeclarations.map(freeVariable), 'verify_no_leaks();'],
     });
     const Cdeclarations = globalDeclarations
