@@ -138,6 +138,10 @@ export const Function = (args, permissions, returnType): Type => ({
     type: { kind: 'Function', arguments: args, permissions, returnType },
 });
 
+export const List = (ofType): Type => ({
+    type: { kind: 'List', of: ofType },
+});
+
 // TODO: Require these to be imported in user code
 export const builtinFunctions: Variable[] = [
     {

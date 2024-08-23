@@ -14,6 +14,7 @@ import {
     resolve,
     builtinTypes,
     Product,
+    List,
     Function as FunctionType,
     builtinFunctions,
     TypeDeclaration,
@@ -742,7 +743,7 @@ export const typeOfExpression = (
                 }
                 return [{ kind: 'uninferrableEmptyList', sourceLocation: ast.sourceLocation }];
             }
-            return { type: { type: { kind: 'List', of: innerType } }, extractedFunctions };
+            return { type: List(innerType), extractedFunctions };
         case 'indexAccess':
             const accessedType = recurse(ast.accessed);
             if (isTypeError(accessedType)) {
