@@ -347,39 +347,47 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
     const a = ast as any;
     switch (ast.type) {
         case 'assign': {
-            const to = parseRegister(a.sequenceItems[0].value);
-            const from = a.sequenceItems[2].value;
-            const why = stripComment(a.sequenceItems[3].value);
+            const [toReg, _assign, fromReg, comment] = a.sequenceItems;
+            const to = parseRegister(toReg.value);
+            const from = fromReg.value;
+            const why = stripComment(comment.value);
             if (isRegister(from)) {
                 return { kind: 'move', to, from: parseRegister(from), why };
             } else {
                 return { kind: 'loadGlobal', from, to, why };
             }
         }
-        case 'label':
+        case 'label': {
+            const [label, _color, comment] = a.sequenceItems;
             return {
                 kind: 'label',
-                name: a.sequenceItems[0].value,
-                why: stripComment(a.sequenceItems[2].value),
+                name: label.value,
+                why: stripComment(comment.value),
             };
-        case 'load':
+        }
+        case 'load': {
+            const [to, _assign, _star, from, comment] = a.sequenceItems;
             return {
                 kind: 'loadMemoryByte',
-                address: parseRegister(a.sequenceItems[3].value),
-                to: parseRegister(a.sequenceItems[0].value),
-                why: stripComment(a.sequenceItems[4].value),
+                address: parseRegister(from.value),
+                to: parseRegister(to.value),
+                why: stripComment(comment.value),
             };
-        case 'goto':
+        }
+        case 'goto': {
+            // TODO: When is this not 3?
             if (a.sequenceItems.length == 3) {
+                const [_goto, label, comment] = a.sequenceItems;
                 return {
                     kind: 'goto',
-                    label: a.sequenceItems[1].value,
-                    why: stripComment(a.sequenceItems[2].value),
+                    label: label.value,
+                    why: stripComment(comment.value),
                 };
             }
             return {
                 kind: 'goto',
             } as any;
+        }
         case 'gotoIfEqual': {
             if (a.sequenceItems[5].value == 0) {
                 return {
