@@ -568,21 +568,24 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
             }
         }
         case 'syscall': {
-            if (a.sequenceItems[1].type == 'assign') {
+            const differentiator = a.sequenceItems[1];
+            if (differentiator.type == 'assign') {
+                const [to, _assign, _syscall, fn, args, comment] = a.sequenceItems;
                 return {
                     kind: 'syscall',
-                    name: a.sequenceItems[3].value,
-                    arguments: parseSyscallArgs(a.sequenceItems[4].sequenceItems[0]),
-                    destination: parseRegister(a.sequenceItems[0].value),
-                    why: stripComment(a.sequenceItems[3].value),
+                    name: fn.value,
+                    arguments: parseSyscallArgs(args.sequenceItems[0]),
+                    destination: parseRegister(to.value),
+                    why: stripComment(comment.value),
                 };
             } else {
+                const [_syscall, fn, args, comment] = a.sequenceItems;
                 return {
                     kind: 'syscall',
-                    name: a.sequenceItems[1].value,
-                    arguments: parseSyscallArgs(a.sequenceItems[2].sequenceItems[0]),
+                    name: fn.value,
+                    arguments: parseSyscallArgs(args.sequenceItems[0]),
                     destination: null,
-                    why: stripComment(a.sequenceItems[3].value),
+                    why: stripComment(comment.value),
                 };
             }
         }
