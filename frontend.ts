@@ -14,6 +14,7 @@ import {
     resolve,
     builtinTypes,
     Product,
+    Function as FunctionType,
     builtinFunctions,
     TypeDeclaration,
     TypeReference,
@@ -422,26 +423,23 @@ export const typeOfExpression = (
                 return f;
             }
             return {
-                type: {
-                    type: {
-                        kind: 'Function',
-                        arguments: ast.parameters
-                            .map(p => p.type)
-                            .map(t => {
-                                const resolved = resolve(
-                                    t,
-                                    ctx.availableTypes,
-                                    ctx.w.sourceLocation
-                                );
-                                if ('errors' in resolved) {
-                                    throw debug('bag argument. This should be a better error.');
-                                }
-                                return resolved;
-                            }),
-                        permissions: [],
-                        returnType: f.returnType,
-                    },
-                },
+                type: FunctionType(
+                    ast.parameters
+                        .map(p => p.type)
+                        .map(t => {
+                            const resolved = resolve(
+                                t,
+                                ctx.availableTypes,
+                                ctx.w.sourceLocation
+                            );
+                            if ('errors' in resolved) {
+                                throw debug('bag argument. This should be a better error.');
+                            }
+                            return resolved;
+                        }),
+                    [],
+                    f.returnType
+                ),
                 extractedFunctions: [f], // TODO: Add functions extracted within the function itself
             };
         case 'callExpression': {

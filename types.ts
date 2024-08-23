@@ -134,6 +134,10 @@ export const builtinTypes: { [index: string]: Type } = {
 
 export const Product = (members): Type => ({ type: { kind: 'Product', members } });
 
+export const Function = (args, permissions, returnType): Type => ({
+    type: { kind: 'Function', arguments: args, permissions, returnType },
+});
+
 // TODO: Require these to be imported in user code
 export const builtinFunctions: Variable[] = [
     {
