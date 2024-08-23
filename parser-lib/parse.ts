@@ -46,7 +46,6 @@ export interface ParseFailureInfo<Token> {
     found: Token | 'endOfFile';
     foundTokenText: string;
     expected: Token | 'endOfFile';
-    whileParsing: string[];
     sourceLocation: SourceLocation;
 }
 
@@ -668,7 +667,6 @@ export const parse = <Node extends string, Token>(
                     found: token.type,
                     foundTokenText: token.string,
                     sourceLocation: token.sourceLocation,
-                    whileParsing: [rule],
                 })),
             };
         }

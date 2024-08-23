@@ -1101,6 +1101,8 @@ test.failing('Add Numbers in ThreeAddressCode', tacTest, {
     exitCode: 3,
 });
 
+const dummySourceLocation = { line: 0, column: 0 };
+
 test('Parse grammar from multiple entry points', t => {
     type TestToken = 'a' | 'b';
     type TestNode = 'a' | 'b';
@@ -1111,8 +1113,6 @@ test('Parse grammar from multiple entry points', t => {
         a: tacTerminal('a'),
         b: tacTerminal('b'),
     };
-
-    const dummySourceLocation = { line: 0, column: 0 };
 
     // Try parsing from an a
     const aresult = parse(testGrammar, 'a', [
@@ -1146,17 +1146,11 @@ test('Parse grammar from multiple entry points', t => {
                 expected: 'endOfFile',
                 found: 'a',
                 foundTokenText: 'anything',
-                sourceLocation: {
-                    column: 0,
-                    line: 0,
-                },
-                whileParsing: ['a'],
+                sourceLocation: dummySourceLocation,
             },
         ],
     });
 });
-
-const dummySourceLocation = { line: 0, column: 0 };
 
 test('Parser lib - SeparatedList', t => {
     type TestToken = 'a' | 'b' | 'comma';
@@ -1340,7 +1334,6 @@ test('Parser Lib - Sequence of Many', t => {
                 found: 'a',
                 foundTokenText: 'a',
                 sourceLocation: dummySourceLocation,
-                whileParsing: ['asAndBs'],
             },
         ],
     });

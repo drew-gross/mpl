@@ -66,7 +66,7 @@ import { backends } from './backend-utils';
                         if ('parseErrors' in programInfo) {
                             if (p.parseErrors) {
                                 // I'm still iterating on how these keys will work. No point fixing the tests yet.
-                                const keysToOmit = ['whileParsing', 'foundTokenText'];
+                                const keysToOmit = ['foundTokenText'];
                                 // TODO: incorporate into table
                                 assert.deepEqual(
                                     p.parseErrors,
