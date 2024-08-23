@@ -256,9 +256,9 @@ export const grammar: Grammar<TacAstNode, TacToken> = {
             statementSeparator,
         ]),
         Sequence('callByRegister', [
-            register,
+            tacOptional(register),
             tacOptional(assign),
-            tacOptional(register), // TODO: a) combine assignment and register b) once optional parsing is refactored, put the optional on the first register
+            register, // TODO: a) combine assignment and register b) once optional parsing is refactored, put the optional on the first register
             leftBracket,
             'argList',
             rightBracket,
@@ -277,6 +277,7 @@ export const grammar: Grammar<TacAstNode, TacToken> = {
     ]),
     argList: SeparatedList(comma, OneOf([number, register])),
     syscallArgs: Sequence('syscallArgs', [
+        // TODO: What is this identifier?
         tacOptional(identifier),
         Many(OneOf([number, register])),
     ]),
@@ -523,71 +524,34 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
             };
         }
         case 'callByRegister': {
-            const differentiator = a.sequenceItems[1];
-            if (differentiator.type == 'assign') {
-                const [to, _assign, from, _lb, args, _rb, comment] = a.sequenceItems;
-                return {
-                    kind: 'callByRegister',
-                    function: parseRegister(from.value),
-                    arguments: parseArgList(args),
-                    destination: parseRegister(to.value),
-                    why: stripComment(comment.value),
-                };
-            } else {
-                if (differentiator.type != 'leftBracket') throw debug('expecting left bracket');
-                const [from, _lb, args, _rb, comment] = a.sequenceItems;
-                return {
-                    kind: 'callByRegister',
-                    function: parseRegister(from.value),
-                    arguments: parseArgList(args),
-                    destination: null,
-                    why: stripComment(comment.value),
-                };
-            }
+            const [to, _assign, fn, _lb, args, _rb, comment] = ast.sequenceItems as any;
+            return {
+                kind: 'callByRegister',
+                function: parseRegister(fn.value),
+                arguments: parseArgList(args),
+                destination: to.item ? parseRegister(to.item.value) : null,
+                why: stripComment(comment.value),
+            };
         }
         case 'callByName': {
-            const differentiator = a.sequenceItems[1];
-            if (differentiator.type == 'assign') {
-                const [to, _assign, fn, _lb, args, _rb, comment] = a.sequenceItems;
-                return {
-                    kind: 'callByName',
-                    function: fn.value,
-                    arguments: parseArgList(args),
-                    destination: parseRegister(to.value),
-                    why: stripComment(comment.value),
-                };
-            } else {
-                const [fn, _lb, args, _rb, comment] = a.sequenceItems;
-                return {
-                    kind: 'callByName',
-                    function: fn.value,
-                    arguments: parseArgList(args),
-                    destination: null,
-                    why: stripComment(comment.value),
-                };
-            }
+            const [to, _assign, fn, _lb, args, _rb, comment] = a.sequenceItems;
+            return {
+                kind: 'callByName',
+                function: fn.value,
+                arguments: parseArgList(args),
+                destination: to.item === undefined ? null : parseRegister(to.item.value),
+                why: stripComment(comment.value),
+            };
         }
         case 'syscall': {
-            const differentiator = a.sequenceItems[1];
-            if (differentiator.type == 'assign') {
-                const [to, _assign, _syscall, fn, args, comment] = a.sequenceItems;
-                return {
-                    kind: 'syscall',
-                    name: fn.value,
-                    arguments: parseSyscallArgs(args.sequenceItems[0]),
-                    destination: parseRegister(to.value),
-                    why: stripComment(comment.value),
-                };
-            } else {
-                const [_syscall, fn, args, comment] = a.sequenceItems;
-                return {
-                    kind: 'syscall',
-                    name: fn.value,
-                    arguments: parseSyscallArgs(args.sequenceItems[0]),
-                    destination: null,
-                    why: stripComment(comment.value),
-                };
-            }
+            const [to, _assign, _syscall, fn, args, comment] = a.sequenceItems;
+            return {
+                kind: 'syscall',
+                name: fn.value,
+                arguments: parseSyscallArgs(args.sequenceItems[1]),
+                destination: to.item === undefined ? null : parseRegister(to.item.value),
+                why: stripComment(comment.value),
+            };
         }
         case 'plusEqual': {
             const [reg, _pe, amount, comment] = a.sequenceItems;

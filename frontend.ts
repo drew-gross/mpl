@@ -31,9 +31,6 @@ import * as Ast from './ast';
 const { add } = require('./mpl/add.mpl');
 /* tslint:enable */
 
-// TODO move this to parser lit
-const hasType = (ast, type: string) => 'type' in ast && ast.type == type;
-
 const repairAssociativity = (nodeType, ast) => {
     // Let this slide because TokenType overlaps InteriorNodeType right now
     if (ast.type === nodeType && !ast.sequenceItems) /*debug('todo')*/ return ast;
@@ -1236,15 +1233,8 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
 };
 
 const extractFunctionBody = (node): any[] => {
-    if (node.type !== 'statement') debug('expected a statement');
-    if (node.sequenceItems.length === 3) {
-        return [
-            astFromParseResult(node.sequenceItems[0]),
-            ...extractFunctionBody(node.sequenceItems[2]),
-        ];
-    } else {
-        return [astFromParseResult(node.sequenceItems[0])];
-    }
+    const [statement, _sep, rest] = node.sequenceItems;
+    return [astFromParseResult(statement), ...(rest.item ? extractFunctionBody(rest.item) : [])];
 };
 
 // TODO: Replace extractParameterList with SeparatedList
@@ -1462,38 +1452,15 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             } as Ast.UninferredAst;
         }
         case 'declaration': {
-            let childIndex = 0;
-            let exported: boolean = false;
-            if ((ast.sequenceItems[childIndex] as any).type == 'export') {
-                exported = true;
-                childIndex++;
-            }
-            const destination = (ast.sequenceItems[childIndex] as any).value as any;
-            childIndex++;
-            const destinationNode = ast.sequenceItems[childIndex];
-            if (isSeparatedListNode(destinationNode) || isListNode(destinationNode)) {
-                throw debug('todo');
-            }
-            if (destinationNode.type != 'colon') debug('expected a colon');
-            childIndex++;
+            const [export_, name, _colon, type_, _assign, expr] = ast.sequenceItems as any;
+            let exported: boolean = export_.item !== undefined;
+            const destination = name.value as any;
             let type: Type | TypeReference | undefined = undefined;
-            const maybeTypeNode = ast.sequenceItems[childIndex];
-            if (isSeparatedListNode(maybeTypeNode) || isListNode(maybeTypeNode)) {
-                throw debug('todo');
-            }
-            if (
-                ['typeWithArgs', 'typeWithoutArgs', 'typeLiteral', 'listType'].includes(
-                    maybeTypeNode.type
-                )
-            ) {
-                type = parseType(maybeTypeNode);
-                childIndex++;
+            if (type_.item !== undefined) {
+                type = parseType(type_.item);
             }
 
-            if ((ast.sequenceItems[childIndex] as any).type != 'assignment')
-                debug('expected assignment');
-            childIndex++;
-            const expression = astFromParseResult(ast.sequenceItems[childIndex]);
+            const expression = astFromParseResult(expr);
             if (type) {
                 return {
                     kind: 'typedDeclarationAssignment',
@@ -1598,65 +1565,29 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             } as Ast.UninferredAst;
         case 'function': {
             functionId++;
-
-            let childIndex = 0;
-            let hasBrackets = false;
-            if (hasType(ast.sequenceItems[0], 'leftBracket')) {
-                childIndex++;
-                hasBrackets = true;
-            }
-            const parameters: Variable[] = extractParameterList(ast.sequenceItems[childIndex]);
-            childIndex++;
-
-            if (hasBrackets) {
-                if (!hasType(ast.sequenceItems[childIndex], 'rightBracket')) {
-                    debug('mismatched brackets');
-                }
-                childIndex++;
-            }
-
-            if (!hasType(ast.sequenceItems[childIndex], 'fatArrow')) debug('wrong');
-            childIndex++;
+            const [_lb, args, _rb, _arrow, expr] = ast.sequenceItems as any;
             return {
                 kind: 'functionLiteral',
                 deanonymizedName: `anonymous_${functionId}`,
                 body: [
                     {
                         kind: 'returnStatement',
-                        expression: astFromParseResult(ast.sequenceItems[childIndex]),
+                        expression: astFromParseResult(expr),
                         sourceLocation: ast.sourceLocation,
                     },
                 ],
-                parameters,
+                parameters: extractParameterList(args),
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         }
         case 'functionWithBlock': {
             functionId++;
-            let childIndex = 0;
-            let hasBrackets = false;
-            if (hasType(ast.sequenceItems[childIndex], 'leftBracket')) {
-                hasBrackets = true;
-                childIndex++;
-            }
-            const parameters2: Variable[] = extractParameterList(ast.sequenceItems[childIndex]);
-            childIndex++;
-
-            if (hasBrackets) {
-                if (!hasType(ast.sequenceItems[childIndex], 'rightBracket')) {
-                    debug('brackets mismatched');
-                }
-                childIndex++;
-            }
-            if (!hasType(ast.sequenceItems[childIndex], 'fatArrow')) debug('wrong');
-            childIndex++;
-            const body = extractFunctionBody(ast.sequenceItems[childIndex]);
-            childIndex++;
-            if (childIndex !== ast.sequenceItems.length) debug('wrong');
+            const [_lb, args, _rb, _arrow, body] = ast.sequenceItems;
+            const parameters2: Variable[] = extractParameterList(args);
             return {
                 kind: 'functionLiteral',
                 deanonymizedName: `anonymous_${functionId}`,
-                body,
+                body: extractFunctionBody(body),
                 parameters: parameters2,
                 sourceLocation: ast.sourceLocation,
             };

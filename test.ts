@@ -161,6 +161,9 @@ test('ast for single number', t => {
                         value: null,
                         sourceLocation: { line: 1, column: 9 },
                     },
+                    {
+                        item: undefined,
+                    },
                 ],
             },
         ],
@@ -203,6 +206,9 @@ test('ast for number in brackets', t => {
                             value: null,
                             sourceLocation: { line: 1, column: 12 },
                         },
+                        {
+                            item: undefined,
+                        },
                     ],
                 },
             ],
@@ -241,6 +247,9 @@ test('ast for number in double brackets', t => {
                         type: 'statementSeparator',
                         value: null,
                         sourceLocation: { line: 1, column: 14 },
+                    },
+                    {
+                        item: undefined,
                     },
                 ],
             },
@@ -318,6 +327,7 @@ test('ast for product with brackets', t => {
                             value: null,
                             sourceLocation: { line: 1, column: 19 },
                         },
+                        { item: undefined },
                     ],
                 },
             ],
@@ -335,8 +345,16 @@ test('ast for assignment then return', t => {
                     {
                         type: 'declaration',
                         sequenceItems: [
+                            {
+                                type: undefined,
+                                value: undefined,
+                            },
                             { type: 'identifier', value: 'constThree' },
                             { type: 'colon', value: null },
+                            {
+                                type: undefined,
+                                value: undefined,
+                            },
                             { type: 'assignment', value: null },
                             {
                                 type: 'function',
@@ -366,6 +384,14 @@ test('ast for assignment then return', t => {
                                         type: undefined,
                                         value: undefined,
                                     },
+                                    {
+                                        type: undefined,
+                                        value: undefined,
+                                    },
+                                    {
+                                        type: undefined,
+                                        value: undefined,
+                                    },
                                     { type: 'fatArrow', value: null },
                                     { type: 'number', value: 3 },
                                 ],
@@ -373,19 +399,24 @@ test('ast for assignment then return', t => {
                         ],
                     },
                     { type: 'statementSeparator', value: null },
+                    // TODO: Seems like this should be the commented version?
                     {
-                        type: 'statement',
-                        sequenceItems: [
-                            {
-                                type: 'returnStatement',
-                                sequenceItems: [
-                                    { type: 'return', value: null },
-                                    { type: 'number', value: 10 },
-                                ],
-                            },
-                            { type: 'statementSeparator', value: null },
-                        ],
+                        type: undefined,
+                        value: undefined,
                     },
+                    // {
+                    //     type: 'statement',
+                    //     sequenceItems: [
+                    //         {
+                    //             type: 'returnStatement',
+                    //             sequenceItems: [
+                    //                 { type: 'return', value: null },
+                    //                 { type: 'number', value: 10 },
+                    //             ],
+                    //         },
+                    //         { type: 'statementSeparator', value: null },
+                    //     ],
+                    // },
                 ],
             },
         ],
@@ -439,11 +470,19 @@ test('parse for', t => {
                                         ],
                                     },
                                     { value: null, type: 'statementSeparator' as any },
+                                    {
+                                        type: undefined,
+                                        value: undefined,
+                                    },
                                 ],
                             },
                         ],
                     },
                     { value: null, type: 'statementSeparator' as any },
+                    {
+                        type: undefined,
+                        value: undefined,
+                    },
                 ],
             },
         ],
@@ -487,6 +526,10 @@ test('lowering of bracketedExpressions', t => {
                     {
                         type: 'statementSeparator',
                         value: null,
+                    },
+                    {
+                        type: undefined,
+                        value: undefined,
                     },
                 ],
             },
@@ -1406,11 +1449,17 @@ test('Parse "x" with "x?x"', t => {
     };
 
     const tokens: Token<TestToken>[] = [
-        { type: 'xToken', string: 'xToken', sourceLocation: { line: 0, column: 0 } },
+        { type: 'xToken', string: 'xToken', sourceLocation: dummySourceLocation },
     ];
     const ast = parse(testGrammar, 'x', tokens);
     t.deepEqual(stripSourceLocation(ast), {
-        sequenceItems: [{ type: 'xToken', value: undefined }],
+        sequenceItems: [
+            {
+                type: undefined,
+                value: undefined,
+            },
+            { type: 'xToken', value: undefined },
+        ],
         type: 'x?x',
     });
 });

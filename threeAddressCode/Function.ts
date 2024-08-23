@@ -9,7 +9,7 @@ import {
     parseArgList,
     instructionFromParseResult,
 } from './parser';
-import { parseString, Ast, isListNode, isSeparatedListNode } from '../parser-lib/parse';
+import { parseString, Ast } from '../parser-lib/parse';
 import { LexError } from '../parser-lib/lex';
 import join from '../util/join';
 import debug from '../util/debug';
@@ -33,83 +33,11 @@ export const toString = ({ name, instructions, arguments: args }: Function): str
 };
 
 export const functionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Function => {
-    if (isSeparatedListNode(ast) || isListNode(ast)) {
-        throw debug('todo');
-    }
-    if (ast.type != 'function') {
-        throw debug('Need a function');
-    }
-    if (!('sequenceItems' in ast)) {
-        debug('wrong shape ast');
-        throw debug('WrongShapeAst');
-    }
-
-    let childIndex = 0;
-    let child = ast.sequenceItems[childIndex];
-    if (isSeparatedListNode(child) || isListNode(child)) {
-        throw debug('todo');
-    }
-    if (child.type != 'function') {
-        debug('wrong shape ast');
-        throw debug('WrongShapeAst');
-    }
-    childIndex++;
-    child = ast.sequenceItems[childIndex];
-    if (isSeparatedListNode(child) || isListNode(child)) {
-        throw debug('todo');
-    }
-    if (child.type == 'spillSpec') {
-        childIndex++;
-    }
-    child = ast.sequenceItems[childIndex];
-    if (isSeparatedListNode(child) || isListNode(child)) {
-        throw debug('todo');
-    }
-    if (child.type != 'identifier') {
-        debug('wrong shape ast');
-        throw debug('WrongShapeAst');
-    }
-    const name = (ast.sequenceItems[childIndex] as any).value;
-    childIndex++;
-    child = ast.sequenceItems[childIndex];
-    if (isSeparatedListNode(child) || isListNode(child)) {
-        throw debug('todo');
-    }
-    if (child.type != 'leftBracket') {
-        debug('wrong shape ast');
-        throw debug('WrongShapeAst');
-    }
-    childIndex++;
-    let args: Register[] = [];
-    child = ast.sequenceItems[childIndex];
-    if (isSeparatedListNode(child)) {
-        args = parseArgList(child) as Register[];
-        childIndex++;
-    }
-
-    child = ast.sequenceItems[childIndex];
-    if (isSeparatedListNode(child) || isListNode(child)) {
-        throw debug('todo');
-    }
-    if (child.type != 'rightBracket') {
-        debug('wrong shape ast');
-        throw debug('WrongShapeAst');
-    }
-    childIndex++;
-    child = ast.sequenceItems[childIndex];
-    if (isSeparatedListNode(child) || isListNode(child)) {
-        throw debug('todo');
-    }
-    if (child.type != 'colon') {
-        debug('wrong shape ast');
-        throw debug('WrongShapeAst');
-    }
-    childIndex++;
-    child = ast.sequenceItems[childIndex];
-    if (!isListNode(child)) {
-        throw debug('todo');
-    }
-    const instructions: Statement[] = child.items.map(instructionFromParseResult);
+    const [_fn, _spillSpec, nameUnp, _lb, argsUnp, _rb, _colon, instructionsUnp] = (ast as any)
+        .sequenceItems;
+    const name = nameUnp.value;
+    let args: Register[] = parseArgList(argsUnp) as Register[];
+    const instructions: Statement[] = instructionsUnp.items.map(instructionFromParseResult);
     return { name, instructions, liveAtExit: [], arguments: args };
 };
 

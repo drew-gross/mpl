@@ -60,53 +60,6 @@ export const parseResultIsError = <Node, Leaf, Token>(
     return result != 'missingOptional' && 'kind' in result && result.kind == 'parseError';
 };
 
-const parseResultWithIndexIsLeaf = <Node, Token>(
-    r: ParseResult<Node, Token>
-): r is Leaf<Token> => 'value' in r;
-
-// TODO also use a real sum type
-const parseResultWithIndexIsSeparatedList = <Node, Token>(
-    r: ParseResult<Node, Token>
-): r is SeparatedListNode<Node, Token> => 'items' in r && 'separators' in r;
-
-const parseResultWithIndexIsList = <Node, Token>(
-    r: ParseResult<Node, Token>
-): r is ListNode<Node, Token> => 'items' in r && !('separators' in r);
-
-const stripNodeIndexes = <Node, Leaf>(r: Ast<Node, Leaf>): Ast<Node, Leaf> => {
-    if (parseResultWithIndexIsLeaf(r)) {
-        return r;
-    }
-    if (parseResultWithIndexIsSeparatedList(r)) {
-        return {
-            items: r.items.map(stripNodeIndexes),
-            separators: r.separators.map(stripNodeIndexes),
-        };
-    }
-    if (parseResultWithIndexIsList(r)) {
-        return { items: r.items.map(stripNodeIndexes) };
-    }
-    // TODO: Should fix optional handling to work more like the new parser when skipping missing items
-    if ('item' in r) {
-        throw debug('TODO: better optional handling');
-    }
-    const childrenWithFixedOptionals: any[] = [];
-    for (const c of r.sequenceItems) {
-        if ('item' in c) {
-            if (c.item) {
-                childrenWithFixedOptionals.push(c.item);
-            }
-        } else {
-            childrenWithFixedOptionals.push(c);
-        }
-    }
-    return {
-        type: r.type,
-        sequenceItems: childrenWithFixedOptionals.map(stripNodeIndexes) as any,
-        sourceLocation: r.sourceLocation,
-    };
-};
-
 export const stripSourceLocation = ast => {
     if ('sequenceItems' in ast) {
         return { type: ast.type, sequenceItems: ast.sequenceItems.map(stripSourceLocation) };
@@ -751,7 +704,7 @@ export const parse = <Node extends string, Token>(
         // TODO: give good error about extra tokens
         throw debug('no parse');
     }
-    return stripNodeIndexes(partialAstToCompleteAst(completeAsts[0]) as any);
+    return partialAstToCompleteAst(completeAsts[0]) as any;
 };
 
 export const parseString = <Node extends string, Token>(
