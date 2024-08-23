@@ -5,7 +5,7 @@ import { TestModule, Test, tacTest, moduleTest } from './test-case';
 import { parseInstructions } from './threeAddressCode/parser';
 import { parseProgram as parseTacProgram } from './threeAddressCode/Program';
 import annotateSource from './annotateSource';
-import { equal as typesAreEqual, Type } from './types';
+import { equal as typesAreEqual, Type, builtinTypes } from './types';
 import {
     Function,
     toString as functionToString,
@@ -993,8 +993,8 @@ test.failing('no structural typing', t => {
         type: {
             kind: 'Product',
             members: [
-                { name: 'first', type: { type: { kind: 'Boolean' } } },
-                { name: 'second', type: { type: { kind: 'Boolean' } } },
+                { name: 'first', type: builtinTypes.Boolean },
+                { name: 'second', type: builtinTypes.Boolean },
             ],
         },
     };
@@ -1002,8 +1002,8 @@ test.failing('no structural typing', t => {
         type: {
             kind: 'Product',
             members: [
-                { name: 'first', type: { type: { kind: 'Boolean' } } },
-                { name: 'second', type: { type: { kind: 'Boolean' } } },
+                { name: 'first', type: builtinTypes.Boolean },
+                { name: 'second', type: builtinTypes.Boolean },
             ],
         },
     };
