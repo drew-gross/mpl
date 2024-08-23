@@ -291,30 +291,25 @@ const getPotentialAsts = <Node extends string, Token>(
             if (error === undefined) throw debug('wat');
             return error;
         case 'sequence': {
-            // TODO: We only seem to use the first element?
-            for (const seqParser of parser.parsers) {
-                const result = getPotentialAsts(grammar, seqParser, token);
-                if ('expected' in result) {
-                    return result;
-                }
-                const empties: PartialAst<Node, Token>[] = parser.parsers.map(p => ({
-                    rule: p,
-                }));
-                // remove first element and replace it with successful partial parse
-                empties.shift();
-                return result.map(({ partial, madeProgress, ...rest }) => ({
-                    partial: {
-                        sequenceItems: [{ ...partial, ...rest }, ...empties],
-                        name: parser.name,
-                        sourceLocation:
-                            token !== 'endOfFile'
-                                ? token.sourceLocation
-                                : { column: 0, line: 0 },
-                    },
-                    madeProgress: madeProgress,
-                }));
+            // Parse the first element now, and ruleForNextEmptySlot handles the remainder
+            const result = getPotentialAsts(grammar, parser.parsers[0], token);
+            if ('expected' in result) {
+                return result;
             }
-            throw debug('All optionals of sequence missing');
+            const empties: PartialAst<Node, Token>[] = parser.parsers.map(p => ({
+                rule: p,
+            }));
+            // remove first element and replace it with successful partial parse
+            empties.shift();
+            return result.map(({ partial, madeProgress, ...rest }) => ({
+                partial: {
+                    sequenceItems: [{ ...partial, ...rest }, ...empties],
+                    name: parser.name,
+                    sourceLocation:
+                        token !== 'endOfFile' ? token.sourceLocation : { column: 0, line: 0 },
+                },
+                madeProgress: madeProgress,
+            }));
         }
         case 'optional': {
             const missingOptional = { partial: { present: false }, madeProgress: false };
