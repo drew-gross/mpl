@@ -5,7 +5,7 @@ import { TestModule, Test, tacTest, moduleTest } from './test-case';
 import { parseInstructions } from './threeAddressCode/parser';
 import { parseProgram as parseTacProgram } from './threeAddressCode/Program';
 import annotateSource from './annotateSource';
-import { equal as typesAreEqual, Type, builtinTypes } from './types';
+import { equal as typesAreEqual, builtinTypes, Product } from './types';
 import {
     Function,
     toString as functionToString,
@@ -989,24 +989,14 @@ test('type of objectLiteral', t => {
 
 // TODO: rethink how product types work
 test.failing('no structural typing', t => {
-    const leftType: Type = {
-        type: {
-            kind: 'Product',
-            members: [
-                { name: 'first', type: builtinTypes.Boolean },
-                { name: 'second', type: builtinTypes.Boolean },
-            ],
-        },
-    };
-    const rightType: Type = {
-        type: {
-            kind: 'Product',
-            members: [
-                { name: 'first', type: builtinTypes.Boolean },
-                { name: 'second', type: builtinTypes.Boolean },
-            ],
-        },
-    };
+    const leftType = Product([
+        { name: 'first', type: builtinTypes.Boolean },
+        { name: 'second', type: builtinTypes.Boolean },
+    ]);
+    const rightType = Product([
+        { name: 'first', type: builtinTypes.Boolean },
+        { name: 'second', type: builtinTypes.Boolean },
+    ]);
     t.assert(!typesAreEqual(leftType, rightType));
 });
 

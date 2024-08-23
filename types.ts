@@ -132,6 +132,8 @@ export const builtinTypes: { [index: string]: Type } = {
     Boolean: { type: { kind: 'Boolean' } },
 };
 
+export const Product = (members): Type => ({ type: { kind: 'Product', members } });
+
 // TODO: Require these to be imported in user code
 export const builtinFunctions: Variable[] = [
     {
