@@ -13,6 +13,7 @@ import {
     equal as typesAreEqual,
     resolve,
     builtinTypes,
+    Product,
     builtinFunctions,
     TypeDeclaration,
     TypeReference,
@@ -685,13 +686,12 @@ export const typeOfExpression = (
             if (!(typeErrors.length == 0)) return typeErrors;
             return {
                 type: {
-                    type: {
-                        kind: 'Product',
-                        members: ast.members.map(({ name, expression }) => ({
+                    ...Product(
+                        ast.members.map(({ name, expression }) => ({
                             name,
                             type: (recurse(expression) as TOEResult).type,
-                        })),
-                    },
+                        }))
+                    ),
                     original: { namedType: ast.typeName },
                 },
                 extractedFunctions: [], // TODO: propagate these
