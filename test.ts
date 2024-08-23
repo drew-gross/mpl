@@ -5,7 +5,13 @@ import { TestModule, Test, tacTest, moduleTest } from './test-case';
 import { parseInstructions } from './threeAddressCode/parser';
 import { parseProgram as parseTacProgram } from './threeAddressCode/Program';
 import annotateSource from './annotateSource';
-import { equal as typesAreEqual, builtinTypes, Product } from './types';
+import {
+    equal as typesAreEqual,
+    builtinTypes,
+    Product,
+    Function as FunctionType,
+    List,
+} from './types';
 import {
     Function,
     toString as functionToString,
@@ -894,22 +900,8 @@ test('liveness of stringEquality', t => {
 test('type equality', t => {
     t.false(
         typesAreEqual(
-            {
-                type: {
-                    kind: 'Function',
-                    arguments: [],
-                    permissions: [],
-                    returnType: builtinTypes.Integer,
-                },
-            },
-            {
-                type: {
-                    kind: 'Function',
-                    arguments: [builtinTypes.Integer, builtinTypes.Integer],
-                    permissions: [],
-                    returnType: builtinTypes.Integer,
-                },
-            }
+            FunctionType([], [], builtinTypes.Integer),
+            FunctionType([builtinTypes.Integer, builtinTypes.Integer], [], builtinTypes.Integer)
         )
     );
 });
@@ -919,12 +911,7 @@ test('equal types are equal', t => {
 });
 
 test('list type equality', t => {
-    t.assert(
-        !typesAreEqual(
-            { type: { kind: 'List', of: builtinTypes.Boolean } },
-            { type: { kind: 'List', of: builtinTypes.Integer } }
-        )
-    );
+    t.assert(!typesAreEqual(List(builtinTypes.Boolean), List(builtinTypes.Integer)));
 });
 
 test('type of objectLiteral', t => {

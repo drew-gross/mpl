@@ -1314,7 +1314,7 @@ const parseType = (ast: MplAst): Type | TypeReference => {
             if (isSeparatedListNode(node) || isListNode(node) || node.type != 'typeIdentifier') {
                 throw debug('expected a type');
             }
-            const listOf: Type = { type: { kind: node.value as 'String' } };
+            const listOf: Type = { type: { kind: node.value as any } };
             return { type: { kind: 'List', of: listOf } };
         }
         default:
