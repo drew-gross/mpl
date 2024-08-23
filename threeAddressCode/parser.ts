@@ -383,136 +383,144 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
             };
         }
         case 'gotoIfEqual': {
-            if (a.sequenceItems[5].value == 0) {
+            const [_goto, label, _if, lhs, _eq, rhs, comment] = a.sequenceItems;
+            if (rhs.value == 0) {
                 return {
                     kind: 'gotoIfZero',
-                    label: a.sequenceItems[1].value,
-                    register: parseRegister(a.sequenceItems[3].value),
-                    why: stripComment(a.sequenceItems[6].value),
+                    label: label.value,
+                    register: parseRegister(lhs.value),
+                    why: stripComment(comment.value),
                 };
             }
-            if (a.sequenceItems[5].type == 'number') {
+            if (rhs.type == 'number') {
                 return {
                     kind: 'gotoIfEqual',
-                    label: a.sequenceItems[1].value,
-                    lhs: parseRegister(a.sequenceItems[3].value),
-                    rhs: parseRegister(a.sequenceItems[5].value),
-                    why: stripComment(a.sequenceItems[6].value),
+                    label: label.value,
+                    lhs: parseRegister(lhs.value),
+                    rhs: parseRegister(rhs.value),
+                    why: stripComment(comment.value),
                 };
             }
             return {
                 kind: 'gotoIfEqual',
-                label: a.sequenceItems[1].value,
-                lhs: parseRegister(a.sequenceItems[3].value),
-                rhs: parseRegister(a.sequenceItems[5].value),
-                why: stripComment(a.sequenceItems[6].value),
+                label: label.value,
+                lhs: parseRegister(lhs.value),
+                rhs: parseRegister(rhs.value),
+                why: stripComment(label.value),
             } as any;
         }
-        case 'increment':
+        case 'increment': {
+            const [reg, _plusplus, comment] = a.sequenceItems;
             return {
                 kind: 'increment',
-                register: parseRegister(a.sequenceItems[0].value),
-                why: stripComment(a.sequenceItems[2].value),
+                register: parseRegister(reg.value),
+                why: stripComment(comment.value),
             };
+        }
         case 'identifier':
             return {
                 kind: 'identifier',
             } as any;
         case 'loadImmediate':
+            const [reg, _assign, imm, comment] = a.sequenceItems;
             return {
                 kind: 'loadImmediate',
-                destination: parseRegister(a.sequenceItems[0].value),
-                value: a.sequenceItems[2].value,
-                why: stripComment(a.sequenceItems[3].value),
+                destination: parseRegister(reg.value),
+                value: imm.value,
+                why: stripComment(comment.value),
             };
         case 'difference': {
+            const [reg, _assign, lhs, _minus, rhs, comment] = a.sequenceItems;
             return {
                 kind: 'subtract',
-                destination: parseRegister(a.sequenceItems[0].value),
-                lhs: parseRegister(a.sequenceItems[2].value),
-                rhs: parseRegister(a.sequenceItems[4].value),
-                why: stripComment(a.sequenceItems[5].value),
+                destination: parseRegister(reg.value),
+                lhs: parseRegister(lhs.value),
+                rhs: parseRegister(rhs.value),
+                why: stripComment(comment.value),
             };
         }
         case 'gotoIfNotEqual': {
-            const rhs =
-                a.sequenceItems[5].type == 'number'
-                    ? a.sequenceItems[5].value
-                    : parseRegister(a.sequenceItems[5].value);
+            const [_goto, label, _if, lhs, _ne, rhsUnp, comment] = a.sequenceItems;
+            const rhs = rhsUnp.type == 'number' ? rhsUnp.value : parseRegister(rhsUnp.value);
             return {
                 kind: 'gotoIfNotEqual',
-                label: a.sequenceItems[1].value,
-                lhs: parseRegister(a.sequenceItems[3].value),
+                label: label.value,
+                lhs: parseRegister(lhs.value),
                 rhs,
-                why: stripComment(a.sequenceItems[6].value),
+                why: stripComment(comment.value),
             };
         }
         case 'gotoIfGreater': {
+            const [_goto, label, _if, lhs, _ge, rhs, comment] = a.sequenceItems;
             return {
                 kind: 'gotoIfGreater',
-                label: a.sequenceItems[1].value,
-                lhs: parseRegister(a.sequenceItems[3].value),
-                rhs: parseRegister(a.sequenceItems[5].value),
-                why: stripComment(a.sequenceItems[6].value),
+                label: label.value,
+                lhs: parseRegister(lhs.value),
+                rhs: parseRegister(rhs.value),
+                why: stripComment(comment.value),
             };
         }
         case 'store': {
-            const why = stripComment(a.sequenceItems[4].value);
-            if (a.sequenceItems[3].type == 'number') {
+            const [_star, to, _assign, from, comment] = a.sequenceItems;
+            const why = stripComment(comment.value);
+            if (from.type == 'number') {
                 return {
                     kind: 'storeMemoryByte',
-                    address: parseRegister(a.sequenceItems[1].value),
-                    contents: a.sequenceItems[3].value,
+                    address: parseRegister(to.value),
+                    contents: from.value,
                     why,
                 };
             }
-            if (!isRegister(a.sequenceItems[1].value)) {
+            if (!isRegister(to.value)) {
                 return {
                     kind: 'storeGlobal',
-                    from: parseRegister(a.sequenceItems[3].value),
-                    to: a.sequenceItems[1].value,
+                    from: parseRegister(from.value),
+                    to: to.value,
                     why,
                 };
             }
             return {
                 kind: 'storeMemoryByte',
-                address: parseRegister(a.sequenceItems[1].value),
-                contents: parseRegister(a.sequenceItems[3].value),
+                address: parseRegister(to.value),
+                contents: parseRegister(from.value),
                 why,
             };
         }
         case 'offsetStore': {
-            if (a.sequenceItems[7].value == 0) {
+            const [_star, _lb, to, _plus, offset, _rb, _assign, from, comment] = a.sequenceItems;
+            if (from.value == 0) {
                 return {
                     kind: 'storeZeroToMemory',
-                    address: parseRegister(a.sequenceItems[2].value),
-                    offset: a.sequenceItems[4].value,
-                    why: stripComment(a.sequenceItems[8].value),
+                    address: parseRegister(to.value),
+                    offset: offset.value,
+                    why: stripComment(comment.value),
                 };
             }
             return {
                 kind: 'storeMemory',
-                address: parseRegister(a.sequenceItems[2].value),
-                offset: a.sequenceItems[4].value,
-                from: parseRegister(a.sequenceItems[7].value),
-                why: stripComment(a.sequenceItems[8].value),
+                address: parseRegister(to.value),
+                offset: offset.value,
+                from: parseRegister(from.value),
+                why: stripComment(comment.value),
             };
         }
         case 'offsetLoad': {
+            const [to, _assign, _star, _lb, from, _plus, offset, _rb, comment] = a.sequenceItems;
             return {
                 kind: 'loadMemory',
-                to: parseRegister(a.sequenceItems[0].value),
-                from: parseRegister(a.sequenceItems[4].value),
-                offset: a.sequenceItems[6].value,
-                why: stripComment(a.sequenceItems[8].value),
+                to: parseRegister(to.value),
+                from: parseRegister(from.value),
+                offset: offset.value,
+                why: stripComment(comment.value),
             };
         }
         case 'addressOf': {
+            const [to, _assign, _and, symbol, comment] = a.sequenceItems;
             return {
                 kind: 'loadSymbolAddress',
-                symbolName: a.sequenceItems[3].value,
-                to: parseRegister(a.sequenceItems[0].value),
-                why: stripComment(a.sequenceItems[4].value),
+                symbolName: symbol.value,
+                to: parseRegister(to.value),
+                why: stripComment(comment.value),
             };
         }
         case 'callByRegister': {
