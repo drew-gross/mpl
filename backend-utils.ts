@@ -176,14 +176,12 @@ export const makeExecutable = <TargetRegister>(
     });
     return {
         main: {
-            // @ts-ignore
-            instructions: targetMain.instructions.map(translator).flat(),
+            instructions: targetMain.instructions.map(translator).flat() as any,
             stackUsage: targetMain.stackUsage as any,
         },
         functions: targetFunctions.map(({ name, instructions, stackUsage }) => ({
             name,
             stackUsage,
-            // @ts-ignore
             instructions: instructions.map(translator).flat(),
         })) as any,
     };
@@ -195,7 +193,6 @@ export const freeGlobalsInstructions = (
     makeTemporary,
     globalNameMap
 ): Statement[] => {
-    // @ts-ignore
     const instructions: Statement[] = globals
         .filter(declaration => ['String', 'List'].includes((declaration.type as Type).type.kind))
         .map(declaration => {
@@ -216,7 +213,7 @@ export const freeGlobalsInstructions = (
                 },
             ];
         })
-        .flat();
+        .flat() as any;
     instructions.push({
         kind: 'return' as 'return',
         register: new Register('dummyReturn'),

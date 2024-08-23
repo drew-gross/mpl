@@ -1,3 +1,2 @@
 export default (lower: number, upper: number) =>
-    // @ts-ignore
-    Array.from({ length: upper - lower }, (v, k) => k + lower);
+    Array.from({ length: upper - lower }, (_v, k) => k + lower);
