@@ -168,10 +168,9 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = bytesInWo
 
 // @ts-ignore
 export const readIntDirect: RuntimeFunctionGenerator = bytesInWord =>
-    // TODO: Allow syscalls that don't have any arguments, cause this shouldn't have arguments
     parseFunctionOrDie(`
-        (function) readInt(r:str):
-              r:result = syscall readInt r:str;
+        (function) readInt():
+              r:result = syscall readInt;
               return r:result;
     `);
 
