@@ -524,7 +524,8 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
             };
         }
         case 'callByRegister': {
-            if (a.sequenceItems[1].type == 'assign') {
+            const differentiator = a.sequenceItems[1];
+            if (differentiator.type == 'assign') {
                 const [to, _assign, from, _lb, args, _rb, comment] = a.sequenceItems;
                 return {
                     kind: 'callByRegister',
@@ -534,8 +535,7 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
                     why: stripComment(comment.value),
                 };
             } else {
-                if (a.sequenceItems[1].type != 'leftBracket')
-                    throw debug('expecting left bracket');
+                if (differentiator.type != 'leftBracket') throw debug('expecting left bracket');
                 return {
                     kind: 'callByRegister',
                     function: parseRegister(a.sequenceItems[0].value),
