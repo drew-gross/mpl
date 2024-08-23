@@ -38,22 +38,23 @@ const repairAssociativity = (nodeType, ast) => {
     // Let this slide because TokenType overlaps InteriorNodeType right now
     if (ast.type === nodeType && !ast.sequenceItems) /*debug('todo')*/ return ast;
     if (ast.type === nodeType) {
-        if (!ast.sequenceItems[2]) debug('todo');
-        if (ast.sequenceItems[2].type === nodeType) {
+        const [lhs, op, rhs] = ast.sequenceItems;
+        if (rhs.type === nodeType) {
+            const [rhslhs, rhsop, rhsrhs] = rhs.sequenceItems;
             return {
                 type: nodeType,
                 sequenceItems: [
                     {
                         type: nodeType,
                         sequenceItems: [
-                            repairAssociativity(nodeType, ast.sequenceItems[0]),
-                            ast.sequenceItems[2].sequenceItems[1],
-                            repairAssociativity(nodeType, ast.sequenceItems[2].sequenceItems[0]),
+                            repairAssociativity(nodeType, lhs),
+                            rhsop,
+                            repairAssociativity(nodeType, rhslhs),
                         ],
                         sourceLocation: ast.sourceLocation,
                     },
-                    ast.sequenceItems[1],
-                    repairAssociativity(nodeType, ast.sequenceItems[2].sequenceItems[2]),
+                    op,
+                    repairAssociativity(nodeType, rhsrhs),
                 ],
                 sourceLocation: ast.sourceLocation,
             };
