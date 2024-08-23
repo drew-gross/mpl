@@ -590,11 +590,12 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
             }
         }
         case 'plusEqual': {
+            const [reg, _pe, amount, comment] = a.sequenceItems;
             return {
                 kind: 'addImmediate',
-                register: parseRegister(a.sequenceItems[0].value),
-                amount: a.sequenceItems[2].value,
-                why: stripComment(a.sequenceItems[3].value),
+                register: parseRegister(reg.value),
+                amount: amount.value,
+                why: stripComment(comment.value),
             } as any;
         }
         case 'statementSeparator': {
@@ -604,53 +605,60 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
             };
         }
         case 'product': {
+            const [to, _assign, lhs, _times, rhs, comment] = a.sequenceItems;
             return {
                 kind: 'multiply',
-                destination: parseRegister(a.sequenceItems[0].value),
-                lhs: parseRegister(a.sequenceItems[2].value),
-                rhs: parseRegister(a.sequenceItems[4].value),
-                why: stripComment(a.sequenceItems[5].value),
+                destination: parseRegister(to.value),
+                lhs: parseRegister(lhs.value),
+                rhs: parseRegister(rhs.value),
+                why: stripComment(comment.value),
             };
         }
         case 'sum': {
+            const [to, _assign, lhs, _sum, rhs, comment] = a.sequenceItems;
             return {
                 kind: 'add',
-                destination: parseRegister(a.sequenceItems[0].value),
-                lhs: parseRegister(a.sequenceItems[2].value),
-                rhs: parseRegister(a.sequenceItems[4].value),
-                why: stripComment(a.sequenceItems[5].value),
+                destination: parseRegister(to.value),
+                lhs: parseRegister(lhs.value),
+                rhs: parseRegister(rhs.value),
+                why: stripComment(comment.value),
             };
         }
-        case 'alloca':
+        case 'alloca': {
+            const [to, _assign, _alloca, _lb, bytes, _rb, comment] = a.sequenceItems;
             return {
                 kind: 'alloca',
-                register: parseRegister(a.sequenceItems[0].value),
-                bytes: a.sequenceItems[4].value,
-                why: stripComment(a.sequenceItems[6].value),
+                register: parseRegister(to.value),
+                bytes: bytes.value,
+                why: stripComment(comment.value),
             };
-        case 'spill':
+        }
+        case 'spill': {
+            const [offset, reg, comment] = a.sequenceItems;
             return {
                 kind: ast.type as any,
-                register: parseRegister(a.sequenceItems[1].value),
-                offset: a.sequenceItems[0].value,
-                why: stripComment(a.sequenceItems[2].value),
+                register: parseRegister(reg.value),
+                offset: offset.value,
+                why: stripComment(comment.value),
             };
-        case 'unspill':
-            if (Number.isNaN(a.sequenceItems[0].value)) debug('nan!');
+        }
+        case 'unspill': {
+            const [offset, reg, comment] = a.sequenceItems;
             return {
                 kind: ast.type as any,
-                register: parseRegister(a.sequenceItems[1].value),
-                offset: a.sequenceItems[0].value,
-                why: stripComment(a.sequenceItems[2].value),
+                register: parseRegister(reg.value),
+                offset: offset.value,
+                why: stripComment(comment.value),
             };
-        case 'return':
-            if (a.sequenceItems.length < 2) debug('short in lengh');
-            if (!a.sequenceItems || !a.sequenceItems[2]) debug('bad shape');
+        }
+        case 'return': {
+            const [_return, reg, comment] = a.sequenceItems;
             return {
                 kind: 'return',
-                register: parseRegister(a.sequenceItems[1].value),
-                why: stripComment(a.sequenceItems[2].value),
+                register: parseRegister(reg.value),
+                why: stripComment(comment.value),
             };
+        }
         default:
             throw debug(`${ast.type} unhandled in instructionFromParseResult`);
     }
