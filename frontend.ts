@@ -1303,21 +1303,20 @@ const parseType = (ast: MplAst): Type | TypeReference => {
     }
     switch (ast.type) {
         case 'typeWithArgs': {
-            const name = (ast.sequenceItems[0] as any).value;
-            if (name != 'Function') throw debug('Only functions support args right now');
-            const list = ast.sequenceItems[1];
+            const [name, list] = ast.sequenceItems as any;
+            if (name.value != 'Function') throw debug('Only functions support args right now');
             if (!isSeparatedListNode(list)) throw debug('todo');
             const typeList = list.items.map(parseType);
             return {
                 type: {
-                    kind: name,
+                    kind: name.value,
                     arguments: typeList.slice(0, typeList.length - 1),
                     returnType: typeList[typeList.length - 1],
                 },
             };
         }
         case 'typeWithoutArgs': {
-            const node = ast.sequenceItems[0];
+            const [node] = ast.sequenceItems;
             if (isSeparatedListNode(node) || isListNode(node)) {
                 throw debug('todo');
             }
@@ -1334,7 +1333,7 @@ const parseType = (ast: MplAst): Type | TypeReference => {
             }
         }
         case 'listType': {
-            const node = ast.sequenceItems[0];
+            const [node, _lb, _rb] = ast.sequenceItems;
             if (isSeparatedListNode(node) || isListNode(node) || node.type != 'typeIdentifier') {
                 throw debug('expected a type');
             }
@@ -1377,9 +1376,10 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
     }
     switch (ast.type) {
         case 'returnStatement':
+            const [_return, expr] = ast.sequenceItems;
             return {
                 kind: 'returnStatement',
-                expression: astFromParseResult(ast.sequenceItems[1]),
+                expression: astFromParseResult(expr),
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'number':
@@ -1419,14 +1419,11 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
         case 'paramList':
             throw debug('paramList in astFromParseResult'); // Should have been caught in "callExpression"
         case 'callExpression':
-            const child2 = ast.sequenceItems[2];
-            if (!isSeparatedListNode(child2)) {
-                throw debug('todo');
-            }
+            const [fn, _lb, args, _rb] = ast.sequenceItems as any;
             return {
                 kind: 'callExpression',
-                name: (ast.sequenceItems[0] as any).value as any,
-                arguments: child2.items.map(astFromParseResult),
+                name: fn.value,
+                arguments: args.items.map(astFromParseResult),
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
         case 'binaryExpression':
@@ -1453,15 +1450,17 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 rhs: astFromParseResult(rhs),
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
-        case 'reassignment':
+        case 'reassignment': {
             if (!('sequenceItems' in ast))
                 throw debug('children not in ast in astFromParseResult');
+            const [to, _assign, expr] = ast.sequenceItems as any;
             return {
                 kind: 'reassignment',
-                destination: (ast.sequenceItems[0] as any).value as any,
-                expression: astFromParseResult(ast.sequenceItems[2]),
+                destination: to.value as any,
+                expression: astFromParseResult(expr),
                 sourceLocation: ast.sourceLocation,
             } as Ast.UninferredAst;
+        }
         case 'declaration': {
             let childIndex = 0;
             let exported: boolean = false;
@@ -1514,9 +1513,10 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 };
             }
         }
-        case 'typeDeclaration':
-            const theType = parseType(ast.sequenceItems[3]);
-            const name: string = (ast.sequenceItems[0] as any).value;
+        case 'typeDeclaration': {
+            const [id, _colon, _assignment, type] = ast.sequenceItems as any;
+            const theType = parseType(type);
+            const name: string = id.value;
             if ('namedType' in theType) {
                 throw debug(
                     "Shouldn't get here, delcaring types have to actually declare a type"
@@ -1528,6 +1528,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 type: theType,
                 sourceLocation: ast.sourceLocation,
             };
+        }
         case 'stringLiteral':
             return {
                 kind: 'stringLiteral',
@@ -1535,14 +1536,13 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 sourceLocation: ast.sourceLocation,
             };
         case 'objectLiteral':
-            const typeNameNode = ast.sequenceItems[0];
+            const [typeNameNode, membersNode] = ast.sequenceItems;
             if (isSeparatedListNode(typeNameNode) || isListNode(typeNameNode)) {
                 throw debug('todo');
             }
             if (typeNameNode.type != 'typeIdentifier') return 'WrongShapeAst';
             const typeName = typeNameNode.value;
             if (typeof typeName != 'string') return 'WrongShapeAst';
-            const membersNode = ast.sequenceItems[1];
             if (!isListNode(membersNode)) {
                 throw debug('todo');
             }
@@ -1663,12 +1663,14 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
         }
         case 'forLoop': {
             const a = ast as any;
-            const body = extractFunctionBody(a.sequenceItems[2]);
-            const lst = astFromParseResult(a.sequenceItems[1].sequenceItems[2]);
+            const [_for, condition, bodyUnex] = a.sequenceItems;
+            const body = extractFunctionBody(bodyUnex);
+            const [id, _colon, iteratee] = condition.sequenceItems;
+            const lst = astFromParseResult(iteratee);
             if (lst == 'WrongShapeAst') return lst;
             const result: Ast.UninferredForLoop = {
                 kind: 'forLoop',
-                var: a.sequenceItems[1].sequenceItems[0].value,
+                var: id.value,
                 list: lst as Ast.UninferredExpression,
                 body,
                 sourceLocation: a.sourceLocation,
@@ -1682,13 +1684,14 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 sourceLocation: ast.sourceLocation,
             };
         case 'program':
+            const [program] = ast.sequenceItems;
             return {
                 kind: 'program',
-                statements: extractFunctionBody(ast.sequenceItems[0]),
+                statements: extractFunctionBody(program),
                 sourceLocation: ast.sourceLocation,
             };
         case 'listLiteral':
-            const items = ast.sequenceItems[0];
+            const [items] = ast.sequenceItems;
             if (!isSeparatedListNode(items)) throw debug('todo');
             return {
                 kind: 'listLiteral',
