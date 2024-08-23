@@ -375,18 +375,12 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
             };
         }
         case 'goto': {
-            // TODO: When is this not 3?
-            if (a.sequenceItems.length == 3) {
-                const [_goto, label, comment] = a.sequenceItems;
-                return {
-                    kind: 'goto',
-                    label: label.value,
-                    why: stripComment(comment.value),
-                };
-            }
+            const [_goto, label, comment] = a.sequenceItems;
             return {
                 kind: 'goto',
-            } as any;
+                label: label.value,
+                why: stripComment(comment.value),
+            };
         }
         case 'gotoIfEqual': {
             if (a.sequenceItems[5].value == 0) {
