@@ -525,13 +525,13 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
         }
         case 'callByRegister': {
             if (a.sequenceItems[1].type == 'assign') {
+                const [to, _assign, from, _lb, args, _rb, comment] = a.sequenceItems;
                 return {
                     kind: 'callByRegister',
-                    function: parseRegister(a.sequenceItems[2].value),
-                    arguments:
-                        a.sequenceItems.length == 7 ? parseArgList(a.sequenceItems[4]) : [],
-                    destination: parseRegister(a.sequenceItems[0].value),
-                    why: stripComment((last(a.sequenceItems) as any).value),
+                    function: parseRegister(from.value),
+                    arguments: a.sequenceItems.length == 7 ? parseArgList(args) : [],
+                    destination: parseRegister(to.value),
+                    why: stripComment(comment.value),
                 };
             } else {
                 if (a.sequenceItems[1].type != 'leftBracket')
