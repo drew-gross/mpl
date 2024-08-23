@@ -551,17 +551,15 @@ test('correct inferred type for function', t => {
         type: {
             type: {
                 kind: 'Function',
-                arguments: [{ type: { kind: 'Integer' } }],
+                arguments: [builtinTypes.Integer],
                 permissions: [],
-                returnType: { type: { kind: 'Integer' } },
+                returnType: builtinTypes.Integer,
             },
         },
         extractedFunctions: [
             {
                 name: 'anonymous_1',
-                parameters: [
-                    { name: 'a', type: { type: { kind: 'Integer' } }, exported: false },
-                ],
+                parameters: [{ name: 'a', type: builtinTypes.Integer, exported: false }],
                 returnType: { type: { kind: 'Integer' as 'Integer' } },
                 statements: [
                     {
@@ -901,15 +899,15 @@ test('type equality', t => {
                     kind: 'Function',
                     arguments: [],
                     permissions: [],
-                    returnType: { type: { kind: 'Integer' } },
+                    returnType: builtinTypes.Integer,
                 },
             },
             {
                 type: {
                     kind: 'Function',
-                    arguments: [{ type: { kind: 'Integer' } }, { type: { kind: 'Integer' } }],
+                    arguments: [builtinTypes.Integer, builtinTypes.Integer],
                     permissions: [],
-                    returnType: { type: { kind: 'Integer' } },
+                    returnType: builtinTypes.Integer,
                 },
             }
         )
@@ -917,14 +915,14 @@ test('type equality', t => {
 });
 
 test('equal types are equal', t => {
-    t.assert(typesAreEqual({ type: { kind: 'Integer' } }, { type: { kind: 'Integer' } }));
+    t.assert(typesAreEqual(builtinTypes.Integer, builtinTypes.Integer));
 });
 
 test('list type equality', t => {
     t.assert(
         !typesAreEqual(
-            { type: { kind: 'List', of: { type: { kind: 'Boolean' } } } },
-            { type: { kind: 'List', of: { type: { kind: 'Integer' } } } }
+            { type: { kind: 'List', of: builtinTypes.Boolean } },
+            { type: { kind: 'List', of: builtinTypes.Integer } }
         )
     );
 });
@@ -963,8 +961,8 @@ test('type of objectLiteral', t => {
                     type: {
                         kind: 'Product',
                         members: [
-                            { name: 'first', type: { type: { kind: 'Boolean' } } },
-                            { name: 'second', type: { type: { kind: 'Boolean' } } },
+                            { name: 'first', type: builtinTypes.Boolean },
+                            { name: 'second', type: builtinTypes.Boolean },
                         ],
                     },
                 },
@@ -976,8 +974,8 @@ test('type of objectLiteral', t => {
             type: {
                 kind: 'Product' as 'Product',
                 members: [
-                    { name: 'first', type: { type: { kind: 'Boolean' } } },
-                    { name: 'second', type: { type: { kind: 'Boolean' } } },
+                    { name: 'first', type: builtinTypes.Boolean },
+                    { name: 'second', type: builtinTypes.Boolean },
                 ] as any,
             },
             original: { namedType: 'BoolPair' },
