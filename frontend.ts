@@ -1204,7 +1204,7 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
             return {
                 kind: 'listLiteral',
                 sourceLocation: ast.sourceLocation,
-                type: { type: { kind: 'List', of: itemType } },
+                type: List(itemType),
                 items,
             };
         case 'indexAccess':
@@ -1276,12 +1276,7 @@ const parseType = (ast: MplAst): Type | TypeReference => {
         throw debug('todo');
     }
     if (isListNode(ast)) {
-        return {
-            type: {
-                kind: 'Product',
-                members: ast.items.map(parseTypeLiteralComponent),
-            },
-        };
+        return Product(ast.items.map(parseTypeLiteralComponent));
     }
     switch (ast.type) {
         case 'typeWithArgs': {
