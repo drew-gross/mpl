@@ -529,7 +529,7 @@ export const instructionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Stat
                 return {
                     kind: 'callByRegister',
                     function: parseRegister(from.value),
-                    arguments: a.sequenceItems.length == 7 ? parseArgList(args) : [],
+                    arguments: parseArgList(args),
                     destination: parseRegister(to.value),
                     why: stripComment(comment.value),
                 };
