@@ -543,23 +543,37 @@ export const typeOfExpression = (
                 return thisArgType;
             }
 
-            const lookupMemberFunction = (methodName: string): Variable | undefined => {
-                return availableVariables.find(({ name: varName }) => methodName == varName);
+            const lookupMemberFunction = (
+                methodName: string,
+                _calleeType: Type
+            ): Type | { errors: TypeError[]; newVariables: Variable[] } => {
+                const method = undefined; //calleeType.methods.find(m => m.name == memberName);
+                if (method) return method;
+                const variable = availableVariables.find(
+                    ({ name: varName }) => methodName == varName
+                );
+                if (!variable) {
+                    return {
+                        errors: [
+                            {
+                                kind: 'unknownIdentifier',
+                                name: functionName,
+                                sourceLocation: ast.sourceLocation,
+                            },
+                        ],
+                        newVariables: [],
+                    };
+                }
+                return resolve(variable.type, availableTypes, ast.sourceLocation);
             };
 
             const functionName = ast.memberName;
-            const declaration = lookupMemberFunction(functionName);
-            if (!declaration) {
-                return [
-                    {
-                        kind: 'unknownIdentifier',
-                        name: functionName,
-                        sourceLocation: ast.sourceLocation,
-                    },
-                ];
+            const declaration = lookupMemberFunction(functionName, thisArgType.type);
+            if ('errors' in declaration) {
+                return declaration.errors;
             }
 
-            const functionType = declaration.type;
+            const functionType = declaration;
             if (!functionType) throw debug('bad function! This should be a better error.');
             if ('namedType' in functionType) {
                 throw debug('nameRef function! This should be supported.');
