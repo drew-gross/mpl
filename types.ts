@@ -146,54 +146,22 @@ export const List = (ofType): Type => ({
 export const builtinFunctions: Variable[] = [
     {
         name: 'length',
-        type: {
-            type: {
-                kind: 'Function',
-                arguments: [builtinTypes.String],
-                permissions: [],
-                returnType: builtinTypes.Integer,
-            },
-            methods: [],
-        },
+        type: Function([builtinTypes.String], [], builtinTypes.Integer),
         exported: false,
     },
     {
         name: 'startsWith',
-        type: {
-            type: {
-                kind: 'Function',
-                arguments: [builtinTypes.String, builtinTypes.String],
-                permissions: [],
-                returnType: builtinTypes.Boolean,
-            },
-            methods: [],
-        },
+        type: Function([builtinTypes.String, builtinTypes.String], [], builtinTypes.Boolean),
         exported: false,
     },
     {
         name: 'print',
-        type: {
-            type: {
-                kind: 'Function',
-                arguments: [builtinTypes.String],
-                permissions: [],
-                returnType: builtinTypes.Integer,
-            },
-            methods: [],
-        },
+        type: Function([builtinTypes.String], [], builtinTypes.Integer),
         exported: false,
     },
     {
         name: 'readInt',
-        type: {
-            type: {
-                kind: 'Function',
-                arguments: [],
-                permissions: ['stdout'],
-                returnType: builtinTypes.Integer,
-            },
-            methods: [],
-        },
+        type: Function([], ['stdout'], builtinTypes.Integer),
         exported: false,
     },
 ];
