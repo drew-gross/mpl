@@ -944,27 +944,19 @@ test('type of objectLiteral', t => {
         availableTypes: [
             {
                 name: 'BoolPair',
-                type: {
-                    type: {
-                        kind: 'Product',
-                        members: [
-                            { name: 'first', type: builtinTypes.Boolean },
-                            { name: 'second', type: builtinTypes.Boolean },
-                        ],
-                    },
-                },
+                type: Product([
+                    { name: 'first', type: builtinTypes.Boolean },
+                    { name: 'second', type: builtinTypes.Boolean },
+                ]),
             },
         ],
     });
     const expectedType = {
         type: {
-            type: {
-                kind: 'Product' as 'Product',
-                members: [
-                    { name: 'first', type: builtinTypes.Boolean },
-                    { name: 'second', type: builtinTypes.Boolean },
-                ] as any,
-            },
+            ...Product([
+                { name: 'first', type: builtinTypes.Boolean },
+                { name: 'second', type: builtinTypes.Boolean },
+            ]),
             original: { namedType: 'BoolPair' },
         },
         extractedFunctions: [],
