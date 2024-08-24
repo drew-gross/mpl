@@ -1312,7 +1312,7 @@ const parseType = (ast: MplAst): Type | TypeReference => {
             if (isSeparatedListNode(node) || isListNode(node) || node.type != 'typeIdentifier') {
                 throw debug('expected a type');
             }
-            return List({ type: { kind: node.value as any } });
+            return List({ type: { kind: node.value as any }, methods: [] });
         }
         default:
             throw debug(`${ast.type} unhandled in parseType`);

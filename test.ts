@@ -559,7 +559,7 @@ test('correct inferred type for function', t => {
             {
                 name: 'anonymous_1',
                 parameters: [{ name: 'a', type: builtinTypes.Integer, exported: false }],
-                returnType: { type: { kind: 'Integer' as 'Integer' } },
+                returnType: builtinTypes.Integer,
                 statements: [
                     {
                         expression: {
@@ -574,7 +574,7 @@ test('correct inferred type for function', t => {
                 variables: [
                     {
                         name: 'a',
-                        type: { type: { kind: 'Integer' as 'Integer' } },
+                        type: builtinTypes.Integer,
                         exported: false,
                     },
                 ],

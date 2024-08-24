@@ -1,7 +1,7 @@
 import { TestModule } from './test-case';
 import join from './util/join';
 import range from './util/list/range';
-import { builtinTypes, Function as FunctionType } from './types';
+import { builtinTypes, Function as FunctionType, List } from './types';
 import { ExecutionResult } from './api';
 
 export type TestProgram = {
@@ -393,8 +393,8 @@ return isFive(5) ? 1 : 0;`,
             {
                 kind: 'assignWrongType',
                 lhsName: 'myList',
-                lhsType: { type: { kind: 'List', of: { type: { kind: 'Boolean' } } } },
-                rhsType: { type: { kind: 'List', of: { type: { kind: 'Integer' } } } },
+                lhsType: List(builtinTypes.Boolean),
+                rhsType: List(builtinTypes.Integer),
                 sourceLocation: { column: 13, line: 2 },
             },
         ],
@@ -934,7 +934,7 @@ return isFive(5) ? 1 : 0;`,
         typeErrors: [
             {
                 kind: 'nonListInFor',
-                found: { type: { kind: 'Integer' } },
+                found: builtinTypes.Integer,
                 sourceLocation: { line: 3, column: 13 },
             },
         ] as any,

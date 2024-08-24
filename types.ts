@@ -27,7 +27,7 @@ export type List = { kind: 'List'; of: Type };
 export type Product = { kind: 'Product'; members: ProductComponent[] };
 export type Type = {
     type: String | Integer | Boolean | Function | List | Product;
-    methods?: Function[];
+    methods: Function[];
     original?: TypeReference;
 };
 
@@ -80,6 +80,7 @@ export const resolve = (
     return {
         type: type.type.type, // lol
         original: unresolved,
+        methods: type.type.methods,
     };
 };
 
@@ -127,19 +128,21 @@ export const equal = (a: Type, b: Type): boolean => {
 };
 
 export const builtinTypes: { [index: string]: Type } = {
-    String: { type: { kind: 'String' } },
-    Integer: { type: { kind: 'Integer' } },
-    Boolean: { type: { kind: 'Boolean' } },
+    String: { type: { kind: 'String' }, methods: [] },
+    Integer: { type: { kind: 'Integer' }, methods: [] },
+    Boolean: { type: { kind: 'Boolean' }, methods: [] },
 };
 
-export const Product = (members): Type => ({ type: { kind: 'Product', members } });
+export const Product = (members): Type => ({ type: { kind: 'Product', members }, methods: [] });
 
 export const Function = (args, permissions, returnType): Type => ({
     type: { kind: 'Function', arguments: args, permissions, returnType },
+    methods: [],
 });
 
 export const List = (ofType): Type => ({
     type: { kind: 'List', of: ofType },
+    methods: [],
 });
 
 // TODO: Require these to be imported in user code
