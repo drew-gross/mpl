@@ -543,8 +543,12 @@ export const typeOfExpression = (
                 return thisArgType;
             }
 
+            const lookupMemberFunction = (methodName: string): Variable | undefined => {
+                return availableVariables.find(({ name: varName }) => methodName == varName);
+            };
+
             const functionName = ast.memberName;
-            const declaration = availableVariables.find(({ name }) => functionName == name);
+            const declaration = lookupMemberFunction(functionName);
             if (!declaration) {
                 return [
                     {
@@ -554,6 +558,7 @@ export const typeOfExpression = (
                     },
                 ];
             }
+
             const functionType = declaration.type;
             if (!functionType) throw debug('bad function! This should be a better error.');
             if ('namedType' in functionType) {
