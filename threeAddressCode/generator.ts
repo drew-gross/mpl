@@ -300,7 +300,10 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
 
             const functionName = ast.name;
             let callInstructions: Statement[] = [];
-            if (builtinFunctions.map(b => b.name).includes(functionName)) {
+            if (
+                builtinFunctions.map(b => b.name).includes(functionName) ||
+                ['startsWith'].includes(functionName)
+            ) {
                 const functionPointer = makeTemporary('function_pointer');
                 callInstructions = [
                     {
@@ -344,8 +347,18 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         why: `Call by register ${functionName}`,
                     },
                 ];
+                // } else if (functionName in ['startsWith']) {
+                //     callInstructions = [
+                //         {
+                //             kind: 'callByRegister',
+                //             function: 'startsWith',
+                //             arguments: argumentRegisters,
+                //             destination,
+                //             why: `Call by register ${functionName}`,
+                //         }
+                //     ];
             } else {
-                debug('todo');
+                debug(`could not find function name ${functionName} anywhere`);
             }
 
             return compileExpression<Statement>(argumentComputers, argComputers => [

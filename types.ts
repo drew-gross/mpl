@@ -25,9 +25,15 @@ export type Function = {
 };
 export type List = { kind: 'List'; of: Type };
 export type Product = { kind: 'Product'; members: ProductComponent[] };
+
+export type Method = {
+    name: string;
+    function: Type; // TODO: Should maybe just be function?
+};
+
 export type Type = {
     type: String | Integer | Boolean | Function | List | Product;
-    methods: Function[];
+    methods: Method[];
     original?: TypeReference;
 };
 
@@ -65,22 +71,26 @@ export const resolve = (
     }
     if (!availableTypes) debug('no declarations');
     const type = availableTypes.find(d => d.name == unresolved.namedType);
-    if (!type) {
+    if (type) {
         return {
-            errors: [
-                {
-                    kind: 'unknownType',
-                    name: (unresolved as TypeReference).namedType,
-                    sourceLocation,
-                },
-            ],
-            newVariables: [],
+            type: type.type.type, // lol
+            original: unresolved,
+            methods: type.type.methods,
         };
     }
+    const builtin = builtinTypes[unresolved.namedType];
+    if (builtin) {
+        return builtin;
+    }
     return {
-        type: type.type.type, // lol
-        original: unresolved,
-        methods: type.type.methods,
+        errors: [
+            {
+                kind: 'unknownType',
+                name: (unresolved as TypeReference).namedType,
+                sourceLocation,
+            },
+        ],
+        newVariables: [],
     };
 };
 
@@ -127,12 +137,6 @@ export const equal = (a: Type, b: Type): boolean => {
     return a.type.kind == b.type.kind;
 };
 
-export const builtinTypes: { [index: string]: Type } = {
-    String: { type: { kind: 'String' }, methods: [] },
-    Integer: { type: { kind: 'Integer' }, methods: [] },
-    Boolean: { type: { kind: 'Boolean' }, methods: [] },
-};
-
 export const Product = (members): Type => ({ type: { kind: 'Product', members }, methods: [] });
 
 export const Function = (args, permissions, returnType): Type => ({
@@ -145,16 +149,27 @@ export const List = (ofType): Type => ({
     methods: [],
 });
 
+export const builtinTypes: { [index: string]: Type } = {
+    String: {
+        type: { kind: 'String' },
+        methods: [
+            {
+                name: 'startsWith',
+                function: Function([{ namedType: 'String' }, { namedType: 'String' }], [], {
+                    namedType: 'Boolean',
+                }),
+            },
+        ],
+    },
+    Integer: { type: { kind: 'Integer' }, methods: [] },
+    Boolean: { type: { kind: 'Boolean' }, methods: [] },
+};
+
 // TODO: Require these to be imported in user code
 export const builtinFunctions: Variable[] = [
     {
         name: 'length',
         type: Function([builtinTypes.String], [], builtinTypes.Integer),
-        exported: false,
-    },
-    {
-        name: 'startsWith',
-        type: Function([builtinTypes.String, builtinTypes.String], [], builtinTypes.Boolean),
         exported: false,
     },
     {

@@ -545,10 +545,10 @@ export const typeOfExpression = (
 
             const lookupMemberFunction = (
                 methodName: string,
-                _calleeType: Type
+                calleeType: Type
             ): Type | { errors: TypeError[]; newVariables: Variable[] } => {
-                const method = undefined; //calleeType.methods.find(m => m.name == memberName);
-                if (method) return method;
+                const method = calleeType.methods.find(m => m.name == methodName);
+                if (method) return method.function;
                 const variable = availableVariables.find(
                     ({ name: varName }) => methodName == varName
                 );
