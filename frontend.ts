@@ -1304,7 +1304,7 @@ const parseType = (ast: MplAst): Type | TypeReference => {
                 case 'String':
                 case 'Integer':
                 case 'Boolean':
-                    return { type: { kind: name } };
+                    return builtinTypes[name];
                 default:
                     return { namedType: name };
             }
