@@ -554,14 +554,7 @@ test('correct inferred type for function', t => {
         parseResult as MplAst
     ) as Ast.UninferredExpression;
     t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
-        type: {
-            type: {
-                kind: 'Function',
-                arguments: [builtinTypes.Integer],
-                permissions: [],
-                returnType: builtinTypes.Integer,
-            },
-        },
+        type: FunctionType([builtinTypes.Integer], [], builtinTypes.Integer),
         extractedFunctions: [
             {
                 name: 'anonymous_1',
