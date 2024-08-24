@@ -836,13 +836,7 @@ return isFive(5) ? 1 : 0;`,
             {
                 kind: 'assignWrongType',
                 lhsName: 'myFunc',
-                lhsType: {
-                    type: {
-                        kind: 'Function',
-                        arguments: [builtinTypes.Integer],
-                        returnType: builtinTypes.Integer,
-                    },
-                },
+                lhsType: FunctionType([builtinTypes.Integer], [], builtinTypes.Integer),
                 rhsType: FunctionType([], [], builtinTypes.Integer),
                 sourceLocation: { line: 2, column: 13 },
             },
@@ -858,13 +852,7 @@ return isFive(5) ? 1 : 0;`,
             {
                 kind: 'assignWrongType',
                 lhsName: 'myFunc',
-                lhsType: {
-                    type: {
-                        kind: 'Function',
-                        arguments: [builtinTypes.Integer],
-                        returnType: builtinTypes.Integer,
-                    },
-                },
+                lhsType: FunctionType([builtinTypes.Integer], [], builtinTypes.Integer),
                 rhsType: FunctionType([builtinTypes.String], [], builtinTypes.Integer),
                 sourceLocation: { line: 2, column: 13 },
             },
@@ -880,13 +868,7 @@ return isFive(5) ? 1 : 0;`,
             {
                 kind: 'assignWrongType',
                 lhsName: 'myFunc',
-                lhsType: {
-                    type: {
-                        kind: 'Function',
-                        arguments: [builtinTypes.Integer],
-                        returnType: builtinTypes.Boolean,
-                    },
-                },
+                lhsType: FunctionType([builtinTypes.Integer], [], builtinTypes.Boolean),
                 rhsType: FunctionType([builtinTypes.String], [], builtinTypes.Integer),
                 sourceLocation: { line: 2, column: 13 },
             },

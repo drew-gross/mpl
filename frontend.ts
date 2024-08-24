@@ -1284,13 +1284,11 @@ const parseType = (ast: MplAst): Type | TypeReference => {
             if (name.value != 'Function') throw debug('Only functions support args right now');
             if (!isSeparatedListNode(list)) throw debug('todo');
             const typeList = list.items.map(parseType);
-            return {
-                type: {
-                    kind: name.value,
-                    arguments: typeList.slice(0, typeList.length - 1),
-                    returnType: typeList[typeList.length - 1],
-                },
-            };
+            return FunctionType(
+                typeList.slice(0, typeList.length - 1),
+                [],
+                typeList[typeList.length - 1]
+            );
         }
         case 'typeWithoutArgs': {
             const [node] = ast.sequenceItems;
