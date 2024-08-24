@@ -1,7 +1,7 @@
 import { TestModule } from './test-case';
 import join from './util/join';
 import range from './util/list/range';
-import { builtinTypes } from './types';
+import { builtinTypes, Function as FunctionType } from './types';
 import { ExecutionResult } from './api';
 
 export type TestProgram = {
@@ -843,14 +843,7 @@ return isFive(5) ? 1 : 0;`,
                         returnType: builtinTypes.Integer,
                     },
                 },
-                rhsType: {
-                    type: {
-                        kind: 'Function',
-                        arguments: [],
-                        permissions: [],
-                        returnType: builtinTypes.Integer,
-                    },
-                },
+                rhsType: FunctionType([], [], builtinTypes.Integer),
                 sourceLocation: { line: 2, column: 13 },
             },
         ],
@@ -872,14 +865,7 @@ return isFive(5) ? 1 : 0;`,
                         returnType: builtinTypes.Integer,
                     },
                 },
-                rhsType: {
-                    type: {
-                        kind: 'Function',
-                        arguments: [builtinTypes.String],
-                        permissions: [],
-                        returnType: builtinTypes.Integer,
-                    },
-                },
+                rhsType: FunctionType([builtinTypes.String], [], builtinTypes.Integer),
                 sourceLocation: { line: 2, column: 13 },
             },
         ],
@@ -901,14 +887,7 @@ return isFive(5) ? 1 : 0;`,
                         returnType: builtinTypes.Boolean,
                     },
                 },
-                rhsType: {
-                    type: {
-                        kind: 'Function',
-                        arguments: [builtinTypes.String],
-                        permissions: [],
-                        returnType: builtinTypes.Integer,
-                    },
-                },
+                rhsType: FunctionType([builtinTypes.String], [], builtinTypes.Integer),
                 sourceLocation: { line: 2, column: 13 },
             },
         ],
