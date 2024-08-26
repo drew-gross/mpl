@@ -1340,6 +1340,80 @@ test('Parser Lib - Separated List With Items That Start With Optional', t => {
     });
 });
 
+test.failing('Parser Lib - Prevent Left Recursion', t => {
+    const terminal = token => Terminal<'Node', 'Token'>(token);
+    const a = terminal('a');
+    const plus = terminal('plus');
+
+    const grammar: Grammar<'Node', 'Token'> = {
+        plusChain: OneOf([Sequence('plusChain', ['plusChain', plus, a]), a]),
+    };
+    const chainOne = parse(grammar, 'plusChain', [
+        { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
+    ]);
+    t.deepEqual(chainOne, {
+        type: 'a',
+        value: undefined,
+        sourceLocation: dummySourceLocation,
+    });
+
+    const chainTwo = parse(grammar, 'plusChain', [
+        { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
+        { type: 'plus', string: '+', sourceLocation: dummySourceLocation },
+        { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
+    ]);
+    t.deepEqual(chainTwo, {
+        sequenceItems: [
+            {
+                type: 'a',
+                value: undefined,
+                sourceLocation: dummySourceLocation,
+            },
+            {
+                type: 'plus',
+                value: undefined,
+                sourceLocation: dummySourceLocation,
+            },
+            {
+                type: 'a',
+                value: undefined,
+                sourceLocation: dummySourceLocation,
+            },
+        ],
+        type: 'plusChain',
+        sourceLocation: dummySourceLocation,
+    });
+
+    const chainThree = parse(grammar, 'plusChain', [
+        { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
+        { type: 'plus', string: '+', sourceLocation: dummySourceLocation },
+        { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
+        { type: 'plus', string: '+', sourceLocation: dummySourceLocation },
+        { type: 'a', string: 'a', sourceLocation: dummySourceLocation },
+    ]);
+    t.deepEqual(chainThree, {
+        sequenceItems: [
+            {
+                type: 'a',
+                value: undefined,
+                sourceLocation: dummySourceLocation,
+            },
+            {
+                type: 'plus',
+                value: undefined,
+                sourceLocation: dummySourceLocation,
+            },
+            {
+                type: 'a',
+                value: undefined,
+                sourceLocation: dummySourceLocation,
+            },
+        ],
+        type: 'plusChain',
+        sourceLocation: dummySourceLocation,
+    });
+});
+
 test('Parse instructions with no comment', t => {
     const result = parseInstructions(`
         r:d = r:l + r:r;
