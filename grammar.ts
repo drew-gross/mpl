@@ -187,13 +187,21 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         Sequence('listType', [typeIdentifier, leftSquareBracket, rightSquareBracket]),
         Sequence('typeWithArgs', [typeIdentifier, NestedIn(angles, 'typeList')]),
         Sequence('typeWithoutArgs', [typeIdentifier]),
-        'typeLiteral',
+        NestedIn(
+            curlies,
+            Sequence('typeLiteral', [Many('typeLiteralComponent'), Many('methodDefinition')])
+        ),
     ]),
-    typeLiteral: NestedIn(curlies, Many('typeLiteralComponent')),
     typeLiteralComponent: Sequence('typeLiteralComponent', [
         identifier,
         colon,
         'type',
+        statementSeparator,
+    ]),
+    methodDefinition: Sequence('methodDefinition', [
+        identifier,
+        NestedIn(rounds, 'argList'),
+        'functionBody',
         statementSeparator,
     ]),
     objectLiteral: Sequence('objectLiteral', [

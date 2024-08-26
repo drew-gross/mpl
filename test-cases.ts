@@ -482,6 +482,36 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 21,
     },
     {
+        name: 'Int Pair With Methods',
+        source: `
+            IntPair := {
+                first: Integer;
+                second: Integer;
+                firstPlusSecond() {
+                    retrun this.first + this.second;
+                };
+            };
+            ip: IntPair = IntPair { first: 3, second: 7, };
+            return ip.firstPlusSecond();
+        `,
+        exitCode: 11,
+    },
+    {
+        name: 'Int Pair With Methods With Args',
+        source: `
+            IntPair := {
+                first: Integer;
+                second: Integer;
+                firstPlusSecondPlusArg(addThis: Integer) {
+                    retrun this.first + this.second;
+                };
+            };
+            ip: IntPair = IntPair { first: 3, second: 7, };
+            return ip.firstPlusSecond(15);
+        `,
+        exitCode: 26,
+    },
+    {
         name: 'List of Pairs',
         source: `
             IntPair := {

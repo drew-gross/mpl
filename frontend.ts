@@ -1333,6 +1333,13 @@ const parseType = (ast: MplAst): Type | TypeReference => {
             }
             return List({ type: { kind: node.value as any }, methods: [] });
         }
+        case 'typeLiteral': {
+            const [members, _methods] = ast.sequenceItems;
+            if (!isListNode(members)) {
+                throw debug('expected a list');
+            }
+            return Product(members.items.map(parseTypeLiteralComponent));
+        }
         default:
             throw debug(`${ast.type} unhandled in parseType`);
     }

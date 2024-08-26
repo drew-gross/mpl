@@ -244,7 +244,7 @@ import { backends } from './backend-utils';
     );
 
     console.log(t.toString());
-    const expectedProblems = 55;
+    const expectedProblems = 57;
     if (problems != expectedProblems) {
         console.log(chalk.red(`${problems} Problems`));
     } else {
