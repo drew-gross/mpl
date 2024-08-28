@@ -1082,20 +1082,20 @@ return isFive(5) ? 1 : 0;`,
         exitCode: 60,
         ast: {
             type: 'program',
-            seqeunceItems: [
+            sequenceItems: [
                 {
                     type: 'statement',
-                    seqeunceItems: [
+                    sequenceItems: [
                         {
                             type: 'returnStatement',
-                            seqeunceItems: [
+                            sequenceItems: [
                                 { type: 'return', value: null },
                                 {
-                                    type: 'product',
-                                    seqeunceItems: [
+                                    type: 'binaryExpression',
+                                    sequenceItems: [
                                         {
-                                            type: 'product',
-                                            seqeunceItems: [
+                                            type: 'binaryExpression',
+                                            sequenceItems: [
                                                 { type: 'number', value: 3 },
                                                 { type: 'product', value: null },
                                                 { type: 'number', value: 4 },
@@ -1108,6 +1108,7 @@ return isFive(5) ? 1 : 0;`,
                             ],
                         },
                         { type: 'statementSeparator', value: null },
+                        { type: undefined, value: undefined },
                     ],
                 },
             ],

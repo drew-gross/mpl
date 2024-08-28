@@ -10,10 +10,10 @@ import { toString as typeErrorToString } from './TypeError';
 import { backends } from './backend-utils';
 import { writeFile } from 'fs-extra';
 import { exec } from 'child-process-promise';
+import stripAnsi from 'strip-ansi';
 
 (async () => {
-    const tColored = new Table();
-    const tBW = new Table();
+    const t = new Table();
 
     let problems = 0;
     const color = st => {
@@ -34,8 +34,7 @@ import { exec } from 'child-process-promise';
         'Itrp?',
         ...backends.map(b => b.name),
     ];
-    tColored.push(headings);
-    tBW.push(headings);
+    t.push(headings);
 
     const tableData = await Promise.all(
         testPrograms.map(async p => {
@@ -234,36 +233,28 @@ import { exec } from 'child-process-promise';
             })();
             return [
                 testName,
-                infiniteLoopOk,
-                producedInfoOk,
-                exceptionOk,
-                parseOk,
-                typeOk,
-                astOk,
-                interpreterOk,
-                ...backendResults,
+                color(infiniteLoopOk),
+                color(producedInfoOk),
+                color(exceptionOk),
+                color(parseOk),
+                color(typeOk),
+                color(astOk),
+                color(interpreterOk),
+                ...backendResults.map(color),
             ];
         })
     );
-    tBW.push(...tableData);
-    const problemsBW = `${tBW.toString()}\n`;
+    t.push(...tableData);
+    const problemsStr = `${t.toString()}\n`;
     const latestTablePath = 'table-latest.txt';
     const canonTablePath = 'table-canon.txt';
-    await writeFile(latestTablePath, problemsBW);
+    await writeFile(latestTablePath, stripAnsi(problemsStr));
     const diffResult = await exec(`diff ${canonTablePath} ${latestTablePath} || true`);
 
-    for (const row of tableData) {
-        // Start at 1 to not color test name
-        for (let i = 1; i < row.length; i++) {
-            row[i] = color(row[i]);
-        }
-        tColored.push(row);
-    }
-    const problemsColored = tColored.toString();
-    console.log(problemsColored);
+    console.log(problemsStr);
     console.log('diff:');
     console.log(diffResult.stdout);
-    const expectedProblems = 57;
+    const expectedProblems = 56;
     if (problems != expectedProblems) {
         console.log(chalk.red(`${problems} Problems`));
     } else {

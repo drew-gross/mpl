@@ -14,6 +14,8 @@ import annotateSource from './annotateSource';
 import * as deepEqual from 'deep-equal';
 import renderParseError from './parser-lib/renderParseError';
 import { mplLoader } from './mpl-loader';
+import deepDiff = require('deep-diff');
+import { stripSourceLocation } from './parser-lib/parse';
 
 (async () => {
     // Commander is dumb
@@ -100,18 +102,24 @@ import { mplLoader } from './mpl-loader';
         return;
     }
 
-    console.log(`Name: ${testCase.name}`)
+    console.log(`Name: ${testCase.name}`);
     console.log(`Mpl: ${(await writeTempFile(testCase.source, 'mpl', 'mpl')).path}`);
     console.log(
-        `Tokens: ${(await writeTempFile(JSON.stringify(programInfo.tokens, null, 2), 'tokens', 'json'))
-            .path
+        `Tokens: ${
+            (await writeTempFile(JSON.stringify(programInfo.tokens, null, 2), 'tokens', 'json'))
+                .path
         }`
     );
-    const astFile = await writeTempFile(JSON.stringify(programInfo.ast, null, 2), 'ast', 'json');
+    const strippedAst = stripSourceLocation(programInfo.ast);
+    const astFile = await writeTempFile(JSON.stringify(strippedAst, null, 2), 'ast', 'json');
     const astInfo = `Ast: ${astFile.path}`;
-    const astMismatch = 'ast' in testCase && !deepEqual(testCase.ast, programInfo.ast);
+    const astMismatch = 'ast' in testCase && !deepEqual(testCase.ast, strippedAst);
     if (astMismatch) {
         console.log(chalk.red(astInfo));
+        const astDiff = deepDiff(testCase.ast, strippedAst);
+        debugger;
+        console.log(JSON.stringify(astDiff, null, 2));
+        console.log(JSON.stringify(strippedAst, null, 2));
     } else {
         console.log(astInfo);
     }
@@ -126,7 +134,8 @@ import { mplLoader } from './mpl-loader';
     );
 
     console.log(
-        `Three Address Code: ${(await writeTempFile(programInfo.threeAddressCode, 'three-address-code', 'txt')).path
+        `Three Address Code: ${
+            (await writeTempFile(programInfo.threeAddressCode, 'three-address-code', 'txt')).path
         }`
     );
     const roundTripParsedPath = (
@@ -204,7 +213,7 @@ import { mplLoader } from './mpl-loader';
     console.log('Interpreter:');
     const log =
         'error' in programInfo.interpreterResults ||
-            testCase.exitCode == programInfo.interpreterResults.exitCode
+        testCase.exitCode == programInfo.interpreterResults.exitCode
             ? s => console.log(s)
             : s => console.log(chalk.red(s));
     if ('error' in programInfo.interpreterResults) {
