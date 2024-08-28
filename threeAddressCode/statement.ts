@@ -3,7 +3,7 @@ import { filter, FilterPredicate } from '../util/list/filter';
 import join from '../util/join';
 import debug from '../util/debug';
 
-type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit';
+type SyscallName = 'printInt' | 'print' | 'sbrk' | 'mmap' | 'exit' | 'readInt';
 
 export type StackLocation =
     | { kind: 'argument'; argNumber: number }

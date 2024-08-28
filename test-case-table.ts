@@ -254,7 +254,7 @@ import stripAnsi from 'strip-ansi';
     console.log(problemsStr);
     console.log('diff:');
     console.log(diffResult.stdout);
-    const expectedProblems = 55;
+    const expectedProblems = 54;
     if (problems != expectedProblems) {
         console.log(chalk.red(`${problems} Problems`));
     } else {

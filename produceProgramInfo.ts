@@ -115,6 +115,7 @@ export default async (
     const interpreterResults = interpretProgram(
         threeAddressCode,
         [],
+        stdin,
         createInitialState(threeAddressCode)
     );
 

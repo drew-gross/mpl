@@ -51,6 +51,7 @@ var isPointer = (val: number | Pointer): val is Pointer => {
 export const interpretFunction = (
     { globals, functions, main, stringLiterals }: Program,
     args: Argument[],
+    stdin: string,
     state: State // modified
 ): number | Pointer | undefined => {
     if (!main) {
@@ -223,6 +224,7 @@ export const interpretFunction = (
                         name: arg.name,
                         value: getRegister(args[index]),
                     })),
+                    stdin,
                     state
                 );
                 if (i.destination) {
@@ -250,6 +252,7 @@ export const interpretFunction = (
                         name: arg.name,
                         value: deepCopy(getRegister(args[index])),
                     })),
+                    '',
                     state
                 );
                 if (i.destination) {
@@ -350,6 +353,14 @@ export const interpretFunction = (
                             registerValues[i.destination.name] = { block: blockName, offset: 0 };
                         }
                         break;
+                    case 'readInt':
+                        if (!i.destination) throw debug;
+                        const int = parseInt(stdin);
+                        if (isNaN(int)) {
+                            throw debug('non-int');
+                        }
+                        registerValues[i.destination.name] = int;
+                        break;
                     case 'exit':
 
                     default:
@@ -372,10 +383,11 @@ export const interpretFunction = (
 export const interpretProgram = (
     program: Program,
     args: Argument[],
+    stdin: string,
     state: State /* modified */
 ): ExecutionResult => {
     /* tslint:disable-next-line */
-    let mainResult = interpretFunction(program, args, state);
+    let mainResult = interpretFunction(program, args, stdin, state);
     if (typeof mainResult !== 'number')
         throw debug(`main should return a number. got: ${mainResult}`);
     return {
