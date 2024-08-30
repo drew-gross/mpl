@@ -253,13 +253,10 @@ import stripAnsi from 'strip-ansi';
     const diffResult = await exec(`diff ${canonTablePath} ${latestTablePath} || true`);
 
     console.log(problemsStr);
-    console.log('diff:');
-    console.log(diffResult.stdout);
-    const expectedProblems = 53;
-    if (problems != expectedProblems) {
-        console.log(chalk.red(`${problems} Problems`));
-    } else {
-        console.log(chalk.green(`${problems} Problems`));
+    if (diffResult.stdout.length != 0) {
+        console.log('diff:');
+        console.log(diffResult.stdout);
+        process.exit(1);
     }
-    process.exit(problems == expectedProblems ? 0 : 1);
+    process.exit(0);
 })();
