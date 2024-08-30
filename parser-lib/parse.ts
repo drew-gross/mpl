@@ -78,6 +78,7 @@ type SeparatedList<Node, Token> = {
     kind: 'separatedList';
     separator: Parser<Node, Token>;
     item: Parser<Node, Token>;
+    trailing: 'required' | 'optional' | 'never';
 };
 type Many<Node, Token> = {
     kind: 'many';
@@ -114,8 +115,9 @@ export const Optional = <Node, Token>(parser: Parser<Node, Token>): Optional<Nod
 
 export const SeparatedList = <Node, Token>(
     separator: Parser<Node, Token>,
-    item: Parser<Node, Token>
-): SeparatedList<Node, Token> => ({ kind: 'separatedList', separator, item });
+    item: Parser<Node, Token>,
+    trailing: 'required' | 'optional' | 'never' = 'never'
+): SeparatedList<Node, Token> => ({ kind: 'separatedList', separator, item, trailing });
 
 export type Nesting<Node, Token> = {
     left: Parser<Node, Token>;
@@ -209,6 +211,7 @@ type PartialSeparatedList<Node, Token> = {
     item: PartialAst<Node, Token>;
     separator?: PartialAst<Node, Token>;
     remainingItems?: PartialSeparatedList<Node, Token>;
+    trailing: 'required' | 'optional' | 'never'; // TODO: This isn't implemented, actually
 };
 type PartialToken<Token> = {
     tokenType: Token;
@@ -349,16 +352,16 @@ const getPotentialAsts = <Node extends string, Token>(
             if ('expected' in result) {
                 return parsesWithNoItems;
             }
-            // TODO: Include already parsed items and separators somehow
             const parsesWithNoMoreItems = result.map(({ partial, madeProgress }) => ({
-                partial: { item: partial },
-                madeProgress: madeProgress,
+                partial: { item: partial, trailing: parser.trailing },
+                madeProgress,
             }));
             const parsesWithMoreItems = result.map(({ partial, madeProgress }) => ({
                 partial: {
                     item: partial,
                     separator: { rule: parser.separator },
                     remainingItems: { rule: parser },
+                    trailing: parser.trailing,
                 },
                 madeProgress,
             }));

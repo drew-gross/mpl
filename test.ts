@@ -1321,6 +1321,156 @@ test('Parser Lib - Sequence of Many', t => {
     });
 });
 
+test.failing('Parser Lib - Separated List With Required Trailing Separator', t => {
+    const terminal = token => Terminal<'Node', 'Token'>(token);
+
+    const sep = terminal('sep');
+    const item = terminal('item');
+
+    const testGrammar: Grammar<'Node', 'Token'> = {
+        req: SeparatedList(item, sep, 'required'),
+        opt: SeparatedList(item, sep, 'optional'),
+        never: SeparatedList(item, sep, 'never'),
+    };
+
+    const withTrailing = [
+        {
+            type: 'item',
+            value: null,
+            string: 'item',
+            sourceLocation: dummySourceLocation,
+        },
+        {
+            type: 'item',
+            value: null,
+            string: 'item',
+            sourceLocation: dummySourceLocation,
+        },
+        {
+            type: 'item',
+            value: null,
+            string: 'item',
+            sourceLocation: dummySourceLocation,
+        },
+        {
+            type: 'sep',
+            value: null,
+            string: 'sep',
+            sourceLocation: dummySourceLocation,
+        },
+    ];
+    const withoutTrailing = [
+        {
+            type: 'item',
+            value: null,
+            string: 'item',
+            sourceLocation: dummySourceLocation,
+        },
+        {
+            type: 'item',
+            value: null,
+            string: 'item',
+            sourceLocation: dummySourceLocation,
+        },
+        {
+            type: 'item',
+            value: null,
+            string: 'item',
+            sourceLocation: dummySourceLocation,
+        },
+    ];
+    t.deepEqual(stripSourceLocation(parse(testGrammar, 'req', withTrailing)), {
+        sequenceItems: [
+            {
+                items: [],
+                separators: [],
+            },
+            {
+                sourceLocation: dummySourceLocation,
+                type: 'end',
+                value: null,
+            },
+        ],
+        type: 'listOfOptionalStarter',
+        sourceLocation: dummySourceLocation,
+    });
+    t.deepEqual(stripSourceLocation(parse(testGrammar, 'req', withoutTrailing)), {
+        sequenceItems: [
+            {
+                items: [],
+                separators: [],
+            },
+            {
+                sourceLocation: dummySourceLocation,
+                type: 'end',
+                value: null,
+            },
+        ],
+        type: 'listOfOptionalStarter',
+        sourceLocation: dummySourceLocation,
+    });
+    t.deepEqual(stripSourceLocation(parse(testGrammar, 'optional', withTrailing)), {
+        sequenceItems: [
+            {
+                items: [],
+                separators: [],
+            },
+            {
+                sourceLocation: dummySourceLocation,
+                type: 'end',
+                value: null,
+            },
+        ],
+        type: 'listOfOptionalStarter',
+        sourceLocation: dummySourceLocation,
+    });
+    t.deepEqual(stripSourceLocation(parse(testGrammar, 'optional', withoutTrailing)), {
+        sequenceItems: [
+            {
+                items: [],
+                separators: [],
+            },
+            {
+                sourceLocation: dummySourceLocation,
+                type: 'end',
+                value: null,
+            },
+        ],
+        type: 'listOfOptionalStarter',
+        sourceLocation: dummySourceLocation,
+    });
+    t.deepEqual(stripSourceLocation(parse(testGrammar, 'never', withTrailing)), {
+        sequenceItems: [
+            {
+                items: [],
+                separators: [],
+            },
+            {
+                sourceLocation: dummySourceLocation,
+                type: 'end',
+                value: null,
+            },
+        ],
+        type: 'listOfOptionalStarter',
+        sourceLocation: dummySourceLocation,
+    });
+    t.deepEqual(stripSourceLocation(parse(testGrammar, 'never', withoutTrailing)), {
+        sequenceItems: [
+            {
+                items: [],
+                separators: [],
+            },
+            {
+                sourceLocation: dummySourceLocation,
+                type: 'end',
+                value: null,
+            },
+        ],
+        type: 'listOfOptionalStarter',
+        sourceLocation: dummySourceLocation,
+    });
+});
+
 test('Parser Lib - Separated List With Items That Start With Optional', t => {
     const terminal = token => Terminal<'Node', 'Token'>(token);
     const opt = parser => Optional<'Node', 'Token'>(parser);
