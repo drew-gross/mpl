@@ -697,6 +697,130 @@ return isFive(5) ? 1 : 0;`,
             return foo(1, 2, 3, 4, 5, 6, 7);
         `,
         exitCode: 28,
+        ast: {
+            type: 'program',
+            sequenceItems: [
+                {
+                    type: 'statement',
+                    sequenceItems: [
+                        {
+                            type: 'declaration',
+                            sequenceItems: [
+                                { type: undefined, value: undefined },
+                                { type: 'identifier', value: 'foo' },
+                                { type: 'colon', value: null },
+                                { type: undefined, value: undefined },
+                                { type: 'assignment', value: null },
+                                {
+                                    type: 'functionWithBlock',
+                                    sequenceItems: [
+                                        { type: undefined, value: undefined },
+                                        { type: undefined, value: undefined },
+                                        { type: undefined, value: undefined },
+                                        { type: 'fatArrow', value: null },
+                                        {
+                                            type: 'statement',
+                                            sequenceItems: [
+                                                {
+                                                    type: 'returnStatement',
+                                                    sequenceItems: [
+                                                        { type: 'return', value: null },
+                                                        {
+                                                            type: 'binaryExpression',
+                                                            sequenceItems: [
+                                                                {
+                                                                    type: 'binaryExpression',
+                                                                    sequenceItems: [
+                                                                        {
+                                                                            type: 'identifier',
+                                                                            value: 'a',
+                                                                        },
+                                                                        {
+                                                                            type: 'sum',
+                                                                            value: null,
+                                                                        },
+                                                                        {
+                                                                            type: 'identifier',
+                                                                            value: 'b',
+                                                                        },
+                                                                    ],
+                                                                },
+                                                                { type: 'sum', value: null },
+                                                                {
+                                                                    type: 'binaryExpression',
+                                                                    sequenceItems: [
+                                                                        {
+                                                                            type: 'binaryExpression',
+                                                                            sequenceItems: [
+                                                                                {
+                                                                                    type: 'identifier',
+                                                                                    value: 'c',
+                                                                                },
+                                                                                {
+                                                                                    type: 'sum',
+                                                                                    value: null,
+                                                                                },
+                                                                                {
+                                                                                    type: 'identifier',
+                                                                                    value: 'd',
+                                                                                },
+                                                                            ],
+                                                                        },
+                                                                        {
+                                                                            type: 'sum',
+                                                                            value: null,
+                                                                        },
+                                                                        {
+                                                                            type: 'binaryExpression',
+                                                                            sequenceItems: [
+                                                                                {
+                                                                                    type: 'binaryExpression',
+                                                                                    sequenceItems:
+                                                                                        [
+                                                                                            {
+                                                                                                type: 'identifier',
+                                                                                                value: 'e',
+                                                                                            },
+                                                                                            {
+                                                                                                type: 'sum',
+                                                                                                value: null,
+                                                                                            },
+                                                                                            {
+                                                                                                type: 'identifier',
+                                                                                                value: 'f',
+                                                                                            },
+                                                                                        ],
+                                                                                },
+                                                                                {
+                                                                                    type: 'sum',
+                                                                                    value: null,
+                                                                                },
+                                                                                {
+                                                                                    type: 'identifier',
+                                                                                    value: 'g',
+                                                                                },
+                                                                            ],
+                                                                        },
+                                                                    ],
+                                                                },
+                                                            ],
+                                                        },
+                                                    ],
+                                                },
+                                                { type: 'statementSeparator', value: null },
+                                                { type: undefined, value: undefined },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                        { type: 'statementSeparator', value: null },
+                        { type: undefined, value: undefined },
+                    ],
+                },
+            ],
+        },
     },
     {
         name: 'Nine Argument Function With Multiply',
