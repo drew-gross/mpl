@@ -62,6 +62,8 @@ export const parseResultIsError = <Node, Leaf, Token>(
 export const stripSourceLocation = ast => {
     if ('sequenceItems' in ast) {
         return { type: ast.type, sequenceItems: ast.sequenceItems.map(stripSourceLocation) };
+    } else if ('items' in ast) {
+        return { type: ast.type, items: ast.items.map(stripSourceLocation) };
     } else {
         return { type: ast.type, value: ast.value };
     }

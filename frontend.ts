@@ -73,6 +73,8 @@ const repairAssociativity = (nodeType, ast) => {
             sequenceItems: ast.sequenceItems.map(child => repairAssociativity(nodeType, child)),
             sourceLocation: ast.sourceLocation,
         };
+    } else if ('items' in ast) {
+        return { ...ast, items: ast.items.map(item => repairAssociativity(nodeType, item)) };
     } else {
         return ast;
     }
@@ -1244,8 +1246,7 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
 };
 
 const extractFunctionBody = (node): any[] => {
-    const [statement, _sep, rest] = node.sequenceItems;
-    return [astFromParseResult(statement), ...(rest.item ? extractFunctionBody(rest.item) : [])];
+    return node.items.map(astFromParseResult);
 };
 
 // TODO: Replace extractParameterList with SeparatedList
@@ -1647,6 +1648,9 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 accessed: astFromParseResult(accessed) as Ast.UninferredExpression,
                 sourceLocation: ast.sourceLocation,
             };
+        case 'separatedStatement':
+            const [statement, _sep] = ast.sequenceItems;
+            return astFromParseResult(statement);
         default:
             throw debug(`${ast.type} unhandled in astFromParseResult`);
     }

@@ -113,7 +113,8 @@ export type MplAstNode =
     | 'memberStyleCall'
     | 'listLiteral'
     | 'indexAccess'
-    | 'paramList';
+    | 'paramList'
+    | 'separatedStatement';
 
 export type MplAst = Ast<MplAstNode, MplToken>;
 export type MplParseResult = ParseResult<MplAstNode, MplToken>;
@@ -159,11 +160,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     program: Sequence<MplAstNode, MplToken>('program', ['functionBody']),
     argList: SeparatedList(comma, 'arg'),
     arg: Sequence('arg', [identifier, colon, 'type']),
-    functionBody: Sequence('statement', [
-        'statement',
-        statementSeparator,
-        mplOptional('functionBody'),
-    ]),
+    functionBody: Many(Sequence('separatedStatement', ['statement', statementSeparator])),
     statement: OneOf([
         Sequence('declaration', [
             mplOptional(export_),

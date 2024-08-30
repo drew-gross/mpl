@@ -32,7 +32,8 @@ import stripAnsi from 'strip-ansi';
         'Type?',
         'AST?',
         'Itrp?',
-        ...backends.map(b => b.name),
+        // Pad to keep the table width consistent for diffing
+        ...backends.map(b => b.name.padEnd(3, ' ')),
     ];
     t.push(headings);
 

@@ -125,38 +125,42 @@ export const testPrograms: TestProgram[] = [
             type: 'program',
             sequenceItems: [
                 {
-                    type: 'statement',
-                    sequenceItems: [
+                    type: undefined,
+                    items: [
                         {
-                            type: 'returnStatement',
+                            type: 'separatedStatement',
                             sequenceItems: [
-                                { type: 'return', value: null },
                                 {
-                                    type: 'binaryExpression',
+                                    type: 'returnStatement',
                                     sequenceItems: [
+                                        { type: 'return', value: null },
                                         {
                                             type: 'binaryExpression',
                                             sequenceItems: [
-                                                { type: 'number', value: 2 },
-                                                { type: 'product', value: null },
                                                 {
                                                     type: 'binaryExpression',
                                                     sequenceItems: [
-                                                        { type: 'number', value: 3 },
+                                                        { type: 'number', value: 2 },
                                                         { type: 'product', value: null },
-                                                        { type: 'number', value: 4 },
+                                                        {
+                                                            type: 'binaryExpression',
+                                                            sequenceItems: [
+                                                                { type: 'number', value: 3 },
+                                                                { type: 'product', value: null },
+                                                                { type: 'number', value: 4 },
+                                                            ],
+                                                        },
                                                     ],
                                                 },
+                                                { type: 'product', value: null },
+                                                { type: 'number', value: 5 },
                                             ],
                                         },
-                                        { type: 'product', value: null },
-                                        { type: 'number', value: 5 },
                                     ],
                                 },
+                                { type: 'statementSeparator', value: null },
                             ],
                         },
-                        { type: 'statementSeparator', value: null },
-                        { type: undefined, value: null },
                     ],
                 },
             ],
@@ -701,73 +705,189 @@ return isFive(5) ? 1 : 0;`,
             type: 'program',
             sequenceItems: [
                 {
-                    type: 'statement',
-                    sequenceItems: [
+                    type: undefined,
+                    items: [
                         {
-                            type: 'declaration',
+                            type: 'separatedStatement',
                             sequenceItems: [
-                                { type: undefined, value: undefined },
-                                { type: 'identifier', value: 'foo' },
-                                { type: 'colon', value: null },
-                                { type: undefined, value: undefined },
-                                { type: 'assignment', value: null },
                                 {
-                                    type: 'functionWithBlock',
+                                    type: 'declaration',
                                     sequenceItems: [
                                         { type: undefined, value: undefined },
+                                        { type: 'identifier', value: 'foo' },
+                                        { type: 'colon', value: null },
                                         { type: undefined, value: undefined },
-                                        { type: undefined, value: undefined },
-                                        { type: 'fatArrow', value: null },
+                                        { type: 'assignment', value: null },
                                         {
-                                            type: 'statement',
+                                            type: 'functionWithBlock',
                                             sequenceItems: [
+                                                { type: undefined, value: undefined },
                                                 {
-                                                    type: 'returnStatement',
-                                                    sequenceItems: [
-                                                        { type: 'return', value: null },
+                                                    type: undefined,
+                                                    items: [
                                                         {
-                                                            type: 'binaryExpression',
+                                                            type: 'arg',
                                                             sequenceItems: [
                                                                 {
-                                                                    type: 'binaryExpression',
+                                                                    type: 'identifier',
+                                                                    value: 'a',
+                                                                },
+                                                                { type: 'colon', value: null },
+                                                                {
+                                                                    type: 'typeWithoutArgs',
                                                                     sequenceItems: [
                                                                         {
-                                                                            type: 'identifier',
-                                                                            value: 'a',
-                                                                        },
-                                                                        {
-                                                                            type: 'sum',
-                                                                            value: null,
-                                                                        },
-                                                                        {
-                                                                            type: 'identifier',
-                                                                            value: 'b',
+                                                                            type: 'typeIdentifier',
+                                                                            value: 'Integer',
                                                                         },
                                                                     ],
                                                                 },
-                                                                { type: 'sum', value: null },
+                                                            ],
+                                                        },
+                                                        {
+                                                            type: 'arg',
+                                                            sequenceItems: [
                                                                 {
-                                                                    type: 'binaryExpression',
+                                                                    type: 'identifier',
+                                                                    value: 'b',
+                                                                },
+                                                                { type: 'colon', value: null },
+                                                                {
+                                                                    type: 'typeWithoutArgs',
                                                                     sequenceItems: [
                                                                         {
-                                                                            type: 'binaryExpression',
-                                                                            sequenceItems: [
-                                                                                {
-                                                                                    type: 'identifier',
-                                                                                    value: 'c',
-                                                                                },
-                                                                                {
-                                                                                    type: 'sum',
-                                                                                    value: null,
-                                                                                },
-                                                                                {
-                                                                                    type: 'identifier',
-                                                                                    value: 'd',
-                                                                                },
-                                                                            ],
+                                                                            type: 'typeIdentifier',
+                                                                            value: 'Integer',
                                                                         },
+                                                                    ],
+                                                                },
+                                                            ],
+                                                        },
+                                                        {
+                                                            type: 'arg',
+                                                            sequenceItems: [
+                                                                {
+                                                                    type: 'identifier',
+                                                                    value: 'c',
+                                                                },
+                                                                { type: 'colon', value: null },
+                                                                {
+                                                                    type: 'typeWithoutArgs',
+                                                                    sequenceItems: [
                                                                         {
-                                                                            type: 'sum',
+                                                                            type: 'typeIdentifier',
+                                                                            value: 'Integer',
+                                                                        },
+                                                                    ],
+                                                                },
+                                                            ],
+                                                        },
+                                                        {
+                                                            type: 'arg',
+                                                            sequenceItems: [
+                                                                {
+                                                                    type: 'identifier',
+                                                                    value: 'd',
+                                                                },
+                                                                {
+                                                                    type: 'colon',
+                                                                    value: null,
+                                                                },
+                                                                {
+                                                                    type: 'typeWithoutArgs',
+                                                                    sequenceItems: [
+                                                                        {
+                                                                            type: 'typeIdentifier',
+                                                                            value: 'Integer',
+                                                                        },
+                                                                    ],
+                                                                },
+                                                            ],
+                                                        },
+                                                        {
+                                                            type: 'arg',
+                                                            sequenceItems: [
+                                                                {
+                                                                    type: 'identifier',
+                                                                    value: 'e',
+                                                                },
+                                                                {
+                                                                    type: 'colon',
+                                                                    value: null,
+                                                                },
+                                                                {
+                                                                    type: 'typeWithoutArgs',
+                                                                    sequenceItems: [
+                                                                        {
+                                                                            type: 'typeIdentifier',
+                                                                            value: 'Integer',
+                                                                        },
+                                                                    ],
+                                                                },
+                                                            ],
+                                                        },
+                                                        {
+                                                            type: 'arg',
+                                                            sequenceItems: [
+                                                                {
+                                                                    type: 'identifier',
+                                                                    value: 'f',
+                                                                },
+                                                                {
+                                                                    type: 'colon',
+                                                                    value: null,
+                                                                },
+                                                                {
+                                                                    type: 'typeWithoutArgs',
+                                                                    sequenceItems: [
+                                                                        {
+                                                                            type: 'typeIdentifier',
+                                                                            value: 'Integer',
+                                                                        },
+                                                                    ],
+                                                                },
+                                                            ],
+                                                        },
+                                                        {
+                                                            type: 'arg',
+                                                            sequenceItems: [
+                                                                {
+                                                                    type: 'identifier',
+                                                                    value: 'g',
+                                                                },
+                                                                {
+                                                                    type: 'colon',
+                                                                    value: null,
+                                                                },
+                                                                {
+                                                                    type: 'typeWithoutArgs',
+                                                                    sequenceItems: [
+                                                                        {
+                                                                            type: 'typeIdentifier',
+                                                                            value: 'Integer',
+                                                                        },
+                                                                    ],
+                                                                },
+                                                            ],
+                                                        },
+                                                    ],
+                                                },
+                                                { type: undefined, value: undefined },
+                                                {
+                                                    type: 'fatArrow',
+                                                    value: null,
+                                                },
+                                                {
+                                                    type: undefined,
+                                                    items: [
+                                                        {
+                                                            type: 'separatedStatement',
+                                                            sequenceItems: [
+                                                                {
+                                                                    type: 'returnStatement',
+                                                                    sequenceItems: [
+                                                                        {
+                                                                            type: 'return',
                                                                             value: null,
                                                                         },
                                                                         {
@@ -779,7 +899,7 @@ return isFive(5) ? 1 : 0;`,
                                                                                         [
                                                                                             {
                                                                                                 type: 'identifier',
-                                                                                                value: 'e',
+                                                                                                value: 'a',
                                                                                             },
                                                                                             {
                                                                                                 type: 'sum',
@@ -787,7 +907,7 @@ return isFive(5) ? 1 : 0;`,
                                                                                             },
                                                                                             {
                                                                                                 type: 'identifier',
-                                                                                                value: 'f',
+                                                                                                value: 'b',
                                                                                             },
                                                                                         ],
                                                                                 },
@@ -796,27 +916,155 @@ return isFive(5) ? 1 : 0;`,
                                                                                     value: null,
                                                                                 },
                                                                                 {
-                                                                                    type: 'identifier',
-                                                                                    value: 'g',
+                                                                                    type: 'binaryExpression',
+                                                                                    sequenceItems:
+                                                                                        [
+                                                                                            {
+                                                                                                type: 'binaryExpression',
+                                                                                                sequenceItems:
+                                                                                                    [
+                                                                                                        {
+                                                                                                            type: 'identifier',
+                                                                                                            value: 'c',
+                                                                                                        },
+                                                                                                        {
+                                                                                                            type: 'sum',
+                                                                                                            value: null,
+                                                                                                        },
+                                                                                                        {
+                                                                                                            type: 'identifier',
+                                                                                                            value: 'd',
+                                                                                                        },
+                                                                                                    ],
+                                                                                            },
+                                                                                            {
+                                                                                                type: 'sum',
+                                                                                                value: null,
+                                                                                            },
+                                                                                            {
+                                                                                                type: 'binaryExpression',
+                                                                                                sequenceItems:
+                                                                                                    [
+                                                                                                        {
+                                                                                                            type: 'binaryExpression',
+                                                                                                            sequenceItems:
+                                                                                                                [
+                                                                                                                    {
+                                                                                                                        type: 'identifier',
+                                                                                                                        value: 'e',
+                                                                                                                    },
+                                                                                                                    {
+                                                                                                                        type: 'sum',
+                                                                                                                        value: null,
+                                                                                                                    },
+                                                                                                                    {
+                                                                                                                        type: 'identifier',
+                                                                                                                        value: 'f',
+                                                                                                                    },
+                                                                                                                ],
+                                                                                                        },
+                                                                                                        {
+                                                                                                            type: 'sum',
+                                                                                                            value: null,
+                                                                                                        },
+                                                                                                        {
+                                                                                                            type: 'identifier',
+                                                                                                            value: 'g',
+                                                                                                        },
+                                                                                                    ],
+                                                                                            },
+                                                                                        ],
                                                                                 },
                                                                             ],
                                                                         },
                                                                     ],
                                                                 },
+                                                                {
+                                                                    type: 'statementSeparator',
+                                                                    value: null,
+                                                                },
                                                             ],
                                                         },
                                                     ],
                                                 },
-                                                { type: 'statementSeparator', value: null },
-                                                { type: undefined, value: undefined },
                                             ],
                                         },
                                     ],
                                 },
+                                {
+                                    type: 'statementSeparator',
+                                    value: null,
+                                },
                             ],
                         },
-                        { type: 'statementSeparator', value: null },
-                        { type: undefined, value: undefined },
+                        {
+                            type: 'separatedStatement',
+                            sequenceItems: [
+                                {
+                                    type: 'returnStatement',
+                                    sequenceItems: [
+                                        {
+                                            type: 'return',
+                                            value: null,
+                                        },
+                                        {
+                                            type: 'callExpression',
+                                            sequenceItems: [
+                                                {
+                                                    type: 'identifier',
+                                                    value: 'foo',
+                                                },
+                                                {
+                                                    type: 'leftBracket',
+                                                    value: null,
+                                                },
+                                                {
+                                                    type: undefined,
+                                                    items: [
+                                                        {
+                                                            type: 'number',
+                                                            value: 1,
+                                                        },
+                                                        {
+                                                            type: 'number',
+                                                            value: 2,
+                                                        },
+                                                        {
+                                                            type: 'number',
+                                                            value: 3,
+                                                        },
+                                                        {
+                                                            type: 'number',
+                                                            value: 4,
+                                                        },
+                                                        {
+                                                            type: 'number',
+                                                            value: 5,
+                                                        },
+                                                        {
+                                                            type: 'number',
+                                                            value: 6,
+                                                        },
+                                                        {
+                                                            type: 'number',
+                                                            value: 7,
+                                                        },
+                                                    ],
+                                                },
+                                                {
+                                                    type: 'rightBracket',
+                                                    value: null,
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                                {
+                                    type: 'statementSeparator',
+                                    value: null,
+                                },
+                            ],
+                        },
                     ],
                 },
             ],
@@ -1209,31 +1457,56 @@ return isFive(5) ? 1 : 0;`,
             type: 'program',
             sequenceItems: [
                 {
-                    type: 'statement',
-                    sequenceItems: [
+                    type: undefined,
+                    items: [
                         {
-                            type: 'returnStatement',
+                            type: 'separatedStatement',
                             sequenceItems: [
-                                { type: 'return', value: null },
                                 {
-                                    type: 'binaryExpression',
+                                    type: 'returnStatement',
                                     sequenceItems: [
+                                        {
+                                            type: 'return',
+                                            value: null,
+                                        },
                                         {
                                             type: 'binaryExpression',
                                             sequenceItems: [
-                                                { type: 'number', value: 3 },
-                                                { type: 'product', value: null },
-                                                { type: 'number', value: 4 },
+                                                {
+                                                    type: 'binaryExpression',
+                                                    sequenceItems: [
+                                                        {
+                                                            type: 'number',
+                                                            value: 3,
+                                                        },
+                                                        {
+                                                            type: 'product',
+                                                            value: null,
+                                                        },
+                                                        {
+                                                            type: 'number',
+                                                            value: 4,
+                                                        },
+                                                    ],
+                                                },
+                                                {
+                                                    type: 'product',
+                                                    value: null,
+                                                },
+                                                {
+                                                    type: 'number',
+                                                    value: 5,
+                                                },
                                             ],
                                         },
-                                        { type: 'product', value: null },
-                                        { type: 'number', value: 5 },
                                     ],
+                                },
+                                {
+                                    type: 'statementSeparator',
+                                    value: null,
                                 },
                             ],
                         },
-                        { type: 'statementSeparator', value: null },
-                        { type: undefined, value: undefined },
                     ],
                 },
             ],
@@ -1408,7 +1681,6 @@ myFunc: Function<Integer> = () => 111;
 return myFunc();`,
         exitCode: 111,
     },
-
     {
         name: 'return local integer',
         source: 'myVar: Integer = 3 * 3; return myVar;',
@@ -1420,7 +1692,6 @@ return myFunc();`,
         exitCode: 1,
         failingBackends: ['mips'],
     },
-
     {
         name: 'multi statement function with locals',
         source: `
@@ -1428,7 +1699,6 @@ quadrupleWithLocal := a: Integer => { b: Integer = 2 * a; return 2 * b; };
 return quadrupleWithLocal(5);`,
         exitCode: 20,
     },
-
     {
         name: 'multi statement function with type error',
         source: `
@@ -1495,7 +1765,7 @@ return quadrupleWithLocal(5);`,
         parseErrors: [
             {
                 found: 'leftBracket',
-                expected: 'endOfFile',
+                expected: 'identifier',
                 sourceLocation: { line: 1, column: 11 },
             },
         ],

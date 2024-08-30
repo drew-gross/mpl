@@ -140,84 +140,69 @@ test('ast for single number', t => {
         return;
     }
     const expectedResult = {
-        type: 'program',
         sequenceItems: [
             {
-                type: 'statement',
-                sourceLocation: { line: 1, column: 1 },
-                sequenceItems: [
+                items: [
                     {
-                        type: 'returnStatement',
-                        sourceLocation: { line: 1, column: 1 },
                         sequenceItems: [
                             {
-                                type: 'return',
-                                value: null,
-                                sourceLocation: { line: 1, column: 1 },
+                                sequenceItems: [
+                                    { type: 'return', value: null },
+                                    { type: 'number', value: 7 },
+                                ],
+                                type: 'returnStatement',
                             },
-                            {
-                                type: 'number',
-                                value: 7,
-                                sourceLocation: { line: 1, column: 8 },
-                            },
+                            { type: 'statementSeparator', value: null },
                         ],
-                    },
-                    {
-                        type: 'statementSeparator',
-                        value: null,
-                        sourceLocation: { line: 1, column: 9 },
-                    },
-                    {
-                        item: undefined,
+                        type: 'separatedStatement',
                     },
                 ],
+                type: undefined,
             },
         ],
-        sourceLocation: { line: 1, column: 1 },
-    } as MplAst;
-    t.deepEqual(expectedResult, parseResult);
+        type: 'program',
+    } as any as MplAst;
+    t.deepEqual(expectedResult, stripSourceLocation(parseResult));
 });
 
 test('ast for number in brackets', t => {
     t.deepEqual(
-        removeBracketsFromAst(
-            parse(grammar, 'program', lex(tokenSpecs, ' return (5);') as Token<MplToken>[])
+        stripSourceLocation(
+            removeBracketsFromAst(
+                parse(grammar, 'program', lex(tokenSpecs, ' return (5);') as Token<MplToken>[])
+            )
         ),
         {
-            type: 'program',
-            sourceLocation: { line: 1, column: 2 },
             sequenceItems: [
                 {
-                    type: 'statement',
-                    sourceLocation: { line: 1, column: 2 },
-                    sequenceItems: [
+                    items: [
                         {
-                            type: 'returnStatement',
-                            sourceLocation: { line: 1, column: 2 },
                             sequenceItems: [
                                 {
-                                    type: 'return',
-                                    value: null,
-                                    sourceLocation: { line: 1, column: 2 },
+                                    sequenceItems: [
+                                        {
+                                            type: 'return',
+                                            value: null,
+                                        },
+                                        {
+                                            type: 'number',
+                                            value: 5,
+                                        },
+                                    ],
+                                    type: 'returnStatement',
                                 },
                                 {
-                                    type: 'number',
-                                    value: 5,
-                                    sourceLocation: { line: 1, column: 10 },
+                                    type: 'statementSeparator',
+                                    value: null,
                                 },
                             ],
-                        },
-                        {
-                            type: 'statementSeparator',
-                            value: null,
-                            sourceLocation: { line: 1, column: 12 },
-                        },
-                        {
-                            item: undefined,
+                            type: 'separatedStatement',
                         },
                     ],
+                    type: undefined,
                 },
             ],
+            type: 'program',
         }
     );
 });
@@ -225,207 +210,226 @@ test('ast for number in brackets', t => {
 test('ast for number in double brackets', t => {
     const tokens = lex(tokenSpecs, 'return ((20));');
     const ast = parse(grammar, 'program', tokens as Token<MplToken>[]);
-    t.deepEqual(removeBracketsFromAst(ast), {
-        type: 'program',
-        sourceLocation: { line: 1, column: 1 },
+    t.deepEqual(stripSourceLocation(removeBracketsFromAst(ast)), {
         sequenceItems: [
             {
-                type: 'statement',
-                sourceLocation: { line: 1, column: 1 },
-                sequenceItems: [
+                items: [
                     {
-                        type: 'returnStatement',
-                        sourceLocation: { line: 1, column: 1 },
                         sequenceItems: [
                             {
-                                type: 'return',
-                                value: null,
-                                sourceLocation: { line: 1, column: 1 },
+                                sequenceItems: [
+                                    {
+                                        type: 'return',
+                                        value: null,
+                                    },
+                                    {
+                                        type: 'number',
+                                        value: 20,
+                                    },
+                                ],
+                                type: 'returnStatement',
                             },
                             {
-                                type: 'number',
-                                value: 20,
-                                sourceLocation: { line: 1, column: 10 },
+                                type: 'statementSeparator',
+                                value: null,
                             },
                         ],
-                    },
-                    {
-                        type: 'statementSeparator',
-                        value: null,
-                        sourceLocation: { line: 1, column: 14 },
-                    },
-                    {
-                        item: undefined,
+                        type: 'separatedStatement',
                     },
                 ],
+                type: undefined,
             },
         ],
+        type: 'program',
     });
 });
 
 test('ast for product with brackets', t => {
     t.deepEqual(
-        removeBracketsFromAst(
-            parse(
-                grammar,
-                'program',
-                lex(tokenSpecs, 'return 3 * (4 * 5);') as Token<MplToken>[]
+        stripSourceLocation(
+            removeBracketsFromAst(
+                parse(
+                    grammar,
+                    'program',
+                    lex(tokenSpecs, 'return 3 * (4 * 5);') as Token<MplToken>[]
+                )
             )
         ),
         {
-            type: 'program',
-            sourceLocation: { line: 1, column: 1 },
             sequenceItems: [
                 {
-                    type: 'statement',
-                    sourceLocation: { line: 1, column: 1 },
-                    sequenceItems: [
+                    items: [
                         {
-                            type: 'returnStatement',
-                            sourceLocation: { line: 1, column: 1 },
                             sequenceItems: [
                                 {
-                                    type: 'return',
-                                    sourceLocation: { line: 1, column: 1 },
-                                    value: null,
-                                },
-                                {
-                                    type: 'binaryExpression',
-                                    sourceLocation: { line: 1, column: 8 },
                                     sequenceItems: [
                                         {
-                                            type: 'number',
-                                            value: 3,
-                                            sourceLocation: { line: 1, column: 8 },
-                                        },
-                                        {
-                                            type: 'product',
+                                            type: 'return',
                                             value: null,
-                                            sourceLocation: { line: 1, column: 10 },
                                         },
                                         {
-                                            type: 'binaryExpression',
-                                            sourceLocation: { line: 1, column: 13 },
                                             sequenceItems: [
                                                 {
                                                     type: 'number',
-                                                    value: 4,
-                                                    sourceLocation: { line: 1, column: 13 },
+                                                    value: 3,
                                                 },
                                                 {
                                                     type: 'product',
                                                     value: null,
-                                                    sourceLocation: { line: 1, column: 15 },
                                                 },
                                                 {
-                                                    type: 'number',
-                                                    value: 5,
-                                                    sourceLocation: { line: 1, column: 17 },
+                                                    sequenceItems: [
+                                                        {
+                                                            type: 'number',
+                                                            value: 4,
+                                                        },
+                                                        {
+                                                            type: 'product',
+                                                            value: null,
+                                                        },
+                                                        {
+                                                            type: 'number',
+                                                            value: 5,
+                                                        },
+                                                    ],
+                                                    type: 'binaryExpression',
                                                 },
                                             ],
+                                            type: 'binaryExpression',
                                         },
                                     ],
+                                    type: 'returnStatement',
+                                },
+                                {
+                                    type: 'statementSeparator',
+                                    value: null,
                                 },
                             ],
+                            type: 'separatedStatement',
                         },
-                        {
-                            type: 'statementSeparator',
-                            value: null,
-                            sourceLocation: { line: 1, column: 19 },
-                        },
-                        { item: undefined },
                     ],
+                    type: undefined,
                 },
             ],
+            type: 'program',
         }
     );
 });
 
 test('ast for assignment then return', t => {
     const expected = {
-        type: 'program',
         sequenceItems: [
             {
-                type: 'statement',
-                sequenceItems: [
+                items: [
                     {
-                        type: 'declaration',
                         sequenceItems: [
                             {
-                                type: undefined,
-                                value: undefined,
-                            },
-                            { type: 'identifier', value: 'constThree' },
-                            { type: 'colon', value: null },
-                            {
-                                type: undefined,
-                                value: undefined,
-                            },
-                            { type: 'assignment', value: null },
-                            {
-                                type: 'function',
                                 sequenceItems: [
-                                    // TODO pretty sure the commented out version is actaully correct
                                     {
-                                        // type: 'arg',
-                                        // sequenceItems: [
-                                        //     {
-                                        //         type: 'identifier',
-                                        //         value: 'a',
-                                        //     },
-                                        //     {
-                                        //         type: 'colon',
-                                        //         value: null,
-                                        //     },
-                                        //     {
-                                        //         type: 'typeWithoutArgs',
-                                        //         sequenceItems: [
-                                        //             {
-                                        //                 type: 'typeIdentifier',
-                                        //                 value: 'Integer',
-                                        //             },
-                                        //         ],
-                                        //     },
-                                        // ],
                                         type: undefined,
                                         value: undefined,
+                                    },
+                                    {
+                                        type: 'identifier',
+                                        value: 'constThree',
+                                    },
+                                    {
+                                        type: 'colon',
+                                        value: null,
                                     },
                                     {
                                         type: undefined,
                                         value: undefined,
                                     },
                                     {
-                                        type: undefined,
-                                        value: undefined,
+                                        type: 'assignment',
+                                        value: null,
                                     },
-                                    { type: 'fatArrow', value: null },
-                                    { type: 'number', value: 3 },
+                                    {
+                                        sequenceItems: [
+                                            {
+                                                type: undefined,
+                                                value: undefined,
+                                            },
+                                            {
+                                                items: [
+                                                    {
+                                                        sequenceItems: [
+                                                            {
+                                                                type: 'identifier',
+                                                                value: 'a',
+                                                            },
+                                                            {
+                                                                type: 'colon',
+                                                                value: null,
+                                                            },
+                                                            {
+                                                                sequenceItems: [
+                                                                    {
+                                                                        type: 'typeIdentifier',
+                                                                        value: 'Integer',
+                                                                    },
+                                                                ],
+                                                                type: 'typeWithoutArgs',
+                                                            },
+                                                        ],
+                                                        type: 'arg',
+                                                    },
+                                                ],
+                                                type: undefined,
+                                            },
+                                            {
+                                                type: undefined,
+                                                value: undefined,
+                                            },
+                                            {
+                                                type: 'fatArrow',
+                                                value: null,
+                                            },
+                                            {
+                                                type: 'number',
+                                                value: 3,
+                                            },
+                                        ],
+                                        type: 'function',
+                                    },
                                 ],
+                                type: 'declaration',
+                            },
+                            {
+                                type: 'statementSeparator',
+                                value: null,
                             },
                         ],
+                        type: 'separatedStatement',
                     },
-                    { type: 'statementSeparator', value: null },
-                    // TODO: Seems like this should be the commented version?
                     {
-                        type: undefined,
-                        value: undefined,
+                        sequenceItems: [
+                            {
+                                sequenceItems: [
+                                    {
+                                        type: 'return',
+                                        value: null,
+                                    },
+                                    {
+                                        type: 'number',
+                                        value: 10,
+                                    },
+                                ],
+                                type: 'returnStatement',
+                            },
+                            {
+                                type: 'statementSeparator',
+                                value: null,
+                            },
+                        ],
+                        type: 'separatedStatement',
                     },
-                    // {
-                    //     type: 'statement',
-                    //     sequenceItems: [
-                    //         {
-                    //             type: 'returnStatement',
-                    //             sequenceItems: [
-                    //                 { type: 'return', value: null },
-                    //                 { type: 'number', value: 10 },
-                    //             ],
-                    //         },
-                    //         { type: 'statementSeparator', value: null },
-                    //     ],
-                    // },
                 ],
+                type: undefined,
             },
         ],
+        type: 'program',
     };
     const astWithSemicolon = stripSourceLocation(
         removeBracketsFromAst(
@@ -447,99 +451,117 @@ test('parse for', t => {
     `;
     const ast = parse(grammar, 'program', lex(tokenSpecs, source) as Token<MplToken>[]);
     t.deepEqual(stripSourceLocation(ast), {
-        type: 'program',
         sequenceItems: [
             {
-                type: 'statement' as any,
-                sequenceItems: [
+                items: [
                     {
-                        type: 'forLoop' as any,
                         sequenceItems: [
-                            { value: null, type: 'for' as any },
                             {
-                                type: 'forCondition' as any,
                                 sequenceItems: [
-                                    { value: 'a', type: 'identifier' as any },
-                                    { value: null, type: 'colon' as any },
-                                    { value: 'b', type: 'identifier' as any },
+                                    {
+                                        type: 'for',
+                                        value: null,
+                                    },
+                                    {
+                                        sequenceItems: [
+                                            {
+                                                type: 'identifier',
+                                                value: 'a',
+                                            },
+                                            {
+                                                type: 'colon',
+                                                value: null,
+                                            },
+                                            {
+                                                type: 'identifier',
+                                                value: 'b',
+                                            },
+                                        ],
+                                        type: 'forCondition',
+                                    },
+                                    {
+                                        items: [
+                                            {
+                                                sequenceItems: [
+                                                    {
+                                                        sequenceItems: [
+                                                            {
+                                                                type: 'identifier',
+                                                                value: 'a',
+                                                            },
+                                                            {
+                                                                type: 'assignment',
+                                                                value: null,
+                                                            },
+                                                            {
+                                                                type: 'identifier',
+                                                                value: 'b',
+                                                            },
+                                                        ],
+                                                        type: 'reassignment',
+                                                    },
+                                                    {
+                                                        type: 'statementSeparator',
+                                                        value: null,
+                                                    },
+                                                ],
+                                                type: 'separatedStatement',
+                                            },
+                                        ],
+                                        type: undefined,
+                                    },
                                 ],
+                                type: 'forLoop',
                             },
                             {
-                                type: 'statement' as any,
-                                sequenceItems: [
-                                    {
-                                        type: 'reassignment' as any,
-                                        sequenceItems: [
-                                            { value: 'a', type: 'identifier' as any },
-                                            { value: null, type: 'assignment' as any },
-                                            { value: 'b', type: 'identifier' as any },
-                                        ],
-                                    },
-                                    { value: null, type: 'statementSeparator' as any },
-                                    {
-                                        type: undefined,
-                                        value: undefined,
-                                    },
-                                ],
+                                type: 'statementSeparator',
+                                value: null,
                             },
                         ],
-                    },
-                    { value: null, type: 'statementSeparator' as any },
-                    {
-                        type: undefined,
-                        value: undefined,
+                        type: 'separatedStatement',
                     },
                 ],
+                type: undefined,
             },
         ],
+        type: 'program',
     });
 });
 
 test('lowering of bracketedExpressions', t => {
     const lexResult = lex(tokenSpecs, 'return (8 * ((7)));') as Token<MplToken>[];
     t.deepEqual(stripSourceLocation(parseMpl(lexResult)), {
-        type: 'program',
         sequenceItems: [
             {
-                type: 'statement',
-                sequenceItems: [
+                items: [
                     {
-                        type: 'returnStatement',
                         sequenceItems: [
                             {
-                                type: 'return',
-                                value: null,
-                            },
-                            {
-                                type: 'binaryExpression',
                                 sequenceItems: [
+                                    { type: 'return', value: null },
                                     {
-                                        type: 'number',
-                                        value: 8,
-                                    },
-                                    {
-                                        type: 'product',
-                                        value: null,
-                                    },
-                                    {
-                                        type: 'number',
-                                        value: 7,
+                                        sequenceItems: [
+                                            { type: 'number', value: 8 },
+                                            { type: 'product', value: null },
+                                            { type: 'number', value: 7 },
+                                        ],
+                                        type: 'binaryExpression',
                                     },
                                 ],
+                                type: 'returnStatement',
+                            },
+                            {
+                                type: 'statementSeparator',
+                                value: null,
                             },
                         ],
-                    },
-                    {
-                        type: 'statementSeparator',
-                        value: null,
-                    },
-                    {
-                        type: undefined,
-                        value: undefined,
+                        type: 'separatedStatement',
                     },
                 ],
+                type: undefined,
             },
         ],
+        type: 'program',
     });
 });
 
