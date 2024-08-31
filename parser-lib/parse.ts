@@ -63,7 +63,14 @@ export const stripSourceLocation = ast => {
     if ('sequenceItems' in ast) {
         return { type: ast.type, sequenceItems: ast.sequenceItems.map(stripSourceLocation) };
     } else if ('items' in ast) {
-        return { items: ast.items.map(stripSourceLocation), separators: ast.separators.map(stripSourceLocation) };
+        if ('separators' in ast) {
+            return {
+                items: ast.items.map(stripSourceLocation),
+                separators: ast.separators.map(stripSourceLocation),
+            };
+        } else {
+            return { items: ast.items.map(stripSourceLocation) };
+        }
     } else {
         return { type: ast.type, value: ast.value };
     }
@@ -352,14 +359,20 @@ const getPotentialAsts = <Node extends string, Token>(
             if ('expected' in result) {
                 return parsesWithNoItems;
             }
-            const parsesWithNoMoreItemsNoSeparator = parser.trailing != 'required' ? result.map(({ partial, madeProgress }) => ({
-                partial: { item: partial },
-                madeProgress,
-            })) : []
-            const parsesWithNoMoreItemsWithSeparator = parser.trailing != 'never' ? result.map(({ partial, madeProgress }) => ({
-                partial: { item: partial, separator: { rule: parser.separator } },
-                madeProgress,
-            })) : [];
+            const parsesWithNoMoreItemsNoSeparator =
+                parser.trailing != 'required'
+                    ? result.map(({ partial, madeProgress }) => ({
+                          partial: { item: partial },
+                          madeProgress,
+                      }))
+                    : [];
+            const parsesWithNoMoreItemsWithSeparator =
+                parser.trailing != 'never'
+                    ? result.map(({ partial, madeProgress }) => ({
+                          partial: { item: partial, separator: { rule: parser.separator } },
+                          madeProgress,
+                      }))
+                    : [];
             const parsesWithMoreItems = result.map(({ partial, madeProgress }) => ({
                 partial: {
                     item: partial,
@@ -372,7 +385,12 @@ const getPotentialAsts = <Node extends string, Token>(
             // NOTE: Need to handle the case where the token indicates that we could parse an item, but
             // the item after that indicates that we can't, and we need to successfully parse a zero item
             // separated list, followed by a successful parse of whatever comes next
-            return [...parsesWithNoMoreItemsNoSeparator, ...parsesWithNoMoreItemsWithSeparator, ...parsesWithMoreItems, ...parsesWithNoItems];
+            return [
+                ...parsesWithNoMoreItemsNoSeparator,
+                ...parsesWithNoMoreItemsWithSeparator,
+                ...parsesWithMoreItems,
+                ...parsesWithNoItems,
+            ];
         }
         default: {
             throw debug(`unhandled parser kind`);
@@ -579,9 +597,7 @@ const partialAstToCompleteAst = <Node, Token>(
                 return { items: [], separators: [] };
             }
             const item = partialAstToCompleteAst(list.item);
-            const separator = list.separator
-                ? [partialAstToCompleteAst(list.separator)]
-                : [];
+            const separator = list.separator ? [partialAstToCompleteAst(list.separator)] : [];
             const { items, separators } = list.remainingItems
                 ? flattenPartialSeparatedList(list.remainingItems)
                 : { items: [], separators: [] };
@@ -693,7 +709,7 @@ export const parse = <Node extends string, Token>(
         }
         for (const newAst of newAsts) {
             // Janky hack to prevent ambiguous parse for two represenations of no more items. TODO: Get rid of emptySeparatedList representation of no more items
-            if ('emptySeparatedList' in newAst.partial) {
+            if ('emptySeparatedList' in newAst.partial && tokens.length > 0) {
                 incompleteAsts.push(ast);
                 continue;
             }
@@ -714,13 +730,17 @@ export const parse = <Node extends string, Token>(
         if (incompleteAsts.length > 0) {
             return {
                 kind: 'parseError',
-                errors: [{
-                    expected: 'TODO: put something here' as 'endOfFile',
-                    found: 'endOfFile',
-                    foundTokenText: 'endOfFile',
-                    sourceLocation: tokens[tokens.length - 1].sourceLocation,
-                }],
-            }
+                errors: [
+                    {
+                        expected: 'TODO: put something here' as 'endOfFile',
+                        found: 'endOfFile',
+                        foundTokenText: 'endOfFile',
+                        sourceLocation: tokens[tokens.length - 1]
+                            ? tokens[tokens.length - 1].sourceLocation
+                            : { column: 0, line: 0 },
+                    },
+                ],
+            };
         }
         throw debug('no parse');
     }

@@ -157,7 +157,6 @@ test('ast for single number', t => {
                         type: 'separatedStatement',
                     },
                 ],
-                type: undefined,
             },
         ],
         type: 'program',
@@ -199,7 +198,6 @@ test('ast for number in brackets', t => {
                             type: 'separatedStatement',
                         },
                     ],
-                    type: undefined,
                 },
             ],
             type: 'program',
@@ -237,7 +235,6 @@ test('ast for number in double brackets', t => {
                         type: 'separatedStatement',
                     },
                 ],
-                type: undefined,
             },
         ],
         type: 'program',
@@ -308,7 +305,6 @@ test('ast for product with brackets', t => {
                             type: 'separatedStatement',
                         },
                     ],
-                    type: undefined,
                 },
             ],
             type: 'program',
@@ -376,7 +372,7 @@ test('ast for assignment then return', t => {
                                                         type: 'arg',
                                                     },
                                                 ],
-                                                type: undefined,
+                                                separators: [],
                                             },
                                             {
                                                 type: undefined,
@@ -426,7 +422,6 @@ test('ast for assignment then return', t => {
                         type: 'separatedStatement',
                     },
                 ],
-                type: undefined,
             },
         ],
         type: 'program',
@@ -508,7 +503,6 @@ test('parse for', t => {
                                                 type: 'separatedStatement',
                                             },
                                         ],
-                                        type: undefined,
                                     },
                                 ],
                                 type: 'forLoop',
@@ -521,7 +515,6 @@ test('parse for', t => {
                         type: 'separatedStatement',
                     },
                 ],
-                type: undefined,
             },
         ],
         type: 'program',
@@ -558,7 +551,6 @@ test('lowering of bracketedExpressions', t => {
                         type: 'separatedStatement',
                     },
                 ],
-                type: undefined,
             },
         ],
         type: 'program',
@@ -1321,7 +1313,7 @@ test('Parser Lib - Sequence of Many', t => {
     });
 });
 
-test.only('Parser Lib - Separated List With Required Trailing Separator', t => {
+test('Parser Lib - Separated List With Required Trailing Separator', t => {
     const terminal = token => Terminal<'Node', 'Token'>(token);
 
     const sep = terminal('sep');
@@ -1389,78 +1381,51 @@ test.only('Parser Lib - Separated List With Required Trailing Separator', t => {
             { type: 'sep', value: null },
         ],
     });
-    t.deepEqual(parse(testGrammar, 'req', withoutTrailing),
-        {
-            kind: 'parseError',
-            errors: [
-                {
-                    expected: 'TODO: put something here',
-                    found: 'endOfFile',
-                    foundTokenText: 'endOfFile',
-                    sourceLocation: { line: 0, column: 0 },
-                },
-            ]
-        },
-    );
-    t.deepEqual(stripSourceLocation(parse(testGrammar, 'opt', withTrailing)), {
-        sequenceItems: [
+    t.deepEqual(parse(testGrammar, 'req', withoutTrailing), {
+        kind: 'parseError',
+        errors: [
             {
-                items: [],
-                separators: [],
-            },
-            {
+                expected: 'TODO: put something here',
+                found: 'endOfFile',
+                foundTokenText: 'endOfFile',
                 sourceLocation: dummySourceLocation,
-                type: 'end',
-                value: null,
             },
         ],
-        type: 'listOfOptionalStarter',
-        sourceLocation: dummySourceLocation,
+    });
+    t.deepEqual(stripSourceLocation(parse(testGrammar, 'opt', withTrailing)), {
+        items: [
+            { type: 'item', value: null },
+            { type: 'item', value: null },
+        ],
+        separators: [
+            { type: 'sep', value: null },
+            { type: 'sep', value: null },
+        ],
     });
     t.deepEqual(stripSourceLocation(parse(testGrammar, 'opt', withoutTrailing)), {
-        sequenceItems: [
-            {
-                items: [],
-                separators: [],
-            },
-            {
-                sourceLocation: dummySourceLocation,
-                type: 'end',
-                value: null,
-            },
+        items: [
+            { type: 'item', value: null },
+            { type: 'item', value: null },
         ],
-        type: 'listOfOptionalStarter',
-        sourceLocation: dummySourceLocation,
+        separators: [{ type: 'sep', value: null }],
     });
-    t.deepEqual(stripSourceLocation(parse(testGrammar, 'never', withTrailing)), {
-        sequenceItems: [
+    t.deepEqual(parse(testGrammar, 'never', withTrailing), {
+        errors: [
             {
-                items: [],
-                separators: [],
-            },
-            {
+                expected: 'TODO: put something here',
+                found: 'endOfFile',
+                foundTokenText: 'endOfFile',
                 sourceLocation: dummySourceLocation,
-                type: 'end',
-                value: null,
             },
         ],
-        type: 'listOfOptionalStarter',
-        sourceLocation: dummySourceLocation,
+        kind: 'parseError',
     });
     t.deepEqual(stripSourceLocation(parse(testGrammar, 'never', withoutTrailing)), {
-        sequenceItems: [
-            {
-                items: [],
-                separators: [],
-            },
-            {
-                sourceLocation: dummySourceLocation,
-                type: 'end',
-                value: null,
-            },
+        items: [
+            { type: 'item', value: null },
+            { type: 'item', value: null },
         ],
-        type: 'listOfOptionalStarter',
-        sourceLocation: dummySourceLocation,
+        separators: [{ type: 'sep', value: null }],
     });
 });
 
