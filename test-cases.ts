@@ -125,7 +125,6 @@ export const testPrograms: TestProgram[] = [
             type: 'program',
             sequenceItems: [
                 {
-                    type: undefined,
                     items: [
                         {
                             type: 'separatedStatement',
@@ -705,7 +704,6 @@ return isFive(5) ? 1 : 0;`,
             type: 'program',
             sequenceItems: [
                 {
-                    type: undefined,
                     items: [
                         {
                             type: 'separatedStatement',
@@ -714,16 +712,24 @@ return isFive(5) ? 1 : 0;`,
                                     type: 'declaration',
                                     sequenceItems: [
                                         { type: undefined, value: undefined },
-                                        { type: 'identifier', value: 'foo' },
-                                        { type: 'colon', value: null },
+                                        {
+                                            type: 'identifier',
+                                            value: 'foo',
+                                        },
+                                        {
+                                            type: 'colon',
+                                            value: null,
+                                        },
                                         { type: undefined, value: undefined },
-                                        { type: 'assignment', value: null },
+                                        {
+                                            type: 'assignment',
+                                            value: null,
+                                        },
                                         {
                                             type: 'functionWithBlock',
                                             sequenceItems: [
                                                 { type: undefined, value: undefined },
                                                 {
-                                                    type: undefined,
                                                     items: [
                                                         {
                                                             type: 'arg',
@@ -732,7 +738,10 @@ return isFive(5) ? 1 : 0;`,
                                                                     type: 'identifier',
                                                                     value: 'a',
                                                                 },
-                                                                { type: 'colon', value: null },
+                                                                {
+                                                                    type: 'colon',
+                                                                    value: null,
+                                                                },
                                                                 {
                                                                     type: 'typeWithoutArgs',
                                                                     sequenceItems: [
@@ -751,7 +760,10 @@ return isFive(5) ? 1 : 0;`,
                                                                     type: 'identifier',
                                                                     value: 'b',
                                                                 },
-                                                                { type: 'colon', value: null },
+                                                                {
+                                                                    type: 'colon',
+                                                                    value: null,
+                                                                },
                                                                 {
                                                                     type: 'typeWithoutArgs',
                                                                     sequenceItems: [
@@ -770,7 +782,10 @@ return isFive(5) ? 1 : 0;`,
                                                                     type: 'identifier',
                                                                     value: 'c',
                                                                 },
-                                                                { type: 'colon', value: null },
+                                                                {
+                                                                    type: 'colon',
+                                                                    value: null,
+                                                                },
                                                                 {
                                                                     type: 'typeWithoutArgs',
                                                                     sequenceItems: [
@@ -871,6 +886,32 @@ return isFive(5) ? 1 : 0;`,
                                                             ],
                                                         },
                                                     ],
+                                                    separators: [
+                                                        {
+                                                            type: 'comma',
+                                                            value: null,
+                                                        },
+                                                        {
+                                                            type: 'comma',
+                                                            value: null,
+                                                        },
+                                                        {
+                                                            type: 'comma',
+                                                            value: null,
+                                                        },
+                                                        {
+                                                            type: 'comma',
+                                                            value: null,
+                                                        },
+                                                        {
+                                                            type: 'comma',
+                                                            value: null,
+                                                        },
+                                                        {
+                                                            type: 'comma',
+                                                            value: null,
+                                                        },
+                                                    ],
                                                 },
                                                 { type: undefined, value: undefined },
                                                 {
@@ -878,7 +919,6 @@ return isFive(5) ? 1 : 0;`,
                                                     value: null,
                                                 },
                                                 {
-                                                    type: undefined,
                                                     items: [
                                                         {
                                                             type: 'separatedStatement',
@@ -1019,7 +1059,6 @@ return isFive(5) ? 1 : 0;`,
                                                     value: null,
                                                 },
                                                 {
-                                                    type: undefined,
                                                     items: [
                                                         {
                                                             type: 'number',
@@ -1048,6 +1087,32 @@ return isFive(5) ? 1 : 0;`,
                                                         {
                                                             type: 'number',
                                                             value: 7,
+                                                        },
+                                                    ],
+                                                    separators: [
+                                                        {
+                                                            type: 'comma',
+                                                            value: null,
+                                                        },
+                                                        {
+                                                            type: 'comma',
+                                                            value: null,
+                                                        },
+                                                        {
+                                                            type: 'comma',
+                                                            value: null,
+                                                        },
+                                                        {
+                                                            type: 'comma',
+                                                            value: null,
+                                                        },
+                                                        {
+                                                            type: 'comma',
+                                                            value: null,
+                                                        },
+                                                        {
+                                                            type: 'comma',
+                                                            value: null,
                                                         },
                                                     ],
                                                 },
@@ -1457,7 +1522,6 @@ return isFive(5) ? 1 : 0;`,
             type: 'program',
             sequenceItems: [
                 {
-                    type: undefined,
                     items: [
                         {
                             type: 'separatedStatement',
