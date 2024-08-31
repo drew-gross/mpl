@@ -1321,16 +1321,16 @@ test('Parser Lib - Sequence of Many', t => {
     });
 });
 
-test.failing('Parser Lib - Separated List With Required Trailing Separator', t => {
+test.only('Parser Lib - Separated List With Required Trailing Separator', t => {
     const terminal = token => Terminal<'Node', 'Token'>(token);
 
     const sep = terminal('sep');
     const item = terminal('item');
 
     const testGrammar: Grammar<'Node', 'Token'> = {
-        req: SeparatedList(item, sep, 'required'),
-        opt: SeparatedList(item, sep, 'optional'),
-        never: SeparatedList(item, sep, 'never'),
+        req: SeparatedList(sep, item, 'required'),
+        opt: SeparatedList(sep, item, 'optional'),
+        never: SeparatedList(sep, item, 'never'),
     };
 
     const withTrailing = [
@@ -1341,9 +1341,9 @@ test.failing('Parser Lib - Separated List With Required Trailing Separator', t =
             sourceLocation: dummySourceLocation,
         },
         {
-            type: 'item',
+            type: 'sep',
             value: null,
-            string: 'item',
+            string: 'sep',
             sourceLocation: dummySourceLocation,
         },
         {
@@ -1367,9 +1367,9 @@ test.failing('Parser Lib - Separated List With Required Trailing Separator', t =
             sourceLocation: dummySourceLocation,
         },
         {
-            type: 'item',
+            type: 'sep',
             value: null,
-            string: 'item',
+            string: 'sep',
             sourceLocation: dummySourceLocation,
         },
         {
@@ -1380,6 +1380,29 @@ test.failing('Parser Lib - Separated List With Required Trailing Separator', t =
         },
     ];
     t.deepEqual(stripSourceLocation(parse(testGrammar, 'req', withTrailing)), {
+        items: [
+            { type: 'item', value: null },
+            { type: 'item', value: null },
+        ],
+        separators: [
+            { type: 'sep', value: null },
+            { type: 'sep', value: null },
+        ],
+    });
+    t.deepEqual(parse(testGrammar, 'req', withoutTrailing),
+        {
+            kind: 'parseError',
+            errors: [
+                {
+                    expected: 'TODO: put something here',
+                    found: 'endOfFile',
+                    foundTokenText: 'endOfFile',
+                    sourceLocation: { line: 0, column: 0 },
+                },
+            ]
+        },
+    );
+    t.deepEqual(stripSourceLocation(parse(testGrammar, 'opt', withTrailing)), {
         sequenceItems: [
             {
                 items: [],
@@ -1394,37 +1417,7 @@ test.failing('Parser Lib - Separated List With Required Trailing Separator', t =
         type: 'listOfOptionalStarter',
         sourceLocation: dummySourceLocation,
     });
-    t.deepEqual(stripSourceLocation(parse(testGrammar, 'req', withoutTrailing)), {
-        sequenceItems: [
-            {
-                items: [],
-                separators: [],
-            },
-            {
-                sourceLocation: dummySourceLocation,
-                type: 'end',
-                value: null,
-            },
-        ],
-        type: 'listOfOptionalStarter',
-        sourceLocation: dummySourceLocation,
-    });
-    t.deepEqual(stripSourceLocation(parse(testGrammar, 'optional', withTrailing)), {
-        sequenceItems: [
-            {
-                items: [],
-                separators: [],
-            },
-            {
-                sourceLocation: dummySourceLocation,
-                type: 'end',
-                value: null,
-            },
-        ],
-        type: 'listOfOptionalStarter',
-        sourceLocation: dummySourceLocation,
-    });
-    t.deepEqual(stripSourceLocation(parse(testGrammar, 'optional', withoutTrailing)), {
+    t.deepEqual(stripSourceLocation(parse(testGrammar, 'opt', withoutTrailing)), {
         sequenceItems: [
             {
                 items: [],
