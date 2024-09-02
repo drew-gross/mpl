@@ -127,38 +127,62 @@ export const testPrograms: TestProgram[] = [
                 {
                     items: [
                         {
-                            type: 'separatedStatement',
+                            type: 'returnStatement',
                             sequenceItems: [
                                 {
-                                    type: 'returnStatement',
+                                    type: 'return',
+                                    value: null,
+                                },
+                                {
+                                    type: 'binaryExpression',
                                     sequenceItems: [
-                                        { type: 'return', value: null },
                                         {
                                             type: 'binaryExpression',
                                             sequenceItems: [
                                                 {
+                                                    type: 'number',
+                                                    value: 2,
+                                                },
+                                                {
+                                                    type: 'product',
+                                                    value: null,
+                                                },
+                                                {
                                                     type: 'binaryExpression',
                                                     sequenceItems: [
-                                                        { type: 'number', value: 2 },
-                                                        { type: 'product', value: null },
                                                         {
-                                                            type: 'binaryExpression',
-                                                            sequenceItems: [
-                                                                { type: 'number', value: 3 },
-                                                                { type: 'product', value: null },
-                                                                { type: 'number', value: 4 },
-                                                            ],
+                                                            type: 'number',
+                                                            value: 3,
+                                                        },
+                                                        {
+                                                            type: 'product',
+                                                            value: null,
+                                                        },
+                                                        {
+                                                            type: 'number',
+                                                            value: 4,
                                                         },
                                                     ],
                                                 },
-                                                { type: 'product', value: null },
-                                                { type: 'number', value: 5 },
                                             ],
+                                        },
+                                        {
+                                            type: 'product',
+                                            value: null,
+                                        },
+                                        {
+                                            type: 'number',
+                                            value: 5,
                                         },
                                     ],
                                 },
-                                { type: 'statementSeparator', value: null },
                             ],
+                        },
+                    ],
+                    separators: [
+                        {
+                            type: 'statementSeparator',
+                            value: null,
                         },
                     ],
                 },
@@ -700,440 +724,6 @@ return isFive(5) ? 1 : 0;`,
             return foo(1, 2, 3, 4, 5, 6, 7);
         `,
         exitCode: 28,
-        ast: {
-            type: 'program',
-            sequenceItems: [
-                {
-                    items: [
-                        {
-                            type: 'separatedStatement',
-                            sequenceItems: [
-                                {
-                                    type: 'declaration',
-                                    sequenceItems: [
-                                        { type: undefined, value: undefined },
-                                        {
-                                            type: 'identifier',
-                                            value: 'foo',
-                                        },
-                                        {
-                                            type: 'colon',
-                                            value: null,
-                                        },
-                                        { type: undefined, value: undefined },
-                                        {
-                                            type: 'assignment',
-                                            value: null,
-                                        },
-                                        {
-                                            type: 'functionWithBlock',
-                                            sequenceItems: [
-                                                { type: undefined, value: undefined },
-                                                {
-                                                    items: [
-                                                        {
-                                                            type: 'arg',
-                                                            sequenceItems: [
-                                                                {
-                                                                    type: 'identifier',
-                                                                    value: 'a',
-                                                                },
-                                                                {
-                                                                    type: 'colon',
-                                                                    value: null,
-                                                                },
-                                                                {
-                                                                    type: 'typeWithoutArgs',
-                                                                    sequenceItems: [
-                                                                        {
-                                                                            type: 'typeIdentifier',
-                                                                            value: 'Integer',
-                                                                        },
-                                                                    ],
-                                                                },
-                                                            ],
-                                                        },
-                                                        {
-                                                            type: 'arg',
-                                                            sequenceItems: [
-                                                                {
-                                                                    type: 'identifier',
-                                                                    value: 'b',
-                                                                },
-                                                                {
-                                                                    type: 'colon',
-                                                                    value: null,
-                                                                },
-                                                                {
-                                                                    type: 'typeWithoutArgs',
-                                                                    sequenceItems: [
-                                                                        {
-                                                                            type: 'typeIdentifier',
-                                                                            value: 'Integer',
-                                                                        },
-                                                                    ],
-                                                                },
-                                                            ],
-                                                        },
-                                                        {
-                                                            type: 'arg',
-                                                            sequenceItems: [
-                                                                {
-                                                                    type: 'identifier',
-                                                                    value: 'c',
-                                                                },
-                                                                {
-                                                                    type: 'colon',
-                                                                    value: null,
-                                                                },
-                                                                {
-                                                                    type: 'typeWithoutArgs',
-                                                                    sequenceItems: [
-                                                                        {
-                                                                            type: 'typeIdentifier',
-                                                                            value: 'Integer',
-                                                                        },
-                                                                    ],
-                                                                },
-                                                            ],
-                                                        },
-                                                        {
-                                                            type: 'arg',
-                                                            sequenceItems: [
-                                                                {
-                                                                    type: 'identifier',
-                                                                    value: 'd',
-                                                                },
-                                                                {
-                                                                    type: 'colon',
-                                                                    value: null,
-                                                                },
-                                                                {
-                                                                    type: 'typeWithoutArgs',
-                                                                    sequenceItems: [
-                                                                        {
-                                                                            type: 'typeIdentifier',
-                                                                            value: 'Integer',
-                                                                        },
-                                                                    ],
-                                                                },
-                                                            ],
-                                                        },
-                                                        {
-                                                            type: 'arg',
-                                                            sequenceItems: [
-                                                                {
-                                                                    type: 'identifier',
-                                                                    value: 'e',
-                                                                },
-                                                                {
-                                                                    type: 'colon',
-                                                                    value: null,
-                                                                },
-                                                                {
-                                                                    type: 'typeWithoutArgs',
-                                                                    sequenceItems: [
-                                                                        {
-                                                                            type: 'typeIdentifier',
-                                                                            value: 'Integer',
-                                                                        },
-                                                                    ],
-                                                                },
-                                                            ],
-                                                        },
-                                                        {
-                                                            type: 'arg',
-                                                            sequenceItems: [
-                                                                {
-                                                                    type: 'identifier',
-                                                                    value: 'f',
-                                                                },
-                                                                {
-                                                                    type: 'colon',
-                                                                    value: null,
-                                                                },
-                                                                {
-                                                                    type: 'typeWithoutArgs',
-                                                                    sequenceItems: [
-                                                                        {
-                                                                            type: 'typeIdentifier',
-                                                                            value: 'Integer',
-                                                                        },
-                                                                    ],
-                                                                },
-                                                            ],
-                                                        },
-                                                        {
-                                                            type: 'arg',
-                                                            sequenceItems: [
-                                                                {
-                                                                    type: 'identifier',
-                                                                    value: 'g',
-                                                                },
-                                                                {
-                                                                    type: 'colon',
-                                                                    value: null,
-                                                                },
-                                                                {
-                                                                    type: 'typeWithoutArgs',
-                                                                    sequenceItems: [
-                                                                        {
-                                                                            type: 'typeIdentifier',
-                                                                            value: 'Integer',
-                                                                        },
-                                                                    ],
-                                                                },
-                                                            ],
-                                                        },
-                                                    ],
-                                                    separators: [
-                                                        {
-                                                            type: 'comma',
-                                                            value: null,
-                                                        },
-                                                        {
-                                                            type: 'comma',
-                                                            value: null,
-                                                        },
-                                                        {
-                                                            type: 'comma',
-                                                            value: null,
-                                                        },
-                                                        {
-                                                            type: 'comma',
-                                                            value: null,
-                                                        },
-                                                        {
-                                                            type: 'comma',
-                                                            value: null,
-                                                        },
-                                                        {
-                                                            type: 'comma',
-                                                            value: null,
-                                                        },
-                                                    ],
-                                                },
-                                                { type: undefined, value: undefined },
-                                                {
-                                                    type: 'fatArrow',
-                                                    value: null,
-                                                },
-                                                {
-                                                    items: [
-                                                        {
-                                                            type: 'separatedStatement',
-                                                            sequenceItems: [
-                                                                {
-                                                                    type: 'returnStatement',
-                                                                    sequenceItems: [
-                                                                        {
-                                                                            type: 'return',
-                                                                            value: null,
-                                                                        },
-                                                                        {
-                                                                            type: 'binaryExpression',
-                                                                            sequenceItems: [
-                                                                                {
-                                                                                    type: 'binaryExpression',
-                                                                                    sequenceItems:
-                                                                                        [
-                                                                                            {
-                                                                                                type: 'identifier',
-                                                                                                value: 'a',
-                                                                                            },
-                                                                                            {
-                                                                                                type: 'sum',
-                                                                                                value: null,
-                                                                                            },
-                                                                                            {
-                                                                                                type: 'identifier',
-                                                                                                value: 'b',
-                                                                                            },
-                                                                                        ],
-                                                                                },
-                                                                                {
-                                                                                    type: 'sum',
-                                                                                    value: null,
-                                                                                },
-                                                                                {
-                                                                                    type: 'binaryExpression',
-                                                                                    sequenceItems:
-                                                                                        [
-                                                                                            {
-                                                                                                type: 'binaryExpression',
-                                                                                                sequenceItems:
-                                                                                                    [
-                                                                                                        {
-                                                                                                            type: 'identifier',
-                                                                                                            value: 'c',
-                                                                                                        },
-                                                                                                        {
-                                                                                                            type: 'sum',
-                                                                                                            value: null,
-                                                                                                        },
-                                                                                                        {
-                                                                                                            type: 'identifier',
-                                                                                                            value: 'd',
-                                                                                                        },
-                                                                                                    ],
-                                                                                            },
-                                                                                            {
-                                                                                                type: 'sum',
-                                                                                                value: null,
-                                                                                            },
-                                                                                            {
-                                                                                                type: 'binaryExpression',
-                                                                                                sequenceItems:
-                                                                                                    [
-                                                                                                        {
-                                                                                                            type: 'binaryExpression',
-                                                                                                            sequenceItems:
-                                                                                                                [
-                                                                                                                    {
-                                                                                                                        type: 'identifier',
-                                                                                                                        value: 'e',
-                                                                                                                    },
-                                                                                                                    {
-                                                                                                                        type: 'sum',
-                                                                                                                        value: null,
-                                                                                                                    },
-                                                                                                                    {
-                                                                                                                        type: 'identifier',
-                                                                                                                        value: 'f',
-                                                                                                                    },
-                                                                                                                ],
-                                                                                                        },
-                                                                                                        {
-                                                                                                            type: 'sum',
-                                                                                                            value: null,
-                                                                                                        },
-                                                                                                        {
-                                                                                                            type: 'identifier',
-                                                                                                            value: 'g',
-                                                                                                        },
-                                                                                                    ],
-                                                                                            },
-                                                                                        ],
-                                                                                },
-                                                                            ],
-                                                                        },
-                                                                    ],
-                                                                },
-                                                                {
-                                                                    type: 'statementSeparator',
-                                                                    value: null,
-                                                                },
-                                                            ],
-                                                        },
-                                                    ],
-                                                },
-                                            ],
-                                        },
-                                    ],
-                                },
-                                {
-                                    type: 'statementSeparator',
-                                    value: null,
-                                },
-                            ],
-                        },
-                        {
-                            type: 'separatedStatement',
-                            sequenceItems: [
-                                {
-                                    type: 'returnStatement',
-                                    sequenceItems: [
-                                        {
-                                            type: 'return',
-                                            value: null,
-                                        },
-                                        {
-                                            type: 'callExpression',
-                                            sequenceItems: [
-                                                {
-                                                    type: 'identifier',
-                                                    value: 'foo',
-                                                },
-                                                {
-                                                    type: 'leftBracket',
-                                                    value: null,
-                                                },
-                                                {
-                                                    items: [
-                                                        {
-                                                            type: 'number',
-                                                            value: 1,
-                                                        },
-                                                        {
-                                                            type: 'number',
-                                                            value: 2,
-                                                        },
-                                                        {
-                                                            type: 'number',
-                                                            value: 3,
-                                                        },
-                                                        {
-                                                            type: 'number',
-                                                            value: 4,
-                                                        },
-                                                        {
-                                                            type: 'number',
-                                                            value: 5,
-                                                        },
-                                                        {
-                                                            type: 'number',
-                                                            value: 6,
-                                                        },
-                                                        {
-                                                            type: 'number',
-                                                            value: 7,
-                                                        },
-                                                    ],
-                                                    separators: [
-                                                        {
-                                                            type: 'comma',
-                                                            value: null,
-                                                        },
-                                                        {
-                                                            type: 'comma',
-                                                            value: null,
-                                                        },
-                                                        {
-                                                            type: 'comma',
-                                                            value: null,
-                                                        },
-                                                        {
-                                                            type: 'comma',
-                                                            value: null,
-                                                        },
-                                                        {
-                                                            type: 'comma',
-                                                            value: null,
-                                                        },
-                                                        {
-                                                            type: 'comma',
-                                                            value: null,
-                                                        },
-                                                    ],
-                                                },
-                                                {
-                                                    type: 'rightBracket',
-                                                    value: null,
-                                                },
-                                            ],
-                                        },
-                                    ],
-                                },
-                                {
-                                    type: 'statementSeparator',
-                                    value: null,
-                                },
-                            ],
-                        },
-                    ],
-                },
-            ],
-        },
     },
     {
         name: 'Nine Argument Function With Multiply',
