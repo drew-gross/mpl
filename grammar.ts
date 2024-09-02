@@ -160,6 +160,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     program: Sequence<MplAstNode, MplToken>('program', ['functionBody']),
     argList: SeparatedList(comma, 'arg'),
     arg: Sequence('arg', [identifier, colon, 'type']),
+    block: NestedIn(curlies, 'functionBody'),
     functionBody: SeparatedList(statementSeparator, 'statement', 'required'),
     statement: OneOf([
         Sequence('declaration', [
@@ -176,7 +177,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
         Sequence('forLoop', [
             for_,
             NestedIn(rounds, Sequence('forCondition', [identifier, colon, 'expression'])),
-            NestedIn(curlies, 'functionBody'),
+            'block',
         ]),
     ]),
     typeList: SeparatedList(comma, 'type'),
@@ -227,7 +228,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
             'argList',
             mplOptional(rightBracket),
             fatArrow,
-            NestedIn(curlies, 'functionBody'),
+            'block',
         ]),
         'ternary',
     ]),
