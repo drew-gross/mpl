@@ -197,7 +197,6 @@ type PartialAst<Node, Token> =
     | PartialToken<Token>
     | PartialMany<Node, Token>
     | PartialSequence<Node, Token>
-    | EmptySeparatedList
     | PartialSeparatedList<Node, Token>
     | PartialNested<Node, Token>
     | PartialOptional<Node, Token>;
@@ -206,20 +205,19 @@ type PartialSequence<Node, Token> = {
     name: string;
     sourceLocation: SourceLocation;
 };
-// TODO: Shouldn't need an extra type for this, just use optional
-type EmptySeparatedList = {
-    emptySeparatedList: true;
-};
 // TOOD: Maybe use separate types for many/separated list with and without more items?
 type PartialMany<Node, Token> = {
     items: PartialAst<Node, Token>[];
     remainingItems?: PartialMany<Node, Token>;
 };
-type PartialSeparatedList<Node, Token> = {
-    item: PartialAst<Node, Token>;
-    separator?: PartialAst<Node, Token>;
-    remainingItems?: PartialSeparatedList<Node, Token>;
-};
+type PartialSeparatedList<Node, Token> =
+    | {
+          isPartialSeparatedList: true;
+          item: PartialAst<Node, Token>;
+          separator?: PartialAst<Node, Token>;
+          remainingItems: PartialAst<Node, Token>;
+      }
+    | { isPartialSeparatedList: true; noMoreItems: true };
 type PartialToken<Token> = {
     tokenType: Token;
     value: LeafValue;
@@ -354,41 +352,61 @@ const getPotentialAsts = <Node extends string, Token>(
         case 'separatedList': {
             const result = getPotentialAsts(grammar, parser.item, token);
             const parsesWithNoItems: PotentialAstsResult<Node, Token>[] = [
-                { partial: { emptySeparatedList: true }, madeProgress: false },
+                {
+                    partial: { isPartialSeparatedList: true, noMoreItems: true },
+                    madeProgress: false,
+                },
             ];
             if ('expected' in result) {
-                return parsesWithNoItems;
+                if ((parser as any).mustHaveItem) {
+                    return result;
+                } else {
+                    return parsesWithNoItems;
+                }
             }
-            const parsesWithNoMoreItemsNoSeparator =
+            const parsesWithNoMoreItemsNoSeparator: PotentialAstsResult<Node, Token>[] =
                 parser.trailing != 'required'
                     ? result.map(({ partial, madeProgress }) => ({
-                          partial: { item: partial },
+                          partial: {
+                              isPartialSeparatedList: true,
+                              item: partial,
+                              remainingItems: {
+                                  isPartialSeparatedList: true,
+                                  noMoreItems: true,
+                              },
+                          },
                           madeProgress,
                       }))
                     : [];
-            const parsesWithNoMoreItemsWithSeparator =
-                parser.trailing != 'never'
-                    ? result.map(({ partial, madeProgress }) => ({
-                          partial: { item: partial, separator: { rule: parser.separator } },
-                          madeProgress,
-                      }))
-                    : [];
-            const parsesWithMoreItems = result.map(({ partial, madeProgress }) => ({
-                partial: {
-                    item: partial,
-                    separator: { rule: parser.separator },
-                    remainingItems: { rule: parser },
-                    trailing: parser.trailing,
-                },
-                madeProgress,
-            }));
+            let parsesWithPotentiallyMoreItems: PotentialAstsResult<Node, Token>[] = [];
+            if (parser.trailing == 'never') {
+                parsesWithPotentiallyMoreItems = result.map(({ partial, madeProgress }) => ({
+                    partial: {
+                        isPartialSeparatedList: true,
+                        item: partial,
+                        separator: { rule: parser.separator },
+                        // Janky way of indicating that because there was a separator and this rule bans trailing separators, there must be another item.
+                        remainingItems: { rule: { ...parser, mustHaveItem: true } as any },
+                    },
+                    madeProgress,
+                }));
+            } else {
+                parsesWithPotentiallyMoreItems = result.map(({ partial, madeProgress }) => ({
+                    partial: {
+                        isPartialSeparatedList: true,
+                        item: partial,
+                        separator: { rule: parser.separator },
+                        remainingItems: { rule: parser },
+                    },
+                    madeProgress,
+                }));
+            }
             // NOTE: Need to handle the case where the token indicates that we could parse an item, but
             // the item after that indicates that we can't, and we need to successfully parse a zero item
             // separated list, followed by a successful parse of whatever comes next
             return [
                 ...parsesWithNoMoreItemsNoSeparator,
-                ...parsesWithNoMoreItemsWithSeparator,
-                ...parsesWithMoreItems,
+                ...parsesWithPotentiallyMoreItems,
                 ...parsesWithNoItems,
             ];
         }
@@ -434,8 +452,11 @@ const getRuleForNextEmptySlot = <Node, Token>(
             return enclosed;
         }
         return getRuleForNextEmptySlot(ast.right);
-    } else if ('separator' in ast) {
+    } else if ('isPartialSeparatedList' in ast) {
         // If the last item isn't finished, we need to finish it before looking for the separator
+        if ('noMoreItems' in ast) {
+            return undefined;
+        }
         const item = getRuleForNextEmptySlot(ast.item);
         if (item) {
             return item;
@@ -455,10 +476,6 @@ const getRuleForNextEmptySlot = <Node, Token>(
         }
         // Otherwise finish the next item
         return getRuleForNextEmptySlot(ast.remainingItems);
-    } else if ('item' in ast) {
-        return getRuleForNextEmptySlot(ast.item);
-    } else if ('emptySeparatedList' in ast) {
-        return undefined;
     } else if ('items' in ast) {
         // many
         // first try to finish any in-progress items
@@ -511,7 +528,10 @@ const replaceRuleForNextEmptySlotWithPartial = <Node, Token>(
             return true;
         }
         return replaceRuleForNextEmptySlotWithPartial(ast.right, replacement);
-    } else if ('separator' in ast) {
+    } else if ('isPartialSeparatedList' in ast) {
+        if ('noMoreItems' in ast) {
+            return false;
+        }
         if (replaceRuleForNextEmptySlotWithPartial(ast.item, replacement)) {
             return true;
         }
@@ -525,10 +545,6 @@ const replaceRuleForNextEmptySlotWithPartial = <Node, Token>(
             return false;
         }
         return replaceRuleForNextEmptySlotWithPartial(ast.remainingItems, replacement);
-    } else if ('item' in ast) {
-        return replaceRuleForNextEmptySlotWithPartial(ast.item, replacement);
-    } else if ('emptySeparatedList' in ast) {
-        return false;
     } else if ('items' in ast) {
         // Replace in the next in-progress item
         for (const item of ast.items) {
@@ -580,26 +596,23 @@ const partialAstToCompleteAst = <Node, Token>(
     } else if ('left' in ast) {
         // TODO: Return into about the separators? Maybe only if asked.
         return partialAstToCompleteAst(ast.enclosed);
-    } else if ('emptySeparatedList' in ast) {
-        return {
-            items: [],
-            separators: [],
-        };
     } else if ('present' in ast) {
         if (ast.present) {
             return { item: partialAstToCompleteAst(ast.item as any) } as any;
         } else {
             return { item: undefined } as any;
         }
-    } else if ('separator' in ast) {
+    } else if (ast.isPartialSeparatedList) {
         const flattenPartialSeparatedList = (list: PartialSeparatedList<Node, Token>) => {
-            if ('emptySeparatedList' in list) {
+            if ('noMoreItems' in list) {
                 return { items: [], separators: [] };
             }
             const item = partialAstToCompleteAst(list.item);
             const separator = list.separator ? [partialAstToCompleteAst(list.separator)] : [];
             const { items, separators } = list.remainingItems
-                ? flattenPartialSeparatedList(list.remainingItems)
+                ? flattenPartialSeparatedList(
+                      list.remainingItems as PartialSeparatedList<Node, Token>
+                  )
                 : { items: [], separators: [] };
             return { items: [item, ...items], separators: [...separator, ...separators] };
         };
@@ -708,11 +721,6 @@ export const parse = <Node extends string, Token>(
             return;
         }
         for (const newAst of newAsts) {
-            // Janky hack to prevent ambiguous parse for two represenations of no more items. TODO: Get rid of emptySeparatedList representation of no more items
-            if ('emptySeparatedList' in newAst.partial && tokens.length > 0) {
-                incompleteAsts.push(ast);
-                continue;
-            }
             const extended = deepCopy(ast);
             replaceRuleForNextEmptySlotWithPartial(extended, newAst.partial);
             potentialAsts.push(extended);

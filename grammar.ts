@@ -160,7 +160,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     program: Sequence<MplAstNode, MplToken>('program', ['functionBody']),
     argList: SeparatedList(comma, 'arg'),
     arg: Sequence('arg', [identifier, colon, 'type']),
-    functionBody: Many(Sequence('separatedStatement', ['statement', statementSeparator])),
+    functionBody: SeparatedList(statementSeparator, 'statement', 'required'),
     statement: OneOf([
         Sequence('declaration', [
             mplOptional(export_),

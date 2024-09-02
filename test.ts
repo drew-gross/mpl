@@ -145,18 +145,13 @@ test('ast for single number', t => {
                 items: [
                     {
                         sequenceItems: [
-                            {
-                                sequenceItems: [
-                                    { type: 'return', value: null },
-                                    { type: 'number', value: 7 },
-                                ],
-                                type: 'returnStatement',
-                            },
-                            { type: 'statementSeparator', value: null },
+                            { type: 'return', value: null },
+                            { type: 'number', value: 7 },
                         ],
-                        type: 'separatedStatement',
+                        type: 'returnStatement',
                     },
                 ],
+                separators: [{ type: 'statementSeparator', value: null }],
             },
         ],
         type: 'program',
@@ -178,24 +173,21 @@ test('ast for number in brackets', t => {
                         {
                             sequenceItems: [
                                 {
-                                    sequenceItems: [
-                                        {
-                                            type: 'return',
-                                            value: null,
-                                        },
-                                        {
-                                            type: 'number',
-                                            value: 5,
-                                        },
-                                    ],
-                                    type: 'returnStatement',
-                                },
-                                {
-                                    type: 'statementSeparator',
+                                    type: 'return',
                                     value: null,
                                 },
+                                {
+                                    type: 'number',
+                                    value: 5,
+                                },
                             ],
-                            type: 'separatedStatement',
+                            type: 'returnStatement',
+                        },
+                    ],
+                    separators: [
+                        {
+                            type: 'statementSeparator',
+                            value: null,
                         },
                     ],
                 },
@@ -215,24 +207,21 @@ test('ast for number in double brackets', t => {
                     {
                         sequenceItems: [
                             {
-                                sequenceItems: [
-                                    {
-                                        type: 'return',
-                                        value: null,
-                                    },
-                                    {
-                                        type: 'number',
-                                        value: 20,
-                                    },
-                                ],
-                                type: 'returnStatement',
-                            },
-                            {
-                                type: 'statementSeparator',
+                                type: 'return',
                                 value: null,
                             },
+                            {
+                                type: 'number',
+                                value: 20,
+                            },
                         ],
-                        type: 'separatedStatement',
+                        type: 'returnStatement',
+                    },
+                ],
+                separators: [
+                    {
+                        type: 'statementSeparator',
+                        value: null,
                     },
                 ],
             },
@@ -259,50 +248,47 @@ test('ast for product with brackets', t => {
                         {
                             sequenceItems: [
                                 {
+                                    type: 'return',
+                                    value: null,
+                                },
+                                {
                                     sequenceItems: [
                                         {
-                                            type: 'return',
+                                            type: 'number',
+                                            value: 3,
+                                        },
+                                        {
+                                            type: 'product',
                                             value: null,
                                         },
                                         {
                                             sequenceItems: [
                                                 {
                                                     type: 'number',
-                                                    value: 3,
+                                                    value: 4,
                                                 },
                                                 {
                                                     type: 'product',
                                                     value: null,
                                                 },
                                                 {
-                                                    sequenceItems: [
-                                                        {
-                                                            type: 'number',
-                                                            value: 4,
-                                                        },
-                                                        {
-                                                            type: 'product',
-                                                            value: null,
-                                                        },
-                                                        {
-                                                            type: 'number',
-                                                            value: 5,
-                                                        },
-                                                    ],
-                                                    type: 'binaryExpression',
+                                                    type: 'number',
+                                                    value: 5,
                                                 },
                                             ],
                                             type: 'binaryExpression',
                                         },
                                     ],
-                                    type: 'returnStatement',
-                                },
-                                {
-                                    type: 'statementSeparator',
-                                    value: null,
+                                    type: 'binaryExpression',
                                 },
                             ],
-                            type: 'separatedStatement',
+                            type: 'returnStatement',
+                        },
+                    ],
+                    separators: [
+                        {
+                            type: 'statementSeparator',
+                            value: null,
                         },
                     ],
                 },
@@ -320,106 +306,98 @@ test('ast for assignment then return', t => {
                     {
                         sequenceItems: [
                             {
+                                type: undefined,
+                                value: undefined,
+                            },
+                            {
+                                type: 'identifier',
+                                value: 'constThree',
+                            },
+                            {
+                                type: 'colon',
+                                value: null,
+                            },
+                            {
+                                type: undefined,
+                                value: undefined,
+                            },
+                            {
+                                type: 'assignment',
+                                value: null,
+                            },
+                            {
                                 sequenceItems: [
                                     {
                                         type: undefined,
                                         value: undefined,
                                     },
                                     {
-                                        type: 'identifier',
-                                        value: 'constThree',
-                                    },
-                                    {
-                                        type: 'colon',
-                                        value: null,
-                                    },
-                                    {
-                                        type: undefined,
-                                        value: undefined,
-                                    },
-                                    {
-                                        type: 'assignment',
-                                        value: null,
-                                    },
-                                    {
-                                        sequenceItems: [
+                                        items: [
                                             {
-                                                type: undefined,
-                                                value: undefined,
-                                            },
-                                            {
-                                                items: [
+                                                sequenceItems: [
+                                                    {
+                                                        type: 'identifier',
+                                                        value: 'a',
+                                                    },
+                                                    {
+                                                        type: 'colon',
+                                                        value: null,
+                                                    },
                                                     {
                                                         sequenceItems: [
                                                             {
-                                                                type: 'identifier',
-                                                                value: 'a',
-                                                            },
-                                                            {
-                                                                type: 'colon',
-                                                                value: null,
-                                                            },
-                                                            {
-                                                                sequenceItems: [
-                                                                    {
-                                                                        type: 'typeIdentifier',
-                                                                        value: 'Integer',
-                                                                    },
-                                                                ],
-                                                                type: 'typeWithoutArgs',
+                                                                type: 'typeIdentifier',
+                                                                value: 'Integer',
                                                             },
                                                         ],
-                                                        type: 'arg',
+                                                        type: 'typeWithoutArgs',
                                                     },
                                                 ],
-                                                separators: [],
-                                            },
-                                            {
-                                                type: undefined,
-                                                value: undefined,
-                                            },
-                                            {
-                                                type: 'fatArrow',
-                                                value: null,
-                                            },
-                                            {
-                                                type: 'number',
-                                                value: 3,
+                                                type: 'arg',
                                             },
                                         ],
-                                        type: 'function',
+                                        separators: [],
                                     },
-                                ],
-                                type: 'declaration',
-                            },
-                            {
-                                type: 'statementSeparator',
-                                value: null,
-                            },
-                        ],
-                        type: 'separatedStatement',
-                    },
-                    {
-                        sequenceItems: [
-                            {
-                                sequenceItems: [
                                     {
-                                        type: 'return',
+                                        type: undefined,
+                                        value: undefined,
+                                    },
+                                    {
+                                        type: 'fatArrow',
                                         value: null,
                                     },
                                     {
                                         type: 'number',
-                                        value: 10,
+                                        value: 3,
                                     },
                                 ],
-                                type: 'returnStatement',
-                            },
-                            {
-                                type: 'statementSeparator',
-                                value: null,
+                                type: 'function',
                             },
                         ],
-                        type: 'separatedStatement',
+                        type: 'declaration',
+                    },
+                    {
+                        sequenceItems: [
+                            {
+                                type: 'return',
+                                value: null,
+                            },
+                            {
+                                type: 'number',
+                                value: 10,
+                            },
+                        ],
+                        type: 'returnStatement',
+                    },
+                ],
+                separators: [
+                    {
+                        type: 'statementSeparator',
+                        value: null,
+                    },
+                    {
+                        type: 'statementSeparator',
+                        value: null,
                     },
                 ],
             },
@@ -452,11 +430,28 @@ test('parse for', t => {
                     {
                         sequenceItems: [
                             {
+                                type: 'for',
+                                value: null,
+                            },
+                            {
                                 sequenceItems: [
                                     {
-                                        type: 'for',
+                                        type: 'identifier',
+                                        value: 'a',
+                                    },
+                                    {
+                                        type: 'colon',
                                         value: null,
                                     },
+                                    {
+                                        type: 'identifier',
+                                        value: 'b',
+                                    },
+                                ],
+                                type: 'forCondition',
+                            },
+                            {
+                                items: [
                                     {
                                         sequenceItems: [
                                             {
@@ -464,7 +459,7 @@ test('parse for', t => {
                                                 value: 'a',
                                             },
                                             {
-                                                type: 'colon',
+                                                type: 'assignment',
                                                 value: null,
                                             },
                                             {
@@ -472,47 +467,24 @@ test('parse for', t => {
                                                 value: 'b',
                                             },
                                         ],
-                                        type: 'forCondition',
-                                    },
-                                    {
-                                        items: [
-                                            {
-                                                sequenceItems: [
-                                                    {
-                                                        sequenceItems: [
-                                                            {
-                                                                type: 'identifier',
-                                                                value: 'a',
-                                                            },
-                                                            {
-                                                                type: 'assignment',
-                                                                value: null,
-                                                            },
-                                                            {
-                                                                type: 'identifier',
-                                                                value: 'b',
-                                                            },
-                                                        ],
-                                                        type: 'reassignment',
-                                                    },
-                                                    {
-                                                        type: 'statementSeparator',
-                                                        value: null,
-                                                    },
-                                                ],
-                                                type: 'separatedStatement',
-                                            },
-                                        ],
+                                        type: 'reassignment',
                                     },
                                 ],
-                                type: 'forLoop',
-                            },
-                            {
-                                type: 'statementSeparator',
-                                value: null,
+                                separators: [
+                                    {
+                                        type: 'statementSeparator',
+                                        value: null,
+                                    },
+                                ],
                             },
                         ],
-                        type: 'separatedStatement',
+                        type: 'forLoop',
+                    },
+                ],
+                separators: [
+                    {
+                        type: 'statementSeparator',
+                        value: null,
                     },
                 ],
             },
@@ -529,26 +501,23 @@ test('lowering of bracketedExpressions', t => {
                 items: [
                     {
                         sequenceItems: [
+                            { type: 'return', value: null },
                             {
                                 sequenceItems: [
-                                    { type: 'return', value: null },
-                                    {
-                                        sequenceItems: [
-                                            { type: 'number', value: 8 },
-                                            { type: 'product', value: null },
-                                            { type: 'number', value: 7 },
-                                        ],
-                                        type: 'binaryExpression',
-                                    },
+                                    { type: 'number', value: 8 },
+                                    { type: 'product', value: null },
+                                    { type: 'number', value: 7 },
                                 ],
-                                type: 'returnStatement',
-                            },
-                            {
-                                type: 'statementSeparator',
-                                value: null,
+                                type: 'binaryExpression',
                             },
                         ],
-                        type: 'separatedStatement',
+                        type: 'returnStatement',
+                    },
+                ],
+                separators: [
+                    {
+                        type: 'statementSeparator',
+                        value: null,
                     },
                 ],
             },

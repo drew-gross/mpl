@@ -1524,34 +1524,21 @@ return isFive(5) ? 1 : 0;`,
                 {
                     items: [
                         {
-                            type: 'separatedStatement',
+                            type: 'returnStatement',
                             sequenceItems: [
                                 {
-                                    type: 'returnStatement',
+                                    type: 'return',
+                                    value: null,
+                                },
+                                {
+                                    type: 'binaryExpression',
                                     sequenceItems: [
-                                        {
-                                            type: 'return',
-                                            value: null,
-                                        },
                                         {
                                             type: 'binaryExpression',
                                             sequenceItems: [
                                                 {
-                                                    type: 'binaryExpression',
-                                                    sequenceItems: [
-                                                        {
-                                                            type: 'number',
-                                                            value: 3,
-                                                        },
-                                                        {
-                                                            type: 'product',
-                                                            value: null,
-                                                        },
-                                                        {
-                                                            type: 'number',
-                                                            value: 4,
-                                                        },
-                                                    ],
+                                                    type: 'number',
+                                                    value: 3,
                                                 },
                                                 {
                                                     type: 'product',
@@ -1559,17 +1546,27 @@ return isFive(5) ? 1 : 0;`,
                                                 },
                                                 {
                                                     type: 'number',
-                                                    value: 5,
+                                                    value: 4,
                                                 },
                                             ],
                                         },
+                                        {
+                                            type: 'product',
+                                            value: null,
+                                        },
+                                        {
+                                            type: 'number',
+                                            value: 5,
+                                        },
                                     ],
                                 },
-                                {
-                                    type: 'statementSeparator',
-                                    value: null,
-                                },
                             ],
+                        },
+                    ],
+                    separators: [
+                        {
+                            type: 'statementSeparator',
+                            value: null,
                         },
                     ],
                 },
