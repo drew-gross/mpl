@@ -1749,12 +1749,13 @@ const divvyIntoFunctions = (
             };
         }
         case 'functionLiteral': {
-            // TODO: Put the statements into a new function, thats the whole point...
             const recursed = ast.body.map(divvyIntoFunctions);
             const extractedFunctions = Object.assign({}, ...recursed.map(r => r.functions));
+            const id = `user_${idMaker()}`;
+            extractedFunctions[id] = { ...ast, body: recursed.map(r => r.updated).flat() };
             return {
                 functions: extractedFunctions,
-                updated: { ...ast, body: recursed.map(r => r.updated).flat() } as any,
+                updated: { ...ast, kind: 'identifier', value: id },
             };
         }
         case 'objectLiteral': {
@@ -1890,9 +1891,6 @@ const compile = (
         return { internalError: 'AST was not a program' };
     }
 
-    const fns = divvyMainIntoFunctions(ast);
-    fns[0];
-
     const exportedDeclarations = ast.statements.filter(
         s =>
             (s.kind == 'typedDeclarationAssignment' || s.kind == 'declarationAssignment') &&
@@ -1913,6 +1911,9 @@ const compile = (
             ],
         };
     }
+
+    const fns = divvyMainIntoFunctions(ast);
+    fns[0];
 
     const availableTypes = walkAst<TypeDeclaration, Ast.UninferredTypeDeclaration>(
         ast,
