@@ -19,6 +19,7 @@ import {
     builtinFunctions,
     TypeDeclaration,
     TypeReference,
+    Method,
 } from './types';
 import {
     Variable,
@@ -555,6 +556,7 @@ export const typeOfExpression = (
                     ({ name: varName }) => methodName == varName
                 );
                 if (!variable) {
+                    debugger;
                     return {
                         errors: [
                             {
@@ -710,7 +712,8 @@ export const typeOfExpression = (
                         ast.members.map(({ name, expression }) => ({
                             name,
                             type: (recurse(expression) as TOEResult).type,
-                        }))
+                        })),
+                        []
                     ),
                     original: { namedType: ast.typeName },
                 },
@@ -1291,12 +1294,32 @@ const parseTypeLiteralComponent = (ast: MplAst): ProductComponent => {
     };
 };
 
+const parseMethodDefinition = (ast: MplAst): Method => {
+    if (!('sequenceItems' in ast)) {
+        throw debug('todo');
+    }
+    const [name, args, _statements, _sep] = ast.sequenceItems;
+    // TODO: Use the statements actually
+    return {
+        name: (name as any).value,
+        function: {
+            type: {
+                kind: 'Function',
+                permissions: [],
+                arguments: ['ImplicitThis', ...(args as any).items.map(astFromParseResult)],
+                returnType: builtinTypes.Boolean,
+            },
+            methods: [],
+        },
+    };
+};
+
 const parseType = (ast: MplAst): Type | TypeReference => {
     if (isSeparatedListNode(ast)) {
         throw debug('todo');
     }
     if (isListNode(ast)) {
-        return Product(ast.items.map(parseTypeLiteralComponent));
+        return Product(ast.items.map(parseTypeLiteralComponent), []);
     }
     switch (ast.type) {
         case 'typeWithArgs': {
@@ -1335,11 +1358,18 @@ const parseType = (ast: MplAst): Type | TypeReference => {
             return List({ type: { kind: node.value as any }, methods: [] });
         }
         case 'typeLiteral': {
-            const [members, _methods] = ast.sequenceItems;
+            const [members, methods] = ast.sequenceItems;
+            debugger;
             if (!isListNode(members)) {
                 throw debug('expected a list');
             }
-            return Product(members.items.map(parseTypeLiteralComponent));
+            if (!isListNode(methods)) {
+                throw debug('expected a list');
+            }
+            return Product(
+                members.items.map(parseTypeLiteralComponent),
+                methods.items.map(parseMethodDefinition)
+            );
         }
         default:
             throw debug(`${ast.type} unhandled in parseType`);

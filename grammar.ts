@@ -199,7 +199,7 @@ export const grammar: Grammar<MplAstNode, MplToken> = {
     methodDefinition: Sequence('methodDefinition', [
         identifier,
         NestedIn(rounds, 'argList'),
-        'functionBody',
+        'block',
         statementSeparator,
     ]),
     objectLiteral: Sequence('objectLiteral', [

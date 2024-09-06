@@ -920,19 +920,25 @@ test('type of objectLiteral', t => {
         availableTypes: [
             {
                 name: 'BoolPair',
-                type: Product([
-                    { name: 'first', type: builtinTypes.Boolean },
-                    { name: 'second', type: builtinTypes.Boolean },
-                ]),
+                type: Product(
+                    [
+                        { name: 'first', type: builtinTypes.Boolean },
+                        { name: 'second', type: builtinTypes.Boolean },
+                    ],
+                    []
+                ),
             },
         ],
     });
     const expectedType = {
         type: {
-            ...Product([
-                { name: 'first', type: builtinTypes.Boolean },
-                { name: 'second', type: builtinTypes.Boolean },
-            ]),
+            ...Product(
+                [
+                    { name: 'first', type: builtinTypes.Boolean },
+                    { name: 'second', type: builtinTypes.Boolean },
+                ],
+                []
+            ),
             original: { namedType: 'BoolPair' },
         },
         extractedFunctions: [],
@@ -942,14 +948,20 @@ test('type of objectLiteral', t => {
 
 // TODO: rethink how product types work
 test.failing('no structural typing', t => {
-    const leftType = Product([
-        { name: 'first', type: builtinTypes.Boolean },
-        { name: 'second', type: builtinTypes.Boolean },
-    ]);
-    const rightType = Product([
-        { name: 'first', type: builtinTypes.Boolean },
-        { name: 'second', type: builtinTypes.Boolean },
-    ]);
+    const leftType = Product(
+        [
+            { name: 'first', type: builtinTypes.Boolean },
+            { name: 'second', type: builtinTypes.Boolean },
+        ],
+        []
+    );
+    const rightType = Product(
+        [
+            { name: 'first', type: builtinTypes.Boolean },
+            { name: 'second', type: builtinTypes.Boolean },
+        ],
+        []
+    );
     t.assert(!typesAreEqual(leftType, rightType));
 });
 

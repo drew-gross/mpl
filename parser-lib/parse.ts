@@ -235,8 +235,9 @@ type PartialOptional<Node, Token> = {
 type EmptySlot<Node, Token> = {
     rule: Parser<Node, Token>;
 };
-type ExpectedToken<Token> = {
+type ExpectedToken<Node, Token> = {
     expected: Token | 'endOfFile';
+    forParser: Parser<Node, Token>;
 };
 
 type PotentialAstsResult<Node, Token> = {
@@ -247,13 +248,13 @@ const getPotentialAsts = <Node extends string, Token>(
     grammar: Grammar<Node, Token>,
     parser: Parser<Node, Token>,
     token: LToken<Token> | 'endOfFile'
-): PotentialAstsResult<Node, Token>[] | ExpectedToken<Token> => {
+): PotentialAstsResult<Node, Token>[] | ExpectedToken<Node, Token> => {
     if (parser === undefined) throw debug('bad parser');
     if (typeof parser == 'string') return getPotentialAsts(grammar, grammar[parser], token);
     switch (parser.kind) {
         case 'terminal':
             if (token === 'endOfFile') {
-                return { expected: parser.token };
+                return { expected: parser.token, forParser: parser };
             }
             if (parser.token === token.type) {
                 return [
@@ -263,7 +264,7 @@ const getPotentialAsts = <Node extends string, Token>(
                     },
                 ];
             } else {
-                return { expected: parser.token };
+                return { expected: parser.token, forParser: parser };
             }
         case 'many': {
             const result = getPotentialAsts(grammar, parser.item, token);
@@ -284,7 +285,7 @@ const getPotentialAsts = <Node extends string, Token>(
             return [...parsesWithMoreItems, ...parsesWithNoItems];
         }
         case 'oneOf':
-            let error: ExpectedToken<Token> | undefined = undefined;
+            let error: ExpectedToken<Node, Token> | undefined = undefined;
             const partials: PotentialAstsResult<Node, Token>[] = [];
             for (const p of parser.parsers) {
                 const result = getPotentialAsts(grammar, p, token);
@@ -631,14 +632,14 @@ const applyTokenToPartialParse = <Node, Token>(
     grammar: Grammar<Node, Token>,
     partial: PartialAst<Node, Token>,
     token: LToken<Token>
-): { errors: ExpectedToken<Token>[]; partials: PartialAst<Node, Token>[] } => {
+): { errors: ExpectedToken<Node, Token>[]; partials: PartialAst<Node, Token>[] } => {
     const partials: PartialAst<Node, Token>[] = [];
     let rule = getRuleForNextEmptySlot(partial);
     if (!rule) {
-        return { errors: [{ expected: 'endOfFile' }], partials };
+        return { errors: [{ expected: 'endOfFile', forParser: 'TODO' as any }], partials };
     }
     const result = getPotentialAsts(grammar, rule, token);
-    let errors: ExpectedToken<Token>[] = [];
+    let errors: ExpectedToken<Node, Token>[] = [];
     // Couldn't find any valid continuations: Must be an error
     if ('expected' in result) {
         errors.push(result);
@@ -683,7 +684,7 @@ export const parse = <Node extends string, Token>(
     if (!ruleParser) throw debug(`invalid rule name: ${rule}`);
     let potentialAsts: PartialAst<Node, Token>[] = [{ rule: ruleParser }] as any;
     for (const token of tokens) {
-        const errors: ExpectedToken<Token>[] = [];
+        const errors: ExpectedToken<Node, Token>[] = [];
         const partials: PartialAst<Node, Token>[] = [];
         for (const potentialAst of potentialAsts) {
             const { errors: newErrors, partials: newPartials } = applyTokenToPartialParse(

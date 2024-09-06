@@ -66,6 +66,9 @@ export const resolve = (
     availableTypes,
     sourceLocation
 ): Type | { errors: TypeError[]; newVariables: Variable[] } => {
+    if ((unresolved as any) == 'ImplicitThis') {
+        throw debug('need resolving for methods');
+    }
     if (!('namedType' in unresolved)) {
         return unresolved;
     }
@@ -137,7 +140,10 @@ export const equal = (a: Type, b: Type): boolean => {
     return a.type.kind == b.type.kind;
 };
 
-export const Product = (members): Type => ({ type: { kind: 'Product', members }, methods: [] });
+export const Product = (members, methods): Type => ({
+    type: { kind: 'Product', members },
+    methods,
+});
 
 export const Function = (args, permissions, returnType): Type => ({
     type: { kind: 'Function', arguments: args, permissions, returnType },

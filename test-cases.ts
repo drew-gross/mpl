@@ -516,7 +516,7 @@ return isFive(5) ? 1 : 0;`,
                 first: Integer;
                 second: Integer;
                 firstPlusSecond() {
-                    retrun this.first + this.second;
+                    return this.first + this.second;
                 };
             };
             ip: IntPair = IntPair { first: 3, second: 7, };
@@ -531,7 +531,7 @@ return isFive(5) ? 1 : 0;`,
                 first: Integer;
                 second: Integer;
                 firstPlusSecondPlusArg(addThis: Integer) {
-                    retrun this.first + this.second;
+                    return this.first + this.second;
                 };
             };
             ip: IntPair = IntPair { first: 3, second: 7, };
