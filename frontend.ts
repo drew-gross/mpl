@@ -1,3 +1,4 @@
+import { zipWith } from 'lodash';
 import uniqueBy from './util/list/uniqueBy';
 import idMaker from './util/idMaker';
 import last from './util/list/last';
@@ -1359,7 +1360,6 @@ const parseType = (ast: MplAst): Type | TypeReference => {
         }
         case 'typeLiteral': {
             const [members, methods] = ast.sequenceItems;
-            debugger;
             if (!isListNode(members)) {
                 throw debug('expected a list');
             }
@@ -1686,6 +1686,180 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
     }
 };
 
+const divvyIntoFunctions = (
+    ast: Ast.UninferredAst
+): { functions: Map<String, Ast.UninferredFunctionLiteral>; updated: Ast.UninferredAst } => {
+    switch (ast.kind) {
+        case 'number':
+        case 'identifier':
+        case 'booleanLiteral':
+        case 'stringLiteral':
+            return { functions: new Map(), updated: ast };
+        case 'typeDeclaration':
+            // TODO: recurse into methods
+            return { functions: new Map(), updated: ast };
+        case 'reassignment':
+        case 'typedDeclarationAssignment':
+        case 'declarationAssignment':
+        case 'returnStatement': {
+            const recursed = divvyIntoFunctions(ast.expression);
+            return {
+                functions: recursed.functions,
+                updated: { ...ast, expression: recursed.updated } as any,
+            };
+        }
+        case 'concatenation':
+        case 'equality':
+        case 'subtraction':
+        case 'product':
+        case 'addition': {
+            const lhsRecurse = divvyIntoFunctions(ast.lhs);
+            const rhsRecurse = divvyIntoFunctions(ast.rhs);
+            const extractedFunctions = { ...lhsRecurse.functions, ...rhsRecurse.functions };
+            return {
+                functions: extractedFunctions,
+                updated: { ...ast, lhs: lhsRecurse.updated, rhs: rhsRecurse.updated } as any,
+            };
+        }
+        case 'ternary': {
+            const conditionRecursed = divvyIntoFunctions(ast.condition);
+            const ifTrueRecursed = divvyIntoFunctions(ast.ifTrue);
+            const ifFalseRecursed = divvyIntoFunctions(ast.ifFalse);
+            const extractedFunctions = {
+                ...conditionRecursed.functions,
+                ...ifTrueRecursed.functions,
+                ...ifFalseRecursed.functions,
+            };
+            return {
+                functions: extractedFunctions,
+                updated: {
+                    ...ast,
+                    condition: conditionRecursed.updated,
+                    ifTrue: ifTrueRecursed.updated,
+                    ifFalse: ifFalseRecursed.updated,
+                } as any,
+            };
+        }
+        case 'callExpression': {
+            const recursed = ast.arguments.map(divvyIntoFunctions);
+            const extractedFunctions = Object.assign({}, ...recursed.map(r => r.functions));
+            return {
+                functions: extractedFunctions,
+                updated: { ...ast, arguments: recursed.map(r => r.updated).flat() } as any,
+            };
+        }
+        case 'functionLiteral': {
+            // TODO: Put the statements into a new function, thats the whole point...
+            const recursed = ast.body.map(divvyIntoFunctions);
+            const extractedFunctions = Object.assign({}, ...recursed.map(r => r.functions));
+            return {
+                functions: extractedFunctions,
+                updated: { ...ast, body: recursed.map(r => r.updated).flat() } as any,
+            };
+        }
+        case 'objectLiteral': {
+            const recursed = ast.members.map(m => m.expression).map(divvyIntoFunctions);
+            const extractedFunctions = Object.assign({}, ...recursed.map(r => r.functions));
+            const reassembledMembers = zipWith(ast.members, recursed, (m, r) => ({
+                ...m,
+                expression: r.updated,
+            }));
+            return {
+                functions: extractedFunctions,
+                updated: { ...ast, members: reassembledMembers },
+            };
+        }
+        case 'listLiteral': {
+            const recursed = ast.items.map(divvyIntoFunctions);
+            const extractedFunctions = Object.assign({}, ...recursed.map(r => r.functions));
+            return {
+                functions: extractedFunctions,
+                updated: { ...ast, items: recursed.map(r => r.updated) as any },
+            };
+        }
+        case 'forLoop': {
+            const listRecursed = divvyIntoFunctions(ast.list);
+            const bodyRecursed = ast.body.map(divvyIntoFunctions);
+            const extractedFunctions = Object.assign(
+                {},
+                listRecursed.functions,
+                ...bodyRecursed.map(r => r.functions)
+            );
+            return {
+                functions: extractedFunctions,
+                updated: {
+                    ...ast,
+                    list: listRecursed.updated,
+                    body: bodyRecursed.map(r => r.updated) as any,
+                } as any,
+            };
+        }
+        case 'indexAccess': {
+            const indexRecursed = divvyIntoFunctions(ast.index);
+            const accessedRecursed = divvyIntoFunctions(ast.accessed);
+            const extractedFunctions = {
+                ...indexRecursed.functions,
+                ...accessedRecursed.functions,
+            };
+            return {
+                functions: extractedFunctions,
+                updated: {
+                    ...ast,
+                    index: indexRecursed.updated,
+                    accessed: accessedRecursed.updated,
+                } as any,
+            };
+        }
+        case 'memberAccess': {
+            const recursed = divvyIntoFunctions(ast.lhs);
+            return {
+                functions: recursed.functions,
+                updated: { ...ast, lhs: recursed.updated } as any,
+            };
+        }
+        case 'memberStyleCall': {
+            const lhsRecursed = divvyIntoFunctions(ast.lhs);
+            const paramsRecursed = ast.params.map(divvyIntoFunctions);
+            const extractedFunctions = Object.assign(
+                {},
+                lhsRecursed.functions,
+                ...paramsRecursed.map(r => r.functions)
+            );
+            return {
+                functions: extractedFunctions,
+                updated: {
+                    ...ast,
+                    lhs: lhsRecursed.updated as any,
+                    params: paramsRecursed.map(r => r.updated) as any,
+                },
+            };
+        }
+        case 'program': {
+            const recursed = ast.statements.map(divvyIntoFunctions);
+            const mainStatements = recursed.map(r => r.updated).flat();
+            const extractedFunctions = Object.assign({}, ...recursed.map(r => r.functions));
+            return {
+                functions: extractedFunctions,
+                updated: { ...ast, statements: mainStatements as any },
+            };
+        }
+    }
+};
+
+const divvyMainIntoFunctions = (
+    ast: Ast.UninferredAst
+): Map<String, Ast.UninferredFunctionLiteral> => {
+    const { functions, updated } = divvyIntoFunctions(ast);
+    functions['builtin_main'] = {
+        kind: 'functionLiteral',
+        deanonymizedName: 'builtin_main',
+        body: updated as any,
+        parameters: [],
+        sourceLocation: ast.sourceLocation,
+    };
+    return functions;
+};
+
 const compile = (
     source: string
 ):
@@ -1715,6 +1889,9 @@ const compile = (
     if (ast.kind !== 'program') {
         return { internalError: 'AST was not a program' };
     }
+
+    const fns = divvyMainIntoFunctions(ast);
+    fns[0];
 
     const exportedDeclarations = ast.statements.filter(
         s =>

@@ -272,6 +272,7 @@ export type UninferredConcatenation = {
     rhs: UninferredExpression;
 };
 
+// TODO: merge this with TypedDeclarationAssignment, make "requested" type optional
 export type UninferredDeclarationAssignment = {
     kind: 'declarationAssignment';
     sourceLocation: SourceLocation;

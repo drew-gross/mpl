@@ -55,7 +55,8 @@ export const toString = (type: Type): string => {
         case 'List':
             return `${toString(type.type.of)}[]`;
         default:
-            throw debug(`Unhandled kindpi in type toString: ${(type.type as any).kind}`);
+            // Seems like this is where user-defined types end up? Shouldn't be.
+            return (type.type as any).kind;
     }
 };
 
