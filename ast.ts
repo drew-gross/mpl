@@ -85,7 +85,7 @@ export type FunctionCall = {
 export type FunctionLiteral = {
     kind: 'functionLiteral';
     sourceLocation: SourceLocation;
-    deanonymizedName: string;
+    deanonymizedName: string; // TODO: remove this
 };
 
 export type Statement = TypedDeclarationAssignment | Reassignment | ReturnStatement | ForLoop;
@@ -239,7 +239,7 @@ export type UninferredMemberAccess = {
 export type UninferredFunctionLiteral = {
     kind: 'functionLiteral';
     sourceLocation: SourceLocation;
-    deanonymizedName: string;
+    deanonymizedName: string; // TODO: remove this
     body: UninferredStatement[];
     parameters: Variable[];
 };

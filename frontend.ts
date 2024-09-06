@@ -1687,8 +1687,10 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
 };
 
 const divvyIntoFunctions = (
+    makeId,
     ast: Ast.UninferredAst
 ): { functions: Map<String, Ast.UninferredFunctionLiteral>; updated: Ast.UninferredAst } => {
+    const recurse = x => divvyIntoFunctions(makeId, x);
     switch (ast.kind) {
         case 'number':
         case 'identifier':
@@ -1702,7 +1704,7 @@ const divvyIntoFunctions = (
         case 'typedDeclarationAssignment':
         case 'declarationAssignment':
         case 'returnStatement': {
-            const recursed = divvyIntoFunctions(ast.expression);
+            const recursed = recurse(ast.expression);
             return {
                 functions: recursed.functions,
                 updated: { ...ast, expression: recursed.updated } as any,
@@ -1713,8 +1715,8 @@ const divvyIntoFunctions = (
         case 'subtraction':
         case 'product':
         case 'addition': {
-            const lhsRecurse = divvyIntoFunctions(ast.lhs);
-            const rhsRecurse = divvyIntoFunctions(ast.rhs);
+            const lhsRecurse = recurse(ast.lhs);
+            const rhsRecurse = recurse(ast.rhs);
             const extractedFunctions = { ...lhsRecurse.functions, ...rhsRecurse.functions };
             return {
                 functions: extractedFunctions,
@@ -1722,9 +1724,9 @@ const divvyIntoFunctions = (
             };
         }
         case 'ternary': {
-            const conditionRecursed = divvyIntoFunctions(ast.condition);
-            const ifTrueRecursed = divvyIntoFunctions(ast.ifTrue);
-            const ifFalseRecursed = divvyIntoFunctions(ast.ifFalse);
+            const conditionRecursed = recurse(ast.condition);
+            const ifTrueRecursed = recurse(ast.ifTrue);
+            const ifFalseRecursed = recurse(ast.ifFalse);
             const extractedFunctions = {
                 ...conditionRecursed.functions,
                 ...ifTrueRecursed.functions,
@@ -1741,7 +1743,7 @@ const divvyIntoFunctions = (
             };
         }
         case 'callExpression': {
-            const recursed = ast.arguments.map(divvyIntoFunctions);
+            const recursed = ast.arguments.map(recurse);
             const extractedFunctions = Object.assign({}, ...recursed.map(r => r.functions));
             return {
                 functions: extractedFunctions,
@@ -1749,9 +1751,9 @@ const divvyIntoFunctions = (
             };
         }
         case 'functionLiteral': {
-            const recursed = ast.body.map(divvyIntoFunctions);
+            const recursed = ast.body.map(recurse);
             const extractedFunctions = Object.assign({}, ...recursed.map(r => r.functions));
-            const id = `user_${idMaker()}`;
+            const id = `user_${makeId()}`;
             extractedFunctions[id] = { ...ast, body: recursed.map(r => r.updated).flat() };
             return {
                 functions: extractedFunctions,
@@ -1759,7 +1761,7 @@ const divvyIntoFunctions = (
             };
         }
         case 'objectLiteral': {
-            const recursed = ast.members.map(m => m.expression).map(divvyIntoFunctions);
+            const recursed = ast.members.map(m => m.expression).map(recurse);
             const extractedFunctions = Object.assign({}, ...recursed.map(r => r.functions));
             const reassembledMembers = zipWith(ast.members, recursed, (m, r) => ({
                 ...m,
@@ -1771,7 +1773,7 @@ const divvyIntoFunctions = (
             };
         }
         case 'listLiteral': {
-            const recursed = ast.items.map(divvyIntoFunctions);
+            const recursed = ast.items.map(recurse);
             const extractedFunctions = Object.assign({}, ...recursed.map(r => r.functions));
             return {
                 functions: extractedFunctions,
@@ -1779,8 +1781,8 @@ const divvyIntoFunctions = (
             };
         }
         case 'forLoop': {
-            const listRecursed = divvyIntoFunctions(ast.list);
-            const bodyRecursed = ast.body.map(divvyIntoFunctions);
+            const listRecursed = recurse(ast.list);
+            const bodyRecursed = ast.body.map(recurse);
             const extractedFunctions = Object.assign(
                 {},
                 listRecursed.functions,
@@ -1796,8 +1798,8 @@ const divvyIntoFunctions = (
             };
         }
         case 'indexAccess': {
-            const indexRecursed = divvyIntoFunctions(ast.index);
-            const accessedRecursed = divvyIntoFunctions(ast.accessed);
+            const indexRecursed = recurse(ast.index);
+            const accessedRecursed = recurse(ast.accessed);
             const extractedFunctions = {
                 ...indexRecursed.functions,
                 ...accessedRecursed.functions,
@@ -1812,15 +1814,15 @@ const divvyIntoFunctions = (
             };
         }
         case 'memberAccess': {
-            const recursed = divvyIntoFunctions(ast.lhs);
+            const recursed = recurse(ast.lhs);
             return {
                 functions: recursed.functions,
                 updated: { ...ast, lhs: recursed.updated } as any,
             };
         }
         case 'memberStyleCall': {
-            const lhsRecursed = divvyIntoFunctions(ast.lhs);
-            const paramsRecursed = ast.params.map(divvyIntoFunctions);
+            const lhsRecursed = recurse(ast.lhs);
+            const paramsRecursed = ast.params.map(recurse);
             const extractedFunctions = Object.assign(
                 {},
                 lhsRecursed.functions,
@@ -1836,7 +1838,7 @@ const divvyIntoFunctions = (
             };
         }
         case 'program': {
-            const recursed = ast.statements.map(divvyIntoFunctions);
+            const recursed = ast.statements.map(recurse);
             const mainStatements = recursed.map(r => r.updated).flat();
             const extractedFunctions = Object.assign({}, ...recursed.map(r => r.functions));
             return {
@@ -1850,11 +1852,11 @@ const divvyIntoFunctions = (
 const divvyMainIntoFunctions = (
     ast: Ast.UninferredAst
 ): Map<String, Ast.UninferredFunctionLiteral> => {
-    const { functions, updated } = divvyIntoFunctions(ast);
+    const { functions, updated } = divvyIntoFunctions(idMaker(), ast);
     functions['builtin_main'] = {
         kind: 'functionLiteral',
         deanonymizedName: 'builtin_main',
-        body: updated as any,
+        body: (updated as any).statements,
         parameters: [],
         sourceLocation: ast.sourceLocation,
     };
@@ -1911,23 +1913,22 @@ const compile = (
             ],
         };
     }
-
-    const fns = divvyMainIntoFunctions(ast);
-    fns[0];
-
     const availableTypes = walkAst<TypeDeclaration, Ast.UninferredTypeDeclaration>(
         ast,
         ['typeDeclaration'],
         n => n
     );
 
+    const fns = divvyMainIntoFunctions(ast);
     let availableVariables = builtinFunctions;
-    const program: UninferredFunction = {
-        name: 'main_program',
-        statements: ast.statements,
-        variables: extractVariables({ w: ast.statements, availableVariables, availableTypes }),
-        parameters: [],
-    };
+
+    const fns2 = Object.fromEntries(
+        Object.entries(fns).map(([key, value]) => [
+            key,
+            functionObjectFromAst({ w: value, availableVariables, availableTypes }),
+        ])
+    );
+    fns2.clear;
 
     const functions = walkAst<UninferredFunction, Ast.UninferredFunctionLiteral>(
         ast,
@@ -1935,14 +1936,41 @@ const compile = (
         astNode => functionObjectFromAst({ w: astNode, availableVariables, availableTypes })
     );
 
+    let availableVariables2: Variable[] = [
+        ...builtinFunctions,
+        ...Object.entries(functions).map(([key, f]) => {
+            const inferred = inferFunction({
+                w: f,
+                availableTypes,
+                availableVariables: builtinFunctions,
+            });
+            if (Array.isArray(inferred)) {
+                // todo: handle type errors here
+                return undefined as any;
+            }
+            return {
+                name: key,
+                type: FunctionType(inferred.parameters, [], inferred.returnType),
+                exported: false,
+            };
+        }),
+    ];
+    availableVariables2;
+
     const stringLiteralIdMaker = idMaker();
     const nonUniqueStringLiterals = walkAst<StringLiteralData, Ast.StringLiteral>(
         ast,
         ['stringLiteral'],
         (astNode: Ast.StringLiteral) => ({ id: stringLiteralIdMaker(), value: astNode.value })
     );
-
     const stringLiterals: StringLiteralData[] = uniqueBy(s => s.value, nonUniqueStringLiterals);
+
+    const program: UninferredFunction = {
+        name: 'main_program',
+        statements: ast.statements,
+        variables: extractVariables({ w: ast.statements, availableVariables, availableTypes }),
+        parameters: [],
+    };
     const programTypeCheck = typeCheckFunction({
         w: program,
         availableVariables,
