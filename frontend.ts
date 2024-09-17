@@ -28,7 +28,6 @@ import {
     UninferredFunction,
     FrontendOutput,
     StringLiteralData,
-    ExportedVariable,
 } from './api';
 import { TypeError } from './TypeError';
 import * as Ast from './ast';
@@ -499,7 +498,7 @@ export const typeOfExpression = (
             }
             for (let i = 0; i < argTypes.length; i++) {
                 const resolved = resolve(
-                    functionType.type.arguments[i],
+                    (functionType.type.arguments[i] as any).type,
                     ctx.availableTypes,
                     ast.sourceLocation
                 );
@@ -1863,6 +1862,48 @@ const divvyMainIntoFunctions = (
     return functions;
 };
 
+// Converts UninferredFunctions in untypedFunctions to variables and adds them to typedVariables and typedFunctions (all arguments excpet 1st modified)
+// TODO: Old version only added to functions. Should these be split? Probably?
+const inferFunctions = (
+    availableTypes,
+    typedVariables: Variable[],
+    typedFunctions: Function[],
+    untypedFunctions: Map<String, Ast.UninferredFunctionLiteral>,
+): TypeError[] => {
+    let anythingChanged = true;
+    const typeErrors: TypeError[] = [];
+    while (anythingChanged) {
+        anythingChanged = false;
+        for (const [name, fn] of Object.entries(untypedFunctions)) {
+            const fnObj = functionObjectFromAst({ w: fn, availableVariables: typedVariables, availableTypes });
+            const inferred = inferFunction({
+                w: fnObj,
+                availableTypes,
+                availableVariables: typedVariables,
+            });
+            if (Array.isArray(inferred)) {
+                // todo: handle type errors here
+                throw debug('type errors we arent ready for');
+            }
+            inferred.name = name;// TODO: Make this less jank when refactoring mangled names, deanonymized names, etc.
+            typedVariables.push({
+                name,
+                type: FunctionType(inferred.parameters, [], inferred.returnType),
+                exported: false,
+            });
+            typedFunctions.push(inferred);
+            delete untypedFunctions[name];
+            anythingChanged = true;
+            typeErrors.push(...typeCheckFunction({ w: fnObj, availableVariables: typedVariables, availableTypes }).typeErrors);
+        }
+    }
+    if (Object.entries(untypedFunctions).length == 0) {
+        return typeErrors;
+    } else {
+        throw debug("failed to infer a function");
+    }
+}
+
 const compile = (
     source: string
 ):
@@ -1919,43 +1960,13 @@ const compile = (
         n => n
     );
 
-    const fns = divvyMainIntoFunctions(ast);
-    let availableVariables = builtinFunctions;
-
-    const fns2 = Object.fromEntries(
-        Object.entries(fns).map(([key, value]) => [
-            key,
-            functionObjectFromAst({ w: value, availableVariables, availableTypes }),
-        ])
-    );
-    fns2.clear;
-
-    const functions = walkAst<UninferredFunction, Ast.UninferredFunctionLiteral>(
-        ast,
-        ['functionLiteral'],
-        astNode => functionObjectFromAst({ w: astNode, availableVariables, availableTypes })
-    );
-
-    let availableVariables2: Variable[] = [
-        ...builtinFunctions,
-        ...Object.entries(functions).map(([key, f]) => {
-            const inferred = inferFunction({
-                w: f,
-                availableTypes,
-                availableVariables: builtinFunctions,
-            });
-            if (Array.isArray(inferred)) {
-                // todo: handle type errors here
-                return undefined as any;
-            }
-            return {
-                name: key,
-                type: FunctionType(inferred.parameters, [], inferred.returnType),
-                exported: false,
-            };
-        }),
-    ];
-    availableVariables2;
+    const untypedFunctions = divvyMainIntoFunctions(ast);
+    const typedVariables: Variable[] = [];
+    const typedFunctions: Function[] = [];
+    const typeErrors = inferFunctions(availableTypes, typedVariables, typedFunctions, untypedFunctions);
+    if (typeErrors.length > 0) {
+        return { typeErrors };
+    }
 
     const stringLiteralIdMaker = idMaker();
     const nonUniqueStringLiterals = walkAst<StringLiteralData, Ast.StringLiteral>(
@@ -1965,104 +1976,28 @@ const compile = (
     );
     const stringLiterals: StringLiteralData[] = uniqueBy(s => s.value, nonUniqueStringLiterals);
 
-    const program: UninferredFunction = {
-        name: 'main_program',
-        statements: ast.statements,
-        variables: extractVariables({ w: ast.statements, availableVariables, availableTypes }),
-        parameters: [],
-    };
-    const programTypeCheck = typeCheckFunction({
-        w: program,
-        availableVariables,
-        availableTypes,
-    });
-    availableVariables = mergeDeclarations(availableVariables, programTypeCheck.identifiers);
-
-    const typeErrors: TypeError[][] = functions.map(
-        f => typeCheckFunction({ w: f, availableVariables, availableTypes }).typeErrors
-    );
-    typeErrors.push(programTypeCheck.typeErrors);
-
-    let flatTypeErrors: TypeError[] = typeErrors.flat();
-    if (flatTypeErrors.length > 0) {
-        return { typeErrors: flatTypeErrors };
+    const main = typedFunctions.find(f => f.name == 'builtin_main');
+    if (!main) {
+        throw debug("no main");
     }
 
-    const typedFunctions: Function[] = [];
-    functions.forEach(f => {
-        const functionOrTypeError = inferFunction({ w: f, availableVariables, availableTypes });
-        if (isTypeError(functionOrTypeError)) {
-            typeErrors.push(functionOrTypeError);
-        } else {
-            typedFunctions.push({
-                ...f,
-                returnType: functionOrTypeError.returnType,
-                statements: f.statements.map(s =>
-                    infer({
-                        w: s,
-                        availableVariables: mergeDeclarations(availableVariables, f.variables),
-                        availableTypes,
-                    })
-                ) as Ast.Statement[],
-            });
-        }
-    });
-
-    flatTypeErrors = typeErrors.flat();
-    if (flatTypeErrors.length > 0) {
-        return { typeErrors: flatTypeErrors };
-    }
-
-    const globalDeclarations: Variable[] = program.statements
-        .filter(
-            s => s.kind === 'typedDeclarationAssignment' || s.kind === 'declarationAssignment'
-        )
+    const globalDeclarations: Variable[] = main.statements
+        .filter(s => s.kind === 'typedDeclarationAssignment')
         .map(assignment =>
             assignmentToGlobalDeclaration({
                 w: assignment as any,
-                availableVariables,
+                availableVariables: [...builtinFunctions, ...typedVariables, ...main.variables],
                 availableTypes,
             })
         );
-    let inferredProgram: Function | ExportedVariable[] | undefined = undefined;
 
-    if (exportedDeclarations.length == 0) {
-        const maybeInferredProgram = inferFunction({
-            w: program,
-            availableVariables,
-            availableTypes,
-        });
-        if (isTypeError(maybeInferredProgram)) {
-            return { typeErrors: maybeInferredProgram };
-        }
-        inferredProgram = maybeInferredProgram;
-
-        if (!typesAreEqual(inferredProgram.returnType, builtinTypes.Integer)) {
-            const returnStatement = last(inferredProgram.statements);
-            return {
-                typeErrors: [
-                    {
-                        kind: 'wrongTypeReturn',
-                        expressionType: inferredProgram.returnType,
-                        sourceLocation: returnStatement
-                            ? returnStatement.sourceLocation
-                            : { line: 1, column: 1 },
-                    },
-                ],
-            };
-        }
-    } else {
-        inferredProgram = globalDeclarations.map(d => ({
-            exportedName: d.name,
-            declaredName: d.mangledName || '',
-        }));
-    }
-
+    // Get the function literals we gave names to into the declaration
+    globalDeclarations.push(...typedVariables);
     return {
         types: availableTypes,
-        functions: typedFunctions,
+        functions: typedFunctions.filter(f => f.name != 'builtin_main'),
         builtinFunctions,
-        program: inferredProgram,
+        program: main,
         globalDeclarations,
         stringLiterals,
     };

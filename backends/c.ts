@@ -39,7 +39,9 @@ const mangleProduct = (p: Product) =>
 // TODO: This returns a function, which is pretty janky. It looks like this because of the way function
 // pointer declarations work in C: the variable name appears in the middle of the declaration
 const mplTypeToCType = (type: Type): ((name: string) => string) => {
-    switch (type.type.kind) {
+    // TODO: Fix whatever is generating incorrect types
+    const t = type.type.kind ? type.type : (type.type as any).type;
+    switch (t.kind) {
         case 'Integer':
             return name => `uint8_t ${name}`;
         case 'Boolean':
@@ -47,11 +49,11 @@ const mplTypeToCType = (type: Type): ((name: string) => string) => {
         case 'String':
             return name => `char *${name}`;
         case 'Function':
-            if ('namedType' in type.type.returnType) {
+            if ('namedType' in t.returnType) {
                 throw debug('figure this out');
             }
-            const returnType = mplTypeToCType(type.type.returnType)('');
-            const argumentTypes = type.type.arguments.map(mplTypeToCType).map(f => f(''));
+            const returnType = mplTypeToCType(t.returnType)('');
+            const argumentTypes = t.arguments.map(mplTypeToCType).map(f => f(''));
             const argumentsString = join(argumentTypes, ', ');
             return name => `${returnType} (*${name})(${argumentsString})`;
         case 'Product':
@@ -59,7 +61,7 @@ const mplTypeToCType = (type: Type): ((name: string) => string) => {
         case 'List':
             return name => `struct list ${name}`;
         default:
-            throw debug(`${(type as any).kind} unhandled in mplTypeToCType`);
+            throw debug(`${t.kind} unhandled in mplTypeToCType`);
     }
 };
 
@@ -508,7 +510,7 @@ const compile = ({
         returnType: builtinTypes.Integer, // Main can only ever return integer
         beforeExit: [...globalDeclarations.map(freeVariable), 'verify_no_leaks();'],
     });
-    const Cdeclarations = globalDeclarations
+    const Cdeclarations = globalDeclarations.filter(cDec => !cDec.name.startsWith('user_'))
         .map(declaration => mplTypeToCDeclaration(declaration.type as Type, declaration.name))
         .map(cDeclaration => `${cDeclaration};`);
 
@@ -690,9 +692,13 @@ int readInt() {
     return result;
 }
 
+// C Type Declarations
 ${join(CtypeDeclarations, '\n')}
+// String Literal Declarations
 ${join(stringLiterals.map(stringLiteralDeclaration), '\n')}
+// C Declarations
 ${join(Cdeclarations, '\n')}
+// C Functions
 ${join(Cfunctions, '\n')}
 ${Cprogram}
 `,

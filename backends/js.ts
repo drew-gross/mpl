@@ -23,6 +23,7 @@ const astToJS = ({
     exitInsteadOfReturn: boolean;
     builtinFunctions: Variable[];
 }): string[] => {
+    debugger;
     if (!ast) debugger;
     const recurse = newInput =>
         astToJS({ ast: newInput, exitInsteadOfReturn, builtinFunctions });
