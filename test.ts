@@ -540,7 +540,6 @@ test('correct inferred type for function', t => {
         type: FunctionType([builtinTypes.Integer], [], builtinTypes.Integer),
         extractedFunctions: [
             {
-                name: 'anonymous_1',
                 parameters: [{ name: 'a', type: builtinTypes.Integer, exported: false }],
                 returnType: builtinTypes.Integer,
                 statements: [
