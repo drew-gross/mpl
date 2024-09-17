@@ -122,7 +122,7 @@ export const length: RuntimeFunctionGenerator = memoize(_bytesInWord =>
             goto length_loop; Go count another char
         length_return:; Done
             return r:len;
-    `)
+    `).f
 );
 
 export const startsWith: RuntimeFunctionGenerator = memoize(_bytesInWord =>
@@ -144,7 +144,7 @@ export const startsWith: RuntimeFunctionGenerator = memoize(_bytesInWord =>
         false_return:; Done
             r:zero = 0; TODO: Support returning int literals
             return r:zero;
-    `)
+    `).f
 );
 
 export const stringCopy: RuntimeFunctionGenerator = memoize(_bytesInWord =>
@@ -158,7 +158,7 @@ export const stringCopy: RuntimeFunctionGenerator = memoize(_bytesInWord =>
             r:destination++; Increment output too
             goto string_copy_loop; and go keep copying
         string_copy_return:; Done
-    `)
+    `).f
 );
 
 export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = memoize(_bytesInWord =>
@@ -166,7 +166,7 @@ export const printWithPrintRuntimeFunction: RuntimeFunctionGenerator = memoize(_
     (function) print(r:str):
         r:result = syscall print r:str;
         return r:result;
-    `)
+    `).f
 );
 
 export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = memoize(_bytesInWord =>
@@ -175,7 +175,7 @@ export const printWithWriteRuntimeFunction: RuntimeFunctionGenerator = memoize(_
         r:len = length(r:str); Get str length
         r:result = syscall print 1 r:str r:len; 1: fd of stdout. r:str: ptr to data to write. r:len: length to write
         return r:result;
-   `)
+   `).f
 );
 
 export const readIntDirect: RuntimeFunctionGenerator = memoize(_bytesInWord =>
@@ -183,7 +183,7 @@ export const readIntDirect: RuntimeFunctionGenerator = memoize(_bytesInWord =>
         (function) readInt():
               r:result = syscall readInt;
               return r:result;
-    `)
+    `).f
 );
 
 export const readIntThroughSyscall: RuntimeFunctionGenerator = memoize(_bytesInWord => {
@@ -203,7 +203,7 @@ export const readIntThroughSyscall: RuntimeFunctionGenerator = memoize(_bytesInW
             syscall print r:err; syscall
             syscall exit -1; syscall
         readIntExit:; exit
-    `);
+    `).f;
 });
 
 // TODO: figure out a way to verify that this is working
@@ -226,7 +226,7 @@ export const verifyNoLeaks: RuntimeFunctionGenerator = memoize(bytesInWord =>
         }); block = block->next
         goto verify_no_leaks_loop; Check next block
     verify_no_leaks_return:; All done
-    `)
+    `).f
 );
 
 export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = memoize(_bytesInWord =>
@@ -247,7 +247,7 @@ export const stringConcatenateRuntimeFunction: RuntimeFunctionGenerator = memoiz
             r:dest++; Bump out pointer
             goto copy_from_right; Go copy next char
         concatenate_return:; Exit. TODO: repair input pointers?
-    `)
+    `).f
 );
 
 export const stringEqualityRuntimeFunction: RuntimeFunctionGenerator = _bytesInWord =>
@@ -283,7 +283,7 @@ export const myFreeRuntimeFunction: RuntimeFunctionGenerator = memoize(bytesInWo
             r:managementBlockSize = ${3 * bytesInWord}; 3 words for management
             r:ptr = r:ptr - r:managementBlockSize; Get management block ptr
             *(r:ptr + ${2 * bytesInWord}) = r:one; block->free = true
-    `)
+    `).f
 );
 
 // TODO: return error if string doesn't contain an int
@@ -305,7 +305,7 @@ export const intFromString: RuntimeFunctionGenerator = memoize(bytesInWord => {
         goto add_char; comment
     exit:; comment
         return r:result;
-    `);
+    `).f;
 });
 
 export const allRuntimeFunctions = [
