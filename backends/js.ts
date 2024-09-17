@@ -47,8 +47,8 @@ const astToJS = ({
             return [ast.destination, '=', ...recurse(ast.expression), ';'];
         case 'typedDeclarationAssignment':
             return [`let ${ast.destination} = `, ...recurse(ast.expression), ';'];
-        case 'functionLiteral':
-            return [ast.deanonymizedName];
+        case 'functionReference':
+            return [ast.name];
         case 'callExpression':
             const functionName = ast.name;
             const functionDecl = builtinFunctions.find(({ name }) => name == functionName);
@@ -116,7 +116,8 @@ const compile = ({
     builtinFunctions,
     program,
 }: FrontendOutput): { target: string; tac: Program | undefined } | { error: string } => {
-    const JSfunctions = functions.map(({ name, parameters, statements }) => {
+    const JSfunctions: string[] = [];
+    functions.forEach(({ parameters, statements }, name) => {
         const prefix = `const ${name} = (${join(
             parameters.map(parameter => parameter.name),
             ', '
@@ -130,7 +131,7 @@ const compile = ({
             );
         });
 
-        return [prefix, ...body, suffix].join(' ');
+        JSfunctions.push([prefix, ...body, suffix].join(' '));
     });
 
     if (Array.isArray(program)) {

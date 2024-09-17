@@ -259,8 +259,8 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                     throw debug(`${JSON.stringify(declaration.type)} unhandled C reassignment`);
             }
         }
-        case 'functionLiteral':
-            return compileExpression([], ([]) => [`&${ast.deanonymizedName}`]);
+        case 'functionReference':
+            return compileExpression([], ([]) => [`&${ast.name}`]);
         case 'callExpression': {
             const argumentsC = ast.arguments.map(argument => recurse(argument));
             return compileExpression(argumentsC, argCode => [
@@ -477,8 +477,9 @@ const compile = ({
                 )}};`
         );
 
-    const Cfunctions = functions.map(({ name, parameters, statements, variables, returnType }) =>
-        makeCfunctionBody({
+    const Cfunctions: string[] = [];
+    functions.forEach(({ parameters, statements, variables, returnType }, name) =>
+        Cfunctions.push(makeCfunctionBody({
             name,
             parameters,
             statements,
@@ -494,7 +495,7 @@ const compile = ({
                 return `${cReturnType} ${functionName}(${join(parameterDeclarations, ', ')})`;
             },
             returnType,
-        })
+        }))
     );
     if (Array.isArray(program)) {
         throw debug("C backend doesn't support modules.");

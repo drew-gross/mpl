@@ -13,7 +13,6 @@ import {
 } from './runtime';
 import idAppender from '../util/idAppender';
 import * as Ast from '../ast';
-import drain from '../util/list/drain';
 import { builtinFunctions, Type, TypeDeclaration, typeSize } from '../types';
 import debug from '../util/debug';
 import {
@@ -66,8 +65,7 @@ const assignGlobal = (
         case 'Integer':
             return compileExpression<Statement>([], ([]) =>
                 ins(
-                    `*${lhsInfo.newName} = ${s(rhsRegister)}; Put ${
-                        (lhsType as Type).type.kind
+                    `*${lhsInfo.newName} = ${s(rhsRegister)}; Put ${(lhsType as Type).type.kind
                     } into global`
                 )
             );
@@ -110,8 +108,8 @@ const assignGlobal = (
                     ${s(sourceAddress)} = ${s(rhsRegister)}; Local copy of source data pointer
                     ${s(itemSize)} = ${bytesInWord}; For multiplying
                     ${s(remainingCount)} = ${s(remainingCount)} * ${s(
-                        itemSize
-                    )}; Count = count * size
+                    itemSize
+                )}; Count = count * size
                     ${s(remainingCount)} += ${bytesInWord}; Add place to store length of list
                     ${s(targetAddress)} = my_malloc(${s(remainingCount)}); Malloc
                     *${lhsInfo.newName} = ${s(targetAddress)}; Store to global
@@ -171,9 +169,9 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 )
             );
         }
-        case 'functionLiteral':
+        case 'functionReference':
             return compileExpression<Statement>([], ([]) =>
-                ins(`${s(destination)} = &${ast.deanonymizedName}; Load function into register`)
+                ins(`${s(destination)} = &${ast.name}; Load function into register`)
             );
         case 'returnStatement':
             const result = makeTemporary('result');
@@ -541,11 +539,11 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 execute: [],
                 cleanup: ins(`
                     goto ${doneFree} if ${s(
-                        allocated
-                    )} == 0; If we never allocated, we should never free
+                    allocated
+                )} == 0; If we never allocated, we should never free
                     my_free(${s(
-                        destination
-                    )}); Free destination of concat (TODO: are we sure we aren't using it?)
+                    destination
+                )}); Free destination of concat (TODO: are we sure we aren't using it?)
                 ${doneFree}:; Done free
                 `),
             };
@@ -563,12 +561,12 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         r:rhsLength = length(${s(rhs)}); Compute rhs length
                         ${s(combinedLength)} = ${s(combinedLength)} + r:rhsLength; Accumulate it
                         ${s(destination)} = my_malloc(${s(
-                            combinedLength
-                        )}); Allocate space for new string
+                    combinedLength
+                )}); Allocate space for new string
                         ${s(allocated)} = 1; Remind ourselves to decallocate
                         string_concatenate(${s(lhs)}, ${s(rhs)}, ${s(
-                            destination
-                        )}); Concatenate and put in new space
+                    destination
+                )}); Concatenate and put in new space
                     `),
             ]);
         }
@@ -746,14 +744,14 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         goto ${outOfRange} if ${s(itemIndex)} > ${s(listLength)}; check OOB
                         ${s(itemSize)} = ${bytesInWord}; TODO:) should be type size
                         ${s(itemAddress)} = ${s(itemIndex)} * ${s(
-                            itemSize
-                        )}; account for item size
+                        itemSize
+                    )}; account for item size
                         ${s(itemAddress)} = ${s(itemAddress)} + ${s(
-                            accessed
-                        )}; offset from list base
+                        accessed
+                    )}; offset from list base
                         ${s(destination)} = *(${s(
-                            itemAddress
-                        )} + ${bytesInWord}); add word to adjust for length
+                        itemAddress
+                    )} + ${bytesInWord}); add word to adjust for length
                     ${outOfRange}:; TODO: exit on out of range
                     `),
                 ]
@@ -813,7 +811,7 @@ export const constructFunction = (
             ];
         })
         .flat();
-    return { name: f.name, instructions: functionCode, liveAtExit, arguments: args };
+    return { instructions: functionCode, liveAtExit, arguments: args };
 };
 
 export type MakeAllFunctionsInput = {
@@ -846,19 +844,6 @@ export const makeTargetProgram = ({
         };
     });
 
-    const userFunctions: Function[] = functions.map(f =>
-        constructFunction(
-            f,
-            globalNameMap,
-            stringLiterals,
-            labelMaker,
-            makeTemporary,
-            types,
-            targetInfo,
-            [exitCodeRegister]
-        )
-    );
-
     if (Array.isArray(program)) {
         throw debug("Three Address Code doesn't support modules.");
     }
@@ -885,7 +870,7 @@ export const makeTargetProgram = ({
         .flat();
 
     const mainFunction: Function = {
-        name: 'main',
+        //name: 'main',
         instructions: mainProgramInstructions,
         liveAtExit: [exitCodeRegister],
         arguments: [],
@@ -897,70 +882,79 @@ export const makeTargetProgram = ({
         arguments: [],
         spills: 0,
     };
-    const runtimeFunctions = [
-        length,
-        startsWith,
-        stringEqualityRuntimeFunction,
-        stringConcatenateRuntimeFunction,
-        stringCopy,
-        myFreeRuntimeFunction,
-        intFromString,
-    ].map(f => f(targetInfo.bytesInWord));
-    const nonMainFunctions = [
-        ...runtimeFunctions,
-        targetInfo.functionImpls.mallocImpl,
-        targetInfo.functionImpls.printImpl,
-        targetInfo.functionImpls.readIntImpl,
-        ...userFunctions,
-    ];
+    const nonMainFunctions: Map<string, Function> = new Map();
+    nonMainFunctions.set('length', length(targetInfo.bytesInWord))
+    nonMainFunctions.set('startsWith', startsWith(targetInfo.bytesInWord))
+    nonMainFunctions.set('stringEquality', stringEqualityRuntimeFunction(targetInfo.bytesInWord))
+    nonMainFunctions.set('string_concatenate', stringConcatenateRuntimeFunction(targetInfo.bytesInWord))
+    nonMainFunctions.set('string_copy', stringCopy(targetInfo.bytesInWord))
+    nonMainFunctions.set('my_free', myFreeRuntimeFunction(targetInfo.bytesInWord))
+    nonMainFunctions.set('intFromString', intFromString(targetInfo.bytesInWord))
+    nonMainFunctions.set('my_malloc', targetInfo.functionImpls.mallocImpl)
+    nonMainFunctions.set('print', targetInfo.functionImpls.printImpl)
+    nonMainFunctions.set('readInt', targetInfo.functionImpls.readIntImpl)
+    functions.forEach((f, name) =>
+        nonMainFunctions.set(name, constructFunction(
+            f,
+            globalNameMap,
+            stringLiterals,
+            labelMaker,
+            makeTemporary,
+            types,
+            targetInfo,
+            [exitCodeRegister]
+        ))
+    );
 
     // Omit unused functions
-    const closedSet: Function[] = [];
+    const closedSet: Map<string, Function> = new Map();
     // Seed open set with the functions we are guaranteed to use:
     //  - main: entry point
     //  - verify_no_leaks: currently always called as a sanity check
     //  - free_globals: freeing globals is done externally to main
     // Always include verify_no_leaks and free_globals because we always call them, from the external cleanup
-    const openSet: Function[] = [
-        mainFunction,
-        verifyNoLeaks(targetInfo.bytesInWord),
-        freeGlobals,
-    ];
-    drain(openSet, currentFunction => {
-        closedSet.push(currentFunction);
+    const openSet: Map<string, Function> = new Map([
+        ['main', mainFunction],
+        ['verify_no_leaks', verifyNoLeaks(targetInfo.bytesInWord)],
+        ['free_globals', freeGlobals],
+    ]);
+    while (openSet.size > 0) {
+        const name = openSet.keys().next().value;
+        const currentFunction = openSet.get(name) as Function;
+        openSet.delete(name);
+        closedSet.set(name, currentFunction);
         currentFunction.instructions.forEach(statement => {
             if (statement.kind == 'callByName') {
-                const usedFunction = nonMainFunctions.find(f2 => f2.name == statement.function);
+                const usedFunction = nonMainFunctions.get(statement.function);
                 if (usedFunction) {
                     if (
-                        closedSet.find(f2 => f2.name == usedFunction.name) ||
-                        openSet.find(f2 => f2.name == usedFunction.name)
+                        closedSet.has(statement.function) ||
+                        openSet.has(statement.function)
                     ) {
                         // We already know about this function
                     } else {
-                        openSet.push(usedFunction);
+                        openSet.set(statement.function, usedFunction);
                     }
                 }
             } else if (statement.kind == 'loadSymbolAddress') {
-                const usedFunction = nonMainFunctions.find(
-                    f2 => f2.name == statement.symbolName
-                );
+                const usedFunction = nonMainFunctions.get(statement.symbolName);
                 if (usedFunction) {
                     if (
-                        closedSet.find(f2 => f2.name == usedFunction.name) ||
-                        openSet.find(f2 => f2.name == usedFunction.name)
+                        closedSet.get(statement.symbolName) ||
+                        openSet.get(statement.symbolName)
                     ) {
                         // We already know about this function
                     } else {
-                        openSet.push(usedFunction);
+                        openSet.set(statement.symbolName, usedFunction);
                     }
                 }
             }
         });
-    });
+    };
 
-    // Main is reported sepeartely, so we remove it (it's guaranteed to be at the front becuase we put it in openSet at the front)
-    const main = closedSet.shift();
-    if (!main) throw debug('no main');
+    // Main is reported sepeartely, so we remove it
+    if (!closedSet.has('main')) throw debug('no main');
+    const main = closedSet.get('main');
+    closedSet.delete('main');
     return { globals, functions: closedSet, main, stringLiterals: backendInputs.stringLiterals };
 };

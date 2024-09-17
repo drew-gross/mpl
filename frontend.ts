@@ -193,7 +193,6 @@ const extractVariables = (ctx: WithContext<Ast.UninferredStatement[]>): Variable
 const functionObjectFromAst = (
     ctx: WithContext<Ast.UninferredFunctionLiteral>
 ): UninferredFunction => ({
-    name: ctx.w.deanonymizedName,
     statements: ctx.w.body,
     variables: [
         ...ctx.w.parameters,
@@ -1050,7 +1049,6 @@ const inferFunction = (ctx: WithContext<UninferredFunction>): Function | TypeErr
         return returnType;
     }
     return {
-        name: ctx.w.name,
         statements,
         variables: ctx.w.variables,
         parameters: ctx.w.parameters,
@@ -1168,9 +1166,9 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
             };
         case 'functionLiteral':
             return {
-                kind: 'functionLiteral',
+                kind: 'functionReference',
                 sourceLocation: ast.sourceLocation,
-                deanonymizedName: ast.deanonymizedName,
+                name: ast.deanonymizedName,
             };
         case 'typeDeclaration':
             // TODO: maybe just strip declarations before inferring.
@@ -1867,7 +1865,7 @@ const divvyMainIntoFunctions = (
 const inferFunctions = (
     availableTypes,
     typedVariables: Variable[],
-    typedFunctions: Function[],
+    typedFunctions: Map<String, Function>,
     untypedFunctions: Map<String, Ast.UninferredFunctionLiteral>,
 ): TypeError[] => {
     let anythingChanged = true;
@@ -1885,13 +1883,12 @@ const inferFunctions = (
                 // todo: handle type errors here
                 throw debug('type errors we arent ready for');
             }
-            inferred.name = name;// TODO: Make this less jank when refactoring mangled names, deanonymized names, etc.
             typedVariables.push({
                 name,
                 type: FunctionType(inferred.parameters, [], inferred.returnType),
                 exported: false,
             });
-            typedFunctions.push(inferred);
+            typedFunctions.set(name, inferred);
             delete untypedFunctions[name];
             anythingChanged = true;
             typeErrors.push(...typeCheckFunction({ w: fnObj, availableVariables: typedVariables, availableTypes }).typeErrors);
@@ -1962,7 +1959,7 @@ const compile = (
 
     const untypedFunctions = divvyMainIntoFunctions(ast);
     const typedVariables: Variable[] = [];
-    const typedFunctions: Function[] = [];
+    const typedFunctions: Map<string, Function> = new Map();
     const typeErrors = inferFunctions(availableTypes, typedVariables, typedFunctions, untypedFunctions);
     if (typeErrors.length > 0) {
         return { typeErrors };
@@ -1976,10 +1973,11 @@ const compile = (
     );
     const stringLiterals: StringLiteralData[] = uniqueBy(s => s.value, nonUniqueStringLiterals);
 
-    const main = typedFunctions.find(f => f.name == 'builtin_main');
+    const main = typedFunctions.get('builtin_main');
     if (!main) {
         throw debug("no main");
     }
+    typedFunctions.delete('builtin_main');
 
     const globalDeclarations: Variable[] = main.statements
         .filter(s => s.kind === 'typedDeclarationAssignment')
@@ -1995,7 +1993,7 @@ const compile = (
     globalDeclarations.push(...typedVariables);
     return {
         types: availableTypes,
-        functions: typedFunctions.filter(f => f.name != 'builtin_main'),
+        functions: typedFunctions,
         builtinFunctions,
         program: main,
         globalDeclarations,

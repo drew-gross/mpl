@@ -11,15 +11,12 @@ export type Variable = {
     mangledName?: string;
 };
 export type UninferredFunction = {
-    // TODO: Don't export this (or rethink it)
-    name: string;
     statements: UninferredStatement[];
     // TODO: These should probably belong to each statement?
     variables: Variable[];
     parameters: Variable[];
 };
 export type Function = {
-    name: string;
     statements: Statement[];
     variables: Variable[];
     parameters: Variable[];
@@ -32,7 +29,7 @@ export type ExportedVariable = {
 };
 export type FrontendOutput = {
     types: TypeDeclaration[];
-    functions: Function[];
+    functions: Map<string, Function>;
     builtinFunctions: Variable[];
     program: Function | ExportedVariable[];
     globalDeclarations: Variable[];

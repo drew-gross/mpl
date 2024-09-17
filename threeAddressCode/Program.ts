@@ -8,7 +8,7 @@ import { LexError } from '../parser-lib/lex';
 
 export type Program = {
     globals: { [key: string]: { mangledName: string; bytes: number } };
-    functions: Function[];
+    functions: Map<string, Function>;
     main: Function | undefined; // TODO: make this not optional?
     stringLiterals: StringLiteralData[];
 };
@@ -20,13 +20,13 @@ export const toString = ({ globals, functions, main }: Program): string => {
     );
     let mainStr = '';
     if (main) {
-        mainStr = functionToString(main);
+        mainStr = functionToString('main', main);
     }
     return `
 ${join(globalStrings, '\n\n')}
 ${mainStr}
 
-${join(functions.map(functionToString), '\n\n')}
+${join(Array.from(functions.entries()).map(([name, f]) => functionToString(name, f)), '\n\n')}
 `;
 };
 
@@ -48,15 +48,15 @@ const tacFromParseResult = (ast: Ast<TacAstNode, TacToken>): Program | ParseErro
     });
     const allFunctions = parsedFunctions.items.map(functionFromParseResult);
     let main: Function | undefined = undefined;
-    const functions: Function[] = [];
+    const functions: Map<string, Function> = new Map();
     allFunctions.forEach(f => {
         if (f.name == 'main') {
             if (main) {
                 throw debug('two mains');
             }
-            main = f;
+            main = f.f;
         } else {
-            functions.push(f);
+            functions.set(f.name, f.f);
         }
     });
 

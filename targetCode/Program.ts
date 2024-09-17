@@ -1,6 +1,5 @@
 import debug from '../util/debug';
 import { toTarget as functionToTarget, Function } from './Function';
-import { Function as ThreeAddressFunction } from '../threeAddressCode/Function';
 import { Program as ThreeAddressProgram } from '../threeAddressCode/Program';
 import { TargetInfo } from '../TargetInfo';
 
@@ -23,13 +22,10 @@ export const toTarget = <TargetRegister>({
     const main = program.main;
     if (!main) throw debug('need a main');
 
-    const mainFn: ThreeAddressFunction = {
-        ...main,
-        name: 'unused', // TODO: make name optional here
-    };
     return {
-        functions: program.functions.map(f =>
+        functions: Array.from(program.functions.entries()).map(([name, f]) =>
             functionToTarget({
+                name: name,
                 threeAddressFunction: f,
                 targetInfo,
                 finalCleanup: [{ kind: 'return', why: 'The Final Return!' }],
@@ -37,7 +33,8 @@ export const toTarget = <TargetRegister>({
             })
         ),
         main: functionToTarget({
-            threeAddressFunction: mainFn,
+            name: 'builtin_main',
+            threeAddressFunction: main,
             // No need to save any registers in main, even if the target says to
             targetInfo: { ...targetInfo, extraSavedRegisters: [] },
             finalCleanup: [
@@ -49,17 +46,17 @@ export const toTarget = <TargetRegister>({
                 },
                 ...(includeCleanup
                     ? [
-                          {
-                              kind: 'callByName' as 'callByName',
-                              function: 'free_globals',
-                              why: 'free_globals',
-                          },
-                          {
-                              kind: 'callByName' as 'callByName',
-                              function: 'verify_no_leaks',
-                              why: 'verify_no_leaks',
-                          },
-                      ]
+                        {
+                            kind: 'callByName' as 'callByName',
+                            function: 'free_globals',
+                            why: 'free_globals',
+                        },
+                        {
+                            kind: 'callByName' as 'callByName',
+                            function: 'verify_no_leaks',
+                            why: 'verify_no_leaks',
+                        },
+                    ]
                     : []),
                 {
                     kind: 'pop' as 'pop',

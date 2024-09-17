@@ -18,10 +18,9 @@ export type Function = {
     instructions: Statement[];
     arguments: Register[];
     liveAtExit: Register[];
-    name: string;
 };
 
-export const toString = ({ name, instructions, arguments: args }: Function): string => {
+export const toString = (name: string, { instructions, arguments: args }: Function): string => {
     if (!args) debug('no args');
     return join(
         [
@@ -32,22 +31,20 @@ export const toString = ({ name, instructions, arguments: args }: Function): str
     );
 };
 
-export const functionFromParseResult = (ast: Ast<TacAstNode, TacToken>): Function => {
-    const [_fn, _spillSpec, nameUnp, _lb, argsUnp, _rb, _colon, instructionsUnp] = (ast as any)
-        .sequenceItems;
-    const name = nameUnp.value;
+export const functionFromParseResult = (ast: Ast<TacAstNode, TacToken>): { f: Function, name: string } => {
+    const [_fn, _spillSpec, name, _lb, argsUnp, _rb, _colon, instructionsUnp] = (ast as any).sequenceItems;
     let args: Register[] = parseArgList(argsUnp) as Register[];
     const instructions: Statement[] = instructionsUnp.items.map(instructionFromParseResult);
-    return { name, instructions, liveAtExit: [], arguments: args };
+    return { f: { instructions, liveAtExit: [], arguments: args }, name };
 };
 
-export const parseFunction = (input: string): Function | LexError | ParseError[] => {
+export const parseFunction = (input: string): { f: Function, name: string } | LexError | ParseError[] => {
     const result = parseString(tokenSpecs, grammar, 'function', input);
     if ('errors' in result) return result.errors;
     return functionFromParseResult(result);
 };
 
-export const parseFunctionOrDie = (tacString: string): Function => {
+export const parseFunctionOrDie = (tacString: string): { f: Function, name: string } => {
     const parsed = parseFunction(tacString);
     if ('kind' in parsed) {
         debugger;

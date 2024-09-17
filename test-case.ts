@@ -72,7 +72,7 @@ export const tacTest = async (
     await Promise.all(
         backends.map(async backend => {
             if (backend.compileTac && !failing.includes(backend.name)) {
-                const program = { globals: {}, functions: [], main: parsed, stringLiterals: [] };
+                const program = { globals: {}, functions: new Map, main: parsed.f, stringLiterals: [] };
                 const targetSource = backend.compileTac(program, false);
 
                 if (typeof targetSource != 'string') {

@@ -671,7 +671,6 @@ test('computeBlockLiveness read and write in one', t => {
 
 test('liveness analysis basic test', t => {
     const testFunction: Function = {
-        name: 'test',
         liveAtExit: [],
         arguments: [new Register('some_arg')],
         instructions: [
@@ -722,7 +721,6 @@ test('liveness analysis basic test', t => {
 
 test('4 block graph (length)', t => {
     const lengthRTLF: Function = {
-        name: 'length',
         liveAtExit: [],
         arguments: [new Register('strPtr')],
         instructions: [
@@ -784,7 +782,6 @@ test('4 block graph (length)', t => {
 
 test('liveness of stringEquality', t => {
     const complexFunction: Function = {
-        name: 'complexFunction',
         liveAtExit: [],
         arguments: [],
         instructions: [
@@ -1654,7 +1651,7 @@ test('Assign Registers for Old For', t => {
             r:result_20 = sum_2; Load sum from global into register
             return r:result_20;; Return previous expressio
     `);
-    assignRegisters(f, ['r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8']);
+    assignRegisters(f.f, ['r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8']);
     t.pass();
 });
 
@@ -1732,7 +1729,7 @@ test.failing('Register assignment for Many Globals Multiply', t => {
             return r:result_;; Return previous expressio
     `);
     const rds = ['$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7', '$t8', '$t9'];
-    const assigned = assignRegisters(f, rds);
+    const assigned = assignRegisters(f.f, rds);
     t.assert('product_lhs_1' in assigned.assignment);
 });
 
@@ -1745,14 +1742,13 @@ test('add/increment are writes', t => {
             r:count++; Increment
             return r:count;
     `);
-    const rds = removeDeadStores(f, tafLiveness(f));
+    const rds = removeDeadStores(f.f, tafLiveness(f.f));
     t.assert(rds === undefined); // undefined means nothing was removed
 });
 
 // Regression test from before we used hasSideEffects and used shitty heuristics for determining whether an instruction had side effects.
 test("Functions calls with side effects don't get removed for being dead", t => {
     const f: Function = {
-        name: 'anonymous_1',
         instructions: [
             {
                 kind: 'loadSymbolAddress',
@@ -1795,7 +1791,6 @@ test("Functions calls with side effects don't get removed for being dead", t => 
 // Regression test for when I accidentally removes all control flow bucause control flow doesn't change registers.
 test("Control flow instructions don't get removed for having no writes", t => {
     const f: Function = {
-        name: 'verify_no_leaks',
         instructions: [
             {
                 kind: 'loadImmediate',
@@ -1832,7 +1827,6 @@ test("Control flow instructions don't get removed for having no writes", t => {
 
 test('functionToString', t => {
     const f: Function = {
-        name: 'main',
         instructions: [
             {
                 kind: 'callByName',
@@ -1848,7 +1842,7 @@ test('functionToString', t => {
         arguments: [],
     };
     t.deepEqual(
-        functionToString(f),
+        functionToString('main', f),
         `(function) main():
     r:dataPointer_3 = my_malloc(28); allocate`
     );

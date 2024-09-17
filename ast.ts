@@ -82,10 +82,11 @@ export type FunctionCall = {
     arguments: Ast[];
 };
 
-export type FunctionLiteral = {
-    kind: 'functionLiteral';
+// In an Ast, each function is stored in a map from name to contents. The reference refers to the function name in that map.
+export type FunctionReference = {
+    kind: 'functionReference';
     sourceLocation: SourceLocation;
-    deanonymizedName: string; // TODO: remove this
+    name: string;
 };
 
 export type Statement = TypedDeclarationAssignment | Reassignment | ReturnStatement | ForLoop;
@@ -163,7 +164,7 @@ export type Ast =
     | Ternary
     | Equality
     | FunctionCall
-    | FunctionLiteral
+    | FunctionReference
     | Statement
     | Subtraction
     | Addition
@@ -375,8 +376,8 @@ export const astToString = (ast: Ast) => {
         case 'callExpression':
             const args = join(ast.arguments.map(astToString), ', ');
             return `${ast.name}(${args})`;
-        case 'functionLiteral':
-            return ast.deanonymizedName;
+        case 'functionReference':
+            return ast.name;
         case 'product':
             return `${astToString(ast.lhs)} * ${astToString(ast.rhs)}`;
         case 'addition':

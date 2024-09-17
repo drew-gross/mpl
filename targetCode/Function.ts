@@ -16,6 +16,7 @@ import { StackUsage, calleeReserveCount, savedExtraOffset, savedUsedOffset } fro
 import { TargetInfo } from '../TargetInfo';
 
 type ToTargetInput<TargetRegister> = {
+    name: string;
     threeAddressFunction: ThreeAddressFunction;
     targetInfo: TargetInfo<TargetRegister>;
     finalCleanup: TargetStatement<TargetRegister>[];
@@ -94,8 +95,7 @@ const translateStackArgumentsToStackReads = (
                         argumentStackLocation(targetInfo, taf.arguments, r) !== undefined;
                     if (registersRead.some(registerReadsStackArgument)) {
                         throw debug(
-                            `not sure how to convert args to stack loads for ${
-                                tas.kind
+                            `not sure how to convert args to stack loads for ${tas.kind
                             }. ${JSON.stringify(tas)}`
                         );
                     }
@@ -126,6 +126,7 @@ const stackArguments = <TargetRegister>(
     );
 
 export const toTarget = <TargetRegister>({
+    name,
     threeAddressFunction,
     targetInfo,
     finalCleanup,
@@ -162,7 +163,7 @@ export const toTarget = <TargetRegister>({
         }
     });
     functionToString; // tslint:disable-line
-    const exitLabel = `${threeAddressFunction.name}_cleanup`;
+    const exitLabel = `${name}_cleanup`;
     const statements: TargetStatement<TargetRegister>[] = functionWithAssignment.instructions
         .map((instruction, index) =>
             statementToTarget({
@@ -178,7 +179,7 @@ export const toTarget = <TargetRegister>({
         .flat();
 
     return {
-        name: threeAddressFunction.name,
+        name,
         instructions: [
             {
                 kind: 'stackReserve',

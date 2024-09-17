@@ -114,9 +114,9 @@ export const executableToString = (
     return `
 ${functionToString(commentChar, main)}
 ${join(
-    functions.map(f => functionToString(commentChar, f)),
-    '\n'
-)}`;
+        functions.map(f => functionToString(commentChar, f)),
+        '\n'
+    )}`;
 };
 
 export const makeExecutable = <TargetRegister>(
@@ -127,15 +127,18 @@ export const makeExecutable = <TargetRegister>(
     includeCleanup: boolean
 ): Executable => {
     if (!main) throw debug('no main');
-    const targetFunctions = functions.map(f =>
-        toTarget({
+    const targetFunctions: any = [];
+    functions.forEach((f, name) =>
+        targetFunctions.push(toTarget({
+            name,
             threeAddressFunction: f,
             targetInfo: targetRegisterInfo,
             finalCleanup: [{ kind: 'return', why: 'The Final Return!' }],
             isMain: false,
-        })
+        }))
     );
     const targetMain = toTarget({
+        name: 'builtin_main',
         threeAddressFunction: main,
         targetInfo: targetRegisterInfo,
         finalCleanup: [
@@ -147,17 +150,17 @@ export const makeExecutable = <TargetRegister>(
             },
             ...(includeCleanup
                 ? [
-                      {
-                          kind: 'callByName' as 'callByName',
-                          function: 'free_globals',
-                          why: 'free_globals',
-                      },
-                      {
-                          kind: 'callByName' as 'callByName',
-                          function: 'verify_no_leaks',
-                          why: 'verify_no_leaks',
-                      },
-                  ]
+                    {
+                        kind: 'callByName' as 'callByName',
+                        function: 'free_globals',
+                        why: 'free_globals',
+                    },
+                    {
+                        kind: 'callByName' as 'callByName',
+                        function: 'verify_no_leaks',
+                        why: 'verify_no_leaks',
+                    },
+                ]
                 : []),
             {
                 kind: 'pop' as 'pop',

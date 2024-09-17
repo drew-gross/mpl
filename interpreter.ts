@@ -69,9 +69,9 @@ export const interpretFunction = (
             throw debug('no label');
         }
     };
-    let findFunction = (funcName: string) => {
+    let findFunction = (name: string) => {
         // TODO: Get the types right for pointers to functions
-        let f = functions.find(f => f.name == funcName || f.name == (funcName as any).block);
+        let f = functions.get(name);
         if (!f) throw debug('failed to find function');
         return f;
     };

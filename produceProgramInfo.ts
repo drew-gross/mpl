@@ -74,8 +74,8 @@ export default async (
 
     let structure = '';
     structure += 'Functions:\n';
-    frontendOutput.functions.forEach(f => {
-        structure += `-> ${f.name}(${join(
+    frontendOutput.functions.forEach((f, name) => {
+        structure += `-> ${name}(${join(
             f.parameters.map(p =>
                 'namedType' in p.type ? p.type.namedType : typeToString(p.type)
             ),
