@@ -46,17 +46,17 @@ export const toTarget = <TargetRegister>({
                 },
                 ...(includeCleanup
                     ? [
-                        {
-                            kind: 'callByName' as 'callByName',
-                            function: 'free_globals',
-                            why: 'free_globals',
-                        },
-                        {
-                            kind: 'callByName' as 'callByName',
-                            function: 'verify_no_leaks',
-                            why: 'verify_no_leaks',
-                        },
-                    ]
+                          {
+                              kind: 'callByName' as 'callByName',
+                              function: 'free_globals',
+                              why: 'free_globals',
+                          },
+                          {
+                              kind: 'callByName' as 'callByName',
+                              function: 'verify_no_leaks',
+                              why: 'verify_no_leaks',
+                          },
+                      ]
                     : []),
                 {
                     kind: 'pop' as 'pop',

@@ -479,23 +479,25 @@ const compile = ({
 
     const Cfunctions: string[] = [];
     functions.forEach(({ parameters, statements, variables, returnType }, name) =>
-        Cfunctions.push(makeCfunctionBody({
-            name,
-            parameters,
-            statements,
-            variables,
-            globalDeclarations,
-            stringLiterals,
-            buildSignature: (functionName, params) => {
-                const parameterDeclarations = params.map(p => {
-                    if ('namedType' in p.type) throw debug('TODO: get a read type here');
-                    return mplTypeToCDeclaration(p.type, p.name);
-                });
-                const cReturnType = mplTypeToCType(returnType)('');
-                return `${cReturnType} ${functionName}(${join(parameterDeclarations, ', ')})`;
-            },
-            returnType,
-        }))
+        Cfunctions.push(
+            makeCfunctionBody({
+                name,
+                parameters,
+                statements,
+                variables,
+                globalDeclarations,
+                stringLiterals,
+                buildSignature: (functionName, params) => {
+                    const parameterDeclarations = params.map(p => {
+                        if ('namedType' in p.type) throw debug('TODO: get a read type here');
+                        return mplTypeToCDeclaration(p.type, p.name);
+                    });
+                    const cReturnType = mplTypeToCType(returnType)('');
+                    return `${cReturnType} ${functionName}(${join(parameterDeclarations, ', ')})`;
+                },
+                returnType,
+            })
+        )
     );
     if (Array.isArray(program)) {
         throw debug("C backend doesn't support modules.");
@@ -511,7 +513,8 @@ const compile = ({
         returnType: builtinTypes.Integer, // Main can only ever return integer
         beforeExit: [...globalDeclarations.map(freeVariable), 'verify_no_leaks();'],
     });
-    const Cdeclarations = globalDeclarations.filter(cDec => !cDec.name.startsWith('user_'))
+    const Cdeclarations = globalDeclarations
+        .filter(cDec => !cDec.name.startsWith('user_'))
         .map(declaration => mplTypeToCDeclaration(declaration.type as Type, declaration.name))
         .map(cDeclaration => `${cDeclaration};`);
 

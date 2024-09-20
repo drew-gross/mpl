@@ -26,7 +26,10 @@ export const toString = ({ globals, functions, main }: Program): string => {
 ${join(globalStrings, '\n\n')}
 ${mainStr}
 
-${join(Array.from(functions.entries()).map(([name, f]) => functionToString(name, f)), '\n\n')}
+${join(
+    Array.from(functions.entries()).map(([name, f]) => functionToString(name, f)),
+    '\n\n'
+)}
 `;
 };
 

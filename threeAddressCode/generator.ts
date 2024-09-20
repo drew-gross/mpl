@@ -65,7 +65,8 @@ const assignGlobal = (
         case 'Integer':
             return compileExpression<Statement>([], ([]) =>
                 ins(
-                    `*${lhsInfo.newName} = ${s(rhsRegister)}; Put ${(lhsType as Type).type.kind
+                    `*${lhsInfo.newName} = ${s(rhsRegister)}; Put ${
+                        (lhsType as Type).type.kind
                     } into global`
                 )
             );
@@ -108,8 +109,8 @@ const assignGlobal = (
                     ${s(sourceAddress)} = ${s(rhsRegister)}; Local copy of source data pointer
                     ${s(itemSize)} = ${bytesInWord}; For multiplying
                     ${s(remainingCount)} = ${s(remainingCount)} * ${s(
-                    itemSize
-                )}; Count = count * size
+                        itemSize
+                    )}; Count = count * size
                     ${s(remainingCount)} += ${bytesInWord}; Add place to store length of list
                     ${s(targetAddress)} = my_malloc(${s(remainingCount)}); Malloc
                     *${lhsInfo.newName} = ${s(targetAddress)}; Store to global
@@ -539,11 +540,11 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 execute: [],
                 cleanup: ins(`
                     goto ${doneFree} if ${s(
-                    allocated
-                )} == 0; If we never allocated, we should never free
+                        allocated
+                    )} == 0; If we never allocated, we should never free
                     my_free(${s(
-                    destination
-                )}); Free destination of concat (TODO: are we sure we aren't using it?)
+                        destination
+                    )}); Free destination of concat (TODO: are we sure we aren't using it?)
                 ${doneFree}:; Done free
                 `),
             };
@@ -561,12 +562,12 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         r:rhsLength = length(${s(rhs)}); Compute rhs length
                         ${s(combinedLength)} = ${s(combinedLength)} + r:rhsLength; Accumulate it
                         ${s(destination)} = my_malloc(${s(
-                    combinedLength
-                )}); Allocate space for new string
+                            combinedLength
+                        )}); Allocate space for new string
                         ${s(allocated)} = 1; Remind ourselves to decallocate
                         string_concatenate(${s(lhs)}, ${s(rhs)}, ${s(
-                    destination
-                )}); Concatenate and put in new space
+                            destination
+                        )}); Concatenate and put in new space
                     `),
             ]);
         }
@@ -744,14 +745,14 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         goto ${outOfRange} if ${s(itemIndex)} > ${s(listLength)}; check OOB
                         ${s(itemSize)} = ${bytesInWord}; TODO:) should be type size
                         ${s(itemAddress)} = ${s(itemIndex)} * ${s(
-                        itemSize
-                    )}; account for item size
+                            itemSize
+                        )}; account for item size
                         ${s(itemAddress)} = ${s(itemAddress)} + ${s(
-                        accessed
-                    )}; offset from list base
+                            accessed
+                        )}; offset from list base
                         ${s(destination)} = *(${s(
-                        itemAddress
-                    )} + ${bytesInWord}); add word to adjust for length
+                            itemAddress
+                        )} + ${bytesInWord}); add word to adjust for length
                     ${outOfRange}:; TODO: exit on out of range
                     `),
                 ]
@@ -883,27 +884,36 @@ export const makeTargetProgram = ({
         spills: 0,
     };
     const nonMainFunctions: Map<string, Function> = new Map();
-    nonMainFunctions.set('length', length(targetInfo.bytesInWord))
-    nonMainFunctions.set('startsWith', startsWith(targetInfo.bytesInWord))
-    nonMainFunctions.set('stringEquality', stringEqualityRuntimeFunction(targetInfo.bytesInWord))
-    nonMainFunctions.set('string_concatenate', stringConcatenateRuntimeFunction(targetInfo.bytesInWord))
-    nonMainFunctions.set('string_copy', stringCopy(targetInfo.bytesInWord))
-    nonMainFunctions.set('my_free', myFreeRuntimeFunction(targetInfo.bytesInWord))
-    nonMainFunctions.set('intFromString', intFromString(targetInfo.bytesInWord))
-    nonMainFunctions.set('my_malloc', targetInfo.functionImpls.mallocImpl)
-    nonMainFunctions.set('print', targetInfo.functionImpls.printImpl)
-    nonMainFunctions.set('readInt', targetInfo.functionImpls.readIntImpl)
+    nonMainFunctions.set('length', length(targetInfo.bytesInWord));
+    nonMainFunctions.set('startsWith', startsWith(targetInfo.bytesInWord));
+    nonMainFunctions.set(
+        'stringEquality',
+        stringEqualityRuntimeFunction(targetInfo.bytesInWord)
+    );
+    nonMainFunctions.set(
+        'string_concatenate',
+        stringConcatenateRuntimeFunction(targetInfo.bytesInWord)
+    );
+    nonMainFunctions.set('string_copy', stringCopy(targetInfo.bytesInWord));
+    nonMainFunctions.set('my_free', myFreeRuntimeFunction(targetInfo.bytesInWord));
+    nonMainFunctions.set('intFromString', intFromString(targetInfo.bytesInWord));
+    nonMainFunctions.set('my_malloc', targetInfo.functionImpls.mallocImpl);
+    nonMainFunctions.set('print', targetInfo.functionImpls.printImpl);
+    nonMainFunctions.set('readInt', targetInfo.functionImpls.readIntImpl);
     functions.forEach((f, name) =>
-        nonMainFunctions.set(name, constructFunction(
-            f,
-            globalNameMap,
-            stringLiterals,
-            labelMaker,
-            makeTemporary,
-            types,
-            targetInfo,
-            [exitCodeRegister]
-        ))
+        nonMainFunctions.set(
+            name,
+            constructFunction(
+                f,
+                globalNameMap,
+                stringLiterals,
+                labelMaker,
+                makeTemporary,
+                types,
+                targetInfo,
+                [exitCodeRegister]
+            )
+        )
     );
 
     // Omit unused functions
@@ -927,10 +937,7 @@ export const makeTargetProgram = ({
             if (statement.kind == 'callByName') {
                 const usedFunction = nonMainFunctions.get(statement.function);
                 if (usedFunction) {
-                    if (
-                        closedSet.has(statement.function) ||
-                        openSet.has(statement.function)
-                    ) {
+                    if (closedSet.has(statement.function) || openSet.has(statement.function)) {
                         // We already know about this function
                     } else {
                         openSet.set(statement.function, usedFunction);
@@ -950,7 +957,7 @@ export const makeTargetProgram = ({
                 }
             }
         });
-    };
+    }
 
     // Main is reported sepeartely, so we remove it
     if (!closedSet.has('main')) throw debug('no main');

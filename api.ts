@@ -22,6 +22,19 @@ export type Function = {
     parameters: Variable[];
     returnType: Type;
 };
+
+export const getTypeOfFunction = (fn: Function): Type => {
+    return {
+        type: {
+            kind: 'Function',
+            permissions: [],
+            arguments: fn.parameters.map(p => p.type),
+            returnType: fn.returnType,
+        },
+        methods: [],
+    };
+};
+
 export type StringLiteralData = { id: number; value: string };
 export type ExportedVariable = {
     exportedName: string;
@@ -37,24 +50,24 @@ export type FrontendOutput = {
 };
 export type ExecutionResult =
     | {
-        exitCode: number;
-        stdout: string;
-        executorName: string;
-        runInstructions: string;
-        debugInstructions: string;
-    }
+          exitCode: number;
+          stdout: string;
+          executorName: string;
+          runInstructions: string;
+          debugInstructions: string;
+      }
     | { error: string; executorName: string };
 
 export type Assembly = {};
 
 export type CompilationResult =
     | {
-        source: string;
-        sourceFile: FileResult;
-        binaryFile: FileResult;
-        threeAddressCode?: Assembly;
-        threeAddressCodeFile: FileResult | undefined;
-    }
+          source: string;
+          sourceFile: FileResult;
+          binaryFile: FileResult;
+          threeAddressCode?: Assembly;
+          threeAddressCodeFile: FileResult | undefined;
+      }
     | { error: string; intermediateFile?: FileResult };
 
 export type Executor = {

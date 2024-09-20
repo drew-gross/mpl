@@ -31,20 +31,25 @@ export const toString = (name: string, { instructions, arguments: args }: Functi
     );
 };
 
-export const functionFromParseResult = (ast: Ast<TacAstNode, TacToken>): { f: Function, name: string } => {
-    const [_fn, _spillSpec, name, _lb, argsUnp, _rb, _colon, instructionsUnp] = (ast as any).sequenceItems;
+export const functionFromParseResult = (
+    ast: Ast<TacAstNode, TacToken>
+): { f: Function; name: string } => {
+    const [_fn, _spillSpec, name, _lb, argsUnp, _rb, _colon, instructionsUnp] = (ast as any)
+        .sequenceItems;
     let args: Register[] = parseArgList(argsUnp) as Register[];
     const instructions: Statement[] = instructionsUnp.items.map(instructionFromParseResult);
     return { f: { instructions, liveAtExit: [], arguments: args }, name };
 };
 
-export const parseFunction = (input: string): { f: Function, name: string } | LexError | ParseError[] => {
+export const parseFunction = (
+    input: string
+): { f: Function; name: string } | LexError | ParseError[] => {
     const result = parseString(tokenSpecs, grammar, 'function', input);
     if ('errors' in result) return result.errors;
     return functionFromParseResult(result);
 };
 
-export const parseFunctionOrDie = (tacString: string): { f: Function, name: string } => {
+export const parseFunctionOrDie = (tacString: string): { f: Function; name: string } => {
     const parsed = parseFunction(tacString);
     if ('kind' in parsed) {
         debugger;

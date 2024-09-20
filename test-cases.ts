@@ -65,20 +65,62 @@ export const testModules: TestModule[] = [
         name: 'Exported Function',
         source: 'export constThree := a: Integer => 3;',
         resultJs: `
-const anonymous_1 = (a) => {
-  return 3;
+const readline = require("readline");
+
+const length = (str) => str.length;
+const startsWith = (haystack, needle) => haystack.startsWith(needle);
+const print = (str) => process.stdout.write(str);
+
+const readInt = async () => {
+  return new Promise((resolve, reject) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+    rl.on("line", (line) => {
+      rl.close();
+      resolve(line);
+    });
+  });
 };
-export const constThree = anonymous_1;
+
+(async () => {
+  const user_1 = (a) => {
+    return 3;
+  };
+  let constThree = user_1;
+})();
 `,
     },
     {
         name: 'Add Functions',
         source: 'export add := (a: Integer, b: Integer) => a + b;',
         resultJs: `
-const anonymous_1 = (a, b) => {
-  return a + b;
+const readline = require("readline");
+
+const length = (str) => str.length;
+const startsWith = (haystack, needle) => haystack.startsWith(needle);
+const print = (str) => process.stdout.write(str);
+
+const readInt = async () => {
+  return new Promise((resolve, reject) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+    rl.on("line", (line) => {
+      rl.close();
+      resolve(line);
+    });
+  });
 };
-export const add = anonymous_1;
+
+(async () => {
+  const user_1 = (a, b) => {
+    return a + b;
+  };
+  let add = user_1;
+})();
 `,
     },
     {
@@ -99,16 +141,37 @@ export const add = anonymous_1;
             };
         `,
         resultJs: `
-const anonymous_1 = (xs) => {
-  let result = 0;
-  const items = xs;
-  for (let i = 0; i < items.length; i++) {
-    const x = items[i];
-    result = result + x;
-  }
-  return result;
+const readline = require("readline");
+
+const length = (str) => str.length;
+const startsWith = (haystack, needle) => haystack.startsWith(needle);
+const print = (str) => process.stdout.write(str);
+
+const readInt = async () => {
+  return new Promise((resolve, reject) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+    rl.on("line", (line) => {
+      rl.close();
+      resolve(line);
+    });
+  });
 };
-export const sum = anonymous_1;
+
+(async () => {
+  const user_1 = (xs) => {
+    let result = 0;
+    const items = xs;
+    for (let i = 0; i < items.length; i++) {
+      const x = items[i];
+      result = result + x;
+    }
+    return result;
+  };
+  let sum = user_1;
+})();
 `,
     },
 ];

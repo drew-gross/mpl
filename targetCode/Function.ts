@@ -95,7 +95,8 @@ const translateStackArgumentsToStackReads = (
                         argumentStackLocation(targetInfo, taf.arguments, r) !== undefined;
                     if (registersRead.some(registerReadsStackArgument)) {
                         throw debug(
-                            `not sure how to convert args to stack loads for ${tas.kind
+                            `not sure how to convert args to stack loads for ${
+                                tas.kind
                             }. ${JSON.stringify(tas)}`
                         );
                     }

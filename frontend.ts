@@ -28,6 +28,7 @@ import {
     UninferredFunction,
     FrontendOutput,
     StringLiteralData,
+    getTypeOfFunction,
 } from './api';
 import { TypeError } from './TypeError';
 import * as Ast from './ast';
@@ -461,6 +462,7 @@ export const typeOfExpression = (
             const functionName = ast.name;
             const declaration = availableVariables.find(({ name }) => functionName == name);
             if (!declaration) {
+                debugger;
                 return [
                     {
                         kind: 'unknownIdentifier',
@@ -496,11 +498,8 @@ export const typeOfExpression = (
                 ];
             }
             for (let i = 0; i < argTypes.length; i++) {
-                const resolved = resolve(
-                    (functionType.type.arguments[i] as any).type,
-                    ctx.availableTypes,
-                    ast.sourceLocation
-                );
+                let argType = functionType.type.arguments[i];
+                const resolved = resolve(argType, ctx.availableTypes, ast.sourceLocation);
                 if ('errors' in resolved) {
                     return resolved.errors;
                 }
@@ -996,6 +995,7 @@ const typeCheckFunction = (ctx: WithContext<UninferredFunction>) => {
 const assignmentToGlobalDeclaration = (
     ctx: WithContext<Ast.UninferredDeclarationAssignment>
 ): Variable => {
+    debugger;
     const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
     return {
@@ -1015,6 +1015,17 @@ type WithContext<T> = {
     availableVariables: Variable[];
 };
 
+const inModule = (ctx: WithContext<UninferredFunction>): boolean => {
+    for (const s of ctx.w.statements) {
+        if (s.kind == 'declarationAssignment' || s.kind == 'typedDeclarationAssignment') {
+            if (s.exported) {
+                return true;
+            }
+        }
+    }
+    return false;
+};
+
 const inferFunction = (ctx: WithContext<UninferredFunction>): Function | TypeError[] => {
     const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
     const statements: Ast.Statement[] = [];
@@ -1032,28 +1043,39 @@ const inferFunction = (ctx: WithContext<UninferredFunction>): Function | TypeErr
         variablesFound.push(...extractVariables(statementsContext));
         statements.push(infer(statementContext) as Ast.Statement);
     });
-    const maybeReturnStatement = last(ctx.w.statements);
-    if (!maybeReturnStatement) {
-        return [{ kind: 'missingReturn', sourceLocation: { line: 0, column: 0 } }];
+    if (inModule(ctx)) {
+        return {
+            statements,
+            variables: ctx.w.variables,
+            parameters: ctx.w.parameters,
+            returnType: builtinTypes.Integer,
+        };
+    } else {
+        const maybeReturnStatement = last(ctx.w.statements);
+        if (!maybeReturnStatement) {
+            return [{ kind: 'missingReturn', sourceLocation: { line: 0, column: 0 } }];
+        }
+        if (maybeReturnStatement.kind != 'returnStatement') {
+            return [
+                { kind: 'missingReturn', sourceLocation: maybeReturnStatement.sourceLocation },
+            ];
+        }
+        const returnStatement = maybeReturnStatement;
+        const returnType = typeOfExpression({
+            ...ctx,
+            availableVariables: variablesFound,
+            w: returnStatement.expression,
+        });
+        if (isTypeError(returnType)) {
+            return returnType;
+        }
+        return {
+            statements,
+            variables: ctx.w.variables,
+            parameters: ctx.w.parameters,
+            returnType: returnType.type,
+        };
     }
-    if (maybeReturnStatement.kind != 'returnStatement') {
-        return [{ kind: 'missingReturn', sourceLocation: maybeReturnStatement.sourceLocation }];
-    }
-    const returnStatement = maybeReturnStatement;
-    const returnType = typeOfExpression({
-        ...ctx,
-        availableVariables: variablesFound,
-        w: returnStatement.expression,
-    });
-    if (isTypeError(returnType)) {
-        return returnType;
-    }
-    return {
-        statements,
-        variables: ctx.w.variables,
-        parameters: ctx.w.parameters,
-        returnType: returnType.type,
-    };
 };
 
 // TODO: merge this with typecheck maybe?
@@ -1866,14 +1888,18 @@ const inferFunctions = (
     availableTypes,
     typedVariables: Variable[],
     typedFunctions: Map<String, Function>,
-    untypedFunctions: Map<String, Ast.UninferredFunctionLiteral>,
+    untypedFunctions: Map<String, Ast.UninferredFunctionLiteral>
 ): TypeError[] => {
     let anythingChanged = true;
     const typeErrors: TypeError[] = [];
     while (anythingChanged) {
         anythingChanged = false;
         for (const [name, fn] of Object.entries(untypedFunctions)) {
-            const fnObj = functionObjectFromAst({ w: fn, availableVariables: typedVariables, availableTypes });
+            const fnObj = functionObjectFromAst({
+                w: fn,
+                availableVariables: typedVariables,
+                availableTypes,
+            });
             const inferred = inferFunction({
                 w: fnObj,
                 availableTypes,
@@ -1891,15 +1917,21 @@ const inferFunctions = (
             typedFunctions.set(name, inferred);
             delete untypedFunctions[name];
             anythingChanged = true;
-            typeErrors.push(...typeCheckFunction({ w: fnObj, availableVariables: typedVariables, availableTypes }).typeErrors);
+            typeErrors.push(
+                ...typeCheckFunction({
+                    w: fnObj,
+                    availableVariables: typedVariables,
+                    availableTypes,
+                }).typeErrors
+            );
         }
     }
     if (Object.entries(untypedFunctions).length == 0) {
         return typeErrors;
     } else {
-        throw debug("failed to infer a function");
+        throw debug('failed to infer a function');
     }
-}
+};
 
 const compile = (
     source: string
@@ -1960,7 +1992,12 @@ const compile = (
     const untypedFunctions = divvyMainIntoFunctions(ast);
     const typedVariables: Variable[] = [];
     const typedFunctions: Map<string, Function> = new Map();
-    const typeErrors = inferFunctions(availableTypes, typedVariables, typedFunctions, untypedFunctions);
+    const typeErrors = inferFunctions(
+        availableTypes,
+        [...builtinFunctions, ...typedVariables],
+        typedFunctions,
+        untypedFunctions
+    );
     if (typeErrors.length > 0) {
         return { typeErrors };
     }
@@ -1975,9 +2012,18 @@ const compile = (
 
     const main = typedFunctions.get('builtin_main');
     if (!main) {
-        throw debug("no main");
+        throw debug('no main');
     }
     typedFunctions.delete('builtin_main');
+
+    // Add typed functions to typed variables since we inserted calls to those functions
+    for (const [name, fn] of typedFunctions.entries()) {
+        typedVariables.push({
+            name,
+            type: getTypeOfFunction(fn),
+            exported: false,
+        });
+    }
 
     const globalDeclarations: Variable[] = main.statements
         .filter(s => s.kind === 'typedDeclarationAssignment')
