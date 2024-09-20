@@ -346,16 +346,6 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                         why: `Call by register ${functionName}`,
                     },
                 ];
-                // } else if (functionName in ['startsWith']) {
-                //     callInstructions = [
-                //         {
-                //             kind: 'callByRegister',
-                //             function: 'startsWith',
-                //             arguments: argumentRegisters,
-                //             destination,
-                //             why: `Call by register ${functionName}`,
-                //         }
-                //     ];
             } else {
                 debug(`could not find function name ${functionName} anywhere`);
             }

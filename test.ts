@@ -2045,7 +2045,7 @@ test('Ordered Set Remove Fuzz', t => {
     }
 });
 
-test('Oredered Set Remove With Predicate Fuzz', t => {
+test('Ordered Set Remove With Predicate Fuzz', t => {
     const inserted = range(0, 100);
     const remaining = range(0, 51);
     for (let seed = 0; seed < 100; seed++) {
