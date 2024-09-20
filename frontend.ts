@@ -462,7 +462,6 @@ export const typeOfExpression = (
             const functionName = ast.name;
             const declaration = availableVariables.find(({ name }) => functionName == name);
             if (!declaration) {
-                debugger;
                 return [
                     {
                         kind: 'unknownIdentifier',
@@ -499,6 +498,13 @@ export const typeOfExpression = (
             }
             for (let i = 0; i < argTypes.length; i++) {
                 let argType = functionType.type.arguments[i];
+                // TODO: Something is putting invalid data into the function type, find out what, fix it, then eliminate this.
+                if (!('methods' in argType)) {
+                    argType = (argType as any).type as any;
+                }
+                if (!('methods' in argType)) {
+                    throw debug('bad type');
+                }
                 const resolved = resolve(argType, ctx.availableTypes, ast.sourceLocation);
                 if ('errors' in resolved) {
                     return resolved.errors;
@@ -554,7 +560,6 @@ export const typeOfExpression = (
                     ({ name: varName }) => methodName == varName
                 );
                 if (!variable) {
-                    debugger;
                     return {
                         errors: [
                             {
@@ -995,17 +1000,12 @@ const typeCheckFunction = (ctx: WithContext<UninferredFunction>) => {
 const assignmentToGlobalDeclaration = (
     ctx: WithContext<Ast.UninferredDeclarationAssignment>
 ): Variable => {
-    debugger;
     const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
     return {
         name: ctx.w.destination,
         type: result.type,
         exported: ctx.w.exported,
-        mangledName:
-            ctx.w.expression.kind == 'functionLiteral'
-                ? ctx.w.expression.deanonymizedName
-                : ctx.w.destination,
     };
 };
 

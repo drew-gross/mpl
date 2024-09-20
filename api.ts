@@ -8,7 +8,6 @@ export type Variable = {
     name: string;
     type: Type | TypeReference;
     exported: boolean;
-    mangledName?: string;
 };
 export type UninferredFunction = {
     statements: UninferredStatement[];
