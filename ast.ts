@@ -240,7 +240,6 @@ export type UninferredMemberAccess = {
 export type UninferredFunctionLiteral = {
     kind: 'functionLiteral';
     sourceLocation: SourceLocation;
-    deanonymizedName: string; // TODO: remove this
     body: UninferredStatement[];
     parameters: Variable[];
 };

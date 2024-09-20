@@ -1186,12 +1186,6 @@ const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
                 ifTrue: recurse(ast.ifTrue),
                 ifFalse: recurse(ast.ifFalse),
             };
-        case 'functionLiteral':
-            return {
-                kind: 'functionReference',
-                sourceLocation: ast.sourceLocation,
-                name: ast.deanonymizedName,
-            };
         case 'typeDeclaration':
             // TODO: maybe just strip declarations before inferring.
             return { kind: 'typeDeclaration', sourceLocation: ast.sourceLocation };
@@ -1628,7 +1622,6 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             const [_lb, args, _rb, _arrow, expr] = ast.sequenceItems as any;
             return {
                 kind: 'functionLiteral',
-                deanonymizedName: `anonymous_${functionId}`,
                 body: [
                     {
                         kind: 'returnStatement',
@@ -1646,7 +1639,6 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             const parameters2: Variable[] = extractParameterList(args);
             return {
                 kind: 'functionLiteral',
-                deanonymizedName: `anonymous_${functionId}`,
                 body: extractFunctionBody(body),
                 parameters: parameters2,
                 sourceLocation: ast.sourceLocation,
@@ -1874,7 +1866,6 @@ const divvyMainIntoFunctions = (
     const { functions, updated } = divvyIntoFunctions(idMaker(), ast);
     functions['builtin_main'] = {
         kind: 'functionLiteral',
-        deanonymizedName: 'builtin_main',
         body: (updated as any).statements,
         parameters: [],
         sourceLocation: ast.sourceLocation,
