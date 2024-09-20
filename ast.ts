@@ -178,180 +178,183 @@ export type Ast =
 
 // Untyped versions (...kinda)
 
-export type UninferredReturnStatement = {
+export type PreFunctionExtractionReturnStatement = {
     kind: 'returnStatement';
     sourceLocation: SourceLocation;
-    expression: UninferredExpression;
+    expression: PreFunctionExtractionExpression;
 };
 
-export type UninferredTernary = {
+export type PreFunctionExtractionTernary = {
     kind: 'ternary';
     sourceLocation: SourceLocation;
-    condition: UninferredExpression;
-    ifTrue: UninferredExpression;
-    ifFalse: UninferredExpression;
+    condition: PreFunctionExtractionExpression;
+    ifTrue: PreFunctionExtractionExpression;
+    ifFalse: PreFunctionExtractionExpression;
 };
 
-export type UninferredEquality = {
+export type PreFunctionExtractionEquality = {
     kind: 'equality';
     sourceLocation: SourceLocation;
-    lhs: UninferredExpression;
-    rhs: UninferredExpression;
+    lhs: PreFunctionExtractionExpression;
+    rhs: PreFunctionExtractionExpression;
 };
 
-export type UninferredTypedDeclarationAssignment = {
+export type PreFunctionExtractionTypedDeclarationAssignment = {
     kind: 'typedDeclarationAssignment';
     sourceLocation: SourceLocation;
     destination: string;
     type: Type | TypeReference;
-    expression: UninferredExpression;
+    expression: PreFunctionExtractionExpression;
     exported: boolean;
 };
 
-export type UninferredReassignment = {
+export type PreFunctionExtractionReassignment = {
     kind: 'reassignment';
     sourceLocation: SourceLocation;
     destination: string;
-    expression: UninferredExpression;
+    expression: PreFunctionExtractionExpression;
 };
 
-export type UninferredFunctionCall = {
+export type PreFunctionExtractionFunctionCall = {
     kind: 'callExpression';
     sourceLocation: SourceLocation;
     name: string;
-    arguments: UninferredExpression[];
+    arguments: PreFunctionExtractionExpression[];
 };
 
-export type UninferredMemberStyleCall = {
+export type PreFunctionExtractionMemberStyleCall = {
     kind: 'memberStyleCall';
     sourceLocation: SourceLocation;
-    lhs: UninferredExpression;
+    lhs: PreFunctionExtractionExpression;
     memberName: string;
-    params: UninferredExpression[];
+    params: PreFunctionExtractionExpression[];
 };
 
-export type UninferredMemberAccess = {
+export type PreFunctionExtractionMemberAccess = {
     kind: 'memberAccess';
     sourceLocation: SourceLocation;
-    lhs: UninferredExpression;
+    lhs: PreFunctionExtractionExpression;
     rhs: string;
 };
 
-export type UninferredFunctionLiteral = {
+export type PreFunctionExtractionFunctionLiteral = {
     kind: 'functionLiteral';
     sourceLocation: SourceLocation;
-    body: UninferredStatement[];
+    body: PreFunctionExtractionStatement[];
     parameters: Variable[];
 };
 
-export type UninferredAddition = {
+export type PreFunctionExtractionAddition = {
     kind: 'addition';
     sourceLocation: SourceLocation;
-    lhs: UninferredExpression;
-    rhs: UninferredExpression;
+    lhs: PreFunctionExtractionExpression;
+    rhs: PreFunctionExtractionExpression;
 };
 
-export type UninferredSubtraction = {
+export type PreFunctionExtractionSubtraction = {
     kind: 'subtraction';
     sourceLocation: SourceLocation;
-    lhs: UninferredExpression;
-    rhs: UninferredExpression;
+    lhs: PreFunctionExtractionExpression;
+    rhs: PreFunctionExtractionExpression;
 };
 
-export type UninferredProduct = {
+export type PreFunctionExtractionProduct = {
     kind: 'product';
     sourceLocation: SourceLocation;
-    lhs: UninferredExpression;
-    rhs: UninferredExpression;
+    lhs: PreFunctionExtractionExpression;
+    rhs: PreFunctionExtractionExpression;
 };
 
-export type UninferredConcatenation = {
+export type PreFunctionExtractionConcatenation = {
     kind: 'concatenation';
     sourceLocation: SourceLocation;
-    lhs: UninferredExpression;
-    rhs: UninferredExpression;
+    lhs: PreFunctionExtractionExpression;
+    rhs: PreFunctionExtractionExpression;
 };
 
 // TODO: merge this with TypedDeclarationAssignment, make "requested" type optional
-export type UninferredDeclarationAssignment = {
+export type PreFunctionExtractionDeclarationAssignment = {
     kind: 'declarationAssignment';
     sourceLocation: SourceLocation;
     destination: string;
-    expression: UninferredExpression;
+    expression: PreFunctionExtractionExpression;
     exported: boolean;
 };
 
-export type UninferredTypeDeclaration = {
+export type PreFunctionExtractionTypeDeclaration = {
     kind: 'typeDeclaration';
     sourceLocation: SourceLocation;
     name: string;
     type: Type;
 };
 
-export type UninferredForLoop = {
+export type PreFunctionExtractionForLoop = {
     kind: 'forLoop';
     sourceLocation: SourceLocation;
     var: Variable;
-    list: UninferredExpression;
-    body: UninferredStatement[];
+    list: PreFunctionExtractionExpression;
+    body: PreFunctionExtractionStatement[];
 };
 
-export type UninferredObjectMember = {
+export type PreFunctionExtractionObjectMember = {
     name: string;
-    expression: UninferredExpression;
+    expression: PreFunctionExtractionExpression;
 };
 
-export type UninferredObjectLiteral = {
+export type PreFunctionExtractionObjectLiteral = {
     kind: 'objectLiteral';
     sourceLocation: SourceLocation;
     typeName: string;
-    members: UninferredObjectMember[];
+    members: PreFunctionExtractionObjectMember[];
 };
 
-export type UninferredListLiteral = {
+export type PreFunctionExtractionListLiteral = {
     kind: 'listLiteral';
     sourceLocation: SourceLocation;
-    items: UninferredExpression[];
+    items: PreFunctionExtractionExpression[];
 };
 
-export type UninferredIndexAccess = {
+export type PreFunctionExtractionIndexAccess = {
     kind: 'indexAccess';
     sourceLocation: SourceLocation;
-    index: UninferredExpression;
-    accessed: UninferredExpression;
+    index: PreFunctionExtractionExpression;
+    accessed: PreFunctionExtractionExpression;
 };
 
-export type UninferredProgram = {
+export type PreFunctionExtractionProgram = {
     kind: 'program';
     sourceLocation: SourceLocation;
-    statements: UninferredStatement[];
+    statements: PreFunctionExtractionStatement[];
 };
 
-export type UninferredStatement =
-    | UninferredTypedDeclarationAssignment
-    | UninferredDeclarationAssignment
-    | UninferredReassignment
-    | UninferredTypeDeclaration
-    | UninferredForLoop
-    | UninferredReturnStatement;
+export type PreFunctionExtractionStatement =
+    | PreFunctionExtractionTypedDeclarationAssignment
+    | PreFunctionExtractionDeclarationAssignment
+    | PreFunctionExtractionReassignment
+    | PreFunctionExtractionTypeDeclaration
+    | PreFunctionExtractionForLoop
+    | PreFunctionExtractionReturnStatement;
 
-export type UninferredExpression =
+export type PreFunctionExtractionExpression =
     | Leaf
-    | UninferredObjectLiteral
-    | UninferredTernary
-    | UninferredEquality
-    | UninferredFunctionCall
-    | UninferredFunctionLiteral
-    | UninferredSubtraction
-    | UninferredAddition
-    | UninferredProduct
-    | UninferredConcatenation
-    | UninferredMemberAccess
-    | UninferredMemberStyleCall
-    | UninferredListLiteral
-    | UninferredIndexAccess;
+    | PreFunctionExtractionObjectLiteral
+    | PreFunctionExtractionTernary
+    | PreFunctionExtractionEquality
+    | PreFunctionExtractionFunctionCall
+    | PreFunctionExtractionFunctionLiteral
+    | PreFunctionExtractionSubtraction
+    | PreFunctionExtractionAddition
+    | PreFunctionExtractionProduct
+    | PreFunctionExtractionConcatenation
+    | PreFunctionExtractionMemberAccess
+    | PreFunctionExtractionMemberStyleCall
+    | PreFunctionExtractionListLiteral
+    | PreFunctionExtractionIndexAccess;
 
-export type UninferredAst = UninferredStatement | UninferredProgram | UninferredExpression;
+export type PreFunctionExtractionAst =
+    | PreFunctionExtractionStatement
+    | PreFunctionExtractionProgram
+    | PreFunctionExtractionExpression;
 
 export const astToString = (ast: Ast) => {
     if (!ast) debug('Null ast in astToString');

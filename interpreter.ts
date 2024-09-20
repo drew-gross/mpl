@@ -51,7 +51,6 @@ export const interpretFunction = (
     stdin: string,
     state: State // modified
 ): number | Pointer | undefined => {
-    debugger;
     if (!main) {
         throw debug('interpret rquires a main');
     }
@@ -107,7 +106,7 @@ export const interpretFunction = (
             (registerValues as any)[name].offset += amount;
         }
     };
-    let getGlobal = (from: string) => {
+    let getGlobal = (from: string): number | Pointer => {
         if (from in globals) {
             // TODO: Tidy up which things are pointers and which are values
             from = globals[from].mangledName;

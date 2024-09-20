@@ -121,7 +121,9 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean): MplAst =
     }
 };
 
-const extractVariable = (ctx: WithContext<Ast.UninferredStatement>): Variable | undefined => {
+const extractVariable = (
+    ctx: WithContext<Ast.PreFunctionExtractionStatement>
+): Variable | undefined => {
     const kind = ctx.w.kind;
     switch (ctx.w.kind) {
         case 'reassignment':
@@ -153,9 +155,11 @@ const extractVariable = (ctx: WithContext<Ast.UninferredStatement>): Variable | 
     }
 };
 
-const extractVariables = (ctx: WithContext<Ast.UninferredStatement[]>): Variable[] => {
+const extractVariables = (
+    ctx: WithContext<Ast.PreFunctionExtractionStatement[]>
+): Variable[] => {
     const variables: Variable[] = [];
-    ctx.w.forEach((statement: Ast.UninferredStatement) => {
+    ctx.w.forEach((statement: Ast.PreFunctionExtractionStatement) => {
         switch (statement.kind) {
             case 'returnStatement':
             case 'reassignment':
@@ -192,7 +196,7 @@ const extractVariables = (ctx: WithContext<Ast.UninferredStatement[]>): Variable
 };
 
 const functionObjectFromAst = (
-    ctx: WithContext<Ast.UninferredFunctionLiteral>
+    ctx: WithContext<Ast.PreFunctionExtractionFunctionLiteral>
 ): UninferredFunction => ({
     statements: ctx.w.body,
     variables: [
@@ -206,8 +210,8 @@ const functionObjectFromAst = (
     parameters: ctx.w.parameters,
 });
 
-const walkAst = <ReturnType, NodeType extends Ast.UninferredAst>(
-    ast: Ast.UninferredAst,
+const walkAst = <ReturnType, NodeType extends Ast.PreFunctionExtractionAst>(
+    ast: Ast.PreFunctionExtractionAst,
     nodeKinds: string[],
     extractItem: (item: NodeType) => ReturnType
 ): ReturnType[] => {
@@ -304,7 +308,7 @@ type TOEResult = { type: Type; extractedFunctions: Function[] };
 
 // TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer() maybe?
 export const typeOfExpression = (
-    ctx: WithContext<Ast.UninferredExpression>,
+    ctx: WithContext<Ast.PreFunctionExtractionExpression>,
     expectedType: Type | undefined = undefined
 ): TOEResult | TypeError[] => {
     const recurse = ast2 => typeOfExpression({ ...ctx, w: ast2 });
@@ -811,7 +815,7 @@ export const typeOfExpression = (
 };
 
 const typeCheckStatement = (
-    ctx: WithContext<Ast.UninferredStatement>
+    ctx: WithContext<Ast.PreFunctionExtractionStatement>
 ): { errors: TypeError[]; newVariables: Variable[] } => {
     const { w, availableTypes, availableVariables } = ctx;
     const ast = w;
@@ -998,7 +1002,7 @@ const typeCheckFunction = (ctx: WithContext<UninferredFunction>) => {
 };
 
 const assignmentToGlobalDeclaration = (
-    ctx: WithContext<Ast.UninferredDeclarationAssignment>
+    ctx: WithContext<Ast.PreFunctionExtractionDeclarationAssignment>
 ): Variable => {
     const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
@@ -1030,12 +1034,12 @@ const inferFunction = (ctx: WithContext<UninferredFunction>): Function | TypeErr
     const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
     const statements: Ast.Statement[] = [];
     ctx.w.statements.forEach(statement => {
-        const statementsContext: WithContext<Ast.UninferredStatement[]> = {
+        const statementsContext: WithContext<Ast.PreFunctionExtractionStatement[]> = {
             w: [statement],
             availableVariables: variablesFound,
             availableTypes: ctx.availableTypes,
         };
-        const statementContext: WithContext<Ast.UninferredStatement> = {
+        const statementContext: WithContext<Ast.PreFunctionExtractionStatement> = {
             w: statement,
             availableVariables: variablesFound,
             availableTypes: ctx.availableTypes,
@@ -1079,7 +1083,7 @@ const inferFunction = (ctx: WithContext<UninferredFunction>): Function | TypeErr
 };
 
 // TODO: merge this with typecheck maybe?
-const infer = (ctx: WithContext<Ast.UninferredAst>): Ast.Ast => {
+const infer = (ctx: WithContext<Ast.PreFunctionExtractionAst>): Ast.Ast => {
     const recurse = ast2 => infer({ ...ctx, w: ast2 });
     const { w, availableVariables, availableTypes } = ctx;
     const ast = w;
@@ -1389,7 +1393,9 @@ const parseType = (ast: MplAst): Type | TypeReference => {
     }
 };
 
-const parseObjectMember = (ast: MplAst): Ast.UninferredObjectMember | 'WrongShapeAst' => {
+const parseObjectMember = (
+    ast: MplAst
+): Ast.PreFunctionExtractionObjectMember | 'WrongShapeAst' => {
     if (isSeparatedListNode(ast) || isListNode(ast)) {
         throw debug('todo');
     }
@@ -1406,7 +1412,7 @@ const parseObjectMember = (ast: MplAst): Ast.UninferredObjectMember | 'WrongShap
             return 'WrongShapeAst';
         }
     }
-    const result: Ast.UninferredObjectMember = {
+    const result: Ast.PreFunctionExtractionObjectMember = {
         name: (ast.sequenceItems[0] as any).value,
         expression: expression as any, // TODO: write a util to check if its and expression
     };
@@ -1414,7 +1420,7 @@ const parseObjectMember = (ast: MplAst): Ast.UninferredObjectMember | 'WrongShap
 };
 
 let functionId = add(-1, 1);
-const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' => {
+const astFromParseResult = (ast: MplAst): Ast.PreFunctionExtractionAst | 'WrongShapeAst' => {
     if (isSeparatedListNode(ast) || isListNode(ast)) {
         throw debug('todo');
     }
@@ -1425,7 +1431,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 kind: 'returnStatement',
                 expression: astFromParseResult(expr),
                 sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredAst;
+            } as Ast.PreFunctionExtractionAst;
         case 'number':
             if (ast.value === undefined) throw debug('ast.value === undefined');
             return {
@@ -1448,7 +1454,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 ifTrue: astFromParseResult(ifTrue),
                 ifFalse: astFromParseResult(ifFalse),
                 sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredAst;
+            } as Ast.PreFunctionExtractionAst;
         case 'equality': {
             if (!('sequenceItems' in ast))
                 throw debug('children not in ast in astFromParseResult');
@@ -1458,7 +1464,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 lhs: astFromParseResult(lhs),
                 rhs: astFromParseResult(rhs),
                 sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredAst;
+            } as Ast.PreFunctionExtractionAst;
         }
         case 'paramList':
             throw debug('paramList in astFromParseResult'); // Should have been caught in "callExpression"
@@ -1469,7 +1475,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 name: fn.value,
                 arguments: args.items.map(astFromParseResult),
                 sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredAst;
+            } as Ast.PreFunctionExtractionAst;
         case 'binaryExpression':
             if (!('sequenceItems' in ast))
                 throw debug('children not in ast in astFromParseResult');
@@ -1493,7 +1499,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 lhs: astFromParseResult(lhs),
                 rhs: astFromParseResult(rhs),
                 sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredAst;
+            } as Ast.PreFunctionExtractionAst;
         case 'reassignment': {
             if (!('sequenceItems' in ast))
                 throw debug('children not in ast in astFromParseResult');
@@ -1503,7 +1509,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 destination: to.value as any,
                 expression: astFromParseResult(expr),
                 sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredAst;
+            } as Ast.PreFunctionExtractionAst;
         }
         case 'declaration': {
             const [export_, name, _colon, type_, _assign, expr] = ast.sequenceItems as any;
@@ -1588,11 +1594,11 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             if (newParams == 'WrongShapeAst') {
                 return 'WrongShapeAst';
             }
-            const r: Ast.UninferredMemberStyleCall = {
+            const r: Ast.PreFunctionExtractionMemberStyleCall = {
                 kind: 'memberStyleCall',
-                lhs: lhs as Ast.UninferredExpression,
+                lhs: lhs as Ast.PreFunctionExtractionExpression,
                 memberName,
-                params: newParams as Ast.UninferredExpression[],
+                params: newParams as Ast.PreFunctionExtractionExpression[],
                 sourceLocation: ast.sourceLocation,
             };
             return r;
@@ -1606,7 +1612,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 lhs,
                 rhs: anyAst.sequenceItems[2].value,
                 sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredAst;
+            } as Ast.PreFunctionExtractionAst;
         }
         case 'concatenation':
             if (!('sequenceItems' in ast))
@@ -1616,7 +1622,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 lhs: astFromParseResult(ast.sequenceItems[0]),
                 rhs: astFromParseResult(ast.sequenceItems[2]),
                 sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredAst;
+            } as Ast.PreFunctionExtractionAst;
         case 'function': {
             functionId++;
             const [_lb, args, _rb, _arrow, expr] = ast.sequenceItems as any;
@@ -1631,7 +1637,7 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
                 ],
                 parameters: extractParameterList(args),
                 sourceLocation: ast.sourceLocation,
-            } as Ast.UninferredAst;
+            } as Ast.PreFunctionExtractionAst;
         }
         case 'functionWithBlock': {
             functionId++;
@@ -1651,10 +1657,10 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             const [id, _colon, iteratee] = condition.sequenceItems;
             const lst = astFromParseResult(iteratee);
             if (lst == 'WrongShapeAst') return lst;
-            const result: Ast.UninferredForLoop = {
+            const result: Ast.PreFunctionExtractionForLoop = {
                 kind: 'forLoop',
                 var: id.value,
-                list: lst as Ast.UninferredExpression,
+                list: lst as Ast.PreFunctionExtractionExpression,
                 body,
                 sourceLocation: a.sourceLocation,
             };
@@ -1678,15 +1684,17 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
             if (!isSeparatedListNode(items)) throw debug('todo');
             return {
                 kind: 'listLiteral',
-                items: items.items.map(astFromParseResult) as Ast.UninferredExpression[],
+                items: items.items.map(
+                    astFromParseResult
+                ) as Ast.PreFunctionExtractionExpression[],
                 sourceLocation: ast.sourceLocation,
             };
         case 'indexAccess':
             const [accessed, index] = ast.sequenceItems;
             return {
                 kind: 'indexAccess',
-                index: astFromParseResult(index) as Ast.UninferredExpression,
-                accessed: astFromParseResult(accessed) as Ast.UninferredExpression,
+                index: astFromParseResult(index) as Ast.PreFunctionExtractionExpression,
+                accessed: astFromParseResult(accessed) as Ast.PreFunctionExtractionExpression,
                 sourceLocation: ast.sourceLocation,
             };
         case 'separatedStatement':
@@ -1699,8 +1707,11 @@ const astFromParseResult = (ast: MplAst): Ast.UninferredAst | 'WrongShapeAst' =>
 
 const divvyIntoFunctions = (
     makeId,
-    ast: Ast.UninferredAst
-): { functions: Map<String, Ast.UninferredFunctionLiteral>; updated: Ast.UninferredAst } => {
+    ast: Ast.PreFunctionExtractionAst
+): {
+    functions: Map<String, Ast.PreFunctionExtractionFunctionLiteral>;
+    updated: Ast.PreFunctionExtractionAst;
+} => {
     const recurse = x => divvyIntoFunctions(makeId, x);
     switch (ast.kind) {
         case 'number':
@@ -1861,8 +1872,8 @@ const divvyIntoFunctions = (
 };
 
 const divvyMainIntoFunctions = (
-    ast: Ast.UninferredAst
-): Map<String, Ast.UninferredFunctionLiteral> => {
+    ast: Ast.PreFunctionExtractionAst
+): Map<String, Ast.PreFunctionExtractionFunctionLiteral> => {
     const { functions, updated } = divvyIntoFunctions(idMaker(), ast);
     functions['builtin_main'] = {
         kind: 'functionLiteral',
@@ -1879,7 +1890,7 @@ const inferFunctions = (
     availableTypes,
     typedVariables: Variable[],
     typedFunctions: Map<String, Function>,
-    untypedFunctions: Map<String, Ast.UninferredFunctionLiteral>
+    untypedFunctions: Map<String, Ast.PreFunctionExtractionFunctionLiteral>
 ): TypeError[] => {
     let anythingChanged = true;
     const typeErrors: TypeError[] = [];
@@ -1974,7 +1985,7 @@ const compile = (
             ],
         };
     }
-    const availableTypes = walkAst<TypeDeclaration, Ast.UninferredTypeDeclaration>(
+    const availableTypes = walkAst<TypeDeclaration, Ast.PreFunctionExtractionTypeDeclaration>(
         ast,
         ['typeDeclaration'],
         n => n

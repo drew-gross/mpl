@@ -1,4 +1,4 @@
-import { UninferredStatement, Statement } from './ast';
+import { PreFunctionExtractionStatement, Statement } from './ast';
 import { RegisterAgnosticTargetInfo } from './TargetInfo';
 import { Type, TypeDeclaration, TypeReference } from './types';
 import { FileResult } from 'fs-extra';
@@ -10,7 +10,7 @@ export type Variable = {
     exported: boolean;
 };
 export type UninferredFunction = {
-    statements: UninferredStatement[];
+    statements: PreFunctionExtractionStatement[];
     // TODO: These should probably belong to each statement?
     variables: Variable[];
     parameters: Variable[];

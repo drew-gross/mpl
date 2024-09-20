@@ -533,9 +533,9 @@ test('correct inferred type for function', t => {
         'function',
         lex(tokenSpecs, functionSource) as Token<MplToken>[]
     );
-    const ast: Ast.UninferredExpression = astFromParseResult(
+    const ast: Ast.PreFunctionExtractionExpression = astFromParseResult(
         parseResult as MplAst
-    ) as Ast.UninferredExpression;
+    ) as Ast.PreFunctionExtractionExpression;
     t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
         type: FunctionType([builtinTypes.Integer], [], builtinTypes.Integer),
         extractedFunctions: [
@@ -887,7 +887,7 @@ test('list type equality', t => {
 });
 
 test('type of objectLiteral', t => {
-    const ast: Ast.UninferredExpression = {
+    const ast: Ast.PreFunctionExtractionExpression = {
         kind: 'objectLiteral',
         typeName: 'BoolPair',
         members: [
