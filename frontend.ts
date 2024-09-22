@@ -25,13 +25,13 @@ import {
 import {
     Variable,
     Function,
-    UninferredFunction,
     FrontendOutput,
     StringLiteralData,
     getTypeOfFunction,
 } from './api';
 import { TypeError } from './TypeError';
 import * as Ast from './ast';
+import * as PFAst from './postFunctionExtractionAst';
 /* tslint:disable */
 const { add } = require('./mpl/add.mpl');
 /* tslint:enable */
@@ -122,7 +122,7 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean): MplAst =
 };
 
 const extractVariable = (
-    ctx: WithContext<Ast.PreFunctionExtractionStatement>
+    ctx: WithContext<PFAst.PostFunctionExtractionStatement>
 ): Variable | undefined => {
     const kind = ctx.w.kind;
     switch (ctx.w.kind) {
@@ -156,10 +156,10 @@ const extractVariable = (
 };
 
 const extractVariables = (
-    ctx: WithContext<Ast.PreFunctionExtractionStatement[]>
+    ctx: WithContext<PFAst.PostFunctionExtractionStatement[]>
 ): Variable[] => {
     const variables: Variable[] = [];
-    ctx.w.forEach((statement: Ast.PreFunctionExtractionStatement) => {
+    ctx.w.forEach((statement: PFAst.PostFunctionExtractionStatement) => {
         switch (statement.kind) {
             case 'returnStatement':
             case 'reassignment':
@@ -196,13 +196,14 @@ const extractVariables = (
 };
 
 const functionObjectFromAst = (
-    ctx: WithContext<Ast.PreFunctionExtractionFunctionLiteral>
-): UninferredFunction => ({
-    statements: ctx.w.body,
+    ctx: WithContext<PFAst.ExtractedFunction>
+): PFAst.ExtractedFunctionWithVariables => ({
+    sourceLocation: ctx.w.sourceLocation,
+    statements: ctx.w.statements,
     variables: [
         ...ctx.w.parameters,
         ...extractVariables({
-            w: ctx.w.body,
+            w: ctx.w.statements,
             availableVariables: mergeDeclarations(ctx.availableVariables, ctx.w.parameters),
             availableTypes: ctx.availableTypes,
         }),
@@ -308,7 +309,7 @@ type TOEResult = { type: Type; extractedFunctions: Function[] };
 
 // TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer() maybe?
 export const typeOfExpression = (
-    ctx: WithContext<Ast.PreFunctionExtractionExpression>,
+    ctx: WithContext<PFAst.PostFunctionExtractionExpression>,
     expectedType: Type | undefined = undefined
 ): TOEResult | TypeError[] => {
     const recurse = ast2 => typeOfExpression({ ...ctx, w: ast2 });
@@ -417,39 +418,40 @@ export const typeOfExpression = (
                 extractedFunctions: [...lt.extractedFunctions, ...rt.extractedFunctions],
             };
         }
-        case 'functionLiteral':
-            const functionObject = functionObjectFromAst({ ...ctx, w: ast });
-            const f = inferFunction({
-                w: functionObject,
-                availableVariables: mergeDeclarations(
-                    ctx.availableVariables,
-                    functionObject.variables
-                ),
-                availableTypes: ctx.availableTypes,
-            });
-            if (isTypeError(f)) {
-                return f;
-            }
-            return {
-                type: FunctionType(
-                    ast.parameters
-                        .map(p => p.type)
-                        .map(t => {
-                            const resolved = resolve(
-                                t,
-                                ctx.availableTypes,
-                                ctx.w.sourceLocation
-                            );
-                            if ('errors' in resolved) {
-                                throw debug('bag argument. This should be a better error.');
-                            }
-                            return resolved;
-                        }),
-                    [],
-                    f.returnType
-                ),
-                extractedFunctions: [f], // TODO: Add functions extracted within the function itself
-            };
+        case 'functionReference':
+            throw debug("todo: implement this, probably need new args?")
+        // const functionObject = functionObjectFromAst({ ...ctx, w: ast });
+        // const f = inferFunction({
+        //     w: functionObject,
+        //     availableVariables: mergeDeclarations(
+        //         ctx.availableVariables,
+        //         functionObject.variables
+        //     ),
+        //     availableTypes: ctx.availableTypes,
+        // });
+        // if (isTypeError(f)) {
+        //     return f;
+        // }
+        // return {
+        //     type: FunctionType(
+        //         ast.parameters
+        //             .map(p => p.type)
+        //             .map(t => {
+        //                 const resolved = resolve(
+        //                     t,
+        //                     ctx.availableTypes,
+        //                     ctx.w.sourceLocation
+        //                 );
+        //                 if ('errors' in resolved) {
+        //                     throw debug('bag argument. This should be a better error.');
+        //                 }
+        //                 return resolved;
+        //             }),
+        //         [],
+        //         f.returnType
+        //     ),
+        //     extractedFunctions: [f], // TODO: Add functions extracted within the function itself
+        // };
         case 'callExpression': {
             const argTypes: (TOEResult | TypeError[])[] = ast.arguments.map(argument =>
                 recurse(argument)
@@ -815,7 +817,7 @@ export const typeOfExpression = (
 };
 
 const typeCheckStatement = (
-    ctx: WithContext<Ast.PreFunctionExtractionStatement>
+    ctx: WithContext<PFAst.PostFunctionExtractionStatement>
 ): { errors: TypeError[]; newVariables: Variable[] } => {
     const { w, availableTypes, availableVariables } = ctx;
     const ast = w;
@@ -984,7 +986,7 @@ const mergeDeclarations = (left: Variable[], right: Variable[]): Variable[] => {
     return result;
 };
 
-const typeCheckFunction = (ctx: WithContext<UninferredFunction>) => {
+const typeCheckFunction = (ctx: WithContext<PFAst.ExtractedFunction>) => {
     let availableVariables = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
     const allErrors: any = [];
     ctx.w.statements.forEach(statement => {
@@ -1002,7 +1004,7 @@ const typeCheckFunction = (ctx: WithContext<UninferredFunction>) => {
 };
 
 const assignmentToGlobalDeclaration = (
-    ctx: WithContext<Ast.PreFunctionExtractionDeclarationAssignment>
+    ctx: WithContext<PFAst.PostFunctionExtractionDeclarationAssignment>
 ): Variable => {
     const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
@@ -1019,7 +1021,7 @@ type WithContext<T> = {
     availableVariables: Variable[];
 };
 
-const inModule = (ctx: WithContext<UninferredFunction>): boolean => {
+const inModule = (ctx: WithContext<PFAst.ExtractedFunction>): boolean => {
     for (const s of ctx.w.statements) {
         if (s.kind == 'declarationAssignment' || s.kind == 'typedDeclarationAssignment') {
             if (s.exported) {
@@ -1030,16 +1032,16 @@ const inModule = (ctx: WithContext<UninferredFunction>): boolean => {
     return false;
 };
 
-const inferFunction = (ctx: WithContext<UninferredFunction>): Function | TypeError[] => {
+const inferFunction = (ctx: WithContext<PFAst.ExtractedFunctionWithVariables>): Function | TypeError[] => {
     const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
     const statements: Ast.Statement[] = [];
     ctx.w.statements.forEach(statement => {
-        const statementsContext: WithContext<Ast.PreFunctionExtractionStatement[]> = {
+        const statementsContext: WithContext<PFAst.PostFunctionExtractionStatement[]> = {
             w: [statement],
             availableVariables: variablesFound,
             availableTypes: ctx.availableTypes,
         };
-        const statementContext: WithContext<Ast.PreFunctionExtractionStatement> = {
+        const statementContext: WithContext<PFAst.PostFunctionExtractionStatement> = {
             w: statement,
             availableVariables: variablesFound,
             availableTypes: ctx.availableTypes,
@@ -1083,7 +1085,7 @@ const inferFunction = (ctx: WithContext<UninferredFunction>): Function | TypeErr
 };
 
 // TODO: merge this with typecheck maybe?
-const infer = (ctx: WithContext<Ast.PreFunctionExtractionAst>): Ast.Ast => {
+const infer = (ctx: WithContext<PFAst.PostFunctionExtractionAst>): Ast.Ast => {
     const recurse = ast2 => infer({ ...ctx, w: ast2 });
     const { w, availableVariables, availableTypes } = ctx;
     const ast = w;
@@ -1705,12 +1707,12 @@ const astFromParseResult = (ast: MplAst): Ast.PreFunctionExtractionAst | 'WrongS
     }
 };
 
-const divvyIntoFunctions = (
+export const divvyIntoFunctions = (
     makeId,
     ast: Ast.PreFunctionExtractionAst
 ): {
-    functions: Map<String, Ast.PreFunctionExtractionFunctionLiteral>;
-    updated: Ast.PreFunctionExtractionAst;
+    functions: Map<String, PFAst.ExtractedFunction>;
+    updated: PFAst.PostFunctionExtractionAst;
 } => {
     const recurse = x => divvyIntoFunctions(makeId, x);
     switch (ast.kind) {
@@ -1776,10 +1778,10 @@ const divvyIntoFunctions = (
             const recursed = ast.body.map(recurse);
             const extractedFunctions = Object.assign({}, ...recursed.map(r => r.functions));
             const id = `user_${makeId()}`;
-            extractedFunctions[id] = { ...ast, body: recursed.map(r => r.updated).flat() };
+            extractedFunctions[id] = { sourceLocation: ast.sourceLocation, statements: recursed.map(r => r.updated), parameters: ast.parameters };
             return {
                 functions: extractedFunctions,
-                updated: { ...ast, kind: 'identifier', value: id },
+                updated: { sourceLocation: ast.sourceLocation, kind: 'functionReference', value: id },
             };
         }
         case 'objectLiteral': {
@@ -1871,13 +1873,16 @@ const divvyIntoFunctions = (
     }
 };
 
-const divvyMainIntoFunctions = (
-    ast: Ast.PreFunctionExtractionAst
-): Map<String, Ast.PreFunctionExtractionFunctionLiteral> => {
+export const divvyMainIntoFunctions = (
+    ast: Ast.PreFunctionExtractionProgram
+): Map<String, PFAst.ExtractedFunction> => {
     const { functions, updated } = divvyIntoFunctions(idMaker(), ast);
+    if (!('statements' in updated)) {
+        throw debug('program in, nonprogram out');
+    }
     functions['builtin_main'] = {
         kind: 'functionLiteral',
-        body: (updated as any).statements,
+        statements: updated.statements,
         parameters: [],
         sourceLocation: ast.sourceLocation,
     };
@@ -1886,11 +1891,11 @@ const divvyMainIntoFunctions = (
 
 // Converts UninferredFunctions in untypedFunctions to variables and adds them to typedVariables and typedFunctions (all arguments excpet 1st modified)
 // TODO: Old version only added to functions. Should these be split? Probably?
-const inferFunctions = (
+export const inferFunctions = (
     availableTypes,
     typedVariables: Variable[],
     typedFunctions: Map<String, Function>,
-    untypedFunctions: Map<String, Ast.PreFunctionExtractionFunctionLiteral>
+    untypedFunctions: Map<String, PFAst.ExtractedFunction>
 ): TypeError[] => {
     let anythingChanged = true;
     const typeErrors: TypeError[] = [];

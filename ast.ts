@@ -4,7 +4,7 @@ import { Type, TypeReference } from './types';
 import debug from './util/debug';
 import join from './util/join';
 
-type Leaf = Number | Identifier | BooleanLiteral | StringLiteral;
+export type Leaf = Number | Identifier | BooleanLiteral | StringLiteral;
 
 export type Number = {
     kind: 'number';

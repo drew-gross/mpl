@@ -5,6 +5,7 @@ import { TestModule, Test, tacTest, moduleTest } from './test-case';
 import { parseInstructions } from './threeAddressCode/parser';
 import { parseProgram as parseTacProgram } from './threeAddressCode/Program';
 import annotateSource from './annotateSource';
+import idMaker from './util/idMaker';
 import {
     equal as typesAreEqual,
     builtinTypes,
@@ -39,7 +40,7 @@ import {
     Many,
 } from './parser-lib/parse';
 import * as Ast from './ast';
-import { removeBracketsFromAst } from './frontend';
+import { removeBracketsFromAst, divvyIntoFunctions, inferFunctions } from './frontend';
 import {
     assignRegisters,
     controlFlowGraph,
@@ -52,6 +53,8 @@ import { orderedSet, operatorCompare } from './util/ordered-set';
 import { set } from './util/set';
 import { shuffle } from 'shuffle-seed';
 import { mergeNoConflict } from './util/merge';
+import * as PFAst from './postFunctionExtractionAst';
+import { Function as FrontendFunction, getTypeOfFunction } from './api';
 
 test('lexer', t => {
     t.deepEqual(lex(tokenSpecs, '123'), [
@@ -533,36 +536,20 @@ test('correct inferred type for function', t => {
         'function',
         lex(tokenSpecs, functionSource) as Token<MplToken>[]
     );
-    const ast: Ast.PreFunctionExtractionExpression = astFromParseResult(
+    const ast: Ast.PreFunctionExtractionProgram = astFromParseResult(
         parseResult as MplAst
-    ) as Ast.PreFunctionExtractionExpression;
-    t.deepEqual(typeOfExpression({ w: ast, availableVariables: [], availableTypes: [] }), {
-        type: FunctionType([builtinTypes.Integer], [], builtinTypes.Integer),
-        extractedFunctions: [
-            {
-                parameters: [{ name: 'a', type: builtinTypes.Integer, exported: false }],
-                returnType: builtinTypes.Integer,
-                statements: [
-                    {
-                        expression: {
-                            kind: 'number' as 'number',
-                            sourceLocation: { column: 15, line: 1 },
-                            value: 11,
-                        },
-                        kind: 'returnStatement' as 'returnStatement',
-                        sourceLocation: { column: 1, line: 1 },
-                    },
-                ],
-                variables: [
-                    {
-                        name: 'a',
-                        type: builtinTypes.Integer,
-                        exported: false,
-                    },
-                ],
-            },
-        ],
-    });
+    ) as Ast.PreFunctionExtractionProgram;
+    const { functions, updated: _ } = divvyIntoFunctions(idMaker(), ast);
+    const typedFunctions: Map<string, FrontendFunction> = new Map();
+    const typeErrors = inferFunctions(
+        [],
+        [],
+        typedFunctions,
+        functions
+    );
+    t.deepEqual(typeErrors, []);
+
+    t.deepEqual(getTypeOfFunction(typedFunctions.get('user_1') as any), FunctionType([builtinTypes.Integer], [], builtinTypes.Integer));
 });
 
 const getRunner = ({ name, infiniteLooping, failing, only }: Test) => {
@@ -887,7 +874,7 @@ test('list type equality', t => {
 });
 
 test('type of objectLiteral', t => {
-    const ast: Ast.PreFunctionExtractionExpression = {
+    const ast: PFAst.PostFunctionExtractionExpression = {
         kind: 'objectLiteral',
         typeName: 'BoolPair',
         members: [

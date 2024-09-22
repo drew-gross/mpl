@@ -9,7 +9,7 @@ export type Variable = {
     type: Type | TypeReference;
     exported: boolean;
 };
-export type UninferredFunction = {
+export type PreFunctionExtractionFunction = {
     statements: PreFunctionExtractionStatement[];
     // TODO: These should probably belong to each statement?
     variables: Variable[];
@@ -49,24 +49,24 @@ export type FrontendOutput = {
 };
 export type ExecutionResult =
     | {
-          exitCode: number;
-          stdout: string;
-          executorName: string;
-          runInstructions: string;
-          debugInstructions: string;
-      }
+        exitCode: number;
+        stdout: string;
+        executorName: string;
+        runInstructions: string;
+        debugInstructions: string;
+    }
     | { error: string; executorName: string };
 
 export type Assembly = {};
 
 export type CompilationResult =
     | {
-          source: string;
-          sourceFile: FileResult;
-          binaryFile: FileResult;
-          threeAddressCode?: Assembly;
-          threeAddressCodeFile: FileResult | undefined;
-      }
+        source: string;
+        sourceFile: FileResult;
+        binaryFile: FileResult;
+        threeAddressCode?: Assembly;
+        threeAddressCodeFile: FileResult | undefined;
+    }
     | { error: string; intermediateFile?: FileResult };
 
 export type Executor = {
