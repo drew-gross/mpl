@@ -1,7 +1,7 @@
 import SourceLocation from './parser-lib/sourceLocation';
 import { Type, TypeReference } from './types';
-import { Variable } from './api';
 import { Leaf } from './ast';
+import { Variable } from './api';
 
 export type ReturnStatement = {
     kind: 'returnStatement';
@@ -15,12 +15,6 @@ export type Ternary = {
     condition: Expression;
     ifTrue: Expression;
     ifFalse: Expression;
-};
-
-export type FunctionReference = {
-    kind: 'functionReference';
-    sourceLocation: SourceLocation;
-    value: string;
 };
 
 export type Equality = {
@@ -66,6 +60,13 @@ export type MemberAccess = {
     sourceLocation: SourceLocation;
     lhs: Expression;
     rhs: string;
+};
+
+export type FunctionLiteral = {
+    kind: 'functionLiteral';
+    sourceLocation: SourceLocation;
+    body: Statement[];
+    parameters: Variable[];
 };
 
 export type Addition = {
@@ -165,7 +166,7 @@ export type Expression =
     | Ternary
     | Equality
     | FunctionCall
-    | FunctionReference
+    | FunctionLiteral
     | Subtraction
     | Addition
     | Product
@@ -176,16 +177,3 @@ export type Expression =
     | IndexAccess;
 
 export type Ast = Statement | Program | Expression;
-
-export type ExtractedFunction = {
-    sourceLocation: SourceLocation;
-    statements: Statement[];
-    parameters: Variable[];
-};
-
-export type ExtractedFunctionWithVariables = {
-    sourceLocation: SourceLocation;
-    statements: Statement[];
-    parameters: Variable[];
-    variables: Variable[];
-};

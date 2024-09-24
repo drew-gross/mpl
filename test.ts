@@ -39,7 +39,6 @@ import {
     SeparatedList,
     Many,
 } from './parser-lib/parse';
-import * as Ast from './ast';
 import { removeBracketsFromAst, divvyIntoFunctions, inferFunctions } from './frontend';
 import {
     assignRegisters,
@@ -53,7 +52,8 @@ import { orderedSet, operatorCompare } from './util/ordered-set';
 import { set } from './util/set';
 import { shuffle } from 'shuffle-seed';
 import { mergeNoConflict } from './util/merge';
-import * as PFAst from './postFunctionExtractionAst';
+import * as PostFunctionExtraction from './postFunctionExtractionAst';
+import * as PreFunctionExtraction from './preFunctionExtractionAst';
 import { Function as FrontendFunction, getTypeOfFunction } from './api';
 
 test('lexer', t => {
@@ -536,9 +536,7 @@ test('correct inferred type for function', t => {
         'function',
         lex(tokenSpecs, functionSource) as Token<MplToken>[]
     );
-    const ast: Ast.PreFunctionExtractionProgram = astFromParseResult(
-        parseResult as MplAst
-    ) as Ast.PreFunctionExtractionProgram;
+    const ast = astFromParseResult(parseResult as MplAst) as PreFunctionExtraction.Program;
     const { functions, updated: _ } = divvyIntoFunctions(idMaker(), ast);
     const typedFunctions: Map<string, FrontendFunction> = new Map();
     const typeErrors = inferFunctions([], [], typedFunctions, functions);
@@ -872,7 +870,7 @@ test('list type equality', t => {
 });
 
 test('type of objectLiteral', t => {
-    const ast: PFAst.PostFunctionExtractionExpression = {
+    const ast: PostFunctionExtraction.Expression = {
         kind: 'objectLiteral',
         typeName: 'BoolPair',
         members: [

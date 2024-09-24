@@ -1,4 +1,5 @@
-import { PreFunctionExtractionStatement, Statement } from './ast';
+import { Statement } from './ast';
+import { Statement as PreFunctionExtractionStatement } from './postFunctionExtractionAst';
 import { RegisterAgnosticTargetInfo } from './TargetInfo';
 import { Type, TypeDeclaration, TypeReference } from './types';
 import { FileResult } from 'fs-extra';

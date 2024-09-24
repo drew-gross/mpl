@@ -97,7 +97,7 @@ import stripAnsi from 'strip-ansi';
                         } else {
                             // TODO: integrate this into debug-test-case
                             console.log(
-                                `found type errors when none expected: ${join(
+                                `found type errors when none expected in ${p.name}: ${join(
                                     programInfo.typeErrors.map(typeErrorToString as any),
                                     ', '
                                 )}`
