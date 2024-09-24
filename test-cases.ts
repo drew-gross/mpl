@@ -9,7 +9,6 @@ export type TestProgram = {
     source: string;
     failingBackends?: string | string[]; // Expect this to fail
     infiniteLooping?: boolean; // Don't even attempt to compile this, it will infinite loop
-    failingInterpreter?: boolean; // Fails to interpret in a way that fucks with the debugger
 
     // Expected results of test
     exitCode?: number;
@@ -297,7 +296,6 @@ str2: String = "b";
 return str1 ++ str2 == "ab" ? 5 : 10;
 `,
         exitCode: 5,
-        failingInterpreter: true,
     },
     {
         name: 'Semi-Complex String Concatenation',
@@ -496,7 +494,6 @@ return isFive(5) ? 1 : 0;`,
             return myList[0];
         `,
         exitCode: 11,
-        failingInterpreter: true,
     },
     {
         name: 'Two Item List',
@@ -546,7 +543,6 @@ return isFive(5) ? 1 : 0;`,
             return bp.first ? 10 : 20;
         `,
         exitCode: 10,
-        failingInterpreter: true,
     },
     {
         name: 'Define Int Pair',
@@ -695,7 +691,6 @@ return isFive(5) ? 1 : 0;`,
             return result1.second - result2.first - midVar;
         `,
         exitCode: 34 - 12 - 2,
-        failingInterpreter: true,
     },
     {
         name: 'Return List',
@@ -717,7 +712,6 @@ return isFive(5) ? 1 : 0;`,
             return returnsList()[3];
         `,
         exitCode: 4,
-        failingInterpreter: true,
     },
     {
         name: 'String Length',
@@ -726,7 +720,6 @@ return isFive(5) ? 1 : 0;`,
             return length(myStr);
         `,
         exitCode: 4,
-        failingInterpreter: true,
     },
     {
         name: 'Empty String Length',
@@ -1028,7 +1021,6 @@ return isFive(5) ? 1 : 0;`,
             return sum;
         `,
         exitCode: 6,
-        failingInterpreter: true,
     },
     {
         name: 'Large For',
@@ -1073,7 +1065,6 @@ return isFive(5) ? 1 : 0;`,
             return sum();
         `,
         exitCode: 12,
-        failingInterpreter: true,
     },
     {
         // TODO: rewrite this in a way that it is guaranteed to cause spilling

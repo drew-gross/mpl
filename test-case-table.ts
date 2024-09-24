@@ -162,24 +162,20 @@ import stripAnsi from 'strip-ansi';
                     astOk = 'ok';
 
                     // Check interpreter
-                    if (!p.failingInterpreter) {
-                        if (
-                            !passed(
-                                {
-                                    exitCode: p.exitCode,
-                                    stdout: p.stdout,
-                                    name: 'interpreter',
-                                    source: p.source,
-                                },
-                                programInfo.interpreterResults
-                            )
-                        ) {
-                            interpreterOk = 'err';
-                        } else {
-                            interpreterOk = 'ok';
-                        }
+                    if (
+                        !passed(
+                            {
+                                exitCode: p.exitCode,
+                                stdout: p.stdout,
+                                name: 'interpreter',
+                                source: p.source,
+                            },
+                            programInfo.interpreterResults
+                        )
+                    ) {
+                        interpreterOk = 'err';
                     } else {
-                        interpreterOk = 'dis';
+                        interpreterOk = 'ok';
                     }
 
                     // Check backends
