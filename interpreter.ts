@@ -114,11 +114,14 @@ export const interpretFunction = (
         }
         return state.memory[from][0];
     };
-    let getMemory = (block: string, offset: number) => {
-        let val = state.memory[block][offset];
+    let getMemory = (pointer: Pointer, offset: number = 0) => {
+        let val = state.memory[pointer.block][pointer.offset + offset];
         // TODO: Make this an error instead, once I have a debugger set up
         if (val === undefined) return 0;
         return val;
+    };
+    const setMemory = (pointer: Pointer, offset: number, value) => {
+        state.memory[pointer.block][pointer.offset + offset] = value;
     };
     var allocaCount = 0;
     var mmapCount = 0;
@@ -144,14 +147,14 @@ export const interpretFunction = (
                 break;
             case 'loadMemory':
                 let pointer = getPointer(i.from);
-                registerValues[i.to.name] = getMemory(pointer.block, pointer.offset + i.offset);
+                registerValues[i.to.name] = getMemory(pointer, i.offset);
                 break;
             case 'loadMemoryByte': {
                 let pointer = getRegister(i.address);
                 if (typeof pointer === 'number') {
                     throw debug('expected a pointer');
                 }
-                registerValues[i.to.name] = getMemory(pointer.block, pointer.offset);
+                registerValues[i.to.name] = getMemory(pointer);
                 break;
             }
             case 'storeGlobal':
@@ -160,18 +163,18 @@ export const interpretFunction = (
             case 'storeMemory': {
                 let pointer = getPointer(i.address);
                 let value = getValue(i.from);
-                state.memory[pointer.block][pointer.offset + i.offset] = value;
+                setMemory(pointer, i.offset, value);
                 break;
             }
             case 'storeMemoryByte': {
                 let pointer = getPointer(i.address);
                 let value = getValue(i.contents);
-                state.memory[pointer.block][pointer.offset] = value;
+                setMemory(pointer, 0, value);
                 break;
             }
             case 'storeZeroToMemory': {
                 let pointer = getPointer(i.address);
-                state.memory[pointer.block][pointer.offset + i.offset] = 0;
+                setMemory(pointer, i.offset, 0);
                 break;
             }
             case 'loadGlobal':
