@@ -915,16 +915,14 @@ test('type of objectLiteral', t => {
         new Map()
     );
     const expectedType = {
-        type: {
-            ...Product(
-                [
-                    { name: 'first', type: builtinTypes.Boolean },
-                    { name: 'second', type: builtinTypes.Boolean },
-                ],
-                []
-            ),
-            original: { namedType: 'BoolPair' },
-        },
+        ...Product(
+            [
+                { name: 'first', type: builtinTypes.Boolean },
+                { name: 'second', type: builtinTypes.Boolean },
+            ],
+            []
+        ),
+        original: { namedType: 'BoolPair' },
     };
     t.deepEqual(type, expectedType);
 });
