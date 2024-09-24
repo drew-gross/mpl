@@ -1029,7 +1029,7 @@ test('tac parser regression', t => {
     t.deepEqual(Array.isArray(result), false);
 });
 
-test.failing('Add Numbers in ThreeAddressCode', tacTest, {
+test('Add Numbers in ThreeAddressCode', tacTest, {
     source: `
 (function) main():
     r:a = 1; a = 1
@@ -1038,6 +1038,7 @@ test.failing('Add Numbers in ThreeAddressCode', tacTest, {
     return r:sum; ret
 `,
     exitCode: 3,
+    failing: ['x64'],
 });
 
 const dummySourceLocation = { line: 0, column: 0 };
