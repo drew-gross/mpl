@@ -541,15 +541,13 @@ test('correct inferred type for function', t => {
     ) as Ast.PreFunctionExtractionProgram;
     const { functions, updated: _ } = divvyIntoFunctions(idMaker(), ast);
     const typedFunctions: Map<string, FrontendFunction> = new Map();
-    const typeErrors = inferFunctions(
-        [],
-        [],
-        typedFunctions,
-        functions
-    );
+    const typeErrors = inferFunctions([], [], typedFunctions, functions);
     t.deepEqual(typeErrors, []);
 
-    t.deepEqual(getTypeOfFunction(typedFunctions.get('user_1') as any), FunctionType([builtinTypes.Integer], [], builtinTypes.Integer));
+    t.deepEqual(
+        getTypeOfFunction(typedFunctions.get('user_1') as any),
+        FunctionType([builtinTypes.Integer], [], builtinTypes.Integer)
+    );
 });
 
 const getRunner = ({ name, infiniteLooping, failing, only }: Test) => {
@@ -897,22 +895,25 @@ test('type of objectLiteral', t => {
         ],
         sourceLocation: { line: 6, column: 16 },
     };
-    const type = typeOfExpression({
-        w: ast,
-        availableVariables: [],
-        availableTypes: [
-            {
-                name: 'BoolPair',
-                type: Product(
-                    [
-                        { name: 'first', type: builtinTypes.Boolean },
-                        { name: 'second', type: builtinTypes.Boolean },
-                    ],
-                    []
-                ),
-            },
-        ],
-    });
+    const type = typeOfExpression(
+        {
+            w: ast,
+            availableVariables: [],
+            availableTypes: [
+                {
+                    name: 'BoolPair',
+                    type: Product(
+                        [
+                            { name: 'first', type: builtinTypes.Boolean },
+                            { name: 'second', type: builtinTypes.Boolean },
+                        ],
+                        []
+                    ),
+                },
+            ],
+        },
+        new Map()
+    );
     const expectedType = {
         type: {
             ...Product(
