@@ -925,7 +925,6 @@ test('type of objectLiteral', t => {
             ),
             original: { namedType: 'BoolPair' },
         },
-        extractedFunctions: [],
     };
     t.deepEqual(type, expectedType);
 });

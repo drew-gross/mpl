@@ -325,7 +325,7 @@ const combineErrors = <Success>(
     return result.length > 0 ? result : null;
 };
 
-type TOEResult = { type: Type; extractedFunctions: Function[] };
+type TOEResult = { type: Type };
 
 // TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer() maybe?
 export const typeOfExpression = (
@@ -338,7 +338,7 @@ export const typeOfExpression = (
     const ast = w;
     switch (ast.kind) {
         case 'number':
-            return { type: builtinTypes.Integer, extractedFunctions: [] };
+            return { type: builtinTypes.Integer };
         case 'addition':
         case 'product':
         case 'subtraction': {
@@ -376,7 +376,6 @@ export const typeOfExpression = (
             }
             return {
                 type: builtinTypes.Integer,
-                extractedFunctions: [...lt.extractedFunctions, ...rt.extractedFunctions],
             };
         }
         case 'equality': {
@@ -399,7 +398,7 @@ export const typeOfExpression = (
                     },
                 ];
             }
-            return { type: builtinTypes.Boolean, extractedFunctions: [] };
+            return { type: builtinTypes.Boolean };
         }
         case 'concatenation': {
             const leftType = recurse(ast.lhs);
@@ -436,7 +435,6 @@ export const typeOfExpression = (
             }
             return {
                 type: builtinTypes.String,
-                extractedFunctions: [...lt.extractedFunctions, ...rt.extractedFunctions],
             };
         }
         case 'functionReference': {
@@ -480,7 +478,6 @@ export const typeOfExpression = (
                     [],
                     f.returnType
                 ),
-                extractedFunctions: [f], // TODO: Add functions extracted within the function itself
             };
         }
         case 'callExpression': {
@@ -566,7 +563,7 @@ export const typeOfExpression = (
             if ('errors' in returnType) {
                 return returnType.errors;
             }
-            return { type: returnType, extractedFunctions: [] };
+            return { type: returnType };
         }
         case 'memberStyleCall': {
             const callArgTypes: (TOEResult | TypeError[])[] = ast.params.map(recurse);
@@ -674,7 +671,7 @@ export const typeOfExpression = (
             if ('errors' in returnType) {
                 return returnType.errors;
             }
-            return { type: returnType, extractedFunctions: [] };
+            return { type: returnType };
         }
         case 'identifier': {
             const unresolved = availableVariables.find(({ name }) => ast.value == name);
@@ -691,7 +688,7 @@ export const typeOfExpression = (
             if ('errors' in declaration) {
                 return declaration.errors;
             }
-            return { type: declaration, extractedFunctions: [] };
+            return { type: declaration };
         }
         case 'ternary': {
             const conditionType = recurse(ast.condition);
@@ -739,9 +736,9 @@ export const typeOfExpression = (
             return trueBranchType;
         }
         case 'booleanLiteral':
-            return { type: builtinTypes.Boolean, extractedFunctions: [] };
+            return { type: builtinTypes.Boolean };
         case 'stringLiteral':
-            return { type: builtinTypes.String, extractedFunctions: [] };
+            return { type: builtinTypes.String };
         case 'objectLiteral':
             const memberTypes = ast.members.map(({ expression }) => recurse(expression));
             const typeErrors: TypeError[] = memberTypes.filter(isTypeError).flat();
@@ -757,7 +754,6 @@ export const typeOfExpression = (
                     ),
                     original: { namedType: ast.typeName },
                 },
-                extractedFunctions: [], // TODO: propagate these
             };
         case 'memberAccess':
             const lhsType = recurse(ast.lhs);
@@ -785,10 +781,9 @@ export const typeOfExpression = (
                     },
                 ];
             }
-            return { type: accessedMember.type, extractedFunctions: [] };
+            return { type: accessedMember.type };
         case 'listLiteral': {
             let innerType: Type | undefined;
-            const extractedFunctions: Function[] = [];
             for (const item of ast.items) {
                 const result = recurse(item);
                 if (isTypeError(result)) {
@@ -799,15 +794,14 @@ export const typeOfExpression = (
                 } else if (!typesAreEqual(innerType, result.type)) {
                     return [{ kind: 'nonhomogenousList', sourceLocation: ast.sourceLocation }];
                 }
-                extractedFunctions.push(...result.extractedFunctions);
             }
             if (!innerType) {
                 if (expectedType) {
-                    return { type: expectedType, extractedFunctions };
+                    return { type: expectedType };
                 }
                 return [{ kind: 'uninferrableEmptyList', sourceLocation: ast.sourceLocation }];
             }
-            return { type: List(innerType), extractedFunctions };
+            return { type: List(innerType) };
         }
         case 'indexAccess':
             const accessedType = recurse(ast.accessed);
@@ -838,10 +832,6 @@ export const typeOfExpression = (
             }
             return {
                 type: accessedType.type.type.of,
-                extractedFunctions: [
-                    ...accessedType.extractedFunctions,
-                    ...indexType.extractedFunctions,
-                ],
             };
         default:
             throw debug(`${(ast as any).kind} unhandled in typeOfExpression`);
