@@ -119,7 +119,7 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean): MplAst =
 
 const extractVariable = (
     ctx: WithContext<PostFunctionExtraction.Statement>,
-    extractedFunctions: Map<String, PostFunctionExtraction.ExtractedFunction>
+    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
 ): Variable | undefined => {
     const kind = ctx.w.kind;
     switch (ctx.w.kind) {
@@ -160,7 +160,7 @@ const extractVariable = (
 
 const extractVariables = (
     ctx: WithContext<PostFunctionExtraction.Statement[]>,
-    extractedFunctions: Map<String, PostFunctionExtraction.ExtractedFunction>
+    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
 ): Variable[] => {
     const variables: Variable[] = [];
     ctx.w.forEach((statement: PostFunctionExtraction.Statement) => {
@@ -210,7 +210,7 @@ const extractVariables = (
 
 const functionObjectFromAst = (
     ctx: WithContext<PostFunctionExtraction.ExtractedFunction>,
-    extractedFunctions: Map<String, PostFunctionExtraction.ExtractedFunction>
+    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
 ): PostFunctionExtraction.ExtractedFunctionWithVariables => ({
     sourceLocation: ctx.w.sourceLocation,
     statements: ctx.w.statements,
@@ -325,7 +325,7 @@ const combineErrors = <Success>(
 // TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer() maybe?
 export const typeOfExpression = (
     ctx: WithContext<PostFunctionExtraction.Expression>,
-    extractedFunctions: Map<String, PostFunctionExtraction.ExtractedFunction>,
+    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>,
     expectedType: Type | undefined = undefined
 ): Type | TypeError[] => {
     const recurse = ast2 => typeOfExpression({ ...ctx, w: ast2 }, extractedFunctions);
@@ -821,7 +821,7 @@ export const typeOfExpression = (
 
 const typeCheckStatement = (
     ctx: WithContext<PostFunctionExtraction.Statement>,
-    extractedFunctions: Map<String, PostFunctionExtraction.ExtractedFunction>
+    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
 ): { errors: TypeError[]; newVariables: Variable[] } => {
     const { w, availableTypes, availableVariables } = ctx;
     const ast = w;
@@ -1002,7 +1002,7 @@ const mergeDeclarations = (left: Variable[], right: Variable[]): Variable[] => {
 
 const typeCheckFunction = (
     ctx: WithContext<PostFunctionExtraction.ExtractedFunction>,
-    extractedFunctions: Map<String, PostFunctionExtraction.ExtractedFunction>
+    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
 ) => {
     let availableVariables = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
     const allErrors: any = [];
@@ -1025,7 +1025,7 @@ const typeCheckFunction = (
 
 const assignmentToGlobalDeclaration = (
     ctx: WithContext<PostFunctionExtraction.DeclarationAssignment>,
-    extractedFunctions: Map<String, PostFunctionExtraction.ExtractedFunction>
+    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
 ): Variable => {
     const result = typeOfExpression({ ...ctx, w: ctx.w.expression }, extractedFunctions);
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
@@ -1055,7 +1055,7 @@ const inModule = (ctx: WithContext<PostFunctionExtraction.ExtractedFunction>): b
 
 const inferFunction = (
     ctx: WithContext<PostFunctionExtraction.ExtractedFunctionWithVariables>,
-    extractedFunctions: Map<String, PostFunctionExtraction.ExtractedFunction>
+    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
 ): Function | TypeError[] => {
     const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
     const statements: Ast.Statement[] = [];
@@ -1114,7 +1114,7 @@ const inferFunction = (
 // TODO: merge this with typecheck maybe?
 const infer = (
     ctx: WithContext<PostFunctionExtraction.Ast>,
-    extractedFunctions: Map<String, PostFunctionExtraction.ExtractedFunction>
+    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
 ): Ast.Ast => {
     const recurse = ast2 => infer({ ...ctx, w: ast2 }, extractedFunctions);
     const { w, availableVariables, availableTypes } = ctx;
@@ -1733,7 +1733,7 @@ export const divvyIntoFunctions = (
     makeId,
     ast: PreFunctionExtraction.Ast
 ): {
-    functions: Map<String, PostFunctionExtraction.ExtractedFunction>;
+    functions: Map<string, PostFunctionExtraction.ExtractedFunction>;
     updated: PostFunctionExtraction.Ast;
 } => {
     const recurse = x => divvyIntoFunctions(makeId, x);
@@ -1903,14 +1903,13 @@ export const divvyIntoFunctions = (
     }
 };
 
-// Converts UninferredFunctions in untypedFunctions to variables and adds them to typedVariables and typedFunctions (all arguments excpet 1st modified)
-// TODO: Old version only added to functions. Should these be split? Probably?
+// Converts UninferredFunctions in untypedFunctions to variables and adds them to typedVariables (which is modified)
 export const inferFunctions = (
     availableTypes,
     typedVariables: Variable[],
-    typedFunctions: Map<String, Function>,
-    untypedFunctions: Map<String, PostFunctionExtraction.ExtractedFunction>
-): TypeError[] => {
+    untypedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
+): Map<string, Function> | TypeError[] => {
+    const typedFunctions: Map<string, Function> = new Map();
     const waitingToBeTypedFunctions = deepCopy(untypedFunctions);
     let anythingChanged = true;
     const typeErrors: TypeError[] = [];
@@ -1958,7 +1957,11 @@ export const inferFunctions = (
         }
     }
     if (Object.entries(waitingToBeTypedFunctions).length == 0) {
-        return typeErrors;
+        if (typeErrors.length > 0) {
+            return typeErrors;
+        } else {
+            return typedFunctions;
+        }
     } else {
         throw debug('failed to infer a function');
     }
@@ -2033,15 +2036,13 @@ const compile = (
     };
 
     const typedVariables: Variable[] = [];
-    const typedFunctions: Map<string, Function> = new Map();
-    const typeErrors = inferFunctions(
+    const typedFunctions = inferFunctions(
         availableTypes,
         [...builtinFunctions, ...typedVariables],
-        typedFunctions,
         untypedFunctions
     );
-    if (typeErrors.length > 0) {
-        return { typeErrors };
+    if (Array.isArray(typedFunctions)) {
+        return { typeErrors: typedFunctions };
     }
 
     const stringLiteralIdMaker = idMaker();

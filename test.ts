@@ -54,7 +54,7 @@ import { shuffle } from 'shuffle-seed';
 import { mergeNoConflict } from './util/merge';
 import * as PostFunctionExtraction from './postFunctionExtractionAst';
 import * as PreFunctionExtraction from './preFunctionExtractionAst';
-import { Function as FrontendFunction, getTypeOfFunction } from './api';
+import { getTypeOfFunction } from './api';
 
 test('lexer', t => {
     t.deepEqual(lex(tokenSpecs, '123'), [
@@ -538,14 +538,15 @@ test('correct inferred type for function', t => {
     );
     const ast = astFromParseResult(parseResult as MplAst) as PreFunctionExtraction.Program;
     const { functions, updated: _ } = divvyIntoFunctions(idMaker(), ast);
-    const typedFunctions: Map<string, FrontendFunction> = new Map();
-    const typeErrors = inferFunctions([], [], typedFunctions, functions);
-    t.deepEqual(typeErrors, []);
-
-    t.deepEqual(
-        getTypeOfFunction(typedFunctions.get('user_1') as any),
-        FunctionType([builtinTypes.Integer], [], builtinTypes.Integer)
-    );
+    const typedFunctions = inferFunctions([], [], functions);
+    if (Array.isArray(typedFunctions)) {
+        t.fail('type errors');
+    } else {
+        t.deepEqual(
+            getTypeOfFunction(typedFunctions.get('user_1') as any),
+            FunctionType([builtinTypes.Integer], [], builtinTypes.Integer)
+        );
+    }
 });
 
 const getRunner = ({ name, infiniteLooping, failing, only }: Test) => {
