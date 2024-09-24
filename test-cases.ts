@@ -310,7 +310,6 @@ lenFunc := dummy: Integer => {
 return lenFunc(5);
 `,
         exitCode: 40,
-        failingInterpreter: true,
     },
     {
         name: 'Self Multiply and Assign',
