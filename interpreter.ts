@@ -51,6 +51,7 @@ export const interpretFunction = (
     stdin: string,
     state: State // modified
 ): number | Pointer | undefined => {
+    debugger;
     if (!main) {
         throw debug('interpret rquires a main');
     }

@@ -99,7 +99,6 @@ export default async (
     });
 
     // Make three address code with random alignment, bytesInWord, and malloc/print impl. TODO: This is jank. Maybe three address code should abstract over platform stuff?
-    debugger;
     const threeAddressCode = makeTargetProgram({
         backendInputs: frontendOutput,
         targetInfo: {

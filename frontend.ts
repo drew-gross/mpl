@@ -1934,22 +1934,6 @@ export const divvyIntoFunctions = (
     }
 };
 
-export const divvyMainIntoFunctions = (
-    ast: Ast.PreFunctionExtractionProgram
-): Map<String, PFAst.ExtractedFunction> => {
-    const { functions, updated } = divvyIntoFunctions(idMaker(), ast);
-    if (!('statements' in updated)) {
-        throw debug('program in, nonprogram out');
-    }
-    functions['builtin_main'] = {
-        kind: 'functionLiteral',
-        statements: updated.statements,
-        parameters: [],
-        sourceLocation: ast.sourceLocation,
-    };
-    return functions;
-};
-
 // Converts UninferredFunctions in untypedFunctions to variables and adds them to typedVariables and typedFunctions (all arguments excpet 1st modified)
 // TODO: Old version only added to functions. Should these be split? Probably?
 export const inferFunctions = (
@@ -2037,17 +2021,22 @@ const compile = (
         return { internalError: 'Wrong shape AST' };
     }
 
-    if (ast.kind !== 'program') {
+    const { functions: untypedFunctions, updated: updatedAst } = divvyIntoFunctions(
+        idMaker(),
+        ast
+    );
+
+    if (updatedAst.kind !== 'program') {
         return { internalError: 'AST was not a program' };
     }
 
-    const exportedDeclarations = ast.statements.filter(
+    const exportedDeclarations = updatedAst.statements.filter(
         s =>
             (s.kind == 'typedDeclarationAssignment' || s.kind == 'declarationAssignment') &&
             s.exported
     );
 
-    const topLevelStatements = ast.statements.filter(
+    const topLevelStatements = updatedAst.statements.filter(
         s => s.kind != 'typedDeclarationAssignment' && s.kind != 'declarationAssignment'
     );
 
@@ -2067,7 +2056,13 @@ const compile = (
         n => n
     );
 
-    const untypedFunctions = divvyMainIntoFunctions(ast);
+    untypedFunctions['builtin_main'] = {
+        kind: 'functionLiteral',
+        statements: updatedAst.statements,
+        parameters: [],
+        sourceLocation: ast.sourceLocation,
+    };
+
     const typedVariables: Variable[] = [];
     const typedFunctions: Map<string, Function> = new Map();
     const typeErrors = inferFunctions(
