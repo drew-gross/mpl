@@ -1175,26 +1175,8 @@ const infer = (
                 type: equalityType.type,
             };
         case 'product':
-            return {
-                kind: ast.kind,
-                sourceLocation: ast.sourceLocation,
-                lhs: recurse(ast.lhs),
-                rhs: recurse(ast.rhs),
-            };
         case 'addition':
-            return {
-                kind: ast.kind,
-                sourceLocation: ast.sourceLocation,
-                lhs: recurse(ast.lhs),
-                rhs: recurse(ast.rhs),
-            };
         case 'subtraction':
-            return {
-                kind: ast.kind,
-                sourceLocation: ast.sourceLocation,
-                lhs: recurse(ast.lhs),
-                rhs: recurse(ast.rhs),
-            };
         case 'concatenation':
             return {
                 kind: ast.kind,
