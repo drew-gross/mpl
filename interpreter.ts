@@ -160,7 +160,7 @@ export const interpretFunction = (
             case 'storeMemory': {
                 let pointer = getPointer(i.address);
                 let value = getValue(i.from);
-                state.memory[pointer.block][pointer.offset] = value;
+                state.memory[pointer.block][pointer.offset + i.offset] = value;
                 break;
             }
             case 'storeMemoryByte': {

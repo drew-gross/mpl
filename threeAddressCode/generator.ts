@@ -101,7 +101,7 @@ const assignGlobal = (
             const targetAddress = makeTemporary('targetAddress');
             const itemSize = makeTemporary('itemSize');
             const sourceAddress = makeTemporary('sourceAddress');
-            const temp = makeTemporary('temp');
+            const temp = makeTemporary('listCopyTemp');
             const bytesInWord = targetInfo.bytesInWord;
             return compileExpression<Statement>([], ([]) => [
                 ...ins(`
@@ -117,9 +117,9 @@ const assignGlobal = (
                 ${copyLoop}:; Copy loop
                     ${s(temp)} = *(${s(sourceAddress)} + 0); Copy a byte
                     *(${s(targetAddress)} + 0) = ${s(temp)}; Finish copy
-                    ${s(remainingCount)} += ${-bytesInWord}; Bump pointers
-                    ${s(sourceAddress)} += ${bytesInWord}; Bump pointers
-                    ${s(targetAddress)} += ${bytesInWord}; Bump pointers
+                    ${s(remainingCount)} += ${-bytesInWord}; Bump index to copy next item
+                    ${s(sourceAddress)} += ${bytesInWord}; Bump source pointer
+                    ${s(targetAddress)} += ${bytesInWord}; Bump target pointer
                     goto ${copyLoop} if ${s(remainingCount)} != 0; Not done
                 `),
             ]);
