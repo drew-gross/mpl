@@ -894,25 +894,23 @@ test('type of objectLiteral', t => {
         ],
         sourceLocation: { line: 6, column: 16 },
     };
-    const type = typeOfExpression(
-        {
-            w: ast,
-            availableVariables: [],
-            availableTypes: [
-                {
-                    name: 'BoolPair',
-                    type: Product(
-                        [
-                            { name: 'first', type: builtinTypes.Boolean },
-                            { name: 'second', type: builtinTypes.Boolean },
-                        ],
-                        []
-                    ),
-                },
-            ],
-        },
-        new Map()
-    );
+    const type = typeOfExpression({
+        w: ast,
+        availableVariables: [],
+        availableTypes: [
+            {
+                name: 'BoolPair',
+                type: Product(
+                    [
+                        { name: 'first', type: builtinTypes.Boolean },
+                        { name: 'second', type: builtinTypes.Boolean },
+                    ],
+                    []
+                ),
+            },
+        ],
+        availableFunctions: new Map(),
+    });
     const expectedType = {
         ...Product(
             [

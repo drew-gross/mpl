@@ -118,8 +118,7 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean): MplAst =
 };
 
 const extractVariable = (
-    ctx: WithContext<PostFunctionExtraction.Statement>,
-    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
+    ctx: WithContext<PostFunctionExtraction.Statement>
 ): Variable | undefined => {
     const kind = ctx.w.kind;
     switch (ctx.w.kind) {
@@ -130,10 +129,7 @@ const extractVariable = (
             // a type. TODO: allow more types of recursive functions than just single int...
             return {
                 name: ctx.w.destination,
-                type: typeOfExpression(
-                    { ...ctx, w: ctx.w.expression },
-                    extractedFunctions
-                ) as Type,
+                type: typeOfExpression({ ...ctx, w: ctx.w.expression }) as Type,
                 exported: false,
             };
         case 'typedDeclarationAssignment':
@@ -141,11 +137,7 @@ const extractVariable = (
             if ('errors' in resolved) throw debug('expected no error');
             return {
                 name: ctx.w.destination,
-                type: typeOfExpression(
-                    { ...ctx, w: ctx.w.expression },
-                    extractedFunctions,
-                    resolved
-                ) as Type,
+                type: typeOfExpression({ ...ctx, w: ctx.w.expression }, resolved) as Type,
                 exported: false,
             };
         case 'returnStatement':
@@ -158,10 +150,7 @@ const extractVariable = (
     }
 };
 
-const extractVariables = (
-    ctx: WithContext<PostFunctionExtraction.Statement[]>,
-    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
-): Variable[] => {
+const extractVariables = (ctx: WithContext<PostFunctionExtraction.Statement[]>): Variable[] => {
     const variables: Variable[] = [];
     ctx.w.forEach((statement: PostFunctionExtraction.Statement) => {
         switch (statement.kind) {
@@ -171,31 +160,22 @@ const extractVariables = (
                 break;
             case 'declarationAssignment':
             case 'typedDeclarationAssignment':
-                const potentialVariable = extractVariable(
-                    {
-                        w: statement,
-                        availableVariables: mergeDeclarations(ctx.availableVariables, variables),
-                        availableTypes: ctx.availableTypes,
-                    },
-                    extractedFunctions
-                );
+                const potentialVariable = extractVariable({
+                    ...ctx,
+                    w: statement,
+                    availableVariables: mergeDeclarations(ctx.availableVariables, variables),
+                });
                 if (potentialVariable) {
                     variables.push(potentialVariable);
                 }
                 break;
             case 'forLoop':
                 statement.body.forEach(s => {
-                    const vars = extractVariables(
-                        {
-                            w: [s],
-                            availableVariables: mergeDeclarations(
-                                ctx.availableVariables,
-                                variables
-                            ),
-                            availableTypes: ctx.availableTypes,
-                        },
-                        extractedFunctions
-                    );
+                    const vars = extractVariables({
+                        ...ctx,
+                        w: [s],
+                        availableVariables: mergeDeclarations(ctx.availableVariables, variables),
+                    });
                     if (vars) {
                         variables.push(...vars);
                     }
@@ -209,21 +189,17 @@ const extractVariables = (
 };
 
 const functionObjectFromAst = (
-    ctx: WithContext<PostFunctionExtraction.ExtractedFunction>,
-    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
+    ctx: WithContext<PostFunctionExtraction.ExtractedFunction>
 ): PostFunctionExtraction.ExtractedFunctionWithVariables => ({
     sourceLocation: ctx.w.sourceLocation,
     statements: ctx.w.statements,
     variables: [
         ...ctx.w.parameters,
-        ...extractVariables(
-            {
-                w: ctx.w.statements,
-                availableVariables: mergeDeclarations(ctx.availableVariables, ctx.w.parameters),
-                availableTypes: ctx.availableTypes,
-            },
-            extractedFunctions
-        ),
+        ...extractVariables({
+            ...ctx,
+            w: ctx.w.statements,
+            availableVariables: mergeDeclarations(ctx.availableVariables, ctx.w.parameters),
+        }),
     ],
     parameters: ctx.w.parameters,
 });
@@ -325,10 +301,9 @@ const combineErrors = <Success>(
 // TODO: It's kinda weird that this accepts an Uninferred AST. This function should maybe be merged with infer() maybe?
 export const typeOfExpression = (
     ctx: WithContext<PostFunctionExtraction.Expression>,
-    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>,
     expectedType: Type | undefined = undefined
 ): Type | TypeError[] => {
-    const recurse = ast2 => typeOfExpression({ ...ctx, w: ast2 }, extractedFunctions);
+    const recurse = ast2 => typeOfExpression({ ...ctx, w: ast2 });
     const { w, availableVariables, availableTypes } = ctx;
     const ast = w;
     switch (ast.kind) {
@@ -429,25 +404,19 @@ export const typeOfExpression = (
             return builtinTypes.String;
         }
         case 'functionReference': {
-            const functionAst = extractedFunctions[ast.value || (ast as any).name];
+            const functionAst = ctx.availableFunctions[ast.value || (ast as any).name];
             if (functionAst === undefined) {
                 throw debug('bad function ref');
             }
-            const functionObject = functionObjectFromAst(
-                { ...ctx, w: functionAst },
-                extractedFunctions
-            );
-            const f = inferFunction(
-                {
-                    w: functionObject,
-                    availableVariables: mergeDeclarations(
-                        ctx.availableVariables,
-                        functionObject.variables
-                    ),
-                    availableTypes: ctx.availableTypes,
-                },
-                extractedFunctions
-            );
+            const functionObject = functionObjectFromAst({ ...ctx, w: functionAst });
+            const f = inferFunction({
+                ...ctx,
+                w: functionObject,
+                availableVariables: mergeDeclarations(
+                    ctx.availableVariables,
+                    functionObject.variables
+                ),
+            });
             if (isTypeError(f)) {
                 return f;
             }
@@ -820,35 +789,31 @@ export const typeOfExpression = (
 };
 
 const typeCheckStatement = (
-    ctx: WithContext<PostFunctionExtraction.Statement>,
-    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
+    ctx: WithContext<PostFunctionExtraction.Statement>
 ): { errors: TypeError[]; newVariables: Variable[] } => {
     const { w, availableTypes, availableVariables } = ctx;
     const ast = w;
     if (!ast.kind) debug('!ast.kind');
     switch (ast.kind) {
         case 'returnStatement': {
-            const result = typeOfExpression({ ...ctx, w: ast.expression }, extractedFunctions);
+            const result = typeOfExpression({ ...ctx, w: ast.expression });
             if (isTypeError(result)) {
                 return { errors: result, newVariables: [] };
             }
             return { errors: [], newVariables: [] };
         }
         case 'declarationAssignment': {
-            const rightType = typeOfExpression(
-                {
-                    w: ast.expression,
-                    availableTypes,
-                    availableVariables: mergeDeclarations(availableVariables, [
-                        {
-                            name: ast.destination,
-                            type: FunctionType([builtinTypes.Integer], [], builtinTypes.Integer),
-                            exported: false,
-                        },
-                    ]),
-                },
-                extractedFunctions
-            );
+            const rightType = typeOfExpression({
+                ...ctx,
+                w: ast.expression,
+                availableVariables: mergeDeclarations(availableVariables, [
+                    {
+                        name: ast.destination,
+                        type: FunctionType([builtinTypes.Integer], [], builtinTypes.Integer),
+                        exported: false,
+                    },
+                ]),
+            });
             if (isTypeError(rightType)) {
                 return { errors: rightType, newVariables: [] };
             }
@@ -859,10 +824,7 @@ const typeCheckStatement = (
             };
         }
         case 'reassignment': {
-            const rightType = typeOfExpression(
-                { ...ctx, w: ast.expression },
-                extractedFunctions
-            );
+            const rightType = typeOfExpression({ ...ctx, w: ast.expression });
             if (isTypeError(rightType)) {
                 return { errors: rightType, newVariables: [] };
             }
@@ -923,7 +885,6 @@ const typeCheckStatement = (
                         { name: ast.destination, type: destinationType, exported: false },
                     ]),
                 },
-                extractedFunctions,
                 resolvedDestination
             );
             if (isTypeError(expressionType)) {
@@ -956,7 +917,7 @@ const typeCheckStatement = (
                 newVariables: [],
             };
         case 'forLoop': {
-            const expressionType = typeOfExpression({ ...ctx, w: ast.list }, extractedFunctions);
+            const expressionType = typeOfExpression({ ...ctx, w: ast.list });
             if (isTypeError(expressionType)) {
                 return { errors: expressionType, newVariables: [] };
             }
@@ -974,10 +935,7 @@ const typeCheckStatement = (
             }
             const newVariables: Variable[] = [];
             for (const statement of ast.body) {
-                const statementType = typeCheckStatement(
-                    { ...ctx, w: statement },
-                    extractedFunctions
-                );
+                const statementType = typeCheckStatement({ ...ctx, w: statement });
                 if (isTypeError(statementType)) {
                     return { errors: statementType, newVariables: [] };
                 }
@@ -1000,22 +958,16 @@ const mergeDeclarations = (left: Variable[], right: Variable[]): Variable[] => {
     return result;
 };
 
-const typeCheckFunction = (
-    ctx: WithContext<PostFunctionExtraction.ExtractedFunction>,
-    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
-) => {
+const typeCheckFunction = (ctx: WithContext<PostFunctionExtraction.ExtractedFunction>) => {
     let availableVariables = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
     const allErrors: any = [];
     ctx.w.statements.forEach(statement => {
         if (allErrors.length == 0) {
-            const { errors, newVariables } = typeCheckStatement(
-                {
-                    ...ctx,
-                    w: statement,
-                    availableVariables,
-                },
-                extractedFunctions
-            );
+            const { errors, newVariables } = typeCheckStatement({
+                ...ctx,
+                w: statement,
+                availableVariables,
+            });
             availableVariables = mergeDeclarations(availableVariables, newVariables);
             allErrors.push(...errors);
         }
@@ -1024,10 +976,9 @@ const typeCheckFunction = (
 };
 
 const assignmentToGlobalDeclaration = (
-    ctx: WithContext<PostFunctionExtraction.DeclarationAssignment>,
-    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
+    ctx: WithContext<PostFunctionExtraction.DeclarationAssignment>
 ): Variable => {
-    const result = typeOfExpression({ ...ctx, w: ctx.w.expression }, extractedFunctions);
+    const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
     return {
         name: ctx.w.destination,
@@ -1040,6 +991,7 @@ type WithContext<T> = {
     w: T;
     availableTypes: TypeDeclaration[];
     availableVariables: Variable[];
+    availableFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>;
 };
 
 const inModule = (ctx: WithContext<PostFunctionExtraction.ExtractedFunction>): boolean => {
@@ -1054,24 +1006,23 @@ const inModule = (ctx: WithContext<PostFunctionExtraction.ExtractedFunction>): b
 };
 
 const inferFunction = (
-    ctx: WithContext<PostFunctionExtraction.ExtractedFunctionWithVariables>,
-    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
+    ctx: WithContext<PostFunctionExtraction.ExtractedFunctionWithVariables>
 ): Function | TypeError[] => {
     const variablesFound = mergeDeclarations(ctx.availableVariables, ctx.w.parameters);
     const statements: Ast.Statement[] = [];
     ctx.w.statements.forEach(statement => {
         const statementsContext: WithContext<PostFunctionExtraction.Statement[]> = {
+            ...ctx,
             w: [statement],
             availableVariables: variablesFound,
-            availableTypes: ctx.availableTypes,
         };
         const statementContext: WithContext<PostFunctionExtraction.Statement> = {
+            ...ctx,
             w: statement,
             availableVariables: variablesFound,
-            availableTypes: ctx.availableTypes,
         };
-        variablesFound.push(...extractVariables(statementsContext, extractedFunctions));
-        statements.push(infer(statementContext, extractedFunctions) as Ast.Statement);
+        variablesFound.push(...extractVariables(statementsContext));
+        statements.push(infer(statementContext) as Ast.Statement);
     });
     if (inModule(ctx)) {
         return {
@@ -1091,14 +1042,11 @@ const inferFunction = (
             ];
         }
         const returnStatement = maybeReturnStatement;
-        const returnType = typeOfExpression(
-            {
-                ...ctx,
-                availableVariables: variablesFound,
-                w: returnStatement.expression,
-            },
-            extractedFunctions
-        );
+        const returnType = typeOfExpression({
+            ...ctx,
+            availableVariables: variablesFound,
+            w: returnStatement.expression,
+        });
         if (isTypeError(returnType)) {
             return returnType;
         }
@@ -1112,12 +1060,9 @@ const inferFunction = (
 };
 
 // TODO: merge this with typecheck maybe?
-const infer = (
-    ctx: WithContext<PostFunctionExtraction.Ast>,
-    extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction>
-): Ast.Ast => {
-    const recurse = ast2 => infer({ ...ctx, w: ast2 }, extractedFunctions);
-    const { w, availableVariables, availableTypes } = ctx;
+const infer = (ctx: WithContext<PostFunctionExtraction.Ast>): Ast.Ast => {
+    const recurse = ast2 => infer({ ...ctx, w: ast2 });
+    const { w, availableTypes } = ctx;
     const ast = w;
     switch (ast.kind) {
         case 'returnStatement':
@@ -1135,7 +1080,7 @@ const infer = (
                 body: ast.body.map(recurse) as Ast.Statement[],
             };
         case 'equality':
-            const equalityType = typeOfExpression({ ...ctx, w: ast.lhs }, extractedFunctions);
+            const equalityType = typeOfExpression({ ...ctx, w: ast.lhs });
             if (isTypeError(equalityType)) throw debug('couldNotFindType');
 
             return {
@@ -1166,7 +1111,7 @@ const infer = (
                 destination: ast.destination,
             };
         case 'declarationAssignment':
-            const type = typeOfExpression({ ...ctx, w: ast.expression }, extractedFunctions);
+            const type = typeOfExpression({ ...ctx, w: ast.expression });
             if (isTypeError(type)) throw debug("type error when there shouldn't be");
             return {
                 kind: 'typedDeclarationAssignment',
@@ -1223,14 +1168,10 @@ const infer = (
             };
         case 'memberAccess':
             const accessedObject = recurse(ast.lhs);
-            const accessedType = typeOfExpression(
-                {
-                    w: ast.lhs,
-                    availableVariables,
-                    availableTypes,
-                },
-                extractedFunctions
-            );
+            const accessedType = typeOfExpression({
+                ...ctx,
+                w: ast.lhs,
+            });
             if (isTypeError(accessedType)) {
                 throw debug("shouldn't be a type error here");
             }
@@ -1248,14 +1189,7 @@ const infer = (
                 const newItem = recurse(item);
                 items.push(newItem);
                 if (itemType === undefined) {
-                    const maybeItemType = typeOfExpression(
-                        {
-                            w: item,
-                            availableVariables,
-                            availableTypes,
-                        },
-                        extractedFunctions
-                    );
+                    const maybeItemType = typeOfExpression({ ...ctx, w: item });
                     if (isTypeError(maybeItemType)) {
                         throw debug("shouldn't be type error here");
                     }
@@ -1916,22 +1850,18 @@ export const inferFunctions = (
     while (anythingChanged) {
         anythingChanged = false;
         for (const [name, fn] of Object.entries(waitingToBeTypedFunctions)) {
-            const fnObj = functionObjectFromAst(
-                {
-                    w: fn,
-                    availableVariables: typedVariables,
-                    availableTypes,
-                },
-                untypedFunctions
-            );
-            const inferred = inferFunction(
-                {
-                    w: fnObj,
-                    availableTypes,
-                    availableVariables: typedVariables,
-                },
-                untypedFunctions
-            );
+            const fnObj = functionObjectFromAst({
+                w: fn,
+                availableVariables: typedVariables,
+                availableTypes,
+                availableFunctions: untypedFunctions,
+            });
+            const inferred = inferFunction({
+                w: fnObj,
+                availableTypes,
+                availableVariables: typedVariables,
+                availableFunctions: untypedFunctions,
+            });
             if (Array.isArray(inferred)) {
                 // todo: handle type errors here
                 throw debug('type errors we arent ready for');
@@ -1945,14 +1875,12 @@ export const inferFunctions = (
             delete waitingToBeTypedFunctions[name];
             anythingChanged = true;
             typeErrors.push(
-                ...typeCheckFunction(
-                    {
-                        w: fnObj,
-                        availableVariables: typedVariables,
-                        availableTypes,
-                    },
-                    untypedFunctions
-                ).typeErrors
+                ...typeCheckFunction({
+                    w: fnObj,
+                    availableVariables: typedVariables,
+                    availableTypes,
+                    availableFunctions: untypedFunctions,
+                }).typeErrors
             );
         }
     }
@@ -2071,18 +1999,12 @@ const compile = (
     const globalDeclarations: Variable[] = main.statements
         .filter(s => s.kind === 'typedDeclarationAssignment')
         .map(assignment =>
-            assignmentToGlobalDeclaration(
-                {
-                    w: assignment as any,
-                    availableVariables: [
-                        ...builtinFunctions,
-                        ...typedVariables,
-                        ...main.variables,
-                    ],
-                    availableTypes,
-                },
-                untypedFunctions
-            )
+            assignmentToGlobalDeclaration({
+                w: assignment as any,
+                availableVariables: [...builtinFunctions, ...typedVariables, ...main.variables],
+                availableTypes,
+                availableFunctions: untypedFunctions,
+            })
         );
 
     // Get the function literals we gave names to into the declaration
