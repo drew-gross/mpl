@@ -128,24 +128,20 @@ const extractVariable = (
                 exported: false,
             };
         case 'declaration':
-            if (ctx.w.type === undefined) {
-                // Recursive functions can refer to the left side on the right side, so to extract
-                // the left side, we need to know about the right side. Probably, this just shouldn't return
-                // a type. TODO: allow more types of recursive functions than just single int...
-                return {
-                    name: ctx.w.destination,
-                    type: typeOfExpression({ ...ctx, w: ctx.w.expression }) as Type,
-                    exported: false,
-                };
-            } else {
-                const resolved = resolve(ctx.w.type, ctx.availableTypes, ctx.w.sourceLocation);
-                if ('errors' in resolved) throw debug('expected no error');
-                return {
-                    name: ctx.w.destination,
-                    type: typeOfExpression({ ...ctx, w: ctx.w.expression }, resolved) as Type,
-                    exported: false,
-                };
+            // Recursive functions can refer to the left side on the right side, so to extract
+            // the left side, we need to know about the right side. Probably, this just shouldn't return
+            // a type. TODO: allow more types of recursive functions than just single int...
+            let resolved: Type | undefined = undefined;
+            if (ctx.w.type) {
+                const maybeType = resolve(ctx.w.type, ctx.availableTypes, ctx.w.sourceLocation);
+                if ('errors' in maybeType) throw debug('expected no error');
+                resolved = maybeType;
             }
+            return {
+                name: ctx.w.destination,
+                type: typeOfExpression({ ...ctx, w: ctx.w.expression }, resolved) as Type,
+                exported: false,
+            };
         case 'returnStatement':
         case 'typeDeclaration':
             return undefined;
