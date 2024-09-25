@@ -2,6 +2,7 @@ import SourceLocation from './parser-lib/sourceLocation';
 import { Type, TypeReference } from './types';
 import { Leaf } from './ast';
 import { Variable } from './api';
+import { TypeExpression } from './frontend';
 
 export type ReturnStatement = {
     kind: 'returnStatement';
@@ -110,7 +111,7 @@ export type TypeDeclaration = {
     kind: 'typeDeclaration';
     sourceLocation: SourceLocation;
     name: string;
-    type: Type;
+    type: TypeExpression;
 };
 
 export type ForLoop = {

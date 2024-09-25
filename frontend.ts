@@ -1545,7 +1545,7 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
             return {
                 kind: 'typeDeclaration',
                 name: id.value,
-                type: typeFromTypeExpression(typeExpression) as Type,
+                type: typeExpression,
                 sourceLocation: ast.sourceLocation,
             };
         }
@@ -1712,7 +1712,14 @@ export const divvyIntoFunctions = (
             return { functions: new Map(), updated: ast };
         case 'typeDeclaration':
             // TODO: recurse into methods
-            return { functions: new Map(), updated: ast };
+
+            return {
+                functions: new Map(),
+                updated: {
+                    ...ast,
+                    type: typeFromTypeExpression(ast.type) as Type,
+                },
+            };
         case 'reassignment':
         case 'typedDeclarationAssignment':
         case 'declarationAssignment':
@@ -1986,7 +1993,7 @@ const compile = (
     const availableTypes = walkAst<TypeDeclaration, PreFunctionExtraction.TypeDeclaration>(
         ast,
         ['typeDeclaration'],
-        n => n
+        n => ({ name: n.name, type: typeFromTypeExpression(n.type) as Type })
     );
 
     untypedFunctions['builtin_main'] = {
