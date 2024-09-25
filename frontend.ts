@@ -10,7 +10,6 @@ import { parseResultIsError, parse, isSeparatedListNode, isListNode } from './pa
 import ParseError from './parser-lib/ParseError';
 import {
     Type,
-    ProductComponent,
     equal as typesAreEqual,
     resolve,
     builtinTypes,
@@ -890,7 +889,6 @@ const typeCheckStatement = (
             if (isTypeError(expressionType)) {
                 return { errors: expressionType, newVariables: [] };
             }
-            console.log(JSON.stringify(resolvedDestination, null, 2));
             if (!typesAreEqual(expressionType, resolvedDestination)) {
                 return {
                     errors: [
@@ -1257,22 +1255,6 @@ const extractParameterList = (ast: MplAst): Variable[] => {
     }
 };
 
-const parseTypeLiteralComponent = (ast: MplAst): ProductComponent => {
-    if (isSeparatedListNode(ast) || isListNode(ast)) {
-        throw debug('todo');
-    }
-    if (ast.type != 'typeLiteralComponent') throw debug('wrong as type');
-    const unresolved = parseType(ast.sequenceItems[2]);
-    const resolved = resolve(unresolved, [], ast.sourceLocation);
-    if ('errors' in resolved) {
-        throw debug('need to make products work as components of other products');
-    }
-    return {
-        name: (ast.sequenceItems[0] as any).value,
-        type: resolved,
-    };
-};
-
 const parseMethodDefinition = (ast: MplAst): Method => {
     if (!('sequenceItems' in ast)) {
         throw debug('todo');
@@ -1293,24 +1275,48 @@ const parseMethodDefinition = (ast: MplAst): Method => {
     };
 };
 
-const parseType = (ast: MplAst): Type | TypeReference => {
+type TypeComponentExpression = {
+    name: string;
+    type: TypeExpression;
+};
+type ListTypeExpression = { of: TypeExpression };
+type TypeWithArgsExpression = { name: string; args: TypeExpression[] };
+type TypeWithoutArgsExpression = { name: string };
+type TypeLiteralExpression = { members: TypeComponentExpression[]; methods: any };
+export type TypeExpression =
+    | ListTypeExpression
+    | TypeWithArgsExpression
+    | TypeWithoutArgsExpression
+    | TypeLiteralExpression;
+
+const parseTypeLiteralComponent = (ast: MplAst): TypeComponentExpression => {
+    if (isSeparatedListNode(ast) || isListNode(ast)) {
+        throw debug('todo');
+    }
+    if (ast.type != 'typeLiteralComponent') throw debug('wrong as type');
+    const [name, _colon, type, _separator] = ast.sequenceItems as any;
+    return {
+        name: name.value,
+        type: parseTypeExpression(type),
+    };
+};
+
+const parseTypeExpression = (ast: MplAst): TypeExpression => {
     if (isSeparatedListNode(ast)) {
         throw debug('todo');
     }
     if (isListNode(ast)) {
-        return Product(ast.items.map(parseTypeLiteralComponent), []);
+        throw debug('todo');
     }
     switch (ast.type) {
         case 'typeWithArgs': {
             const [name, list] = ast.sequenceItems as any;
             if (name.value != 'Function') throw debug('Only functions support args right now');
             if (!isSeparatedListNode(list)) throw debug('todo');
-            const typeList = list.items.map(parseType);
-            return FunctionType(
-                typeList.slice(0, typeList.length - 1),
-                [],
-                typeList[typeList.length - 1]
-            );
+            return { name: name.value, args: list.items.map(parseTypeExpression) };
+        }
+        case 'typeIdentifier': {
+            return { name: ast.value as string };
         }
         case 'typeWithoutArgs': {
             const [node] = ast.sequenceItems;
@@ -1320,21 +1326,14 @@ const parseType = (ast: MplAst): Type | TypeReference => {
             if (node.type != 'typeIdentifier') throw debug('Failed to parse type');
             const name = node.value;
             if (typeof name != 'string') throw debug('Failed to parse type');
-            switch (name) {
-                case 'String':
-                case 'Integer':
-                case 'Boolean':
-                    return builtinTypes[name];
-                default:
-                    return { namedType: name };
-            }
+            return { name };
         }
         case 'listType': {
             const [node, _lb, _rb] = ast.sequenceItems;
             if (isSeparatedListNode(node) || isListNode(node) || node.type != 'typeIdentifier') {
                 throw debug('expected a type');
             }
-            return List({ type: { kind: node.value as any }, methods: [] });
+            return { of: parseTypeExpression(node) };
         }
         case 'typeLiteral': {
             const [members, methods] = ast.sequenceItems;
@@ -1344,14 +1343,48 @@ const parseType = (ast: MplAst): Type | TypeReference => {
             if (!isListNode(methods)) {
                 throw debug('expected a list');
             }
-            return Product(
-                members.items.map(parseTypeLiteralComponent),
-                methods.items.map(parseMethodDefinition)
-            );
+            return {
+                members: members.items.map(parseTypeLiteralComponent),
+                methods: methods.items.map(parseMethodDefinition),
+            };
         }
         default:
-            throw debug(`${ast.type} unhandled in parseType`);
+            throw debug(`${ast.type} unhandled in parseTypeExpression`);
     }
+};
+
+const typeFromTypeExpression = (expr: TypeExpression): Type | TypeReference => {
+    if (Array.isArray(expr)) {
+        return Product(expr, []);
+    } else if ('of' in expr) {
+        return List(typeFromTypeExpression(expr.of));
+    } else if ('members' in expr) {
+        return Product(
+            expr.members.map(({ name, type }) => ({ name, type: typeFromTypeExpression(type) })),
+            expr.methods
+        );
+    } else if ('args' in expr) {
+        if (expr.name != 'Function') throw debug('Only functions support args right now');
+        const typeList = expr.args.map(typeFromTypeExpression);
+        return FunctionType(
+            typeList.slice(0, typeList.length - 1),
+            [],
+            typeList[typeList.length - 1]
+        );
+    } else {
+        switch (expr.name) {
+            case 'String':
+            case 'Integer':
+            case 'Boolean':
+                return builtinTypes[expr.name];
+            default:
+                return { namedType: expr.name };
+        }
+    }
+};
+
+const parseType = (ast: MplAst): Type | TypeReference => {
+    return typeFromTypeExpression(parseTypeExpression(ast));
 };
 
 const parseObjectMember = (
