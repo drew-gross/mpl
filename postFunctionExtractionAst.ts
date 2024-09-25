@@ -30,8 +30,8 @@ export type Equality = {
     rhs: Expression;
 };
 
-export type TypedDeclarationAssignment = {
-    kind: 'typedDeclarationAssignment';
+export type Declaration = {
+    kind: 'declaration';
     sourceLocation: SourceLocation;
     destination: string;
     type: Type | TypeReference;
@@ -96,15 +96,6 @@ export type Concatenation = {
     rhs: Expression;
 };
 
-// TODO: merge this with TypedDeclarationAssignment, make "requested" type optional
-export type DeclarationAssignment = {
-    kind: 'declarationAssignment';
-    sourceLocation: SourceLocation;
-    destination: string;
-    expression: Expression;
-    exported: boolean;
-};
-
 export type TypeDeclaration = {
     kind: 'typeDeclaration';
     sourceLocation: SourceLocation;
@@ -151,13 +142,7 @@ export type Program = {
     statements: Statement[];
 };
 
-export type Statement =
-    | TypedDeclarationAssignment
-    | DeclarationAssignment
-    | Reassignment
-    | TypeDeclaration
-    | ForLoop
-    | ReturnStatement;
+export type Statement = Declaration | Reassignment | TypeDeclaration | ForLoop | ReturnStatement;
 
 export type Expression =
     | Leaf

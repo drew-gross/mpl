@@ -122,23 +122,30 @@ const extractVariable = (
     const kind = ctx.w.kind;
     switch (ctx.w.kind) {
         case 'reassignment':
-        case 'declarationAssignment':
-            // Recursive functions can refer to the left side on the right side, so to extract
-            // the left side, we need to know about the right side. Probably, this just shouldn't return
-            // a type. TODO: allow more types of recursive functions than just single int...
             return {
                 name: ctx.w.destination,
                 type: typeOfExpression({ ...ctx, w: ctx.w.expression }) as Type,
                 exported: false,
             };
-        case 'typedDeclarationAssignment':
-            const resolved = resolve(ctx.w.type, ctx.availableTypes, ctx.w.sourceLocation);
-            if ('errors' in resolved) throw debug('expected no error');
-            return {
-                name: ctx.w.destination,
-                type: typeOfExpression({ ...ctx, w: ctx.w.expression }, resolved) as Type,
-                exported: false,
-            };
+        case 'declaration':
+            if (ctx.w.type === undefined) {
+                // Recursive functions can refer to the left side on the right side, so to extract
+                // the left side, we need to know about the right side. Probably, this just shouldn't return
+                // a type. TODO: allow more types of recursive functions than just single int...
+                return {
+                    name: ctx.w.destination,
+                    type: typeOfExpression({ ...ctx, w: ctx.w.expression }) as Type,
+                    exported: false,
+                };
+            } else {
+                const resolved = resolve(ctx.w.type, ctx.availableTypes, ctx.w.sourceLocation);
+                if ('errors' in resolved) throw debug('expected no error');
+                return {
+                    name: ctx.w.destination,
+                    type: typeOfExpression({ ...ctx, w: ctx.w.expression }, resolved) as Type,
+                    exported: false,
+                };
+            }
         case 'returnStatement':
         case 'typeDeclaration':
             return undefined;
@@ -157,8 +164,7 @@ const extractVariables = (ctx: WithContext<PostFunctionExtraction.Statement[]>):
             case 'reassignment':
             case 'typeDeclaration':
                 break;
-            case 'declarationAssignment':
-            case 'typedDeclarationAssignment':
+            case 'declaration':
                 const potentialVariable = extractVariable({
                     ...ctx,
                     w: statement,
@@ -215,8 +221,7 @@ const walkAst = <ReturnType, NodeType extends PreFunctionExtraction.Ast>(
     }
     switch (ast.kind) {
         case 'returnStatement':
-        case 'typedDeclarationAssignment':
-        case 'declarationAssignment':
+        case 'declaration':
         case 'reassignment':
             return [...result, ...recurse(ast.expression)];
         case 'product':
@@ -801,27 +806,6 @@ const typeCheckStatement = (
             }
             return { errors: [], newVariables: [] };
         }
-        case 'declarationAssignment': {
-            const rightType = typeOfExpression({
-                ...ctx,
-                w: ast.expression,
-                availableVariables: mergeDeclarations(availableVariables, [
-                    {
-                        name: ast.destination,
-                        type: FunctionType([builtinTypes.Integer], [], builtinTypes.Integer),
-                        exported: false,
-                    },
-                ]),
-            });
-            if (isTypeError(rightType)) {
-                return { errors: rightType, newVariables: [] };
-            }
-            // Left type is inferred as right type
-            return {
-                errors: [],
-                newVariables: [{ name: ast.destination, type: rightType, exported: false }],
-            };
-        }
         case 'reassignment': {
             const rightType = typeOfExpression({ ...ctx, w: ast.expression });
             if (isTypeError(rightType)) {
@@ -865,50 +849,72 @@ const typeCheckStatement = (
             }
             return { errors: [], newVariables: [] };
         }
-        case 'typedDeclarationAssignment': {
-            // Check that type of var being assigned to matches type being assigned
-            const destinationType = ast.type;
-            const resolvedDestination = resolve(
-                destinationType,
-                availableTypes,
-                ast.sourceLocation
-            );
-            if ('errors' in resolvedDestination) {
-                return resolvedDestination;
-            }
-            const expressionType = typeOfExpression(
-                {
+        case 'declaration': {
+            if (ast.type === undefined) {
+                const rightType = typeOfExpression({
                     ...ctx,
                     w: ast.expression,
                     availableVariables: mergeDeclarations(availableVariables, [
-                        { name: ast.destination, type: destinationType, exported: false },
-                    ]),
-                },
-                resolvedDestination
-            );
-            if (isTypeError(expressionType)) {
-                return { errors: expressionType, newVariables: [] };
-            }
-            if (!typesAreEqual(expressionType, resolvedDestination)) {
-                return {
-                    errors: [
                         {
-                            kind: 'assignWrongType',
-                            lhsName: ast.destination,
-                            lhsType: resolvedDestination,
-                            rhsType: expressionType,
-                            sourceLocation: ast.sourceLocation,
+                            name: ast.destination,
+                            type: FunctionType([builtinTypes.Integer], [], builtinTypes.Integer),
+                            exported: false,
                         },
+                    ]),
+                });
+                if (isTypeError(rightType)) {
+                    return { errors: rightType, newVariables: [] };
+                }
+                // Left type is inferred as right type
+                return {
+                    errors: [],
+                    newVariables: [{ name: ast.destination, type: rightType, exported: false }],
+                };
+            } else {
+                // Check that type of var being assigned to matches type being assigned
+                const destinationType = ast.type;
+                const resolvedDestination = resolve(
+                    destinationType,
+                    availableTypes,
+                    ast.sourceLocation
+                );
+                if ('errors' in resolvedDestination) {
+                    return resolvedDestination;
+                }
+                const expressionType = typeOfExpression(
+                    {
+                        ...ctx,
+                        w: ast.expression,
+                        availableVariables: mergeDeclarations(availableVariables, [
+                            { name: ast.destination, type: destinationType, exported: false },
+                        ]),
+                    },
+                    resolvedDestination
+                );
+                if (isTypeError(expressionType)) {
+                    return { errors: expressionType, newVariables: [] };
+                }
+                if (!typesAreEqual(expressionType, resolvedDestination)) {
+                    return {
+                        errors: [
+                            {
+                                kind: 'assignWrongType',
+                                lhsName: ast.destination,
+                                lhsType: resolvedDestination,
+                                rhsType: expressionType,
+                                sourceLocation: ast.sourceLocation,
+                            },
+                        ],
+                        newVariables: [],
+                    };
+                }
+                return {
+                    errors: [],
+                    newVariables: [
+                        { name: ast.destination, type: destinationType, exported: false },
                     ],
-                    newVariables: [],
                 };
             }
-            return {
-                errors: [],
-                newVariables: [
-                    { name: ast.destination, type: destinationType, exported: false },
-                ],
-            };
         }
         case 'typeDeclaration':
             return {
@@ -975,7 +981,7 @@ const typeCheckFunction = (ctx: WithContext<PostFunctionExtraction.ExtractedFunc
 };
 
 const assignmentToGlobalDeclaration = (
-    ctx: WithContext<PostFunctionExtraction.DeclarationAssignment>
+    ctx: WithContext<PostFunctionExtraction.Declaration>
 ): Variable => {
     const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
     if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
@@ -995,7 +1001,7 @@ type WithContext<T> = {
 
 const inModule = (ctx: WithContext<PostFunctionExtraction.ExtractedFunction>): boolean => {
     for (const s of ctx.w.statements) {
-        if (s.kind == 'declarationAssignment' || s.kind == 'typedDeclarationAssignment') {
+        if (s.kind == 'declaration') {
             if (s.exported) {
                 return true;
             }
@@ -1099,26 +1105,28 @@ const infer = (ctx: WithContext<PostFunctionExtraction.Ast>): Ast.Ast => {
                 lhs: recurse(ast.lhs),
                 rhs: recurse(ast.rhs),
             };
-        case 'typedDeclarationAssignment':
-            const resolved = resolve(ast.type, availableTypes, ast.sourceLocation);
-            if ('errors' in resolved) throw debug("resolution shouldn't fail here");
-            return {
-                kind: 'typedDeclarationAssignment',
-                sourceLocation: ast.sourceLocation,
-                expression: recurse(ast.expression),
-                type: resolved,
-                destination: ast.destination,
-            };
-        case 'declarationAssignment':
-            const type = typeOfExpression({ ...ctx, w: ast.expression });
-            if (isTypeError(type)) throw debug("type error when there shouldn't be");
-            return {
-                kind: 'typedDeclarationAssignment',
-                sourceLocation: ast.sourceLocation,
-                expression: recurse(ast.expression),
-                type,
-                destination: ast.destination,
-            };
+        case 'declaration':
+            if (ast.type !== undefined) {
+                const resolved = resolve(ast.type, availableTypes, ast.sourceLocation);
+                if ('errors' in resolved) throw debug("resolution shouldn't fail here");
+                return {
+                    kind: 'typedDeclarationAssignment',
+                    sourceLocation: ast.sourceLocation,
+                    expression: recurse(ast.expression),
+                    type: resolved,
+                    destination: ast.destination,
+                };
+            } else {
+                const type = typeOfExpression({ ...ctx, w: ast.expression });
+                if (isTypeError(type)) throw debug("type error when there shouldn't be");
+                return {
+                    kind: 'typedDeclarationAssignment',
+                    sourceLocation: ast.sourceLocation,
+                    expression: recurse(ast.expression),
+                    type,
+                    destination: ast.destination,
+                };
+            }
         case 'reassignment':
             return {
                 kind: 'reassignment',
@@ -1515,24 +1523,14 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
             }
 
             const expression = astFromParseResult(expr);
-            if (type) {
-                return {
-                    kind: 'typedDeclarationAssignment',
-                    destination,
-                    expression: expression as any,
-                    type,
-                    exported,
-                    sourceLocation: ast.sourceLocation,
-                };
-            } else {
-                return {
-                    kind: 'declarationAssignment',
-                    destination,
-                    expression: expression as any,
-                    exported,
-                    sourceLocation: ast.sourceLocation,
-                };
-            }
+            return {
+                kind: 'declaration',
+                destination,
+                expression: expression as any,
+                type,
+                exported,
+                sourceLocation: ast.sourceLocation,
+            };
         }
         case 'typeDeclaration': {
             const [id, _colon, _assignment, type] = ast.sequenceItems as any;
@@ -1721,8 +1719,7 @@ export const divvyIntoFunctions = (
                 },
             };
         case 'reassignment':
-        case 'typedDeclarationAssignment':
-        case 'declarationAssignment':
+        case 'declaration':
         case 'returnStatement': {
             const recursed = recurse(ast.expression);
             return {
@@ -1971,14 +1968,10 @@ const compile = (
     }
 
     const exportedDeclarations = updatedAst.statements.filter(
-        s =>
-            (s.kind == 'typedDeclarationAssignment' || s.kind == 'declarationAssignment') &&
-            s.exported
+        s => s.kind == 'declaration' && s.exported
     );
 
-    const topLevelStatements = updatedAst.statements.filter(
-        s => s.kind != 'typedDeclarationAssignment' && s.kind != 'declarationAssignment'
-    );
+    const topLevelStatements = updatedAst.statements.filter(s => s.kind != 'declaration');
 
     if (exportedDeclarations.length > 0 && topLevelStatements.length > 0) {
         return {
