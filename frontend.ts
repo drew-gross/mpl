@@ -1536,17 +1536,16 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
         }
         case 'typeDeclaration': {
             const [id, _colon, _assignment, type] = ast.sequenceItems as any;
-            const theType = parseType(type);
-            const name: string = id.value;
-            if ('namedType' in theType) {
+            const typeExpression = parseTypeExpression(type);
+            if (!('members' in typeExpression)) {
                 throw debug(
                     "Shouldn't get here, delcaring types have to actually declare a type"
                 );
             }
             return {
                 kind: 'typeDeclaration',
-                name,
-                type: theType,
+                name: id.value,
+                type: typeFromTypeExpression(typeExpression) as Type,
                 sourceLocation: ast.sourceLocation,
             };
         }
