@@ -1106,7 +1106,7 @@ const infer = (ctx: WithContext<PostFunctionExtraction.Ast>): Ast.Ast => {
                 const resolved = resolve(ast.type, availableTypes, ast.sourceLocation);
                 if ('errors' in resolved) throw debug("resolution shouldn't fail here");
                 return {
-                    kind: 'typedDeclarationAssignment',
+                    kind: 'declaration',
                     sourceLocation: ast.sourceLocation,
                     expression: recurse(ast.expression),
                     type: resolved,
@@ -1116,7 +1116,7 @@ const infer = (ctx: WithContext<PostFunctionExtraction.Ast>): Ast.Ast => {
                 const type = typeOfExpression({ ...ctx, w: ast.expression });
                 if (isTypeError(type)) throw debug("type error when there shouldn't be");
                 return {
-                    kind: 'typedDeclarationAssignment',
+                    kind: 'declaration',
                     sourceLocation: ast.sourceLocation,
                     expression: recurse(ast.expression),
                     type,
@@ -2026,7 +2026,7 @@ const compile = (
     }
 
     const globalDeclarations: Variable[] = main.statements
-        .filter(s => s.kind === 'typedDeclarationAssignment')
+        .filter(s => s.kind === 'declaration')
         .map(assignment =>
             assignmentToGlobalDeclaration({
                 w: assignment as any,

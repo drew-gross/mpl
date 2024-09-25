@@ -153,8 +153,8 @@ const astToC = (input: BackendInput): CompiledProgram<string> => {
                 temporaryName,
             ]);
         }
-        // TODO: Unify these somehow typedDeclarationAssignment and reassignment
-        case 'typedDeclarationAssignment': {
+        // TODO: Unify these somehow declaration and reassignment
+        case 'declaration': {
             const lhs = ast.destination;
             const rhs = recurse(ast.expression);
             const declaration = declarations.find(d => d.name === lhs);

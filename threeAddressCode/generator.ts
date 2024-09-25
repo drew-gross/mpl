@@ -412,7 +412,7 @@ export const astToThreeAddressCode = (input: BackendOptions): CompiledExpression
                 );
             }
         }
-        case 'typedDeclarationAssignment': {
+        case 'declaration': {
             const lhs: string = ast.destination;
             if (lhs in globalNameMap) {
                 const rhsRegister = makeTemporary('assignment_rhs');
@@ -774,7 +774,7 @@ export const constructFunction = (
     });
 
     f.statements.forEach(statement => {
-        if (statement.kind === 'typedDeclarationAssignment') {
+        if (statement.kind === 'declaration') {
             variablesInScope[statement.destination] = makeTemporary(
                 `local_${statement.destination}`
             );

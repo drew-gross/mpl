@@ -44,7 +44,7 @@ const astToJS = ({
             return [...recurse(ast.lhs), '+', ...recurse(ast.rhs)];
         case 'reassignment':
             return [ast.destination, '=', ...recurse(ast.expression), ';'];
-        case 'typedDeclarationAssignment':
+        case 'declaration':
             return [`let ${ast.destination} = `, ...recurse(ast.expression), ';'];
         case 'functionReference':
             return [ast.name];

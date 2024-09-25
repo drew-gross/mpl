@@ -60,8 +60,8 @@ export type Equality = {
     type: Type;
 };
 
-export type TypedDeclarationAssignment = {
-    kind: 'typedDeclarationAssignment';
+export type Declaration = {
+    kind: 'declaration';
     sourceLocation: SourceLocation;
     type: Type;
     destination: string;
@@ -89,7 +89,7 @@ export type FunctionReference = {
     name: string;
 };
 
-export type Statement = TypedDeclarationAssignment | Reassignment | ReturnStatement | ForLoop;
+export type Statement = Declaration | Reassignment | ReturnStatement | ForLoop;
 
 export type Addition = {
     kind: 'addition';
@@ -212,7 +212,7 @@ export const astToString = (ast: Ast) => {
             return ast.value ? 'True' : 'False';
         case 'concatenation':
             return `${ast.lhs} ++ ${ast.rhs}`;
-        case 'typedDeclarationAssignment':
+        case 'declaration':
             return `${ast.destination}: ${ast.type.type.kind} = ${astToString(ast.expression)};`;
         case 'typeDeclaration':
             return `(${ast.kind})`; // TODO: Figure out what parts of type declaration should go in AST vs uninferred AST.
