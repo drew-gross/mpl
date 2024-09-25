@@ -890,7 +890,7 @@ const typeCheckStatement = (
             if (isTypeError(expressionType)) {
                 return { errors: expressionType, newVariables: [] };
             }
-            console.log(resolvedDestination);
+            console.log(JSON.stringify(resolvedDestination))
             if (!typesAreEqual(expressionType, resolvedDestination)) {
                 return {
                     errors: [
