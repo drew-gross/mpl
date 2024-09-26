@@ -1234,22 +1234,21 @@ const extractFunctionBody = (node): any[] => {
 };
 
 // TODO: Replace extractParameterList with SeparatedList
-const extractParameterList = (ast: MplAst): Variable[] => {
+const extractParameterList = (ast: MplAst): PreFunctionExtraction.Parameter[] => {
     if (isSeparatedListNode(ast)) {
         return ast.items
             .map(i => {
                 if (isSeparatedListNode(i) || !('sequenceItems' in i)) {
                     throw debug('todo');
                 }
-                const child2 = i.sequenceItems[2];
-                if (isSeparatedListNode(child2) || isListNode(child2)) {
+                const [name, _colon, type] = i.sequenceItems;
+                if (isSeparatedListNode(type) || isListNode(type)) {
                     throw debug('todo');
                 }
                 return [
                     {
-                        name: (i.sequenceItems[0] as any).value as string,
-                        type: parseType(child2),
-                        exported: false,
+                        name: (name as any).value as string,
+                        type: parseTypeExpression(type),
                     },
                 ];
             })
@@ -1618,22 +1617,21 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
                 body: [
                     {
                         kind: 'returnStatement',
-                        expression: astFromParseResult(expr),
+                        expression: astFromParseResult(expr) as PreFunctionExtraction.Expression,
                         sourceLocation: ast.sourceLocation,
                     },
                 ],
                 parameters: extractParameterList(args),
                 sourceLocation: ast.sourceLocation,
-            } as PreFunctionExtraction.Ast;
+            };
         }
         case 'functionWithBlock': {
             functionId++;
             const [_lb, args, _rb, _arrow, body] = ast.sequenceItems;
-            const parameters2: Variable[] = extractParameterList(args);
             return {
                 kind: 'functionLiteral',
                 body: extractFunctionBody(body),
-                parameters: parameters2,
+                parameters: extractParameterList(args),
                 sourceLocation: ast.sourceLocation,
             };
         }
@@ -1765,13 +1763,18 @@ export const divvyIntoFunctions = (
         }
         case 'functionLiteral': {
             const recursed = ast.body.map(recurse);
-            const extractedFunctions = Object.assign({}, ...recursed.map(r => r.functions));
+            const extractedFunctions: Map<string, PostFunctionExtraction.ExtractedFunction> =
+                Object.assign({}, ...recursed.map(r => r.functions));
             const id = `user_${makeId()}`;
             extractedFunctions[id] = {
                 sourceLocation: ast.sourceLocation,
                 statements: recursed.map(r => r.updated),
-                parameters: ast.parameters,
-            };
+                parameters: ast.parameters.map(p => ({
+                    name: p.name,
+                    type: typeFromTypeExpression(p.type),
+                    exported: false,
+                })),
+            } as PostFunctionExtraction.ExtractedFunction;
             return {
                 functions: extractedFunctions,
                 updated: {

@@ -63,11 +63,16 @@ export type MemberAccess = {
     rhs: string;
 };
 
+export type Parameter = {
+    name: string;
+    type: TypeExpression;
+};
+
 export type FunctionLiteral = {
     kind: 'functionLiteral';
     sourceLocation: SourceLocation;
     body: Statement[];
-    parameters: Variable[];
+    parameters: Parameter[];
 };
 
 export type Addition = {
