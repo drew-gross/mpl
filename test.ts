@@ -53,7 +53,7 @@ import { set } from './util/set';
 import { shuffle } from 'shuffle-seed';
 import { mergeNoConflict } from './util/merge';
 import * as PostFunctionExtraction from './postFunctionExtractionAst';
-import * as PreFunctionExtraction from './preFunctionExtractionAst';
+import * as PreExtraction from './preExtractionAst';
 import { getTypeOfFunction } from './api';
 
 test('lexer', t => {
@@ -536,7 +536,7 @@ test('correct inferred type for function', t => {
         'function',
         lex(tokenSpecs, functionSource) as Token<MplToken>[]
     );
-    const ast = astFromParseResult(parseResult as MplAst) as PreFunctionExtraction.Program;
+    const ast = astFromParseResult(parseResult as MplAst) as PreExtraction.Program;
     const { functions, updated: _ } = divvyIntoFunctions(idMaker(), ast);
     const typedFunctions = inferFunctions([], [], functions);
     if (Array.isArray(typedFunctions)) {

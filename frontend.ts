@@ -25,7 +25,7 @@ import { Variable, Function, FrontendOutput, StringLiteralData, getTypeOfFunctio
 import { TypeError } from './TypeError';
 import * as Ast from './ast';
 import * as PostFunctionExtraction from './postFunctionExtractionAst';
-import * as PreFunctionExtraction from './preFunctionExtractionAst';
+import * as PreExtraction from './preExtractionAst';
 import { deepCopy } from 'deep-copy-ts';
 /* tslint:disable */
 const { add } = require('./mpl/add.mpl');
@@ -209,8 +209,8 @@ const functionObjectFromAst = (
     parameters: ctx.w.parameters,
 });
 
-const walkAst = <ReturnType, NodeType extends PreFunctionExtraction.Ast>(
-    ast: PreFunctionExtraction.Ast,
+const walkAst = <ReturnType, NodeType extends PreExtraction.Ast>(
+    ast: PreExtraction.Ast,
     nodeKinds: string[],
     extractItem: (item: NodeType) => ReturnType
 ): ReturnType[] => {
@@ -1242,7 +1242,7 @@ const extractFunctionBody = (node): any[] => {
 };
 
 // TODO: Replace extractParameterList with SeparatedList
-const extractParameterList = (ast: MplAst): PreFunctionExtraction.Parameter[] => {
+const extractParameterList = (ast: MplAst): PreExtraction.Parameter[] => {
     if (isSeparatedListNode(ast)) {
         return ast.items
             .map(i => {
@@ -1394,9 +1394,7 @@ const typeFromTypeExpression = (expr: TypeExpression): Type | TypeReference => {
     }
 };
 
-const parseObjectMember = (
-    ast: MplAst
-): PreFunctionExtraction.ObjectMember | 'WrongShapeAst' => {
+const parseObjectMember = (ast: MplAst): PreExtraction.ObjectMember | 'WrongShapeAst' => {
     if (isSeparatedListNode(ast) || isListNode(ast)) {
         throw debug('todo');
     }
@@ -1413,7 +1411,7 @@ const parseObjectMember = (
             return 'WrongShapeAst';
         }
     }
-    const result: PreFunctionExtraction.ObjectMember = {
+    const result: PreExtraction.ObjectMember = {
         name: (ast.sequenceItems[0] as any).value,
         expression: expression as any, // TODO: write a util to check if its and expression
     };
@@ -1421,7 +1419,7 @@ const parseObjectMember = (
 };
 
 let functionId = add(-1, 1);
-const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShapeAst' => {
+const astFromParseResult = (ast: MplAst): PreExtraction.Ast | 'WrongShapeAst' => {
     if (isSeparatedListNode(ast) || isListNode(ast)) {
         throw debug('todo');
     }
@@ -1432,7 +1430,7 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
                 kind: 'returnStatement',
                 expression: astFromParseResult(expr),
                 sourceLocation: ast.sourceLocation,
-            } as PreFunctionExtraction.Ast;
+            } as PreExtraction.Ast;
         case 'number':
             if (ast.value === undefined) throw debug('ast.value === undefined');
             return {
@@ -1455,7 +1453,7 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
                 ifTrue: astFromParseResult(ifTrue),
                 ifFalse: astFromParseResult(ifFalse),
                 sourceLocation: ast.sourceLocation,
-            } as PreFunctionExtraction.Ast;
+            } as PreExtraction.Ast;
         case 'equality': {
             if (!('sequenceItems' in ast))
                 throw debug('children not in ast in astFromParseResult');
@@ -1465,7 +1463,7 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
                 lhs: astFromParseResult(lhs),
                 rhs: astFromParseResult(rhs),
                 sourceLocation: ast.sourceLocation,
-            } as PreFunctionExtraction.Ast;
+            } as PreExtraction.Ast;
         }
         case 'paramList':
             throw debug('paramList in astFromParseResult'); // Should have been caught in "callExpression"
@@ -1476,7 +1474,7 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
                 name: fn.value,
                 arguments: args.items.map(astFromParseResult),
                 sourceLocation: ast.sourceLocation,
-            } as PreFunctionExtraction.Ast;
+            } as PreExtraction.Ast;
         case 'binaryExpression':
             if (!('sequenceItems' in ast))
                 throw debug('children not in ast in astFromParseResult');
@@ -1500,7 +1498,7 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
                 lhs: astFromParseResult(lhs),
                 rhs: astFromParseResult(rhs),
                 sourceLocation: ast.sourceLocation,
-            } as PreFunctionExtraction.Ast;
+            } as PreExtraction.Ast;
         case 'reassignment': {
             if (!('sequenceItems' in ast))
                 throw debug('children not in ast in astFromParseResult');
@@ -1510,7 +1508,7 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
                 destination: to.value as any,
                 expression: astFromParseResult(expr),
                 sourceLocation: ast.sourceLocation,
-            } as PreFunctionExtraction.Ast;
+            } as PreExtraction.Ast;
         }
         case 'declaration': {
             const [export_, name, _colon, type_, _assign, expr] = ast.sequenceItems as any;
@@ -1584,11 +1582,11 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
             if (newParams == 'WrongShapeAst') {
                 return 'WrongShapeAst';
             }
-            const r: PreFunctionExtraction.MemberStyleCall = {
+            const r: PreExtraction.MemberStyleCall = {
                 kind: 'memberStyleCall',
-                lhs: lhs as PreFunctionExtraction.Expression,
+                lhs: lhs as PreExtraction.Expression,
                 memberName,
-                params: newParams as PreFunctionExtraction.Expression[],
+                params: newParams as PreExtraction.Expression[],
                 sourceLocation: ast.sourceLocation,
             };
             return r;
@@ -1602,7 +1600,7 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
                 lhs,
                 rhs: anyAst.sequenceItems[2].value,
                 sourceLocation: ast.sourceLocation,
-            } as PreFunctionExtraction.Ast;
+            } as PreExtraction.Ast;
         }
         case 'concatenation':
             if (!('sequenceItems' in ast))
@@ -1612,7 +1610,7 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
                 lhs: astFromParseResult(ast.sequenceItems[0]),
                 rhs: astFromParseResult(ast.sequenceItems[2]),
                 sourceLocation: ast.sourceLocation,
-            } as PreFunctionExtraction.Ast;
+            } as PreExtraction.Ast;
         case 'function': {
             functionId++;
             const [_lb, args, _rb, _arrow, expr] = ast.sequenceItems as any;
@@ -1621,7 +1619,7 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
                 body: [
                     {
                         kind: 'returnStatement',
-                        expression: astFromParseResult(expr) as PreFunctionExtraction.Expression,
+                        expression: astFromParseResult(expr) as PreExtraction.Expression,
                         sourceLocation: ast.sourceLocation,
                     },
                 ],
@@ -1646,10 +1644,10 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
             const [id, _colon, iteratee] = condition.sequenceItems;
             const lst = astFromParseResult(iteratee);
             if (lst == 'WrongShapeAst') return lst;
-            const result: PreFunctionExtraction.ForLoop = {
+            const result: PreExtraction.ForLoop = {
                 kind: 'forLoop',
                 var: id.value,
-                list: lst as PreFunctionExtraction.Expression,
+                list: lst as PreExtraction.Expression,
                 body,
                 sourceLocation: a.sourceLocation,
             };
@@ -1673,15 +1671,15 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
             if (!isSeparatedListNode(items)) throw debug('todo');
             return {
                 kind: 'listLiteral',
-                items: items.items.map(astFromParseResult) as PreFunctionExtraction.Expression[],
+                items: items.items.map(astFromParseResult) as PreExtraction.Expression[],
                 sourceLocation: ast.sourceLocation,
             };
         case 'indexAccess':
             const [accessed, index] = ast.sequenceItems;
             return {
                 kind: 'indexAccess',
-                index: astFromParseResult(index) as PreFunctionExtraction.Expression,
-                accessed: astFromParseResult(accessed) as PreFunctionExtraction.Expression,
+                index: astFromParseResult(index) as PreExtraction.Expression,
+                accessed: astFromParseResult(accessed) as PreExtraction.Expression,
                 sourceLocation: ast.sourceLocation,
             };
         case 'separatedStatement':
@@ -1694,7 +1692,7 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
 
 export const divvyIntoFunctions = (
     makeId,
-    ast: PreFunctionExtraction.Ast
+    ast: PreExtraction.Ast
 ): {
     functions: Map<string, PostFunctionExtraction.ExtractedFunction>;
     updated: PostFunctionExtraction.Ast;
@@ -1708,7 +1706,6 @@ export const divvyIntoFunctions = (
             return { functions: new Map(), updated: ast };
         case 'typeDeclaration':
             // TODO: recurse into methods
-
             return {
                 functions: new Map(),
                 updated: {
@@ -1986,7 +1983,7 @@ const compile = (
             ],
         };
     }
-    const availableTypes = walkAst<TypeDeclaration, PreFunctionExtraction.TypeDeclaration>(
+    const availableTypes = walkAst<TypeDeclaration, PreExtraction.TypeDeclaration>(
         ast,
         ['typeDeclaration'],
         n => ({ name: n.name, type: typeFromTypeExpression(n.type) as Type })
