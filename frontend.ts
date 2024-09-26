@@ -133,7 +133,11 @@ const extractVariable = (
             // a type. TODO: allow more types of recursive functions than just single int...
             let resolved: Type | undefined = undefined;
             if (ctx.w.type) {
-                const maybeType = resolve(ctx.w.type, ctx.availableTypes, ctx.w.sourceLocation);
+                const maybeType = resolve(
+                    typeFromTypeExpression(ctx.w.type),
+                    ctx.availableTypes,
+                    ctx.w.sourceLocation
+                );
                 if ('errors' in maybeType) throw debug('expected no error');
                 resolved = maybeType;
             }
@@ -868,7 +872,7 @@ const typeCheckStatement = (
                 };
             } else {
                 // Check that type of var being assigned to matches type being assigned
-                const destinationType = ast.type;
+                const destinationType = typeFromTypeExpression(ast.type);
                 const resolvedDestination = resolve(
                     destinationType,
                     availableTypes,
@@ -1103,7 +1107,11 @@ const infer = (ctx: WithContext<PostFunctionExtraction.Ast>): Ast.Ast => {
             };
         case 'declaration':
             if (ast.type !== undefined) {
-                const resolved = resolve(ast.type, availableTypes, ast.sourceLocation);
+                const resolved = resolve(
+                    typeFromTypeExpression(ast.type),
+                    availableTypes,
+                    ast.sourceLocation
+                );
                 if ('errors' in resolved) throw debug("resolution shouldn't fail here");
                 return {
                     kind: 'declaration',
@@ -1386,10 +1394,6 @@ const typeFromTypeExpression = (expr: TypeExpression): Type | TypeReference => {
     }
 };
 
-const parseType = (ast: MplAst): Type | TypeReference => {
-    return typeFromTypeExpression(parseTypeExpression(ast));
-};
-
 const parseObjectMember = (
     ast: MplAst
 ): PreFunctionExtraction.ObjectMember | 'WrongShapeAst' => {
@@ -1512,9 +1516,9 @@ const astFromParseResult = (ast: MplAst): PreFunctionExtraction.Ast | 'WrongShap
             const [export_, name, _colon, type_, _assign, expr] = ast.sequenceItems as any;
             let exported: boolean = export_.item !== undefined;
             const destination = name.value as any;
-            let type: Type | TypeReference | undefined = undefined;
+            let type: TypeExpression | undefined = undefined;
             if (type_.item !== undefined) {
-                type = parseType(type_.item);
+                type = parseTypeExpression(type_.item);
             }
 
             const expression = astFromParseResult(expr);

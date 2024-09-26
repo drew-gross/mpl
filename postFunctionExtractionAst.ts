@@ -1,7 +1,8 @@
 import SourceLocation from './parser-lib/sourceLocation';
-import { Type, TypeReference } from './types';
+import { Type } from './types';
 import { Variable } from './api';
 import { Leaf } from './ast';
+import { TypeExpression } from './frontend';
 
 export type ReturnStatement = {
     kind: 'returnStatement';
@@ -34,7 +35,7 @@ export type Declaration = {
     kind: 'declaration';
     sourceLocation: SourceLocation;
     destination: string;
-    type: Type | TypeReference;
+    type: TypeExpression;
     expression: Expression;
     exported: boolean;
 };
