@@ -25,7 +25,7 @@ import test from 'ava';
 import join from './util/join';
 import range from './util/list/range';
 import { lex, Token } from './parser-lib/lex';
-import { parseMpl, compile, astFromParseResult, typeOfExpression } from './frontend';
+import { parseMpl, compile, astFromParseResult, typeOfExpression, extractTypeDeclarations } from './frontend';
 import { grammar, tokenSpecs, MplParseResult, MplAst, MplToken } from './grammar';
 import {
     parse,
@@ -537,7 +537,11 @@ test('correct inferred type for function', t => {
         lex(tokenSpecs, functionSource) as Token<MplToken>[]
     );
     const ast = astFromParseResult(parseResult as MplAst) as PreExtraction.Program;
-    const { functions, updated: _ } = divvyIntoFunctions(idMaker(), ast);
+
+    const { postTypeDeclarationExtractionAst, types } = extractTypeDeclarations(ast);
+    types;
+
+    const { functions, updated: _ } = divvyIntoFunctions(idMaker(), postTypeDeclarationExtractionAst);
     const typedFunctions = inferFunctions([], [], functions);
     if (Array.isArray(typedFunctions)) {
         t.fail('type errors');

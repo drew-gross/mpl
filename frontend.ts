@@ -23,9 +23,10 @@ import {
 } from './types';
 import { Variable, Function, FrontendOutput, StringLiteralData, getTypeOfFunction } from './api';
 import { TypeError } from './TypeError';
-import * as Ast from './ast';
-import * as PostFunctionExtraction from './postFunctionExtractionAst';
 import * as PreExtraction from './preExtractionAst';
+import * as PostTypeDeclarationExtraction from './postTypeDeclarationExtractionAst';
+import * as PostFunctionExtraction from './postFunctionExtractionAst';
+import * as Ast from './ast';
 import { deepCopy } from 'deep-copy-ts';
 /* tslint:disable */
 const { add } = require('./mpl/add.mpl');
@@ -1690,9 +1691,18 @@ const astFromParseResult = (ast: MplAst): PreExtraction.Ast | 'WrongShapeAst' =>
     }
 };
 
+export const extractTypeDeclarations = (ast: PreExtraction.Ast): { postTypeDeclarationExtractionAst: PostTypeDeclarationExtraction.Ast, types: any } => {
+    switch (ast.kind) {
+        case 'number':
+        default: {
+            throw debug(`${ast.kind} unhandled in extractTypeDeclarations`)
+        }
+    }
+}
+
 export const divvyIntoFunctions = (
     makeId,
-    ast: PreExtraction.Ast
+    ast: PostTypeDeclarationExtraction.Ast
 ): {
     functions: Map<string, PostFunctionExtraction.ExtractedFunction>;
     updated: PostFunctionExtraction.Ast;
@@ -1704,15 +1714,6 @@ export const divvyIntoFunctions = (
         case 'booleanLiteral':
         case 'stringLiteral':
             return { functions: new Map(), updated: ast };
-        case 'typeDeclaration':
-            // TODO: recurse into methods
-            return {
-                functions: new Map(),
-                updated: {
-                    ...ast,
-                    type: typeFromTypeExpression(ast.type) as Type,
-                },
-            };
         case 'reassignment':
         case 'declaration':
         case 'returnStatement': {
@@ -1871,6 +1872,9 @@ export const divvyIntoFunctions = (
                 updated: { ...ast, statements: mainStatements as any },
             };
         }
+        default: {
+            throw debug(`${(ast as any).kind} unhandled in divvyIntoFunctions`)
+        }
     }
 };
 
@@ -1958,9 +1962,12 @@ const compile = (
         return { internalError: 'Wrong shape AST' };
     }
 
+    const { postTypeDeclarationExtractionAst, types } = extractTypeDeclarations(ast);
+    types;
+
     const { functions: untypedFunctions, updated: updatedAst } = divvyIntoFunctions(
         idMaker(),
-        ast
+        postTypeDeclarationExtractionAst
     );
 
     if (updatedAst.kind !== 'program') {
