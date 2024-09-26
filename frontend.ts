@@ -1691,14 +1691,190 @@ const astFromParseResult = (ast: MplAst): PreExtraction.Ast | 'WrongShapeAst' =>
     }
 };
 
-export const extractTypeDeclarations = (ast: PreExtraction.Ast): { postTypeDeclarationExtractionAst: PostTypeDeclarationExtraction.Ast, types: any } => {
+export const extractTypeDeclarations = (
+    ast: PreExtraction.Ast
+): {
+    postTypeDeclarationExtractionAst: PostTypeDeclarationExtraction.Ast;
+    types: PreExtraction.TypeDeclaration[];
+} => {
+    const extractFromStatementList = (statements: PreExtraction.Statement[]) => {
+        const typeDeclarations = statements.filter(s => s.kind == 'typeDeclaration');
+        const updated = statements
+            .filter(s => s.kind != 'typeDeclaration')
+            .map(s => extractTypeDeclarations(s));
+        return {
+            types: [
+                ...typeDeclarations,
+                ...updated.map(x => x.types).flat(),
+            ] as PreExtraction.TypeDeclaration[],
+            statements: updated.map(
+                x => x.postTypeDeclarationExtractionAst
+            ) as PostTypeDeclarationExtraction.Statement[],
+        };
+    };
     switch (ast.kind) {
+        case 'functionLiteral': {
+            const filtered = extractFromStatementList(ast.body);
+            return {
+                postTypeDeclarationExtractionAst: { ...ast, body: filtered.statements },
+                types: filtered.types,
+            };
+        }
+        case 'program': {
+            const filtered = extractFromStatementList(ast.statements);
+            return {
+                postTypeDeclarationExtractionAst: { ...ast, statements: filtered.statements },
+                types: filtered.types,
+            };
+        }
+        case 'forLoop': {
+            const filtered = extractFromStatementList(ast.body);
+            const list = extractTypeDeclarations(ast.list);
+            return {
+                postTypeDeclarationExtractionAst: {
+                    ...ast,
+                    body: filtered.statements,
+                    list: list.postTypeDeclarationExtractionAst as PostTypeDeclarationExtraction.Expression,
+                },
+                types: [...filtered.types, ...list.types],
+            };
+        }
+        case 'callExpression': {
+            const result = ast.arguments.map(extractTypeDeclarations);
+            return {
+                postTypeDeclarationExtractionAst: {
+                    ...ast,
+                    arguments: result.map(
+                        r => r.postTypeDeclarationExtractionAst
+                    ) as PostTypeDeclarationExtraction.Expression[],
+                },
+                types: result.map(r => r.types).flat(),
+            };
+        }
+        case 'memberStyleCall': {
+            const result = ast.params.map(p => extractTypeDeclarations(p));
+            const lhs = extractTypeDeclarations(ast.lhs);
+            return {
+                postTypeDeclarationExtractionAst: {
+                    ...ast,
+                    lhs: lhs.postTypeDeclarationExtractionAst as PostTypeDeclarationExtraction.Expression,
+                    params: result.map(
+                        x => x.postTypeDeclarationExtractionAst
+                    ) as PostTypeDeclarationExtraction.Expression[],
+                },
+                types: [...lhs.types, ...result.map(x => x.types).flat()],
+            };
+        }
+        case 'memberAccess': {
+            const result = extractTypeDeclarations(ast.lhs);
+            return {
+                postTypeDeclarationExtractionAst: {
+                    ...ast,
+                    lhs: result.postTypeDeclarationExtractionAst as PostTypeDeclarationExtraction.Expression,
+                },
+                types: result.types,
+            };
+        }
+        case 'reassignment':
+        case 'declaration':
+        case 'returnStatement': {
+            const result = extractTypeDeclarations(ast.expression);
+            return {
+                postTypeDeclarationExtractionAst: {
+                    ...ast,
+                    expression:
+                        result.postTypeDeclarationExtractionAst as PostTypeDeclarationExtraction.Expression,
+                },
+                types: result.types,
+            };
+        }
+        case 'equality':
+        case 'concatenation':
+        case 'subtraction':
+        case 'product':
+        case 'addition': {
+            const lhs = extractTypeDeclarations(ast.lhs);
+            const rhs = extractTypeDeclarations(ast.rhs);
+            return {
+                postTypeDeclarationExtractionAst: {
+                    ...ast,
+                    lhs: lhs.postTypeDeclarationExtractionAst as PostTypeDeclarationExtraction.Expression,
+                    rhs: rhs.postTypeDeclarationExtractionAst as PostTypeDeclarationExtraction.Expression,
+                },
+                types: [...lhs.types, ...rhs.types],
+            };
+        }
+        case 'objectLiteral': {
+            const filtered = ast.members.map(m => {
+                const filteredMember = extractTypeDeclarations(m.expression);
+                return {
+                    member: {
+                        name: m.name,
+                        expression:
+                            filteredMember.postTypeDeclarationExtractionAst as PostTypeDeclarationExtraction.Expression,
+                    },
+                    types: filteredMember.types,
+                };
+            });
+            return {
+                postTypeDeclarationExtractionAst: {
+                    ...ast,
+                    members: filtered.map(x => x.member),
+                },
+                types: filtered.map(f => f.types).flat(),
+            };
+        }
+        case 'ternary': {
+            const condition = extractTypeDeclarations(ast.condition);
+            const ifTrue = extractTypeDeclarations(ast.ifTrue);
+            const ifFalse = extractTypeDeclarations(ast.ifFalse);
+            return {
+                postTypeDeclarationExtractionAst: {
+                    ...ast,
+                    condition:
+                        condition.postTypeDeclarationExtractionAst as PostTypeDeclarationExtraction.Expression,
+                    ifTrue: ifTrue.postTypeDeclarationExtractionAst as PostTypeDeclarationExtraction.Expression,
+                    ifFalse:
+                        ifFalse.postTypeDeclarationExtractionAst as PostTypeDeclarationExtraction.Expression,
+                },
+                types: [...condition.types, ...ifTrue.types, ...ifFalse.types],
+            };
+        }
+        case 'listLiteral': {
+            const filtered = ast.items.map(extractTypeDeclarations);
+            return {
+                postTypeDeclarationExtractionAst: {
+                    ...ast,
+                    items: filtered.map(
+                        x => x.postTypeDeclarationExtractionAst
+                    ) as PostTypeDeclarationExtraction.Expression[],
+                },
+                types: filtered.map(x => x.types).flat(),
+            };
+        }
+        case 'indexAccess': {
+            const index = extractTypeDeclarations(ast.index);
+            const accessed = extractTypeDeclarations(ast.accessed);
+            return {
+                postTypeDeclarationExtractionAst: {
+                    ...ast,
+                    index: index.postTypeDeclarationExtractionAst as PostTypeDeclarationExtraction.Expression,
+                    accessed:
+                        accessed.postTypeDeclarationExtractionAst as PostTypeDeclarationExtraction.Expression,
+                },
+                types: [...index.types, ...accessed.types],
+            };
+        }
         case 'number':
+        case 'stringLiteral':
+        case 'identifier':
+        case 'booleanLiteral':
+            return { postTypeDeclarationExtractionAst: ast, types: [] };
         default: {
-            throw debug(`${ast.kind} unhandled in extractTypeDeclarations`)
+            throw debug(`${ast.kind} unhandled in extractTypeDeclarations`);
         }
     }
-}
+};
 
 export const divvyIntoFunctions = (
     makeId,
@@ -1873,7 +2049,7 @@ export const divvyIntoFunctions = (
             };
         }
         default: {
-            throw debug(`${(ast as any).kind} unhandled in divvyIntoFunctions`)
+            throw debug(`${(ast as any).kind} unhandled in divvyIntoFunctions`);
         }
     }
 };
