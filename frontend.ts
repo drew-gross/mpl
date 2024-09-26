@@ -2139,7 +2139,10 @@ const compile = (
     }
 
     const { postTypeDeclarationExtractionAst, types } = extractTypeDeclarations(ast);
-    types;
+    const availableTypes: TypeDeclaration[] = types.map(t => ({
+        name: t.name,
+        type: typeFromTypeExpression(t.type) as Type,
+    }));
 
     const { functions: untypedFunctions, updated: updatedAst } = divvyIntoFunctions(
         idMaker(),
@@ -2166,12 +2169,6 @@ const compile = (
             ],
         };
     }
-    const availableTypes = walkAst<TypeDeclaration, PreExtraction.TypeDeclaration>(
-        ast,
-        ['typeDeclaration'],
-        n => ({ name: n.name, type: typeFromTypeExpression(n.type) as Type })
-    );
-
     untypedFunctions['builtin_main'] = {
         kind: 'functionLiteral',
         statements: updatedAst.statements,
