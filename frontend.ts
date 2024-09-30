@@ -2076,8 +2076,7 @@ export const inferFunctions = (
                 availableFunctions: untypedFunctions,
             });
             if (Array.isArray(inferred)) {
-                // todo: handle type errors here
-                throw debug('type errors we arent ready for');
+                return inferred;
             }
             typedVariables.push({
                 name,
