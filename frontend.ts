@@ -1107,6 +1107,7 @@ const infer = (ctx: WithContext<PostFunctionExtraction.Ast>): Ast.Ast => {
                 rhs: recurse(ast.rhs),
             };
         case 'declaration':
+            let type: Type | undefined = undefined;
             if (ast.type !== undefined) {
                 const resolved = resolve(
                     typeFromTypeExpression(ast.type),
@@ -1114,24 +1115,19 @@ const infer = (ctx: WithContext<PostFunctionExtraction.Ast>): Ast.Ast => {
                     ast.sourceLocation
                 );
                 if ('errors' in resolved) throw debug("resolution shouldn't fail here");
-                return {
-                    kind: 'declaration',
-                    sourceLocation: ast.sourceLocation,
-                    expression: recurse(ast.expression),
-                    type: resolved,
-                    destination: ast.destination,
-                };
+                type = resolved;
             } else {
-                const type = typeOfExpression({ ...ctx, w: ast.expression });
-                if (isTypeError(type)) throw debug("type error when there shouldn't be");
-                return {
-                    kind: 'declaration',
-                    sourceLocation: ast.sourceLocation,
-                    expression: recurse(ast.expression),
-                    type,
-                    destination: ast.destination,
-                };
+                const resolved = typeOfExpression({ ...ctx, w: ast.expression });
+                if (isTypeError(resolved)) throw debug("type error when there shouldn't be");
+                type = resolved;
             }
+            return {
+                kind: 'declaration',
+                sourceLocation: ast.sourceLocation,
+                expression: recurse(ast.expression),
+                type: type as Type,
+                destination: ast.destination,
+            };
         case 'reassignment':
             return {
                 kind: 'reassignment',
