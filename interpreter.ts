@@ -297,9 +297,14 @@ export const interpretFunction = (
                 switch (i.name) {
                     case 'print':
                         let stringName = getName(i.arguments[0]);
-                        let string = stringLiterals[stringName];
-                        if (typeof string !== 'string') throw debug('missing string');
-                        console.log(string);
+                        let string = stringLiterals.find(
+                            sl => stringLiteralName(sl) == stringName
+                        );
+                        if (string === undefined) throw debug('missing string');
+                        console.log(string.value);
+                        if (i.destination) {
+                            registerValues[i.destination.name] = 0;
+                        }
                         break;
                     case 'mmap':
                         let blockName = `mmap_count_${mmapCount}`;
