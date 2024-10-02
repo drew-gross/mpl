@@ -1,20 +1,17 @@
 import { Statement } from './ast';
-import { Statement as PreFunctionExtractionStatement } from './postFunctionExtractionAst';
 import { RegisterAgnosticTargetInfo } from './TargetInfo';
 import { Type, TypeDeclaration, TypeReference } from './types';
 import { FileResult } from 'fs-extra';
 import { Program } from './threeAddressCode/Program';
 
+export type Identifier = {
+    name: string;
+    exported: boolean;
+};
 export type Variable = {
     name: string;
     type: Type | TypeReference;
     exported: boolean;
-};
-export type PreFunctionExtractionFunction = {
-    statements: PreFunctionExtractionStatement[];
-    // TODO: These should probably belong to each statement?
-    variables: Variable[];
-    parameters: Variable[];
 };
 export type Function = {
     statements: Statement[];
