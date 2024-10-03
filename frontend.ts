@@ -21,7 +21,14 @@ import {
     TypeReference,
     Method,
 } from './types';
-import { Variable, Function, FrontendOutput, StringLiteralData, getTypeOfFunction } from './api';
+import {
+    Variable,
+    Function,
+    FrontendOutput,
+    StringLiteralData,
+    getTypeOfFunction,
+    Declaration,
+} from './api';
 import { TypeError } from './TypeError';
 import * as PreExtraction from './preExtractionAst';
 import * as PostTypeDeclarationExtraction from './postTypeDeclarationExtractionAst';
@@ -156,7 +163,6 @@ const extractVariable = (
             never(kind as never, 'extractVariable');
     }
 };
-
 const extractVariables = (ctx: WithContext<PostFunctionExtraction.Statement[]>): Variable[] => {
     const variables: Variable[] = [];
     ctx.w.forEach((statement: PostFunctionExtraction.Statement) => {
@@ -192,6 +198,30 @@ const extractVariables = (ctx: WithContext<PostFunctionExtraction.Statement[]>):
         }
     });
     return variables;
+};
+
+const extractDeclarations = (statements: PostFunctionExtraction.Statement[]): Declaration[] => {
+    return statements
+        .map(s => {
+            switch (s.kind) {
+                case 'returnStatement':
+                case 'reassignment':
+                case 'typeDeclaration':
+                    return [];
+                case 'declaration':
+                    return [
+                        {
+                            name: s.destination,
+                            exported: false,
+                        } as Declaration,
+                    ];
+                case 'forLoop':
+                    return extractDeclarations(s.body);
+                default:
+                    throw never(s, 'extractVariables');
+            }
+        })
+        .flat();
 };
 
 const functionObjectFromAst = (
@@ -2164,6 +2194,7 @@ const compile = (
             ],
         };
     }
+
     untypedFunctions['builtin_main'] = {
         kind: 'functionLiteral',
         statements: updatedAst.statements,

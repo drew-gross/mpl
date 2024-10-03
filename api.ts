@@ -4,7 +4,7 @@ import { Type, TypeDeclaration, TypeReference } from './types';
 import { FileResult } from 'fs-extra';
 import { Program } from './threeAddressCode/Program';
 
-export type Identifier = {
+export type Declaration = {
     name: string;
     exported: boolean;
 };
