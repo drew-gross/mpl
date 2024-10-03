@@ -21,23 +21,25 @@ import {
     TypeReference,
     Method,
 } from './types';
-import {
-    Variable,
-    Function,
-    FrontendOutput,
-    StringLiteralData,
-    getTypeOfFunction,
-    Declaration,
-} from './api';
+import { Variable, Function, FrontendOutput, StringLiteralData, getTypeOfFunction } from './api';
 import { TypeError } from './TypeError';
 import * as PreExtraction from './preExtractionAst';
 import * as PostTypeDeclarationExtraction from './postTypeDeclarationExtractionAst';
 import * as PostFunctionExtraction from './postFunctionExtractionAst';
 import * as Ast from './ast';
 import { deepCopy } from 'deep-copy-ts';
+import SourceLocation from './parser-lib/sourceLocation';
 /* tslint:disable */
 const { add } = require('./mpl/add.mpl');
 /* tslint:enable */
+
+export type Declaration = {
+    name: string;
+    expression: PostFunctionExtraction.Expression;
+    sourceLocation: SourceLocation;
+    declaredType: TypeExpression | undefined;
+    exported: boolean;
+};
 
 const repairAssociativity = (nodeType, ast) => {
     // Let this slide because TokenType overlaps InteriorNodeType right now
@@ -124,78 +126,31 @@ const transformAst = (nodeType, f, ast: MplAst, recurseOnNew: boolean): MplAst =
     }
 };
 
-const extractVariable = (
-    ctx: WithContext<PostFunctionExtraction.Statement>
-): Variable | undefined => {
-    const kind = ctx.w.kind;
-    switch (ctx.w.kind) {
-        case 'reassignment':
-            return {
-                name: ctx.w.destination,
-                type: typeOfExpression({ ...ctx, w: ctx.w.expression }) as Type,
-                exported: false,
-            };
-        case 'declaration':
-            // Recursive functions can refer to the left side on the right side, so to extract
-            // the left side, we need to know about the right side. Probably, this just shouldn't return
-            // a type. TODO: allow more types of recursive functions than just single int...
-            let resolved: Type | undefined = undefined;
-            if (ctx.w.type) {
-                const maybeType = resolve(
-                    typeFromTypeExpression(ctx.w.type),
-                    ctx.availableTypes,
-                    ctx.w.sourceLocation
-                );
-                if ('errors' in maybeType) throw debug('expected no error');
-                resolved = maybeType;
-            }
-            return {
-                name: ctx.w.destination,
-                type: typeOfExpression({ ...ctx, w: ctx.w.expression }, resolved) as Type,
-                exported: false,
-            };
-        case 'returnStatement':
-        case 'typeDeclaration':
-            return undefined;
-        case 'forLoop':
-            throw debug("forLoop has muliple variables, doesn't work here");
-        default:
-            never(kind as never, 'extractVariable');
-    }
-};
 const extractVariables = (ctx: WithContext<PostFunctionExtraction.Statement[]>): Variable[] => {
     const variables: Variable[] = [];
-    ctx.w.forEach((statement: PostFunctionExtraction.Statement) => {
-        switch (statement.kind) {
-            case 'returnStatement':
-            case 'reassignment':
-            case 'typeDeclaration':
-                break;
-            case 'declaration':
-                const potentialVariable = extractVariable({
-                    ...ctx,
-                    w: statement,
-                    availableVariables: mergeDeclarations(ctx.availableVariables, variables),
-                });
-                if (potentialVariable) {
-                    variables.push(potentialVariable);
-                }
-                break;
-            case 'forLoop':
-                statement.body.forEach(s => {
-                    const vars = extractVariables({
-                        ...ctx,
-                        w: [s],
-                        availableVariables: mergeDeclarations(ctx.availableVariables, variables),
-                    });
-                    if (vars) {
-                        variables.push(...vars);
-                    }
-                });
-                break;
-            default:
-                never(statement, 'extractVariables');
+    extractDeclarations(ctx.w).forEach((declaration: Declaration) => {
+        let resolved: Type | undefined = undefined;
+        if (declaration.declaredType) {
+            const maybeType = resolve(
+                typeFromTypeExpression(declaration.declaredType),
+                ctx.availableTypes,
+                declaration.sourceLocation
+            );
+            if ('errors' in maybeType) throw debug('expected no error');
+            resolved = maybeType;
         }
+        variables.push({
+            name: declaration.name,
+            type: typeOfExpression(
+                {
+                    ...ctx,
+                    availableVariables: mergeDeclarations(ctx.availableVariables, variables),
+                    w: declaration.expression,
+                },
+                resolved
+            ) as Type,
+            exported: declaration.exported,
+        });
     });
     return variables;
 };
@@ -212,8 +167,11 @@ const extractDeclarations = (statements: PostFunctionExtraction.Statement[]): De
                     return [
                         {
                             name: s.destination,
-                            exported: false,
-                        } as Declaration,
+                            expression: s.expression,
+                            sourceLocation: s.sourceLocation,
+                            declaredType: s.type,
+                            exported: s.exported,
+                        },
                     ];
                 case 'forLoop':
                     return extractDeclarations(s.body);
@@ -1009,18 +967,6 @@ const typeCheckFunction = (ctx: WithContext<PostFunctionExtraction.ExtractedFunc
         }
     });
     return { typeErrors: allErrors, identifiers: availableVariables };
-};
-
-const assignmentToGlobalDeclaration = (
-    ctx: WithContext<PostFunctionExtraction.Declaration>
-): Variable => {
-    const result = typeOfExpression({ ...ctx, w: ctx.w.expression });
-    if (isTypeError(result)) throw debug('isTypeError in assignmentToGlobalDeclaration');
-    return {
-        name: ctx.w.destination,
-        type: result,
-        exported: ctx.w.exported,
-    };
 };
 
 type WithContext<T> = {
@@ -2163,7 +2109,6 @@ const compile = (
         return { internalError: 'Wrong shape AST' };
     }
 
-    debugger;
     const { postTypeDeclarationExtractionAst, types } = extractTypeDeclarations(ast);
     const availableTypes: TypeDeclaration[] = types.map(t => ({
         name: t.name,
@@ -2236,25 +2181,13 @@ const compile = (
         });
     }
 
-    const globalDeclarations: Variable[] = main.statements
-        .filter(s => s.kind === 'declaration')
-        .map(assignment =>
-            assignmentToGlobalDeclaration({
-                w: assignment as any,
-                availableVariables: [...builtinFunctions, ...typedVariables, ...main.variables],
-                availableTypes,
-                availableFunctions: untypedFunctions,
-            })
-        );
-
-    // Get the function literals we gave names to into the declaration
-    globalDeclarations.push(...typedVariables);
     return {
         types: availableTypes,
         functions: typedFunctions,
         builtinFunctions,
         program: main,
-        globalDeclarations,
+        // Add the synthetic variables we created out of the functions. TODO: Just include these in the main?
+        globalDeclarations: [...main.variables, ...typedVariables],
         stringLiterals,
     };
 };
