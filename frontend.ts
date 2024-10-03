@@ -2163,6 +2163,7 @@ const compile = (
         return { internalError: 'Wrong shape AST' };
     }
 
+    debugger;
     const { postTypeDeclarationExtractionAst, types } = extractTypeDeclarations(ast);
     const availableTypes: TypeDeclaration[] = types.map(t => ({
         name: t.name,
